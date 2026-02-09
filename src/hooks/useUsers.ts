@@ -35,3 +35,47 @@ export function useUpdateUserStatus() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 }
+
+async function callAdminUsers(body: Record<string, unknown>) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Nicht eingeloggt");
+
+  const res = await supabase.functions.invoke("admin-users", {
+    body,
+  });
+
+  if (res.error) throw new Error(res.error.message || "Fehler");
+  if (res.data?.error) throw new Error(res.data.error);
+  return res.data;
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+    }) => callAdminUsers({ action: "create", ...params }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => callAdminUsers({ action: "delete", userId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { userId: string; firstName: string; lastName: string }) =>
+      callAdminUsers({ action: "update", ...params }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
