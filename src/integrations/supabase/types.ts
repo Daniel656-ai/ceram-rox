@@ -379,6 +379,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_assigned_to_measurement: {
+        Args: { _measurement_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_assigned_to_order: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_order_creator: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_order_creator_via_measurement: {
+        Args: { _measurement_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "master" | "auftraggeber" | "durchfuehrer"
