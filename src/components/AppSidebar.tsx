@@ -71,7 +71,7 @@ export function AppSidebar() {
         <div className="h-8 w-8 rounded-md bg-accent flex items-center justify-center shrink-0">
           <Beaker className="h-4 w-4 text-accent-foreground" />
         </div>
-        {!collapsed && <span className="font-bold text-sidebar-foreground tracking-tight">LIMS</span>}
+        {!collapsed && <span className="font-bold text-sidebar-foreground tracking-tight">Ceram ROX</span>}
       </div>
 
       <SidebarContent>
