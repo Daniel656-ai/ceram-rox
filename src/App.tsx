@@ -8,6 +8,14 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import OrdersPage from "./pages/OrdersPage";
+import CreateOrderPage from "./pages/CreateOrderPage";
+import OrderDetailPage from "./pages/OrderDetailPage";
+import ProjectsPage from "./pages/ProjectsPage";
+import WorkPlanPage from "./pages/WorkPlanPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminServicesPage from "./pages/AdminServicesPage";
+import AdminStatsPage from "./pages/AdminStatsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,11 +38,14 @@ const App = () => (
               }
             >
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/auftraege" element={<Dashboard />} />
-              <Route path="/templates" element={<Dashboard />} />
-              <Route path="/admin/benutzer" element={<Dashboard />} />
-              <Route path="/admin/statistiken" element={<Dashboard />} />
-              <Route path="/admin/einstellungen" element={<Dashboard />} />
+              <Route path="/auftraege" element={<OrdersPage />} />
+              <Route path="/auftraege/neu" element={<CreateOrderPage />} />
+              <Route path="/auftraege/:id" element={<OrderDetailPage />} />
+              <Route path="/projekte" element={<ProjectsPage />} />
+              <Route path="/arbeitsplanung" element={<WorkPlanPage />} />
+              <Route path="/admin/benutzer" element={<AdminUsersPage />} />
+              <Route path="/admin/messdienstleistungen" element={<AdminServicesPage />} />
+              <Route path="/admin/statistiken" element={<AdminStatsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

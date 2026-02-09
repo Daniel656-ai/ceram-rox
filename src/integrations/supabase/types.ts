@@ -14,6 +14,204 @@ export type Database = {
   }
   public: {
     Tables: {
+      documents: {
+        Row: {
+          file_name: string
+          file_type: string | null
+          id: string
+          order_measurement_id: string
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          file_name: string
+          file_type?: string | null
+          id?: string
+          order_measurement_id: string
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          file_name?: string
+          file_type?: string | null
+          id?: string
+          order_measurement_id?: string
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_order_measurement_id_fkey"
+            columns: ["order_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_orders: {
+        Row: {
+          created_at: string
+          created_by: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          order_type: Database["public"]["Enums"]["order_type"]
+          project_id: string
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          order_type: Database["public"]["Enums"]["order_type"]
+          project_id: string
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          order_type?: Database["public"]["Enums"]["order_type"]
+          project_id?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_parameters: {
+        Row: {
+          id: string
+          order_measurement_id: string
+          parameter_name: string
+          parameter_value: string | null
+          unit: string | null
+        }
+        Insert: {
+          id?: string
+          order_measurement_id: string
+          parameter_name: string
+          parameter_value?: string | null
+          unit?: string | null
+        }
+        Update: {
+          id?: string
+          order_measurement_id?: string
+          parameter_name?: string
+          parameter_value?: string | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_parameters_order_measurement_id_fkey"
+            columns: ["order_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_services: {
+        Row: {
+          active: boolean
+          category: Database["public"]["Enums"]["service_category"]
+          created_at: string
+          hourly_rate: number
+          id: string
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: Database["public"]["Enums"]["service_category"]
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          service_name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: Database["public"]["Enums"]["service_category"]
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          service_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      order_measurements: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          order_id: string
+          planned_hours: number | null
+          priority: number
+          service_id: string
+          status: Database["public"]["Enums"]["measurement_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          order_id: string
+          planned_hours?: number | null
+          priority?: number
+          service_id: string
+          status?: Database["public"]["Enums"]["measurement_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          order_id?: string
+          planned_hours?: number | null
+          priority?: number
+          service_id?: string
+          status?: Database["public"]["Enums"]["measurement_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_measurements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_measurements_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -44,6 +242,71 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          project_name: string | null
+          project_number: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          project_name?: string | null
+          project_number: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          project_name?: string | null
+          project_number?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      service_parameter_definitions: {
+        Row: {
+          default_value: string | null
+          id: string
+          parameter_name: string
+          service_id: string
+          sort_order: number
+          unit: string | null
+        }
+        Insert: {
+          default_value?: string | null
+          id?: string
+          parameter_name: string
+          service_id: string
+          sort_order?: number
+          unit?: string | null
+        }
+        Update: {
+          default_value?: string | null
+          id?: string
+          parameter_name?: string
+          service_id?: string
+          sort_order?: number
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_parameter_definitions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -61,6 +324,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      work_logs: {
+        Row: {
+          comment: string | null
+          created_at: string
+          hours: number
+          id: string
+          order_measurement_id: string
+          user_id: string
+          work_date: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          hours: number
+          id?: string
+          order_measurement_id: string
+          user_id: string
+          work_date?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          hours?: number
+          id?: string
+          order_measurement_id?: string
+          user_id?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_logs_order_measurement_id_fkey"
+            columns: ["order_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -81,6 +382,10 @@ export type Database = {
     }
     Enums: {
       app_role: "master" | "auftraggeber" | "durchfuehrer"
+      measurement_status: "open" | "in_progress" | "completed"
+      order_status: "open" | "in_progress" | "completed"
+      order_type: "customer" | "production" | "rnd"
+      service_category: "labor" | "pilot_plant"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -209,6 +514,10 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["master", "auftraggeber", "durchfuehrer"],
+      measurement_status: ["open", "in_progress", "completed"],
+      order_status: ["open", "in_progress", "completed"],
+      order_type: ["customer", "production", "rnd"],
+      service_category: ["labor", "pilot_plant"],
     },
   },
 } as const
