@@ -1,0 +1,149 @@
+import { useAllServices, useUpdateService, useCreateService } from "@/hooks/useMeasurements";
+import { CATEGORY_LABELS } from "@/lib/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Edit2 } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
+
+export default function AdminServicesPage() {
+  const { data: services = [], isLoading } = useAllServices();
+  const updateService = useUpdateService();
+  const createService = useCreateService();
+  const [newOpen, setNewOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCategory, setNewCategory] = useState<string>("labor");
+  const [newRate, setNewRate] = useState("75");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editRate, setEditRate] = useState("");
+
+  const handleToggle = async (id: string, active: boolean) => {
+    try {
+      await updateService.mutateAsync({ id, active });
+      toast.success(active ? "Aktiviert" : "Deaktiviert");
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
+    }
+  };
+
+  const handleRateUpdate = async (id: string) => {
+    try {
+      await updateService.mutateAsync({ id, hourly_rate: parseFloat(editRate) });
+      toast.success("Stundensatz aktualisiert");
+      setEditId(null);
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!newName) { toast.error("Name erforderlich"); return; }
+    try {
+      await createService.mutateAsync({ service_name: newName, category: newCategory, hourly_rate: parseFloat(newRate) });
+      toast.success("Messdienstleistung erstellt");
+      setNewOpen(false);
+      setNewName("");
+      setNewRate("75");
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
+    }
+  };
+
+  const laborServices = services.filter(s => s.category === "labor");
+  const pilotServices = services.filter(s => s.category === "pilot_plant");
+
+  const renderServiceTable = (title: string, items: typeof services) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">{title} ({items.length})</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Stundensatz (€/h)</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map(s => (
+              <TableRow key={s.id}>
+                <TableCell className="font-medium">{s.service_name}</TableCell>
+                <TableCell>
+                  {editId === s.id ? (
+                    <div className="flex gap-2">
+                      <Input type="number" value={editRate} onChange={e => setEditRate(e.target.value)} className="w-24 h-8" />
+                      <Button size="sm" onClick={() => handleRateUpdate(s.id)}>OK</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>✕</Button>
+                    </div>
+                  ) : (
+                    <button className="hover:underline text-left" onClick={() => { setEditId(s.id); setEditRate(String(s.hourly_rate)); }}>
+                      {s.hourly_rate} €/h
+                    </button>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} />
+                    <span className="text-sm">{s.active ? "Aktiv" : "Inaktiv"}</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Messdienstleistungen</h1>
+          <p className="text-muted-foreground">Verwaltung der Messdienstleistungen und Stundensätze</p>
+        </div>
+        <Dialog open={newOpen} onOpenChange={setNewOpen}>
+          <DialogTrigger asChild>
+            <Button><Plus className="h-4 w-4 mr-2" />Neue Messung</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Neue Messdienstleistung</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div><Label>Name</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="z.B. Viskosimetrie" /></div>
+              <div>
+                <Label>Kategorie</Label>
+                <Select value={newCategory} onValueChange={setNewCategory}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="labor">Labor</SelectItem>
+                    <SelectItem value="pilot_plant">Pilot Plant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Stundensatz (€/h)</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>
+              <Button onClick={handleCreate}>Erstellen</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-32"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
+      ) : (
+        <div className="space-y-6">
+          {renderServiceTable("Labor", laborServices)}
+          {renderServiceTable("Pilot Plant", pilotServices)}
+        </div>
+      )}
+    </div>
+  );
+}

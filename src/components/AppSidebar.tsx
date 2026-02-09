@@ -1,12 +1,13 @@
 import {
   LayoutDashboard,
-  FileText,
+  ClipboardList,
+  FolderOpen,
   Users,
   Settings,
   LogOut,
-  FlaskConical,
+  Beaker,
   BarChart3,
-  ClipboardList,
+  CalendarDays,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,20 +28,25 @@ import { Separator } from "@/components/ui/separator";
 
 const auftraggeberItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Aufträge", url: "/auftraege", icon: ClipboardList },
-  { title: "Templates", url: "/templates", icon: FileText },
+  { title: "Messaufträge", url: "/auftraege", icon: ClipboardList },
+  { title: "Projekte", url: "/projekte", icon: FolderOpen },
 ];
 
 const masterItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Alle Aufträge", url: "/auftraege", icon: ClipboardList },
+  { title: "Alle Messaufträge", url: "/auftraege", icon: ClipboardList },
+  { title: "Projekte", url: "/projekte", icon: FolderOpen },
+];
+
+const masterAdminItems = [
   { title: "Benutzer", url: "/admin/benutzer", icon: Users },
+  { title: "Messdienstleistungen", url: "/admin/messdienstleistungen", icon: Beaker },
   { title: "Statistiken", url: "/admin/statistiken", icon: BarChart3 },
-  { title: "Einstellungen", url: "/admin/einstellungen", icon: Settings },
 ];
 
 const durchfuehrerItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Arbeitsplanung", url: "/arbeitsplanung", icon: CalendarDays },
   { title: "Meine Aufträge", url: "/auftraege", icon: ClipboardList },
 ];
 
@@ -57,13 +63,13 @@ export function AppSidebar() {
   const roleLabel =
     role === "master" ? "Administrator" :
     role === "auftraggeber" ? "Auftraggeber" :
-    role === "durchfuehrer" ? "Durchführer" : "";
+    role === "durchfuehrer" ? "Messdienstleister" : "";
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       <div className="flex h-14 items-center gap-2 px-4">
-        <div className="h-8 w-8 rounded-md bg-sidebar-primary flex items-center justify-center shrink-0">
-          <FlaskConical className="h-4 w-4 text-sidebar-primary-foreground" />
+        <div className="h-8 w-8 rounded-md bg-accent flex items-center justify-center shrink-0">
+          <Beaker className="h-4 w-4 text-accent-foreground" />
         </div>
         {!collapsed && <span className="font-bold text-sidebar-foreground tracking-tight">LIMS</span>}
       </div>
@@ -91,6 +97,30 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {role === "master" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {masterAdminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className="hover:bg-sidebar-accent"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>
