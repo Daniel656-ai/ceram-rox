@@ -5,11 +5,21 @@ export function useUsers() {
   return useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*, user_roles(role)");
-      if (error) throw error;
-      return data;
+      const [profilesRes, rolesRes] = await Promise.all([
+        supabase.from("profiles").select("*"),
+        supabase.from("user_roles").select("user_id, role"),
+      ]);
+      if (profilesRes.error) throw profilesRes.error;
+      if (rolesRes.error) throw rolesRes.error;
+
+      const roleMap = new Map(
+        (rolesRes.data || []).map((r: any) => [r.user_id, r.role])
+      );
+
+      return (profilesRes.data || []).map((p: any) => ({
+        ...p,
+        user_roles: [{ role: roleMap.get(p.user_id) || "auftraggeber" }],
+      }));
     },
   });
 }
