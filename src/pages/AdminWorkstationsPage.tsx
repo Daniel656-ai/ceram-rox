@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { StatusBadge } from "@/components/StatusBadge";
+import { WorkstationMeasurementsList } from "@/components/WorkstationMeasurementsList";
 import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -434,6 +435,7 @@ export default function AdminWorkstationsPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                   {ws.description && <p className="text-sm text-muted-foreground mb-4">{ws.description}</p>}
+                  <WorkstationMeasurementsList workstationId={ws.id} userMap={userMap} />
                   <WorkstationTasksList workstationId={ws.id} users={users} />
                 </AccordionContent>
               </AccordionItem>
