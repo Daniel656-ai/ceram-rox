@@ -1,13 +1,14 @@
-import { useProjects, useCreateProject } from "@/hooks/useProjects";
+import { useProjects, useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ export default function ProjectsPage() {
   const { data: projects = [], isLoading } = useProjects();
   const { user, role } = useAuth();
   const createProject = useCreateProject();
+  const deleteProject = useDeleteProject();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ project_number: "", project_name: "", description: "" });
@@ -89,27 +91,64 @@ export default function ProjectsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Projekt-Nr.</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Beschreibung</TableHead>
-                <TableHead>Erstellt</TableHead>
-              </TableRow>
+                 <TableHead>Projekt-Nr.</TableHead>
+                 <TableHead>Name</TableHead>
+                 <TableHead>Beschreibung</TableHead>
+                 <TableHead>Erstellt</TableHead>
+                 {(role === "master" || role === "auftraggeber") && <TableHead className="w-12"></TableHead>}
+               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8">Laden...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Keine Projekte gefunden</TableCell></TableRow>
-              ) : (
-                filtered.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.project_number}</TableCell>
-                    <TableCell>{p.project_name || "–"}</TableCell>
-                    <TableCell className="max-w-xs truncate">{p.description || "–"}</TableCell>
-                    <TableCell>{new Date(p.created_at).toLocaleDateString("de-DE")}</TableCell>
-                  </TableRow>
-                ))
-              )}
+                 <TableRow><TableCell colSpan={5} className="text-center py-8">Laden...</TableCell></TableRow>
+               ) : filtered.length === 0 ? (
+                 <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Keine Projekte gefunden</TableCell></TableRow>
+               ) : (
+                 filtered.map(p => (
+                   <TableRow key={p.id}>
+                     <TableCell className="font-medium">{p.project_number}</TableCell>
+                     <TableCell>{p.project_name || "–"}</TableCell>
+                     <TableCell className="max-w-xs truncate">{p.description || "–"}</TableCell>
+                     <TableCell>{new Date(p.created_at).toLocaleDateString("de-DE")}</TableCell>
+                     {(role === "master" || (role === "auftraggeber" && p.created_by === user?.id)) && (
+                       <TableCell>
+                         <AlertDialog>
+                           <AlertDialogTrigger asChild>
+                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+                           </AlertDialogTrigger>
+                           <AlertDialogContent>
+                             <AlertDialogHeader>
+                               <AlertDialogTitle>Projekt löschen?</AlertDialogTitle>
+                               <AlertDialogDescription>
+                                 Projekt „{p.project_number}" wird unwiderruflich gelöscht.
+                               </AlertDialogDescription>
+                             </AlertDialogHeader>
+                             <AlertDialogFooter>
+                               <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                               <AlertDialogAction
+                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                 onClick={async () => {
+                                   try {
+                                     await deleteProject.mutateAsync(p.id);
+                                     toast.success("Projekt gelöscht");
+                                   } catch (e: any) {
+                                     toast.error(e.message || "Fehler beim Löschen");
+                                   }
+                                 }}
+                               >
+                                 Löschen
+                               </AlertDialogAction>
+                             </AlertDialogFooter>
+                           </AlertDialogContent>
+                         </AlertDialog>
+                       </TableCell>
+                     )}
+                     {role !== "master" && p.created_by !== user?.id && (role === "auftraggeber" || role === "durchfuehrer") && <TableCell />}
+                   </TableRow>
+                 ))
+               )}
             </TableBody>
           </Table>
         </CardContent>
