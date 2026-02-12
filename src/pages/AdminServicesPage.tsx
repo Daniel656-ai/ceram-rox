@@ -166,7 +166,7 @@ export default function AdminServicesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Messdienstleistungen</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Messungen</h1>
           <p className="text-muted-foreground">Verwaltung der Messdienstleistungen und Stundensätze</p>
         </div>
         <Dialog open={newOpen} onOpenChange={setNewOpen}>
