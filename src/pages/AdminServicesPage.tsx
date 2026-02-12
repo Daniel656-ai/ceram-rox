@@ -232,18 +232,6 @@ export default function AdminServicesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Arbeitsplatz</Label>
-                <Select value={newWorkstation || "none"} onValueChange={v => setNewWorkstation(v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Nicht zugeordnet" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nicht zugeordnet</SelectItem>
-                    {workstations.filter(w => w.status === "active").map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div><Label>Stundensatz (€/h)</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>
               <Button onClick={handleCreate}>Erstellen</Button>
             </div>
