@@ -138,6 +138,7 @@ export type Database = {
           responsible_user_id: string | null
           service_name: string
           updated_at: string
+          workstation_id: string | null
         }
         Insert: {
           active?: boolean
@@ -148,6 +149,7 @@ export type Database = {
           responsible_user_id?: string | null
           service_name: string
           updated_at?: string
+          workstation_id?: string | null
         }
         Update: {
           active?: boolean
@@ -158,8 +160,17 @@ export type Database = {
           responsible_user_id?: string | null
           service_name?: string
           updated_at?: string
+          workstation_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "measurement_services_workstation_id_fkey"
+            columns: ["workstation_id"]
+            isOneToOne: false
+            referencedRelation: "workstations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_measurements: {
         Row: {

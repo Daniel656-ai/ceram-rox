@@ -1,4 +1,5 @@
 import { useAllServices, useUpdateService, useCreateService } from "@/hooks/useMeasurements";
+import { useWorkstations } from "@/hooks/useWorkstations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
@@ -38,6 +39,7 @@ function useDurchfuehrerUsers() {
 export default function AdminServicesPage() {
   const { data: services = [], isLoading } = useAllServices();
   const { data: users = [] } = useDurchfuehrerUsers();
+  const { data: workstations = [] } = useWorkstations();
   const updateService = useUpdateService();
   const createService = useCreateService();
   const [newOpen, setNewOpen] = useState(false);
@@ -47,6 +49,7 @@ export default function AdminServicesPage() {
   const [newResponsible, setNewResponsible] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState("");
+  const [newWorkstation, setNewWorkstation] = useState<string>("");
 
   const handleToggle = async (id: string, active: boolean) => {
     try {
@@ -76,6 +79,15 @@ export default function AdminServicesPage() {
     }
   };
 
+  const handleWorkstationChange = async (id: string, workstationId: string) => {
+    try {
+      await updateService.mutateAsync({ id, workstation_id: workstationId || null });
+      toast.success("Arbeitsplatz zugeordnet");
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
+    }
+  };
+
   const handleCreate = async () => {
     if (!newName) { toast.error("Name erforderlich"); return; }
     try {
@@ -84,12 +96,14 @@ export default function AdminServicesPage() {
         category: newCategory,
         hourly_rate: parseFloat(newRate),
         responsible_user_id: newResponsible || null,
+        workstation_id: newWorkstation || null,
       });
-      toast.success("Messdienstleistung erstellt");
+      toast.success("Messung erstellt");
       setNewOpen(false);
       setNewName("");
       setNewRate("75");
       setNewResponsible("");
+      setNewWorkstation("");
     } catch (err: any) {
       toast.error("Fehler", { description: err.message });
     }
@@ -108,6 +122,7 @@ export default function AdminServicesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Arbeitsplatz</TableHead>
               <TableHead>Messdienstleister</TableHead>
               <TableHead>Stundensatz (€/h)</TableHead>
               <TableHead>Status</TableHead>
@@ -117,6 +132,22 @@ export default function AdminServicesPage() {
             {items.map(s => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{s.service_name}</TableCell>
+                <TableCell>
+                  <Select
+                    value={(s as any).workstation_id || "none"}
+                    onValueChange={v => handleWorkstationChange(s.id, v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger className="w-44 h-8">
+                      <SelectValue placeholder="Nicht zugeordnet" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nicht zugeordnet</SelectItem>
+                      {workstations.filter(w => w.status === "active").map(w => (
+                        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
                 <TableCell>
                   <Select
                     value={(s as any).responsible_user_id || "none"}
@@ -197,6 +228,18 @@ export default function AdminServicesPage() {
                       <SelectItem key={u.user_id} value={u.user_id}>
                         {u.first_name} {u.last_name}
                       </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Arbeitsplatz</Label>
+                <Select value={newWorkstation || "none"} onValueChange={v => setNewWorkstation(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Nicht zugeordnet" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nicht zugeordnet</SelectItem>
+                    {workstations.filter(w => w.status === "active").map(w => (
+                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
