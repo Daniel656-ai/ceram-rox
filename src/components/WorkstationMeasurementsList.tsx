@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
+  const navigate = useNavigate();
   const { data: measurements, isLoading } = useWorkstationMeasurements(workstationId);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -63,8 +65,12 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
               const assignee = m.assigned_to ? userMap.get(m.assigned_to) : null;
 
               return (
-                <TableRow key={m.id}>
-                  <TableCell className="font-medium">
+                <TableRow
+                  key={m.id}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate(`/orders/${order?.id}`)}
+                >
+                  <TableCell className="font-medium text-primary">
                     {service?.service_name ?? "–"}
                     {service?.category && (
                       <Badge variant="outline" className="ml-2 text-[10px]">
