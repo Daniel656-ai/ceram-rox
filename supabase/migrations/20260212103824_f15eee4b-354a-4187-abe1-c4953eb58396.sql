@@ -1,0 +1,1 @@
+ALTER TABLE public.measurement_services ADD COLUMN workstation_id uuid REFERENCES public.workstations(id) ON DELETE SET NULL;
