@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProjects, useCreateProject } from "@/hooks/useProjects";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useServices, useAddOrderMeasurement } from "@/hooks/useMeasurements";
+import { useWorkstations } from "@/hooks/useWorkstations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ interface SelectedMeasurement {
   service_name: string;
   planned_hours: number;
   priority: number;
+  workstation_id: string;
 }
 
 export default function CreateOrderPage() {
@@ -27,6 +29,7 @@ export default function CreateOrderPage() {
   const { user } = useAuth();
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
+  const { data: workstations = [] } = useWorkstations();
   const createProject = useCreateProject();
   const createOrder = useCreateOrder();
   const addMeasurement = useAddOrderMeasurement();
@@ -44,7 +47,7 @@ export default function CreateOrderPage() {
   const addService = (serviceId: string) => {
     const svc = services.find(s => s.id === serviceId);
     if (!svc || measurements.some(m => m.service_id === serviceId)) return;
-    setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, priority: 0 }]);
+    setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, priority: 0, workstation_id: "" }]);
   };
 
   const removeMeasurement = (idx: number) => {
@@ -93,6 +96,7 @@ export default function CreateOrderPage() {
           planned_hours: m.planned_hours,
           priority: m.priority,
           due_date: dueDate || undefined,
+          workstation_id: m.workstation_id || undefined,
         })
       ));
 
@@ -228,9 +232,21 @@ export default function CreateOrderPage() {
             ) : (
               <div className="space-y-3">
                 {measurements.map((m, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 border rounded-md">
-                    <div className="flex-1">
+                  <div key={idx} className="flex items-center gap-3 p-3 border rounded-md flex-wrap">
+                    <div className="flex-1 min-w-[120px]">
                       <p className="font-medium text-sm">{m.service_name}</p>
+                    </div>
+                    <div className="w-36">
+                      <Label className="text-xs">Arbeitsplatz</Label>
+                      <Select value={m.workstation_id || "__none"} onValueChange={v => updateMeasurement(idx, "workstation_id", v === "__none" ? "" : v)}>
+                        <SelectTrigger className="h-8"><SelectValue placeholder="Wählen..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">– Keiner –</SelectItem>
+                          {workstations.filter((w: any) => w.status === "active").map((w: any) => (
+                            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="w-24">
                       <Label className="text-xs">Stunden</Label>

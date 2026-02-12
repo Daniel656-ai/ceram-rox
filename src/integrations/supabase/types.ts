@@ -173,6 +173,7 @@ export type Database = {
           service_id: string
           status: Database["public"]["Enums"]["measurement_status"]
           updated_at: string
+          workstation_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -185,6 +186,7 @@ export type Database = {
           service_id: string
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
+          workstation_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           service_id?: string
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
+          workstation_id?: string | null
         }
         Relationships: [
           {
@@ -211,6 +214,13 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_measurements_workstation_id_fkey"
+            columns: ["workstation_id"]
+            isOneToOne: false
+            referencedRelation: "workstations"
             referencedColumns: ["id"]
           },
         ]

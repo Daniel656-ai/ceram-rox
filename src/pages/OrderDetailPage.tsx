@@ -139,6 +139,7 @@ export default function OrderDetailPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Messung</TableHead>
+                <TableHead>Arbeitsplatz</TableHead>
                 <TableHead>Kategorie</TableHead>
                 <TableHead>Stunden (Plan/Ist)</TableHead>
                 <TableHead>Stundensatz</TableHead>
@@ -154,6 +155,7 @@ export default function OrderDetailPage() {
                 return (
                   <TableRow key={m.id}>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
+                    <TableCell>{m.workstations?.name || <span className="text-muted-foreground">–</span>}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</Badge>
                     </TableCell>
