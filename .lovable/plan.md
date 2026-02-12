@@ -1,54 +1,108 @@
 
 
-## Problem: Infinite Recursion in Database Policies
+## Administrations-Dashboard fuer Arbeitsplaetze
 
-All queries are failing with error `42P17: infinite recursion detected in policy for relation "order_measurements"`. This is caused by circular references between RLS policies:
+### Uebersicht
 
-- `projects` SELECT policy checks `order_measurements` -> `measurement_orders`
-- `measurement_orders` SELECT policy checks `order_measurements`
-- `order_measurements` SELECT policy checks `measurement_orders`
+Es wird ein neues Verwaltungsmodul fuer Arbeitsplaetze erstellt. Dieses umfasst zwei neue Datenbanktabellen, eine neue Seite mit Tabellen- und Aufgabenverwaltung, sowie die Integration in die bestehende Navigation.
 
-## Solution
+### Was wird gebaut
 
-Replace the cross-referencing RLS policies with **SECURITY DEFINER helper functions** that bypass RLS and break the recursion cycle.
+**1. Neue Datenbanktabellen**
 
-### Step 1: Create helper functions
+- **workstations** - Arbeitsplaetze mit Name, Beschreibung, Status (active/inactive), verantwortlichem Benutzer
+- **workstation_tasks** - Aufgaben pro Arbeitsplatz mit Titel, Beschreibung, zugewiesener Person, Faelligkeitsdatum, Stundensatz, Status
 
-Create two `SECURITY DEFINER` functions:
-- `is_order_creator(uuid, uuid)` -- checks if a user created a given measurement_order
-- `is_measurement_assigned(uuid, uuid)` -- checks if a user is assigned to any order_measurement for a given order
+**2. Neue Seite: Arbeitsplaetze verwalten**
 
-These functions run with elevated privileges and don't trigger RLS checks on the tables they query, breaking the recursion.
+Die Seite zeigt:
+- Uebersicht aller Arbeitsplaetze in einer Tabelle (Name, Status, Verantwortlicher)
+- Button zum Erstellen neuer Arbeitsplaetze
+- Aufklappbare/Detail-Ansicht pro Arbeitsplatz mit zugeordneten Aufgaben
+- Dialog zum Erstellen/Bearbeiten von Aufgaben (Titel, Beschreibung, Person, Faelligkeitsdatum, Stundensatz)
+- Filter fuer Aufgaben nach Status
+- Anzeige der Benutzerrolle neben dem Namen
 
-### Step 2: Replace RLS policies
+**3. Navigation**
 
-Drop and recreate the following policies using the helper functions instead of sub-selects:
+- Neuer Eintrag "Arbeitsplaetze" im Admin-Bereich der Sidebar (nur fuer master-Rolle sichtbar)
+- Neue Route: `/admin/arbeitsplaetze`
 
-1. **`measurement_orders` SELECT** -- use `is_measurement_assigned` instead of sub-select on `order_measurements`
-2. **`order_measurements` SELECT/INSERT/UPDATE** -- use `is_order_creator` instead of sub-select on `measurement_orders`
-3. **`projects` SELECT** -- use a dedicated function or simplified logic
+### Technische Details
 
-### Step 3: Database migration
-
-A single migration will:
-1. Create `is_order_creator(_user_id uuid, _order_id uuid)` function
-2. Create `is_assigned_to_order(_user_id uuid, _order_id uuid)` function
-3. Drop all affected policies (on `projects`, `measurement_orders`, `order_measurements`, `measurement_parameters`, `work_logs`, `documents`)
-4. Recreate them using the helper functions
-
-### Technical Details
+**Datenbank-Migration (SQL):**
 
 ```sql
--- Example helper function
-CREATE OR REPLACE FUNCTION public.is_order_creator(_user_id uuid, _order_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM measurement_orders WHERE id = _order_id AND created_by = _user_id
-  )
-$$;
+-- Arbeitsplaetze
+CREATE TABLE public.workstations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  responsible_user_id uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.workstations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "All authenticated can read workstations"
+  ON public.workstations FOR SELECT USING (true);
+
+CREATE POLICY "Masters can manage workstations"
+  ON public.workstations FOR ALL
+  USING (has_role(auth.uid(), 'master'))
+  WITH CHECK (has_role(auth.uid(), 'master'));
+
+-- Aufgaben pro Arbeitsplatz
+CREATE TYPE public.task_status AS ENUM ('open', 'in_progress', 'completed');
+
+CREATE TABLE public.workstation_tasks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workstation_id uuid NOT NULL REFERENCES public.workstations(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  description text,
+  assigned_to uuid,
+  due_date date,
+  hourly_rate numeric NOT NULL DEFAULT 0,
+  status task_status NOT NULL DEFAULT 'open',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.workstation_tasks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated can read tasks"
+  ON public.workstation_tasks FOR SELECT USING (true);
+
+CREATE POLICY "Masters can manage tasks"
+  ON public.workstation_tasks FOR ALL
+  USING (has_role(auth.uid(), 'master'))
+  WITH CHECK (has_role(auth.uid(), 'master'));
+
+-- updated_at Trigger
+CREATE TRIGGER update_workstations_updated_at
+  BEFORE UPDATE ON public.workstations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_workstation_tasks_updated_at
+  BEFORE UPDATE ON public.workstation_tasks
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
-No frontend code changes needed -- this is purely a database-level fix.
+**Neue Dateien:**
+
+- `src/hooks/useWorkstations.ts` - React-Query Hooks fuer CRUD auf workstations und workstation_tasks
+- `src/pages/AdminWorkstationsPage.tsx` - Hauptseite mit Arbeitsplatz-Tabelle, Aufgabenverwaltung, Filter, Dialoge
+
+**Aenderungen an bestehenden Dateien:**
+
+- `src/components/AppSidebar.tsx` - Neuer Menueeintrag "Arbeitsplaetze" in masterAdminItems
+- `src/App.tsx` - Neue Route `/admin/arbeitsplaetze`
+
+**Berechtigungen:**
+
+- Nur Benutzer mit der Rolle "master" koennen Arbeitsplaetze und Aufgaben erstellen, bearbeiten und loeschen
+- Aufgaben koennen Benutzern mit der Rolle "durchfuehrer" oder "master" zugewiesen werden
+- Die Seite ist nur ueber die Admin-Navigation erreichbar (master-only)
 
