@@ -16,6 +16,7 @@ import WorkPlanPage from "./pages/WorkPlanPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminServicesPage from "./pages/AdminServicesPage";
 import AdminStatsPage from "./pages/AdminStatsPage";
+import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/admin/benutzer" element={<AdminUsersPage />} />
               <Route path="/admin/messdienstleistungen" element={<AdminServicesPage />} />
               <Route path="/admin/statistiken" element={<AdminStatsPage />} />
+              <Route path="/admin/arbeitsplaetze" element={<AdminWorkstationsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

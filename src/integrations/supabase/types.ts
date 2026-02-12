@@ -366,6 +366,83 @@ export type Database = {
           },
         ]
       }
+      workstation_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          hourly_rate: number
+          id: string
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+          workstation_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          hourly_rate?: number
+          id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+          workstation_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          hourly_rate?: number
+          id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+          workstation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workstation_tasks_workstation_id_fkey"
+            columns: ["workstation_id"]
+            isOneToOne: false
+            referencedRelation: "workstations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workstations: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          responsible_user_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          responsible_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          responsible_user_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -405,6 +482,7 @@ export type Database = {
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
       service_category: "labor" | "pilot_plant"
+      task_status: "open" | "in_progress" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -537,6 +615,7 @@ export const Constants = {
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
       service_category: ["labor", "pilot_plant"],
+      task_status: ["open", "in_progress", "completed"],
     },
   },
 } as const
