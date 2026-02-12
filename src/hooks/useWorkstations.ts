@@ -126,3 +126,20 @@ export function useDeleteTask() {
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ["workstation_tasks", vars.workstation_id] }),
   });
 }
+
+// ── Workstation Measurements (from order_measurements) ──
+export function useWorkstationMeasurements(workstationId?: string) {
+  return useQuery({
+    queryKey: ["workstation_measurements", workstationId],
+    enabled: !!workstationId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_measurements")
+        .select(`*, measurement_services(service_name, category), measurement_orders(*, projects(project_number, project_name))`)
+        .eq("workstation_id", workstationId!)
+        .order("due_date");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
