@@ -8,6 +8,7 @@ import {
   Beaker,
   BarChart3,
   CalendarDays,
+  Building2,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,6 +42,7 @@ const masterItems = [
 const masterAdminItems = [
   { title: "Benutzer", url: "/admin/benutzer", icon: Users },
   { title: "Messdienstleistungen", url: "/admin/messdienstleistungen", icon: Beaker },
+  { title: "Arbeitsplätze", url: "/admin/arbeitsplaetze", icon: Building2 },
   { title: "Statistiken", url: "/admin/statistiken", icon: BarChart3 },
 ];
 
