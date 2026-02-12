@@ -1,26 +1,50 @@
 import { useAllServices, useUpdateService, useCreateService } from "@/hooks/useMeasurements";
-import { CATEGORY_LABELS } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Edit2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+function useDurchfuehrerUsers() {
+  return useQuery({
+    queryKey: ["durchfuehrer-users"],
+    queryFn: async () => {
+      const [profilesRes, rolesRes] = await Promise.all([
+        supabase.from("profiles").select("*"),
+        supabase.from("user_roles").select("user_id, role"),
+      ]);
+      if (profilesRes.error) throw profilesRes.error;
+      if (rolesRes.error) throw rolesRes.error;
+
+      const durchfuehrerIds = new Set(
+        (rolesRes.data || [])
+          .filter((r: any) => r.role === "durchfuehrer" || r.role === "master")
+          .map((r: any) => r.user_id)
+      );
+
+      return (profilesRes.data || []).filter((p: any) => durchfuehrerIds.has(p.user_id));
+    },
+  });
+}
 
 export default function AdminServicesPage() {
   const { data: services = [], isLoading } = useAllServices();
+  const { data: users = [] } = useDurchfuehrerUsers();
   const updateService = useUpdateService();
   const createService = useCreateService();
   const [newOpen, setNewOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<string>("labor");
   const [newRate, setNewRate] = useState("75");
+  const [newResponsible, setNewResponsible] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState("");
 
@@ -43,14 +67,29 @@ export default function AdminServicesPage() {
     }
   };
 
+  const handleResponsibleChange = async (id: string, userId: string) => {
+    try {
+      await updateService.mutateAsync({ id, responsible_user_id: userId || null });
+      toast.success("Messdienstleister zugeordnet");
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
+    }
+  };
+
   const handleCreate = async () => {
     if (!newName) { toast.error("Name erforderlich"); return; }
     try {
-      await createService.mutateAsync({ service_name: newName, category: newCategory, hourly_rate: parseFloat(newRate) });
+      await createService.mutateAsync({
+        service_name: newName,
+        category: newCategory,
+        hourly_rate: parseFloat(newRate),
+        responsible_user_id: newResponsible || null,
+      });
       toast.success("Messdienstleistung erstellt");
       setNewOpen(false);
       setNewName("");
       setNewRate("75");
+      setNewResponsible("");
     } catch (err: any) {
       toast.error("Fehler", { description: err.message });
     }
@@ -69,6 +108,7 @@ export default function AdminServicesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Messdienstleister</TableHead>
               <TableHead>Stundensatz (€/h)</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
@@ -77,6 +117,24 @@ export default function AdminServicesPage() {
             {items.map(s => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{s.service_name}</TableCell>
+                <TableCell>
+                  <Select
+                    value={(s as any).responsible_user_id || "none"}
+                    onValueChange={v => handleResponsibleChange(s.id, v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger className="w-44 h-8">
+                      <SelectValue placeholder="Nicht zugeordnet" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nicht zugeordnet</SelectItem>
+                      {users.map((u: any) => (
+                        <SelectItem key={u.user_id} value={u.user_id}>
+                          {u.first_name} {u.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
                 <TableCell>
                   {editId === s.id ? (
                     <div className="flex gap-2">
@@ -126,6 +184,20 @@ export default function AdminServicesPage() {
                   <SelectContent>
                     <SelectItem value="labor">Labor</SelectItem>
                     <SelectItem value="pilot_plant">Pilot Plant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Messdienstleister</Label>
+                <Select value={newResponsible || "none"} onValueChange={v => setNewResponsible(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Nicht zugeordnet" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nicht zugeordnet</SelectItem>
+                    {users.map((u: any) => (
+                      <SelectItem key={u.user_id} value={u.user_id}>
+                        {u.first_name} {u.last_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

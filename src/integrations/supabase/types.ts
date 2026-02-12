@@ -135,6 +135,7 @@ export type Database = {
           created_at: string
           hourly_rate: number
           id: string
+          responsible_user_id: string | null
           service_name: string
           updated_at: string
         }
@@ -144,6 +145,7 @@ export type Database = {
           created_at?: string
           hourly_rate?: number
           id?: string
+          responsible_user_id?: string | null
           service_name: string
           updated_at?: string
         }
@@ -153,6 +155,7 @@ export type Database = {
           created_at?: string
           hourly_rate?: number
           id?: string
+          responsible_user_id?: string | null
           service_name?: string
           updated_at?: string
         }

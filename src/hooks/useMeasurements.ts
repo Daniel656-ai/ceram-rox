@@ -99,7 +99,7 @@ export function useAddWorkLog() {
 export function useUpdateService() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; hourly_rate?: number; active?: boolean; service_name?: string }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; hourly_rate?: number; active?: boolean; service_name?: string; responsible_user_id?: string | null }) => {
       const { error } = await supabase.from("measurement_services").update(updates).eq("id", id);
       if (error) throw error;
     },
@@ -113,7 +113,7 @@ export function useUpdateService() {
 export function useCreateService() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (service: { service_name: string; category: string; hourly_rate: number }) => {
+    mutationFn: async (service: { service_name: string; category: string; hourly_rate: number; responsible_user_id?: string | null }) => {
       const { data, error } = await supabase.from("measurement_services").insert(service as any).select().single();
       if (error) throw error;
       return data;
