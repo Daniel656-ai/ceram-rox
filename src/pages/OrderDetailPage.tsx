@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useOrderDetail, useUpdateOrderStatus } from "@/hooks/useOrders";
+import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder } from "@/hooks/useOrders";
 import { useUpdateMeasurementStatus, useAddWorkLog } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Clock, FileText, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Clock, FileText, Upload, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +25,8 @@ export default function OrderDetailPage() {
   const { user, role } = useAuth();
   const { data: order, isLoading } = useOrderDetail(id);
   const updateMeasurementStatus = useUpdateMeasurementStatus();
+  const updateOrder = useUpdateOrder();
+  const deleteOrder = useDeleteOrder();
   const addWorkLog = useAddWorkLog();
   const [logOpen, setLogOpen] = useState(false);
   const [logMeasurementId, setLogMeasurementId] = useState("");
@@ -30,8 +34,16 @@ export default function OrderDetailPage() {
   const [logDate, setLogDate] = useState(new Date().toISOString().slice(0, 10));
   const [logComment, setLogComment] = useState("");
 
+  // Edit dialog state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editOrderType, setEditOrderType] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   if (!order) return <p className="text-muted-foreground">Auftrag nicht gefunden.</p>;
+
+  const canEditDelete = role === "master" || (role === "auftraggeber" && (order as any).created_by === user?.id && order.status === "open");
 
   const measurements = (order as any).order_measurements || [];
   const totalPlanned = measurements.reduce((s: number, m: any) => s + (parseFloat(m.planned_hours) || 0), 0);
@@ -85,6 +97,38 @@ export default function OrderDetailPage() {
     toast.success("Datei hochgeladen");
   };
 
+  const openEditDialog = () => {
+    setEditOrderType((order as any).order_type);
+    setEditDueDate((order as any).due_date || "");
+    setEditNotes((order as any).notes || "");
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    try {
+      await updateOrder.mutateAsync({
+        id: order.id,
+        order_type: editOrderType as any,
+        due_date: editDueDate || null,
+        notes: editNotes || null,
+      });
+      toast.success("Auftrag aktualisiert");
+      setEditOpen(false);
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteOrder.mutateAsync(order.id);
+      toast.success("Messauftrag gelöscht");
+      navigate("/auftraege");
+    } catch (err: any) {
+      toast.error("Fehler beim Löschen", { description: err.message });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -100,6 +144,34 @@ export default function OrderDetailPage() {
           </p>
         </div>
         <StatusBadge status={order.status} />
+        {canEditDelete && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={openEditDialog}>
+              <Pencil className="h-4 w-4 mr-1" /> Bearbeiten
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-1" /> Löschen
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Messauftrag löschen?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Dieser Messauftrag und alle zugehörigen Messungen werden unwiderruflich gelöscht.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Löschen
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -226,6 +298,35 @@ export default function OrderDetailPage() {
               <Textarea value={logComment} onChange={e => setLogComment(e.target.value)} placeholder="Optionaler Kommentar" rows={2} />
             </div>
             <Button onClick={handleLogSubmit}>Speichern</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Order Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Auftrag bearbeiten</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Auftragstyp</Label>
+              <Select value={editOrderType} onValueChange={setEditOrderType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ORDER_TYPE_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Fälligkeitsdatum</Label>
+              <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>Anmerkungen</Label>
+              <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Anmerkungen zum Auftrag" rows={3} />
+            </div>
+            <Button onClick={handleEditSubmit}>Speichern</Button>
           </div>
         </DialogContent>
       </Dialog>
