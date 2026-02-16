@@ -1,29 +1,59 @@
 
 
-## Messungen automatisch dem Standard-Arbeitsplatz zuweisen
+## Messauftraege bearbeiten und loeschen
 
-### Problem
-Beim Hinzufuegen einer Messung zu einem neuen Messauftrag wird der Arbeitsplatz immer leer gelassen, obwohl in den Messdienstleistungs-Stammdaten (`measurement_services`) bereits ein Standard-Arbeitsplatz (`workstation_id`) hinterlegt sein kann.
+### Uebersicht
+Bearbeitungs- und Loeschfunktionen fuer Messauftraege mit rollenabhaengiger Berechtigung:
+- **Master**: Kann alle Messauftraege bearbeiten und loeschen, unabhaengig vom Status
+- **Auftraggeber**: Kann nur eigene Messauftraege mit Status "Offen" bearbeiten oder loeschen
 
-### Loesung
-Beim Hinzufuegen einer Messdienstleistung im Auftragsformular wird der in den Stammdaten hinterlegte Standard-Arbeitsplatz automatisch vorbelegt. Der Benutzer kann ihn anschliessend noch manuell aendern.
+### Aenderungen
 
-### Aenderung
+**1. Datenbank-Migration: DELETE-Policy fuer `measurement_orders`**
 
-**Datei: `src/pages/CreateOrderPage.tsx`**
+Aktuell fehlt eine DELETE-Policy. Neue Policy:
 
-In der Funktion `addService` (Zeile 47-51) wird beim Erstellen eines neuen Messungs-Eintrags das Feld `workstation_id` mit dem Wert aus `svc.workstation_id` vorbelegt statt mit einem leeren String:
-
-```typescript
-// Vorher:
-workstation_id: ""
-
-// Nachher:
-workstation_id: svc.workstation_id || ""
+```sql
+CREATE POLICY "Users delete relevant orders"
+ON public.measurement_orders
+FOR DELETE
+USING (
+  has_role(auth.uid(), 'master'::app_role)
+  OR (created_by = auth.uid() AND status = 'open'::order_status)
+);
 ```
 
-Das ist die einzige Aenderung. Die `useServices`-Query laedt bereits alle Felder (`select("*")`), sodass `workstation_id` verfuegbar ist.
+Die bestehende UPDATE-Policy erlaubt bereits Updates fuer Creator und Master. Die Status-Einschraenkung fuer Auftraggeber wird im Frontend durchgesetzt (Backend erlaubt Update fuer Creator generell, was fuer Statusuebergaenge noetig ist).
+
+**2. Neuer Hook: `useDeleteOrder` in `src/hooks/useOrders.ts`**
+
+Mutation die `supabase.from("measurement_orders").delete().eq("id", id)` ausfuehrt und die Query-Caches invalidiert.
+
+**3. Neuer Hook: `useUpdateOrder` in `src/hooks/useOrders.ts`**
+
+Mutation die `notes`, `due_date` und `order_type` eines Auftrags aktualisiert.
+
+**4. UI in `src/pages/OrdersPage.tsx` -- Loeschen-Button pro Zeile**
+
+- Neue Spalte "Aktionen" in der Tabelle
+- Loeschen-Button (Papierkorb-Icon) mit Bestaetigung ueber AlertDialog
+- Sichtbarkeitslogik:
+  - Master: immer sichtbar
+  - Auftraggeber: nur wenn `o.status === "open"` und `o.created_by === user.id`
+  - Durchfuehrer: kein Loeschen-Button
+
+**5. UI in `src/pages/OrderDetailPage.tsx` -- Bearbeiten und Loeschen im Header**
+
+- "Bearbeiten"-Button oeffnet Dialog mit Formular fuer Auftragstyp, Faelligkeitsdatum und Anmerkungen
+- "Loeschen"-Button mit AlertDialog-Bestaetigung, navigiert nach Loeschung zurueck zur Uebersicht
+- Sichtbarkeitslogik wie bei der Uebersicht:
+  - Master: beide Buttons immer sichtbar
+  - Auftraggeber: nur bei Status "Offen" und eigenem Auftrag
+  - Durchfuehrer: keine Buttons
 
 ### Betroffene Dateien
-- `src/pages/CreateOrderPage.tsx` -- eine Zeile in der `addService`-Funktion
+- Datenbank-Migration (neue DELETE-Policy)
+- `src/hooks/useOrders.ts` -- neue Hooks `useDeleteOrder` und `useUpdateOrder`
+- `src/pages/OrdersPage.tsx` -- Aktionen-Spalte mit Loeschen
+- `src/pages/OrderDetailPage.tsx` -- Bearbeiten-Dialog und Loeschen im Header
 
