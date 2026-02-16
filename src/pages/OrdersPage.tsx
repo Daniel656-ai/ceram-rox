@@ -1,19 +1,22 @@
-import { useOrders } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder } from "@/hooks/useOrders";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ORDER_TYPE_LABELS } from "@/lib/types";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ClipboardList, Plus, Search } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export default function OrdersPage() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const { data: orders = [], isLoading } = useOrders();
+  const deleteOrder = useDeleteOrder();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -24,6 +27,21 @@ export default function OrdersPage() {
     const matchesStatus = statusFilter === "all" || o.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const canDelete = (o: any) => {
+    if (role === "master") return true;
+    if (role === "auftraggeber" && o.created_by === user?.id && o.status === "open") return true;
+    return false;
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteOrder.mutateAsync(id);
+      toast.success("Messauftrag gelöscht");
+    } catch (err: any) {
+      toast.error("Fehler beim Löschen", { description: err.message });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -75,16 +93,17 @@ export default function OrdersPage() {
                 <TableHead>Status</TableHead>
                 <TableHead>Fälligkeit</TableHead>
                 <TableHead>Erstellt</TableHead>
+                {(role === "master" || role === "auftraggeber") && <TableHead className="w-[60px]">Aktionen</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Keine Messaufträge gefunden</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Messaufträge gefunden</TableCell></TableRow>
               ) : (
                 filtered.map((o: any) => (
-                  <TableRow key={o.id} className="cursor-pointer" onClick={() => {}}>
+                  <TableRow key={o.id}>
                     <TableCell>
                       <Link to={`/auftraege/${o.id}`} className="font-medium text-primary hover:underline">
                         {o.projects?.project_number}
@@ -95,6 +114,33 @@ export default function OrdersPage() {
                     <TableCell><StatusBadge status={o.status} /></TableCell>
                     <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString("de-DE") : "–"}</TableCell>
                     <TableCell>{new Date(o.created_at).toLocaleDateString("de-DE")}</TableCell>
+                    {(role === "master" || role === "auftraggeber") && (
+                      <TableCell>
+                        {canDelete(o) && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Messauftrag löschen?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Dieser Messauftrag und alle zugehörigen Messungen werden unwiderruflich gelöscht.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Löschen
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
