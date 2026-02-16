@@ -155,7 +155,7 @@ export default function OrderDetailPage() {
                 return (
                   <TableRow key={m.id}>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
-                    <TableCell>{m.workstations?.name || <span className="text-muted-foreground">–</span>}</TableCell>
+                    <TableCell>{m.workstations?.name ? <span className="cursor-pointer text-primary hover:underline" onClick={() => navigate("/admin/arbeitsplaetze")}>{m.workstations.name}</span> : <span className="text-muted-foreground">–</span>}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</Badge>
                     </TableCell>
