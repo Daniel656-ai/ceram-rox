@@ -47,7 +47,7 @@ export default function CreateOrderPage() {
   const addService = (serviceId: string) => {
     const svc = services.find(s => s.id === serviceId);
     if (!svc || measurements.some(m => m.service_id === serviceId)) return;
-    setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, priority: 0, workstation_id: "" }]);
+    setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, priority: 0, workstation_id: svc.workstation_id || "" }]);
   };
 
   const removeMeasurement = (idx: number) => {
