@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import type { OrderType } from "@/lib/types";
+import type { OrderType, OrderPriority } from "@/lib/types";
 
 export function useOrders() {
   const { user } = useAuth();
@@ -38,7 +38,7 @@ export function useOrderDetail(orderId: string | undefined) {
 export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (order: { project_id: string; order_type: OrderType; created_by: string; due_date?: string; notes?: string }) => {
+    mutationFn: async (order: { project_id: string; order_type: OrderType; created_by: string; due_date?: string; notes?: string; priority?: OrderPriority }) => {
       const { data, error } = await supabase.from("measurement_orders").insert(order).select().single();
       if (error) throw error;
       return data;
@@ -64,7 +64,7 @@ export function useUpdateOrderStatus() {
 export function useUpdateOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...fields }: { id: string; order_type?: OrderType; due_date?: string | null; notes?: string | null }) => {
+    mutationFn: async ({ id, ...fields }: { id: string; order_type?: OrderType; due_date?: string | null; notes?: string | null; priority?: OrderPriority }) => {
       const { error } = await supabase.from("measurement_orders").update(fields as any).eq("id", id);
       if (error) throw error;
     },
@@ -83,5 +83,21 @@ export function useDeleteOrder() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
+  });
+}
+
+export function useOrderAuditLog(orderId: string | undefined) {
+  return useQuery({
+    queryKey: ["order-audit-log", orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_audit_log")
+        .select("*")
+        .eq("order_id", orderId!)
+        .order("changed_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orderId,
   });
 }

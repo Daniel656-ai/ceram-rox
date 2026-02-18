@@ -60,6 +60,7 @@ export type Database = {
           id: string
           notes: string | null
           order_type: Database["public"]["Enums"]["order_type"]
+          priority: Database["public"]["Enums"]["order_priority"]
           project_id: string
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
@@ -71,6 +72,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_type: Database["public"]["Enums"]["order_type"]
+          priority?: Database["public"]["Enums"]["order_priority"]
           project_id: string
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
@@ -82,6 +84,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_type?: Database["public"]["Enums"]["order_type"]
+          priority?: Database["public"]["Enums"]["order_priority"]
           project_id?: string
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
@@ -168,6 +171,44 @@ export type Database = {
             columns: ["workstation_id"]
             isOneToOne: false
             referencedRelation: "workstations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          order_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_audit_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -500,6 +541,7 @@ export type Database = {
     Enums: {
       app_role: "master" | "auftraggeber" | "durchfuehrer"
       measurement_status: "open" | "in_progress" | "completed"
+      order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
       service_category: "labor" | "pilot_plant"
@@ -633,6 +675,7 @@ export const Constants = {
     Enums: {
       app_role: ["master", "auftraggeber", "durchfuehrer"],
       measurement_status: ["open", "in_progress", "completed"],
+      order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
       service_category: ["labor", "pilot_plant"],

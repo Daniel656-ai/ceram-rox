@@ -15,6 +15,7 @@ export type OrderType = Database["public"]["Enums"]["order_type"];
 export type MeasurementStatus = Database["public"]["Enums"]["measurement_status"];
 export type OrderStatus = Database["public"]["Enums"]["order_status"];
 export type ServiceCategory = Database["public"]["Enums"]["service_category"];
+export type OrderPriority = Database["public"]["Enums"]["order_priority"];
 
 export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
   customer: "Kundenauftrag",
@@ -37,4 +38,10 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 export const CATEGORY_LABELS: Record<ServiceCategory, string> = {
   labor: "Labor",
   pilot_plant: "Pilot Plant",
+};
+
+export const ORDER_PRIORITY_LABELS: Record<OrderPriority, string> = {
+  normal: "Normal",
+  wichtig: "Wichtig",
+  hoechste: "Höchste",
 };

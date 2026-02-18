@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder } from "@/hooks/useOrders";
+import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog } from "@/hooks/useOrders";
 import { useUpdateMeasurementStatus, useAddWorkLog } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ORDER_TYPE_LABELS, CATEGORY_LABELS } from "@/lib/types";
+import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -24,6 +24,7 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { data: order, isLoading } = useOrderDetail(id);
+  const { data: auditLogs = [] } = useOrderAuditLog(id);
   const updateMeasurementStatus = useUpdateMeasurementStatus();
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
@@ -37,6 +38,7 @@ export default function OrderDetailPage() {
   // Edit dialog state
   const [editOpen, setEditOpen] = useState(false);
   const [editOrderType, setEditOrderType] = useState("");
+  const [editPriority, setEditPriority] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
@@ -44,6 +46,7 @@ export default function OrderDetailPage() {
   if (!order) return <p className="text-muted-foreground">Auftrag nicht gefunden.</p>;
 
   const canEditDelete = role === "master" || (role === "auftraggeber" && (order as any).created_by === user?.id && order.status === "open");
+  const canEditPriority = role === "master" || (order as any).created_by === user?.id;
 
   const measurements = (order as any).order_measurements || [];
   const totalPlanned = measurements.reduce((s: number, m: any) => s + (parseFloat(m.planned_hours) || 0), 0);
@@ -99,6 +102,7 @@ export default function OrderDetailPage() {
 
   const openEditDialog = () => {
     setEditOrderType((order as any).order_type);
+    setEditPriority((order as any).priority || "normal");
     setEditDueDate((order as any).due_date || "");
     setEditNotes((order as any).notes || "");
     setEditOpen(true);
@@ -109,6 +113,7 @@ export default function OrderDetailPage() {
       await updateOrder.mutateAsync({
         id: order.id,
         order_type: editOrderType as any,
+        priority: editPriority as any,
         due_date: editDueDate || null,
         notes: editNotes || null,
       });
@@ -143,8 +148,11 @@ export default function OrderDetailPage() {
             {ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]} · Erstellt am {new Date(order.created_at).toLocaleDateString("de-DE")}
           </p>
         </div>
+        <Badge variant={(order as any).priority === "hoechste" ? "destructive" : (order as any).priority === "wichtig" ? "default" : "secondary"}>
+          {ORDER_PRIORITY_LABELS[(order as any).priority as keyof typeof ORDER_PRIORITY_LABELS] || "Normal"}
+        </Badge>
         <StatusBadge status={order.status} />
-        {canEditDelete && (
+        {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={openEditDialog}>
               <Pencil className="h-4 w-4 mr-1" /> Bearbeiten
@@ -302,26 +310,70 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Audit Log */}
+      {auditLogs.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Änderungsverlauf</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Datum</TableHead>
+                  <TableHead>Feld</TableHead>
+                  <TableHead>Alt</TableHead>
+                  <TableHead>Neu</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {auditLogs.map((log: any) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{new Date(log.changed_at).toLocaleString("de-DE")}</TableCell>
+                    <TableCell>{log.field_name === "priority" ? "Priorität" : log.field_name}</TableCell>
+                    <TableCell>{ORDER_PRIORITY_LABELS[log.old_value as keyof typeof ORDER_PRIORITY_LABELS] || log.old_value}</TableCell>
+                    <TableCell>{ORDER_PRIORITY_LABELS[log.new_value as keyof typeof ORDER_PRIORITY_LABELS] || log.new_value}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Edit Order Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Auftrag bearbeiten</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            {canEditDelete && (
+              <div>
+                <Label>Auftragstyp</Label>
+                <Select value={editOrderType} onValueChange={setEditOrderType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ORDER_TYPE_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
-              <Label>Auftragstyp</Label>
-              <Select value={editOrderType} onValueChange={setEditOrderType}>
+              <Label>Priorität</Label>
+              <Select value={editPriority} onValueChange={setEditPriority}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(ORDER_TYPE_LABELS).map(([k, v]) => (
+                  {Object.entries(ORDER_PRIORITY_LABELS).map(([k, v]) => (
                     <SelectItem key={k} value={k}>{v}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Fälligkeitsdatum</Label>
-              <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
-            </div>
+            {canEditDelete && (
+              <div>
+                <Label>Fälligkeitsdatum</Label>
+                <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
+              </div>
+            )}
             <div>
               <Label>Anmerkungen</Label>
               <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Anmerkungen zum Auftrag" rows={3} />
