@@ -33,11 +33,11 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
   const canCreate = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
   const filteredSamples = useMemo(() => {
-    if (projectId) return samples.filter(s => s.project_id === projectId);
+    if (projectId) return samples.filter((s) => s.project_id === projectId);
     return samples;
   }, [samples, projectId]);
 
-  const selected = samples.find(s => s.id === value);
+  const selected = samples.find((s) => s.id === value);
 
   const handleCreate = async () => {
     if (!form.sample_name.trim() || !form.project_id || !form.description.trim()) {
@@ -65,9 +65,7 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
-            {selected
-              ? `${selected.sample_number} – ${selected.sample_name}`
-              : "Probe auswählen..."}
+            {selected ? `${selected.sample_number} – ${selected.sample_name}` : "Probe auswählen..."}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -77,18 +75,22 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
             <CommandList>
               <CommandEmpty>Keine Proben gefunden.</CommandEmpty>
               <CommandGroup>
-                {filteredSamples.map(s => {
+                {filteredSamples.map((s) => {
                   const proj = (s as any).projects;
                   return (
                     <CommandItem
                       key={s.id}
                       value={`${s.sample_number} ${s.sample_name} ${proj?.project_number || ""}`}
-                      onSelect={() => { onSelect(s.id); setOpen(false); }}
+                      onSelect={() => {
+                        onSelect(s.id);
+                        setOpen(false);
+                      }}
                     >
                       <Check className={cn("mr-2 h-4 w-4", value === s.id ? "opacity-100" : "opacity-0")} />
                       <div className="flex flex-col">
-                        <span className="font-medium">{s.sample_number} – {s.sample_name}</span>
-                        <span className="text-xs text-muted-foreground">Projekt: {proj?.project_number || "–"}</span>
+                        <span className="font-medium">
+                          {s.sample_number} – {s.sample_name}
+                        </span>
                       </div>
                     </CommandItem>
                   );
@@ -99,7 +101,7 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
                   <CommandItem
                     onSelect={() => {
                       setOpen(false);
-                      setForm(f => ({ ...f, project_id: projectId || "" }));
+                      setForm((f) => ({ ...f, project_id: projectId || "" }));
                       setDialogOpen(true);
                     }}
                   >
@@ -115,20 +117,29 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Neue Probe erstellen</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Neue Probe erstellen</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-2">
               <Label>Probenname *</Label>
-              <Input value={form.sample_name} onChange={e => setForm(f => ({ ...f, sample_name: e.target.value }))} placeholder="Name der Probe" />
+              <Input
+                value={form.sample_name}
+                onChange={(e) => setForm((f) => ({ ...f, sample_name: e.target.value }))}
+                placeholder="Name der Probe"
+              />
             </div>
             <div className="space-y-2">
               <Label>Projekt *</Label>
-              <Select value={form.project_id} onValueChange={v => setForm(f => ({ ...f, project_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Projekt auswählen" /></SelectTrigger>
+              <Select value={form.project_id} onValueChange={(v) => setForm((f) => ({ ...f, project_id: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Projekt auswählen" />
+                </SelectTrigger>
                 <SelectContent>
-                  {projects.map(p => (
+                  {projects.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.project_number}{p.project_name ? ` – ${p.project_name}` : ""}
+                      {p.project_number}
+                      {p.project_name ? ` – ${p.project_name}` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -136,7 +147,12 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
             </div>
             <div className="space-y-2">
               <Label>Beschreibung *</Label>
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Beschreibung der Probe" rows={3} />
+              <Textarea
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Beschreibung der Probe"
+                rows={3}
+              />
             </div>
             <p className="text-xs text-muted-foreground">Die Probennummer wird automatisch vergeben.</p>
             <Button className="w-full" onClick={handleCreate} disabled={createSample.isPending}>
