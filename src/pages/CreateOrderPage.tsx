@@ -133,15 +133,7 @@ export default function CreateOrderPage() {
         {/* Projekt */}
         <Card>
           <CardHeader><CardTitle className="text-base">Projekt</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4">
-              <Button type="button" variant={projectMode === "existing" ? "default" : "outline"} size="sm" onClick={() => setProjectMode("existing")}>
-                Bestehendes Projekt
-              </Button>
-              <Button type="button" variant={projectMode === "new" ? "default" : "outline"} size="sm" onClick={() => setProjectMode("new")}>
-                Neues Projekt
-              </Button>
-            </div>
+           <CardContent className="space-y-4">
             {projectMode === "existing" ?
             <div>
                 <Label>Projekt auswählen</Label>
