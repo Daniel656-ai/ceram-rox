@@ -1,59 +1,81 @@
 
 
-## Messauftraege bearbeiten und loeschen
+## Prioritaet als Pflichtfeld fuer Messauftraege
 
 ### Uebersicht
-Bearbeitungs- und Loeschfunktionen fuer Messauftraege mit rollenabhaengiger Berechtigung:
-- **Master**: Kann alle Messauftraege bearbeiten und loeschen, unabhaengig vom Status
-- **Auftraggeber**: Kann nur eigene Messauftraege mit Status "Offen" bearbeiten oder loeschen
+Ein neues Pflichtfeld "Prioritaet" wird auf Auftragsebene (`measurement_orders`) eingefuehrt -- nicht zu verwechseln mit der bestehenden Messungs-Prioritaet auf `order_measurements`. Aenderungen werden in einer neuen Audit-Log-Tabelle protokolliert.
 
-### Aenderungen
+### 1. Datenbank-Migration
 
-**1. Datenbank-Migration: DELETE-Policy fuer `measurement_orders`**
-
-Aktuell fehlt eine DELETE-Policy. Neue Policy:
-
+**Neuer Enum-Typ:**
 ```sql
-CREATE POLICY "Users delete relevant orders"
-ON public.measurement_orders
-FOR DELETE
-USING (
-  has_role(auth.uid(), 'master'::app_role)
-  OR (created_by = auth.uid() AND status = 'open'::order_status)
-);
+CREATE TYPE public.order_priority AS ENUM ('normal', 'wichtig', 'hoechste');
 ```
 
-Die bestehende UPDATE-Policy erlaubt bereits Updates fuer Creator und Master. Die Status-Einschraenkung fuer Auftraggeber wird im Frontend durchgesetzt (Backend erlaubt Update fuer Creator generell, was fuer Statusuebergaenge noetig ist).
+**Neue Spalte auf `measurement_orders`:**
+```sql
+ALTER TABLE public.measurement_orders
+  ADD COLUMN priority order_priority NOT NULL DEFAULT 'normal';
+```
 
-**2. Neuer Hook: `useDeleteOrder` in `src/hooks/useOrders.ts`**
+**Neue Tabelle `order_audit_log`:**
 
-Mutation die `supabase.from("measurement_orders").delete().eq("id", id)` ausfuehrt und die Query-Caches invalidiert.
+| Spalte | Typ | Beschreibung |
+|--------|-----|-------------|
+| id | uuid (PK) | Eindeutige ID |
+| order_id | uuid (FK) | Verweis auf measurement_orders |
+| changed_by | uuid | User-ID des Aendernden |
+| changed_at | timestamptz | Zeitpunkt der Aenderung |
+| field_name | text | Geaendertes Feld (z.B. 'priority') |
+| old_value | text | Alter Wert |
+| new_value | text | Neuer Wert |
 
-**3. Neuer Hook: `useUpdateOrder` in `src/hooks/useOrders.ts`**
+RLS-Policies fuer `order_audit_log`:
+- SELECT: Master sehen alles; Auftraggeber sehen Logs eigener Auftraege; Durchfuehrer sehen Logs zugewiesener Auftraege
+- INSERT: Nur ueber Trigger (kein direkter Client-Insert noetig, aber Policy fuer authentifizierte User mit `changed_by = auth.uid()`)
 
-Mutation die `notes`, `due_date` und `order_type` eines Auftrags aktualisiert.
+**Datenbank-Trigger `log_order_priority_change`:**
+Ein `BEFORE UPDATE`-Trigger auf `measurement_orders`, der bei Aenderung von `priority` automatisch einen Eintrag in `order_audit_log` schreibt.
 
-**4. UI in `src/pages/OrdersPage.tsx` -- Loeschen-Button pro Zeile**
+### 2. Typ-Definitionen (`src/lib/types.ts`)
 
-- Neue Spalte "Aktionen" in der Tabelle
-- Loeschen-Button (Papierkorb-Icon) mit Bestaetigung ueber AlertDialog
-- Sichtbarkeitslogik:
-  - Master: immer sichtbar
-  - Auftraggeber: nur wenn `o.status === "open"` und `o.created_by === user.id`
-  - Durchfuehrer: kein Loeschen-Button
+Neuer Export:
+```typescript
+export type OrderPriority = Database["public"]["Enums"]["order_priority"];
 
-**5. UI in `src/pages/OrderDetailPage.tsx` -- Bearbeiten und Loeschen im Header**
+export const ORDER_PRIORITY_LABELS: Record<OrderPriority, string> = {
+  normal: "Normal",
+  wichtig: "Wichtig",
+  hoechste: "Höchste",
+};
+```
 
-- "Bearbeiten"-Button oeffnet Dialog mit Formular fuer Auftragstyp, Faelligkeitsdatum und Anmerkungen
-- "Loeschen"-Button mit AlertDialog-Bestaetigung, navigiert nach Loeschung zurueck zur Uebersicht
-- Sichtbarkeitslogik wie bei der Uebersicht:
-  - Master: beide Buttons immer sichtbar
-  - Auftraggeber: nur bei Status "Offen" und eigenem Auftrag
-  - Durchfuehrer: keine Buttons
+### 3. Hooks (`src/hooks/useOrders.ts`)
+
+- `useUpdateOrder`: Feld `priority` als optionalen Parameter aufnehmen
+- Neuer Hook `useOrderAuditLog(orderId)`: Laedt die Audit-Log-Eintraege fuer einen Auftrag
+
+### 4. Auftragserstellung (`src/pages/CreateOrderPage.tsx`)
+
+- Neuer State `priority` mit Standardwert `"normal"`
+- Neues Auswahlfeld (Select-Dropdown) im Abschnitt "Auftragsdetails" mit den drei Optionen: Hoechste, Wichtig, Normal
+- Der Wert wird beim `createOrder.mutateAsync`-Aufruf mitgegeben
+
+### 5. Auftragsdetailseite (`src/pages/OrderDetailPage.tsx`)
+
+- Prioritaet im Header anzeigen (als Badge neben dem Status)
+- Im Bearbeiten-Dialog: Prioritaets-Dropdown hinzufuegen
+- Berechtigungslogik: Prioritaetsaenderung nur fuer Master oder Ersteller (unabhaengig vom Status, da die Anforderung sich nur auf die Prioritaet bezieht -- die bestehende canEditDelete-Logik bleibt fuer andere Felder bestehen)
+- Neuer Abschnitt "Aenderungsverlauf" am Ende der Seite mit Tabelle der Audit-Log-Eintraege (Datum, Benutzer, altes/neues Feld)
+
+### 6. Auftragsuebersicht (`src/pages/OrdersPage.tsx`)
+
+- Neue Spalte "Prioritaet" in der Tabelle mit farbigem Badge
 
 ### Betroffene Dateien
-- Datenbank-Migration (neue DELETE-Policy)
-- `src/hooks/useOrders.ts` -- neue Hooks `useDeleteOrder` und `useUpdateOrder`
-- `src/pages/OrdersPage.tsx` -- Aktionen-Spalte mit Loeschen
-- `src/pages/OrderDetailPage.tsx` -- Bearbeiten-Dialog und Loeschen im Header
-
+- Datenbank-Migration (Enum, Spalte, Audit-Tabelle, Trigger, RLS)
+- `src/lib/types.ts` -- neuer Typ und Labels
+- `src/hooks/useOrders.ts` -- Update-Hook erweitern, neuer Audit-Log-Hook
+- `src/pages/CreateOrderPage.tsx` -- Prioritaets-Dropdown
+- `src/pages/OrderDetailPage.tsx` -- Anzeige, Bearbeitung, Aenderungsverlauf
+- `src/pages/OrdersPage.tsx` -- Prioritaets-Spalte
