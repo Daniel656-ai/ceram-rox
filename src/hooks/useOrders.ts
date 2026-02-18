@@ -38,7 +38,7 @@ export function useOrderDetail(orderId: string | undefined) {
 export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (order: { project_id: string; order_type: OrderType; created_by: string; due_date?: string; notes?: string; priority?: OrderPriority }) => {
+    mutationFn: async (order: { project_id: string; order_type: OrderType; created_by: string; due_date?: string; notes?: string; priority?: OrderPriority; sample_id?: string }) => {
       const { data, error } = await supabase.from("measurement_orders").insert(order).select().single();
       if (error) throw error;
       return data;
