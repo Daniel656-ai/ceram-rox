@@ -1,6 +1,7 @@
 import { useOrders, useDeleteOrder } from "@/hooks/useOrders";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ORDER_TYPE_LABELS } from "@/lib/types";
+import { ORDER_TYPE_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -90,6 +91,7 @@ export default function OrdersPage() {
                 <TableHead>Projekt-Nr.</TableHead>
                 <TableHead>Projektname</TableHead>
                 <TableHead>Auftragstyp</TableHead>
+                <TableHead>Priorität</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Fälligkeit</TableHead>
                 <TableHead>Erstellt</TableHead>
@@ -98,9 +100,9 @@ export default function OrdersPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Messaufträge gefunden</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Keine Messaufträge gefunden</TableCell></TableRow>
               ) : (
                 filtered.map((o: any) => (
                   <TableRow key={o.id}>
@@ -111,6 +113,11 @@ export default function OrdersPage() {
                     </TableCell>
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
                     <TableCell>{ORDER_TYPE_LABELS[o.order_type as keyof typeof ORDER_TYPE_LABELS]}</TableCell>
+                    <TableCell>
+                      <Badge variant={o.priority === "hoechste" ? "destructive" : o.priority === "wichtig" ? "default" : "secondary"}>
+                        {ORDER_PRIORITY_LABELS[o.priority as keyof typeof ORDER_PRIORITY_LABELS] || "Normal"}
+                      </Badge>
+                    </TableCell>
                     <TableCell><StatusBadge status={o.status} /></TableCell>
                     <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString("de-DE") : "–"}</TableCell>
                     <TableCell>{new Date(o.created_at).toLocaleDateString("de-DE")}</TableCell>

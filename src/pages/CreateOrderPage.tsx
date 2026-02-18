@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ORDER_TYPE_LABELS, CATEGORY_LABELS } from "@/lib/types";
+import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 
@@ -39,6 +39,7 @@ export default function CreateOrderPage() {
   const [newProjectNumber, setNewProjectNumber] = useState("");
   const [newProjectName, setNewProjectName] = useState("");
   const [orderType, setOrderType] = useState<string>("");
+  const [priority, setPriority] = useState<string>("normal");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
@@ -87,6 +88,7 @@ export default function CreateOrderPage() {
         created_by: user.id,
         due_date: dueDate || undefined,
         notes: notes || undefined,
+        priority: priority as any,
       });
 
       await Promise.all(measurements.map(m =>
@@ -183,9 +185,20 @@ export default function CreateOrderPage() {
                 </Select>
               </div>
               <div>
-                <Label>Fälligkeitsdatum</Label>
-                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                <Label>Priorität *</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ORDER_PRIORITY_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div>
+              <Label>Fälligkeitsdatum</Label>
+              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
             </div>
             <div>
               <Label>Anmerkungen</Label>
