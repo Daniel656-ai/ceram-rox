@@ -337,6 +337,47 @@ export type Database = {
         }
         Relationships: []
       }
+      samples: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          project_id: string
+          sample_name: string
+          sample_number: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          project_id: string
+          sample_name: string
+          sample_number: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          project_id?: string
+          sample_name?: string
+          sample_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "samples_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_parameter_definitions: {
         Row: {
           default_value: string | null

@@ -17,6 +17,7 @@ import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminServicesPage from "./pages/AdminServicesPage";
 import AdminStatsPage from "./pages/AdminStatsPage";
 import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
+import SamplesPage from "./pages/SamplesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/auftraege/neu" element={<CreateOrderPage />} />
               <Route path="/auftraege/:id" element={<OrderDetailPage />} />
               <Route path="/projekte" element={<ProjectsPage />} />
+              <Route path="/proben" element={<SamplesPage />} />
               <Route path="/arbeitsplanung" element={<WorkPlanPage />} />
               <Route path="/admin/benutzer" element={<AdminUsersPage />} />
               <Route path="/admin/messdienstleistungen" element={<AdminServicesPage />} />
