@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import SampleSelector from "@/components/SampleSelector";
 
 interface SelectedMeasurement {
   service_id: string;
@@ -43,6 +44,7 @@ export default function CreateOrderPage() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
+  const [selectedSampleId, setSelectedSampleId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const addService = (serviceId: string) => {
@@ -61,8 +63,8 @@ export default function CreateOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !orderType || measurements.length === 0) {
-      toast.error("Bitte füllen Sie alle Pflichtfelder aus und fügen mindestens eine Messung hinzu.");
+    if (!user || !orderType || measurements.length === 0 || !selectedSampleId) {
+      toast.error("Bitte füllen Sie alle Pflichtfelder aus, wählen eine Probe und fügen mindestens eine Messung hinzu.");
       return;
     }
 
@@ -88,7 +90,8 @@ export default function CreateOrderPage() {
         created_by: user.id,
         due_date: dueDate || undefined,
         notes: notes || undefined,
-        priority: priority as any
+        priority: priority as any,
+        sample_id: selectedSampleId,
       });
 
       await Promise.all(measurements.map((m) =>
@@ -204,6 +207,18 @@ export default function CreateOrderPage() {
               <Label>Anmerkungen</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optionale Anmerkungen zum Auftrag" rows={3} />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Probe */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">Probe *</CardTitle></CardHeader>
+          <CardContent>
+            <SampleSelector
+              value={selectedSampleId}
+              onSelect={setSelectedSampleId}
+              projectId={projectMode === "existing" ? selectedProjectId : undefined}
+            />
           </CardContent>
         </Card>
 

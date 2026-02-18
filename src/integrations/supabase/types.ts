@@ -62,6 +62,7 @@ export type Database = {
           order_type: Database["public"]["Enums"]["order_type"]
           priority: Database["public"]["Enums"]["order_priority"]
           project_id: string
+          sample_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
         }
@@ -74,6 +75,7 @@ export type Database = {
           order_type: Database["public"]["Enums"]["order_type"]
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id: string
+          sample_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
         }
@@ -86,6 +88,7 @@ export type Database = {
           order_type?: Database["public"]["Enums"]["order_type"]
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id?: string
+          sample_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
         }
@@ -95,6 +98,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_orders_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
             referencedColumns: ["id"]
           },
         ]
