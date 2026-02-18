@@ -171,6 +171,18 @@ export default function CreateOrderPage() {
           </CardContent>
         </Card>
 
+        {/* Probe */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">Probe *</CardTitle></CardHeader>
+          <CardContent>
+            <SampleSelector
+              value={selectedSampleId}
+              onSelect={setSelectedSampleId}
+              projectId={projectMode === "existing" ? selectedProjectId : undefined}
+            />
+          </CardContent>
+        </Card>
+
         {/* Auftragsdetails */}
         <Card>
           <CardHeader><CardTitle className="text-base">Auftragsdetails</CardTitle></CardHeader>
@@ -207,18 +219,6 @@ export default function CreateOrderPage() {
               <Label>Anmerkungen</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optionale Anmerkungen zum Auftrag" rows={3} />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Probe */}
-        <Card>
-          <CardHeader><CardTitle className="text-base">Probe *</CardTitle></CardHeader>
-          <CardContent>
-            <SampleSelector
-              value={selectedSampleId}
-              onSelect={setSelectedSampleId}
-              projectId={projectMode === "existing" ? selectedProjectId : undefined}
-            />
           </CardContent>
         </Card>
 
