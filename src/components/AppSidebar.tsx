@@ -9,6 +9,7 @@ import {
   BarChart3,
   CalendarDays,
   Building2,
+  FlaskConical,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,12 +32,14 @@ const auftraggeberItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Messaufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
+  { title: "Proben", url: "/proben", icon: FlaskConical },
 ];
 
 const masterItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Alle Messaufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
+  { title: "Proben", url: "/proben", icon: FlaskConical },
 ];
 
 const masterAdminItems = [
@@ -50,6 +53,7 @@ const durchfuehrerItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Arbeitsplanung", url: "/arbeitsplanung", icon: CalendarDays },
   { title: "Meine Aufträge", url: "/auftraege", icon: ClipboardList },
+  { title: "Proben", url: "/proben", icon: FlaskConical },
 ];
 
 export function AppSidebar() {
