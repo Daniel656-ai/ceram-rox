@@ -9,7 +9,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -55,9 +55,14 @@ export default function OrdersPage() {
           <p className="text-muted-foreground">Übersicht und Verwaltung Ihrer Messaufträge</p>
         </div>
         {(role === "auftraggeber" || role === "master") && (
-          <Link to="/auftraege/neu">
-            <Button><Plus className="h-4 w-4 mr-2" />Neuer Messauftrag</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link to="/auftraege/neu">
+              <Button><Plus className="h-4 w-4 mr-2" />Neuer Messauftrag</Button>
+            </Link>
+            <Link to="/auftraege/import">
+              <Button variant="outline"><FileSpreadsheet className="h-4 w-4 mr-2" />Excel-Import</Button>
+            </Link>
+          </div>
         )}
       </div>
 

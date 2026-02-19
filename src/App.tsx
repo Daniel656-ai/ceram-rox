@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import OrdersPage from "./pages/OrdersPage";
 import CreateOrderPage from "./pages/CreateOrderPage";
+import ImportOrderPage from "./pages/ImportOrderPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import WorkPlanPage from "./pages/WorkPlanPage";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/auftraege" element={<OrdersPage />} />
               <Route path="/auftraege/neu" element={<CreateOrderPage />} />
+              <Route path="/auftraege/import" element={<ImportOrderPage />} />
               <Route path="/auftraege/:id" element={<OrderDetailPage />} />
               <Route path="/projekte" element={<ProjectsPage />} />
               <Route path="/proben" element={<SamplesPage />} />
