@@ -68,6 +68,7 @@ export function useCreateUser() {
       firstName: string;
       lastName: string;
       role: string;
+      shortCode: string;
     }) => callAdminUsers({ action: "create", ...params }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
@@ -84,7 +85,7 @@ export function useDeleteUser() {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { userId: string; firstName: string; lastName: string }) =>
+    mutationFn: async (params: { userId: string; firstName: string; lastName: string; shortCode: string }) =>
       callAdminUsers({ action: "update", ...params }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });

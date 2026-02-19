@@ -38,10 +38,12 @@ export default function AdminUsersPage() {
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
   const [newRole, setNewRole] = useState("auftraggeber");
+  const [newShortCode, setNewShortCode] = useState("");
 
   // Edit form state
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
+  const [editShortCode, setEditShortCode] = useState("");
 
   const resetCreateForm = () => {
     setNewEmail("");
@@ -49,11 +51,16 @@ export default function AdminUsersPage() {
     setNewFirstName("");
     setNewLastName("");
     setNewRole("auftraggeber");
+    setNewShortCode("");
   };
 
   const handleCreate = async () => {
     if (!newEmail || !newPassword) {
       toast.error("E-Mail und Passwort sind Pflichtfelder");
+      return;
+    }
+    if (!newShortCode || newShortCode.length !== 3) {
+      toast.error("Kurzzeichen muss genau 3 Zeichen lang sein");
       return;
     }
     try {
@@ -63,6 +70,7 @@ export default function AdminUsersPage() {
         firstName: newFirstName,
         lastName: newLastName,
         role: newRole,
+        shortCode: newShortCode.toUpperCase(),
       });
       toast.success("Benutzer erstellt");
       setCreateOpen(false);
@@ -74,11 +82,16 @@ export default function AdminUsersPage() {
 
   const handleEdit = async () => {
     if (!editUser) return;
+    if (!editShortCode || editShortCode.length !== 3) {
+      toast.error("Kurzzeichen muss genau 3 Zeichen lang sein");
+      return;
+    }
     try {
       await updateProfile.mutateAsync({
         userId: editUser.user_id,
         firstName: editFirstName,
         lastName: editLastName,
+        shortCode: editShortCode.toUpperCase(),
       });
       toast.success("Benutzer aktualisiert");
       setEditUser(null);
@@ -119,6 +132,7 @@ export default function AdminUsersPage() {
   const openEdit = (u: any) => {
     setEditFirstName(u.first_name || "");
     setEditLastName(u.last_name || "");
+    setEditShortCode(u.short_code || "");
     setEditUser(u);
   };
 
@@ -141,6 +155,7 @@ export default function AdminUsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Kurzzeichen</TableHead>
                 <TableHead>Rolle</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Erstellt</TableHead>
@@ -149,9 +164,9 @@ export default function AdminUsersPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">Laden...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8">Laden...</TableCell></TableRow>
               ) : users.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">Keine Benutzer gefunden</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8">Keine Benutzer gefunden</TableCell></TableRow>
               ) : (
                 users.map((u: any) => {
                   const role = u.user_roles?.[0]?.role || "auftraggeber";
@@ -160,6 +175,9 @@ export default function AdminUsersPage() {
                     <TableRow key={u.id}>
                       <TableCell>
                         <p className="font-medium">{u.first_name} {u.last_name}</p>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">{u.short_code || "–"}</span>
                       </TableCell>
                       <TableCell>
                         <Select value={role} onValueChange={v => handleRoleChange(u.user_id, v)}>
@@ -226,6 +244,10 @@ export default function AdminUsersPage() {
               <Input id="password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="shortCode">Kurzzeichen * (3 Zeichen)</Label>
+              <Input id="shortCode" value={newShortCode} onChange={e => setNewShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder="z.B. ABC" />
+            </div>
+            <div className="space-y-2">
               <Label>Rolle</Label>
               <Select value={newRole} onValueChange={setNewRole}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -263,6 +285,10 @@ export default function AdminUsersPage() {
                 <Label>Nachname</Label>
                 <Input value={editLastName} onChange={e => setEditLastName(e.target.value)} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Kurzzeichen * (3 Zeichen)</Label>
+              <Input value={editShortCode} onChange={e => setEditShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder="z.B. ABC" />
             </div>
           </div>
           <DialogFooter>

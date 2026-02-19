@@ -23,6 +23,7 @@ export default function OrdersPage() {
 
   const filtered = orders.filter((o: any) => {
     const matchesSearch = !search ||
+      o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
       o.projects?.project_number?.toLowerCase().includes(search.toLowerCase()) ||
       o.projects?.project_name?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || o.status === statusFilter;
@@ -88,6 +89,7 @@ export default function OrdersPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Auftrags-Nr.</TableHead>
                 <TableHead>Projekt-Nr.</TableHead>
                 <TableHead>Projektname</TableHead>
                 <TableHead>Auftragstyp</TableHead>
@@ -107,9 +109,12 @@ export default function OrdersPage() {
                 filtered.map((o: any) => (
                   <TableRow key={o.id}>
                     <TableCell>
-                      <Link to={`/auftraege/${o.id}`} className="font-medium text-primary hover:underline">
-                        {o.projects?.project_number}
+                      <Link to={`/auftraege/${o.id}`} className="font-mono font-medium text-primary hover:underline">
+                        {o.order_number || "–"}
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      {o.projects?.project_number}
                     </TableCell>
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
                     <TableCell>{ORDER_TYPE_LABELS[o.order_type as keyof typeof ORDER_TYPE_LABELS]}</TableCell>

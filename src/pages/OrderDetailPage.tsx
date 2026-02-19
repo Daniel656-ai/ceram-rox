@@ -143,10 +143,10 @@ export default function OrderDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">
-            Auftrag: {(order as any).projects?.project_number}
+            Auftrag: {(order as any).order_number || (order as any).projects?.project_number}
           </h1>
           <p className="text-muted-foreground">
-            {ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]} · Erstellt am {new Date(order.created_at).toLocaleDateString("de-DE")}
+            {(order as any).order_number ? `Projekt: ${(order as any).projects?.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]} · Erstellt am {new Date(order.created_at).toLocaleDateString("de-DE")}
           </p>
         </div>
         <Badge variant={(order as any).priority === "hoechste" ? "destructive" : (order as any).priority === "wichtig" ? "default" : "secondary"}>
