@@ -588,6 +588,10 @@ export type Database = {
         Args: { _measurement_id: string; _user_id: string }
         Returns: boolean
       }
+      priority_enum_to_int: {
+        Args: { p: Database["public"]["Enums"]["order_priority"] }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "master" | "auftraggeber" | "durchfuehrer"
