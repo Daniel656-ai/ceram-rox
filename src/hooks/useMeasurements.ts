@@ -110,6 +110,42 @@ export function useUpdateService() {
   });
 }
 
+export function useDurchfuehrer() {
+  return useQuery({
+    queryKey: ["durchfuehrer-users"],
+    queryFn: async () => {
+      const { data: roles, error: rolesErr } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["durchfuehrer", "master"]);
+      if (rolesErr) throw rolesErr;
+      const userIds = (roles || []).map((r: any) => r.user_id);
+      if (userIds.length === 0) return [];
+      const { data: profiles, error: profErr } = await supabase
+        .from("profiles")
+        .select("user_id, first_name, last_name")
+        .in("user_id", userIds)
+        .eq("is_active", true);
+      if (profErr) throw profErr;
+      return profiles || [];
+    },
+  });
+}
+
+export function useAssignMeasurement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, assigned_to }: { id: string; assigned_to: string | null }) => {
+      const { error } = await supabase.from("order_measurements").update({ assigned_to }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["order"] });
+      qc.invalidateQueries({ queryKey: ["my-measurements"] });
+    },
+  });
+}
+
 export function useCreateService() {
   const qc = useQueryClient();
   return useMutation({
