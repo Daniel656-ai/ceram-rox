@@ -14,11 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Clock, FileText, Upload, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Pencil, Trash2 } from "lucide-react";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import MeasurementDocuments from "@/components/MeasurementDocuments";
 import { toast } from "sonner";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+
 
 export default function OrderDetailPage() {
   const { id } = useParams();
@@ -87,21 +88,7 @@ export default function OrderDetailPage() {
     }
   };
 
-  const handleFileUpload = async (measurementId: string, file: File) => {
-    if (!user) return;
-    const path = `${user.id}/${measurementId}/${Date.now()}_${file.name}`;
-    const { error: uploadErr } = await supabase.storage.from("measurement-documents").upload(path, file);
-    if (uploadErr) { toast.error("Upload fehlgeschlagen", { description: uploadErr.message }); return; }
-    const { error: dbErr } = await supabase.from("documents").insert({
-      order_measurement_id: measurementId,
-      file_name: file.name,
-      file_type: file.type,
-      storage_path: path,
-      uploaded_by: user.id,
-    });
-    if (dbErr) { toast.error("Fehler", { description: dbErr.message }); return; }
-    toast.success("Datei hochgeladen");
-  };
+  // File upload moved to MeasurementDocuments component
 
   const openEditDialog = () => {
     setEditOrderType((order as any).order_type);
@@ -284,11 +271,12 @@ export default function OrderDetailPage() {
                     <TableCell>{parseFloat(m.planned_hours || 0).toFixed(1)} / {actualHours.toFixed(1)} h</TableCell>
                     <TableCell>{m.measurement_services?.hourly_rate} €/h</TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <FileText className="h-3 w-3" />
-                        <span className="text-sm">{docs.length}</span>
-                      </div>
+                    <TableCell className="min-w-[200px]">
+                      <MeasurementDocuments
+                        measurementId={m.id}
+                        documents={docs}
+                        orderId={order.id}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -312,14 +300,6 @@ export default function OrderDetailPage() {
                             </Button>
                           </>
                         )}
-                        <label className="cursor-pointer">
-                          <input type="file" className="hidden" onChange={e => {
-                            if (e.target.files?.[0]) handleFileUpload(m.id, e.target.files[0]);
-                          }} />
-                          <Button size="sm" variant="ghost" asChild>
-                            <span><Upload className="h-3 w-3" /></span>
-                          </Button>
-                        </label>
                       </div>
                     </TableCell>
                   </TableRow>
