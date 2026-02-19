@@ -107,7 +107,10 @@ export default function WorkPlanPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <Beaker className="h-4 w-4 text-primary" />
-                    <CardTitle className="text-base">{m.measurement_services?.service_name}</CardTitle>
+                    <CardTitle className="text-base">
+                      <span className="font-mono text-xs text-muted-foreground mr-2">{m.measurement_number}</span>
+                      {m.measurement_services?.service_name}
+                    </CardTitle>
                   </div>
                   <PriorityBadge priority={m.priority} />
                 </div>

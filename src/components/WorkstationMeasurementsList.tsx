@@ -51,6 +51,7 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Mess-Nr.</TableHead>
               <TableHead>Messung</TableHead>
               <TableHead>Priorität</TableHead>
               <TableHead>Projekt</TableHead>
@@ -72,6 +73,7 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => navigate(`/orders/${order?.id}`)}
                 >
+                  <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                   <TableCell className="font-medium text-primary">
                     {service?.service_name ?? "–"}
                     {service?.category && (

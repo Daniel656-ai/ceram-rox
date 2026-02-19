@@ -219,6 +219,7 @@ export default function OrderDetailPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Mess-Nr.</TableHead>
                 <TableHead>Messung</TableHead>
                 <TableHead>Priorität</TableHead>
                 <TableHead>Arbeitsplatz</TableHead>
@@ -236,6 +237,7 @@ export default function OrderDetailPage() {
                 const docs = m.documents || [];
                 return (
                   <TableRow key={m.id}>
+                    <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
                     <TableCell><PriorityBadge priority={m.priority} /></TableCell>
                     <TableCell>{m.workstations?.name ? <span className="cursor-pointer text-primary hover:underline" onClick={() => navigate("/admin/arbeitsplaetze")}>{m.workstations.name}</span> : <span className="text-muted-foreground">–</span>}</TableCell>
