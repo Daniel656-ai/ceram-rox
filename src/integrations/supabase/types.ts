@@ -229,6 +229,7 @@ export type Database = {
           created_at: string
           due_date: string | null
           id: string
+          measurement_number: string
           order_id: string
           planned_hours: number | null
           priority: number
@@ -242,6 +243,7 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          measurement_number: string
           order_id: string
           planned_hours?: number | null
           priority?: number
@@ -255,6 +257,7 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          measurement_number?: string
           order_id?: string
           planned_hours?: number | null
           priority?: number

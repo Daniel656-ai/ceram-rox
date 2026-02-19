@@ -55,7 +55,7 @@ export function useAddOrderMeasurement() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (m: { order_id: string; service_id: string; planned_hours?: number; due_date?: string; workstation_id?: string }) => {
-      const { data, error } = await supabase.from("order_measurements").insert(m).select().single();
+      const { data, error } = await supabase.from("order_measurements").insert({ ...m, measurement_number: "WILL_BE_OVERWRITTEN" } as any).select().single();
       if (error) throw error;
       return data;
     },
