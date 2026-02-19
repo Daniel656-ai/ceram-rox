@@ -36,8 +36,17 @@ serve(async (req: Request) => {
     const { action, ...params } = await req.json();
 
     if (action === "create") {
-      const { email, password, firstName, lastName, role } = params;
+      const { email, password, firstName, lastName, role, shortCode } = params;
       if (!email || !password) throw new Error("E-Mail und Passwort erforderlich");
+      if (!shortCode || shortCode.length !== 3) throw new Error("Kurzzeichen muss genau 3 Zeichen lang sein");
+
+      // Check uniqueness of short_code
+      const { data: existing } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("short_code", shortCode.toUpperCase())
+        .maybeSingle();
+      if (existing) throw new Error("Dieses Kurzzeichen ist bereits vergeben");
 
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -49,6 +58,14 @@ serve(async (req: Request) => {
         },
       });
       if (createError) throw createError;
+
+      // Set short_code on profile
+      if (newUser.user) {
+        await supabaseAdmin
+          .from("profiles")
+          .update({ short_code: shortCode.toUpperCase() })
+          .eq("user_id", newUser.user.id);
+      }
 
       // Update role if not default
       if (role && role !== "auftraggeber" && newUser.user) {
@@ -77,12 +94,25 @@ serve(async (req: Request) => {
     }
 
     if (action === "update") {
-      const { userId, firstName, lastName } = params;
+      const { userId, firstName, lastName, shortCode } = params;
       if (!userId) throw new Error("User-ID erforderlich");
+      if (shortCode !== undefined) {
+        if (!shortCode || shortCode.length !== 3) throw new Error("Kurzzeichen muss genau 3 Zeichen lang sein");
+        // Check uniqueness
+        const { data: existing } = await supabaseAdmin
+          .from("profiles")
+          .select("id, user_id")
+          .eq("short_code", shortCode.toUpperCase())
+          .maybeSingle();
+        if (existing && existing.user_id !== userId) throw new Error("Dieses Kurzzeichen ist bereits vergeben");
+      }
+
+      const updateData: Record<string, string> = { first_name: firstName, last_name: lastName };
+      if (shortCode) updateData.short_code = shortCode.toUpperCase();
 
       const { error } = await supabaseAdmin
         .from("profiles")
-        .update({ first_name: firstName, last_name: lastName })
+        .update(updateData)
         .eq("user_id", userId);
       if (error) throw error;
 

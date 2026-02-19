@@ -59,6 +59,7 @@ export type Database = {
           due_date: string | null
           id: string
           notes: string | null
+          order_number: string | null
           order_type: Database["public"]["Enums"]["order_type"]
           priority: Database["public"]["Enums"]["order_priority"]
           project_id: string
@@ -72,6 +73,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           notes?: string | null
+          order_number?: string | null
           order_type: Database["public"]["Enums"]["order_type"]
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id: string
@@ -85,6 +87,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           notes?: string | null
+          order_number?: string | null
           order_type?: Database["public"]["Enums"]["order_type"]
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id?: string
@@ -297,6 +300,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_name: string
+          short_code: string | null
           updated_at: string
           user_id: string
         }
@@ -306,6 +310,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string
+          short_code?: string | null
           updated_at?: string
           user_id: string
         }
@@ -315,6 +320,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string
+          short_code?: string | null
           updated_at?: string
           user_id?: string
         }
