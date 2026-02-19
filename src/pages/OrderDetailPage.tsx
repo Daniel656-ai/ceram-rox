@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog } from "@/hooks/useOrders";
-import { useUpdateMeasurementStatus, useAddWorkLog } from "@/hooks/useMeasurements";
+import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
@@ -30,6 +30,8 @@ export default function OrderDetailPage() {
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
   const addWorkLog = useAddWorkLog();
+  const { data: durchfuehrerList = [] } = useDurchfuehrer();
+  const assignMeasurement = useAssignMeasurement();
   const [logOpen, setLogOpen] = useState(false);
   const [logMeasurementId, setLogMeasurementId] = useState("");
   const [logHours, setLogHours] = useState("1");
@@ -222,6 +224,7 @@ export default function OrderDetailPage() {
                 <TableHead>Mess-Nr.</TableHead>
                 <TableHead>Messung</TableHead>
                 <TableHead>Priorität</TableHead>
+                <TableHead>Messtechniker</TableHead>
                 <TableHead>Arbeitsplatz</TableHead>
                 <TableHead>Kategorie</TableHead>
                 <TableHead>Stunden (Plan/Ist)</TableHead>
@@ -240,6 +243,40 @@ export default function OrderDetailPage() {
                     <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
                     <TableCell><PriorityBadge priority={m.priority} /></TableCell>
+                    <TableCell>
+                      {role === "master" ? (
+                        <Select
+                          value={m.assigned_to || "unassigned"}
+                          onValueChange={(val) => {
+                            const newVal = val === "unassigned" ? null : val;
+                            assignMeasurement.mutate({ id: m.id, assigned_to: newVal }, {
+                              onSuccess: () => toast.success("Messtechniker zugewiesen"),
+                              onError: (err: any) => toast.error("Fehler", { description: err.message }),
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="w-[160px] h-8 text-xs">
+                            <SelectValue placeholder="Nicht zugewiesen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
+                            {durchfuehrerList.map((u: any) => (
+                              <SelectItem key={u.user_id} value={u.user_id}>
+                                {u.first_name} {u.last_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-sm">
+                          {m.assigned_to
+                            ? durchfuehrerList.find((u: any) => u.user_id === m.assigned_to)
+                              ? `${durchfuehrerList.find((u: any) => u.user_id === m.assigned_to)!.first_name} ${durchfuehrerList.find((u: any) => u.user_id === m.assigned_to)!.last_name}`
+                              : "Zugewiesen"
+                            : <span className="text-muted-foreground">–</span>}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>{m.workstations?.name ? <span className="cursor-pointer text-primary hover:underline" onClick={() => navigate("/admin/arbeitsplaetze")}>{m.workstations.name}</span> : <span className="text-muted-foreground">–</span>}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</Badge>
