@@ -33,10 +33,10 @@ export interface ParsedImportOrder {
   errors: string[];
 }
 
-const VALID_ORDER_TYPES = ["customer", "production", "rnd"];
-const VALID_PRIORITIES = ["normal", "wichtig", "hoechste"];
+export const VALID_ORDER_TYPES = ["customer", "production", "rnd"];
+export const VALID_PRIORITIES = ["normal", "wichtig", "hoechste"];
 
-const ORDER_TYPE_MAP: Record<string, string> = {
+export const ORDER_TYPE_MAP: Record<string, string> = {
   kundenauftrag: "customer",
   customer: "customer",
   produktionsauftrag: "production",
@@ -46,7 +46,7 @@ const ORDER_TYPE_MAP: Record<string, string> = {
   rnd: "rnd",
 };
 
-const PRIORITY_MAP: Record<string, string> = {
+export const PRIORITY_MAP: Record<string, string> = {
   normal: "normal",
   wichtig: "wichtig",
   höchste: "hoechste",
@@ -167,4 +167,44 @@ export function generateTemplate(): void {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Messaufträge");
   XLSX.writeFile(wb, "Messauftrag-Vorlage.xlsx");
+}
+
+export type RowFieldErrors = Record<string, string>;
+
+export function validateRows(
+  rows: ImportedOrderRow[],
+  existingServices: { id: string; service_name: string; workstation_id: string | null }[]
+): RowFieldErrors[] {
+  return rows.map((row) => {
+    const errors: RowFieldErrors = {};
+
+    if (!row.project_number.trim()) errors.project_number = "Projektnummer fehlt";
+    if (!row.sample_name.trim()) errors.sample_name = "Probenname fehlt";
+    if (!row.sample_description.trim()) errors.sample_description = "Probenbeschreibung fehlt";
+
+    if (!row.order_type.trim()) {
+      errors.order_type = "Auftragstyp fehlt";
+    } else {
+      const mapped = ORDER_TYPE_MAP[row.order_type.toLowerCase()];
+      if (!mapped) errors.order_type = `Ungültiger Auftragstyp: "${row.order_type}"`;
+    }
+
+    if (row.priority.trim()) {
+      const mapped = PRIORITY_MAP[row.priority.toLowerCase()];
+      if (!mapped) errors.priority = `Ungültige Priorität: "${row.priority}"`;
+    }
+
+    if (!row.service_name.trim()) {
+      errors.service_name = "Messdienstleistung fehlt";
+    } else {
+      const match = existingServices.find(
+        (s) => s.service_name.toLowerCase() === row.service_name.toLowerCase()
+      );
+      if (!match) errors.service_name = `Nicht gefunden: "${row.service_name}"`;
+    }
+
+    if (row.planned_hours <= 0) errors.planned_hours = "Muss größer als 0 sein";
+
+    return errors;
+  });
 }
