@@ -1,6 +1,7 @@
 import { useMyMeasurements, useUpdateMeasurementStatus, useAddWorkLog } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { CATEGORY_LABELS } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,13 +32,7 @@ export default function WorkPlanPage() {
     filter === "all" || m.status === filter
   );
 
-  const priorityLabel = (p: number) =>
-    p === 2 ? "Dringend" : p === 1 ? "Hoch" : "Normal";
-
-  const priorityColor = (p: number) =>
-    p === 2 ? "bg-destructive/15 text-destructive border-destructive/30" :
-    p === 1 ? "bg-warning/15 text-warning border-warning/30" :
-    "bg-muted text-muted-foreground";
+  // Priority is now synced from order, use PriorityBadge component
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
@@ -114,7 +109,7 @@ export default function WorkPlanPage() {
                     <Beaker className="h-4 w-4 text-primary" />
                     <CardTitle className="text-base">{m.measurement_services?.service_name}</CardTitle>
                   </div>
-                  <Badge variant="outline" className={priorityColor(m.priority)}>{priorityLabel(m.priority)}</Badge>
+                  <PriorityBadge priority={m.priority} />
                 </div>
               </CardHeader>
               <CardContent className="flex-1 space-y-3">

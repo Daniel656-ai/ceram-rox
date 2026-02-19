@@ -21,7 +21,6 @@ interface SelectedMeasurement {
   service_id: string;
   service_name: string;
   planned_hours: number;
-  priority: number;
   workstation_id: string;
 }
 
@@ -50,7 +49,7 @@ export default function CreateOrderPage() {
   const addService = (serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
     if (!svc || measurements.some((m) => m.service_id === serviceId)) return;
-    setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, priority: 0, workstation_id: svc.workstation_id || "" }]);
+    setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" }]);
   };
 
   const removeMeasurement = (idx: number) => {
@@ -99,7 +98,6 @@ export default function CreateOrderPage() {
         order_id: order.id,
         service_id: m.service_id,
         planned_hours: m.planned_hours,
-        priority: m.priority,
         due_date: dueDate || undefined,
         workstation_id: m.workstation_id || undefined
       })
