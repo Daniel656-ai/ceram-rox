@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { useWorkstationMeasurements } from "@/hooks/useWorkstations";
 
 interface Props {
@@ -51,6 +52,7 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead>Messung</TableHead>
+              <TableHead>Priorität</TableHead>
               <TableHead>Projekt</TableHead>
               <TableHead>Zugewiesen an</TableHead>
               <TableHead>Fällig</TableHead>
@@ -78,6 +80,7 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell><PriorityBadge priority={m.priority} /></TableCell>
                   <TableCell>
                     {project
                       ? `${project.project_number}${project.project_name ? ` – ${project.project_name}` : ""}`

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Clock, FileText, Upload, Pencil, Trash2 } from "lucide-react";
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -219,6 +220,7 @@ export default function OrderDetailPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Messung</TableHead>
+                <TableHead>Priorität</TableHead>
                 <TableHead>Arbeitsplatz</TableHead>
                 <TableHead>Kategorie</TableHead>
                 <TableHead>Stunden (Plan/Ist)</TableHead>
@@ -235,6 +237,7 @@ export default function OrderDetailPage() {
                 return (
                   <TableRow key={m.id}>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
+                    <TableCell><PriorityBadge priority={m.priority} /></TableCell>
                     <TableCell>{m.workstations?.name ? <span className="cursor-pointer text-primary hover:underline" onClick={() => navigate("/admin/arbeitsplaetze")}>{m.workstations.name}</span> : <span className="text-muted-foreground">–</span>}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</Badge>
