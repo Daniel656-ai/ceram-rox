@@ -52,6 +52,65 @@ export type Database = {
           },
         ]
       }
+      mdl_permission_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string
+          id: string
+          service_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by: string
+          id?: string
+          service_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          service_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mdl_service_permissions: {
+        Row: {
+          granted_at: string
+          granted_by: string
+          id: string
+          service_id: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by: string
+          id?: string
+          service_id: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string
+          id?: string
+          service_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mdl_service_permissions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurement_orders: {
         Row: {
           created_at: string
