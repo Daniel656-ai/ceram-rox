@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Clock, Pencil, Trash2 } from "lucide-react";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import MeasurementDocuments from "@/components/MeasurementDocuments";
+import MeasurementDataEntry from "@/components/MeasurementDataEntry";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -226,6 +227,7 @@ export default function OrderDetailPage() {
                 const actualHours = (m.work_logs || []).reduce((s: number, w: any) => s + (parseFloat(w.hours) || 0), 0);
                 const docs = m.documents || [];
                 return (
+                  <>
                   <TableRow key={m.id}>
                     <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
@@ -303,6 +305,16 @@ export default function OrderDetailPage() {
                       </div>
                     </TableCell>
                   </TableRow>
+                  <TableRow key={`${m.id}-data`}>
+                    <TableCell colSpan={11} className="p-0 border-b">
+                      <MeasurementDataEntry
+                        measurement={m}
+                        sampleInfo={(order as any).samples}
+                        projectInfo={(order as any).projects}
+                      />
+                    </TableCell>
+                  </TableRow>
+                  </>
                 );
               })}
             </TableBody>
