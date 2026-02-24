@@ -144,6 +144,62 @@ export type Database = {
           },
         ]
       }
+      measurement_results: {
+        Row: {
+          created_at: string
+          id: string
+          measured_at: string | null
+          measured_by: string | null
+          order_measurement_id: string
+          remarks: string | null
+          result_name: string
+          temperature_range_from: number | null
+          temperature_range_to: number | null
+          temperature_unit: string | null
+          unit: string | null
+          updated_at: string
+          value: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          measured_at?: string | null
+          measured_by?: string | null
+          order_measurement_id: string
+          remarks?: string | null
+          result_name: string
+          temperature_range_from?: number | null
+          temperature_range_to?: number | null
+          temperature_unit?: string | null
+          unit?: string | null
+          updated_at?: string
+          value?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          measured_at?: string | null
+          measured_by?: string | null
+          order_measurement_id?: string
+          remarks?: string | null
+          result_name?: string
+          temperature_range_from?: number | null
+          temperature_range_to?: number | null
+          temperature_unit?: string | null
+          unit?: string | null
+          updated_at?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_results_order_measurement_id_fkey"
+            columns: ["order_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurement_services: {
         Row: {
           active: boolean
