@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Building2,
   FlaskConical,
+  ShieldCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,6 +48,7 @@ const masterAdminItems = [
   { title: "Messungen", url: "/admin/messdienstleistungen", icon: Beaker },
   { title: "Arbeitsplätze", url: "/admin/arbeitsplaetze", icon: Building2 },
   { title: "Statistiken", url: "/admin/statistiken", icon: BarChart3 },
+  { title: "Berechtigungen", url: "/admin/berechtigungen", icon: ShieldCheck },
 ];
 
 const durchfuehrerItems = [
