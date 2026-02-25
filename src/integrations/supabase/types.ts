@@ -547,6 +547,39 @@ export type Database = {
           },
         ]
       }
+      user_absences: {
+        Row: {
+          absence_type: Database["public"]["Enums"]["absence_type"]
+          comment: string | null
+          created_at: string
+          end_at: string
+          id: string
+          start_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          absence_type: Database["public"]["Enums"]["absence_type"]
+          comment?: string | null
+          created_at?: string
+          end_at: string
+          id?: string
+          start_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          absence_type?: Database["public"]["Enums"]["absence_type"]
+          comment?: string | null
+          created_at?: string
+          end_at?: string
+          id?: string
+          start_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -599,6 +632,53 @@ export type Database = {
             columns: ["order_measurement_id"]
             isOneToOne: false
             referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workstation_downtimes: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          downtime_type: Database["public"]["Enums"]["downtime_type"]
+          end_at: string
+          id: string
+          start_at: string
+          status: Database["public"]["Enums"]["downtime_status"]
+          updated_at: string
+          workstation_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          downtime_type: Database["public"]["Enums"]["downtime_type"]
+          end_at: string
+          id?: string
+          start_at: string
+          status?: Database["public"]["Enums"]["downtime_status"]
+          updated_at?: string
+          workstation_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          downtime_type?: Database["public"]["Enums"]["downtime_type"]
+          end_at?: string
+          id?: string
+          start_at?: string
+          status?: Database["public"]["Enums"]["downtime_status"]
+          updated_at?: string
+          workstation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workstation_downtimes_workstation_id_fkey"
+            columns: ["workstation_id"]
+            isOneToOne: false
+            referencedRelation: "workstations"
             referencedColumns: ["id"]
           },
         ]
@@ -685,6 +765,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_user_absence_conflict: {
+        Args: { _end: string; _start: string; _user_id: string }
+        Returns: {
+          absence_type: Database["public"]["Enums"]["absence_type"]
+          end_at: string
+          id: string
+          start_at: string
+        }[]
+      }
+      check_workstation_downtime_conflict: {
+        Args: { _end: string; _start: string; _workstation_id: string }
+        Returns: {
+          downtime_type: Database["public"]["Enums"]["downtime_type"]
+          end_at: string
+          id: string
+          start_at: string
+          status: Database["public"]["Enums"]["downtime_status"]
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -718,7 +817,10 @@ export type Database = {
       }
     }
     Enums: {
+      absence_type: "urlaub" | "krankheit" | "weiterbildung" | "sonstiges"
       app_role: "master" | "auftraggeber" | "durchfuehrer"
+      downtime_status: "geplant" | "aktiv" | "abgeschlossen"
+      downtime_type: "wartung" | "reparatur" | "sonstiges"
       measurement_status: "open" | "in_progress" | "completed"
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
@@ -852,7 +954,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      absence_type: ["urlaub", "krankheit", "weiterbildung", "sonstiges"],
       app_role: ["master", "auftraggeber", "durchfuehrer"],
+      downtime_status: ["geplant", "aktiv", "abgeschlossen"],
+      downtime_type: ["wartung", "reparatur", "sonstiges"],
       measurement_status: ["open", "in_progress", "completed"],
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
