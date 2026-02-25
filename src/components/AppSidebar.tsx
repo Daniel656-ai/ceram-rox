@@ -8,6 +8,7 @@ import {
   Beaker,
   BarChart3,
   CalendarDays,
+  CalendarClock,
   Building2,
   FlaskConical,
   ShieldCheck,
@@ -41,6 +42,7 @@ const masterItems = [
   { title: "Alle Messaufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
+  { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
 const masterAdminItems = [
@@ -56,6 +58,7 @@ const durchfuehrerItems = [
   { title: "Arbeitsplanung", url: "/arbeitsplanung", icon: CalendarDays },
   { title: "Meine Aufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Proben", url: "/proben", icon: FlaskConical },
+  { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
 export function AppSidebar() {

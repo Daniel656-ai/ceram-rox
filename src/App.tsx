@@ -19,6 +19,7 @@ import AdminServicesPage from "./pages/AdminServicesPage";
 import AdminStatsPage from "./pages/AdminStatsPage";
 import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
 import AdminPermissionsPage from "./pages/AdminPermissionsPage";
+import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
 import NotFound from "./pages/NotFound";
 
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/admin/statistiken" element={<AdminStatsPage />} />
               <Route path="/admin/arbeitsplaetze" element={<AdminWorkstationsPage />} />
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />
+              <Route path="/kalender" element={<CalendarPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
