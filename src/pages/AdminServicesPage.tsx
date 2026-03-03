@@ -14,6 +14,21 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+function DurationCell({ service, onUpdate }: { service: any; onUpdate: (id: string, val: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(service.standard_duration_hours ?? 1));
+  if (editing) {
+    return (
+      <div className="flex gap-2">
+        <Input type="number" value={val} onChange={e => setVal(e.target.value)} className="w-20 h-8" min={0.25} step={0.25} />
+        <Button size="sm" onClick={() => { onUpdate(service.id, parseFloat(val)); setEditing(false); }}>OK</Button>
+        <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>✕</Button>
+      </div>
+    );
+  }
+  return <button className="hover:underline text-left" onClick={() => { setVal(String(service.standard_duration_hours ?? 1)); setEditing(true); }}>{service.standard_duration_hours ?? 1} h</button>;
+}
+
 function useDurchfuehrerUsers() {
   return useQuery({
     queryKey: ["durchfuehrer-users"],
@@ -50,6 +65,7 @@ export default function AdminServicesPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState("");
   const [newWorkstation, setNewWorkstation] = useState<string>("");
+  const [newDuration, setNewDuration] = useState("1");
 
   const handleToggle = async (id: string, active: boolean) => {
     try {
@@ -97,11 +113,13 @@ export default function AdminServicesPage() {
         hourly_rate: parseFloat(newRate),
         responsible_user_id: newResponsible || null,
         workstation_id: newWorkstation || null,
-      });
+        standard_duration_hours: parseFloat(newDuration),
+      } as any);
       toast.success("Messung erstellt");
       setNewOpen(false);
       setNewName("");
       setNewRate("75");
+      setNewDuration("1");
       setNewResponsible("");
       setNewWorkstation("");
     } catch (err: any) {
@@ -124,6 +142,7 @@ export default function AdminServicesPage() {
               <TableHead>Name</TableHead>
               <TableHead>Arbeitsplatz</TableHead>
               <TableHead>Messdienstleister</TableHead>
+              <TableHead>Standarddauer (h)</TableHead>
               <TableHead>Stundensatz (€/h)</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
@@ -165,6 +184,14 @@ export default function AdminServicesPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </TableCell>
+                <TableCell>
+                  <DurationCell service={s} onUpdate={async (id, val) => {
+                    try {
+                      await updateService.mutateAsync({ id, standard_duration_hours: val } as any);
+                      toast.success("Standarddauer aktualisiert");
+                    } catch (err: any) { toast.error("Fehler", { description: err.message }); }
+                  }} />
                 </TableCell>
                 <TableCell>
                   {editId === s.id ? (
@@ -232,6 +259,7 @@ export default function AdminServicesPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div><Label>Standarddauer (h)</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
               <div><Label>Stundensatz (€/h)</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>
               <Button onClick={handleCreate}>Erstellen</Button>
             </div>

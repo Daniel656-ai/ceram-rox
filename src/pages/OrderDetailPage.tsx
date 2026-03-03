@@ -20,6 +20,7 @@ import MeasurementDocuments from "@/components/MeasurementDocuments";
 import MeasurementDataEntry from "@/components/MeasurementDataEntry";
 import { toast } from "sonner";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 
 export default function OrderDetailPage() {
@@ -39,6 +40,13 @@ export default function OrderDetailPage() {
   const [logHours, setLogHours] = useState("1");
   const [logDate, setLogDate] = useState(new Date().toISOString().slice(0, 10));
   const [logComment, setLogComment] = useState("");
+
+  // Completion dialog state
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [completeMeasurementId, setCompleteMeasurementId] = useState("");
+  const [completeStandardDuration, setCompleteStandardDuration] = useState(0);
+  const [actualDuration, setActualDuration] = useState("");
+  const [deviationReason, setDeviationReason] = useState("");
 
   // Edit dialog state
   const [editOpen, setEditOpen] = useState(false);
@@ -62,9 +70,42 @@ export default function OrderDetailPage() {
   }, 0);
 
   const handleStatusChange = async (measurementId: string, newStatus: string) => {
+    if (newStatus === "completed") {
+      // Find the measurement to get standard duration
+      const m = measurements.find((m: any) => m.id === measurementId);
+      const stdDuration = m?.measurement_services?.standard_duration_hours ?? 1;
+      setCompleteMeasurementId(measurementId);
+      setCompleteStandardDuration(stdDuration);
+      setActualDuration(String(stdDuration));
+      setDeviationReason("");
+      setCompleteOpen(true);
+      return;
+    }
     try {
       await updateMeasurementStatus.mutateAsync({ id: measurementId, status: newStatus });
       toast.success("Status aktualisiert");
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
+    }
+  };
+
+  const handleCompleteSubmit = async () => {
+    const dur = parseFloat(actualDuration);
+    if (isNaN(dur) || dur <= 0) { toast.error("Bitte gültige Dauer angeben"); return; }
+    if (dur !== completeStandardDuration && !deviationReason.trim()) {
+      toast.error("Bei Abweichung von der Standarddauer ist eine Begründung erforderlich");
+      return;
+    }
+    try {
+      // Update actual duration and reason
+      const updatePayload: any = { actual_duration_hours: dur, status: 'completed' };
+      if (deviationReason.trim()) updatePayload.duration_deviation_reason = deviationReason.trim();
+      const { error } = await supabase.from("order_measurements").update(updatePayload).eq("id", completeMeasurementId);
+      if (error) throw error;
+      toast.success("Messung abgeschlossen");
+      setCompleteOpen(false);
+      // Refresh
+      window.location.reload();
     } catch (err: any) {
       toast.error("Fehler", { description: err.message });
     }
@@ -215,6 +256,8 @@ export default function OrderDetailPage() {
                 <TableHead>Messtechniker</TableHead>
                 <TableHead>Arbeitsplatz</TableHead>
                 <TableHead>Kategorie</TableHead>
+                <TableHead>Std-Dauer</TableHead>
+                <TableHead>Ist-Dauer</TableHead>
                 <TableHead>Stunden (Plan/Ist)</TableHead>
                 <TableHead>Stundensatz</TableHead>
                 <TableHead>Status</TableHead>
@@ -270,6 +313,17 @@ export default function OrderDetailPage() {
                     <TableCell>
                       <Badge variant="outline">{CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</Badge>
                     </TableCell>
+                    <TableCell className="text-xs">{m.measurement_services?.standard_duration_hours ?? '–'} h</TableCell>
+                    <TableCell className="text-xs">
+                      {m.actual_duration_hours != null ? (
+                        <span>
+                          {m.actual_duration_hours} h
+                          {m.duration_deviation_reason && (
+                            <span className="block text-[10px] text-muted-foreground" title={m.duration_deviation_reason}>⚠ {m.duration_deviation_reason.slice(0, 30)}{m.duration_deviation_reason.length > 30 ? '…' : ''}</span>
+                          )}
+                        </span>
+                      ) : '–'}
+                    </TableCell>
                     <TableCell>{parseFloat(m.planned_hours || 0).toFixed(1)} / {actualHours.toFixed(1)} h</TableCell>
                     <TableCell>{m.measurement_services?.hourly_rate} €/h</TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
@@ -306,7 +360,7 @@ export default function OrderDetailPage() {
                     </TableCell>
                   </TableRow>
                   <TableRow key={`${m.id}-data`}>
-                    <TableCell colSpan={11} className="p-0 border-b">
+                    <TableCell colSpan={13} className="p-0 border-b">
                       <MeasurementDataEntry
                         measurement={m}
                         sampleInfo={(order as any).samples}
@@ -344,7 +398,30 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Audit Log */}
+      {/* Completion Dialog with actual duration */}
+      <Dialog open={completeOpen} onOpenChange={setCompleteOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Messung abschließen</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Standarddauer</Label>
+              <p className="text-sm text-muted-foreground">{completeStandardDuration} h</p>
+            </div>
+            <div>
+              <Label>Tatsächliche Messdauer (h)</Label>
+              <Input type="number" min={0.25} step={0.25} value={actualDuration} onChange={e => setActualDuration(e.target.value)} />
+            </div>
+            {parseFloat(actualDuration) !== completeStandardDuration && (
+              <div>
+                <Label>Begründung der Abweichung *</Label>
+                <Textarea value={deviationReason} onChange={e => setDeviationReason(e.target.value)} placeholder="Pflichtfeld bei Abweichung von der Standarddauer" rows={3} />
+              </div>
+            )}
+            <Button onClick={handleCompleteSubmit}>Abschließen</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {auditLogs.length > 0 && (
         <Card>
           <CardHeader><CardTitle className="text-base">Änderungsverlauf</CardTitle></CardHeader>

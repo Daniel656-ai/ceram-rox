@@ -40,7 +40,7 @@ export function useMyMeasurements() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("order_measurements")
-        .select(`*, measurement_services(service_name, category, hourly_rate), measurement_orders(*, projects(project_number, project_name))`)
+        .select(`*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_orders(*, projects(project_number, project_name))`)
         .eq("assigned_to", user!.id)
         .order("priority", { ascending: false })
         .order("due_date");
@@ -99,8 +99,8 @@ export function useAddWorkLog() {
 export function useUpdateService() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; hourly_rate?: number; active?: boolean; service_name?: string; responsible_user_id?: string | null; workstation_id?: string | null }) => {
-      const { error } = await supabase.from("measurement_services").update(updates).eq("id", id);
+    mutationFn: async ({ id, ...updates }: { id: string; hourly_rate?: number; active?: boolean; service_name?: string; responsible_user_id?: string | null; workstation_id?: string | null; standard_duration_hours?: number }) => {
+      const { error } = await supabase.from("measurement_services").update(updates as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
