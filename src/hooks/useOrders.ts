@@ -25,7 +25,7 @@ export function useOrderDetail(orderId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("measurement_orders")
-        .select(`*, projects(project_number, project_name), samples(sample_number, sample_name), order_measurements(*, measurement_services(service_name, category, hourly_rate), measurement_parameters(*), measurement_results(*), work_logs(*), documents(*), workstations(id, name))`)
+        .select(`*, projects(project_number, project_name), samples(sample_number, sample_name), order_measurements(*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_parameters(*), measurement_results(*), work_logs(*), documents(*), workstations(id, name))`)
         .eq("id", orderId!)
         .single();
       if (error) throw error;

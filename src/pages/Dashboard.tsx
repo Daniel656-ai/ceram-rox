@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ORDER_TYPE_LABELS } from "@/lib/types";
+import { UtilizationSidebar } from "@/components/UtilizationSidebar";
 
 export default function Dashboard() {
   const { profile, role } = useAuth();
@@ -143,6 +144,11 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Utilization Widget - visible for master and durchfuehrer */}
+      {(role === "master" || role === "durchfuehrer") && (
+        <UtilizationSidebar />
+      )}
     </div>
   );
 }

@@ -27,6 +27,11 @@ export default function WorkPlanPage() {
   const [logHours, setLogHours] = useState("1");
   const [logDate, setLogDate] = useState(new Date().toISOString().slice(0, 10));
   const [logComment, setLogComment] = useState("");
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [completeMId, setCompleteMId] = useState("");
+  const [completeStdDur, setCompleteStdDur] = useState(0);
+  const [completeActDur, setCompleteActDur] = useState("");
+  const [completeReason, setCompleteReason] = useState("");
 
   const filtered = measurements.filter((m: any) =>
     filter === "all" || m.status === filter
@@ -35,6 +40,16 @@ export default function WorkPlanPage() {
   // Priority is now synced from order, use PriorityBadge component
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    if (newStatus === "completed") {
+      const m = measurements.find((m: any) => m.id === id);
+      const stdDur = (m?.measurement_services as any)?.standard_duration_hours ?? 1;
+      setCompleteMId(id);
+      setCompleteStdDur(stdDur);
+      setCompleteActDur(String(stdDur));
+      setCompleteReason("");
+      setCompleteOpen(true);
+      return;
+    }
     try {
       await updateStatus.mutateAsync({ id, status: newStatus });
       toast.success("Status aktualisiert");
@@ -120,6 +135,7 @@ export default function WorkPlanPage() {
                   <p><span className="text-muted-foreground">Projekt:</span> {m.measurement_orders?.projects?.project_number}</p>
                   <p><span className="text-muted-foreground">Kategorie:</span> {CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</p>
                   <p><span className="text-muted-foreground">Geplant:</span> {parseFloat(m.planned_hours || 0).toFixed(1)} h</p>
+                  <p><span className="text-muted-foreground">Std-Dauer:</span> {(m.measurement_services as any)?.standard_duration_hours ?? '–'} h</p>
                   {m.due_date && <p><span className="text-muted-foreground">Fällig:</span> {new Date(m.due_date).toLocaleDateString("de-DE")}</p>}
                 </div>
                 <StatusBadge status={m.status} />
@@ -160,6 +176,47 @@ export default function WorkPlanPage() {
             <div><Label>Stunden</Label><Input type="number" min={0.25} step={0.25} value={logHours} onChange={e => setLogHours(e.target.value)} /></div>
             <div><Label>Kommentar</Label><Textarea value={logComment} onChange={e => setLogComment(e.target.value)} rows={2} /></div>
             <Button onClick={handleLogSubmit}>Speichern</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Completion Dialog */}
+      <Dialog open={completeOpen} onOpenChange={setCompleteOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Messung abschließen</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Standarddauer</Label>
+              <p className="text-sm text-muted-foreground">{completeStdDur} h</p>
+            </div>
+            <div>
+              <Label>Tatsächliche Messdauer (h)</Label>
+              <Input type="number" min={0.25} step={0.25} value={completeActDur} onChange={e => setCompleteActDur(e.target.value)} />
+            </div>
+            {parseFloat(completeActDur) !== completeStdDur && (
+              <div>
+                <Label>Begründung der Abweichung *</Label>
+                <Textarea value={completeReason} onChange={e => setCompleteReason(e.target.value)} placeholder="Pflichtfeld bei Abweichung" rows={3} />
+              </div>
+            )}
+            <Button onClick={async () => {
+              const dur = parseFloat(completeActDur);
+              if (isNaN(dur) || dur <= 0) { toast.error("Bitte gültige Dauer angeben"); return; }
+              if (dur !== completeStdDur && !completeReason.trim()) {
+                toast.error("Begründung erforderlich bei Abweichung");
+                return;
+              }
+              try {
+                const updatePayload: any = { actual_duration_hours: dur, status: 'completed' };
+                if (completeReason.trim()) updatePayload.duration_deviation_reason = completeReason.trim();
+                const { error } = await supabase.from("order_measurements").update(updatePayload).eq("id", completeMId);
+                if (error) throw error;
+                toast.success("Messung abgeschlossen");
+                setCompleteOpen(false);
+              } catch (err: any) {
+                toast.error("Fehler", { description: err.message });
+              }
+            }}>Abschließen</Button>
           </div>
         </DialogContent>
       </Dialog>

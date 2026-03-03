@@ -268,6 +268,7 @@ export type Database = {
           id: string
           responsible_user_id: string | null
           service_name: string
+          standard_duration_hours: number
           updated_at: string
           workstation_id: string | null
         }
@@ -279,6 +280,7 @@ export type Database = {
           id?: string
           responsible_user_id?: string | null
           service_name: string
+          standard_duration_hours?: number
           updated_at?: string
           workstation_id?: string | null
         }
@@ -290,6 +292,7 @@ export type Database = {
           id?: string
           responsible_user_id?: string | null
           service_name?: string
+          standard_duration_hours?: number
           updated_at?: string
           workstation_id?: string | null
         }
@@ -343,42 +346,60 @@ export type Database = {
       }
       order_measurements: {
         Row: {
+          actual_duration_hours: number | null
           assigned_to: string | null
           created_at: string
           due_date: string | null
+          duration_deviation_reason: string | null
+          estimated_delivery_date: string | null
           id: string
           measurement_number: string
           order_id: string
+          planned_end_date: string | null
           planned_hours: number | null
+          planned_start_date: string | null
           priority: number
+          processing_time_hours: number
           service_id: string
           status: Database["public"]["Enums"]["measurement_status"]
           updated_at: string
           workstation_id: string | null
         }
         Insert: {
+          actual_duration_hours?: number | null
           assigned_to?: string | null
           created_at?: string
           due_date?: string | null
+          duration_deviation_reason?: string | null
+          estimated_delivery_date?: string | null
           id?: string
           measurement_number: string
           order_id: string
+          planned_end_date?: string | null
           planned_hours?: number | null
+          planned_start_date?: string | null
           priority?: number
+          processing_time_hours?: number
           service_id: string
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
           workstation_id?: string | null
         }
         Update: {
+          actual_duration_hours?: number | null
           assigned_to?: string | null
           created_at?: string
           due_date?: string | null
+          duration_deviation_reason?: string | null
+          estimated_delivery_date?: string | null
           id?: string
           measurement_number?: string
           order_id?: string
+          planned_end_date?: string | null
           planned_hours?: number | null
+          planned_start_date?: string | null
           priority?: number
+          processing_time_hours?: number
           service_id?: string
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
