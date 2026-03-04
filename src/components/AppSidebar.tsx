@@ -36,6 +36,7 @@ const auftraggeberItems = [
   { title: "Messaufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
+  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
 ];
 
 const masterItems = [
