@@ -61,6 +61,7 @@ const durchfuehrerItems = [
   { title: "Arbeitsplanung", url: "/arbeitsplanung", icon: CalendarDays },
   { title: "Meine Aufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Proben", url: "/proben", icon: FlaskConical },
+  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
   { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
