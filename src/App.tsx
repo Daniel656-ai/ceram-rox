@@ -21,6 +21,7 @@ import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
 import AdminPermissionsPage from "./pages/AdminPermissionsPage";
 import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
+import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
