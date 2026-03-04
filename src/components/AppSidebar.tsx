@@ -12,6 +12,7 @@ import {
   Building2,
   FlaskConical,
   ShieldCheck,
+  Database,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
