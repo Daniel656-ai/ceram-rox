@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Save, FlaskConical, Beaker } from "lucide-react";
 import { toast } from "sonner";
+import DynamicParameterForm from "@/components/DynamicParameterForm";
 
 interface MeasurementDataEntryProps {
   measurement: any;
@@ -27,7 +28,7 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
 
   const [isOpen, setIsOpen] = useState(false);
 
-  // Parameter editing
+  // Parameter editing (legacy manual)
   const [editingParamId, setEditingParamId] = useState<string | null>(null);
   const [paramForm, setParamForm] = useState({ parameter_name: "", parameter_value: "", unit: "" });
   const [addingParam, setAddingParam] = useState(false);
@@ -51,8 +52,9 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
 
   const parameters = measurement.measurement_parameters || [];
   const results = measurement.measurement_results || [];
+  const serviceId = measurement.service_id;
 
-  // --- Parameter CRUD ---
+  // --- Parameter CRUD (legacy manual) ---
   const handleSaveParam = async () => {
     try {
       if (editingParamId) {
@@ -174,12 +176,20 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
           <div><span className="font-medium">Messung:</span> {measurement.measurement_number} – {measurement.measurement_services?.service_name}</div>
         </div>
 
-        {/* Parameters Section */}
+        {/* Dynamic Parameter Form (from template) */}
+        <DynamicParameterForm
+          measurementId={measurement.id}
+          serviceId={serviceId}
+          existingParams={parameters}
+          canEdit={canEdit}
+        />
+
+        {/* Legacy manual parameters (for params not from template) */}
         <Card>
           <CardHeader className="py-2 px-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm flex items-center gap-1.5">
-                <Beaker className="h-3.5 w-3.5" /> Parameter
+                <Beaker className="h-3.5 w-3.5" /> Zusätzliche Parameter
               </CardTitle>
               {canEdit && (
                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => {
@@ -249,7 +259,7 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
                   </TableRow>
                 )}
                 {parameters.length === 0 && !addingParam && (
-                  <TableRow><TableCell colSpan={canEdit ? 4 : 3} className="text-center text-xs text-muted-foreground py-3">Keine Parameter definiert</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={canEdit ? 4 : 3} className="text-center text-xs text-muted-foreground py-3">Keine zusätzlichen Parameter</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -355,9 +365,9 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
               </div>
               <div>
                 <Label className="text-xs">Bemerkungen</Label>
-                <Textarea value={resultForm.remarks} onChange={e => setResultForm(f => ({ ...f, remarks: e.target.value }))} rows={2} placeholder="Optionale Bemerkungen" />
+                <Textarea value={resultForm.remarks} onChange={e => setResultForm(f => ({ ...f, remarks: e.target.value }))} rows={2} />
               </div>
-              <Button onClick={handleSaveResult} className="w-full" disabled={!resultForm.result_name.trim()}>
+              <Button onClick={handleSaveResult} className="w-full">
                 {editingResult ? "Aktualisieren" : "Speichern"}
               </Button>
             </div>

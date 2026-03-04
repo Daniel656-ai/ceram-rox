@@ -535,30 +535,55 @@ export type Database = {
       }
       service_parameter_definitions: {
         Row: {
+          conditional_on: string | null
+          conditional_value: string | null
           default_value: string | null
           id: string
+          is_required: boolean
+          parameter_category: string
           parameter_name: string
+          parameter_type: string
+          select_options: Json | null
           service_id: string
           sort_order: number
           unit: string | null
         }
         Insert: {
+          conditional_on?: string | null
+          conditional_value?: string | null
           default_value?: string | null
           id?: string
+          is_required?: boolean
+          parameter_category?: string
           parameter_name: string
+          parameter_type?: string
+          select_options?: Json | null
           service_id: string
           sort_order?: number
           unit?: string | null
         }
         Update: {
+          conditional_on?: string | null
+          conditional_value?: string | null
           default_value?: string | null
           id?: string
+          is_required?: boolean
+          parameter_category?: string
           parameter_name?: string
+          parameter_type?: string
+          select_options?: Json | null
           service_id?: string
           sort_order?: number
           unit?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "service_parameter_definitions_conditional_on_fkey"
+            columns: ["conditional_on"]
+            isOneToOne: false
+            referencedRelation: "service_parameter_definitions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_parameter_definitions_service_id_fkey"
             columns: ["service_id"]

@@ -5,6 +5,7 @@ import { useProjects, useCreateProject } from "@/hooks/useProjects";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useServices, useAddOrderMeasurement } from "@/hooks/useMeasurements";
 import { useCreateSample } from "@/hooks/useSamples";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +68,7 @@ export default function ImportOrderPage() {
       setFileName(file.name);
       try {
         const buffer = await file.arrayBuffer();
-        const rows = parseExcelFile(buffer);
+        const { rows } = parseExcelFile(buffer);
         if (rows.length === 0) {
           toast.error("Die Datei enthält keine Daten.");
           setRawRows([]);
@@ -120,7 +121,7 @@ export default function ImportOrderPage() {
           sample_id: sample.id,
         });
 
-        await Promise.all(
+        const createdMeasurements = await Promise.all(
           order.measurements
             .filter((m) => m.matched_service_id)
             .map((m) =>
@@ -130,9 +131,23 @@ export default function ImportOrderPage() {
                 planned_hours: m.planned_hours,
                 due_date: order.due_date || undefined,
                 workstation_id: m.matched_workstation_id || undefined,
-              })
+              }).then((created) => ({ created, params: m.parameters }))
             )
         );
+
+        // Insert parameters from Excel columns
+        const paramInserts = createdMeasurements
+          .filter((cm) => cm.params && Object.keys(cm.params).length > 0)
+          .flatMap((cm) =>
+            Object.entries(cm.params!).map(([name, value]) => ({
+              order_measurement_id: cm.created.id,
+              parameter_name: name,
+              parameter_value: value,
+            }))
+          );
+        if (paramInserts.length > 0) {
+          await supabase.from("measurement_parameters").insert(paramInserts);
+        }
 
         created++;
       }

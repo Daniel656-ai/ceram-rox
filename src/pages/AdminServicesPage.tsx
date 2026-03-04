@@ -8,11 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Plus, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import ServiceParameterEditor from "@/components/ServiceParameterEditor";
 
 function DurationCell({ service, onUpdate }: { service: any; onUpdate: (id: string, val: number) => void }) {
   const [editing, setEditing] = useState(false);
@@ -39,13 +40,11 @@ function useDurchfuehrerUsers() {
       ]);
       if (profilesRes.error) throw profilesRes.error;
       if (rolesRes.error) throw rolesRes.error;
-
       const durchfuehrerIds = new Set(
         (rolesRes.data || [])
           .filter((r: any) => r.role === "durchfuehrer" || r.role === "master")
           .map((r: any) => r.user_id)
       );
-
       return (profilesRes.data || []).filter((p: any) => durchfuehrerIds.has(p.user_id));
     },
   });
@@ -66,6 +65,8 @@ export default function AdminServicesPage() {
   const [editRate, setEditRate] = useState("");
   const [newWorkstation, setNewWorkstation] = useState<string>("");
   const [newDuration, setNewDuration] = useState("1");
+  const [paramEditorServiceId, setParamEditorServiceId] = useState<string | null>(null);
+  const [paramEditorServiceName, setParamEditorServiceName] = useState("");
 
   const handleToggle = async (id: string, active: boolean) => {
     try {
@@ -144,6 +145,7 @@ export default function AdminServicesPage() {
               <TableHead>Messdienstleister</TableHead>
               <TableHead>Standarddauer (h)</TableHead>
               <TableHead>Stundensatz (€/h)</TableHead>
+              <TableHead>Parameter</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -207,6 +209,19 @@ export default function AdminServicesPage() {
                   )}
                 </TableCell>
                 <TableCell>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => {
+                      setParamEditorServiceId(s.id);
+                      setParamEditorServiceName(s.service_name);
+                    }}
+                  >
+                    <Settings2 className="h-3 w-3" /> Parameter
+                  </Button>
+                </TableCell>
+                <TableCell>
                   <div className="flex items-center gap-2">
                     <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} />
                     <span className="text-sm">{s.active ? "Aktiv" : "Inaktiv"}</span>
@@ -225,7 +240,7 @@ export default function AdminServicesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Messungen</h1>
-          <p className="text-muted-foreground">Verwaltung der Messdienstleistungen und Stundensätze</p>
+          <p className="text-muted-foreground">Verwaltung der Messdienstleistungen, Stundensätze und Parameterdefinitionen</p>
         </div>
         <Dialog open={newOpen} onOpenChange={setNewOpen}>
           <DialogTrigger asChild>
@@ -275,6 +290,18 @@ export default function AdminServicesPage() {
           {renderServiceTable("Pilot Plant", pilotServices)}
         </div>
       )}
+
+      {/* Parameter Editor Dialog */}
+      <Dialog open={!!paramEditorServiceId} onOpenChange={(open) => { if (!open) setParamEditorServiceId(null); }}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          {paramEditorServiceId && (
+            <ServiceParameterEditor
+              serviceId={paramEditorServiceId}
+              serviceName={paramEditorServiceName}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
