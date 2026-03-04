@@ -21,6 +21,7 @@ import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
 import AdminPermissionsPage from "./pages/AdminPermissionsPage";
 import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
+import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/admin/arbeitsplaetze" element={<AdminWorkstationsPage />} />
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />
               <Route path="/kalender" element={<CalendarPage />} />
+              <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

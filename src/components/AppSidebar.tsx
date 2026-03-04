@@ -12,6 +12,7 @@ import {
   Building2,
   FlaskConical,
   ShieldCheck,
+  Database,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +36,7 @@ const auftraggeberItems = [
   { title: "Messaufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
+  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
 ];
 
 const masterItems = [
@@ -42,6 +44,7 @@ const masterItems = [
   { title: "Alle Messaufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
+  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
   { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
@@ -58,6 +61,7 @@ const durchfuehrerItems = [
   { title: "Arbeitsplanung", url: "/arbeitsplanung", icon: CalendarDays },
   { title: "Meine Aufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Proben", url: "/proben", icon: FlaskConical },
+  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
   { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
