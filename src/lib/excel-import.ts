@@ -11,6 +11,8 @@ export interface ImportedOrderRow {
   notes?: string;
   service_name: string;
   planned_hours: number;
+  // Dynamic parameter values keyed by parameter name
+  parameters?: Record<string, string>;
 }
 
 export interface ParsedImportOrder {
@@ -29,6 +31,7 @@ export interface ParsedImportOrder {
     planned_hours: number;
     matched_service_id?: string;
     matched_workstation_id?: string;
+    parameters?: Record<string, string>;
   }[];
   errors: string[];
 }
@@ -53,30 +56,66 @@ export const PRIORITY_MAP: Record<string, string> = {
   hoechste: "hoechste",
 };
 
-export function parseExcelFile(buffer: ArrayBuffer): ImportedOrderRow[] {
+// Known fixed columns that are NOT parameters
+const FIXED_COLUMNS = new Set([
+  "projektnummer", "project_number",
+  "projektname", "project_name",
+  "probenname", "sample_name",
+  "probenbeschreibung", "sample_description",
+  "auftragstyp", "order_type",
+  "priorität", "priority",
+  "fälligkeitsdatum", "due_date",
+  "anmerkungen", "notes",
+  "messdienstleistung", "service_name",
+  "geplante stunden", "planned_hours",
+]);
+
+export function parseExcelFile(buffer: ArrayBuffer): { rows: ImportedOrderRow[]; extraColumns: string[] } {
   const wb = XLSX.read(buffer, { type: "array" });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const raw = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
 
-  return raw.map((row) => ({
-    project_number: String(row["Projektnummer"] || row["project_number"] || "").trim(),
-    project_name: String(row["Projektname"] || row["project_name"] || "").trim() || undefined,
-    sample_name: String(row["Probenname"] || row["sample_name"] || "").trim(),
-    sample_description: String(row["Probenbeschreibung"] || row["sample_description"] || "").trim(),
-    order_type: String(row["Auftragstyp"] || row["order_type"] || "").trim(),
-    priority: String(row["Priorität"] || row["priority"] || "normal").trim(),
-    due_date: row["Fälligkeitsdatum"] || row["due_date"] ? String(row["Fälligkeitsdatum"] || row["due_date"]).trim() : undefined,
-    notes: String(row["Anmerkungen"] || row["notes"] || "").trim() || undefined,
-    service_name: String(row["Messdienstleistung"] || row["service_name"] || "").trim(),
-    planned_hours: Number(row["Geplante Stunden"] || row["planned_hours"]) || 1,
-  }));
+  // Detect extra columns (potential parameters)
+  const extraColumns: string[] = [];
+  if (raw.length > 0) {
+    for (const key of Object.keys(raw[0])) {
+      if (!FIXED_COLUMNS.has(key.toLowerCase().trim())) {
+        extraColumns.push(key);
+      }
+    }
+  }
+
+  const rows = raw.map((row) => {
+    const params: Record<string, string> = {};
+    for (const col of extraColumns) {
+      const val = row[col];
+      if (val != null && String(val).trim()) {
+        params[col] = String(val).trim();
+      }
+    }
+
+    return {
+      project_number: String(row["Projektnummer"] || row["project_number"] || "").trim(),
+      project_name: String(row["Projektname"] || row["project_name"] || "").trim() || undefined,
+      sample_name: String(row["Probenname"] || row["sample_name"] || "").trim(),
+      sample_description: String(row["Probenbeschreibung"] || row["sample_description"] || "").trim(),
+      order_type: String(row["Auftragstyp"] || row["order_type"] || "").trim(),
+      priority: String(row["Priorität"] || row["priority"] || "normal").trim(),
+      due_date: row["Fälligkeitsdatum"] || row["due_date"] ? String(row["Fälligkeitsdatum"] || row["due_date"]).trim() : undefined,
+      notes: String(row["Anmerkungen"] || row["notes"] || "").trim() || undefined,
+      service_name: String(row["Messdienstleistung"] || row["service_name"] || "").trim(),
+      planned_hours: Number(row["Geplante Stunden"] || row["planned_hours"]) || 1,
+      parameters: Object.keys(params).length > 0 ? params : undefined,
+    };
+  });
+
+  return { rows, extraColumns };
 }
 
 export function groupRowsIntoOrders(
   rows: ImportedOrderRow[],
   existingServices: { id: string; service_name: string; workstation_id: string | null }[]
 ): ParsedImportOrder[] {
-  // Group by project_number + sample_name + order_type (= one order per unique combo)
   const groups = new Map<string, ImportedOrderRow[]>();
   for (const row of rows) {
     const key = `${row.project_number}||${row.sample_name}||${row.order_type}`;
@@ -88,13 +127,11 @@ export function groupRowsIntoOrders(
     const first = groupRows[0];
     const errors: string[] = [];
 
-    // Validate order type
     const mappedType = ORDER_TYPE_MAP[first.order_type.toLowerCase()] || first.order_type.toLowerCase();
     if (!VALID_ORDER_TYPES.includes(mappedType)) {
       errors.push(`Ungültiger Auftragstyp: "${first.order_type}"`);
     }
 
-    // Validate priority
     const mappedPriority = PRIORITY_MAP[first.priority.toLowerCase()] || first.priority.toLowerCase();
     if (!VALID_PRIORITIES.includes(mappedPriority)) {
       errors.push(`Ungültige Priorität: "${first.priority}"`);
@@ -114,6 +151,7 @@ export function groupRowsIntoOrders(
         planned_hours: r.planned_hours,
         matched_service_id: match?.id,
         matched_workstation_id: match?.workstation_id || undefined,
+        parameters: r.parameters,
       };
     });
 
