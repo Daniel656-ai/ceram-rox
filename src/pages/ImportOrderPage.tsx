@@ -121,7 +121,7 @@ export default function ImportOrderPage() {
           sample_id: sample.id,
         });
 
-        await Promise.all(
+        const createdMeasurements = await Promise.all(
           order.measurements
             .filter((m) => m.matched_service_id)
             .map((m) =>
@@ -131,9 +131,23 @@ export default function ImportOrderPage() {
                 planned_hours: m.planned_hours,
                 due_date: order.due_date || undefined,
                 workstation_id: m.matched_workstation_id || undefined,
-              })
+              }).then((created) => ({ created, params: m.parameters }))
             )
         );
+
+        // Insert parameters from Excel columns
+        const paramInserts = createdMeasurements
+          .filter((cm) => cm.params && Object.keys(cm.params).length > 0)
+          .flatMap((cm) =>
+            Object.entries(cm.params!).map(([name, value]) => ({
+              order_measurement_id: cm.created.id,
+              parameter_name: name,
+              parameter_value: value,
+            }))
+          );
+        if (paramInserts.length > 0) {
+          await supabase.from("measurement_parameters").insert(paramInserts);
+        }
 
         created++;
       }
