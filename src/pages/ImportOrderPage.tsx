@@ -67,7 +67,7 @@ export default function ImportOrderPage() {
       setFileName(file.name);
       try {
         const buffer = await file.arrayBuffer();
-        const rows = parseExcelFile(buffer);
+        const { rows } = parseExcelFile(buffer);
         if (rows.length === 0) {
           toast.error("Die Datei enthält keine Daten.");
           setRawRows([]);
