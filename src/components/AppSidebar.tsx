@@ -43,6 +43,7 @@ const masterItems = [
   { title: "Alle Messaufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
+  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
   { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
