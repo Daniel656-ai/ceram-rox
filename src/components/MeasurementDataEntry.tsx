@@ -30,23 +30,6 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
   const [paramForm, setParamForm] = useState({ parameter_name: "", parameter_value: "", unit: "" });
   const [addingParam, setAddingParam] = useState(false);
 
-  // Result editing
-  const addResult = useAddMeasurementResult();
-  const updateResult = useUpdateMeasurementResult();
-  const deleteResult = useDeleteMeasurementResult();
-  const [resultDialogOpen, setResultDialogOpen] = useState(false);
-  const [editingResult, setEditingResult] = useState<any>(null);
-  const [resultForm, setResultForm] = useState({
-    result_name: "",
-    unit: "",
-    value: "",
-    temperature_range_from: "",
-    temperature_range_to: "",
-    temperature_unit: "°C",
-    remarks: "",
-    measured_at: new Date().toISOString().slice(0, 10),
-  });
-
   const parameters = measurement.measurement_parameters || [];
   const results = measurement.measurement_results || [];
   const serviceId = measurement.service_id;
@@ -86,76 +69,6 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
     }
   };
 
-  // --- Result CRUD ---
-  const openResultDialog = (result?: any) => {
-    if (result) {
-      setEditingResult(result);
-      setResultForm({
-        result_name: result.result_name || "",
-        unit: result.unit || "",
-        value: result.value?.toString() || "",
-        temperature_range_from: result.temperature_range_from?.toString() || "",
-        temperature_range_to: result.temperature_range_to?.toString() || "",
-        temperature_unit: result.temperature_unit || "°C",
-        remarks: result.remarks || "",
-        measured_at: result.measured_at || new Date().toISOString().slice(0, 10),
-      });
-    } else {
-      setEditingResult(null);
-      setResultForm({
-        result_name: "",
-        unit: "",
-        value: "",
-        temperature_range_from: "",
-        temperature_range_to: "",
-        temperature_unit: "°C",
-        remarks: "",
-        measured_at: new Date().toISOString().slice(0, 10),
-      });
-    }
-    setResultDialogOpen(true);
-  };
-
-  const handleSaveResult = async () => {
-    if (!resultForm.result_name.trim()) {
-      toast.error("Messwert-Name ist erforderlich");
-      return;
-    }
-    try {
-      const payload = {
-        result_name: resultForm.result_name.trim(),
-        unit: resultForm.unit || null,
-        value: resultForm.value ? parseFloat(resultForm.value) : null,
-        temperature_range_from: resultForm.temperature_range_from ? parseFloat(resultForm.temperature_range_from) : null,
-        temperature_range_to: resultForm.temperature_range_to ? parseFloat(resultForm.temperature_range_to) : null,
-        temperature_unit: resultForm.temperature_unit || "°C",
-        remarks: resultForm.remarks || null,
-        measured_at: resultForm.measured_at || null,
-        measured_by: user?.id || null,
-      };
-
-      if (editingResult) {
-        await updateResult.mutateAsync({ id: editingResult.id, ...payload });
-        toast.success("Ergebnis aktualisiert");
-      } else {
-        await addResult.mutateAsync({ order_measurement_id: measurement.id, ...payload });
-        toast.success("Ergebnis hinzugefügt");
-      }
-      setResultDialogOpen(false);
-    } catch (err: any) {
-      toast.error("Fehler", { description: err.message });
-    }
-  };
-
-  const handleDeleteResult = async (resultId: string) => {
-    try {
-      await deleteResult.mutateAsync(resultId);
-      toast.success("Ergebnis gelöscht");
-    } catch (err: any) {
-      toast.error("Fehler", { description: err.message });
-    }
-  };
-
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
@@ -173,11 +86,19 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
           <div><span className="font-medium">Messung:</span> {measurement.measurement_number} – {measurement.measurement_services?.service_name}</div>
         </div>
 
-        {/* Dynamic Parameter Form (from template) */}
+        {/* Dynamic Parameter Form (from template - input params) */}
         <DynamicParameterForm
           measurementId={measurement.id}
           serviceId={serviceId}
           existingParams={parameters}
+          canEdit={canEdit}
+        />
+
+        {/* Structured Result Entry (from template - output params) */}
+        <ResultParameterEntry
+          measurementId={measurement.id}
+          serviceId={serviceId}
+          existingResults={results}
           canEdit={canEdit}
         />
 
@@ -262,114 +183,6 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
             </Table>
           </CardContent>
         </Card>
-
-        {/* Results Section */}
-        <Card>
-          <CardHeader className="py-2 px-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-1.5">
-                <FlaskConical className="h-3.5 w-3.5" /> Ergebnisse
-              </CardTitle>
-              {canEdit && (
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openResultDialog()}>
-                  <Plus className="h-3 w-3 mr-1" /> Hinzufügen
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Messwert-Name</TableHead>
-                  <TableHead className="text-xs">Wert</TableHead>
-                  <TableHead className="text-xs">Einheit</TableHead>
-                  <TableHead className="text-xs">Temp.-Bereich</TableHead>
-                  <TableHead className="text-xs">Messdatum</TableHead>
-                  <TableHead className="text-xs">Bemerkungen</TableHead>
-                  {canEdit && <TableHead className="text-xs w-20">Aktionen</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {results.map((r: any) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="text-xs font-medium">{r.result_name}</TableCell>
-                    <TableCell className="text-xs font-mono">{r.value != null ? r.value : "–"}</TableCell>
-                    <TableCell className="text-xs">{r.unit || "–"}</TableCell>
-                    <TableCell className="text-xs">
-                      {r.temperature_range_from != null && r.temperature_range_to != null
-                        ? `${r.temperature_range_from} – ${r.temperature_range_to} ${r.temperature_unit || "°C"}`
-                        : "–"}
-                    </TableCell>
-                    <TableCell className="text-xs">{r.measured_at ? new Date(r.measured_at).toLocaleDateString("de-DE") : "–"}</TableCell>
-                    <TableCell className="text-xs max-w-[150px] truncate">{r.remarks || "–"}</TableCell>
-                    {canEdit && (
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openResultDialog(r)}><Pencil className="h-3 w-3" /></Button>
-                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeleteResult(r.id)}><Trash2 className="h-3 w-3" /></Button>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-                {results.length === 0 && (
-                  <TableRow><TableCell colSpan={canEdit ? 7 : 6} className="text-center text-xs text-muted-foreground py-3">Keine Ergebnisse erfasst</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Result Dialog */}
-        <Dialog open={resultDialogOpen} onOpenChange={setResultDialogOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{editingResult ? "Ergebnis bearbeiten" : "Neues Ergebnis erfassen"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Messwert-Name *</Label>
-                  <Input value={resultForm.result_name} onChange={e => setResultForm(f => ({ ...f, result_name: e.target.value }))} placeholder="z. B. Techn. Alpha" />
-                </div>
-                <div>
-                  <Label className="text-xs">Einheit</Label>
-                  <Input value={resultForm.unit} onChange={e => setResultForm(f => ({ ...f, unit: e.target.value }))} placeholder="z. B. 10^-6 K^-1" />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Messwert</Label>
-                <Input type="number" step="any" value={resultForm.value} onChange={e => setResultForm(f => ({ ...f, value: e.target.value }))} placeholder="Numerischer Wert" />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">Temp. von</Label>
-                  <Input type="number" step="any" value={resultForm.temperature_range_from} onChange={e => setResultForm(f => ({ ...f, temperature_range_from: e.target.value }))} />
-                </div>
-                <div>
-                  <Label className="text-xs">Temp. bis</Label>
-                  <Input type="number" step="any" value={resultForm.temperature_range_to} onChange={e => setResultForm(f => ({ ...f, temperature_range_to: e.target.value }))} />
-                </div>
-                <div>
-                  <Label className="text-xs">Temp.-Einheit</Label>
-                  <Input value={resultForm.temperature_unit} onChange={e => setResultForm(f => ({ ...f, temperature_unit: e.target.value }))} />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs">Messdatum</Label>
-                <Input type="date" value={resultForm.measured_at} onChange={e => setResultForm(f => ({ ...f, measured_at: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs">Bemerkungen</Label>
-                <Textarea value={resultForm.remarks} onChange={e => setResultForm(f => ({ ...f, remarks: e.target.value }))} rows={2} />
-              </div>
-              <Button onClick={handleSaveResult} className="w-full">
-                {editingResult ? "Aktualisieren" : "Speichern"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </CollapsibleContent>
     </Collapsible>
   );
