@@ -5,16 +5,19 @@ import { useProjects, useCreateProject } from "@/hooks/useProjects";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useServices, useAddOrderMeasurement } from "@/hooks/useMeasurements";
 import { useWorkstations } from "@/hooks/useWorkstations";
+import { useServiceParameterDefs } from "@/hooks/useServiceParameters";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { ORDER_TYPE_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, AlertCircle } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 
 interface SelectedMeasurement {
@@ -22,6 +25,88 @@ interface SelectedMeasurement {
   service_name: string;
   planned_hours: number;
   workstation_id: string;
+}
+
+// Inline component for required input parameters of a service
+function ServiceRequiredParams({
+  serviceId,
+  paramValues,
+  onParamChange,
+}: {
+  serviceId: string;
+  paramValues: Record<string, string>;
+  onParamChange: (paramId: string, value: string) => void;
+}) {
+  const { data: defs = [] } = useServiceParameterDefs(serviceId);
+  
+  // Show only required input parameters
+  const requiredInputDefs = defs.filter(
+    (d) => d.parameter_category === "input" && d.is_required && !d.conditional_on
+  );
+
+  if (requiredInputDefs.length === 0) return null;
+
+  return (
+    <div className="mt-2 pl-2 border-l-2 border-primary/20 space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">Pflichtparameter:</p>
+      <div className="grid grid-cols-2 gap-2">
+        {requiredInputDefs.map((def) => {
+          const val = paramValues[def.id] || "";
+          const hasError = !val.trim();
+
+          return (
+            <div key={def.id} className="space-y-0.5">
+              <Label className="text-xs flex items-center gap-1">
+                {def.parameter_name}
+                {def.unit && <span className="text-muted-foreground font-normal">({def.unit})</span>}
+                <span className="text-destructive">*</span>
+                {hasError && <AlertCircle className="h-3 w-3 text-destructive" />}
+              </Label>
+              {def.parameter_type === "number" && (
+                <Input
+                  type="number"
+                  step="any"
+                  value={val}
+                  onChange={(e) => onParamChange(def.id, e.target.value)}
+                  placeholder={def.default_value || ""}
+                  className={`h-7 text-xs ${hasError ? "border-destructive" : ""}`}
+                />
+              )}
+              {def.parameter_type === "text" && (
+                <Input
+                  value={val}
+                  onChange={(e) => onParamChange(def.id, e.target.value)}
+                  placeholder={def.default_value || ""}
+                  className={`h-7 text-xs ${hasError ? "border-destructive" : ""}`}
+                />
+              )}
+              {def.parameter_type === "boolean" && (
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={val === "true"}
+                    onCheckedChange={(c) => onParamChange(def.id, c ? "true" : "false")}
+                  />
+                  <span className="text-xs">{val === "true" ? "Ja" : "Nein"}</span>
+                </div>
+              )}
+              {def.parameter_type === "select" && (
+                <Select value={val} onValueChange={(v) => onParamChange(def.id, v)}>
+                  <SelectTrigger className={`h-7 text-xs ${hasError ? "border-destructive" : ""}`}>
+                    <SelectValue placeholder="Bitte wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(def.select_options || []).map((o) => (
+                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function CreateOrderPage() {
@@ -34,10 +119,7 @@ export default function CreateOrderPage() {
   const createOrder = useCreateOrder();
   const addMeasurement = useAddOrderMeasurement();
 
-  const [projectMode, setProjectMode] = useState<"existing" | "new">("existing");
   const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [newProjectNumber, setNewProjectNumber] = useState("");
-  const [newProjectName, setNewProjectName] = useState("");
   const [orderType, setOrderType] = useState<string>("");
   const [priority, setPriority] = useState<string>("normal");
   const [dueDate, setDueDate] = useState("");
@@ -45,6 +127,8 @@ export default function CreateOrderPage() {
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
   const [selectedSampleId, setSelectedSampleId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Parameter values per measurement index, keyed by def.id
+  const [measurementParams, setMeasurementParams] = useState<Record<number, Record<string, string>>>({});
 
   const addService = (serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
@@ -54,10 +138,22 @@ export default function CreateOrderPage() {
 
   const removeMeasurement = (idx: number) => {
     setMeasurements(measurements.filter((_, i) => i !== idx));
+    setMeasurementParams((prev) => {
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
   };
 
   const updateMeasurement = (idx: number, field: string, value: any) => {
     setMeasurements(measurements.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  };
+
+  const updateParam = (measurementIdx: number, paramId: string, value: string) => {
+    setMeasurementParams((prev) => ({
+      ...prev,
+      [measurementIdx]: { ...(prev[measurementIdx] || {}), [paramId]: value },
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,19 +165,8 @@ export default function CreateOrderPage() {
 
     setSubmitting(true);
     try {
-      let projectId = selectedProjectId;
-
-      if (projectMode === "new") {
-        if (!newProjectNumber) {toast.error("Projektnummer ist erforderlich.");setSubmitting(false);return;}
-        const project = await createProject.mutateAsync({
-          project_number: newProjectNumber,
-          project_name: newProjectName || undefined,
-          created_by: user.id
-        });
-        projectId = project.id;
-      }
-
-      if (!projectId) {toast.error("Bitte wählen Sie ein Projekt.");setSubmitting(false);return;}
+      const projectId = selectedProjectId;
+      if (!projectId) { toast.error("Bitte wählen Sie ein Projekt."); setSubmitting(false); return; }
 
       const order = await createOrder.mutateAsync({
         project_id: projectId,
@@ -93,15 +178,44 @@ export default function CreateOrderPage() {
         sample_id: selectedSampleId,
       });
 
-      await Promise.all(measurements.map((m) =>
-      addMeasurement.mutateAsync({
-        order_id: order.id,
-        service_id: m.service_id,
-        planned_hours: m.planned_hours,
-        due_date: dueDate || undefined,
-        workstation_id: m.workstation_id || undefined
-      })
-      ));
+      // Create measurements and save parameters
+      for (let idx = 0; idx < measurements.length; idx++) {
+        const m = measurements[idx];
+        const createdMeasurement = await addMeasurement.mutateAsync({
+          order_id: order.id,
+          service_id: m.service_id,
+          planned_hours: m.planned_hours,
+          due_date: dueDate || undefined,
+          workstation_id: m.workstation_id || undefined,
+        });
+
+        // Save required parameters if any were filled
+        const params = measurementParams[idx];
+        if (params && Object.keys(params).length > 0) {
+          // We need to look up the defs to get parameter_name and unit
+          const { data: defs } = await supabase
+            .from("service_parameter_definitions")
+            .select("id, parameter_name, unit")
+            .eq("service_id", m.service_id)
+            .in("id", Object.keys(params));
+
+          if (defs && defs.length > 0) {
+            const inserts = defs
+              .filter((d) => (params[d.id] || "").trim())
+              .map((d) => ({
+                order_measurement_id: createdMeasurement.id,
+                parameter_name: d.parameter_name,
+                parameter_value: params[d.id],
+                unit: d.unit || null,
+              }));
+
+            if (inserts.length > 0) {
+              const { error } = await supabase.from("measurement_parameters").insert(inserts);
+              if (error) throw error;
+            }
+          }
+        }
+      }
 
       toast.success("Messauftrag erfolgreich erstellt!");
       navigate(`/auftraege/${order.id}`);
@@ -131,33 +245,20 @@ export default function CreateOrderPage() {
         {/* Projekt */}
         <Card>
           <CardHeader><CardTitle className="text-base">Projekt</CardTitle></CardHeader>
-           <CardContent className="space-y-4">
-            {projectMode === "existing" ?
+          <CardContent>
             <div>
-                <Label>Projekt auswählen</Label>
-                <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                  <SelectTrigger><SelectValue placeholder="Projekt wählen..." /></SelectTrigger>
-                  <SelectContent>
-                    {projects.map((p) =>
-                  <SelectItem key={p.id} value={p.id}>
-                        {p.project_number} {p.project_name ? `– ${p.project_name}` : ""}
-                      </SelectItem>
-                  )}
-                  </SelectContent>
-                </Select>
-              </div> :
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Projektnummer *</Label>
-                  <Input value={newProjectNumber} onChange={(e) => setNewProjectNumber(e.target.value)} placeholder="z.B. PRJ-2025-001" required />
-                </div>
-                <div>
-                  <Label>Projektname</Label>
-                  <Input value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} placeholder="Optional" />
-                </div>
-              </div>
-            }
+              <Label>Projekt auswählen</Label>
+              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                <SelectTrigger><SelectValue placeholder="Projekt wählen..." /></SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.project_number} {p.project_name ? `– ${p.project_name}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
@@ -168,7 +269,7 @@ export default function CreateOrderPage() {
             <SampleSelector
               value={selectedSampleId}
               onSelect={setSelectedSampleId}
-              projectId={projectMode === "existing" ? selectedProjectId : undefined}
+              projectId={selectedProjectId || undefined}
             />
           </CardContent>
         </Card>
@@ -183,9 +284,9 @@ export default function CreateOrderPage() {
                 <Select value={orderType} onValueChange={setOrderType}>
                   <SelectTrigger><SelectValue placeholder="Typ wählen..." /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(ORDER_TYPE_LABELS).map(([k, v]) =>
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                    )}
+                    {Object.entries(ORDER_TYPE_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -194,9 +295,9 @@ export default function CreateOrderPage() {
                 <Select value={priority} onValueChange={setPriority}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(ORDER_PRIORITY_LABELS).map(([k, v]) =>
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                    )}
+                    {Object.entries(ORDER_PRIORITY_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -221,80 +322,77 @@ export default function CreateOrderPage() {
               <Select onValueChange={addService}>
                 <SelectTrigger><SelectValue placeholder="Messdienstleistung auswählen..." /></SelectTrigger>
                 <SelectContent>
-                  {laborServices.length > 0 &&
-                  <>
+                  {laborServices.length > 0 && (
+                    <>
                       <SelectItem value="__labor_header" disabled>── Labor ──</SelectItem>
-                      {laborServices.map((s) =>
-                    <SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>
+                      {laborServices.map((s) => (
+                        <SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>
                           {s.service_name} ({s.hourly_rate} €/h)
                         </SelectItem>
-                    )}
+                      ))}
                     </>
-                  }
-                  {pilotServices.length > 0 &&
-                  <>
+                  )}
+                  {pilotServices.length > 0 && (
+                    <>
                       <SelectItem value="__pilot_header" disabled>── Pilot Plant ──</SelectItem>
-                      {pilotServices.map((s) =>
-                    <SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>
+                      {pilotServices.map((s) => (
+                        <SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>
                           {s.service_name} ({s.hourly_rate} €/h)
                         </SelectItem>
-                    )}
+                      ))}
                     </>
-                  }
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
-            {measurements.length === 0 ?
-            <p className="text-sm text-muted-foreground">Noch keine Messungen hinzugefügt. Wählen Sie mindestens eine Messdienstleistung aus.</p> :
-
-            <div className="space-y-3">
-                {measurements.map((m, idx) =>
-              <div key={idx} className="flex items-center gap-3 p-3 border rounded-md flex-wrap">
-                    <div className="flex-1 min-w-[120px]">
-                      <p className="font-medium text-sm">{m.service_name}</p>
+            {measurements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Noch keine Messungen hinzugefügt. Wählen Sie mindestens eine Messdienstleistung aus.</p>
+            ) : (
+              <div className="space-y-3">
+                {measurements.map((m, idx) => (
+                  <div key={idx} className="p-3 border rounded-md space-y-2">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="font-medium text-sm">{m.service_name}</p>
+                      </div>
+                      <div className="w-36">
+                        <Label className="text-xs">Arbeitsplatz</Label>
+                        <Select value={m.workstation_id || "__none"} onValueChange={(v) => updateMeasurement(idx, "workstation_id", v === "__none" ? "" : v)}>
+                          <SelectTrigger className="h-8"><SelectValue placeholder="Wählen..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none">– Keiner –</SelectItem>
+                            {workstations.filter((w: any) => w.status === "active").map((w: any) => (
+                              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="w-24">
+                        <Label className="text-xs">Stunden</Label>
+                        <Input
+                          type="number"
+                          min={0.5}
+                          step={0.5}
+                          value={m.planned_hours}
+                          onChange={(e) => updateMeasurement(idx, "planned_hours", parseFloat(e.target.value) || 0)}
+                          className="h-8"
+                        />
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(idx)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <div className="w-36">
-                      <Label className="text-xs">Arbeitsplatz</Label>
-                      <Select value={m.workstation_id || "__none"} onValueChange={(v) => updateMeasurement(idx, "workstation_id", v === "__none" ? "" : v)}>
-                        <SelectTrigger className="h-8"><SelectValue placeholder="Wählen..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none">– Keiner –</SelectItem>
-                          {workstations.filter((w: any) => w.status === "active").map((w: any) =>
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                      )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="w-24">
-                      <Label className="text-xs">Stunden</Label>
-                      <Input
-                    type="number"
-                    min={0.5}
-                    step={0.5}
-                    value={m.planned_hours}
-                    onChange={(e) => updateMeasurement(idx, "planned_hours", parseFloat(e.target.value) || 0)}
-                    className="h-8" />
-
-                    </div>
-                    
-
-
-
-
-
-
-
-
-
-
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(idx)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {/* Required parameters for this service */}
+                    <ServiceRequiredParams
+                      serviceId={m.service_id}
+                      paramValues={measurementParams[idx] || {}}
+                      onParamChange={(paramId, value) => updateParam(idx, paramId, value)}
+                    />
                   </div>
-              )}
+                ))}
               </div>
-            }
+            )}
           </CardContent>
         </Card>
 
@@ -305,6 +403,6 @@ export default function CreateOrderPage() {
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>Abbrechen</Button>
         </div>
       </form>
-    </div>);
-
+    </div>
+  );
 }
