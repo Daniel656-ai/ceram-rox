@@ -296,10 +296,29 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
               </div>
             )}
 
+
+            <div>
+              <Label>Beschreibung</Label>
+              <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optionale Beschreibung" />
+            </div>
+
             <div>
               <Label>Standardwert</Label>
               <Input value={form.default_value} onChange={(e) => setForm((f) => ({ ...f, default_value: e.target.value }))} placeholder="Optional" />
             </div>
+
+            {form.parameter_type === "number" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Min-Wert</Label>
+                  <Input type="number" step="any" value={form.min_value} onChange={(e) => setForm((f) => ({ ...f, min_value: e.target.value }))} placeholder="Optional" />
+                </div>
+                <div>
+                  <Label>Max-Wert</Label>
+                  <Input type="number" step="any" value={form.max_value} onChange={(e) => setForm((f) => ({ ...f, max_value: e.target.value }))} placeholder="Optional" />
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-3">
               <Switch checked={form.is_required} onCheckedChange={(v) => setForm((f) => ({ ...f, is_required: v }))} />

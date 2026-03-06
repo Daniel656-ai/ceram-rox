@@ -2,18 +2,15 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAddMeasurementResult, useUpdateMeasurementResult, useDeleteMeasurementResult } from "@/hooks/useMeasurementResults";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Save, FlaskConical, Beaker } from "lucide-react";
 import { toast } from "sonner";
 import DynamicParameterForm from "@/components/DynamicParameterForm";
+import ResultParameterEntry from "@/components/ResultParameterEntry";
 
 interface MeasurementDataEntryProps {
   measurement: any;
