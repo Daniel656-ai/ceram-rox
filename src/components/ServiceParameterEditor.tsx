@@ -191,6 +191,11 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
                   </TableCell>
                   <TableCell className="text-sm">{d.unit || "–"}</TableCell>
                   <TableCell>{d.is_required ? <Badge className="text-xs">Pflicht</Badge> : <span className="text-xs text-muted-foreground">Optional</span>}</TableCell>
+                  <TableCell className="text-xs">
+                    {d.min_value != null || d.max_value != null
+                      ? `${d.min_value ?? '–'} – ${d.max_value ?? '–'}`
+                      : "–"}
+                  </TableCell>
                   <TableCell className="text-sm">{d.default_value || "–"}</TableCell>
                   <TableCell className="text-xs">
                     {condParam ? (
