@@ -79,6 +79,9 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
         select_options_text: (def.select_options || []).join(", "),
         conditional_on: def.conditional_on || "",
         conditional_value: def.conditional_value || "",
+        description: def.description || "",
+        min_value: def.min_value != null ? String(def.min_value) : "",
+        max_value: def.max_value != null ? String(def.max_value) : "",
       });
     } else {
       setEditing(null);
@@ -92,6 +95,9 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
         select_options_text: "",
         conditional_on: "",
         conditional_value: "",
+        description: "",
+        min_value: "",
+        max_value: "",
       });
     }
     setDialogOpen(true);
