@@ -538,8 +538,11 @@ export type Database = {
           conditional_on: string | null
           conditional_value: string | null
           default_value: string | null
+          description: string | null
           id: string
           is_required: boolean
+          max_value: number | null
+          min_value: number | null
           parameter_category: string
           parameter_name: string
           parameter_type: string
@@ -552,8 +555,11 @@ export type Database = {
           conditional_on?: string | null
           conditional_value?: string | null
           default_value?: string | null
+          description?: string | null
           id?: string
           is_required?: boolean
+          max_value?: number | null
+          min_value?: number | null
           parameter_category?: string
           parameter_name: string
           parameter_type?: string
@@ -566,8 +572,11 @@ export type Database = {
           conditional_on?: string | null
           conditional_value?: string | null
           default_value?: string | null
+          description?: string | null
           id?: string
           is_required?: boolean
+          max_value?: number | null
+          min_value?: number | null
           parameter_category?: string
           parameter_name?: string
           parameter_type?: string
