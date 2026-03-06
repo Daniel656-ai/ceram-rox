@@ -124,6 +124,9 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
       conditional_on: form.conditional_on || null,
       conditional_value: form.conditional_value || null,
       sort_order: editing ? undefined : defs.length,
+      description: form.description || null,
+      min_value: form.min_value ? parseFloat(form.min_value) : null,
+      max_value: form.max_value ? parseFloat(form.max_value) : null,
     };
 
     try {
