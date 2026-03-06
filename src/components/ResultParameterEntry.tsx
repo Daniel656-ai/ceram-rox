@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useServiceParameterDefs, type ServiceParameterDefinition } from "@/hooks/useServiceParameters";
+import { useServiceParameterDefs } from "@/hooks/useServiceParameters";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAddMeasurementResult, useUpdateMeasurementResult, useDeleteMeasurementResult } from "@/hooks/useMeasurementResults";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

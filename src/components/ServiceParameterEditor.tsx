@@ -217,7 +217,7 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
             })}
             {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-xs text-muted-foreground py-4">
+              <TableCell colSpan={9} className="text-center text-xs text-muted-foreground py-4">
                   Keine {CATEGORY_LABELS[category]} definiert
                 </TableCell>
               </TableRow>
