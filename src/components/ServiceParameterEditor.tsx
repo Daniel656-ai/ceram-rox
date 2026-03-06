@@ -170,6 +170,7 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
               <TableHead>Typ</TableHead>
               <TableHead>Einheit</TableHead>
               <TableHead>Pflicht</TableHead>
+              <TableHead>Bereich</TableHead>
               <TableHead>Standard</TableHead>
               <TableHead>Bedingung</TableHead>
               <TableHead className="w-20">Aktionen</TableHead>
