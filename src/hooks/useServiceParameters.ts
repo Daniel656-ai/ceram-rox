@@ -14,6 +14,9 @@ export interface ServiceParameterDefinition {
   select_options: string[];
   conditional_on: string | null;
   conditional_value: string | null;
+  description: string | null;
+  min_value: number | null;
+  max_value: number | null;
 }
 
 export function useServiceParameterDefs(serviceId: string | undefined) {
