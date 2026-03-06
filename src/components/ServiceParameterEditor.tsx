@@ -58,6 +58,9 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
     select_options_text: "",
     conditional_on: "" as string,
     conditional_value: "",
+    description: "",
+    min_value: "",
+    max_value: "",
   });
 
   const inputDefs = defs.filter((d) => d.parameter_category === "input");
