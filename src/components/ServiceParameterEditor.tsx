@@ -58,6 +58,9 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
     select_options_text: "",
     conditional_on: "" as string,
     conditional_value: "",
+    description: "",
+    min_value: "",
+    max_value: "",
   });
 
   const inputDefs = defs.filter((d) => d.parameter_category === "input");
@@ -76,6 +79,9 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
         select_options_text: (def.select_options || []).join(", "),
         conditional_on: def.conditional_on || "",
         conditional_value: def.conditional_value || "",
+        description: def.description || "",
+        min_value: def.min_value != null ? String(def.min_value) : "",
+        max_value: def.max_value != null ? String(def.max_value) : "",
       });
     } else {
       setEditing(null);
@@ -89,6 +95,9 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
         select_options_text: "",
         conditional_on: "",
         conditional_value: "",
+        description: "",
+        min_value: "",
+        max_value: "",
       });
     }
     setDialogOpen(true);
@@ -115,6 +124,9 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
       conditional_on: form.conditional_on || null,
       conditional_value: form.conditional_value || null,
       sort_order: editing ? undefined : defs.length,
+      description: form.description || null,
+      min_value: form.min_value ? parseFloat(form.min_value) : null,
+      max_value: form.max_value ? parseFloat(form.max_value) : null,
     };
 
     try {
@@ -158,6 +170,7 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
               <TableHead>Typ</TableHead>
               <TableHead>Einheit</TableHead>
               <TableHead>Pflicht</TableHead>
+              <TableHead>Bereich</TableHead>
               <TableHead>Standard</TableHead>
               <TableHead>Bedingung</TableHead>
               <TableHead className="w-20">Aktionen</TableHead>
@@ -178,6 +191,11 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
                   </TableCell>
                   <TableCell className="text-sm">{d.unit || "–"}</TableCell>
                   <TableCell>{d.is_required ? <Badge className="text-xs">Pflicht</Badge> : <span className="text-xs text-muted-foreground">Optional</span>}</TableCell>
+                  <TableCell className="text-xs">
+                    {d.min_value != null || d.max_value != null
+                      ? `${d.min_value ?? '–'} – ${d.max_value ?? '–'}`
+                      : "–"}
+                  </TableCell>
                   <TableCell className="text-sm">{d.default_value || "–"}</TableCell>
                   <TableCell className="text-xs">
                     {condParam ? (
@@ -199,7 +217,7 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
             })}
             {items.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-xs text-muted-foreground py-4">
+              <TableCell colSpan={9} className="text-center text-xs text-muted-foreground py-4">
                   Keine {CATEGORY_LABELS[category]} definiert
                 </TableCell>
               </TableRow>
@@ -278,10 +296,29 @@ export default function ServiceParameterEditor({ serviceId, serviceName }: Props
               </div>
             )}
 
+
+            <div>
+              <Label>Beschreibung</Label>
+              <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optionale Beschreibung" />
+            </div>
+
             <div>
               <Label>Standardwert</Label>
               <Input value={form.default_value} onChange={(e) => setForm((f) => ({ ...f, default_value: e.target.value }))} placeholder="Optional" />
             </div>
+
+            {form.parameter_type === "number" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Min-Wert</Label>
+                  <Input type="number" step="any" value={form.min_value} onChange={(e) => setForm((f) => ({ ...f, min_value: e.target.value }))} placeholder="Optional" />
+                </div>
+                <div>
+                  <Label>Max-Wert</Label>
+                  <Input type="number" step="any" value={form.max_value} onChange={(e) => setForm((f) => ({ ...f, max_value: e.target.value }))} placeholder="Optional" />
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-3">
               <Switch checked={form.is_required} onCheckedChange={(v) => setForm((f) => ({ ...f, is_required: v }))} />
