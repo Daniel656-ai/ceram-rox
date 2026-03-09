@@ -51,7 +51,7 @@ export function SampleBarcode({ sampleNumber }: { sampleNumber: string }) {
   return <svg ref={svgRef} />;
 }
 
-export function SampleQRCode({ sampleId, sampleNumber, size = 120 }: { sampleId: string; sampleNumber: string; size?: number }) {
+export function SampleQRCode({ sampleId, size = 120 }: { sampleId: string; sampleNumber?: string; size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const url = `${window.location.origin}/proben/${sampleId}`;
 

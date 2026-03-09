@@ -65,7 +65,7 @@ export function SampleScannerInput() {
 
 export function SampleCameraScanner() {
   const { t } = useTranslation("samples");
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
