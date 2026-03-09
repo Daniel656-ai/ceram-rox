@@ -189,10 +189,10 @@ export default function RawMaterialDetailPage() {
             <div><Label>Lieferant</Label><Input value={editSupplier} onChange={(e) => setEditSupplier(e.target.value)} /></div>
             <div>
               <Label>Lagerort</Label>
-              <Select value={editLocationId} onValueChange={setEditLocationId}>
+              <Select value={editLocationId || "__none__"} onValueChange={(v) => setEditLocationId(v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Lagerort wählen" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Kein Lagerort</SelectItem>
+                  <SelectItem value="__none__">Kein Lagerort</SelectItem>
                   {locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -283,10 +283,10 @@ export default function RawMaterialDetailPage() {
                       </div>
                       <div>
                         <Label>Charge (optional)</Label>
-                        <Select value={aBatchId} onValueChange={setABatchId}>
+                        <Select value={aBatchId || "__none__"} onValueChange={(v) => setABatchId(v === "__none__" ? "" : v)}>
                           <SelectTrigger><SelectValue placeholder="Keine Charge" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Keine</SelectItem>
+                            <SelectItem value="__none__">Keine</SelectItem>
                             {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -346,10 +346,10 @@ export default function RawMaterialDetailPage() {
                       <SelectItem value="sonstiges">Sonstiges</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={docBatchId} onValueChange={setDocBatchId}>
+                  <Select value={docBatchId || "__none__"} onValueChange={(v) => setDocBatchId(v === "__none__" ? "" : v)}>
                     <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Charge" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Keine</SelectItem>
+                      <SelectItem value="__none__">Keine</SelectItem>
                       {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -415,10 +415,10 @@ export default function RawMaterialDetailPage() {
                       </div>
                       <div>
                         <Label>Charge</Label>
-                        <Select value={mBatchId} onValueChange={setMBatchId}>
+                        <Select value={mBatchId || "__none__"} onValueChange={(v) => setMBatchId(v === "__none__" ? "" : v)}>
                           <SelectTrigger><SelectValue placeholder="Charge wählen" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Keine</SelectItem>
+                            <SelectItem value="__none__">Keine</SelectItem>
                             {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
                           </SelectContent>
                         </Select>
