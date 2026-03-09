@@ -414,7 +414,8 @@ export default function RawMaterialDetailPage() {
                         <div><Label>Datum</Label><Input type="date" value={mDate} onChange={(e) => setMDate(e.target.value)} /></div>
                       </div>
                       <div>
-                        <Label>Charge</Label> || "__none__"} onValueChange={(v) => setMBatchId(v === "__none__" ? "" : v)lect value={mBatchId} onValueChange={setMBatchId}>
+                        <Label>Charge</Label>
+                        <Select value={mBatchId || "__none__"} onValueChange={(v) => setMBatchId(v === "__none__" ? "" : v)}>
                           <SelectTrigger><SelectValue placeholder="Charge wählen" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">Keine</SelectItem>
