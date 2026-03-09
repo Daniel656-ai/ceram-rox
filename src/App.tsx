@@ -60,6 +60,8 @@ const App = () => (
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
+              <Route path="/rohstoffe" element={<RawMaterialsPage />} />
+              <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
