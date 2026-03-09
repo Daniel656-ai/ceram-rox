@@ -261,8 +261,9 @@ export default function SampleDetailPage() {
               </div>
             </DialogContent>
           </Dialog>
+          </>
+        )}
         </div>
-      )}
 
       <Tabs defaultValue="overview">
         <TabsList>
