@@ -6,6 +6,7 @@ import {
   useUpdateSampleStatus, useUpdateSampleLocation, useHandoverSample,
   useCreateSample, useAddSampleDocument, useAddSampleHistory,
 } from "@/hooks/useSamples";
+import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useProjects } from "@/hooks/useProjects";
 import { useStorageLocations } from "@/hooks/useRawMaterials";
 import { useUsers } from "@/hooks/useUsers";
