@@ -106,6 +106,7 @@ export function useCreateSample() {
       is_hazardous?: boolean;
       location_id?: string;
       parent_sample_id?: string;
+      tags?: string[];
     }) => {
       const { data, error } = await supabase
         .from("samples")
