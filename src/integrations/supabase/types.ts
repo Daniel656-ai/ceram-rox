@@ -52,6 +52,73 @@ export type Database = {
           },
         ]
       }
+      inventory_movements: {
+        Row: {
+          batch_id: string | null
+          certificate_document_id: string | null
+          comment: string | null
+          created_at: string
+          created_by: string
+          id: string
+          movement_date: string
+          movement_type: string
+          project_reference: string | null
+          quantity: number
+          raw_material_id: string
+          supplier: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          certificate_document_id?: string | null
+          comment?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          movement_date?: string
+          movement_type: string
+          project_reference?: string | null
+          quantity: number
+          raw_material_id: string
+          supplier?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          certificate_document_id?: string | null
+          comment?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          movement_date?: string
+          movement_type?: string
+          project_reference?: string | null
+          quantity?: number
+          raw_material_id?: string
+          supplier?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_certificate_document_id_fkey"
+            columns: ["certificate_document_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mdl_permission_audit_log: {
         Row: {
           action: string
@@ -492,6 +559,208 @@ export type Database = {
         }
         Relationships: []
       }
+      raw_material_analyses: {
+        Row: {
+          analysis_type: string
+          batch_id: string | null
+          created_at: string
+          id: string
+          max_limit: number | null
+          min_limit: number | null
+          parameter_name: string
+          raw_material_id: string
+          remarks: string | null
+          text_value: string | null
+          unit: string | null
+          value: number | null
+        }
+        Insert: {
+          analysis_type?: string
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          max_limit?: number | null
+          min_limit?: number | null
+          parameter_name: string
+          raw_material_id: string
+          remarks?: string | null
+          text_value?: string | null
+          unit?: string | null
+          value?: number | null
+        }
+        Update: {
+          analysis_type?: string
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          max_limit?: number | null
+          min_limit?: number | null
+          parameter_name?: string
+          raw_material_id?: string
+          remarks?: string | null
+          text_value?: string | null
+          unit?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_analyses_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_material_analyses_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_material_batches: {
+        Row: {
+          batch_number: string
+          created_at: string
+          delivery_date: string | null
+          delivery_quantity: number | null
+          id: string
+          notes: string | null
+          raw_material_id: string
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          delivery_date?: string | null
+          delivery_quantity?: number | null
+          id?: string
+          notes?: string | null
+          raw_material_id: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          delivery_date?: string | null
+          delivery_quantity?: number | null
+          id?: string
+          notes?: string | null
+          raw_material_id?: string
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_batches_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_material_documents: {
+        Row: {
+          batch_id: string | null
+          document_type: string
+          file_name: string
+          file_type: string | null
+          id: string
+          raw_material_id: string
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          batch_id?: string | null
+          document_type?: string
+          file_name: string
+          file_type?: string | null
+          id?: string
+          raw_material_id: string
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          batch_id?: string | null
+          document_type?: string
+          file_name?: string
+          file_type?: string | null
+          id?: string
+          raw_material_id?: string
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_documents_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_material_documents_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_materials: {
+        Row: {
+          created_at: string
+          created_by: string
+          default_location_id: string | null
+          description: string | null
+          id: string
+          material_name: string
+          material_number: string
+          supplier: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          default_location_id?: string | null
+          description?: string | null
+          id?: string
+          material_name: string
+          material_number: string
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          default_location_id?: string | null
+          description?: string | null
+          id?: string
+          material_name?: string
+          material_number?: string
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_materials_default_location_id_fkey"
+            columns: ["default_location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       samples: {
         Row: {
           created_at: string
@@ -601,6 +870,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      storage_locations: {
+        Row: {
+          created_at: string
+          hall: string
+          id: string
+          position: string | null
+          room: string | null
+          shelf: string | null
+        }
+        Insert: {
+          created_at?: string
+          hall: string
+          id?: string
+          position?: string | null
+          room?: string | null
+          shelf?: string | null
+        }
+        Update: {
+          created_at?: string
+          hall?: string
+          id?: string
+          position?: string | null
+          room?: string | null
+          shelf?: string | null
+        }
+        Relationships: []
       }
       user_absences: {
         Row: {
