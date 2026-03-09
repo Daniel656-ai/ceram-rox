@@ -13,6 +13,7 @@ import CreateOrderPage from "./pages/CreateOrderPage";
 import ImportOrderPage from "./pages/ImportOrderPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 import WorkPlanPage from "./pages/WorkPlanPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminServicesPage from "./pages/AdminServicesPage";
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/auftraege/import" element={<ImportOrderPage />} />
               <Route path="/auftraege/:id" element={<OrderDetailPage />} />
               <Route path="/projekte" element={<ProjectsPage />} />
+              <Route path="/projekte/:id" element={<ProjectDetailPage />} />
               <Route path="/proben" element={<SamplesPage />} />
               <Route path="/proben/:id" element={<SampleDetailPage />} />
               <Route path="/arbeitsplanung" element={<WorkPlanPage />} />
