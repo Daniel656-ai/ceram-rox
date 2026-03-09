@@ -1,1 +1,7 @@
 project_id = "vrzqlfovvdxofxqyslev"
+
+[functions.absence-ics-feed]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false

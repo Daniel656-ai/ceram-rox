@@ -19,6 +19,7 @@ import AdminServicesPage from "./pages/AdminServicesPage";
 import AdminStatsPage from "./pages/AdminStatsPage";
 import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
 import AdminPermissionsPage from "./pages/AdminPermissionsPage";
+import AdminSyncPage from "./pages/AdminSyncPage";
 import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
 import ResultsDatabasePage from "./pages/ResultsDatabasePage";
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/admin/statistiken" element={<AdminStatsPage />} />
               <Route path="/admin/arbeitsplaetze" element={<AdminWorkstationsPage />} />
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />
+              <Route path="/admin/synchronisation" element={<AdminSyncPage />} />
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
