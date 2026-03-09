@@ -56,7 +56,7 @@ export function SampleBarcode({ sampleNumber, label }: { sampleNumber: string; l
   );
 }
 
-export function SampleQRCode({ sampleId, size = 120 }: { sampleId: string; sampleNumber?: string; size?: number }) {
+export function SampleQRCode({ sampleId, label, size = 120 }: { sampleId: string; sampleNumber?: string; label?: string; size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const url = `${window.location.origin}/proben/${sampleId}`;
 
@@ -70,7 +70,12 @@ export function SampleQRCode({ sampleId, size = 120 }: { sampleId: string; sampl
     }
   }, [url, size]);
 
-  return <canvas ref={canvasRef} />;
+  return (
+    <div className="text-center">
+      <canvas ref={canvasRef} />
+      {label && <p className="text-xs text-muted-foreground mt-1">{label}</p>}
+    </div>
+  );
 }
 
 export function SampleLabelPrintDialog({ sample }: SampleLabelProps) {
