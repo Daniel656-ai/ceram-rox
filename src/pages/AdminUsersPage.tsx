@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile } from "@/hooks/useUsers";
+import { useCustomRoles } from "@/hooks/useCustomRoles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,20 +8,16 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
-const ROLE_LABELS: Record<string, string> = {
-  master: "Administrator",
-  auftraggeber: "Auftraggeber",
-  durchfuehrer: "Messdienstleister",
-};
-
 export default function AdminUsersPage() {
   const { data: users = [], isLoading } = useUsers();
+  const { data: customRoles = [] } = useCustomRoles();
   const { user: currentUser } = useAuth();
   const updateRole = useUpdateUserRole();
   const updateStatus = useUpdateUserStatus();
@@ -37,7 +34,7 @@ export default function AdminUsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
-  const [newRole, setNewRole] = useState("auftraggeber");
+  const [newCustomRoleId, setNewCustomRoleId] = useState("");
   const [newShortCode, setNewShortCode] = useState("");
 
   // Edit form state
@@ -50,7 +47,7 @@ export default function AdminUsersPage() {
     setNewPassword("");
     setNewFirstName("");
     setNewLastName("");
-    setNewRole("auftraggeber");
+    setNewCustomRoleId("");
     setNewShortCode("");
   };
 
@@ -63,14 +60,16 @@ export default function AdminUsersPage() {
       toast.error("Kurzzeichen muss genau 3 Zeichen lang sein");
       return;
     }
+    const selectedRole = customRoles.find((r) => r.id === newCustomRoleId);
     try {
       await createUser.mutateAsync({
         email: newEmail,
         password: newPassword,
         firstName: newFirstName,
         lastName: newLastName,
-        role: newRole,
+        role: selectedRole?.base_role || "auftraggeber",
         shortCode: newShortCode.toUpperCase(),
+        customRoleId: newCustomRoleId || undefined,
       });
       toast.success("Benutzer erstellt");
       setCreateOpen(false);
@@ -111,9 +110,11 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleRoleChange = async (userId: string, role: string) => {
+  const handleRoleChange = async (userId: string, customRoleId: string) => {
+    const selectedRole = customRoles.find((r) => r.id === customRoleId);
+    if (!selectedRole) return;
     try {
-      await updateRole.mutateAsync({ userId, role });
+      await updateRole.mutateAsync({ userId, role: selectedRole.base_role, customRoleId });
       toast.success("Rolle geändert");
     } catch (err: any) {
       toast.error("Fehler", { description: err.message });
@@ -169,7 +170,6 @@ export default function AdminUsersPage() {
                 <TableRow><TableCell colSpan={6} className="text-center py-8">Keine Benutzer gefunden</TableCell></TableRow>
               ) : (
                 users.map((u: any) => {
-                  const role = u.user_roles?.[0]?.role || "auftraggeber";
                   const isSelf = u.user_id === currentUser?.id;
                   return (
                     <TableRow key={u.id}>
@@ -180,18 +180,28 @@ export default function AdminUsersPage() {
                         <span className="font-mono text-sm">{u.short_code || "–"}</span>
                       </TableCell>
                       <TableCell>
-                        <Select value={role} onValueChange={v => handleRoleChange(u.user_id, v)}>
-                          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                        <Select
+                          value={u.custom_role_id || ""}
+                          onValueChange={(v) => handleRoleChange(u.user_id, v)}
+                        >
+                          <SelectTrigger className="w-[200px]">
+                            <SelectValue placeholder={u.custom_role_name || "–"} />
+                          </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="master">Administrator</SelectItem>
-                            <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
-                            <SelectItem value="durchfuehrer">Messdienstleister</SelectItem>
+                            {customRoles.map((r) => (
+                              <SelectItem key={r.id} value={r.id}>
+                                <div className="flex items-center gap-2">
+                                  {r.name}
+                                  {r.is_system && <Badge variant="outline" className="text-xs ml-1">System</Badge>}
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Switch checked={u.is_active} onCheckedChange={v => handleStatusChange(u.user_id, v)} />
+                          <Switch checked={u.is_active} onCheckedChange={(v) => handleStatusChange(u.user_id, v)} />
                           <span className="text-sm">{u.is_active ? "Aktiv" : "Inaktiv"}</span>
                         </div>
                       </TableCell>
@@ -218,7 +228,7 @@ export default function AdminUsersPage() {
       </Card>
 
       {/* Create User Dialog */}
-      <Dialog open={createOpen} onOpenChange={v => { setCreateOpen(v); if (!v) resetCreateForm(); }}>
+      <Dialog open={createOpen} onOpenChange={(v) => { setCreateOpen(v); if (!v) resetCreateForm(); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Neuen Benutzer anlegen</DialogTitle>
@@ -228,33 +238,36 @@ export default function AdminUsersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">Vorname</Label>
-                <Input id="firstName" value={newFirstName} onChange={e => setNewFirstName(e.target.value)} />
+                <Input id="firstName" value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Nachname</Label>
-                <Input id="lastName" value={newLastName} onChange={e => setNewLastName(e.target.value)} />
+                <Input id="lastName" value={newLastName} onChange={(e) => setNewLastName(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-Mail *</Label>
-              <Input id="email" type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+              <Input id="email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Passwort *</Label>
-              <Input id="password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              <Input id="password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="shortCode">Kurzzeichen * (3 Zeichen)</Label>
-              <Input id="shortCode" value={newShortCode} onChange={e => setNewShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder="z.B. ABC" />
+              <Input id="shortCode" value={newShortCode} onChange={(e) => setNewShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder="z.B. ABC" />
             </div>
             <div className="space-y-2">
               <Label>Rolle</Label>
-              <Select value={newRole} onValueChange={setNewRole}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={newCustomRoleId} onValueChange={setNewCustomRoleId}>
+                <SelectTrigger><SelectValue placeholder="Rolle wählen" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="master">Administrator</SelectItem>
-                  <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
-                  <SelectItem value="durchfuehrer">Messdienstleister</SelectItem>
+                  {customRoles.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                      {r.is_system ? " (System)" : ""}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -269,7 +282,7 @@ export default function AdminUsersPage() {
       </Dialog>
 
       {/* Edit User Dialog */}
-      <Dialog open={!!editUser} onOpenChange={v => { if (!v) setEditUser(null); }}>
+      <Dialog open={!!editUser} onOpenChange={(v) => { if (!v) setEditUser(null); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Benutzer bearbeiten</DialogTitle>
@@ -279,16 +292,16 @@ export default function AdminUsersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Vorname</Label>
-                <Input value={editFirstName} onChange={e => setEditFirstName(e.target.value)} />
+                <Input value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Nachname</Label>
-                <Input value={editLastName} onChange={e => setEditLastName(e.target.value)} />
+                <Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Kurzzeichen * (3 Zeichen)</Label>
-              <Input value={editShortCode} onChange={e => setEditShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder="z.B. ABC" />
+              <Input value={editShortCode} onChange={(e) => setEditShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder="z.B. ABC" />
             </div>
           </div>
           <DialogFooter>
@@ -301,7 +314,7 @@ export default function AdminUsersPage() {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Benutzer löschen?</AlertDialogTitle>

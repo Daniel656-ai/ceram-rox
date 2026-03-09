@@ -14,6 +14,7 @@ import {
   Database,
   Gem,
   RefreshCw,
+  KeyRound,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,58 +36,41 @@ import { Separator } from "@/components/ui/separator";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function AppSidebar() {
-  const { profile, role, signOut } = useAuth();
+  const { profile, role, customRoleName, permissions, signOut } = useAuth();
   const { state } = useSidebar();
   const { t } = useTranslation(["navigation", "common"]);
   const collapsed = state === "collapsed";
 
-  const auftraggeberItems = [
-    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard },
-    { title: t("navigation:orders"), url: "/auftraege", icon: ClipboardList },
-    { title: t("navigation:projects"), url: "/projekte", icon: FolderOpen },
-    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical },
-    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database },
-    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem },
-  ];
+  const hasPerm = (key: string) => permissions.includes(key);
+  const isAdmin = hasPerm("admin.system");
 
-  const masterItems = [
-    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard },
-    { title: t("navigation:all_orders"), url: "/auftraege", icon: ClipboardList },
-    { title: t("navigation:projects"), url: "/projekte", icon: FolderOpen },
-    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical },
-    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database },
-    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem },
-    { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock },
-  ];
+  // Build navigation items based on permissions
+  const navItems = [
+    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard, show: true },
+    { title: role === "master" ? t("navigation:all_orders") : role === "durchfuehrer" ? t("navigation:my_orders") : t("navigation:orders"), url: "/auftraege", icon: ClipboardList, show: hasPerm("orders.view") || hasPerm("orders.create") },
+    { title: t("navigation:projects"), url: "/projekte", icon: FolderOpen, show: hasPerm("projects.view") || hasPerm("projects.create") },
+    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical, show: hasPerm("samples.view") || hasPerm("samples.create") },
+    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database, show: hasPerm("measurements.view") || hasPerm("samples.view") },
+    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
+    { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays, show: hasPerm("measurements.enter") },
+    { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master" },
+  ].filter((item) => item.show);
 
-  const masterAdminItems = [
-    { title: t("navigation:users"), url: "/admin/benutzer", icon: Users },
-    { title: t("navigation:measurement_services"), url: "/admin/messdienstleistungen", icon: Beaker },
-    { title: t("navigation:workstations"), url: "/admin/arbeitsplaetze", icon: Building2 },
-    { title: t("navigation:statistics"), url: "/admin/statistiken", icon: BarChart3 },
-    { title: t("navigation:permissions"), url: "/admin/berechtigungen", icon: ShieldCheck },
-    { title: t("navigation:sync"), url: "/admin/synchronisation", icon: RefreshCw },
-  ];
+  const adminItems = [
+    { title: t("navigation:users"), url: "/admin/benutzer", icon: Users, show: hasPerm("users.manage") },
+    { title: t("navigation:roles"), url: "/admin/rollen", icon: KeyRound, show: isAdmin },
+    { title: t("navigation:measurement_services"), url: "/admin/messdienstleistungen", icon: Beaker, show: hasPerm("services.manage") },
+    { title: t("navigation:workstations"), url: "/admin/arbeitsplaetze", icon: Building2, show: hasPerm("workstations.manage") },
+    { title: t("navigation:statistics"), url: "/admin/statistiken", icon: BarChart3, show: isAdmin },
+    { title: t("navigation:permissions"), url: "/admin/berechtigungen", icon: ShieldCheck, show: isAdmin },
+    { title: t("navigation:sync"), url: "/admin/synchronisation", icon: RefreshCw, show: isAdmin },
+  ].filter((item) => item.show);
 
-  const durchfuehrerItems = [
-    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard },
-    { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays },
-    { title: t("navigation:my_orders"), url: "/auftraege", icon: ClipboardList },
-    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical },
-    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database },
-    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem },
-    { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock },
-  ];
-
-  const items =
-    role === "master" ? masterItems :
-    role === "durchfuehrer" ? durchfuehrerItems :
-    auftraggeberItems;
-
-  const roleLabel =
+  const roleLabel = customRoleName || (
     role === "master" ? t("common:role_master") :
     role === "auftraggeber" ? t("common:role_auftraggeber") :
-    role === "durchfuehrer" ? t("common:role_durchfuehrer") : "";
+    role === "durchfuehrer" ? t("common:role_durchfuehrer") : ""
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -102,8 +86,8 @@ export function AppSidebar() {
           <SidebarGroupLabel>{t("navigation:navigation")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
@@ -121,13 +105,13 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {role === "master" && (
+        {adminItems.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel>{t("navigation:administration")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {masterAdminItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.url}

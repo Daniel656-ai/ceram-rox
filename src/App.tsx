@@ -64,6 +64,7 @@ const App = () => (
               <Route path="/admin/statistiken" element={<AdminStatsPage />} />
               <Route path="/admin/arbeitsplaetze" element={<AdminWorkstationsPage />} />
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />
+              <Route path="/admin/rollen" element={<AdminRolesPage />} />
               <Route path="/admin/synchronisation" element={<AdminSyncPage />} />
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
