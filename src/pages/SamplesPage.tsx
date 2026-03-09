@@ -1,5 +1,5 @@
 import { useSamples, useCreateSample, useDeleteSample } from "@/hooks/useSamples";
-import { useProjects } from "@/hooks/useProjects";
+import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useStorageLocations } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
