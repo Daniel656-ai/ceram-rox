@@ -5,21 +5,30 @@ export function useUsers() {
   return useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const [profilesRes, rolesRes] = await Promise.all([
+      const [profilesRes, rolesRes, customRolesRes] = await Promise.all([
         supabase.from("profiles").select("*"),
-        supabase.from("user_roles").select("user_id, role"),
+        supabase.from("user_roles").select("user_id, role, custom_role_id"),
+        supabase.from("custom_roles").select("id, name"),
       ]);
       if (profilesRes.error) throw profilesRes.error;
       if (rolesRes.error) throw rolesRes.error;
 
       const roleMap = new Map(
-        (rolesRes.data || []).map((r: any) => [r.user_id, r.role])
+        (rolesRes.data || []).map((r: any) => [r.user_id, r])
+      );
+      const customRoleMap = new Map(
+        (customRolesRes.data || []).map((cr: any) => [cr.id, cr.name])
       );
 
-      return (profilesRes.data || []).map((p: any) => ({
-        ...p,
-        user_roles: [{ role: roleMap.get(p.user_id) || "auftraggeber" }],
-      }));
+      return (profilesRes.data || []).map((p: any) => {
+        const userRole = roleMap.get(p.user_id);
+        return {
+          ...p,
+          user_roles: [{ role: userRole?.role || "auftraggeber" }],
+          custom_role_id: userRole?.custom_role_id || null,
+          custom_role_name: userRole?.custom_role_id ? customRoleMap.get(userRole.custom_role_id) || null : null,
+        };
+      });
     },
   });
 }
@@ -27,8 +36,10 @@ export function useUsers() {
 export function useUpdateUserRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      const { error } = await supabase.from("user_roles").update({ role: role as any }).eq("user_id", userId);
+    mutationFn: async ({ userId, role, customRoleId }: { userId: string; role: string; customRoleId?: string }) => {
+      const updateData: any = { role: role as any };
+      if (customRoleId !== undefined) updateData.custom_role_id = customRoleId;
+      const { error } = await supabase.from("user_roles").update(updateData).eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
@@ -69,6 +80,7 @@ export function useCreateUser() {
       lastName: string;
       role: string;
       shortCode: string;
+      customRoleId?: string;
     }) => callAdminUsers({ action: "create", ...params }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });

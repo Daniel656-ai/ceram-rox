@@ -36,7 +36,7 @@ serve(async (req: Request) => {
     const { action, ...params } = await req.json();
 
     if (action === "create") {
-      const { email, password, firstName, lastName, role, shortCode } = params;
+      const { email, password, firstName, lastName, role, shortCode, customRoleId } = params;
       if (!email || !password) throw new Error("E-Mail und Passwort erforderlich");
       if (!shortCode || shortCode.length !== 3) throw new Error("Kurzzeichen muss genau 3 Zeichen lang sein");
 
@@ -67,12 +67,18 @@ serve(async (req: Request) => {
           .eq("user_id", newUser.user.id);
       }
 
-      // Update role if not default
-      if (role && role !== "auftraggeber" && newUser.user) {
-        await supabaseAdmin
-          .from("user_roles")
-          .update({ role })
-          .eq("user_id", newUser.user.id);
+      // Update role and custom_role_id
+      if (newUser.user) {
+        const updateData: Record<string, unknown> = {};
+        if (role && role !== "auftraggeber") updateData.role = role;
+        if (customRoleId) updateData.custom_role_id = customRoleId;
+
+        if (Object.keys(updateData).length > 0) {
+          await supabaseAdmin
+            .from("user_roles")
+            .update(updateData)
+            .eq("user_id", newUser.user.id);
+        }
       }
 
       return new Response(JSON.stringify({ user: newUser.user }), {
