@@ -192,7 +192,7 @@ export default function RawMaterialDetailPage() {
               <Select value={editLocationId} onValueChange={setEditLocationId}>
                 <SelectTrigger><SelectValue placeholder="Lagerort wählen" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Kein Lagerort</SelectItem>
+                  <SelectItem value="__none__">Kein Lagerort</SelectItem>
                   {locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
                 </SelectContent>
               </Select>
