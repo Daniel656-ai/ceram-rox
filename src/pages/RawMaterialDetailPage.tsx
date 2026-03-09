@@ -189,7 +189,7 @@ export default function RawMaterialDetailPage() {
             <div><Label>Lieferant</Label><Input value={editSupplier} onChange={(e) => setEditSupplier(e.target.value)} /></div>
             <div>
               <Label>Lagerort</Label>
-              <Select value={editLocationId} onValueChange={setEditLocationId}>
+              <Select value={editLocationId || "__none__"} onValueChange={(v) => setEditLocationId(v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Lagerort wählen" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Kein Lagerort</SelectItem>
