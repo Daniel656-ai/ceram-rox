@@ -346,7 +346,7 @@ export default function RawMaterialDetailPage() {
                       <SelectItem value="sonstiges">Sonstiges</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={docBatchId || "__none__"} onValueChange={(v) => setDocBatchId(v === "__none__" ? "" : v){(v) => setDocBatchId(v === "__none__" ? "" : v)}>
+                  <Select value={docBatchId || "__none__"} onValueChange={(v) => setDocBatchId(v === "__none__" ? "" : v)}>
                     <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Charge" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">Keine</SelectItem>
