@@ -65,6 +65,7 @@ const durchfuehrerItems = [
   { title: "Meine Aufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Proben", url: "/proben", icon: FlaskConical },
   { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
+  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
   { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
