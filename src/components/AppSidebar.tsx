@@ -47,6 +47,7 @@ const masterItems = [
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
   { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
+  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
   { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
