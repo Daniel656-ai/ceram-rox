@@ -27,7 +27,7 @@ export function SampleScannerInput() {
     }
 
     // Otherwise treat as sample_number
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("samples")
       .select("id")
       .eq("sample_number", trimmed)
