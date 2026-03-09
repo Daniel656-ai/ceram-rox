@@ -288,6 +288,23 @@ export default function SampleDetailPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("project")}</span><span className="font-medium">{project?.project_number || "–"}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("description")}</span><span className="font-medium text-right max-w-[60%]">{s.description}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("created_at")}</span><span className="font-medium">{new Date(s.created_at).toLocaleDateString("de-DE")}</span></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">{t("eta")}</span>
+                  <span className="font-medium">
+                    {(() => {
+                      const completed = ["vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"];
+                      if (completed.includes(s.status)) return t("eta_completed");
+                      const eta = etaMap.get(s.id);
+                      if (!eta) return t("eta_no_orders");
+                      return (
+                        <Badge variant="outline" className="gap-1">
+                          <CalendarClock className="h-3 w-3" />
+                          {eta.toLocaleDateString("de-DE")}
+                        </Badge>
+                      );
+                    })()}
+                  </span>
+                </div>
                 {s.parent_sample_id && (
                   <div className="flex justify-between"><span className="text-muted-foreground">{t("parent_sample")}</span>
                     <Link to={`/proben/${s.parent_sample_id}`} className="font-medium text-primary underline">{t("parent_sample")}</Link>
