@@ -38,6 +38,40 @@ export default function RawMaterialDetailPage() {
   const canManage = role === "master" || role === "auftraggeber";
   const stock = movements ? calculateStock(movements) : 0;
 
+  // Edit material form
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editSupplier, setEditSupplier] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editUnit, setEditUnit] = useState("");
+  const [editLocationId, setEditLocationId] = useState<string>("");
+
+  const openEditDialog = () => {
+    if (!mat) return;
+    setEditName(mat.material_name);
+    setEditSupplier(mat.supplier || "");
+    setEditDesc(mat.description || "");
+    setEditUnit(mat.unit);
+    setEditLocationId(mat.default_location_id || "");
+    setEditOpen(true);
+  };
+
+  const handleUpdateMaterial = async () => {
+    if (!editName) { toast.error("Name ist Pflicht"); return; }
+    try {
+      await updateMaterial.mutateAsync({
+        id: id!,
+        material_name: editName,
+        supplier: editSupplier || undefined,
+        description: editDesc || undefined,
+        unit: editUnit,
+        default_location_id: editLocationId || null,
+      });
+      toast.success("Rohstoff aktualisiert");
+      setEditOpen(false);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   // Batch form
   const [batchOpen, setBatchOpen] = useState(false);
   const [bNum, setBNum] = useState("");
