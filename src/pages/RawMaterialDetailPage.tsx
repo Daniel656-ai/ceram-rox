@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useRawMaterialDetail, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useStorageLocations, calculateStock } from "@/hooks/useRawMaterials";
+import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useStorageLocations, calculateStock } from "@/hooks/useRawMaterials";
+import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,14 @@ export default function RawMaterialDetailPage() {
   const { data: mat, isLoading } = useRawMaterialDetail(id);
   const { data: movements } = useInventoryMovements(id);
   const { data: locations } = useStorageLocations();
+  const { data: allMaterials } = useRawMaterials();
+  const { data: projects } = useProjects();
+
+  // Extract unique suppliers from all raw materials
+  const suppliers = useMemo(() => {
+    if (!allMaterials) return [];
+    return [...new Set(allMaterials.map((m: any) => m.supplier).filter(Boolean))] as string[];
+  }, [allMaterials]);
   const addBatch = useAddBatch();
   const deleteBatch = useDeleteBatch();
   const addAnalysis = useAddAnalysis();
@@ -423,8 +432,34 @@ export default function RawMaterialDetailPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      {mType === "eingang" && <div><Label>Lieferant</Label><Input value={mSupplier} onChange={(e) => setMSupplier(e.target.value)} /></div>}
-                      {mType === "verbrauch" && <div><Label>Projekt / Versuch</Label><Input value={mProject} onChange={(e) => setMProject(e.target.value)} /></div>}
+                      {mType === "eingang" && (
+                        <div>
+                          <Label>Lieferant</Label>
+                          <Select value={mSupplier || "__none__"} onValueChange={(v) => setMSupplier(v === "__none__" ? "" : v)}>
+                            <SelectTrigger><SelectValue placeholder="Lieferant wählen" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Kein Lieferant</SelectItem>
+                              {suppliers.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {mType === "verbrauch" && (
+                        <div>
+                          <Label>Projekt</Label>
+                          <Select value={mProject || "__none__"} onValueChange={(v) => setMProject(v === "__none__" ? "" : v)}>
+                            <SelectTrigger><SelectValue placeholder="Projekt wählen" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Kein Projekt</SelectItem>
+                              {projects?.map((p: any) => (
+                                <SelectItem key={p.id} value={p.project_number}>
+                                  {p.project_number}{p.project_name ? ` – ${p.project_name}` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       <div><Label>Kommentar</Label><Textarea value={mComment} onChange={(e) => setMComment(e.target.value)} rows={2} /></div>
                       <Button onClick={handleAddMovement} className="w-full">Buchen</Button>
                     </div>
