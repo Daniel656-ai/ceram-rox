@@ -136,5 +136,18 @@
   "tab_history": "History",
   "tab_documents": "Documents",
   "tab_subsamples": "Sub-samples",
-  "tab_measurements": "Measurements"
+  "tab_measurements": "Measurements",
+
+  "print_label": "Print Label",
+  "label_size": "Label Size",
+  "label_small": "Small (Lab tubes)",
+  "label_medium": "Medium (Sample bags)",
+  "label_large": "Large (Containers)",
+  "barcode": "Barcode",
+  "qr_code": "QR Code",
+  "scan_placeholder": "Scan barcode or enter sample number...",
+  "scan_camera": "Camera Scanner",
+  "scan_camera_hint": "Hold the QR code in front of the camera. Alternatively, use a USB barcode scanner.",
+  "scan_not_found": "Sample not found",
+  "camera_error": "Could not start camera"
 }

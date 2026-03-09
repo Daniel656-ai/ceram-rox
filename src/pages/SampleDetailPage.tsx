@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, FileText, GitBranch } from "lucide-react";
+import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
 
 const STATUSES = ["neu", "eingelagert", "in_bearbeitung", "teilweise_verbraucht", "vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"] as const;
 
@@ -187,81 +188,84 @@ export default function SampleDetailPage() {
       )}
 
       {/* Action buttons */}
-      {canManage && (
-        <div className="flex flex-wrap gap-2">
-          <Dialog open={statusDialog} onOpenChange={setStatusDialog}>
-            <DialogTrigger asChild><Button variant="outline" size="sm"><Clock className="h-4 w-4 mr-1" />{t("change_status")}</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{t("change_status")}</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <Select value={newStatus} onValueChange={setNewStatus}>
-                  <SelectTrigger><SelectValue placeholder="..." /></SelectTrigger>
-                  <SelectContent>
-                    {STATUSES.map(st => <SelectItem key={st} value={st}>{t(`status_${st}`)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Textarea value={actionComment} onChange={e => setActionComment(e.target.value)} placeholder={t("comment_placeholder")} rows={2} />
-                <Button onClick={handleStatusChange} disabled={!newStatus} className="w-full">{t("save")}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={locationDialog} onOpenChange={setLocationDialog}>
-            <DialogTrigger asChild><Button variant="outline" size="sm"><MapPin className="h-4 w-4 mr-1" />{t("change_location")}</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{t("change_location")}</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <Select value={newLocationId || "__none__"} onValueChange={setNewLocationId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">{t("no_location")}</SelectItem>
-                    {locations.map(l => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Textarea value={actionComment} onChange={e => setActionComment(e.target.value)} placeholder={t("comment_placeholder")} rows={2} />
-                <Button onClick={handleLocationChange} className="w-full">{t("save")}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={handoverDialog} onOpenChange={setHandoverDialog}>
-            <DialogTrigger asChild><Button variant="outline" size="sm"><Users className="h-4 w-4 mr-1" />{t("handover")}</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{t("handover_to")}</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <Select value={handoverTo} onValueChange={setHandoverTo}>
-                  <SelectTrigger><SelectValue placeholder={t("select_user")} /></SelectTrigger>
-                  <SelectContent>
-                    {users.filter((u: any) => u.user_id !== user?.id && u.is_active).map((u: any) => (
-                      <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Textarea value={actionComment} onChange={e => setActionComment(e.target.value)} placeholder={t("comment_placeholder")} rows={2} />
-                <Button onClick={handleHandover} disabled={!handoverTo} className="w-full">{t("save")}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={subSampleDialog} onOpenChange={setSubSampleDialog}>
-            <DialogTrigger asChild><Button variant="outline" size="sm"><GitBranch className="h-4 w-4 mr-1" />{t("create_subsample")}</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{t("create_subsample")}</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>{t("sample_name_required")}</Label>
-                  <Input value={subName} onChange={e => setSubName(e.target.value)} placeholder={t("subsample_name_placeholder")} />
+      <div className="flex flex-wrap gap-2">
+        <SampleLabelPrintDialog sample={s} />
+        {canManage && (
+          <>
+            <Dialog open={statusDialog} onOpenChange={setStatusDialog}>
+              <DialogTrigger asChild><Button variant="outline" size="sm"><Clock className="h-4 w-4 mr-1" />{t("change_status")}</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>{t("change_status")}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <Select value={newStatus} onValueChange={setNewStatus}>
+                    <SelectTrigger><SelectValue placeholder="..." /></SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map(st => <SelectItem key={st} value={st}>{t(`status_${st}`)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Textarea value={actionComment} onChange={e => setActionComment(e.target.value)} placeholder={t("comment_placeholder")} rows={2} />
+                  <Button onClick={handleStatusChange} disabled={!newStatus} className="w-full">{t("save")}</Button>
                 </div>
-                <div className="space-y-2">
-                  <Label>{t("description")}</Label>
-                  <Textarea value={subDesc} onChange={e => setSubDesc(e.target.value)} placeholder={t("description_placeholder")} rows={2} />
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={locationDialog} onOpenChange={setLocationDialog}>
+              <DialogTrigger asChild><Button variant="outline" size="sm"><MapPin className="h-4 w-4 mr-1" />{t("change_location")}</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>{t("change_location")}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <Select value={newLocationId || "__none__"} onValueChange={setNewLocationId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">{t("no_location")}</SelectItem>
+                      {locations.map(l => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Textarea value={actionComment} onChange={e => setActionComment(e.target.value)} placeholder={t("comment_placeholder")} rows={2} />
+                  <Button onClick={handleLocationChange} className="w-full">{t("save")}</Button>
                 </div>
-                <Button onClick={handleCreateSubSample} disabled={!subName.trim() || !subDesc.trim()} className="w-full">{t("create_sample")}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={handoverDialog} onOpenChange={setHandoverDialog}>
+              <DialogTrigger asChild><Button variant="outline" size="sm"><Users className="h-4 w-4 mr-1" />{t("handover")}</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>{t("handover_to")}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <Select value={handoverTo} onValueChange={setHandoverTo}>
+                    <SelectTrigger><SelectValue placeholder={t("select_user")} /></SelectTrigger>
+                    <SelectContent>
+                      {users.filter((u: any) => u.user_id !== user?.id && u.is_active).map((u: any) => (
+                        <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Textarea value={actionComment} onChange={e => setActionComment(e.target.value)} placeholder={t("comment_placeholder")} rows={2} />
+                  <Button onClick={handleHandover} disabled={!handoverTo} className="w-full">{t("save")}</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={subSampleDialog} onOpenChange={setSubSampleDialog}>
+              <DialogTrigger asChild><Button variant="outline" size="sm"><GitBranch className="h-4 w-4 mr-1" />{t("create_subsample")}</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>{t("create_subsample")}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>{t("sample_name_required")}</Label>
+                    <Input value={subName} onChange={e => setSubName(e.target.value)} placeholder={t("subsample_name_placeholder")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("description")}</Label>
+                    <Textarea value={subDesc} onChange={e => setSubDesc(e.target.value)} placeholder={t("description_placeholder")} rows={2} />
+                  </div>
+                  <Button onClick={handleCreateSubSample} disabled={!subName.trim() || !subDesc.trim()} className="w-full">{t("create_sample")}</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+      </div>
 
       <Tabs defaultValue="overview">
         <TabsList>
@@ -317,6 +321,20 @@ export default function SampleDetailPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Barcode & QR Code */}
+            <Card>
+              <CardHeader><CardTitle className="text-base">{t("barcode")} & {t("qr_code")}</CardTitle></CardHeader>
+              <CardContent className="flex items-center justify-center gap-6 flex-wrap">
+                <div className="text-center">
+                  <SampleBarcode sampleNumber={s.sample_number} />
+                </div>
+                <div className="text-center">
+                  <SampleQRCode sampleId={s.id} sampleNumber={s.sample_number} size={120} />
+                  <p className="text-xs text-muted-foreground mt-1">{s.sample_number}</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
