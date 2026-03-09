@@ -58,6 +58,7 @@ const masterAdminItems = [
   { title: "Arbeitsplätze", url: "/admin/arbeitsplaetze", icon: Building2 },
   { title: "Statistiken", url: "/admin/statistiken", icon: BarChart3 },
   { title: "Berechtigungen", url: "/admin/berechtigungen", icon: ShieldCheck },
+  { title: "Synchronisation", url: "/admin/synchronisation", icon: RefreshCw },
 ];
 
 const durchfuehrerItems = [
