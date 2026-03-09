@@ -106,6 +106,7 @@ export default function RawMaterialDetailPage() {
   const [mBatchId, setMBatchId] = useState("");
   const [mSupplier, setMSupplier] = useState("");
   const [mProject, setMProject] = useState("");
+  const [mExperiment, setMExperiment] = useState("");
   const [mComment, setMComment] = useState("");
 
   // Document upload
