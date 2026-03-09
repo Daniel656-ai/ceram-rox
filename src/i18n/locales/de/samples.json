@@ -136,5 +136,18 @@
   "tab_history": "Historie",
   "tab_documents": "Dokumente",
   "tab_subsamples": "Teilproben",
-  "tab_measurements": "Messungen"
+  "tab_measurements": "Messungen",
+
+  "print_label": "Etikett drucken",
+  "label_size": "Etikettengröße",
+  "label_small": "Klein (Laborröhrchen)",
+  "label_medium": "Mittel (Probenbeutel)",
+  "label_large": "Groß (Behälter)",
+  "barcode": "Barcode",
+  "qr_code": "QR-Code",
+  "scan_placeholder": "Barcode scannen oder Probennummer eingeben...",
+  "scan_camera": "Kamera-Scanner",
+  "scan_camera_hint": "Halten Sie den QR-Code vor die Kamera. Alternativ nutzen Sie einen USB-Barcodescanner.",
+  "scan_not_found": "Probe nicht gefunden",
+  "camera_error": "Kamera konnte nicht gestartet werden"
 }
