@@ -37,6 +37,20 @@
   "name": "Name",
   "actions": "Actions",
 
+  "cat_all": "All",
+  "cat_eingang": "Incoming",
+  "cat_in_bearbeitung": "In Progress",
+  "cat_wartend": "Waiting",
+  "cat_eingelagert": "Stored",
+  "cat_kritisch": "Critical Storage",
+  "cat_gefahrstoff": "Hazardous",
+  "cat_kritisch_warning": "{{count}} sample(s) with critical or expired storage duration.",
+  "cat_gefahrstoff_warning": "{{count}} sample(s) contain hazardous substances. Observe special protective measures.",
+
+  "expiry_remaining": "Time Remaining",
+  "expiry_days": "{{count}} day(s)",
+  "expiry_overdue": "Overdue",
+
   "status_neu": "New",
   "status_eingelagert": "Stored",
   "status_in_bearbeitung": "In Progress",

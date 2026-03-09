@@ -37,6 +37,20 @@
   "name": "Name",
   "actions": "Aktionen",
 
+  "cat_all": "Alle",
+  "cat_eingang": "Eingang",
+  "cat_in_bearbeitung": "In Bearbeitung",
+  "cat_wartend": "Wartend",
+  "cat_eingelagert": "Eingelagert",
+  "cat_kritisch": "Kritische Lagerzeit",
+  "cat_gefahrstoff": "Gefahrstoffe",
+  "cat_kritisch_warning": "{{count}} Probe(n) mit kritischer oder abgelaufener Lagerdauer.",
+  "cat_gefahrstoff_warning": "{{count}} Probe(n) enthalten Gefahrstoffe. Besondere Schutzmaßnahmen beachten.",
+
+  "expiry_remaining": "Restlaufzeit",
+  "expiry_days": "{{count}} Tag(e)",
+  "expiry_overdue": "Abgelaufen",
+
   "status_neu": "Neu angelegt",
   "status_eingelagert": "Eingelagert",
   "status_in_bearbeitung": "In Bearbeitung",
