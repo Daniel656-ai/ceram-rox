@@ -462,6 +462,12 @@ export default function RawMaterialDetailPage() {
                           </Select>
                         </div>
                       )}
+                      {mType === "verbrauch" && (
+                        <div>
+                          <Label>Versuchsnummer</Label>
+                          <Input value={mExperiment} onChange={(e) => setMExperiment(e.target.value)} placeholder="z.B. V-001" />
+                        </div>
+                      )}
                       <div><Label>Kommentar</Label><Textarea value={mComment} onChange={(e) => setMComment(e.target.value)} rows={2} /></div>
                       <Button onClick={handleAddMovement} className="w-full">Buchen</Button>
                     </div>
