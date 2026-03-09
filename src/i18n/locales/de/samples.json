@@ -163,5 +163,10 @@
   "scan_camera": "Kamera-Scanner",
   "scan_camera_hint": "Halten Sie den QR-Code vor die Kamera. Alternativ nutzen Sie einen USB-Barcodescanner.",
   "scan_not_found": "Probe nicht gefunden",
-  "camera_error": "Kamera konnte nicht gestartet werden"
+  "camera_error": "Kamera konnte nicht gestartet werden",
+
+  "eta": "Voraussichtl. Fertigstellung",
+  "eta_short": "ETA",
+  "eta_no_orders": "Keine offenen Aufträge",
+  "eta_completed": "Abgeschlossen"
 }
