@@ -329,9 +329,9 @@ export default function SamplesPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 9 : 8} className="text-center py-8">{t("loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 10 : 9} className="text-center py-8">{t("loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 9 : 8} className="text-center py-8 text-muted-foreground">{t("no_samples")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 10 : 9} className="text-center py-8 text-muted-foreground">{t("no_samples")}</TableCell></TableRow>
               ) : (
                 filtered.map((s: any) => {
                   const project = s.projects;
