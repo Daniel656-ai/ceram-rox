@@ -26,12 +26,14 @@ export default function RawMaterialDetailPage() {
   const { user, role } = useAuth();
   const { data: mat, isLoading } = useRawMaterialDetail(id);
   const { data: movements } = useInventoryMovements(id);
+  const { data: locations } = useStorageLocations();
   const addBatch = useAddBatch();
   const deleteBatch = useDeleteBatch();
   const addAnalysis = useAddAnalysis();
   const deleteAnalysis = useDeleteAnalysis();
   const addMovement = useAddMovement();
   const addDocument = useAddRawMaterialDocument();
+  const updateMaterial = useUpdateRawMaterial();
 
   const canManage = role === "master" || role === "auftraggeber";
   const stock = movements ? calculateStock(movements) : 0;
