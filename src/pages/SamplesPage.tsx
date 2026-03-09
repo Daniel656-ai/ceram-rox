@@ -1,4 +1,5 @@
 import { useSamples, useCreateSample, useDeleteSample } from "@/hooks/useSamples";
+import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useProjects } from "@/hooks/useProjects";
 import { useStorageLocations } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, Trash2, AlertTriangle, Eye, Inbox, FlaskConical, Clock, Archive, Timer, ShieldAlert } from "lucide-react";
+import { Search, Plus, Trash2, AlertTriangle, Eye, Inbox, FlaskConical, Clock, Archive, Timer, ShieldAlert, CalendarClock } from "lucide-react";
 import { SampleScannerInput } from "@/components/SampleScanner";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -48,6 +49,7 @@ export default function SamplesPage() {
   const { user, role } = useAuth();
   const createSample = useCreateSample();
   const deleteSample = useDeleteSample();
+  const etaMap = useEstimatedCompletion();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SubCategory>("all");
@@ -317,6 +319,7 @@ export default function SamplesPage() {
                 <TableHead>{t("name")}</TableHead>
                 <TableHead>{t("project")}</TableHead>
                 <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("eta_short")}</TableHead>
                 <TableHead>{t("location")}</TableHead>
                 <TableHead>{t("hazardous")}</TableHead>
                 {activeTab === "kritisch" && <TableHead>{t("expiry_remaining")}</TableHead>}
@@ -326,9 +329,9 @@ export default function SamplesPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 9 : 8} className="text-center py-8">{t("loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 10 : 9} className="text-center py-8">{t("loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 9 : 8} className="text-center py-8 text-muted-foreground">{t("no_samples")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 10 : 9} className="text-center py-8 text-muted-foreground">{t("no_samples")}</TableCell></TableRow>
               ) : (
                 filtered.map((s: any) => {
                   const project = s.projects;
@@ -341,6 +344,15 @@ export default function SamplesPage() {
                       <TableCell>{s.sample_name}</TableCell>
                       <TableCell>{project?.project_number || "–"}</TableCell>
                       <TableCell>{getStatusBadge(s.status || "neu")}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const completed = ["vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"];
+                          if (completed.includes(s.status)) return <span className="text-muted-foreground text-xs">{t("eta_completed")}</span>;
+                          const eta = etaMap.get(s.id);
+                          if (!eta) return <span className="text-muted-foreground text-xs">{t("eta_no_orders")}</span>;
+                          return <Badge variant="outline" className="gap-1 text-xs"><CalendarClock className="h-3 w-3" />{eta.toLocaleDateString("de-DE")}</Badge>;
+                        })()}
+                      </TableCell>
                       <TableCell className="text-sm">{formatLocation(location)}</TableCell>
                       <TableCell>
                         {s.is_hazardous ? (
