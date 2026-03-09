@@ -13,6 +13,7 @@ import {
   FlaskConical,
   ShieldCheck,
   Database,
+  Gem,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +38,7 @@ const auftraggeberItems = [
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
   { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
+  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
 ];
 
 const masterItems = [
@@ -45,6 +47,7 @@ const masterItems = [
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
   { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
+  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
   { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 
@@ -62,6 +65,7 @@ const durchfuehrerItems = [
   { title: "Meine Aufträge", url: "/auftraege", icon: ClipboardList },
   { title: "Proben", url: "/proben", icon: FlaskConical },
   { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
+  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
   { title: "Kalender", url: "/kalender", icon: CalendarClock },
 ];
 

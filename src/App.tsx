@@ -22,6 +22,8 @@ import AdminPermissionsPage from "./pages/AdminPermissionsPage";
 import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
 import ResultsDatabasePage from "./pages/ResultsDatabasePage";
+import RawMaterialsPage from "./pages/RawMaterialsPage";
+import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +60,8 @@ const App = () => (
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
+              <Route path="/rohstoffe" element={<RawMaterialsPage />} />
+              <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
