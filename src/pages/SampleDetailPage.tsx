@@ -326,13 +326,8 @@ export default function SampleDetailPage() {
             <Card>
               <CardHeader><CardTitle className="text-base">{t("barcode")} & {t("qr_code")}</CardTitle></CardHeader>
               <CardContent className="flex items-center justify-center gap-6 flex-wrap">
-                <div className="text-center">
-                  <SampleBarcode sampleNumber={s.sample_number} />
-                </div>
-                <div className="text-center">
-                  <SampleQRCode sampleId={s.id} sampleNumber={s.sample_number} size={120} />
-                  <p className="text-xs text-muted-foreground mt-1">{s.sample_number}</p>
-                </div>
+                <SampleBarcode sampleNumber={s.sample_number} label={s.sample_name} />
+                <SampleQRCode sampleId={s.id} sampleNumber={s.sample_number} label={s.sample_name} size={120} />
               </CardContent>
             </Card>
           </div>

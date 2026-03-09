@@ -28,7 +28,7 @@ const LABEL_SIZES: Record<LabelSize, { width: string; height: string; label: str
   large: { width: "100mm", height: "60mm", label: "label_large" },
 };
 
-export function SampleBarcode({ sampleNumber }: { sampleNumber: string }) {
+export function SampleBarcode({ sampleNumber, label }: { sampleNumber: string; label?: string }) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
@@ -48,10 +48,15 @@ export function SampleBarcode({ sampleNumber }: { sampleNumber: string }) {
     }
   }, [sampleNumber]);
 
-  return <svg ref={svgRef} />;
+  return (
+    <div className="text-center">
+      <svg ref={svgRef} />
+      {label && <p className="text-xs text-muted-foreground mt-0.5">{label}</p>}
+    </div>
+  );
 }
 
-export function SampleQRCode({ sampleId, size = 120 }: { sampleId: string; sampleNumber?: string; size?: number }) {
+export function SampleQRCode({ sampleId, label, size = 120 }: { sampleId: string; sampleNumber?: string; label?: string; size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const url = `${window.location.origin}/proben/${sampleId}`;
 
@@ -65,7 +70,12 @@ export function SampleQRCode({ sampleId, size = 120 }: { sampleId: string; sampl
     }
   }, [url, size]);
 
-  return <canvas ref={canvasRef} />;
+  return (
+    <div className="text-center">
+      <canvas ref={canvasRef} />
+      {label && <p className="text-xs text-muted-foreground mt-1">{label}</p>}
+    </div>
+  );
 }
 
 export function SampleLabelPrintDialog({ sample }: SampleLabelProps) {
