@@ -49,6 +49,7 @@ export default function SamplesPage() {
   const { user, role } = useAuth();
   const createSample = useCreateSample();
   const deleteSample = useDeleteSample();
+  const etaMap = useEstimatedCompletion();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SubCategory>("all");
