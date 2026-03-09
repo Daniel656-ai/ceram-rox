@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useRawMaterialDetail, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, calculateStock } from "@/hooks/useRawMaterials";
+import { useRawMaterialDetail, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useStorageLocations, calculateStock } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3 } from "lucide-react";
+import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil } from "lucide-react";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
@@ -26,15 +26,51 @@ export default function RawMaterialDetailPage() {
   const { user, role } = useAuth();
   const { data: mat, isLoading } = useRawMaterialDetail(id);
   const { data: movements } = useInventoryMovements(id);
+  const { data: locations } = useStorageLocations();
   const addBatch = useAddBatch();
   const deleteBatch = useDeleteBatch();
   const addAnalysis = useAddAnalysis();
   const deleteAnalysis = useDeleteAnalysis();
   const addMovement = useAddMovement();
   const addDocument = useAddRawMaterialDocument();
+  const updateMaterial = useUpdateRawMaterial();
 
   const canManage = role === "master" || role === "auftraggeber";
   const stock = movements ? calculateStock(movements) : 0;
+
+  // Edit material form
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editSupplier, setEditSupplier] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editUnit, setEditUnit] = useState("");
+  const [editLocationId, setEditLocationId] = useState<string>("");
+
+  const openEditDialog = () => {
+    if (!mat) return;
+    setEditName(mat.material_name);
+    setEditSupplier(mat.supplier || "");
+    setEditDesc(mat.description || "");
+    setEditUnit(mat.unit);
+    setEditLocationId(mat.default_location_id || "");
+    setEditOpen(true);
+  };
+
+  const handleUpdateMaterial = async () => {
+    if (!editName) { toast.error("Name ist Pflicht"); return; }
+    try {
+      await updateMaterial.mutateAsync({
+        id: id!,
+        material_name: editName,
+        supplier: editSupplier || undefined,
+        description: editDesc || undefined,
+        unit: editUnit,
+        default_location_id: editLocationId || null,
+      });
+      toast.success("Rohstoff aktualisiert");
+      setEditOpen(false);
+    } catch (e: any) { toast.error(e.message); }
+  };
 
   // Batch form
   const [batchOpen, setBatchOpen] = useState(false);
@@ -128,8 +164,44 @@ export default function RawMaterialDetailPage() {
           <h1 className="text-2xl font-bold">{mat.material_name}</h1>
           <p className="text-sm text-muted-foreground">{mat.material_number} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)}</p>
         </div>
+        {canManage && (
+          <Button variant="outline" size="sm" onClick={openEditDialog}><Pencil className="h-4 w-4 mr-1" />Bearbeiten</Button>
+        )}
         <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{stock.toFixed(1)} {mat.unit}</Badge>
       </div>
+
+      {/* Edit Material Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Rohstoff bearbeiten</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+              <div><Label>Einheit</Label>
+                <Select value={editUnit} onValueChange={setEditUnit}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["kg", "g", "t", "Liter", "ml", "Stück"].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div><Label>Lieferant</Label><Input value={editSupplier} onChange={(e) => setEditSupplier(e.target.value)} /></div>
+            <div>
+              <Label>Lagerort</Label>
+              <Select value={editLocationId} onValueChange={setEditLocationId}>
+                <SelectTrigger><SelectValue placeholder="Lagerort wählen" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Kein Lagerort</SelectItem>
+                  {locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
+            <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="chargen">
         <TabsList>
