@@ -319,6 +319,7 @@ export default function SamplesPage() {
                 <TableHead>{t("name")}</TableHead>
                 <TableHead>{t("project")}</TableHead>
                 <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("eta_short")}</TableHead>
                 <TableHead>{t("location")}</TableHead>
                 <TableHead>{t("hazardous")}</TableHead>
                 {activeTab === "kritisch" && <TableHead>{t("expiry_remaining")}</TableHead>}
