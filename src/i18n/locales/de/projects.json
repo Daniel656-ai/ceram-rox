@@ -1,0 +1,20 @@
+{
+  "title": "Projekte",
+  "subtitle": "Übersicht aller Projekte",
+  "new_project": "Neues Projekt",
+  "create_title": "Neues Projekt erstellen",
+  "project_number": "Projektnummer",
+  "project_number_required": "Projektnummer *",
+  "project_name": "Projektname",
+  "description": "Beschreibung",
+  "search_placeholder": "Projektnummer oder Name...",
+  "project_number_placeholder": "z. B. P-2026-001",
+  "no_projects": "Keine Projekte gefunden",
+  "created": "Projekt erstellt",
+  "create_error": "Fehler beim Erstellen",
+  "number_required": "Projektnummer ist erforderlich",
+  "delete_title": "Projekt löschen?",
+  "delete_description": "Projekt „{{number}}" wird unwiderruflich gelöscht.",
+  "deleted": "Projekt gelöscht",
+  "delete_error": "Fehler beim Löschen"
+}

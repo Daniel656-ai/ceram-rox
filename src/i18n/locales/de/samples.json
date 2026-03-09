@@ -1,0 +1,23 @@
+{
+  "title": "Proben",
+  "subtitle": "Übersicht aller Proben",
+  "new_sample": "Neue Probe",
+  "create_title": "Neue Probe erstellen",
+  "sample_name": "Probenname",
+  "sample_name_required": "Probenname *",
+  "sample_number": "Proben-Nr.",
+  "project_number": "Projektnummer *",
+  "select_project": "Projekt auswählen",
+  "description": "Beschreibung *",
+  "description_placeholder": "Beschreibung der Probe",
+  "auto_number": "Die Probennummer wird automatisch vergeben.",
+  "search_placeholder": "Probennummer oder Name...",
+  "no_samples": "Keine Proben gefunden",
+  "all_required": "Alle Felder sind Pflichtfelder",
+  "created": "Probe erstellt",
+  "create_error": "Fehler beim Erstellen",
+  "delete_title": "Probe löschen?",
+  "delete_description": "Probe „{{number}}" wird unwiderruflich gelöscht.",
+  "deleted": "Probe gelöscht",
+  "delete_error": "Fehler beim Löschen"
+}

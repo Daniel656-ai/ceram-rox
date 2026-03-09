@@ -1,0 +1,72 @@
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import LanguageDetector from "i18next-browser-languagedetector";
+
+import commonDe from "./locales/de/common.json";
+import navigationDe from "./locales/de/navigation.json";
+import authDe from "./locales/de/auth.json";
+import ordersDe from "./locales/de/orders.json";
+import projectsDe from "./locales/de/projects.json";
+import samplesDe from "./locales/de/samples.json";
+import measurementsDe from "./locales/de/measurements.json";
+import rawMaterialsDe from "./locales/de/raw_materials.json";
+import adminDe from "./locales/de/admin.json";
+import calendarDe from "./locales/de/calendar.json";
+
+import commonEn from "./locales/en/common.json";
+import navigationEn from "./locales/en/navigation.json";
+import authEn from "./locales/en/auth.json";
+import ordersEn from "./locales/en/orders.json";
+import projectsEn from "./locales/en/projects.json";
+import samplesEn from "./locales/en/samples.json";
+import measurementsEn from "./locales/en/measurements.json";
+import rawMaterialsEn from "./locales/en/raw_materials.json";
+import adminEn from "./locales/en/admin.json";
+import calendarEn from "./locales/en/calendar.json";
+
+const resources = {
+  de: {
+    common: commonDe,
+    navigation: navigationDe,
+    auth: authDe,
+    orders: ordersDe,
+    projects: projectsDe,
+    samples: samplesDe,
+    measurements: measurementsDe,
+    raw_materials: rawMaterialsDe,
+    admin: adminDe,
+    calendar: calendarDe,
+  },
+  en: {
+    common: commonEn,
+    navigation: navigationEn,
+    auth: authEn,
+    orders: ordersEn,
+    projects: projectsEn,
+    samples: samplesEn,
+    measurements: measurementsEn,
+    raw_materials: rawMaterialsEn,
+    admin: adminEn,
+    calendar: calendarEn,
+  },
+};
+
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: "de",
+    defaultNS: "common",
+    ns: ["common", "navigation", "auth", "orders", "projects", "samples", "measurements", "raw_materials", "admin", "calendar"],
+    interpolation: {
+      escapeValue: false,
+    },
+    detection: {
+      order: ["localStorage", "navigator"],
+      lookupLocalStorage: "ceramrox_language",
+      caches: ["localStorage"],
+    },
+  });
+
+export default i18n;
