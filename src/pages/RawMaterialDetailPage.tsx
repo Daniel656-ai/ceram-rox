@@ -141,10 +141,11 @@ export default function RawMaterialDetailPage() {
 
   const handleAddMovement = async () => {
     if (!mQty || Number(mQty) <= 0) { toast.error("Menge muss > 0 sein"); return; }
+    const projectRef = [mProject, mExperiment].filter(Boolean).join(" / ") || undefined;
     try {
-      await addMovement.mutateAsync({ raw_material_id: id!, batch_id: mBatchId || undefined, movement_type: mType, quantity: Number(mQty), movement_date: mDate || undefined, supplier: mSupplier || undefined, project_reference: mProject || undefined, comment: mComment || undefined });
+      await addMovement.mutateAsync({ raw_material_id: id!, batch_id: mBatchId || undefined, movement_type: mType, quantity: Number(mQty), movement_date: mDate || undefined, supplier: mSupplier || undefined, project_reference: projectRef, comment: mComment || undefined });
       toast.success(mType === "eingang" ? "Wareneingang gebucht" : "Verbrauch gebucht");
-      setMovOpen(false); setMQty(""); setMDate(""); setMBatchId(""); setMSupplier(""); setMProject(""); setMComment("");
+      setMovOpen(false); setMQty(""); setMDate(""); setMBatchId(""); setMSupplier(""); setMProject(""); setMExperiment(""); setMComment("");
     } catch (e: any) { toast.error(e.message); }
   };
 
