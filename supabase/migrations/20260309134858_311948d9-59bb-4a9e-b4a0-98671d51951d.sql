@@ -1,0 +1,1 @@
+ALTER TABLE public.samples ADD COLUMN tags jsonb NOT NULL DEFAULT '[]'::jsonb;

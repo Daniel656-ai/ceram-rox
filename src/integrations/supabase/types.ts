@@ -865,6 +865,7 @@ export type Database = {
           storage_expiry_date: string | null
           storage_hints: string | null
           storage_min_duration: string | null
+          tags: Json
           updated_at: string
         }
         Insert: {
@@ -891,6 +892,7 @@ export type Database = {
           storage_expiry_date?: string | null
           storage_hints?: string | null
           storage_min_duration?: string | null
+          tags?: Json
           updated_at?: string
         }
         Update: {
@@ -917,6 +919,7 @@ export type Database = {
           storage_expiry_date?: string | null
           storage_hints?: string | null
           storage_min_duration?: string | null
+          tags?: Json
           updated_at?: string
         }
         Relationships: [
