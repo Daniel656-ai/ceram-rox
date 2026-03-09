@@ -346,7 +346,7 @@ export default function RawMaterialDetailPage() {
                       <SelectItem value="sonstiges">Sonstiges</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={docBatchId || "__none__"} onValueChange={(v) => setDocBatchId(v === "__none__" ? "" : v)}>
+                  <Select value={docBatchId || "__none__"} onValueChange={(v) => setDocBatchId(v === "__none__" ? "" : v){(v) => setDocBatchId(v === "__none__" ? "" : v)}>
                     <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Charge" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">Keine</SelectItem>
@@ -414,8 +414,7 @@ export default function RawMaterialDetailPage() {
                         <div><Label>Datum</Label><Input type="date" value={mDate} onChange={(e) => setMDate(e.target.value)} /></div>
                       </div>
                       <div>
-                        <Label>Charge</Label>
-                        <Select value={mBatchId} onValueChange={setMBatchId}>
+                        <Label>Charge</Label> || "__none__"} onValueChange={(v) => setMBatchId(v === "__none__" ? "" : v)lect value={mBatchId} onValueChange={setMBatchId}>
                           <SelectTrigger><SelectValue placeholder="Charge wählen" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">Keine</SelectItem>
