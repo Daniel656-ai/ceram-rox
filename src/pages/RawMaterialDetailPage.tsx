@@ -349,7 +349,7 @@ export default function RawMaterialDetailPage() {
                   <Select value={docBatchId} onValueChange={setDocBatchId}>
                     <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Charge" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Keine</SelectItem>
+                      <SelectItem value="__none__">Keine</SelectItem>
                       {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
                     </SelectContent>
                   </Select>
