@@ -1,0 +1,21 @@
+{
+  "title": "Projects",
+  "subtitle": "Overview of all projects",
+  "new_project": "New Project",
+  "create_title": "Create New Project",
+  "project_number": "Project Number",
+  "project_number_required": "Project Number *",
+  "project_name": "Project Name",
+  "description": "Description",
+  "search_placeholder": "Project number or name...",
+  "project_number_placeholder": "e.g. P-2026-001",
+  "no_projects": "No projects found",
+  "created": "Project created",
+  "create_error": "Error creating",
+  "number_required": "Project number is required",
+  "delete_title": "Delete project?",
+  "delete_description_prefix": "Project \"",
+  "delete_description_suffix": "\" will be permanently deleted.",
+  "deleted": "Project deleted",
+  "delete_error": "Error deleting"
+}

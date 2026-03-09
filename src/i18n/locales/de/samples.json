@@ -17,7 +17,8 @@
   "created": "Probe erstellt",
   "create_error": "Fehler beim Erstellen",
   "delete_title": "Probe löschen?",
-  "delete_description": "Probe „{{number}}" wird unwiderruflich gelöscht.",
+  "delete_description_prefix": "Probe „",
+  "delete_description_suffix": "" wird unwiderruflich gelöscht.",
   "deleted": "Probe gelöscht",
   "delete_error": "Fehler beim Löschen"
 }
