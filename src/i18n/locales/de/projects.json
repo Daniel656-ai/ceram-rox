@@ -13,9 +13,9 @@
   "created": "Projekt erstellt",
   "create_error": "Fehler beim Erstellen",
   "number_required": "Projektnummer ist erforderlich",
-  "delete_title": "Projekt löschen?",
-  "delete_description_prefix": "Projekt „",
-  "delete_description_suffix": "" wird unwiderruflich gelöscht.",
-  "deleted": "Projekt gelöscht",
-  "delete_error": "Fehler beim Löschen"
+  "delete_title": "Projekt loeschen?",
+  "delete_description_prefix": "Projekt ",
+  "delete_description_suffix": " wird unwiderruflich geloescht.",
+  "deleted": "Projekt geloescht",
+  "delete_error": "Fehler beim Loeschen"
 }
