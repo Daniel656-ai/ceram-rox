@@ -761,38 +761,179 @@ export type Database = {
           },
         ]
       }
+      sample_documents: {
+        Row: {
+          document_type: string
+          file_name: string
+          file_type: string | null
+          id: string
+          sample_id: string
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          document_type?: string
+          file_name: string
+          file_type?: string | null
+          id?: string
+          sample_id: string
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          document_type?: string
+          file_name?: string
+          file_type?: string | null
+          id?: string
+          sample_id?: string
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_documents_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sample_history: {
+        Row: {
+          action: string
+          comment: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          sample_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          sample_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          sample_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_history_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       samples: {
         Row: {
           created_at: string
           created_by: string
+          current_holder_id: string | null
           description: string
+          disposal_category: string | null
+          disposal_hints: string | null
+          disposal_method: string | null
+          hazard_categories: Json | null
           id: string
+          is_hazardous: boolean
+          location_id: string | null
+          parent_sample_id: string | null
+          post_measurement_action:
+            | Database["public"]["Enums"]["post_measurement_action"]
+            | null
+          post_measurement_action_text: string | null
           project_id: string
           sample_name: string
           sample_number: string
+          status: Database["public"]["Enums"]["sample_status"]
+          storage_expiry_date: string | null
+          storage_hints: string | null
+          storage_min_duration: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by: string
+          current_holder_id?: string | null
           description: string
+          disposal_category?: string | null
+          disposal_hints?: string | null
+          disposal_method?: string | null
+          hazard_categories?: Json | null
           id?: string
+          is_hazardous?: boolean
+          location_id?: string | null
+          parent_sample_id?: string | null
+          post_measurement_action?:
+            | Database["public"]["Enums"]["post_measurement_action"]
+            | null
+          post_measurement_action_text?: string | null
           project_id: string
           sample_name: string
           sample_number: string
+          status?: Database["public"]["Enums"]["sample_status"]
+          storage_expiry_date?: string | null
+          storage_hints?: string | null
+          storage_min_duration?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
+          current_holder_id?: string | null
           description?: string
+          disposal_category?: string | null
+          disposal_hints?: string | null
+          disposal_method?: string | null
+          hazard_categories?: Json | null
           id?: string
+          is_hazardous?: boolean
+          location_id?: string | null
+          parent_sample_id?: string | null
+          post_measurement_action?:
+            | Database["public"]["Enums"]["post_measurement_action"]
+            | null
+          post_measurement_action_text?: string | null
           project_id?: string
           sample_name?: string
           sample_number?: string
+          status?: Database["public"]["Enums"]["sample_status"]
+          storage_expiry_date?: string | null
+          storage_hints?: string | null
+          storage_min_duration?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "samples_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samples_parent_sample_id_fkey"
+            columns: ["parent_sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "samples_project_id_fkey"
             columns: ["project_id"]
@@ -1212,6 +1353,19 @@ export type Database = {
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
+      post_measurement_action:
+        | "aufbewahren"
+        | "entsorgen"
+        | "zurueck"
+        | "andere"
+      sample_status:
+        | "neu"
+        | "eingelagert"
+        | "in_bearbeitung"
+        | "teilweise_verbraucht"
+        | "vollstaendig_verbraucht"
+        | "entsorgt"
+        | "zurueckgesendet"
       service_category: "labor" | "pilot_plant"
       task_status: "open" | "in_progress" | "completed"
     }
@@ -1349,6 +1503,21 @@ export const Constants = {
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
+      post_measurement_action: [
+        "aufbewahren",
+        "entsorgen",
+        "zurueck",
+        "andere",
+      ],
+      sample_status: [
+        "neu",
+        "eingelagert",
+        "in_bearbeitung",
+        "teilweise_verbraucht",
+        "vollstaendig_verbraucht",
+        "entsorgt",
+        "zurueckgesendet",
+      ],
       service_category: ["labor", "pilot_plant"],
       task_status: ["open", "in_progress", "completed"],
     },
