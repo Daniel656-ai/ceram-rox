@@ -164,8 +164,44 @@ export default function RawMaterialDetailPage() {
           <h1 className="text-2xl font-bold">{mat.material_name}</h1>
           <p className="text-sm text-muted-foreground">{mat.material_number} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)}</p>
         </div>
+        {canManage && (
+          <Button variant="outline" size="sm" onClick={openEditDialog}><Pencil className="h-4 w-4 mr-1" />Bearbeiten</Button>
+        )}
         <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{stock.toFixed(1)} {mat.unit}</Badge>
       </div>
+
+      {/* Edit Material Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Rohstoff bearbeiten</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+              <div><Label>Einheit</Label>
+                <Select value={editUnit} onValueChange={setEditUnit}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["kg", "g", "t", "Liter", "ml", "Stück"].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div><Label>Lieferant</Label><Input value={editSupplier} onChange={(e) => setEditSupplier(e.target.value)} /></div>
+            <div>
+              <Label>Lagerort</Label>
+              <Select value={editLocationId} onValueChange={setEditLocationId}>
+                <SelectTrigger><SelectValue placeholder="Lagerort wählen" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Kein Lagerort</SelectItem>
+                  {locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
+            <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="chargen">
         <TabsList>
