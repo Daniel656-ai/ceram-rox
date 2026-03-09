@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ type AuthMode = "login" | "register" | "forgot";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const { t } = useTranslation("auth");
   const [mode, setMode] = useState<AuthMode>("login");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -25,7 +27,7 @@ export default function Auth() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast.error("Anmeldung fehlgeschlagen", { description: error.message });
+      toast.error(t("login_failed"), { description: error.message });
     } else {
       navigate("/dashboard");
     }
@@ -44,11 +46,9 @@ export default function Auth() {
     });
     setLoading(false);
     if (error) {
-      toast.error("Registrierung fehlgeschlagen", { description: error.message });
+      toast.error(t("register_failed"), { description: error.message });
     } else {
-      toast.success("Registrierung erfolgreich", {
-        description: "Bitte bestätigen Sie Ihre E-Mail-Adresse.",
-      });
+      toast.success(t("register_success"), { description: t("register_success_description") });
       setMode("login");
     }
   };
@@ -61,11 +61,9 @@ export default function Auth() {
     });
     setLoading(false);
     if (error) {
-      toast.error("Fehler", { description: error.message });
+      toast.error(t("common:error"), { description: error.message });
     } else {
-      toast.success("E-Mail gesendet", {
-        description: "Prüfen Sie Ihr Postfach für den Passwort-Reset-Link.",
-      });
+      toast.success(t("email_sent"), { description: t("email_sent_description") });
       setMode("login");
     }
   };
@@ -73,7 +71,6 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="h-11 w-11 rounded-lg bg-primary flex items-center justify-center">
             <FlaskConical className="h-6 w-6 text-primary-foreground" />
@@ -84,36 +81,36 @@ export default function Auth() {
         <Card className="border-border/60 shadow-lg">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl">
-              {mode === "login" && "Anmelden"}
-              {mode === "register" && "Konto erstellen"}
-              {mode === "forgot" && "Passwort zurücksetzen"}
+              {mode === "login" && t("login_title")}
+              {mode === "register" && t("register_title")}
+              {mode === "forgot" && t("forgot_title")}
             </CardTitle>
             <CardDescription>
-              {mode === "login" && "Melden Sie sich mit Ihrer E-Mail-Adresse an"}
-              {mode === "register" && "Erstellen Sie ein neues Benutzerkonto"}
-              {mode === "forgot" && "Geben Sie Ihre E-Mail-Adresse ein"}
+              {mode === "login" && t("login_description")}
+              {mode === "register" && t("register_description")}
+              {mode === "forgot" && t("forgot_description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {mode === "login" && (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">E-Mail</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@labor.de" required />
+                  <Label htmlFor="email">{t("email")}</Label>
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_placeholder")} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Passwort</Label>
+                  <Label htmlFor="password">{t("password")}</Label>
                   <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Wird angemeldet…" : "Anmelden"}
+                  {loading ? t("logging_in") : t("login")}
                 </Button>
                 <div className="flex items-center justify-between text-sm">
                   <button type="button" onClick={() => setMode("forgot")} className="text-primary hover:underline">
-                    Passwort vergessen?
+                    {t("forgot_password_link")}
                   </button>
                   <button type="button" onClick={() => setMode("register")} className="text-primary hover:underline">
-                    Konto erstellen
+                    {t("create_account")}
                   </button>
                 </div>
               </form>
@@ -123,29 +120,29 @@ export default function Auth() {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">Vorname</Label>
-                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Max" required />
+                    <Label htmlFor="firstName">{t("first_name")}</Label>
+                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Nachname</Label>
-                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Mustermann" required />
+                    <Label htmlFor="lastName">{t("last_name")}</Label>
+                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="regEmail">E-Mail</Label>
-                  <Input id="regEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@labor.de" required />
+                  <Label htmlFor="regEmail">{t("email")}</Label>
+                  <Input id="regEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_placeholder")} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="regPassword">Passwort</Label>
-                  <Input id="regPassword" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mind. 6 Zeichen" required minLength={6} />
+                  <Label htmlFor="regPassword">{t("password")}</Label>
+                  <Input id="regPassword" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("min_password")} required minLength={6} />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Wird registriert…" : "Registrieren"}
+                  {loading ? t("registering") : t("register")}
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
-                  Bereits ein Konto?{" "}
+                  {t("already_have_account")}{" "}
                   <button type="button" onClick={() => setMode("login")} className="text-primary hover:underline">
-                    Anmelden
+                    {t("login")}
                   </button>
                 </p>
               </form>
@@ -154,15 +151,15 @@ export default function Auth() {
             {mode === "forgot" && (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="forgotEmail">E-Mail</Label>
-                  <Input id="forgotEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@labor.de" required />
+                  <Label htmlFor="forgotEmail">{t("email")}</Label>
+                  <Input id="forgotEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_placeholder")} required />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Wird gesendet…" : "Link senden"}
+                  {loading ? t("sending") : t("send_link")}
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
                   <button type="button" onClick={() => setMode("login")} className="text-primary hover:underline">
-                    Zurück zur Anmeldung
+                    {t("back_to_login")}
                   </button>
                 </p>
               </form>
