@@ -28,6 +28,14 @@ export default function RawMaterialDetailPage() {
   const { data: mat, isLoading } = useRawMaterialDetail(id);
   const { data: movements } = useInventoryMovements(id);
   const { data: locations } = useStorageLocations();
+  const { data: allMaterials } = useRawMaterials();
+  const { data: projects } = useProjects();
+
+  // Extract unique suppliers from all raw materials
+  const suppliers = useMemo(() => {
+    if (!allMaterials) return [];
+    return [...new Set(allMaterials.map((m: any) => m.supplier).filter(Boolean))] as string[];
+  }, [allMaterials]);
   const addBatch = useAddBatch();
   const deleteBatch = useDeleteBatch();
   const addAnalysis = useAddAnalysis();
