@@ -19,6 +19,7 @@ import AdminServicesPage from "./pages/AdminServicesPage";
 import AdminStatsPage from "./pages/AdminStatsPage";
 import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
 import AdminPermissionsPage from "./pages/AdminPermissionsPage";
+import AdminSyncPage from "./pages/AdminSyncPage";
 import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
 import ResultsDatabasePage from "./pages/ResultsDatabasePage";
