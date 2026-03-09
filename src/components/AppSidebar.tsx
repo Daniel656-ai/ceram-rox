@@ -3,7 +3,6 @@ import {
   ClipboardList,
   FolderOpen,
   Users,
-  Settings,
   LogOut,
   Beaker,
   BarChart3,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import {
   Sidebar,
   SidebarContent,
@@ -32,49 +32,51 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-
-const auftraggeberItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Messaufträge", url: "/auftraege", icon: ClipboardList },
-  { title: "Projekte", url: "/projekte", icon: FolderOpen },
-  { title: "Proben", url: "/proben", icon: FlaskConical },
-  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
-  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
-];
-
-const masterItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Alle Messaufträge", url: "/auftraege", icon: ClipboardList },
-  { title: "Projekte", url: "/projekte", icon: FolderOpen },
-  { title: "Proben", url: "/proben", icon: FlaskConical },
-  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
-  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
-  { title: "Kalender", url: "/kalender", icon: CalendarClock },
-];
-
-const masterAdminItems = [
-  { title: "Benutzer", url: "/admin/benutzer", icon: Users },
-  { title: "Messungen", url: "/admin/messdienstleistungen", icon: Beaker },
-  { title: "Arbeitsplätze", url: "/admin/arbeitsplaetze", icon: Building2 },
-  { title: "Statistiken", url: "/admin/statistiken", icon: BarChart3 },
-  { title: "Berechtigungen", url: "/admin/berechtigungen", icon: ShieldCheck },
-  { title: "Synchronisation", url: "/admin/synchronisation", icon: RefreshCw },
-];
-
-const durchfuehrerItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Arbeitsplanung", url: "/arbeitsplanung", icon: CalendarDays },
-  { title: "Meine Aufträge", url: "/auftraege", icon: ClipboardList },
-  { title: "Proben", url: "/proben", icon: FlaskConical },
-  { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
-  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
-  { title: "Kalender", url: "/kalender", icon: CalendarClock },
-];
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function AppSidebar() {
   const { profile, role, signOut } = useAuth();
   const { state } = useSidebar();
+  const { t } = useTranslation(["navigation", "common"]);
   const collapsed = state === "collapsed";
+
+  const auftraggeberItems = [
+    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard },
+    { title: t("navigation:orders"), url: "/auftraege", icon: ClipboardList },
+    { title: t("navigation:projects"), url: "/projekte", icon: FolderOpen },
+    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical },
+    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database },
+    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem },
+  ];
+
+  const masterItems = [
+    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard },
+    { title: t("navigation:all_orders"), url: "/auftraege", icon: ClipboardList },
+    { title: t("navigation:projects"), url: "/projekte", icon: FolderOpen },
+    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical },
+    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database },
+    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem },
+    { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock },
+  ];
+
+  const masterAdminItems = [
+    { title: t("navigation:users"), url: "/admin/benutzer", icon: Users },
+    { title: t("navigation:measurement_services"), url: "/admin/messdienstleistungen", icon: Beaker },
+    { title: t("navigation:workstations"), url: "/admin/arbeitsplaetze", icon: Building2 },
+    { title: t("navigation:statistics"), url: "/admin/statistiken", icon: BarChart3 },
+    { title: t("navigation:permissions"), url: "/admin/berechtigungen", icon: ShieldCheck },
+    { title: t("navigation:sync"), url: "/admin/synchronisation", icon: RefreshCw },
+  ];
+
+  const durchfuehrerItems = [
+    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard },
+    { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays },
+    { title: t("navigation:my_orders"), url: "/auftraege", icon: ClipboardList },
+    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical },
+    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database },
+    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem },
+    { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock },
+  ];
 
   const items =
     role === "master" ? masterItems :
@@ -82,9 +84,9 @@ export function AppSidebar() {
     auftraggeberItems;
 
   const roleLabel =
-    role === "master" ? "Administrator" :
-    role === "auftraggeber" ? "Auftraggeber" :
-    role === "durchfuehrer" ? "Messdienstleister" : "";
+    role === "master" ? t("common:role_master") :
+    role === "auftraggeber" ? t("common:role_auftraggeber") :
+    role === "durchfuehrer" ? t("common:role_durchfuehrer") : "";
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -97,7 +99,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("navigation:navigation")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -121,7 +123,7 @@ export function AppSidebar() {
 
         {role === "master" && (
           <SidebarGroup>
-            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("navigation:administration")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {masterAdminItems.map((item) => (
@@ -149,11 +151,14 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="px-3 py-2">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
-              {profile ? `${profile.first_name} ${profile.last_name}` : "Benutzer"}
+              {profile ? `${profile.first_name} ${profile.last_name}` : t("common:user")}
             </p>
             <p className="text-xs text-sidebar-foreground/60">{roleLabel}</p>
           </div>
         )}
+        <div className="px-2">
+          <LanguageSwitcher collapsed={collapsed} />
+        </div>
         <div className="px-2 pb-2">
           <Button
             variant="ghost"
@@ -162,7 +167,7 @@ export function AppSidebar() {
             onClick={signOut}
           >
             <LogOut className="h-4 w-4" />
-            {!collapsed && <span className="ml-2">Abmelden</span>}
+            {!collapsed && <span className="ml-2">{t("common:sign_out")}</span>}
           </Button>
         </div>
       </SidebarFooter>

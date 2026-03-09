@@ -1,35 +1,35 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClipboardList, Clock, CheckCircle2, FolderOpen, Beaker, Users } from "lucide-react";
+import { ClipboardList, Clock, CheckCircle2, FolderOpen } from "lucide-react";
 import { useOrders } from "@/hooks/useOrders";
 import { useProjects } from "@/hooks/useProjects";
 import { useMyMeasurements } from "@/hooks/useMeasurements";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ORDER_TYPE_LABELS } from "@/lib/types";
 import { UtilizationSidebar } from "@/components/UtilizationSidebar";
 
 export default function Dashboard() {
   const { profile, role } = useAuth();
+  const { t } = useTranslation(["common", "navigation", "orders"]);
   const { data: orders = [] } = useOrders();
   const { data: projects = [] } = useProjects();
   const { data: myMeasurements = [] } = useMyMeasurements();
 
   const greeting = profile?.first_name
-    ? `Willkommen, ${profile.first_name}!`
-    : "Willkommen!";
+    ? `${t("common:welcome", "Willkommen")}, ${profile.first_name}!`
+    : `${t("common:welcome", "Willkommen")}!`;
 
   const roleLabel =
-    role === "master" ? "Administrator" :
-    role === "auftraggeber" ? "Auftraggeber" :
-    role === "durchfuehrer" ? "Messdienstleister" : "";
+    role === "master" ? t("common:role_master") :
+    role === "auftraggeber" ? t("common:role_auftraggeber") :
+    role === "durchfuehrer" ? t("common:role_durchfuehrer") : "";
 
   const openOrders = orders.filter(o => o.status === "open").length;
   const inProgressOrders = orders.filter(o => o.status === "in_progress").length;
   const completedOrders = orders.filter(o => o.status === "completed").length;
 
-  const openMeasurements = myMeasurements.filter(m => m.status === "open").length;
   const inProgressMeasurements = myMeasurements.filter(m => m.status === "in_progress").length;
 
   return (
@@ -38,24 +38,23 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{greeting}</h1>
           <p className="text-muted-foreground">
-            {roleLabel}-Dashboard – Überblick über Ihre Aktivitäten
+            {roleLabel}-Dashboard
           </p>
         </div>
         {(role === "auftraggeber" || role === "master") && (
           <Link to="/auftraege/neu">
             <Button>
               <ClipboardList className="h-4 w-4 mr-2" />
-              Neuer Messauftrag
+              {t("orders:new_order")}
             </Button>
           </Link>
         )}
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Projekte</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("navigation:projects")}</CardTitle>
             <FolderOpen className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -64,7 +63,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Offene Aufträge</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_open")}</CardTitle>
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -73,7 +72,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">In Bearbeitung</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_in_progress")}</CardTitle>
             <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
@@ -82,7 +81,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Abgeschlossen</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_completed")}</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
@@ -91,17 +90,16 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Recent orders */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            {role === "durchfuehrer" ? "Meine offenen Messungen" : "Aktuelle Messaufträge"}
+            {role === "durchfuehrer" ? t("measurements:no_measurements", "Meine offenen Messungen") : t("orders:title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {role === "durchfuehrer" ? (
             myMeasurements.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Keine offenen Messungen zugewiesen.</p>
+              <p className="text-muted-foreground text-sm">{t("measurements:no_measurements")}</p>
             ) : (
               <div className="space-y-3">
                 {myMeasurements.slice(0, 5).map((m: any) => (
@@ -109,7 +107,7 @@ export default function Dashboard() {
                     <div>
                       <p className="font-medium">{m.measurement_services?.service_name}</p>
                       <p className="text-sm text-muted-foreground">
-                        Projekt: {m.measurement_orders?.projects?.project_number}
+                        {t("common:project")}: {m.measurement_orders?.projects?.project_number}
                       </p>
                     </div>
                     <StatusBadge status={m.status} />
@@ -119,9 +117,7 @@ export default function Dashboard() {
             )
           ) : (
             orders.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                Noch keine Messaufträge vorhanden. Erstellen Sie Ihren ersten Auftrag!
-              </p>
+              <p className="text-muted-foreground text-sm">{t("common:no_data")}</p>
             ) : (
               <div className="space-y-3">
                 {orders.slice(0, 5).map((o: any) => (
@@ -129,10 +125,10 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/50 transition-colors">
                       <div>
                         <p className="font-medium">
-                          {o.projects?.project_number} – {ORDER_TYPE_LABELS[o.order_type as keyof typeof ORDER_TYPE_LABELS]}
+                          {o.projects?.project_number} – {t(`common:order_type_${o.order_type}`, o.order_type)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {o.projects?.project_name || "Ohne Projektname"}
+                          {o.projects?.project_name || "–"}
                         </p>
                       </div>
                       <StatusBadge status={o.status} />
@@ -145,7 +141,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Utilization Widget - visible for master and durchfuehrer */}
       {(role === "master" || role === "durchfuehrer") && (
         <UtilizationSidebar />
       )}

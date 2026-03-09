@@ -1,0 +1,20 @@
+{
+  "dashboard": "Dashboard",
+  "orders": "Messaufträge",
+  "all_orders": "Alle Messaufträge",
+  "my_orders": "Meine Aufträge",
+  "projects": "Projekte",
+  "samples": "Proben",
+  "results_database": "Ergebnisdatenbank",
+  "raw_materials": "Rohstoffe",
+  "calendar": "Kalender",
+  "work_planning": "Arbeitsplanung",
+  "navigation": "Navigation",
+  "administration": "Administration",
+  "users": "Benutzer",
+  "measurement_services": "Messungen",
+  "workstations": "Arbeitsplätze",
+  "statistics": "Statistiken",
+  "permissions": "Berechtigungen",
+  "sync": "Synchronisation"
+}
