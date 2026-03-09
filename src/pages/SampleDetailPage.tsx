@@ -51,6 +51,7 @@ export default function SampleDetailPage() {
   const createSample = useCreateSample();
   const addDocument = useAddSampleDocument();
   const addHistory = useAddSampleHistory();
+  const etaMap = useEstimatedCompletion();
 
   const [statusDialog, setStatusDialog] = useState(false);
   const [locationDialog, setLocationDialog] = useState(false);
