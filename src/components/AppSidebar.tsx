@@ -38,6 +38,7 @@ const auftraggeberItems = [
   { title: "Projekte", url: "/projekte", icon: FolderOpen },
   { title: "Proben", url: "/proben", icon: FlaskConical },
   { title: "Ergebnisdatenbank", url: "/ergebnisse", icon: Database },
+  { title: "Rohstoffe", url: "/rohstoffe", icon: Gem },
 ];
 
 const masterItems = [
