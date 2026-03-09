@@ -344,6 +344,15 @@ export default function SamplesPage() {
                       <TableCell>{s.sample_name}</TableCell>
                       <TableCell>{project?.project_number || "–"}</TableCell>
                       <TableCell>{getStatusBadge(s.status || "neu")}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const completed = ["vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"];
+                          if (completed.includes(s.status)) return <span className="text-muted-foreground text-xs">{t("eta_completed")}</span>;
+                          const eta = etaMap.get(s.id);
+                          if (!eta) return <span className="text-muted-foreground text-xs">{t("eta_no_orders")}</span>;
+                          return <Badge variant="outline" className="gap-1 text-xs"><CalendarClock className="h-3 w-3" />{eta.toLocaleDateString("de-DE")}</Badge>;
+                        })()}
+                      </TableCell>
                       <TableCell className="text-sm">{formatLocation(location)}</TableCell>
                       <TableCell>
                         {s.is_hazardous ? (
