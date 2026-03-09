@@ -283,7 +283,7 @@ export default function RawMaterialDetailPage() {
                       </div>
                       <div>
                         <Label>Charge (optional)</Label>
-                        <Select value={aBatchId} onValueChange={setABatchId}>
+                        <Select value={aBatchId || "__none__"} onValueChange={(v) => setABatchId(v === "__none__" ? "" : v)}>
                           <SelectTrigger><SelectValue placeholder="Keine Charge" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">Keine</SelectItem>
