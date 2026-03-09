@@ -898,14 +898,42 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
       user_absences: {
         Row: {
           absence_type: Database["public"]["Enums"]["absence_type"]
           comment: string | null
           created_at: string
           end_at: string
+          external_id: string | null
           id: string
+          last_synced_at: string | null
+          outlook_event_id: string | null
           start_at: string
+          sync_source: string | null
           updated_at: string
           user_id: string
         }
@@ -914,8 +942,12 @@ export type Database = {
           comment?: string | null
           created_at?: string
           end_at: string
+          external_id?: string | null
           id?: string
+          last_synced_at?: string | null
+          outlook_event_id?: string | null
           start_at: string
+          sync_source?: string | null
           updated_at?: string
           user_id: string
         }
@@ -924,8 +956,12 @@ export type Database = {
           comment?: string | null
           created_at?: string
           end_at?: string
+          external_id?: string | null
           id?: string
+          last_synced_at?: string | null
+          outlook_event_id?: string | null
           start_at?: string
+          sync_source?: string | null
           updated_at?: string
           user_id?: string
         }
