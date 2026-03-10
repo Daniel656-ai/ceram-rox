@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
+import { countWorkingDays } from "@/lib/austrian-holidays";
 
 export type TimePeriod = "week" | "month" | "quarter" | "year";
 
@@ -14,9 +15,8 @@ function getDateRange(period: TimePeriod, reference = new Date()) {
 }
 
 function getWorkingHours(start: Date, end: Date, downtimeHours: number): number {
-  const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-  // ~5 working days per 7, 8h per day
-  const workingDays = Math.floor(days * 5 / 7);
+  // Count actual working days (Mon-Fri, excluding Austrian holidays)
+  const workingDays = countWorkingDays(start, end);
   return Math.max(1, workingDays * 8 - downtimeHours);
 }
 
@@ -26,14 +26,12 @@ export function useWorkstationUtilization(period: TimePeriod) {
     queryFn: async () => {
       const { start, end } = getDateRange(period);
 
-      // Get all active workstations
       const { data: workstations, error: wsErr } = await supabase
         .from("workstations")
         .select("id, name")
         .eq("status", "active");
       if (wsErr) throw wsErr;
 
-      // Get all completed measurements in the period with durations
       const { data: measurements, error: mErr } = await supabase
         .from("order_measurements")
         .select("workstation_id, actual_duration_hours, measurement_services(standard_duration_hours)")
@@ -42,7 +40,6 @@ export function useWorkstationUtilization(period: TimePeriod) {
         .lte("updated_at", end.toISOString());
       if (mErr) throw mErr;
 
-      // Get downtimes in the period
       const { data: downtimes, error: dtErr } = await supabase
         .from("workstation_downtimes")
         .select("workstation_id, start_at, end_at")
