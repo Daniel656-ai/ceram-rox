@@ -222,7 +222,7 @@ export default function ProjectsPage() {
                                   }
                                 }}
                               >
-                                Löschen
+                                {t("delete", { ns: "common" })}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
