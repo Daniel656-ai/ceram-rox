@@ -1,6 +1,5 @@
 import { useOrders, useDeleteOrder } from "@/hooks/useOrders";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ORDER_TYPE_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,9 +12,11 @@ import { Plus, Search, Trash2, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export default function OrdersPage() {
   const { user, role } = useAuth();
+  const { t, i18n } = useTranslation(["orders", "common"]);
   const { data: orders = [], isLoading } = useOrders();
   const deleteOrder = useDeleteOrder();
   const [search, setSearch] = useState("");
@@ -39,9 +40,9 @@ export default function OrdersPage() {
   const handleDelete = async (id: string) => {
     try {
       await deleteOrder.mutateAsync(id);
-      toast.success("Messauftrag gelöscht");
+      toast.success(t("orders:deleted"));
     } catch (err: any) {
-      toast.error("Fehler beim Löschen", { description: err.message });
+      toast.error(t("orders:delete_error"), { description: err.message });
     }
   };
 
@@ -50,17 +51,17 @@ export default function OrdersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {role === "master" ? "Alle Messaufträge" : role === "durchfuehrer" ? "Meine Aufträge" : "Messaufträge"}
+            {role === "master" ? t("orders:all_title") : role === "durchfuehrer" ? t("orders:my_title") : t("orders:title")}
           </h1>
-          <p className="text-muted-foreground">Übersicht und Verwaltung Ihrer Messaufträge</p>
+          <p className="text-muted-foreground">{t("orders:subtitle")}</p>
         </div>
         {(role === "auftraggeber" || role === "master") && (
           <div className="flex gap-2">
             <Link to="/auftraege/neu">
-              <Button><Plus className="h-4 w-4 mr-2" />Neuer Messauftrag</Button>
+              <Button><Plus className="h-4 w-4 mr-2" />{t("orders:new_order")}</Button>
             </Link>
             <Link to="/auftraege/import">
-              <Button variant="outline"><FileSpreadsheet className="h-4 w-4 mr-2" />Excel-Import</Button>
+              <Button variant="outline"><FileSpreadsheet className="h-4 w-4 mr-2" />{t("orders:excel_import")}</Button>
             </Link>
           </div>
         )}
@@ -70,7 +71,7 @@ export default function OrdersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Projektnummer oder Name..."
+            placeholder={t("orders:search_placeholder")}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
@@ -78,13 +79,13 @@ export default function OrdersPage() {
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("common:status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Alle Status</SelectItem>
-            <SelectItem value="open">Offen</SelectItem>
-            <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-            <SelectItem value="completed">Abgeschlossen</SelectItem>
+            <SelectItem value="all">{t("orders:all_status")}</SelectItem>
+            <SelectItem value="open">{t("common:status_open")}</SelectItem>
+            <SelectItem value="in_progress">{t("common:status_in_progress")}</SelectItem>
+            <SelectItem value="completed">{t("common:status_completed")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -94,22 +95,22 @@ export default function OrdersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Auftrags-Nr.</TableHead>
-                <TableHead>Projekt-Nr.</TableHead>
-                <TableHead>Projektname</TableHead>
-                <TableHead>Auftragstyp</TableHead>
-                <TableHead>Priorität</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Fälligkeit</TableHead>
-                <TableHead>Erstellt</TableHead>
-                {(role === "master" || role === "auftraggeber") && <TableHead className="w-[60px]">Aktionen</TableHead>}
+                <TableHead>{t("orders:order_number")}</TableHead>
+                <TableHead>{t("orders:project_number")}</TableHead>
+                <TableHead>{t("orders:project_name")}</TableHead>
+                <TableHead>{t("orders:order_type")}</TableHead>
+                <TableHead>{t("orders:priority")}</TableHead>
+                <TableHead>{t("common:status")}</TableHead>
+                <TableHead>{t("orders:due_date")}</TableHead>
+                <TableHead>{t("common:created")}</TableHead>
+                {(role === "master" || role === "auftraggeber") && <TableHead className="w-[60px]">{t("common:actions")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Keine Messaufträge gefunden</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
               ) : (
                 filtered.map((o: any) => (
                   <TableRow key={o.id}>
@@ -122,15 +123,15 @@ export default function OrdersPage() {
                       {o.projects?.project_number}
                     </TableCell>
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
-                    <TableCell>{ORDER_TYPE_LABELS[o.order_type as keyof typeof ORDER_TYPE_LABELS]}</TableCell>
+                    <TableCell>{t(`common:order_type_${o.order_type}`)}</TableCell>
                     <TableCell>
                       <Badge variant={o.priority === "hoechste" ? "destructive" : o.priority === "wichtig" ? "default" : "secondary"}>
-                        {ORDER_PRIORITY_LABELS[o.priority as keyof typeof ORDER_PRIORITY_LABELS] || "Normal"}
+                        {o.priority === "hoechste" ? t("common:priority_highest") : o.priority === "wichtig" ? t("common:priority_important") : t("common:priority_normal")}
                       </Badge>
                     </TableCell>
                     <TableCell><StatusBadge status={o.status} /></TableCell>
-                    <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString("de-DE") : "–"}</TableCell>
-                    <TableCell>{new Date(o.created_at).toLocaleDateString("de-DE")}</TableCell>
+                    <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
+                    <TableCell>{new Date(o.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
                     {(role === "master" || role === "auftraggeber") && (
                       <TableCell>
                         {canDelete(o) && (
@@ -142,15 +143,15 @@ export default function OrdersPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Messauftrag löschen?</AlertDialogTitle>
+                                <AlertDialogTitle>{t("orders:delete_title")}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Dieser Messauftrag und alle zugehörigen Messungen werden unwiderruflich gelöscht.
+                                  {t("orders:delete_description")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                  Löschen
+                                  {t("common:delete")}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
