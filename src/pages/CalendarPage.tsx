@@ -418,7 +418,16 @@ export default function CalendarPage() {
       {/* Calendar grid */}
       <Card>
         <CardContent className="p-0">
-          {viewMode === "month" && (
+          {viewMode === "month" && (() => {
+            const monthStart = startOfMonth(currentDate);
+            const monthEnd = endOfMonth(currentDate);
+            const rangeStart = startOfWeek(monthStart, { locale: de });
+            const rangeEnd = endOfWeek(monthEnd, { locale: de });
+            const holidaysInView = getHolidaysInRange(rangeStart, rangeEnd);
+            const holidayMap = new Map(holidaysInView.map(h => [format(h.date, "yyyy-MM-dd"), h.name]));
+            const holidaySet = getHolidaySet(currentDate.getFullYear(), [currentDate.getFullYear() - 1, currentDate.getFullYear() + 1]);
+
+            return (
             <div className="grid grid-cols-7">
               {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((d) => (
                 <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground border-b border-border">
@@ -429,15 +438,24 @@ export default function CalendarPage() {
                 const dayEvents = eventsForDay(day);
                 const isCurrentMonth = isSameMonth(day, currentDate);
                 const isToday = isSameDay(day, new Date());
+                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                const holidayName = holidayMap.get(format(day, "yyyy-MM-dd"));
+                const isHoliday = !!holidayName;
+                const isNonWorking = isWeekend || isHoliday;
                 return (
                   <div
                     key={day.toISOString()}
                     className={`min-h-[100px] border-b border-r border-border p-1 ${
                       !isCurrentMonth ? "bg-muted/30" : ""
-                    } ${isToday ? "bg-accent/10" : ""}`}
+                    } ${isToday ? "bg-accent/10" : ""} ${isNonWorking && isCurrentMonth ? "bg-primary/5" : ""} ${isWeekend && isCurrentMonth ? "bg-muted/40" : ""}`}
                   >
-                    <div className={`text-xs font-medium mb-1 ${isToday ? "text-accent" : isCurrentMonth ? "text-foreground" : "text-muted-foreground"}`}>
+                    <div className={`text-xs font-medium mb-1 flex items-center gap-1 ${isToday ? "text-accent" : isCurrentMonth ? "text-foreground" : "text-muted-foreground"}`}>
                       {format(day, "d")}
+                      {isHoliday && (
+                        <span className="text-[9px] bg-primary/20 text-primary px-1 rounded truncate max-w-[80px]" title={holidayName}>
+                          {holidayName}
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-0.5">
                       {dayEvents.slice(0, 3).map((ev) => (
@@ -472,7 +490,8 @@ export default function CalendarPage() {
                 );
               })}
             </div>
-          )}
+            );
+          })()}
 
           {(viewMode === "week" || viewMode === "day") && (
             <div className={`grid ${viewMode === "week" ? "grid-cols-7" : "grid-cols-1"} divide-x divide-border`}>
