@@ -493,15 +493,28 @@ export default function CalendarPage() {
             );
           })()}
 
-          {(viewMode === "week" || viewMode === "day") && (
+          {(viewMode === "week" || viewMode === "day") && (() => {
+            const holidaySet = getHolidaySet(currentDate.getFullYear(), [currentDate.getFullYear() - 1, currentDate.getFullYear() + 1]);
+            const holidaysInView = getHolidaysInRange(days[0], days[days.length - 1]);
+            const holidayMap = new Map(holidaysInView.map(h => [format(h.date, "yyyy-MM-dd"), h.name]));
+
+            return (
             <div className={`grid ${viewMode === "week" ? "grid-cols-7" : "grid-cols-1"} divide-x divide-border`}>
               {days.map((day) => {
                 const dayEvents = eventsForDay(day);
                 const isToday = isSameDay(day, new Date());
+                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                const holidayName = holidayMap.get(format(day, "yyyy-MM-dd"));
+                const isNonWorking = isWeekend || !!holidayName;
                 return (
-                  <div key={day.toISOString()} className={`min-h-[300px] p-2 ${isToday ? "bg-accent/10" : ""}`}>
+                  <div key={day.toISOString()} className={`min-h-[300px] p-2 ${isToday ? "bg-accent/10" : ""} ${isNonWorking ? "bg-muted/30" : ""}`}>
                     <div className={`text-sm font-medium mb-2 ${isToday ? "text-accent" : "text-foreground"}`}>
                       {format(day, "EEE d. MMM", { locale: de })}
+                      {holidayName && (
+                        <span className="block text-[10px] bg-primary/20 text-primary px-1 rounded mt-0.5 w-fit">
+                          {holidayName}
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-1">
                       {dayEvents.map((ev) => (
@@ -531,14 +544,17 @@ export default function CalendarPage() {
                         </Tooltip>
                       ))}
                       {dayEvents.length === 0 && (
-                        <div className="text-xs text-muted-foreground italic">Keine Ereignisse</div>
+                        <div className="text-xs text-muted-foreground italic">
+                          {isNonWorking ? (isWeekend ? "Wochenende" : "Feiertag") : "Keine Ereignisse"}
+                        </div>
                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
 
