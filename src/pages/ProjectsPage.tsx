@@ -21,7 +21,7 @@ import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs";
 
 export default function ProjectsPage() {
-  const { t } = useTranslation("projects");
+  const { t, i18n } = useTranslation("projects");
   const { data: projects = [], isLoading } = useProjectsWithStats();
   const { data: users = [] } = useUsers();
   const { user, role } = useAuth();
