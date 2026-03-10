@@ -62,6 +62,13 @@ i18n
     interpolation: {
       escapeValue: false,
     },
+    returnEmptyString: false,
+    parseMissingKeyHandler: (key) => {
+      if (import.meta.env.DEV) {
+        console.warn(`[i18n] Missing translation key: ${key}`);
+      }
+      return key;
+    },
     detection: {
       order: ["localStorage", "navigator"],
       lookupLocalStorage: "ceramrox_language",
