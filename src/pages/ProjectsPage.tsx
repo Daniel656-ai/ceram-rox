@@ -21,7 +21,7 @@ import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs";
 
 export default function ProjectsPage() {
-  const { t } = useTranslation("projects");
+  const { t, i18n } = useTranslation("projects");
   const { data: projects = [], isLoading } = useProjectsWithStats();
   const { data: users = [] } = useUsers();
   const { user, role } = useAuth();
@@ -193,7 +193,7 @@ export default function ProjectsPage() {
                     <TableCell className="text-center">
                       {p.stats.totalCost > 0 ? `${p.stats.totalCost.toFixed(0)}€` : "–"}
                     </TableCell>
-                    <TableCell>{new Date(p.created_at).toLocaleDateString("de-DE")}</TableCell>
+                    <TableCell>{new Date(p.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
                     {role === "master" && (
                       <TableCell>
                         <AlertDialog>
@@ -210,7 +210,7 @@ export default function ProjectsPage() {
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                              <AlertDialogCancel>{t("cancel", { ns: "common" })}</AlertDialogCancel>
                               <AlertDialogAction
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 onClick={async () => {
@@ -222,7 +222,7 @@ export default function ProjectsPage() {
                                   }
                                 }}
                               >
-                                Löschen
+                                {t("delete", { ns: "common" })}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>

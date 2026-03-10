@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   format,
   startOfMonth,
@@ -17,7 +18,7 @@ import {
   isWithinInterval,
   parseISO,
 } from "date-fns";
-import { de } from "date-fns/locale";
+import { de, enGB } from "date-fns/locale";
 import { isWorkingDay, getHolidaysInRange, getHolidaySet } from "@/lib/austrian-holidays";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,25 +41,6 @@ import { useUsers } from "@/hooks/useUsers";
 type ViewMode = "month" | "week" | "day";
 type EventFilter = "all" | "absences" | "downtimes";
 
-const ABSENCE_LABELS: Record<UserAbsence["absence_type"], string> = {
-  urlaub: "Urlaub",
-  krankheit: "Krankheit",
-  weiterbildung: "Weiterbildung",
-  sonstiges: "Sonstiges",
-};
-
-const DOWNTIME_LABELS: Record<WorkstationDowntime["downtime_type"], string> = {
-  wartung: "Geplante Wartung",
-  reparatur: "Ungeplante Reparatur",
-  sonstiges: "Sonstiger Stillstand",
-};
-
-const STATUS_LABELS: Record<WorkstationDowntime["status"], string> = {
-  geplant: "Geplant",
-  aktiv: "Aktiv",
-  abgeschlossen: "Abgeschlossen",
-};
-
 interface CalendarEvent {
   id: string;
   type: "absence" | "downtime";
@@ -71,6 +53,8 @@ interface CalendarEvent {
 }
 
 export default function CalendarPage() {
+  const { t, i18n } = useTranslation(["calendar", "common"]);
+  const dateFnsLocale = i18n.language === "en" ? enGB : de;
   const { user, role } = useAuth();
   const isMaster = role === "master";
 
@@ -117,14 +101,33 @@ export default function CalendarPage() {
     description: "",
   });
 
+  const absenceLabels: Record<UserAbsence["absence_type"], string> = {
+    urlaub: t("calendar:vacation"),
+    krankheit: t("calendar:sick"),
+    weiterbildung: t("calendar:training"),
+    sonstiges: t("calendar:other_absence"),
+  };
+
+  const downtimeLabels: Record<WorkstationDowntime["downtime_type"], string> = {
+    wartung: t("calendar:planned_maintenance"),
+    reparatur: t("calendar:unplanned_repair"),
+    sonstiges: t("calendar:other_downtime"),
+  };
+
+  const statusLabels: Record<WorkstationDowntime["status"], string> = {
+    geplant: t("calendar:status_planned"),
+    aktiv: t("calendar:status_active"),
+    abgeschlossen: t("calendar:status_completed"),
+  };
+
   const getUserName = (userId: string) => {
     const u = users.find((u: any) => u.user_id === userId);
-    return u ? `${u.first_name} ${u.last_name}` : "Unbekannt";
+    return u ? `${u.first_name} ${u.last_name}` : t("calendar:unknown");
   };
 
   const getWsName = (wsId: string) => {
     const ws = workstations.find((w) => w.id === wsId);
-    return ws?.name ?? "Unbekannt";
+    return ws?.name ?? t("calendar:unknown");
   };
 
   // Build events
@@ -139,7 +142,7 @@ export default function CalendarPage() {
             id: a.id,
             type: "absence",
             label: getUserName(a.user_id),
-            subLabel: ABSENCE_LABELS[a.absence_type],
+            subLabel: absenceLabels[a.absence_type],
             start: parseISO(a.start_at),
             end: parseISO(a.end_at),
             colorClass:
@@ -161,7 +164,7 @@ export default function CalendarPage() {
             id: d.id,
             type: "downtime",
             label: getWsName(d.workstation_id),
-            subLabel: DOWNTIME_LABELS[d.downtime_type],
+            subLabel: downtimeLabels[d.downtime_type],
             start: parseISO(d.start_at),
             end: parseISO(d.end_at),
             colorClass:
@@ -176,7 +179,7 @@ export default function CalendarPage() {
     }
 
     return result;
-  }, [absences, downtimes, eventFilter, userFilter, wsFilter, users, workstations]);
+  }, [absences, downtimes, eventFilter, userFilter, wsFilter, users, workstations, i18n.language]);
 
   // Calendar days
   const days = useMemo(() => {
@@ -184,18 +187,18 @@ export default function CalendarPage() {
       const monthStart = startOfMonth(currentDate);
       const monthEnd = endOfMonth(currentDate);
       return eachDayOfInterval({
-        start: startOfWeek(monthStart, { locale: de }),
-        end: endOfWeek(monthEnd, { locale: de }),
+        start: startOfWeek(monthStart, { locale: dateFnsLocale }),
+        end: endOfWeek(monthEnd, { locale: dateFnsLocale }),
       });
     }
     if (viewMode === "week") {
       return eachDayOfInterval({
-        start: startOfWeek(currentDate, { locale: de }),
-        end: endOfWeek(currentDate, { locale: de }),
+        start: startOfWeek(currentDate, { locale: dateFnsLocale }),
+        end: endOfWeek(currentDate, { locale: dateFnsLocale }),
       });
     }
     return [currentDate];
-  }, [currentDate, viewMode]);
+  }, [currentDate, viewMode, dateFnsLocale]);
 
   const navigate = (dir: 1 | -1) => {
     if (viewMode === "month") setCurrentDate(dir === 1 ? addMonths(currentDate, 1) : subMonths(currentDate, 1));
@@ -237,13 +240,13 @@ export default function CalendarPage() {
 
   const saveAbsence = async () => {
     if (!absForm.start_at || !absForm.end_at) {
-      toast({ title: "Bitte Start und Ende angeben", variant: "destructive" });
+      toast({ title: t("calendar:start_end_required"), variant: "destructive" });
       return;
     }
     try {
       if (editingAbsence) {
         await updateAbsence.mutateAsync({ id: editingAbsence.id, ...absForm });
-        toast({ title: "Abwesenheit aktualisiert" });
+        toast({ title: t("calendar:absence_updated") });
       } else {
         await createAbsence.mutateAsync({
           user_id: absForm.user_id || user!.id,
@@ -252,11 +255,11 @@ export default function CalendarPage() {
           end_at: new Date(absForm.end_at).toISOString(),
           comment: absForm.comment || undefined,
         });
-        toast({ title: "Abwesenheit eingetragen" });
+        toast({ title: t("calendar:absence_created") });
       }
       setAbsenceDialogOpen(false);
     } catch (e: any) {
-      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+      toast({ title: t("common:error"), description: e.message, variant: "destructive" });
     }
   };
 
@@ -288,13 +291,13 @@ export default function CalendarPage() {
 
   const saveDowntime = async () => {
     if (!dtForm.start_at || !dtForm.end_at || !dtForm.workstation_id) {
-      toast({ title: "Bitte alle Pflichtfelder ausfüllen", variant: "destructive" });
+      toast({ title: t("calendar:fill_required"), variant: "destructive" });
       return;
     }
     try {
       if (editingDowntime) {
         await updateDowntime.mutateAsync({ id: editingDowntime.id, ...dtForm });
-        toast({ title: "Stillstand aktualisiert" });
+        toast({ title: t("calendar:downtime_updated") });
       } else {
         await createDowntime.mutateAsync({
           ...dtForm,
@@ -302,22 +305,22 @@ export default function CalendarPage() {
           end_at: new Date(dtForm.end_at).toISOString(),
           created_by: user!.id,
         });
-        toast({ title: "Stillstand eingetragen" });
+        toast({ title: t("calendar:downtime_created") });
       }
       setDowntimeDialogOpen(false);
     } catch (e: any) {
-      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+      toast({ title: t("common:error"), description: e.message, variant: "destructive" });
     }
   };
 
   const headerLabel = () => {
-    if (viewMode === "month") return format(currentDate, "MMMM yyyy", { locale: de });
+    if (viewMode === "month") return format(currentDate, "MMMM yyyy", { locale: dateFnsLocale });
     if (viewMode === "week") {
-      const ws = startOfWeek(currentDate, { locale: de });
-      const we = endOfWeek(currentDate, { locale: de });
-      return `${format(ws, "d. MMM", { locale: de })} – ${format(we, "d. MMM yyyy", { locale: de })}`;
+      const ws = startOfWeek(currentDate, { locale: dateFnsLocale });
+      const we = endOfWeek(currentDate, { locale: dateFnsLocale });
+      return `${format(ws, "d. MMM", { locale: dateFnsLocale })} – ${format(we, "d. MMM yyyy", { locale: dateFnsLocale })}`;
     }
-    return format(currentDate, "EEEE, d. MMMM yyyy", { locale: de });
+    return format(currentDate, "EEEE, d. MMMM yyyy", { locale: dateFnsLocale });
   };
 
   const durchfuehrerUsers = users.filter((u: any) => {
@@ -325,17 +328,19 @@ export default function CalendarPage() {
     return r === "durchfuehrer" || r === "master";
   });
 
+  const weekdayLabels = t("calendar:weekdays_short", { returnObjects: true }) as string[];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Kalender & Verfügbarkeit</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("calendar:title")}</h1>
         <div className="flex gap-2 flex-wrap">
           <Button size="sm" onClick={() => openAbsenceDialog()}>
-            <Plus className="h-4 w-4 mr-1" /> Abwesenheit
+            <Plus className="h-4 w-4 mr-1" /> {t("calendar:add_absence")}
           </Button>
           {isMaster && (
             <Button size="sm" variant="outline" onClick={() => openDowntimeDialog()}>
-              <Plus className="h-4 w-4 mr-1" /> Stillstand
+              <Plus className="h-4 w-4 mr-1" /> {t("calendar:add_downtime")}
             </Button>
           )}
         </div>
@@ -345,32 +350,32 @@ export default function CalendarPage() {
       <Card>
         <CardContent className="pt-4 flex flex-wrap gap-4 items-end">
           <div>
-            <Label className="text-xs text-muted-foreground">Ansicht</Label>
+            <Label className="text-xs text-muted-foreground">{t("calendar:view")}</Label>
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
               <TabsList>
-                <TabsTrigger value="month">Monat</TabsTrigger>
-                <TabsTrigger value="week">Woche</TabsTrigger>
-                <TabsTrigger value="day">Tag</TabsTrigger>
+                <TabsTrigger value="month">{t("calendar:month")}</TabsTrigger>
+                <TabsTrigger value="week">{t("calendar:week")}</TabsTrigger>
+                <TabsTrigger value="day">{t("calendar:day")}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
           <div className="w-40">
-            <Label className="text-xs text-muted-foreground">Ereignistyp</Label>
+            <Label className="text-xs text-muted-foreground">{t("calendar:event_type")}</Label>
             <Select value={eventFilter} onValueChange={(v) => setEventFilter(v as EventFilter)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle</SelectItem>
-                <SelectItem value="absences">Abwesenheiten</SelectItem>
-                <SelectItem value="downtimes">Stillstände</SelectItem>
+                <SelectItem value="all">{t("common:all")}</SelectItem>
+                <SelectItem value="absences">{t("calendar:absences")}</SelectItem>
+                <SelectItem value="downtimes">{t("calendar:downtimes")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="w-48">
-            <Label className="text-xs text-muted-foreground">Messtechniker</Label>
+            <Label className="text-xs text-muted-foreground">{t("calendar:technician")}</Label>
             <Select value={userFilter} onValueChange={setUserFilter}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle</SelectItem>
+                <SelectItem value="all">{t("common:all")}</SelectItem>
                 {durchfuehrerUsers.map((u: any) => (
                   <SelectItem key={u.user_id} value={u.user_id}>
                     {u.first_name} {u.last_name}
@@ -380,11 +385,11 @@ export default function CalendarPage() {
             </Select>
           </div>
           <div className="w-48">
-            <Label className="text-xs text-muted-foreground">Messplatz</Label>
+            <Label className="text-xs text-muted-foreground">{t("calendar:workstation")}</Label>
             <Select value={wsFilter} onValueChange={setWsFilter}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle</SelectItem>
+                <SelectItem value="all">{t("common:all")}</SelectItem>
                 {workstations.map((ws) => (
                   <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
                 ))}
@@ -407,12 +412,12 @@ export default function CalendarPage() {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive/60" /> Urlaub</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive/80" /> Krankheit</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning/70" /> Weiterbildung/Sonstiges</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning" /> Wartung</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> Reparatur</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary/20 border border-primary/30" /> Feiertag (AT)</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive/60" /> {t("calendar:legend_vacation")}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive/80" /> {t("calendar:legend_sick")}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning/70" /> {t("calendar:legend_training_other")}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning" /> {t("calendar:legend_maintenance")}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> {t("calendar:legend_repair")}</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary/20 border border-primary/30" /> {t("calendar:legend_holiday")}</span>
       </div>
 
       {/* Calendar grid */}
@@ -421,15 +426,15 @@ export default function CalendarPage() {
           {viewMode === "month" && (() => {
             const monthStart = startOfMonth(currentDate);
             const monthEnd = endOfMonth(currentDate);
-            const rangeStart = startOfWeek(monthStart, { locale: de });
-            const rangeEnd = endOfWeek(monthEnd, { locale: de });
+            const rangeStart = startOfWeek(monthStart, { locale: dateFnsLocale });
+            const rangeEnd = endOfWeek(monthEnd, { locale: dateFnsLocale });
             const holidaysInView = getHolidaysInRange(rangeStart, rangeEnd);
             const holidayMap = new Map(holidaysInView.map(h => [format(h.date, "yyyy-MM-dd"), h.name]));
             const holidaySet = getHolidaySet(currentDate.getFullYear(), [currentDate.getFullYear() - 1, currentDate.getFullYear() + 1]);
 
             return (
             <div className="grid grid-cols-7">
-              {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((d) => (
+              {weekdayLabels.map((d) => (
                 <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground border-b border-border">
                   {d}
                 </div>
@@ -482,7 +487,7 @@ export default function CalendarPage() {
                       ))}
                       {dayEvents.length > 3 && (
                         <div className="text-[10px] text-muted-foreground px-1">
-                          +{dayEvents.length - 3} mehr
+                          {t("calendar:more_events", { count: dayEvents.length - 3 })}
                         </div>
                       )}
                     </div>
@@ -509,7 +514,7 @@ export default function CalendarPage() {
                 return (
                   <div key={day.toISOString()} className={`min-h-[300px] p-2 ${isToday ? "bg-accent/10" : ""} ${isNonWorking ? "bg-muted/30" : ""}`}>
                     <div className={`text-sm font-medium mb-2 ${isToday ? "text-accent" : "text-foreground"}`}>
-                      {format(day, "EEE d. MMM", { locale: de })}
+                      {format(day, "EEE d. MMM", { locale: dateFnsLocale })}
                       {holidayName && (
                         <span className="block text-[10px] bg-primary/20 text-primary px-1 rounded mt-0.5 w-fit">
                           {holidayName}
@@ -545,7 +550,7 @@ export default function CalendarPage() {
                       ))}
                       {dayEvents.length === 0 && (
                         <div className="text-xs text-muted-foreground italic">
-                          {isNonWorking ? (isWeekend ? "Wochenende" : "Feiertag") : "Keine Ereignisse"}
+                          {isNonWorking ? (isWeekend ? t("calendar:weekend") : t("calendar:holiday")) : t("calendar:no_events")}
                         </div>
                       )}
                     </div>
@@ -562,12 +567,12 @@ export default function CalendarPage() {
       <Dialog open={absenceDialogOpen} onOpenChange={setAbsenceDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingAbsence ? "Abwesenheit bearbeiten" : "Neue Abwesenheit"}</DialogTitle>
+            <DialogTitle>{editingAbsence ? t("calendar:edit_absence") : t("calendar:new_absence")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {isMaster && (
               <div>
-                <Label>Messtechniker</Label>
+                <Label>{t("calendar:technician")}</Label>
                 <Select value={absForm.user_id || user?.id} onValueChange={(v) => setAbsForm((p) => ({ ...p, user_id: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -581,29 +586,29 @@ export default function CalendarPage() {
               </div>
             )}
             <div>
-              <Label>Typ</Label>
+              <Label>{t("calendar:absence_type")}</Label>
               <Select value={absForm.absence_type} onValueChange={(v) => setAbsForm((p) => ({ ...p, absence_type: v as any }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="urlaub">Urlaub</SelectItem>
-                  <SelectItem value="krankheit">Krankheit</SelectItem>
-                  <SelectItem value="weiterbildung">Weiterbildung</SelectItem>
-                  <SelectItem value="sonstiges">Sonstiges</SelectItem>
+                  <SelectItem value="urlaub">{t("calendar:vacation")}</SelectItem>
+                  <SelectItem value="krankheit">{t("calendar:sick")}</SelectItem>
+                  <SelectItem value="weiterbildung">{t("calendar:training")}</SelectItem>
+                  <SelectItem value="sonstiges">{t("calendar:other_absence")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Start</Label>
+                <Label>{t("calendar:start")}</Label>
                 <Input type="datetime-local" value={absForm.start_at} onChange={(e) => setAbsForm((p) => ({ ...p, start_at: e.target.value }))} />
               </div>
               <div>
-                <Label>Ende</Label>
+                <Label>{t("calendar:end")}</Label>
                 <Input type="datetime-local" value={absForm.end_at} onChange={(e) => setAbsForm((p) => ({ ...p, end_at: e.target.value }))} />
               </div>
             </div>
             <div>
-              <Label>Kommentar (optional)</Label>
+              <Label>{t("calendar:comment_optional")}</Label>
               <Textarea value={absForm.comment} onChange={(e) => setAbsForm((p) => ({ ...p, comment: e.target.value }))} />
             </div>
           </div>
@@ -615,14 +620,14 @@ export default function CalendarPage() {
                 onClick={async () => {
                   await deleteAbsence.mutateAsync(editingAbsence.id);
                   setAbsenceDialogOpen(false);
-                  toast({ title: "Abwesenheit gelöscht" });
+                  toast({ title: t("calendar:absence_deleted") });
                 }}
               >
-                <Trash2 className="h-4 w-4 mr-1" /> Löschen
+                <Trash2 className="h-4 w-4 mr-1" /> {t("common:delete")}
               </Button>
             )}
             <Button onClick={saveAbsence} disabled={createAbsence.isPending || updateAbsence.isPending}>
-              Speichern
+              {t("common:save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -632,11 +637,11 @@ export default function CalendarPage() {
       <Dialog open={downtimeDialogOpen} onOpenChange={setDowntimeDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingDowntime ? "Stillstand bearbeiten" : "Neuer Stillstand"}</DialogTitle>
+            <DialogTitle>{editingDowntime ? t("calendar:edit_downtime") : t("calendar:new_downtime")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Messplatz</Label>
+              <Label>{t("calendar:workstation")}</Label>
               <Select value={dtForm.workstation_id} onValueChange={(v) => setDtForm((p) => ({ ...p, workstation_id: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -648,40 +653,40 @@ export default function CalendarPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Typ</Label>
+                <Label>{t("calendar:downtime_type")}</Label>
                 <Select value={dtForm.downtime_type} onValueChange={(v) => setDtForm((p) => ({ ...p, downtime_type: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="wartung">Geplante Wartung</SelectItem>
-                    <SelectItem value="reparatur">Ungeplante Reparatur</SelectItem>
-                    <SelectItem value="sonstiges">Sonstiges</SelectItem>
+                    <SelectItem value="wartung">{t("calendar:planned_maintenance")}</SelectItem>
+                    <SelectItem value="reparatur">{t("calendar:unplanned_repair")}</SelectItem>
+                    <SelectItem value="sonstiges">{t("calendar:other_downtime")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Status</Label>
+                <Label>{t("common:status")}</Label>
                 <Select value={dtForm.status} onValueChange={(v) => setDtForm((p) => ({ ...p, status: v as any }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="geplant">Geplant</SelectItem>
-                    <SelectItem value="aktiv">Aktiv</SelectItem>
-                    <SelectItem value="abgeschlossen">Abgeschlossen</SelectItem>
+                    <SelectItem value="geplant">{t("calendar:status_planned")}</SelectItem>
+                    <SelectItem value="aktiv">{t("calendar:status_active")}</SelectItem>
+                    <SelectItem value="abgeschlossen">{t("calendar:status_completed")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Start</Label>
+                <Label>{t("calendar:start")}</Label>
                 <Input type="datetime-local" value={dtForm.start_at} onChange={(e) => setDtForm((p) => ({ ...p, start_at: e.target.value }))} />
               </div>
               <div>
-                <Label>Ende</Label>
+                <Label>{t("calendar:end")}</Label>
                 <Input type="datetime-local" value={dtForm.end_at} onChange={(e) => setDtForm((p) => ({ ...p, end_at: e.target.value }))} />
               </div>
             </div>
             <div>
-              <Label>Beschreibung (optional)</Label>
+              <Label>{t("calendar:description_optional")}</Label>
               <Textarea value={dtForm.description} onChange={(e) => setDtForm((p) => ({ ...p, description: e.target.value }))} />
             </div>
           </div>
@@ -693,14 +698,14 @@ export default function CalendarPage() {
                 onClick={async () => {
                   await deleteDowntime.mutateAsync(editingDowntime.id);
                   setDowntimeDialogOpen(false);
-                  toast({ title: "Stillstand gelöscht" });
+                  toast({ title: t("calendar:downtime_deleted") });
                 }}
               >
-                <Trash2 className="h-4 w-4 mr-1" /> Löschen
+                <Trash2 className="h-4 w-4 mr-1" /> {t("common:delete")}
               </Button>
             )}
             <Button onClick={saveDowntime} disabled={createDowntime.isPending || updateDowntime.isPending}>
-              Speichern
+              {t("common:save")}
             </Button>
           </DialogFooter>
         </DialogContent>
