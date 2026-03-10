@@ -412,6 +412,7 @@ export default function CalendarPage() {
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning/70" /> Weiterbildung/Sonstiges</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning" /> Wartung</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> Reparatur</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary/20 border border-primary/30" /> Feiertag (AT)</span>
       </div>
 
       {/* Calendar grid */}
