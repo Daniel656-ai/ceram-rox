@@ -210,7 +210,7 @@ export default function ProjectsPage() {
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                              <AlertDialogCancel>{t("cancel", { ns: "common" })}</AlertDialogCancel>
                               <AlertDialogAction
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 onClick={async () => {
