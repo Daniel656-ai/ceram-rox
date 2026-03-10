@@ -193,7 +193,7 @@ export default function ProjectsPage() {
                     <TableCell className="text-center">
                       {p.stats.totalCost > 0 ? `${p.stats.totalCost.toFixed(0)}€` : "–"}
                     </TableCell>
-                    <TableCell>{new Date(p.created_at).toLocaleDateString("de-DE")}</TableCell>
+                    <TableCell>{new Date(p.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
                     {role === "master" && (
                       <TableCell>
                         <AlertDialog>
