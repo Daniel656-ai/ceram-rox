@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { addWorkingDays } from "@/lib/austrian-holidays";
 
 /**
  * Fetches all open/in-progress measurement orders with their measurements,
@@ -11,12 +12,13 @@ import { useAuth } from "@/contexts/AuthContext";
  *   3. Sum of processing durations ahead in queue + own duration
  *
  * Returns a Map<sampleId, Date> with the estimated completion date.
+ * Uses Austrian working days (Mon-Fri, excluding public holidays).
  */
 
 interface OrderWithMeasurements {
   id: string;
   sample_id: string | null;
-  priority: string; // order_priority enum
+  priority: string;
   created_at: string;
   status: string;
   order_measurements: {
@@ -57,11 +59,9 @@ export function useEstimatedCompletion() {
     const map = new Map<string, Date>();
     if (!orders.length) return map;
 
-    // Filter orders that have a sample linked
     const sampleOrders = orders
       .filter(o => o.sample_id)
       .map(o => {
-        // Sum remaining hours for this order (only open/in_progress measurements)
         const remainingHours = o.order_measurements
           .filter(m => m.status !== "completed")
           .reduce((sum, m) => sum + (m.planned_hours ?? m.processing_time_hours ?? 0), 0);
@@ -89,18 +89,11 @@ export function useEstimatedCompletion() {
 
     for (const order of sampleOrders) {
       cumulativeHours += order.remainingHours;
-      const workingDays = Math.ceil(cumulativeHours / HOURS_PER_DAY);
+      const workingDaysNeeded = Math.ceil(cumulativeHours / HOURS_PER_DAY);
 
-      // Calculate ETA by adding working days (skip weekends)
-      const eta = new Date(now);
-      let daysAdded = 0;
-      while (daysAdded < workingDays) {
-        eta.setDate(eta.getDate() + 1);
-        const day = eta.getDay();
-        if (day !== 0 && day !== 6) daysAdded++;
-      }
+      // Use Austrian working days calculation (skips weekends + holidays)
+      const eta = addWorkingDays(now, workingDaysNeeded);
 
-      // If sample already has an ETA, keep the later one (multiple orders)
       const existing = map.get(order.sampleId);
       if (!existing || eta > existing) {
         map.set(order.sampleId, eta);

@@ -18,6 +18,7 @@ import {
   parseISO,
 } from "date-fns";
 import { de } from "date-fns/locale";
+import { isWorkingDay, getHolidaysInRange, getHolidaySet } from "@/lib/austrian-holidays";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -411,12 +412,22 @@ export default function CalendarPage() {
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning/70" /> Weiterbildung/Sonstiges</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning" /> Wartung</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> Reparatur</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary/20 border border-primary/30" /> Feiertag (AT)</span>
       </div>
 
       {/* Calendar grid */}
       <Card>
         <CardContent className="p-0">
-          {viewMode === "month" && (
+          {viewMode === "month" && (() => {
+            const monthStart = startOfMonth(currentDate);
+            const monthEnd = endOfMonth(currentDate);
+            const rangeStart = startOfWeek(monthStart, { locale: de });
+            const rangeEnd = endOfWeek(monthEnd, { locale: de });
+            const holidaysInView = getHolidaysInRange(rangeStart, rangeEnd);
+            const holidayMap = new Map(holidaysInView.map(h => [format(h.date, "yyyy-MM-dd"), h.name]));
+            const holidaySet = getHolidaySet(currentDate.getFullYear(), [currentDate.getFullYear() - 1, currentDate.getFullYear() + 1]);
+
+            return (
             <div className="grid grid-cols-7">
               {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((d) => (
                 <div key={d} className="p-2 text-center text-xs font-medium text-muted-foreground border-b border-border">
@@ -427,15 +438,24 @@ export default function CalendarPage() {
                 const dayEvents = eventsForDay(day);
                 const isCurrentMonth = isSameMonth(day, currentDate);
                 const isToday = isSameDay(day, new Date());
+                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                const holidayName = holidayMap.get(format(day, "yyyy-MM-dd"));
+                const isHoliday = !!holidayName;
+                const isNonWorking = isWeekend || isHoliday;
                 return (
                   <div
                     key={day.toISOString()}
                     className={`min-h-[100px] border-b border-r border-border p-1 ${
                       !isCurrentMonth ? "bg-muted/30" : ""
-                    } ${isToday ? "bg-accent/10" : ""}`}
+                    } ${isToday ? "bg-accent/10" : ""} ${isNonWorking && isCurrentMonth ? "bg-primary/5" : ""} ${isWeekend && isCurrentMonth ? "bg-muted/40" : ""}`}
                   >
-                    <div className={`text-xs font-medium mb-1 ${isToday ? "text-accent" : isCurrentMonth ? "text-foreground" : "text-muted-foreground"}`}>
+                    <div className={`text-xs font-medium mb-1 flex items-center gap-1 ${isToday ? "text-accent" : isCurrentMonth ? "text-foreground" : "text-muted-foreground"}`}>
                       {format(day, "d")}
+                      {isHoliday && (
+                        <span className="text-[9px] bg-primary/20 text-primary px-1 rounded truncate max-w-[80px]" title={holidayName}>
+                          {holidayName}
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-0.5">
                       {dayEvents.slice(0, 3).map((ev) => (
@@ -470,17 +490,31 @@ export default function CalendarPage() {
                 );
               })}
             </div>
-          )}
+            );
+          })()}
 
-          {(viewMode === "week" || viewMode === "day") && (
+          {(viewMode === "week" || viewMode === "day") && (() => {
+            const holidaySet = getHolidaySet(currentDate.getFullYear(), [currentDate.getFullYear() - 1, currentDate.getFullYear() + 1]);
+            const holidaysInView = getHolidaysInRange(days[0], days[days.length - 1]);
+            const holidayMap = new Map(holidaysInView.map(h => [format(h.date, "yyyy-MM-dd"), h.name]));
+
+            return (
             <div className={`grid ${viewMode === "week" ? "grid-cols-7" : "grid-cols-1"} divide-x divide-border`}>
               {days.map((day) => {
                 const dayEvents = eventsForDay(day);
                 const isToday = isSameDay(day, new Date());
+                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                const holidayName = holidayMap.get(format(day, "yyyy-MM-dd"));
+                const isNonWorking = isWeekend || !!holidayName;
                 return (
-                  <div key={day.toISOString()} className={`min-h-[300px] p-2 ${isToday ? "bg-accent/10" : ""}`}>
+                  <div key={day.toISOString()} className={`min-h-[300px] p-2 ${isToday ? "bg-accent/10" : ""} ${isNonWorking ? "bg-muted/30" : ""}`}>
                     <div className={`text-sm font-medium mb-2 ${isToday ? "text-accent" : "text-foreground"}`}>
                       {format(day, "EEE d. MMM", { locale: de })}
+                      {holidayName && (
+                        <span className="block text-[10px] bg-primary/20 text-primary px-1 rounded mt-0.5 w-fit">
+                          {holidayName}
+                        </span>
+                      )}
                     </div>
                     <div className="space-y-1">
                       {dayEvents.map((ev) => (
@@ -510,14 +544,17 @@ export default function CalendarPage() {
                         </Tooltip>
                       ))}
                       {dayEvents.length === 0 && (
-                        <div className="text-xs text-muted-foreground italic">Keine Ereignisse</div>
+                        <div className="text-xs text-muted-foreground italic">
+                          {isNonWorking ? (isWeekend ? "Wochenende" : "Feiertag") : "Keine Ereignisse"}
+                        </div>
                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
 
