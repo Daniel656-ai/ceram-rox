@@ -127,5 +127,11 @@
   "time_delete_desc": "This time entry will be permanently deleted.",
   "time_person_required": "Please select a person",
   "time_note_required": "Please enter a note",
-  "time_short": "Work Time"
+  "time_short": "Work Time",
+  "csv_export": "CSV Export",
+  "csv_section_project": "Project Information",
+  "csv_cost_summary": "Cost Summary",
+  "csv_total_time": "Total Work Time",
+  "csv_total_personnel": "Total Personnel Costs",
+  "time_duration_min": "Duration (Minutes)"
 }
