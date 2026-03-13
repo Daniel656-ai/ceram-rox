@@ -32,6 +32,7 @@ export function useAddProjectTimeEntry() {
       entry_date: string;
       duration_minutes: number;
       note: string;
+      order_id?: string;
     }) => {
       const { data, error } = await supabase
         .from("project_time_entries")
