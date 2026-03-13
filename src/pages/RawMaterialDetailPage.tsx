@@ -210,6 +210,7 @@ export default function RawMaterialDetailPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
             <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
             <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>
           </div>
