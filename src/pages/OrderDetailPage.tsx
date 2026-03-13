@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Clock, Pencil, Trash2 } from "lucide-react";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import MeasurementDocuments from "@/components/MeasurementDocuments";
+import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import MeasurementDataEntry from "@/components/MeasurementDataEntry";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -421,6 +422,14 @@ export default function OrderDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Time Entries for this Order */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Arbeitszeiten</CardTitle></CardHeader>
+        <CardContent>
+          <ProjectTimeEntries projectId={(order as any).project_id} orderId={order.id} />
+        </CardContent>
+      </Card>
 
       {auditLogs.length > 0 && (
         <Card>

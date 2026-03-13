@@ -709,6 +709,7 @@ export type Database = {
           entry_date: string
           id: string
           note: string
+          order_id: string | null
           person_id: string
           project_id: string
           updated_at: string
@@ -720,6 +721,7 @@ export type Database = {
           entry_date?: string
           id?: string
           note?: string
+          order_id?: string | null
           person_id: string
           project_id: string
           updated_at?: string
@@ -731,11 +733,19 @@ export type Database = {
           entry_date?: string
           id?: string
           note?: string
+          order_id?: string | null
           person_id?: string
           project_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_time_entries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_time_entries_project_id_fkey"
             columns: ["project_id"]

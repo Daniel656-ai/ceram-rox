@@ -23,6 +23,7 @@ import { toast } from "sonner";
 
 interface Props {
   projectId: string;
+  orderId?: string;
 }
 
 const DURATION_OPTIONS = Array.from({ length: 32 }, (_, i) => (i + 1) * 15); // 15 min to 8h
@@ -38,9 +39,9 @@ function getUserName(users: any[], userId: string) {
   return u ? `${u.first_name} ${u.last_name}`.trim() || "–" : "–";
 }
 
-export function ProjectTimeEntries({ projectId }: Props) {
+export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const { t, i18n } = useTranslation("projects");
-  const { data: entries = [] } = useProjectTimeEntries(projectId);
+  const { data: entries = [] } = useProjectTimeEntries(projectId, orderId);
   const { data: users = [] } = useUsers();
   const addEntry = useAddProjectTimeEntry();
   const updateEntry = useUpdateProjectTimeEntry();
@@ -93,6 +94,7 @@ export function ProjectTimeEntries({ projectId }: Props) {
         entry_date: form.entry_date,
         duration_minutes: Number(form.duration_minutes),
         note: form.note.trim(),
+        order_id: orderId,
       });
       toast.success(t("time_entry_created"));
       resetForm();

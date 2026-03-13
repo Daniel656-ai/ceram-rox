@@ -2,15 +2,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function useProjectTimeEntries(projectId?: string) {
+export function useProjectTimeEntries(projectId?: string, orderId?: string) {
   return useQuery({
-    queryKey: ["project_time_entries", projectId],
+    queryKey: ["project_time_entries", projectId, orderId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("project_time_entries")
         .select("*")
         .eq("project_id", projectId!)
         .order("entry_date", { ascending: false });
+      if (orderId) {
+        query = query.eq("order_id", orderId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -28,6 +32,7 @@ export function useAddProjectTimeEntry() {
       entry_date: string;
       duration_minutes: number;
       note: string;
+      order_id?: string;
     }) => {
       const { data, error } = await supabase
         .from("project_time_entries")
