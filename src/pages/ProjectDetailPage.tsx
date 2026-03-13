@@ -237,9 +237,14 @@ export default function ProjectDetailPage() {
           </h1>
           <p className="text-muted-foreground">{project.description || t("description")}</p>
         </div>
-        <Button variant="outline" onClick={handlePrint} className="print:hidden">
-          <Printer className="h-4 w-4 mr-2" />{t("print_report")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleCsvExport} className="print:hidden">
+            <Download className="h-4 w-4 mr-2" />{t("csv_export")}
+          </Button>
+          <Button variant="outline" onClick={handlePrint} className="print:hidden">
+            <Printer className="h-4 w-4 mr-2" />{t("print_report")}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
