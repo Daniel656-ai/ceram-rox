@@ -559,31 +559,119 @@ export default function ProjectDetailPage() {
                   </Table>
                 </div>
 
-                {/* Costs Summary */}
+                {/* Time Entries */}
+                <div>
+                  <h3 className="font-semibold mb-2">{t("report_time_entries_section")}</h3>
+                  {(timeEntries as any[]).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t("time_no_entries")}</p>
+                  ) : (
+                    <>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t("time_date")}</TableHead>
+                            <TableHead>{t("time_person")}</TableHead>
+                            <TableHead>{t("time_duration")}</TableHead>
+                            <TableHead>{t("time_note")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(timeEntries as any[]).map((e: any) => (
+                            <TableRow key={e.id}>
+                              <TableCell>{new Date(e.entry_date).toLocaleDateString("de-DE")}</TableCell>
+                              <TableCell>{getUserNameLocal(e.person_id)}</TableCell>
+                              <TableCell>{e.duration_minutes} min ({(e.duration_minutes / 60).toFixed(1)}{t("hours_unit")})</TableCell>
+                              <TableCell className="max-w-xs truncate">{e.note || "–"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <div className="mt-2 text-right font-semibold">
+                        {t("time_total_hours")}: {timeEntryHours.toFixed(1)}{t("hours_unit")}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Consumables */}
+                <div>
+                  <h3 className="font-semibold mb-2">{t("report_consumables_section")}</h3>
+                  {(projectConsumables as any[]).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t("materials:no_consumable_bookings")}</p>
+                  ) : (
+                    <>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t("materials:name")}</TableHead>
+                            <TableHead>{t("materials:quantity")}</TableHead>
+                            <TableHead>{t("materials:unit")}</TableHead>
+                            <TableHead>{t("materials:price_per_unit")}</TableHead>
+                            <TableHead>{t("materials:total")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(projectConsumables as any[]).map((c: any) => (
+                            <TableRow key={c.id}>
+                              <TableCell>{c.consumables?.name || "–"}</TableCell>
+                              <TableCell>{c.quantity}</TableCell>
+                              <TableCell>{c.consumables?.unit || "–"}</TableCell>
+                              <TableCell>{Number(c.unit_price).toFixed(2)}{t("currency")}</TableCell>
+                              <TableCell>{Number(c.total_cost || 0).toFixed(2)}{t("currency")}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <div className="mt-2 text-right font-semibold">
+                        {t("materials:total_consumables")}: {(projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0).toFixed(2)}{t("currency")}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Knetung Raw Materials */}
+                <div>
+                  <h3 className="font-semibold mb-2">{t("report_knetung_section")}</h3>
+                  {(projectKnetung as any[]).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t("materials:no_knetung_bookings")}</p>
+                  ) : (
+                    <>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t("materials:name")}</TableHead>
+                            <TableHead>{t("materials:quantity_kg")}</TableHead>
+                            <TableHead>{t("materials:price_per_kg")}</TableHead>
+                            <TableHead>{t("materials:total")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(projectKnetung as any[]).map((k: any) => (
+                            <TableRow key={k.id}>
+                              <TableCell>{k.raw_materials?.material_name || "–"}</TableCell>
+                              <TableCell>{k.quantity_kg}</TableCell>
+                              <TableCell>{Number(k.price_per_kg).toFixed(2)}{t("currency")}</TableCell>
+                              <TableCell>{Number(k.total_cost || 0).toFixed(2)}{t("currency")}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <div className="mt-2 text-right font-semibold">
+                        {t("materials:total_knetung")}: {(projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0).toFixed(2)}{t("currency")}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Cost Summary */}
                 <div>
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t("measurement_number")}</TableHead>
-                        <TableHead>{t("measurement_type")}</TableHead>
-                        <TableHead>{t("hours")}</TableHead>
-                        <TableHead>{t("personnel_costs")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {costData.perMeasurement.map(([mNum, data]) => (
-                        <TableRow key={mNum}>
-                          <TableCell>{mNum}</TableCell>
-                          <TableCell>{data.name}</TableCell>
-                          <TableCell>{data.hours.toFixed(1)}{t("hours_unit")}</TableCell>
-                          <TableCell>{data.cost.toFixed(2)}{t("currency")}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <div className="mt-2 text-right font-semibold">
-                    {t("total")}: {costData.totalPersonnel.toFixed(2)}{t("currency")}
+                  <div className="rounded-lg border p-4 space-y-2 text-sm">
+                    <div className="flex justify-between"><span>{t("csv_total_time")}:</span><span className="font-medium">{totalHours.toFixed(1)}{t("hours_unit")}</span></div>
+                    <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{costData.totalPersonnel.toFixed(2)}{t("currency")}</span></div>
+                    <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{(projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0).toFixed(2)}{t("currency")}</span></div>
+                    <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{(projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0).toFixed(2)}{t("currency")}</span></div>
+                    <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{totalCosts.toFixed(2)}{t("currency")}</span></div>
                   </div>
                 </div>
 
