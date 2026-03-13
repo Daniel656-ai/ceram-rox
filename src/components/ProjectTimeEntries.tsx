@@ -94,6 +94,7 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
         entry_date: form.entry_date,
         duration_minutes: Number(form.duration_minutes),
         note: form.note.trim(),
+        order_id: orderId,
       });
       toast.success(t("time_entry_created"));
       resetForm();
