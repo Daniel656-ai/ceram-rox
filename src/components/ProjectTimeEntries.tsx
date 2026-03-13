@@ -39,9 +39,9 @@ function getUserName(users: any[], userId: string) {
   return u ? `${u.first_name} ${u.last_name}`.trim() || "–" : "–";
 }
 
-export function ProjectTimeEntries({ projectId }: Props) {
+export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const { t, i18n } = useTranslation("projects");
-  const { data: entries = [] } = useProjectTimeEntries(projectId);
+  const { data: entries = [] } = useProjectTimeEntries(projectId, orderId);
   const { data: users = [] } = useUsers();
   const addEntry = useAddProjectTimeEntry();
   const updateEntry = useUpdateProjectTimeEntry();
