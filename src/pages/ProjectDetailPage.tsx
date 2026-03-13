@@ -206,6 +206,7 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="hours">{t("tab_hours")}</TabsTrigger>
           <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
+          <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
 
