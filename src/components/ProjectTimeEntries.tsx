@@ -23,6 +23,7 @@ import { toast } from "sonner";
 
 interface Props {
   projectId: string;
+  orderId?: string;
 }
 
 const DURATION_OPTIONS = Array.from({ length: 32 }, (_, i) => (i + 1) * 15); // 15 min to 8h
