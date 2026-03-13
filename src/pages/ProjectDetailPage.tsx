@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
+import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
@@ -205,6 +206,7 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="hours">{t("tab_hours")}</TabsTrigger>
           <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
+          <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
 
@@ -390,6 +392,11 @@ export default function ProjectDetailPage() {
               .filter((m: any) => m.measurement_services?.service_name?.toLowerCase().includes("knetung"))
               .map((m: any) => ({ id: m.id, measurement_number: m.measurement_number }))}
           />
+        </TabsContent>
+
+        {/* TIME ENTRIES TAB */}
+        <TabsContent value="time_entries">
+          <ProjectTimeEntries projectId={id!} />
         </TabsContent>
 
         {/* REPORT TAB */}

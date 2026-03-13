@@ -701,6 +701,50 @@ export type Database = {
           },
         ]
       }
+      project_time_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          duration_minutes: number
+          entry_date: string
+          id: string
+          note: string
+          person_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          duration_minutes: number
+          entry_date?: string
+          id?: string
+          note?: string
+          person_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          duration_minutes?: number
+          entry_date?: string
+          id?: string
+          note?: string
+          person_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_time_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
