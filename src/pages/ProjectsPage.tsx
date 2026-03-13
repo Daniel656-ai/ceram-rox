@@ -191,7 +191,7 @@ export default function ProjectsPage() {
                       {p.stats.totalHours > 0 ? `${p.stats.totalHours.toFixed(1)}h` : "–"}
                     </TableCell>
                     <TableCell className="text-center">
-                      {p.stats.totalCost > 0 ? `${p.stats.totalCost.toFixed(0)}€` : "–"}
+                      {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${(p.stats.totalCost + p.stats.materialCost).toFixed(0)}€` : "–"}
                     </TableCell>
                     <TableCell>{new Date(p.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
                     {role === "master" && (
