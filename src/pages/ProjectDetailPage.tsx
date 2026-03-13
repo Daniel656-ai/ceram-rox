@@ -4,13 +4,14 @@ import { useProjectDetail, useProjectSamples, useProjectOrders, useProjectSample
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectConsumables, useProjectKnetungMaterials } from "@/hooks/useProjectMaterials";
+import { useProjectTimeEntries } from "@/hooks/useProjectTimeEntries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem, Download } from "lucide-react";
+import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 
