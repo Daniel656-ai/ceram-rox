@@ -57,7 +57,7 @@ export default function ProjectsPage() {
         case "created_desc": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case "name": return (a.project_name || a.project_number).localeCompare(b.project_name || b.project_number);
         case "samples": return (b.stats?.sampleCount || 0) - (a.stats?.sampleCount || 0);
-        case "costs": return (b.stats?.totalCost || 0) - (a.stats?.totalCost || 0);
+        case "costs": return ((b.stats?.totalCost || 0) + (b.stats?.materialCost || 0)) - ((a.stats?.totalCost || 0) + (a.stats?.materialCost || 0));
         default: return 0;
       }
     });
