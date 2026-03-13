@@ -365,6 +365,16 @@ export default function ProjectDetailPage() {
           </div>
         </TabsContent>
 
+        {/* MATERIAL COSTS TAB */}
+        <TabsContent value="material_costs">
+          <ProjectMaterialCosts
+            projectId={id!}
+            knetungMeasurements={allMeasurements
+              .filter((m: any) => m.measurement_services?.service_name?.toLowerCase().includes("knetung"))
+              .map((m: any) => ({ id: m.id, measurement_number: m.measurement_number }))}
+          />
+        </TabsContent>
+
         {/* REPORT TAB */}
         <TabsContent value="report">
           <div ref={reportRef} className="space-y-6 print:space-y-4">
