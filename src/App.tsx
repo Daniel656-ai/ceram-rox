@@ -28,6 +28,7 @@ import SampleDetailPage from "./pages/SampleDetailPage";
 import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
+import ConsumablesPage from "./pages/ConsumablesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
