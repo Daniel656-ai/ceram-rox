@@ -54,6 +54,7 @@ export default function RawMaterialDetailPage() {
   const [editDesc, setEditDesc] = useState("");
   const [editUnit, setEditUnit] = useState("");
   const [editLocationId, setEditLocationId] = useState<string>("");
+  const [editPricePerKg, setEditPricePerKg] = useState("");
 
   const openEditDialog = () => {
     if (!mat) return;
@@ -62,6 +63,7 @@ export default function RawMaterialDetailPage() {
     setEditDesc(mat.description || "");
     setEditUnit(mat.unit);
     setEditLocationId(mat.default_location_id || "");
+    setEditPricePerKg(String((mat as any).price_per_kg || 0));
     setEditOpen(true);
   };
 
