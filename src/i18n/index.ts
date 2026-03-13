@@ -62,7 +62,7 @@ i18n
     resources,
     fallbackLng: "de",
     defaultNS: "common",
-    ns: ["common", "navigation", "auth", "orders", "projects", "samples", "measurements", "raw_materials", "admin", "calendar"],
+    ns: ["common", "navigation", "auth", "orders", "projects", "samples", "measurements", "raw_materials", "admin", "calendar", "materials"],
     interpolation: {
       escapeValue: false,
     },
