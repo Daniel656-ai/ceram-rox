@@ -185,8 +185,13 @@ export default function ProjectDetailPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <DollarSign className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-2xl font-bold">{costData.totalPersonnel.toFixed(2)}{t("currency")}</p>
+              <p className="text-2xl font-bold">{totalCosts.toFixed(2)}{t("currency")}</p>
               <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
+              {totalMaterialCosts > 0 && (
+                <p className="text-[10px] text-muted-foreground">
+                  {t("personnel_short")}: {costData.totalPersonnel.toFixed(0)}{t("currency")} + {t("materials:material_short")}: {totalMaterialCosts.toFixed(0)}{t("currency")}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
