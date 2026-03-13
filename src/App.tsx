@@ -28,6 +28,7 @@ import SampleDetailPage from "./pages/SampleDetailPage";
 import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
+import ConsumablesPage from "./pages/ConsumablesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App = () => (
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
+              <Route path="/verbrauchsmaterialien" element={<ConsumablesPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

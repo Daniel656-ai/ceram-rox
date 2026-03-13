@@ -12,6 +12,7 @@ import measurementsDe from "./locales/de/measurements.json";
 import rawMaterialsDe from "./locales/de/raw_materials.json";
 import adminDe from "./locales/de/admin.json";
 import calendarDe from "./locales/de/calendar.json";
+import materialsDe from "./locales/de/materials.json";
 
 import commonEn from "./locales/en/common.json";
 import navigationEn from "./locales/en/navigation.json";
@@ -23,6 +24,7 @@ import measurementsEn from "./locales/en/measurements.json";
 import rawMaterialsEn from "./locales/en/raw_materials.json";
 import adminEn from "./locales/en/admin.json";
 import calendarEn from "./locales/en/calendar.json";
+import materialsEn from "./locales/en/materials.json";
 
 const resources = {
   de: {
@@ -36,6 +38,7 @@ const resources = {
     raw_materials: rawMaterialsDe,
     admin: adminDe,
     calendar: calendarDe,
+    materials: materialsDe,
   },
   en: {
     common: commonEn,
@@ -48,6 +51,7 @@ const resources = {
     raw_materials: rawMaterialsEn,
     admin: adminEn,
     calendar: calendarEn,
+    materials: materialsEn,
   },
 };
 
@@ -58,7 +62,7 @@ i18n
     resources,
     fallbackLng: "de",
     defaultNS: "common",
-    ns: ["common", "navigation", "auth", "orders", "projects", "samples", "measurements", "raw_materials", "admin", "calendar"],
+    ns: ["common", "navigation", "auth", "orders", "projects", "samples", "measurements", "raw_materials", "admin", "calendar", "materials"],
     interpolation: {
       escapeValue: false,
     },

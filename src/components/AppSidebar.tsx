@@ -15,6 +15,7 @@ import {
   Gem,
   RefreshCw,
   KeyRound,
+  Package,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +53,7 @@ export function AppSidebar() {
     { title: t("navigation:samples"), url: "/proben", icon: FlaskConical, show: hasPerm("samples.view") || hasPerm("samples.create") },
     { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database, show: hasPerm("measurements.view") || hasPerm("samples.view") },
     { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
+    { title: t("navigation:consumables"), url: "/verbrauchsmaterialien", icon: Package, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
     { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays, show: hasPerm("measurements.enter") },
     { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master" },
   ].filter((item) => item.show);

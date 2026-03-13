@@ -54,6 +54,7 @@ export default function RawMaterialDetailPage() {
   const [editDesc, setEditDesc] = useState("");
   const [editUnit, setEditUnit] = useState("");
   const [editLocationId, setEditLocationId] = useState<string>("");
+  const [editPricePerKg, setEditPricePerKg] = useState("");
 
   const openEditDialog = () => {
     if (!mat) return;
@@ -62,6 +63,7 @@ export default function RawMaterialDetailPage() {
     setEditDesc(mat.description || "");
     setEditUnit(mat.unit);
     setEditLocationId(mat.default_location_id || "");
+    setEditPricePerKg(String((mat as any).price_per_kg || 0));
     setEditOpen(true);
   };
 
@@ -75,6 +77,7 @@ export default function RawMaterialDetailPage() {
         description: editDesc || undefined,
         unit: editUnit,
         default_location_id: editLocationId || null,
+        price_per_kg: Number(editPricePerKg) || 0,
       });
       toast.success("Rohstoff aktualisiert");
       setEditOpen(false);
@@ -173,7 +176,7 @@ export default function RawMaterialDetailPage() {
         <Link to="/rohstoffe"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{mat.material_name}</h1>
-          <p className="text-sm text-muted-foreground">{mat.material_number} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)}</p>
+          <p className="text-sm text-muted-foreground">{mat.material_number} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg</p>
         </div>
         {canManage && (
           <Button variant="outline" size="sm" onClick={openEditDialog}><Pencil className="h-4 w-4 mr-1" />Bearbeiten</Button>
@@ -208,6 +211,7 @@ export default function RawMaterialDetailPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
             <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
             <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>
           </div>

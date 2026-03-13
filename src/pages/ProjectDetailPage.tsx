@@ -8,8 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package } from "lucide-react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem } from "lucide-react";
 import { useMemo, useRef } from "react";
+import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
@@ -186,6 +187,7 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
           <TabsTrigger value="hours">{t("tab_hours")}</TabsTrigger>
           <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
+          <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
 
@@ -361,6 +363,16 @@ export default function ProjectDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* MATERIAL COSTS TAB */}
+        <TabsContent value="material_costs">
+          <ProjectMaterialCosts
+            projectId={id!}
+            knetungMeasurements={allMeasurements
+              .filter((m: any) => m.measurement_services?.service_name?.toLowerCase().includes("knetung"))
+              .map((m: any) => ({ id: m.id, measurement_number: m.measurement_number }))}
+          />
         </TabsContent>
 
         {/* REPORT TAB */}

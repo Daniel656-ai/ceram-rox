@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      consumables: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price_per_unit: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price_per_unit?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price_per_unit?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       custom_roles: {
         Row: {
           base_role: Database["public"]["Enums"]["app_role"]
@@ -559,6 +589,118 @@ export type Database = {
         }
         Relationships: []
       }
+      project_consumables: {
+        Row: {
+          comment: string | null
+          consumable_id: string
+          created_at: string
+          created_by: string
+          id: string
+          project_id: string
+          quantity: number
+          total_cost: number | null
+          unit_price: number
+        }
+        Insert: {
+          comment?: string | null
+          consumable_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          project_id: string
+          quantity: number
+          total_cost?: number | null
+          unit_price: number
+        }
+        Update: {
+          comment?: string | null
+          consumable_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          project_id?: string
+          quantity?: number
+          total_cost?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_consumables_consumable_id_fkey"
+            columns: ["consumable_id"]
+            isOneToOne: false
+            referencedRelation: "consumables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_consumables_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_knetung_materials: {
+        Row: {
+          comment: string | null
+          created_at: string
+          created_by: string
+          id: string
+          order_measurement_id: string | null
+          price_per_kg: number
+          project_id: string
+          quantity_kg: number
+          raw_material_id: string
+          total_cost: number | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          order_measurement_id?: string | null
+          price_per_kg: number
+          project_id: string
+          quantity_kg: number
+          raw_material_id: string
+          total_cost?: number | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          order_measurement_id?: string | null
+          price_per_kg?: number
+          project_id?: string
+          quantity_kg?: number
+          raw_material_id?: string
+          total_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_knetung_materials_order_measurement_id_fkey"
+            columns: ["order_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_knetung_materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_knetung_materials_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
@@ -753,6 +895,7 @@ export type Database = {
           id: string
           material_name: string
           material_number: string
+          price_per_kg: number | null
           supplier: string | null
           unit: string
           updated_at: string
@@ -765,6 +908,7 @@ export type Database = {
           id?: string
           material_name: string
           material_number: string
+          price_per_kg?: number | null
           supplier?: string | null
           unit?: string
           updated_at?: string
@@ -777,6 +921,7 @@ export type Database = {
           id?: string
           material_name?: string
           material_number?: string
+          price_per_kg?: number | null
           supplier?: string | null
           unit?: string
           updated_at?: string
