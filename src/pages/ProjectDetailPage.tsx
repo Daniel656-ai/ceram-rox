@@ -394,6 +394,11 @@ export default function ProjectDetailPage() {
           />
         </TabsContent>
 
+        {/* TIME ENTRIES TAB */}
+        <TabsContent value="time_entries">
+          <ProjectTimeEntries projectId={id!} />
+        </TabsContent>
+
         {/* REPORT TAB */}
         <TabsContent value="report">
           <div ref={reportRef} className="space-y-6 print:space-y-4">
