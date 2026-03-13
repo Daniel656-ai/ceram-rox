@@ -297,7 +297,7 @@ export default function ProjectDetailPage() {
         <TabsList className="print:hidden">
           <TabsTrigger value="samples">{t("tab_samples")}</TabsTrigger>
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
-          <TabsTrigger value="hours">{t("tab_hours")}</TabsTrigger>
+          <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
           <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
