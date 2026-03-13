@@ -57,24 +57,39 @@ export default function ProjectDetailPage() {
     );
   }, [allMeasurements]);
 
-  // Cost aggregation
+  // Cost aggregation – use actual_duration_hours (Ist-Dauer) when available (completed measurements),
+  // otherwise fall back to sum of work_logs hours
   const costData = useMemo(() => {
     let totalPersonnel = 0;
-    const perMeasurement = new Map<string, { name: string; hours: number; cost: number }>();
+    const perMeasurement = new Map<string, { name: string; hours: number; cost: number; source: string }>();
 
-    for (const wl of allWorkLogs) {
-      const cost = (wl.hours || 0) * (wl.hourlyRate || 0);
+    for (const m of allMeasurements) {
+      const rate = m.measurement_services?.hourly_rate || 0;
+      const workLogHours = (m.work_logs || []).reduce((s: number, wl: any) => s + (wl.hours || 0), 0);
+      // For completed measurements, prefer actual_duration_hours (entered at completion)
+      const useActual = m.status === "completed" && m.actual_duration_hours != null;
+      const hours = useActual ? Number(m.actual_duration_hours) : workLogHours;
+      const cost = hours * rate;
       totalPersonnel += cost;
-      const existing = perMeasurement.get(wl.measurementNumber) || { name: wl.serviceName, hours: 0, cost: 0 };
-      existing.hours += wl.hours || 0;
-      existing.cost += cost;
-      perMeasurement.set(wl.measurementNumber, existing);
+      perMeasurement.set(m.measurement_number, {
+        name: m.measurement_services?.service_name || "–",
+        hours,
+        cost,
+        source: useActual ? "actual" : "worklogs",
+      });
     }
 
     return { totalPersonnel, perMeasurement: Array.from(perMeasurement.entries()) };
-  }, [allWorkLogs]);
+  }, [allMeasurements]);
 
-  const totalHours = allWorkLogs.reduce((s: number, wl: any) => s + (wl.hours || 0), 0);
+  // Total hours also based on actual_duration_hours where available
+  const totalHours = useMemo(() => {
+    return allMeasurements.reduce((sum: number, m: any) => {
+      const workLogHours = (m.work_logs || []).reduce((s: number, wl: any) => s + (wl.hours || 0), 0);
+      const useActual = m.status === "completed" && m.actual_duration_hours != null;
+      return sum + (useActual ? Number(m.actual_duration_hours) : workLogHours);
+    }, 0);
+  }, [allMeasurements]);
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {

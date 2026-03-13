@@ -102,7 +102,7 @@ export function useProjectsWithStats() {
       // Fetch orders with measurements & work_logs
       const { data: orders, error: oErr } = await supabase
         .from("measurement_orders")
-        .select("id, project_id, status, order_measurements(id, status, processing_time_hours, planned_hours, measurement_services(hourly_rate), work_logs(hours))");
+        .select("id, project_id, status, order_measurements(id, status, processing_time_hours, planned_hours, actual_duration_hours, measurement_services(hourly_rate), work_logs(hours))");
       if (oErr) throw oErr;
 
       const statsMap = new Map<string, {
@@ -130,7 +130,10 @@ export function useProjectsWithStats() {
         if (o.status === "completed") st.completedOrders++;
         for (const m of o.order_measurements || []) {
           st.measurementCount++;
-          const hours = (m.work_logs || []).reduce((sum: number, wl: any) => sum + (wl.hours || 0), 0);
+          const workLogHours = (m.work_logs || []).reduce((sum: number, wl: any) => sum + (wl.hours || 0), 0);
+          // Use actual_duration_hours (Ist-Dauer) for completed measurements
+          const useActual = m.status === "completed" && m.actual_duration_hours != null;
+          const hours = useActual ? Number(m.actual_duration_hours) : workLogHours;
           st.totalHours += hours;
           const rate = m.measurement_services?.hourly_rate || 0;
           st.totalCost += hours * rate;
