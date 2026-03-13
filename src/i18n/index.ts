@@ -51,6 +51,7 @@ const resources = {
     raw_materials: rawMaterialsEn,
     admin: adminEn,
     calendar: calendarEn,
+    materials: materialsEn,
   },
 };
 
