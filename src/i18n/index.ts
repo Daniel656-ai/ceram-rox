@@ -24,6 +24,7 @@ import measurementsEn from "./locales/en/measurements.json";
 import rawMaterialsEn from "./locales/en/raw_materials.json";
 import adminEn from "./locales/en/admin.json";
 import calendarEn from "./locales/en/calendar.json";
+import materialsEn from "./locales/en/materials.json";
 
 const resources = {
   de: {
