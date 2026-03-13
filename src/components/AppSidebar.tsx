@@ -15,6 +15,7 @@ import {
   Gem,
   RefreshCw,
   KeyRound,
+  Package,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
