@@ -133,5 +133,8 @@
   "csv_cost_summary": "Cost Summary",
   "csv_total_time": "Total Work Time",
   "csv_total_personnel": "Total Personnel Costs",
-  "time_duration_min": "Duration (Minutes)"
+  "time_duration_min": "Duration (Minutes)",
+  "report_time_entries_section": "Time Entries",
+  "report_consumables_section": "Consumables",
+  "report_knetung_section": "Raw Materials (Kneading)"
 }

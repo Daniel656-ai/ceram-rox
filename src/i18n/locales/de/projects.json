@@ -133,5 +133,8 @@
   "csv_cost_summary": "Kostenübersicht",
   "csv_total_time": "Summe Arbeitszeit",
   "csv_total_personnel": "Summe Personalkosten",
-  "time_duration_min": "Dauer (Minuten)"
+  "time_duration_min": "Dauer (Minuten)",
+  "report_time_entries_section": "Arbeitszeiten",
+  "report_consumables_section": "Verbrauchsmaterialien",
+  "report_knetung_section": "Rohstoffe (Knetungen)"
 }
