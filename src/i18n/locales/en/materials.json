@@ -39,5 +39,6 @@
   "currency": "€",
   "price_per_kg": "Price/kg",
   "raw_material_price": "Raw Material Price (€/kg)",
-  "actions": "Actions"
+  "actions": "Actions",
+  "material_short": "Material"
 }

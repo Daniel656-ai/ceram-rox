@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useProjectDetail, useProjectSamples, useProjectOrders, useProjectSampleHistory } from "@/hooks/useProjectDetail";
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useUsers } from "@/hooks/useUsers";
+import { useProjectConsumables, useProjectKnetungMaterials } from "@/hooks/useProjectMaterials";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -29,6 +30,8 @@ export default function ProjectDetailPage() {
   const { data: samples = [] } = useProjectSamples(id);
   const { data: orders = [] } = useProjectOrders(id);
   const { data: users = [] } = useUsers();
+  const { data: projectConsumables = [] } = useProjectConsumables(id);
+  const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
   const etaMap = useEstimatedCompletion();
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +85,15 @@ export default function ProjectDetailPage() {
 
     return { totalPersonnel, perMeasurement: Array.from(perMeasurement.entries()) };
   }, [allMeasurements]);
+
+  // Material costs from consumables + knetung raw materials
+  const totalMaterialCosts = useMemo(() => {
+    const conTotal = (projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0);
+    const knTotal = (projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0);
+    return conTotal + knTotal;
+  }, [projectConsumables, projectKnetung]);
+
+  const totalCosts = costData.totalPersonnel + totalMaterialCosts;
 
   // Total hours also based on actual_duration_hours where available
   const totalHours = useMemo(() => {
@@ -173,8 +185,13 @@ export default function ProjectDetailPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <DollarSign className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-2xl font-bold">{costData.totalPersonnel.toFixed(2)}{t("currency")}</p>
+              <p className="text-2xl font-bold">{totalCosts.toFixed(2)}{t("currency")}</p>
               <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
+              {totalMaterialCosts > 0 && (
+                <p className="text-[10px] text-muted-foreground">
+                  {t("personnel_short")}: {costData.totalPersonnel.toFixed(0)}{t("currency")} + {t("materials:material_short")}: {totalMaterialCosts.toFixed(0)}{t("currency")}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

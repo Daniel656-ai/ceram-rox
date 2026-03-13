@@ -105,17 +105,29 @@ export function useProjectsWithStats() {
         .select("id, project_id, status, order_measurements(id, status, processing_time_hours, planned_hours, actual_duration_hours, measurement_services(hourly_rate), work_logs(hours))");
       if (oErr) throw oErr;
 
+      // Fetch material costs
+      const { data: projCon, error: pcErr } = await supabase
+        .from("project_consumables")
+        .select("project_id, total_cost");
+      if (pcErr) throw pcErr;
+
+      const { data: projKn, error: pkErr } = await supabase
+        .from("project_knetung_materials")
+        .select("project_id, total_cost");
+      if (pkErr) throw pkErr;
+
       const statsMap = new Map<string, {
         sampleCount: number;
         measurementCount: number;
         totalHours: number;
         totalCost: number;
+        materialCost: number;
         completedOrders: number;
         totalOrders: number;
       }>();
 
       for (const p of projects || []) {
-        statsMap.set(p.id, { sampleCount: 0, measurementCount: 0, totalHours: 0, totalCost: 0, completedOrders: 0, totalOrders: 0 });
+        statsMap.set(p.id, { sampleCount: 0, measurementCount: 0, totalHours: 0, totalCost: 0, materialCost: 0, completedOrders: 0, totalOrders: 0 });
       }
 
       for (const s of samples || []) {
@@ -140,9 +152,19 @@ export function useProjectsWithStats() {
         }
       }
 
+      // Add material costs
+      for (const c of projCon || []) {
+        const st = statsMap.get(c.project_id);
+        if (st) st.materialCost += Number(c.total_cost || 0);
+      }
+      for (const k of projKn || []) {
+        const st = statsMap.get(k.project_id);
+        if (st) st.materialCost += Number(k.total_cost || 0);
+      }
+
       return (projects || []).map(p => ({
         ...p,
-        stats: statsMap.get(p.id) || { sampleCount: 0, measurementCount: 0, totalHours: 0, totalCost: 0, completedOrders: 0, totalOrders: 0 },
+        stats: statsMap.get(p.id) || { sampleCount: 0, measurementCount: 0, totalHours: 0, totalCost: 0, materialCost: 0, completedOrders: 0, totalOrders: 0 },
       }));
     },
     enabled: !!user,
