@@ -395,47 +395,6 @@ export default function ProjectDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* HOURS TAB */}
-        <TabsContent value="hours">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("measurement_number")}</TableHead>
-                    <TableHead>{t("measurement_type")}</TableHead>
-                    <TableHead>{t("worker")}</TableHead>
-                    <TableHead>{t("work_date")}</TableHead>
-                    <TableHead>{t("hours")}</TableHead>
-                    <TableHead>{t("comment")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allWorkLogs.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("no_work_logs")}</TableCell></TableRow>
-                  ) : (
-                    allWorkLogs.map((wl: any) => (
-                      <TableRow key={wl.id}>
-                        <TableCell className="font-medium">{wl.measurementNumber}</TableCell>
-                        <TableCell>{wl.serviceName}</TableCell>
-                        <TableCell>{getUserName(users, wl.user_id)}</TableCell>
-                        <TableCell>{new Date(wl.work_date).toLocaleDateString("de-DE")}</TableCell>
-                        <TableCell>{wl.hours}{t("hours_unit")}</TableCell>
-                        <TableCell className="max-w-xs truncate">{wl.comment || "–"}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              {allWorkLogs.length > 0 && (
-                <div className="border-t p-4 flex justify-end">
-                  <span className="font-semibold">{t("total")}: {totalHours.toFixed(1)}{t("hours_unit")}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* COSTS TAB */}
         <TabsContent value="costs">
           <div className="space-y-4">
