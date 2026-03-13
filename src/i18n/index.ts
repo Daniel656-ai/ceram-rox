@@ -12,6 +12,7 @@ import measurementsDe from "./locales/de/measurements.json";
 import rawMaterialsDe from "./locales/de/raw_materials.json";
 import adminDe from "./locales/de/admin.json";
 import calendarDe from "./locales/de/calendar.json";
+import materialsDe from "./locales/de/materials.json";
 
 import commonEn from "./locales/en/common.json";
 import navigationEn from "./locales/en/navigation.json";
