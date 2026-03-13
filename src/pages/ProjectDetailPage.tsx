@@ -4,13 +4,14 @@ import { useProjectDetail, useProjectSamples, useProjectOrders, useProjectSample
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectConsumables, useProjectKnetungMaterials } from "@/hooks/useProjectMaterials";
+import { useProjectTimeEntries } from "@/hooks/useProjectTimeEntries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem, Download } from "lucide-react";
+import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 
@@ -33,6 +34,7 @@ export default function ProjectDetailPage() {
   const { data: users = [] } = useUsers();
   const { data: projectConsumables = [] } = useProjectConsumables(id);
   const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
+  const { data: timeEntries = [] } = useProjectTimeEntries(id);
   const etaMap = useEstimatedCompletion();
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -96,14 +98,101 @@ export default function ProjectDetailPage() {
 
   const totalCosts = costData.totalPersonnel + totalMaterialCosts;
 
-  // Total hours also based on actual_duration_hours where available
+  // Total hours: measurement hours + project time entries
+  const timeEntryHours = useMemo(() => {
+    return (timeEntries as any[]).reduce((s, e) => s + (e.duration_minutes || 0), 0) / 60;
+  }, [timeEntries]);
+
   const totalHours = useMemo(() => {
-    return allMeasurements.reduce((sum: number, m: any) => {
+    const measurementHours = allMeasurements.reduce((sum: number, m: any) => {
       const workLogHours = (m.work_logs || []).reduce((s: number, wl: any) => s + (wl.hours || 0), 0);
       const useActual = m.status === "completed" && m.actual_duration_hours != null;
       return sum + (useActual ? Number(m.actual_duration_hours) : workLogHours);
     }, 0);
-  }, [allMeasurements]);
+    return measurementHours + timeEntryHours;
+  }, [allMeasurements, timeEntryHours]);
+
+  const getUserNameLocal = (userId: string) => getUserName(users as any[], userId);
+
+  // CSV Export
+  const handleCsvExport = useCallback(() => {
+    if (!project) return;
+    const sep = ";";
+    const lines: string[] = [];
+    const esc = (v: string) => `"${(v || "").replace(/"/g, '""')}"`;
+
+    // Project info
+    lines.push([t("csv_section_project")].join(sep));
+    lines.push([t("project_name"), t("project_number"), t("created_at")].join(sep));
+    lines.push([esc(project.project_name || "–"), esc(project.project_number), esc(new Date(project.created_at).toLocaleDateString("de-DE"))].join(sep));
+    lines.push("");
+
+    // Time entries
+    lines.push([t("tab_time_entries")].join(sep));
+    lines.push([t("time_date"), t("time_person"), t("time_duration_min"), t("time_note")].join(sep));
+    for (const e of timeEntries as any[]) {
+      lines.push([
+        esc(new Date(e.entry_date).toLocaleDateString("de-DE")),
+        esc(getUserNameLocal(e.person_id)),
+        String(e.duration_minutes),
+        esc(e.note || ""),
+      ].join(sep));
+    }
+    const totalTimeMin = (timeEntries as any[]).reduce((s, e) => s + (e.duration_minutes || 0), 0);
+    lines.push([t("total"), "", String(totalTimeMin), ""].join(sep));
+    lines.push("");
+
+    // Consumables
+    const conTotal = (projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0);
+    lines.push([t("materials:consumables_section")].join(sep));
+    lines.push([t("materials:name"), t("materials:quantity"), t("materials:unit"), t("materials:price_per_unit"), t("materials:total")].join(sep));
+    for (const c of projectConsumables as any[]) {
+      lines.push([
+        esc(c.consumables?.name || "–"),
+        String(c.quantity),
+        esc(c.consumables?.unit || ""),
+        String(c.unit_price),
+        String(c.total_cost || 0),
+      ].join(sep));
+    }
+    lines.push([t("total"), "", "", "", String(conTotal.toFixed(2))].join(sep));
+    lines.push("");
+
+    // Knetung raw materials
+    const knTotal = (projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0);
+    lines.push([t("materials:knetung_section")].join(sep));
+    lines.push([t("materials:name"), t("materials:quantity_kg"), t("materials:price_per_kg"), t("materials:total")].join(sep));
+    for (const k of projectKnetung as any[]) {
+      lines.push([
+        esc(k.raw_materials?.material_name || "–"),
+        String(k.quantity_kg),
+        String(k.price_per_kg),
+        String(k.total_cost || 0),
+      ].join(sep));
+    }
+    lines.push([t("total"), "", "", String(knTotal.toFixed(2))].join(sep));
+    lines.push("");
+
+    // Cost summary
+    lines.push([t("csv_cost_summary")].join(sep));
+    lines.push([t("csv_total_time"), `${(totalTimeMin / 60).toFixed(1)}h`].join(sep));
+    lines.push([t("csv_total_personnel"), `${costData.totalPersonnel.toFixed(2)}€`].join(sep));
+    lines.push([t("materials:total_consumables"), `${conTotal.toFixed(2)}€`].join(sep));
+    lines.push([t("materials:total_knetung"), `${knTotal.toFixed(2)}€`].join(sep));
+    lines.push([t("materials:total_material_costs"), `${totalMaterialCosts.toFixed(2)}€`].join(sep));
+    lines.push([t("total_costs"), `${totalCosts.toFixed(2)}€`].join(sep));
+
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const safeName = (project.project_name || project.project_number).replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g, "_").toLowerCase();
+    a.href = url;
+    a.download = `projektbericht_${safeName}_${dateStr}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [project, timeEntries, projectConsumables, projectKnetung, costData, totalMaterialCosts, totalCosts, users, t]);
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -148,9 +237,14 @@ export default function ProjectDetailPage() {
           </h1>
           <p className="text-muted-foreground">{project.description || t("description")}</p>
         </div>
-        <Button variant="outline" onClick={handlePrint} className="print:hidden">
-          <Printer className="h-4 w-4 mr-2" />{t("print_report")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleCsvExport} className="print:hidden">
+            <Download className="h-4 w-4 mr-2" />{t("csv_export")}
+          </Button>
+          <Button variant="outline" onClick={handlePrint} className="print:hidden">
+            <Printer className="h-4 w-4 mr-2" />{t("print_report")}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -203,7 +297,7 @@ export default function ProjectDetailPage() {
         <TabsList className="print:hidden">
           <TabsTrigger value="samples">{t("tab_samples")}</TabsTrigger>
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
-          <TabsTrigger value="hours">{t("tab_hours")}</TabsTrigger>
+          <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
           <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
@@ -297,47 +391,6 @@ export default function ProjectDetailPage() {
                   )}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* HOURS TAB */}
-        <TabsContent value="hours">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("measurement_number")}</TableHead>
-                    <TableHead>{t("measurement_type")}</TableHead>
-                    <TableHead>{t("worker")}</TableHead>
-                    <TableHead>{t("work_date")}</TableHead>
-                    <TableHead>{t("hours")}</TableHead>
-                    <TableHead>{t("comment")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allWorkLogs.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("no_work_logs")}</TableCell></TableRow>
-                  ) : (
-                    allWorkLogs.map((wl: any) => (
-                      <TableRow key={wl.id}>
-                        <TableCell className="font-medium">{wl.measurementNumber}</TableCell>
-                        <TableCell>{wl.serviceName}</TableCell>
-                        <TableCell>{getUserName(users, wl.user_id)}</TableCell>
-                        <TableCell>{new Date(wl.work_date).toLocaleDateString("de-DE")}</TableCell>
-                        <TableCell>{wl.hours}{t("hours_unit")}</TableCell>
-                        <TableCell className="max-w-xs truncate">{wl.comment || "–"}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              {allWorkLogs.length > 0 && (
-                <div className="border-t p-4 flex justify-end">
-                  <span className="font-semibold">{t("total")}: {totalHours.toFixed(1)}{t("hours_unit")}</span>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -127,5 +127,11 @@
   "time_delete_desc": "Diese Zeitbuchung wird dauerhaft gelöscht.",
   "time_person_required": "Bitte wähle eine Person aus",
   "time_note_required": "Bitte gib eine Anmerkung ein",
-  "time_short": "Arbeitszeit"
+  "time_short": "Arbeitszeit",
+  "csv_export": "CSV Export",
+  "csv_section_project": "Projektinformationen",
+  "csv_cost_summary": "Kostenübersicht",
+  "csv_total_time": "Summe Arbeitszeit",
+  "csv_total_personnel": "Summe Personalkosten",
+  "time_duration_min": "Dauer (Minuten)"
 }

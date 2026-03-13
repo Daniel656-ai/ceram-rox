@@ -116,6 +116,12 @@ export function useProjectsWithStats() {
         .select("project_id, total_cost");
       if (pkErr) throw pkErr;
 
+      // Fetch time entries
+      const { data: timeEntries, error: teErr } = await supabase
+        .from("project_time_entries")
+        .select("project_id, duration_minutes");
+      if (teErr) throw teErr;
+
       const statsMap = new Map<string, {
         sampleCount: number;
         measurementCount: number;
@@ -143,7 +149,6 @@ export function useProjectsWithStats() {
         for (const m of o.order_measurements || []) {
           st.measurementCount++;
           const workLogHours = (m.work_logs || []).reduce((sum: number, wl: any) => sum + (wl.hours || 0), 0);
-          // Use actual_duration_hours (Ist-Dauer) for completed measurements
           const useActual = m.status === "completed" && m.actual_duration_hours != null;
           const hours = useActual ? Number(m.actual_duration_hours) : workLogHours;
           st.totalHours += hours;
@@ -160,6 +165,12 @@ export function useProjectsWithStats() {
       for (const k of projKn || []) {
         const st = statsMap.get(k.project_id);
         if (st) st.materialCost += Number(k.total_cost || 0);
+      }
+
+      // Add time entry hours
+      for (const te of timeEntries || []) {
+        const st = statsMap.get(te.project_id);
+        if (st) st.totalHours += (te.duration_minutes || 0) / 60;
       }
 
       return (projects || []).map(p => ({
