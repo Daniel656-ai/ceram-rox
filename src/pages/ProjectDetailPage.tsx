@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
+import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
