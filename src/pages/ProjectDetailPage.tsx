@@ -86,6 +86,15 @@ export default function ProjectDetailPage() {
     return { totalPersonnel, perMeasurement: Array.from(perMeasurement.entries()) };
   }, [allMeasurements]);
 
+  // Material costs from consumables + knetung raw materials
+  const totalMaterialCosts = useMemo(() => {
+    const conTotal = (projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0);
+    const knTotal = (projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0);
+    return conTotal + knTotal;
+  }, [projectConsumables, projectKnetung]);
+
+  const totalCosts = costData.totalPersonnel + totalMaterialCosts;
+
   // Total hours also based on actual_duration_hours where available
   const totalHours = useMemo(() => {
     return allMeasurements.reduce((sum: number, m: any) => {
