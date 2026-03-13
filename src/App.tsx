@@ -71,6 +71,7 @@ const App = () => (
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
+              <Route path="/verbrauchsmaterialien" element={<ConsumablesPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
