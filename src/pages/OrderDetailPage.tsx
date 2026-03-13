@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Clock, Pencil, Trash2 } from "lucide-react";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import MeasurementDocuments from "@/components/MeasurementDocuments";
+import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import MeasurementDataEntry from "@/components/MeasurementDataEntry";
 import { toast } from "sonner";
 import { useState } from "react";
