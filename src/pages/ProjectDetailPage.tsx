@@ -98,14 +98,101 @@ export default function ProjectDetailPage() {
 
   const totalCosts = costData.totalPersonnel + totalMaterialCosts;
 
-  // Total hours also based on actual_duration_hours where available
+  // Total hours: measurement hours + project time entries
+  const timeEntryHours = useMemo(() => {
+    return (timeEntries as any[]).reduce((s, e) => s + (e.duration_minutes || 0), 0) / 60;
+  }, [timeEntries]);
+
   const totalHours = useMemo(() => {
-    return allMeasurements.reduce((sum: number, m: any) => {
+    const measurementHours = allMeasurements.reduce((sum: number, m: any) => {
       const workLogHours = (m.work_logs || []).reduce((s: number, wl: any) => s + (wl.hours || 0), 0);
       const useActual = m.status === "completed" && m.actual_duration_hours != null;
       return sum + (useActual ? Number(m.actual_duration_hours) : workLogHours);
     }, 0);
-  }, [allMeasurements]);
+    return measurementHours + timeEntryHours;
+  }, [allMeasurements, timeEntryHours]);
+
+  const getUserNameLocal = (userId: string) => getUserName(users as any[], userId);
+
+  // CSV Export
+  const handleCsvExport = useCallback(() => {
+    if (!project) return;
+    const sep = ";";
+    const lines: string[] = [];
+    const esc = (v: string) => `"${(v || "").replace(/"/g, '""')}"`;
+
+    // Project info
+    lines.push([t("csv_section_project")].join(sep));
+    lines.push([t("project_name"), t("project_number"), t("created_at")].join(sep));
+    lines.push([esc(project.project_name || "–"), esc(project.project_number), esc(new Date(project.created_at).toLocaleDateString("de-DE"))].join(sep));
+    lines.push("");
+
+    // Time entries
+    lines.push([t("tab_time_entries")].join(sep));
+    lines.push([t("time_date"), t("time_person"), t("time_duration_min"), t("time_note")].join(sep));
+    for (const e of timeEntries as any[]) {
+      lines.push([
+        esc(new Date(e.entry_date).toLocaleDateString("de-DE")),
+        esc(getUserNameLocal(e.person_id)),
+        String(e.duration_minutes),
+        esc(e.note || ""),
+      ].join(sep));
+    }
+    const totalTimeMin = (timeEntries as any[]).reduce((s, e) => s + (e.duration_minutes || 0), 0);
+    lines.push([t("total"), "", String(totalTimeMin), ""].join(sep));
+    lines.push("");
+
+    // Consumables
+    const conTotal = (projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0);
+    lines.push([t("materials:consumables_section")].join(sep));
+    lines.push([t("materials:name"), t("materials:quantity"), t("materials:unit"), t("materials:price_per_unit"), t("materials:total")].join(sep));
+    for (const c of projectConsumables as any[]) {
+      lines.push([
+        esc(c.consumables?.name || "–"),
+        String(c.quantity),
+        esc(c.consumables?.unit || ""),
+        String(c.unit_price),
+        String(c.total_cost || 0),
+      ].join(sep));
+    }
+    lines.push([t("total"), "", "", "", String(conTotal.toFixed(2))].join(sep));
+    lines.push("");
+
+    // Knetung raw materials
+    const knTotal = (projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0);
+    lines.push([t("materials:knetung_section")].join(sep));
+    lines.push([t("materials:name"), t("materials:quantity_kg"), t("materials:price_per_kg"), t("materials:total")].join(sep));
+    for (const k of projectKnetung as any[]) {
+      lines.push([
+        esc(k.raw_materials?.material_name || "–"),
+        String(k.quantity_kg),
+        String(k.price_per_kg),
+        String(k.total_cost || 0),
+      ].join(sep));
+    }
+    lines.push([t("total"), "", "", String(knTotal.toFixed(2))].join(sep));
+    lines.push("");
+
+    // Cost summary
+    lines.push([t("csv_cost_summary")].join(sep));
+    lines.push([t("csv_total_time"), `${(totalTimeMin / 60).toFixed(1)}h`].join(sep));
+    lines.push([t("csv_total_personnel"), `${costData.totalPersonnel.toFixed(2)}€`].join(sep));
+    lines.push([t("materials:total_consumables"), `${conTotal.toFixed(2)}€`].join(sep));
+    lines.push([t("materials:total_knetung"), `${knTotal.toFixed(2)}€`].join(sep));
+    lines.push([t("materials:total_material_costs"), `${totalMaterialCosts.toFixed(2)}€`].join(sep));
+    lines.push([t("total_costs"), `${totalCosts.toFixed(2)}€`].join(sep));
+
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const safeName = (project.project_name || project.project_number).replace(/[^a-zA-Z0-9äöüÄÖÜß_-]/g, "_").toLowerCase();
+    a.href = url;
+    a.download = `projektbericht_${safeName}_${dateStr}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [project, timeEntries, projectConsumables, projectKnetung, costData, totalMaterialCosts, totalCosts, users, t]);
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
