@@ -38,6 +38,7 @@ const resources = {
     raw_materials: rawMaterialsDe,
     admin: adminDe,
     calendar: calendarDe,
+    materials: materialsDe,
   },
   en: {
     common: commonEn,
