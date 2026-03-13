@@ -102,7 +102,7 @@ export function useProjectsWithStats() {
       // Fetch orders with measurements & work_logs
       const { data: orders, error: oErr } = await supabase
         .from("measurement_orders")
-        .select("id, project_id, status, order_measurements(id, status, processing_time_hours, planned_hours, measurement_services(hourly_rate), work_logs(hours))");
+        .select("id, project_id, status, order_measurements(id, status, processing_time_hours, planned_hours, actual_duration_hours, measurement_services(hourly_rate), work_logs(hours))");
       if (oErr) throw oErr;
 
       const statsMap = new Map<string, {
