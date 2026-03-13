@@ -82,7 +82,7 @@ export function useAddRawMaterial() {
 export function useUpdateRawMaterial() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; material_name?: string; supplier?: string; description?: string; unit?: string; default_location_id?: string | null }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; material_name?: string; supplier?: string; description?: string; unit?: string; default_location_id?: string | null; price_per_kg?: number }) => {
       const { error } = await supabase.from("raw_materials").update(updates).eq("id", id);
       if (error) throw error;
     },

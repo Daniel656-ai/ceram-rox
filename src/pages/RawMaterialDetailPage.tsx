@@ -77,6 +77,7 @@ export default function RawMaterialDetailPage() {
         description: editDesc || undefined,
         unit: editUnit,
         default_location_id: editLocationId || null,
+        price_per_kg: Number(editPricePerKg) || 0,
       });
       toast.success("Rohstoff aktualisiert");
       setEditOpen(false);
