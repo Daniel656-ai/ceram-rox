@@ -30,6 +30,8 @@ export default function ProjectDetailPage() {
   const { data: samples = [] } = useProjectSamples(id);
   const { data: orders = [] } = useProjectOrders(id);
   const { data: users = [] } = useUsers();
+  const { data: projectConsumables = [] } = useProjectConsumables(id);
+  const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
   const etaMap = useEstimatedCompletion();
   const reportRef = useRef<HTMLDivElement>(null);
 
