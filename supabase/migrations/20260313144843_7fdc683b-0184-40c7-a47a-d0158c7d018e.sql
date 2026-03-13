@@ -1,0 +1,1 @@
+ALTER TABLE public.project_time_entries ADD COLUMN order_id uuid REFERENCES public.measurement_orders(id) ON DELETE SET NULL;
