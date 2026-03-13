@@ -130,7 +130,10 @@ export function useProjectsWithStats() {
         if (o.status === "completed") st.completedOrders++;
         for (const m of o.order_measurements || []) {
           st.measurementCount++;
-          const hours = (m.work_logs || []).reduce((sum: number, wl: any) => sum + (wl.hours || 0), 0);
+          const workLogHours = (m.work_logs || []).reduce((sum: number, wl: any) => sum + (wl.hours || 0), 0);
+          // Use actual_duration_hours (Ist-Dauer) for completed measurements
+          const useActual = m.status === "completed" && m.actual_duration_hours != null;
+          const hours = useActual ? Number(m.actual_duration_hours) : workLogHours;
           st.totalHours += hours;
           const rate = m.measurement_services?.hourly_rate || 0;
           st.totalCost += hours * rate;
