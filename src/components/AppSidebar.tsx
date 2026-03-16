@@ -16,6 +16,10 @@ import {
   RefreshCw,
   KeyRound,
   Package,
+  Layers,
+  Zap,
+  CopyPlus,
+  Kanban,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
