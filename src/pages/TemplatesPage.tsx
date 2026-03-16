@@ -16,7 +16,6 @@ import { toast } from "sonner";
 import { Plus, Trash2, Edit, FlaskConical } from "lucide-react";
 
 export default function TemplatesPage() {
-  const { t } = useTranslation(["common", "orders"]);
   const { user } = useAuth();
   const { data: templates = [], isLoading } = useTemplates();
   const { data: allServices = [] } = useAllServices();
