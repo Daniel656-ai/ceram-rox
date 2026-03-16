@@ -76,6 +76,10 @@ const App = () => (
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
               <Route path="/verbrauchsmaterialien" element={<ConsumablesPage />} />
+              <Route path="/templates" element={<TemplatesPage />} />
+              <Route path="/batch-planung" element={<BatchPlanningPage />} />
+              <Route path="/serien-proben" element={<BulkSamplePage />} />
+              <Route path="/laborplanung" element={<LabPlanningPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

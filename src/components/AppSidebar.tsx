@@ -59,6 +59,10 @@ export function AppSidebar() {
     { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
     { title: t("navigation:consumables"), url: "/verbrauchsmaterialien", icon: Package, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
     { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays, show: hasPerm("measurements.enter") },
+    { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: hasPerm("measurements.view") || hasPerm("measurements.enter") },
+    { title: t("navigation:templates"), url: "/templates", icon: Layers, show: hasPerm("orders.create") || isAdmin },
+    { title: t("navigation:batch_planning"), url: "/batch-planung", icon: Zap, show: hasPerm("orders.create") || isAdmin },
+    { title: t("navigation:bulk_samples"), url: "/serien-proben", icon: CopyPlus, show: hasPerm("samples.create") || isAdmin },
     { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master" },
   ].filter((item) => item.show);
 
