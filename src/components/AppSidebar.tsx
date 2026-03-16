@@ -74,6 +74,7 @@ export function AppSidebar() {
     { title: t("navigation:statistics"), url: "/admin/statistiken", icon: BarChart3, show: isAdmin },
     { title: t("navigation:permissions"), url: "/admin/berechtigungen", icon: ShieldCheck, show: isAdmin },
     { title: t("navigation:sync"), url: "/admin/synchronisation", icon: RefreshCw, show: isAdmin },
+    { title: t("navigation:database"), url: "/admin/datenbank", icon: Database, show: isAdmin },
   ].filter((item) => item.show);
 
   const roleLabel = customRoleName || (

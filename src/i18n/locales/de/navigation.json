@@ -22,5 +22,6 @@
   "templates": "Mess-Templates",
   "batch_planning": "Batch-Planung",
   "bulk_samples": "Serien-Proben",
-  "lab_planning": "Laborplanung"
+  "lab_planning": "Laborplanung",
+  "database": "Datenbank"
 }
