@@ -29,6 +29,10 @@ import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import ConsumablesPage from "./pages/ConsumablesPage";
+import TemplatesPage from "./pages/TemplatesPage";
+import BatchPlanningPage from "./pages/BatchPlanningPage";
+import BulkSamplePage from "./pages/BulkSamplePage";
+import LabPlanningPage from "./pages/LabPlanningPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
