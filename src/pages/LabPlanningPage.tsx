@@ -6,7 +6,7 @@ import { useUsers } from "@/hooks/useUsers";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { GripVertical, ArrowRight, Clock, User } from "lucide-react";
