@@ -22,5 +22,6 @@
   "templates": "Templates",
   "batch_planning": "Batch Planning",
   "bulk_samples": "Bulk Samples",
-  "lab_planning": "Lab Planning"
+  "lab_planning": "Lab Planning",
+  "database": "Database"
 }
