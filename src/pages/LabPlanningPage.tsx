@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useUsers } from "@/hooks/useUsers";
