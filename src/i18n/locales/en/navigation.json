@@ -18,5 +18,9 @@
   "permissions": "Permissions",
   "roles": "Roles",
   "sync": "Synchronization",
-  "consumables": "Consumables"
+  "consumables": "Consumables",
+  "templates": "Templates",
+  "batch_planning": "Batch Planning",
+  "bulk_samples": "Bulk Samples",
+  "lab_planning": "Lab Planning"
 }
