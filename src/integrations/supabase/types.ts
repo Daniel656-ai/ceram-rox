@@ -433,6 +433,72 @@ export type Database = {
           },
         ]
       }
+      measurement_template_items: {
+        Row: {
+          id: string
+          service_id: string
+          sort_order: number
+          template_id: string
+        }
+        Insert: {
+          id?: string
+          service_id: string
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          id?: string
+          service_id?: string
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_template_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_audit_log: {
         Row: {
           changed_at: string
@@ -1117,6 +1183,7 @@ export type Database = {
             | null
           post_measurement_action_text: string | null
           project_id: string
+          sample_group: string | null
           sample_name: string
           sample_number: string
           status: Database["public"]["Enums"]["sample_status"]
@@ -1144,6 +1211,7 @@ export type Database = {
             | null
           post_measurement_action_text?: string | null
           project_id: string
+          sample_group?: string | null
           sample_name: string
           sample_number: string
           status?: Database["public"]["Enums"]["sample_status"]
@@ -1171,6 +1239,7 @@ export type Database = {
             | null
           post_measurement_action_text?: string | null
           project_id?: string
+          sample_group?: string | null
           sample_name?: string
           sample_number?: string
           status?: Database["public"]["Enums"]["sample_status"]
