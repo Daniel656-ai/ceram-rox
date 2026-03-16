@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { GripVertical, ArrowRight, Clock, User } from "lucide-react";
+import { GripVertical, Clock, User } from "lucide-react";
 
 const STATUS_COLUMNS = [
   { key: "open", label: "Offen", color: "bg-yellow-500/10 border-yellow-500/30" },

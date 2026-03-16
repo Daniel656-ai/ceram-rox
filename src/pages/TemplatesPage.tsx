@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, Copy, FlaskConical } from "lucide-react";
+import { Plus, Trash2, Edit, FlaskConical } from "lucide-react";
 
 export default function TemplatesPage() {
   const { t } = useTranslation(["common", "orders"]);
