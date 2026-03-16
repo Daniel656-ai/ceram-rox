@@ -29,6 +29,10 @@ import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import ConsumablesPage from "./pages/ConsumablesPage";
+import TemplatesPage from "./pages/TemplatesPage";
+import BatchPlanningPage from "./pages/BatchPlanningPage";
+import BulkSamplePage from "./pages/BulkSamplePage";
+import LabPlanningPage from "./pages/LabPlanningPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +76,10 @@ const App = () => (
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
               <Route path="/verbrauchsmaterialien" element={<ConsumablesPage />} />
+              <Route path="/templates" element={<TemplatesPage />} />
+              <Route path="/batch-planung" element={<BatchPlanningPage />} />
+              <Route path="/serien-proben" element={<BulkSamplePage />} />
+              <Route path="/laborplanung" element={<LabPlanningPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
