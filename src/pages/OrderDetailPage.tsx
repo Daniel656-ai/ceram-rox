@@ -305,8 +305,8 @@ export default function OrderDetailPage() {
                           {m.assigned_to
                             ? durchfuehrerList.find((u: any) => u.user_id === m.assigned_to)
                               ? `${durchfuehrerList.find((u: any) => u.user_id === m.assigned_to)!.first_name} ${durchfuehrerList.find((u: any) => u.user_id === m.assigned_to)!.last_name}`
-                              : "Zugewiesen"
-                            : <span className="text-muted-foreground">–</span>}
+                              : ""
+                            : ""}
                         </span>
                       )}
                     </TableCell>
