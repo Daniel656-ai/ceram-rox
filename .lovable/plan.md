@@ -1,81 +1,34 @@
 
 
-## Prioritaet als Pflichtfeld fuer Messauftraege
+## Plan: SampleSelector-Dialog an SamplesPage-Dialog angleichen
 
-### Uebersicht
-Ein neues Pflichtfeld "Prioritaet" wird auf Auftragsebene (`measurement_orders`) eingefuehrt -- nicht zu verwechseln mit der bestehenden Messungs-Prioritaet auf `order_measurements`. Aenderungen werden in einer neuen Audit-Log-Tabelle protokolliert.
+### Problem
+Der Dialog "Neue Probe erstellen" im `SampleSelector` (beim Anlegen eines Messauftrags) hat nur 3 Felder (Name, Projekt, Beschreibung), während der Dialog auf der Proben-Seite deutlich mehr Optionen bietet: Nachverwendung, Lagerung, Entsorgung, Lagerort, Gefahrstoffe und Tags.
 
-### 1. Datenbank-Migration
+### Lösungsansatz
+Den `SampleSelector`-Dialog (`src/components/SampleSelector.tsx`) erweitern, sodass er dieselben Felder und Abschnitte wie der Dialog in `SamplesPage.tsx` (Zeilen 336-466) enthält:
 
-**Neuer Enum-Typ:**
-```sql
-CREATE TYPE public.order_priority AS ENUM ('normal', 'wichtig', 'hoechste');
-```
+1. **Erweiterten Form-State** hinzufügen (gleiche Struktur wie SamplesPage):
+   - `post_measurement_action`, `post_measurement_action_text`
+   - `storage_min_duration`, `storage_hints`, `storage_expiry_date`
+   - `disposal_method`, `disposal_hints`, `disposal_category`
+   - `hazard_categories`, `is_hazardous`, `location_id`, `tags`
 
-**Neue Spalte auf `measurement_orders`:**
-```sql
-ALTER TABLE public.measurement_orders
-  ADD COLUMN priority order_priority NOT NULL DEFAULT 'normal';
-```
+2. **Fehlende Daten laden**: `useStorageLocations` importieren für Lagerort-Dropdown.
 
-**Neue Tabelle `order_audit_log`:**
+3. **Dialog-UI erweitern** mit denselben Abschnitten:
+   - Name + Projekt (2-spaltig)
+   - Beschreibung
+   - Nachverwendung (aufbewahren/entsorgen/zurück/andere) mit konditionalen Unterfeldern
+   - Lagerort-Auswahl
+   - Gefahrstoff-Checkboxen
+   - Tags mit Enter-Eingabe
+   - `max-w-2xl max-h-[90vh] overflow-y-auto` für konsistente Dialoggröße
 
-| Spalte | Typ | Beschreibung |
-|--------|-----|-------------|
-| id | uuid (PK) | Eindeutige ID |
-| order_id | uuid (FK) | Verweis auf measurement_orders |
-| changed_by | uuid | User-ID des Aendernden |
-| changed_at | timestamptz | Zeitpunkt der Aenderung |
-| field_name | text | Geaendertes Feld (z.B. 'priority') |
-| old_value | text | Alter Wert |
-| new_value | text | Neuer Wert |
+4. **handleCreate erweitern**: Alle neuen Felder an `createSample.mutateAsync` übergeben (wie in SamplesPage).
 
-RLS-Policies fuer `order_audit_log`:
-- SELECT: Master sehen alles; Auftraggeber sehen Logs eigener Auftraege; Durchfuehrer sehen Logs zugewiesener Auftraege
-- INSERT: Nur ueber Trigger (kein direkter Client-Insert noetig, aber Policy fuer authentifizierte User mit `changed_by = auth.uid()`)
+5. **i18n**: Translations aus dem `samples`-Namespace verwenden (bereits vorhanden).
 
-**Datenbank-Trigger `log_order_priority_change`:**
-Ein `BEFORE UPDATE`-Trigger auf `measurement_orders`, der bei Aenderung von `priority` automatisch einen Eintrag in `order_audit_log` schreibt.
+### Betroffene Datei
+- `src/components/SampleSelector.tsx` -- Dialog-Inhalt und Form-State erweitern
 
-### 2. Typ-Definitionen (`src/lib/types.ts`)
-
-Neuer Export:
-```typescript
-export type OrderPriority = Database["public"]["Enums"]["order_priority"];
-
-export const ORDER_PRIORITY_LABELS: Record<OrderPriority, string> = {
-  normal: "Normal",
-  wichtig: "Wichtig",
-  hoechste: "Höchste",
-};
-```
-
-### 3. Hooks (`src/hooks/useOrders.ts`)
-
-- `useUpdateOrder`: Feld `priority` als optionalen Parameter aufnehmen
-- Neuer Hook `useOrderAuditLog(orderId)`: Laedt die Audit-Log-Eintraege fuer einen Auftrag
-
-### 4. Auftragserstellung (`src/pages/CreateOrderPage.tsx`)
-
-- Neuer State `priority` mit Standardwert `"normal"`
-- Neues Auswahlfeld (Select-Dropdown) im Abschnitt "Auftragsdetails" mit den drei Optionen: Hoechste, Wichtig, Normal
-- Der Wert wird beim `createOrder.mutateAsync`-Aufruf mitgegeben
-
-### 5. Auftragsdetailseite (`src/pages/OrderDetailPage.tsx`)
-
-- Prioritaet im Header anzeigen (als Badge neben dem Status)
-- Im Bearbeiten-Dialog: Prioritaets-Dropdown hinzufuegen
-- Berechtigungslogik: Prioritaetsaenderung nur fuer Master oder Ersteller (unabhaengig vom Status, da die Anforderung sich nur auf die Prioritaet bezieht -- die bestehende canEditDelete-Logik bleibt fuer andere Felder bestehen)
-- Neuer Abschnitt "Aenderungsverlauf" am Ende der Seite mit Tabelle der Audit-Log-Eintraege (Datum, Benutzer, altes/neues Feld)
-
-### 6. Auftragsuebersicht (`src/pages/OrdersPage.tsx`)
-
-- Neue Spalte "Prioritaet" in der Tabelle mit farbigem Badge
-
-### Betroffene Dateien
-- Datenbank-Migration (Enum, Spalte, Audit-Tabelle, Trigger, RLS)
-- `src/lib/types.ts` -- neuer Typ und Labels
-- `src/hooks/useOrders.ts` -- Update-Hook erweitern, neuer Audit-Log-Hook
-- `src/pages/CreateOrderPage.tsx` -- Prioritaets-Dropdown
-- `src/pages/OrderDetailPage.tsx` -- Anzeige, Bearbeitung, Aenderungsverlauf
-- `src/pages/OrdersPage.tsx` -- Prioritaets-Spalte
