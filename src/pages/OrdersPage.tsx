@@ -60,9 +60,11 @@ export default function OrdersPage() {
             <Link to="/auftraege/neu">
               <Button><Plus className="h-4 w-4 mr-2" />{t("orders:new_order")}</Button>
             </Link>
-            <Link to="/auftraege/import">
-              <Button variant="outline"><FileSpreadsheet className="h-4 w-4 mr-2" />{t("orders:excel_import")}</Button>
-            </Link>
+            {role === "master" && (
+              <Link to="/auftraege/import">
+                <Button variant="outline"><FileSpreadsheet className="h-4 w-4 mr-2" />{t("orders:excel_import")}</Button>
+              </Link>
+            )}
           </div>
         )}
       </div>
