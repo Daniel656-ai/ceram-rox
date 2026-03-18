@@ -57,7 +57,7 @@ export function AppSidebar() {
     { title: t("navigation:samples"), url: "/proben", icon: FlaskConical, show: hasPerm("samples.view") || hasPerm("samples.create") },
     { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database, show: hasPerm("measurements.view") || hasPerm("samples.view") },
     { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
-    { title: t("navigation:consumables"), url: "/verbrauchsmaterialien", icon: Package, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
+    { title: t("navigation:consumables"), url: "/verbrauchsmaterialien", icon: Package, show: (hasPerm("raw_materials.manage") || hasPerm("samples.view")) && role !== "auftraggeber" },
     { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays, show: hasPerm("measurements.enter") },
     { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: hasPerm("measurements.view") || hasPerm("measurements.enter") },
     { title: t("navigation:templates"), url: "/templates", icon: Layers, show: hasPerm("orders.create") || isAdmin },
