@@ -252,7 +252,15 @@ export default function CreateOrderPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">{t("orders:measurements_section")}</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">{t("orders:measurements_section")}</CardTitle>
+              <TemplateManager
+                selectedServiceIds={measurements.map((m) => m.service_id)}
+                onApplyTemplate={handleApplyTemplate}
+              />
+            </div>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label>{t("orders:add_measurement")}</Label>
