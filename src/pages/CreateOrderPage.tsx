@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, Trash2, AlertCircle } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
+import TemplateManager from "@/components/TemplateManager";
 
 interface SelectedMeasurement {
   service_id: string;
@@ -107,6 +108,18 @@ export default function CreateOrderPage() {
     const svc = services.find((s) => s.id === serviceId);
     if (!svc || measurements.some((m) => m.service_id === serviceId)) return;
     setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" }]);
+  };
+
+  const handleApplyTemplate = (serviceIds: string[]) => {
+    const newMeasurements: SelectedMeasurement[] = [];
+    for (const sid of serviceIds) {
+      const svc = services.find((s) => s.id === sid);
+      if (svc && !newMeasurements.some((m) => m.service_id === sid)) {
+        newMeasurements.push({ service_id: sid, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" });
+      }
+    }
+    setMeasurements(newMeasurements);
+    setMeasurementParams({});
   };
 
   const removeMeasurement = (idx: number) => {
@@ -239,7 +252,15 @@ export default function CreateOrderPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">{t("orders:measurements_section")}</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">{t("orders:measurements_section")}</CardTitle>
+              <TemplateManager
+                selectedServiceIds={measurements.map((m) => m.service_id)}
+                onApplyTemplate={handleApplyTemplate}
+              />
+            </div>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label>{t("orders:add_measurement")}</Label>
