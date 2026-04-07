@@ -25,12 +25,13 @@ function useLabMeasurements() {
       const { data, error } = await supabase
         .from("order_measurements")
         .select(`
-          id, measurement_number, status, assigned_to, due_date, priority,
+          id, measurement_number, status, assigned_to, due_date, priority, ranking,
           planned_start_date, planned_end_date, workstation_id,
           measurement_services(service_name, category, standard_duration_hours),
           measurement_orders(order_number, projects(project_number, project_name), samples(sample_number, sample_name)),
           workstations(name)
         `)
+        .order("ranking", { ascending: true, nullsFirst: false })
         .order("priority", { ascending: false })
         .order("due_date");
       if (error) throw error;
@@ -153,9 +154,15 @@ export default function LabPlanningPage() {
                           <GripVertical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <span className="font-mono text-xs font-medium">{m.measurement_number}</span>
                         </div>
-                        <Badge className={`text-[10px] ${priorityColor(m.priority)}`} variant="outline">
-                          {priorityLabel(m.priority)}
-                        </Badge>
+                        {m.ranking ? (
+                          <Badge className={`text-[10px] ${m.ranking === 1 ? "text-red-600 bg-red-50" : m.ranking === 2 ? "text-orange-600 bg-orange-50" : "text-yellow-600 bg-yellow-50"}`} variant="outline">
+                            Prio {m.ranking}
+                          </Badge>
+                        ) : (
+                          <Badge className={`text-[10px] ${priorityColor(m.priority)}`} variant="outline">
+                            {priorityLabel(m.priority)}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm font-medium truncate">
                         {m.measurement_services?.service_name || "–"}

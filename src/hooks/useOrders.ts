@@ -11,7 +11,8 @@ export function useOrders() {
       const { data, error } = await supabase
         .from("measurement_orders")
         .select(`*, projects(project_number, project_name)`)
-        .order("created_at", { ascending: false });
+        .order("ranking", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -83,6 +84,22 @@ export function useDeleteOrder() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
+  });
+}
+
+export function useUpdateOrderRanking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ranking }: { id: string; ranking: number | null }) => {
+      const { error } = await supabase.from("measurement_orders").update({ ranking } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order"] });
+      qc.invalidateQueries({ queryKey: ["lab-planning-measurements"] });
+      qc.invalidateQueries({ queryKey: ["my-measurements"] });
+    },
   });
 }
 

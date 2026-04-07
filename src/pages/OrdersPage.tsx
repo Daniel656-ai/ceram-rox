@@ -1,4 +1,4 @@
-import { useOrders, useDeleteOrder } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder, useUpdateOrderRanking } from "@/hooks/useOrders";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
@@ -19,6 +19,7 @@ export default function OrdersPage() {
   const { t, i18n } = useTranslation(["orders", "common"]);
   const { data: orders = [], isLoading } = useOrders();
   const deleteOrder = useDeleteOrder();
+  const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -43,6 +44,16 @@ export default function OrdersPage() {
       toast.success(t("orders:deleted"));
     } catch (err: any) {
       toast.error(t("orders:delete_error"), { description: err.message });
+    }
+  };
+
+  const handleRankingChange = async (orderId: string, value: string) => {
+    try {
+      const ranking = value === "none" ? null : parseInt(value);
+      await updateRanking.mutateAsync({ id: orderId, ranking });
+      toast.success("Priorisierung aktualisiert");
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
     }
   };
 
@@ -127,9 +138,30 @@ export default function OrdersPage() {
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}</TableCell>
                     <TableCell>
-                      <Badge variant={o.priority === "hoechste" ? "destructive" : o.priority === "wichtig" ? "default" : "secondary"}>
-                        {o.priority === "hoechste" ? t("common:priority_highest") : o.priority === "wichtig" ? t("common:priority_important") : t("common:priority_normal")}
-                      </Badge>
+                      {role === "master" ? (
+                        <Select
+                          value={o.ranking ? String(o.ranking) : "none"}
+                          onValueChange={(val) => handleRankingChange(o.id, val)}
+                        >
+                          <SelectTrigger className="w-[100px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">–</SelectItem>
+                            <SelectItem value="1">Prio 1</SelectItem>
+                            <SelectItem value="2">Prio 2</SelectItem>
+                            <SelectItem value="3">Prio 3</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        o.ranking ? (
+                          <Badge variant={o.ranking === 1 ? "destructive" : o.ranking === 2 ? "default" : "secondary"}>
+                            Prio {o.ranking}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">–</span>
+                        )
+                      )}
                     </TableCell>
                     <TableCell><StatusBadge status={o.status} /></TableCell>
                     <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
