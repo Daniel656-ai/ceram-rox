@@ -249,6 +249,7 @@ export type Database = {
           order_type: Database["public"]["Enums"]["order_type"]
           priority: Database["public"]["Enums"]["order_priority"]
           project_id: string
+          ranking: number | null
           sample_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
@@ -263,6 +264,7 @@ export type Database = {
           order_type: Database["public"]["Enums"]["order_type"]
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id: string
+          ranking?: number | null
           sample_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
@@ -277,6 +279,7 @@ export type Database = {
           order_type?: Database["public"]["Enums"]["order_type"]
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id?: string
+          ranking?: number | null
           sample_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
@@ -553,6 +556,7 @@ export type Database = {
           planned_start_date: string | null
           priority: number
           processing_time_hours: number
+          ranking: number | null
           service_id: string
           status: Database["public"]["Enums"]["measurement_status"]
           updated_at: string
@@ -573,6 +577,7 @@ export type Database = {
           planned_start_date?: string | null
           priority?: number
           processing_time_hours?: number
+          ranking?: number | null
           service_id: string
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
@@ -593,6 +598,7 @@ export type Database = {
           planned_start_date?: string | null
           priority?: number
           processing_time_hours?: number
+          ranking?: number | null
           service_id?: string
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
