@@ -42,6 +42,7 @@ export function useMyMeasurements() {
         .from("order_measurements")
         .select(`*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_orders(*, projects(project_number, project_name))`)
         .eq("assigned_to", user!.id)
+        .order("ranking", { ascending: true, nullsFirst: false })
         .order("priority", { ascending: false })
         .order("due_date");
       if (error) throw error;
