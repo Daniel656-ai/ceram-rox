@@ -81,6 +81,21 @@ export function useUpdateMeasurementStatus() {
   });
 }
 
+export function useUpdateMeasurementRanking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ranking }: { id: string; ranking: number | null }) => {
+      const { error } = await supabase.from("order_measurements").update({ ranking } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["order"] });
+      qc.invalidateQueries({ queryKey: ["my-measurements"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+}
+
 export function useAddWorkLog() {
   const qc = useQueryClient();
   return useMutation({

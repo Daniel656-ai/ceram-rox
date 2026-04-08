@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog } from "@/hooks/useOrders";
-import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement } from "@/hooks/useMeasurements";
+import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
