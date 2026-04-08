@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog } from "@/hooks/useOrders";
-import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement } from "@/hooks/useMeasurements";
+import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
@@ -36,6 +36,7 @@ export default function OrderDetailPage() {
   const addWorkLog = useAddWorkLog();
   const { data: durchfuehrerList = [] } = useDurchfuehrer();
   const assignMeasurement = useAssignMeasurement();
+  const updateMeasurementRanking = useUpdateMeasurementRanking();
   const [logOpen, setLogOpen] = useState(false);
   const [logMeasurementId, setLogMeasurementId] = useState("");
   const [logHours, setLogHours] = useState("1");
@@ -275,7 +276,32 @@ export default function OrderDetailPage() {
                   <TableRow key={m.id}>
                     <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
-                    <TableCell><PriorityBadge priority={m.priority} /></TableCell>
+                    <TableCell>
+                      {role === "master" ? (
+                        <Select
+                          value={m.ranking != null ? String(m.ranking) : "none"}
+                          onValueChange={(val) => {
+                            const newRanking = val === "none" ? null : parseInt(val);
+                            updateMeasurementRanking.mutate({ id: m.id, ranking: newRanking }, {
+                              onSuccess: () => toast.success("Priorität aktualisiert"),
+                              onError: (err: any) => toast.error("Fehler", { description: err.message }),
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="w-[100px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">–</SelectItem>
+                            <SelectItem value="1">Prio 1</SelectItem>
+                            <SelectItem value="2">Prio 2</SelectItem>
+                            <SelectItem value="3">Prio 3</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <PriorityBadge priority={m.priority} />
+                      )}
+                    </TableCell>
                     <TableCell>
                       {role === "master" ? (
                         <Select
