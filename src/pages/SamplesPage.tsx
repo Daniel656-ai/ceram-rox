@@ -394,6 +394,30 @@ export default function SamplesPage() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>{t("create_title")}</DialogTitle></DialogHeader>
+
+              {/* Mode toggle */}
+              <div className="flex gap-2 border-b pb-3">
+                <Button
+                  variant={createMode === "single" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCreateMode("single")}
+                  className="gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Einzelprobe
+                </Button>
+                <Button
+                  variant={createMode === "bulk" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCreateMode("bulk")}
+                  className="gap-1.5"
+                >
+                  <CopyPlus className="h-4 w-4" />
+                  Serienerstellung
+                </Button>
+              </div>
+
+              {createMode === "single" ? (
               <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -491,8 +515,6 @@ export default function SamplesPage() {
                     ))}
                   </div>
                 </div>
-
-                {/* Tags section in create form */}
                 <div className="space-y-2">
                   <Label>{t("tags_section")}</Label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
@@ -515,12 +537,84 @@ export default function SamplesPage() {
                     placeholder={t("tags_placeholder")}
                   />
                 </div>
-
                 <p className="text-xs text-muted-foreground">{t("auto_number")}</p>
                 <Button className="w-full" onClick={handleCreate} disabled={createSample.isPending}>
                   {createSample.isPending ? t("creating") : t("create_sample")}
                 </Button>
               </div>
+              ) : (
+              /* Bulk creation mode */
+              <div className="space-y-4 pt-2">
+                {bulkCreatedCount !== null ? (
+                  <div className="py-8 text-center">
+                    <CheckCircle2 className="h-14 w-14 mx-auto mb-3 text-green-500" />
+                    <h3 className="text-lg font-bold mb-2">{bulkCreatedCount} Proben erstellt!</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Die Proben wurden erfolgreich angelegt.</p>
+                    <div className="flex gap-2 justify-center">
+                      <Button variant="outline" size="sm" onClick={() => setBulkCreatedCount(null)}>Weitere erstellen</Button>
+                      <Button size="sm" onClick={() => { resetForm(); setOpen(false); }}>Schließen</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Projekt *</Label>
+                      <Select value={bulkProjectId} onValueChange={setBulkProjectId}>
+                        <SelectTrigger><SelectValue placeholder="Projekt wählen" /></SelectTrigger>
+                        <SelectContent>
+                          {projects.map(p => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.project_number}{p.project_name ? ` – ${p.project_name}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Namenspräfix *</Label>
+                      <Input value={bulkPrefix} onChange={e => setBulkPrefix(e.target.value)} placeholder="z.B. Probe_" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Startnummer</Label>
+                        <Input type="number" min={1} value={bulkStartNum} onChange={e => setBulkStartNum(parseInt(e.target.value) || 1)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Endnummer</Label>
+                        <Input type="number" min={bulkStartNum} value={bulkEndNum} onChange={e => setBulkEndNum(parseInt(e.target.value) || bulkStartNum)} />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Gruppenname</Label>
+                      <Input value={bulkGroupName} onChange={e => setBulkGroupName(e.target.value)} placeholder="Optional – für spätere Filterung" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Beschreibung</Label>
+                      <Textarea value={bulkDescription} onChange={e => setBulkDescription(e.target.value)} placeholder="Gemeinsame Beschreibung für alle Proben" rows={2} />
+                    </div>
+
+                    {/* Preview */}
+                    <div className="rounded-md border p-3 space-y-2">
+                      <p className="text-sm font-medium">{bulkCount} Proben werden erstellt:</p>
+                      <div className="bg-muted rounded-md p-3 font-mono text-sm space-y-1">
+                        {bulkPreviewNames.map(n => (
+                          <div key={n} className="flex items-center gap-2">
+                            <FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />
+                            {n}
+                          </div>
+                        ))}
+                        {bulkCount > 5 && <div className="text-muted-foreground">… und {bulkCount - 5} weitere</div>}
+                      </div>
+                    </div>
+
+                    <Button className="w-full" size="lg" onClick={handleBulkCreate} disabled={isBulkCreating || bulkCount <= 0 || !bulkProjectId}>
+                      <CopyPlus className="h-4 w-4 mr-2" />
+                      {isBulkCreating ? "Erstelle…" : `${bulkCount} Proben erstellen`}
+                    </Button>
+                  </>
+                )}
+              </div>
+              )}
             </DialogContent>
           </Dialog>
         )}
