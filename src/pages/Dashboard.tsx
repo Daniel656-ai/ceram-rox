@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { UtilizationSidebar } from "@/components/UtilizationSidebar";
+
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -397,9 +397,6 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {(role === "master" || role === "durchfuehrer") && (
-        <UtilizationSidebar />
-      )}
     </div>
   );
 }
