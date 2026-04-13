@@ -14,6 +14,8 @@ import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, Calendar
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/contexts/AuthContext";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
@@ -28,6 +30,9 @@ function getUserName(users: any[], userId: string) {
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation("projects");
+  const { role } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
   const { data: project, isLoading } = useProjectDetail(id);
   const { data: samples = [] } = useProjectSamples(id);
   const { data: orders = [] } = useProjectOrders(id);
@@ -280,9 +285,11 @@ export default function ProjectDetailPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <DollarSign className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-2xl font-bold">{totalCosts.toFixed(2)}{t("currency")}</p>
+              <p className="text-2xl font-bold">
+                {canViewPersonnelCosts ? totalCosts.toFixed(2) : totalMaterialCosts.toFixed(2)}{t("currency")}
+              </p>
               <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
-              {totalMaterialCosts > 0 && (
+              {canViewPersonnelCosts && totalMaterialCosts > 0 && (
                 <p className="text-[10px] text-muted-foreground">
                   {t("personnel_short")}: {costData.totalPersonnel.toFixed(0)}{t("currency")} + {t("materials:material_short")}: {totalMaterialCosts.toFixed(0)}{t("currency")}
                 </p>
@@ -297,7 +304,7 @@ export default function ProjectDetailPage() {
         <TabsList className="print:hidden">
           <TabsTrigger value="samples">{t("tab_samples")}</TabsTrigger>
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
-          <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
+          {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
@@ -394,8 +401,8 @@ export default function ProjectDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* COSTS TAB */}
-        <TabsContent value="costs">
+        {/* COSTS TAB - personnel costs, admin only */}
+        {canViewPersonnelCosts && <TabsContent value="costs">
           <div className="space-y-4">
             <Card>
               <CardHeader><CardTitle>{t("cost_per_measurement")}</CardTitle></CardHeader>
@@ -434,7 +441,7 @@ export default function ProjectDetailPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </TabsContent>}
 
         {/* MATERIAL COSTS TAB */}
         <TabsContent value="material_costs">
@@ -668,10 +675,10 @@ export default function ProjectDetailPage() {
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
                   <div className="rounded-lg border p-4 space-y-2 text-sm">
                     <div className="flex justify-between"><span>{t("csv_total_time")}:</span><span className="font-medium">{totalHours.toFixed(1)}{t("hours_unit")}</span></div>
-                    <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{costData.totalPersonnel.toFixed(2)}{t("currency")}</span></div>
+                    {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{costData.totalPersonnel.toFixed(2)}{t("currency")}</span></div>}
                     <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{(projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0).toFixed(2)}{t("currency")}</span></div>
                     <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{(projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0).toFixed(2)}{t("currency")}</span></div>
-                    <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{totalCosts.toFixed(2)}{t("currency")}</span></div>
+                    <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{(canViewPersonnelCosts ? totalCosts : totalMaterialCosts).toFixed(2)}{t("currency")}</span></div>
                   </div>
                 </div>
 

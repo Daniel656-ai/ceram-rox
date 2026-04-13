@@ -22,12 +22,15 @@ import MeasurementDataEntry from "@/components/MeasurementDataEntry";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 
 export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
   const { data: order, isLoading } = useOrderDetail(id);
   const { data: auditLogs = [] } = useOrderAuditLog(id);
   const updateMeasurementStatus = useUpdateMeasurementStatus();
@@ -230,12 +233,12 @@ export default function OrderDetailPage() {
             <p className="text-2xl font-bold">{totalActual.toFixed(1)} h</p>
           </CardContent>
         </Card>
-        <Card>
+        {canViewPersonnelCosts && <Card>
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Kosten (Ist)</p>
             <p className="text-2xl font-bold">{totalCost.toFixed(2)} €</p>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
 
       {order.notes && (
@@ -261,7 +264,7 @@ export default function OrderDetailPage() {
                 <TableHead>Std-Dauer</TableHead>
                 <TableHead>Ist-Dauer</TableHead>
                 <TableHead>Stunden (Plan/Ist)</TableHead>
-                <TableHead>Stundensatz</TableHead>
+                {canViewPersonnelCosts && <TableHead>Stundensatz</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead>Dokumente</TableHead>
                 <TableHead>Aktionen</TableHead>
@@ -352,7 +355,7 @@ export default function OrderDetailPage() {
                       ) : '–'}
                     </TableCell>
                     <TableCell>{parseFloat(m.planned_hours || 0).toFixed(1)} / {actualHours.toFixed(1)} h</TableCell>
-                    <TableCell>{m.measurement_services?.hourly_rate} €/h</TableCell>
+                    {canViewPersonnelCosts && <TableCell>{m.measurement_services?.hourly_rate} €/h</TableCell>}
                     <TableCell><StatusBadge status={m.status} /></TableCell>
                     <TableCell className="min-w-[200px]">
                       <MeasurementDocuments
