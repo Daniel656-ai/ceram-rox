@@ -256,6 +256,14 @@ export default function SamplesPage() {
     setBulkPrefix("Probe_"); setBulkStartNum(1); setBulkEndNum(10);
     setBulkDescription(""); setBulkGroupName(""); setBulkProjectId("");
     setBulkCreatedCount(null); setCreateMode("single");
+    setBulkForm({
+      post_measurement_action: "", post_measurement_action_text: "",
+      storage_min_duration: "", storage_hints: "", storage_expiry_date: "",
+      disposal_method: "", disposal_hints: "", disposal_category: "",
+      hazard_categories: [], is_hazardous: false, location_id: "",
+      tags: [],
+    });
+    setBulkFormTagInput("");
   };
 
   const bulkCount = Math.max(0, bulkEndNum - bulkStartNum + 1);
