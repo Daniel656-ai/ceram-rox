@@ -675,10 +675,10 @@ export default function ProjectDetailPage() {
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
                   <div className="rounded-lg border p-4 space-y-2 text-sm">
                     <div className="flex justify-between"><span>{t("csv_total_time")}:</span><span className="font-medium">{totalHours.toFixed(1)}{t("hours_unit")}</span></div>
-                    <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{costData.totalPersonnel.toFixed(2)}{t("currency")}</span></div>
+                    {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{costData.totalPersonnel.toFixed(2)}{t("currency")}</span></div>}
                     <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{(projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0).toFixed(2)}{t("currency")}</span></div>
                     <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{(projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0).toFixed(2)}{t("currency")}</span></div>
-                    <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{totalCosts.toFixed(2)}{t("currency")}</span></div>
+                    <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{(canViewPersonnelCosts ? totalCosts : totalMaterialCosts).toFixed(2)}{t("currency")}</span></div>
                   </div>
                 </div>
 
