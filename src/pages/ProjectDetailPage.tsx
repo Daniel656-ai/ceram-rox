@@ -304,7 +304,7 @@ export default function ProjectDetailPage() {
         <TabsList className="print:hidden">
           <TabsTrigger value="samples">{t("tab_samples")}</TabsTrigger>
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
-          <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>
+          {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
@@ -401,8 +401,8 @@ export default function ProjectDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* COSTS TAB */}
-        <TabsContent value="costs">
+        {/* COSTS TAB - personnel costs, admin only */}
+        {canViewPersonnelCosts && <TabsContent value="costs">
           <div className="space-y-4">
             <Card>
               <CardHeader><CardTitle>{t("cost_per_measurement")}</CardTitle></CardHeader>
