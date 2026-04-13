@@ -29,6 +29,8 @@ export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
   const { data: order, isLoading } = useOrderDetail(id);
   const { data: auditLogs = [] } = useOrderAuditLog(id);
   const updateMeasurementStatus = useUpdateMeasurementStatus();

@@ -30,6 +30,9 @@ function getUserName(users: any[], userId: string) {
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation("projects");
+  const { role } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
   const { data: project, isLoading } = useProjectDetail(id);
   const { data: samples = [] } = useProjectSamples(id);
   const { data: orders = [] } = useProjectOrders(id);
