@@ -104,6 +104,7 @@ export default function SamplesPage() {
   const [sortBy, setSortBy] = useState<SortOption>("created_desc");
 
   const [open, setOpen] = useState(false);
+  const [createMode, setCreateMode] = useState<"single" | "bulk">("single");
   const [activeTab, setActiveTab] = useState<SubCategory>("all");
   const [form, setForm] = useState({
     sample_name: "", project_id: "", description: "",
@@ -114,6 +115,16 @@ export default function SamplesPage() {
     tags: [] as string[],
   });
   const [formTagInput, setFormTagInput] = useState("");
+
+  // Bulk creation state
+  const [bulkPrefix, setBulkPrefix] = useState("Probe_");
+  const [bulkStartNum, setBulkStartNum] = useState(1);
+  const [bulkEndNum, setBulkEndNum] = useState(10);
+  const [bulkDescription, setBulkDescription] = useState("");
+  const [bulkGroupName, setBulkGroupName] = useState("");
+  const [bulkProjectId, setBulkProjectId] = useState("");
+  const [isBulkCreating, setIsBulkCreating] = useState(false);
+  const [bulkCreatedCount, setBulkCreatedCount] = useState<number | null>(null);
 
   const canCreate = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
