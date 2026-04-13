@@ -67,7 +67,7 @@ export function AppSidebar() {
   ].filter((item) => item.show);
 
   const adminItems = [
-    { title: t("navigation:users"), url: "/admin/benutzer", icon: Users, show: hasPerm("users.manage") },
+    { title: t("navigation:users"), url: "/admin/benutzer", icon: Users, show: isAdmin },
     { title: t("navigation:roles"), url: "/admin/rollen", icon: KeyRound, show: isAdmin },
     { title: t("navigation:measurement_services"), url: "/admin/messdienstleistungen", icon: Beaker, show: hasPerm("services.manage") },
     { title: t("navigation:workstations"), url: "/admin/arbeitsplaetze", icon: Building2, show: hasPerm("workstations.manage") },
