@@ -125,6 +125,14 @@ export default function SamplesPage() {
   const [bulkProjectId, setBulkProjectId] = useState("");
   const [isBulkCreating, setIsBulkCreating] = useState(false);
   const [bulkCreatedCount, setBulkCreatedCount] = useState<number | null>(null);
+  const [bulkForm, setBulkForm] = useState({
+    post_measurement_action: "" as string, post_measurement_action_text: "",
+    storage_min_duration: "", storage_hints: "", storage_expiry_date: "",
+    disposal_method: "", disposal_hints: "", disposal_category: "",
+    hazard_categories: [] as string[], is_hazardous: false, location_id: "",
+    tags: [] as string[],
+  });
+  const [bulkFormTagInput, setBulkFormTagInput] = useState("");
 
   const canCreate = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
