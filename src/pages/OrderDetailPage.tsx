@@ -22,6 +22,7 @@ import MeasurementDataEntry from "@/components/MeasurementDataEntry";
 import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { usePermissions } from "@/hooks/usePermissions";
 
 
 export default function OrderDetailPage() {

@@ -14,6 +14,8 @@ import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, Calendar
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/contexts/AuthContext";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
