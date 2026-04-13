@@ -236,14 +236,62 @@ export default function SamplesPage() {
     });
   };
 
-  const resetForm = () => setForm({
-    sample_name: "", project_id: "", description: "",
-    post_measurement_action: "", post_measurement_action_text: "",
-    storage_min_duration: "", storage_hints: "", storage_expiry_date: "",
-    disposal_method: "", disposal_hints: "", disposal_category: "",
-    hazard_categories: [], is_hazardous: false, location_id: "",
-    tags: [],
-  });
+  const resetForm = () => {
+    setForm({
+      sample_name: "", project_id: "", description: "",
+      post_measurement_action: "", post_measurement_action_text: "",
+      storage_min_duration: "", storage_hints: "", storage_expiry_date: "",
+      disposal_method: "", disposal_hints: "", disposal_category: "",
+      hazard_categories: [], is_hazardous: false, location_id: "",
+      tags: [],
+    });
+    setBulkPrefix("Probe_"); setBulkStartNum(1); setBulkEndNum(10);
+    setBulkDescription(""); setBulkGroupName(""); setBulkProjectId("");
+    setBulkCreatedCount(null); setCreateMode("single");
+  };
+
+  const bulkCount = Math.max(0, bulkEndNum - bulkStartNum + 1);
+  const bulkPadLength = Math.max(3, String(bulkEndNum).length);
+  const bulkPreviewNames = Array.from({ length: Math.min(bulkCount, 5) }, (_, i) =>
+    `${bulkPrefix}${String(bulkStartNum + i).padStart(bulkPadLength, "0")}`
+  );
+
+  const handleBulkCreate = async () => {
+    if (!bulkProjectId || !bulkPrefix.trim() || bulkCount <= 0) {
+      toast.error("Bitte Projekt, Präfix und gültigen Nummernbereich angeben");
+      return;
+    }
+    if (bulkCount > 200) {
+      toast.error("Maximal 200 Proben gleichzeitig");
+      return;
+    }
+    setIsBulkCreating(true);
+    try {
+      const group = bulkGroupName || `bulk_${Date.now()}`;
+      const samples = Array.from({ length: bulkCount }, (_, i) => ({
+        sample_name: `${bulkPrefix}${String(bulkStartNum + i).padStart(bulkPadLength, "0")}`,
+        sample_number: "WILL_BE_OVERWRITTEN",
+        project_id: bulkProjectId,
+        description: bulkDescription || `Serienprobe ${bulkPrefix}`,
+        created_by: user!.id,
+        sample_group: group,
+        hazard_categories: [],
+      }));
+      let total = 0;
+      for (let i = 0; i < samples.length; i += 50) {
+        const batch = samples.slice(i, i + 50);
+        const { error } = await supabase.from("samples").insert(batch as any);
+        if (error) throw error;
+        total += batch.length;
+      }
+      setBulkCreatedCount(total);
+      toast.success(`${total} Proben erstellt`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setIsBulkCreating(false);
+    }
+  };
 
   const resetFilters = () => {
     setFilterProject("__all__");
