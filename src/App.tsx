@@ -31,7 +31,7 @@ import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import ConsumablesPage from "./pages/ConsumablesPage";
 
-import BatchPlanningPage from "./pages/BatchPlanningPage";
+
 
 import LabPlanningPage from "./pages/LabPlanningPage";
 import NotFound from "./pages/NotFound";
@@ -79,7 +79,7 @@ const App = () => (
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
               <Route path="/verbrauchsmaterialien" element={<ConsumablesPage />} />
               
-              <Route path="/batch-planung" element={<BatchPlanningPage />} />
+              
               
               <Route path="/laborplanung" element={<LabPlanningPage />} />
             </Route>
