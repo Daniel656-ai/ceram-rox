@@ -125,6 +125,14 @@ export default function SamplesPage() {
   const [bulkProjectId, setBulkProjectId] = useState("");
   const [isBulkCreating, setIsBulkCreating] = useState(false);
   const [bulkCreatedCount, setBulkCreatedCount] = useState<number | null>(null);
+  const [bulkForm, setBulkForm] = useState({
+    post_measurement_action: "" as string, post_measurement_action_text: "",
+    storage_min_duration: "", storage_hints: "", storage_expiry_date: "",
+    disposal_method: "", disposal_hints: "", disposal_category: "",
+    hazard_categories: [] as string[], is_hazardous: false, location_id: "",
+    tags: [] as string[],
+  });
+  const [bulkFormTagInput, setBulkFormTagInput] = useState("");
 
   const canCreate = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
@@ -248,6 +256,14 @@ export default function SamplesPage() {
     setBulkPrefix("Probe_"); setBulkStartNum(1); setBulkEndNum(10);
     setBulkDescription(""); setBulkGroupName(""); setBulkProjectId("");
     setBulkCreatedCount(null); setCreateMode("single");
+    setBulkForm({
+      post_measurement_action: "", post_measurement_action_text: "",
+      storage_min_duration: "", storage_hints: "", storage_expiry_date: "",
+      disposal_method: "", disposal_hints: "", disposal_category: "",
+      hazard_categories: [], is_hazardous: false, location_id: "",
+      tags: [],
+    });
+    setBulkFormTagInput("");
   };
 
   const bulkCount = Math.max(0, bulkEndNum - bulkStartNum + 1);
@@ -275,7 +291,18 @@ export default function SamplesPage() {
         description: bulkDescription || `Serienprobe ${bulkPrefix}`,
         created_by: user!.id,
         sample_group: group,
-        hazard_categories: [],
+        hazard_categories: bulkForm.hazard_categories,
+        is_hazardous: bulkForm.is_hazardous,
+        post_measurement_action: bulkForm.post_measurement_action || undefined,
+        post_measurement_action_text: bulkForm.post_measurement_action_text || undefined,
+        storage_min_duration: bulkForm.storage_min_duration || undefined,
+        storage_hints: bulkForm.storage_hints || undefined,
+        storage_expiry_date: bulkForm.storage_expiry_date || undefined,
+        disposal_method: bulkForm.disposal_method || undefined,
+        disposal_hints: bulkForm.disposal_hints || undefined,
+        disposal_category: bulkForm.disposal_category || undefined,
+        location_id: bulkForm.location_id || undefined,
+        tags: bulkForm.tags,
       }));
       let total = 0;
       for (let i = 0; i < samples.length; i += 50) {
@@ -291,6 +318,27 @@ export default function SamplesPage() {
     } finally {
       setIsBulkCreating(false);
     }
+  };
+
+  const toggleBulkHazard = (cat: string) => {
+    setBulkForm(f => {
+      const cats = f.hazard_categories.includes(cat)
+        ? f.hazard_categories.filter(c => c !== cat)
+        : [...f.hazard_categories, cat];
+      return { ...f, hazard_categories: cats, is_hazardous: cats.length > 0 };
+    });
+  };
+
+  const addBulkFormTag = (tag: string) => {
+    const trimmed = tag.trim();
+    if (trimmed && !bulkForm.tags.includes(trimmed)) {
+      setBulkForm(f => ({ ...f, tags: [...f.tags, trimmed] }));
+    }
+    setBulkFormTagInput("");
+  };
+
+  const removeBulkFormTag = (tag: string) => {
+    setBulkForm(f => ({ ...f, tags: f.tags.filter(t => t !== tag) }));
   };
 
   const resetFilters = () => {
@@ -589,8 +637,104 @@ export default function SamplesPage() {
                       <Input value={bulkGroupName} onChange={e => setBulkGroupName(e.target.value)} placeholder="Optional – für spätere Filterung" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Beschreibung</Label>
+                      <Label>Beschreibung *</Label>
                       <Textarea value={bulkDescription} onChange={e => setBulkDescription(e.target.value)} placeholder="Gemeinsame Beschreibung für alle Proben" rows={2} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{t("post_measurement")}</Label>
+                      <Select value={bulkForm.post_measurement_action} onValueChange={v => setBulkForm(f => ({ ...f, post_measurement_action: v }))}>
+                        <SelectTrigger><SelectValue placeholder="..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="aufbewahren">{t("post_aufbewahren")}</SelectItem>
+                          <SelectItem value="entsorgen">{t("post_entsorgen")}</SelectItem>
+                          <SelectItem value="zurueck">{t("post_zurueck")}</SelectItem>
+                          <SelectItem value="andere">{t("post_andere")}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {bulkForm.post_measurement_action === "andere" && (
+                      <Input value={bulkForm.post_measurement_action_text} onChange={e => setBulkForm(f => ({ ...f, post_measurement_action_text: e.target.value }))} placeholder={t("post_action_text_placeholder")} />
+                    )}
+                    {bulkForm.post_measurement_action === "aufbewahren" && (
+                      <div className="space-y-3 rounded-md border p-3">
+                        <div className="space-y-2">
+                          <Label>{t("storage_min_duration")}</Label>
+                          <Input value={bulkForm.storage_min_duration} onChange={e => setBulkForm(f => ({ ...f, storage_min_duration: e.target.value }))} placeholder={t("storage_min_duration_placeholder")} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t("storage_hints")}</Label>
+                          <Input value={bulkForm.storage_hints} onChange={e => setBulkForm(f => ({ ...f, storage_hints: e.target.value }))} placeholder={t("storage_hints_placeholder")} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t("storage_expiry_date")}</Label>
+                          <Input type="date" value={bulkForm.storage_expiry_date} onChange={e => setBulkForm(f => ({ ...f, storage_expiry_date: e.target.value }))} />
+                        </div>
+                      </div>
+                    )}
+                    {bulkForm.post_measurement_action === "entsorgen" && (
+                      <div className="space-y-3 rounded-md border p-3">
+                        <div className="space-y-2">
+                          <Label>{t("disposal_method")}</Label>
+                          <Input value={bulkForm.disposal_method} onChange={e => setBulkForm(f => ({ ...f, disposal_method: e.target.value }))} placeholder={t("disposal_method_placeholder")} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t("disposal_hints")}</Label>
+                          <Input value={bulkForm.disposal_hints} onChange={e => setBulkForm(f => ({ ...f, disposal_hints: e.target.value }))} placeholder={t("disposal_hints_placeholder")} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t("disposal_category")}</Label>
+                          <Select value={bulkForm.disposal_category} onValueChange={v => setBulkForm(f => ({ ...f, disposal_category: v }))}>
+                            <SelectTrigger><SelectValue placeholder="..." /></SelectTrigger>
+                            <SelectContent>
+                              {DISPOSAL_CATEGORIES.map(c => <SelectItem key={c} value={c}>{t(`disposal_${c}`)}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label>{t("location_section")}</Label>
+                      <Select value={bulkForm.location_id || "__none__"} onValueChange={v => setBulkForm(f => ({ ...f, location_id: v === "__none__" ? "" : v }))}>
+                        <SelectTrigger><SelectValue placeholder={t("select_location")} /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">{t("no_location")}</SelectItem>
+                          {locations.map(l => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-3 rounded-md border p-3">
+                      <Label className="font-semibold">{t("hazard_section")}</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {HAZARD_CATEGORIES.map(cat => (
+                          <div key={cat} className="flex items-center space-x-2">
+                            <Checkbox checked={bulkForm.hazard_categories.includes(cat)} onCheckedChange={() => toggleBulkHazard(cat)} />
+                            <Label className="text-sm font-normal">{t(`hazard_${cat}`)}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t("tags_section")}</Label>
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {bulkForm.tags.map(tag => (
+                          <Badge key={tag} variant="secondary" className="gap-1 pr-1">
+                            <Tag className="h-3 w-3" />
+                            {tag}
+                            <button type="button" onClick={() => removeBulkFormTag(tag)} className="ml-0.5 hover:text-destructive">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <Input
+                        value={bulkFormTagInput}
+                        onChange={e => setBulkFormTagInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") { e.preventDefault(); addBulkFormTag(bulkFormTagInput); }
+                        }}
+                        placeholder={t("tags_placeholder")}
+                      />
                     </div>
 
                     {/* Preview */}
