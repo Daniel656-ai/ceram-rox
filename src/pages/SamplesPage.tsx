@@ -320,6 +320,27 @@ export default function SamplesPage() {
     }
   };
 
+  const toggleBulkHazard = (cat: string) => {
+    setBulkForm(f => {
+      const cats = f.hazard_categories.includes(cat)
+        ? f.hazard_categories.filter(c => c !== cat)
+        : [...f.hazard_categories, cat];
+      return { ...f, hazard_categories: cats, is_hazardous: cats.length > 0 };
+    });
+  };
+
+  const addBulkFormTag = (tag: string) => {
+    const trimmed = tag.trim();
+    if (trimmed && !bulkForm.tags.includes(trimmed)) {
+      setBulkForm(f => ({ ...f, tags: [...f.tags, trimmed] }));
+    }
+    setBulkFormTagInput("");
+  };
+
+  const removeBulkFormTag = (tag: string) => {
+    setBulkForm(f => ({ ...f, tags: f.tags.filter(t => t !== tag) }));
+  };
+
   const resetFilters = () => {
     setFilterProject("__all__");
     setFilterService("__all__");
