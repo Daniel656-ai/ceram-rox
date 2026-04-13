@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { Search, Plus, Trash2, AlertTriangle, Eye, Inbox, FlaskConical, Clock, Archive, Timer, ShieldAlert, CalendarClock, X, SlidersHorizontal, Tag } from "lucide-react";
+import { Search, Plus, Trash2, AlertTriangle, Eye, Inbox, FlaskConical, Clock, Archive, Timer, ShieldAlert, CalendarClock, X, SlidersHorizontal, Tag, CopyPlus, CheckCircle2 } from "lucide-react";
 import { SampleScannerInput } from "@/components/SampleScanner";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
