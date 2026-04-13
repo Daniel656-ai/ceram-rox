@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +7,8 @@ import { useCreateOrder } from "@/hooks/useOrders";
 import { useServices, useAddOrderMeasurement } from "@/hooks/useMeasurements";
 import { useWorkstations } from "@/hooks/useWorkstations";
 import { useServiceParameterDefs } from "@/hooks/useServiceParameters";
+import { useTemplates, useApplyTemplate } from "@/hooks/useTemplates";
+import { useSamples } from "@/hooks/useSamples";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,8 +18,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Trash2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 
@@ -90,10 +93,15 @@ export default function CreateOrderPage() {
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
   const { data: workstations = [] } = useWorkstations();
-  const createProject = useCreateProject();
+  const { data: templates = [] } = useTemplates();
+  const { data: allSamples = [] } = useSamples();
   const createOrder = useCreateOrder();
   const addMeasurement = useAddOrderMeasurement();
+  const applyTemplate = useApplyTemplate();
 
+  const [mode, setMode] = useState<"single" | "batch">("single");
+
+  // Single order state
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [orderType, setOrderType] = useState<string>("");
   const [priority, setPriority] = useState<string>("normal");
@@ -104,6 +112,57 @@ export default function CreateOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<number, Record<string, string>>>({});
 
+  // Batch state
+  const [batchTemplateId, setBatchTemplateId] = useState("");
+  const [batchProjectId, setBatchProjectId] = useState("");
+  const [batchOrderType, setBatchOrderType] = useState("customer");
+  const [batchPriority, setBatchPriority] = useState("normal");
+  const [batchDueDate, setBatchDueDate] = useState("");
+  const [batchSelectedSampleIds, setBatchSelectedSampleIds] = useState<string[]>([]);
+  const [batchResult, setBatchResult] = useState<string[] | null>(null);
+
+  const batchProjectSamples = useMemo(() =>
+    (allSamples as any[]).filter(s => s.project_id === batchProjectId),
+    [allSamples, batchProjectId]
+  );
+
+  const selectedBatchTemplate = (templates as any[]).find(tmpl => tmpl.id === batchTemplateId);
+  const batchTemplateItemCount = selectedBatchTemplate?.measurement_template_items?.length || 0;
+  const batchTotalMeasurements = batchTemplateItemCount * batchSelectedSampleIds.length;
+
+  const toggleBatchSample = (id: string) => {
+    setBatchSelectedSampleIds(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllBatchSamples = () => {
+    setBatchSelectedSampleIds(batchProjectSamples.map(s => s.id));
+  };
+
+  const handleBatchApply = async () => {
+    if (!batchTemplateId || !batchProjectId || batchSelectedSampleIds.length === 0) {
+      toast.error("Bitte Template, Projekt und mindestens eine Probe auswählen");
+      return;
+    }
+    try {
+      const orderIds = await applyTemplate.mutateAsync({
+        templateId: batchTemplateId,
+        projectId: batchProjectId,
+        sampleIds: batchSelectedSampleIds,
+        createdBy: user!.id,
+        orderType: batchOrderType,
+        priority: batchPriority,
+        dueDate: batchDueDate || undefined,
+      });
+      setBatchResult(orderIds);
+      toast.success(`${orderIds.length} Auftrag/Aufträge mit ${batchTotalMeasurements} Messungen erstellt`);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  // Single order functions
   const addService = (serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
     if (!svc || measurements.some((m) => m.service_id === serviceId)) return;
@@ -198,6 +257,29 @@ export default function CreateOrderPage() {
         </div>
       </div>
 
+      {/* Mode toggle */}
+      <div className="flex gap-2">
+        <Button
+          variant={mode === "single" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMode("single")}
+          className="gap-1.5"
+        >
+          <ClipboardList className="h-4 w-4" />
+          Einzelauftrag
+        </Button>
+        <Button
+          variant={mode === "batch" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMode("batch")}
+          className="gap-1.5"
+        >
+          <Zap className="h-4 w-4" />
+          Batch-Planung
+        </Button>
+      </div>
+
+      {mode === "single" ? (
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader><CardTitle className="text-base">{t("common:project")}</CardTitle></CardHeader>
@@ -320,6 +402,164 @@ export default function CreateOrderPage() {
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>{t("common:cancel")}</Button>
         </div>
       </form>
+      ) : (
+      /* Batch Planning Mode */
+      <div className="space-y-6">
+        {batchResult ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-500" />
+              <h2 className="text-xl font-bold mb-2">Batch-Planung abgeschlossen!</h2>
+              <p className="text-muted-foreground mb-4">
+                {batchResult.length} Auftrag/Aufträge mit insgesamt {batchTotalMeasurements} Messungen wurden erstellt.
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={() => { setBatchResult(null); setBatchSelectedSampleIds([]); }}>
+                  Weitere Batch-Planung
+                </Button>
+                <Button onClick={() => navigate("/auftraege")}>
+                  Zu den Aufträgen
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">1. Template & Konfiguration</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Template *</Label>
+                      <Select value={batchTemplateId} onValueChange={setBatchTemplateId}>
+                        <SelectTrigger><SelectValue placeholder="Template wählen" /></SelectTrigger>
+                        <SelectContent>
+                          {(templates as any[]).map(tmpl => (
+                            <SelectItem key={tmpl.id} value={tmpl.id}>
+                              {tmpl.name} ({(tmpl.measurement_template_items || []).length} Messungen)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedBatchTemplate && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(selectedBatchTemplate.measurement_template_items || []).map((item: any) => (
+                            <Badge key={item.id} variant="outline" className="text-xs">
+                              {item.measurement_services?.service_name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Projekt *</Label>
+                      <Select value={batchProjectId} onValueChange={(v) => { setBatchProjectId(v); setBatchSelectedSampleIds([]); }}>
+                        <SelectTrigger><SelectValue placeholder="Projekt wählen" /></SelectTrigger>
+                        <SelectContent>
+                          {(projects as any[]).map(p => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.project_number} – {p.project_name || "–"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-2">
+                        <Label>Auftragstyp</Label>
+                        <Select value={batchOrderType} onValueChange={setBatchOrderType}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Priorität</Label>
+                        <Select value={batchPriority} onValueChange={setBatchPriority}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(priorityLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fällig</Label>
+                        <Input type="date" value={batchDueDate} onChange={e => setBatchDueDate(e.target.value)} />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">2. Proben auswählen</CardTitle>
+                      {batchProjectSamples.length > 0 && (
+                        <Button variant="outline" size="sm" onClick={selectAllBatchSamples}>
+                          Alle auswählen ({batchProjectSamples.length})
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {!batchProjectId ? (
+                      <p className="text-sm text-muted-foreground">Bitte zuerst ein Projekt wählen</p>
+                    ) : batchProjectSamples.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Keine Proben in diesem Projekt</p>
+                    ) : (
+                      <div className="border rounded-md max-h-64 overflow-y-auto">
+                        {batchProjectSamples.map(s => (
+                          <label key={s.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0">
+                            <Checkbox
+                              checked={batchSelectedSampleIds.includes(s.id)}
+                              onCheckedChange={() => toggleBatchSample(s.id)}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium">{s.sample_number}</span>
+                              <span className="text-sm text-muted-foreground ml-2">{s.sample_name}</span>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">{s.status}</Badge>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {batchTemplateId && batchSelectedSampleIds.length > 0 && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">
+                        {batchSelectedSampleIds.length} Probe(n) × {batchTemplateItemCount} Messung(en) = <strong>{batchTotalMeasurements} Messungen</strong>
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Es werden {batchSelectedSampleIds.length} Auftrag/Aufträge erstellt, jeweils mit {batchTemplateItemCount} Messungen.
+                      </p>
+                    </div>
+                    <Button size="lg" onClick={handleBatchApply} disabled={applyTemplate.isPending}>
+                      <Zap className="h-4 w-4 mr-2" />
+                      {applyTemplate.isPending ? "Erstelle…" : "Batch ausführen"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
+      )}
     </div>
   );
 }
