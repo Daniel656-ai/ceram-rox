@@ -26,6 +26,8 @@ export const ALL_PERMISSIONS = [
   "services.manage",
   "absences.manage_all",
   "admin.system",
+  "costs.manage",
+  "costs.view_personnel",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
