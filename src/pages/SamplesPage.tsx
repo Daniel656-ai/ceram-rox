@@ -291,7 +291,18 @@ export default function SamplesPage() {
         description: bulkDescription || `Serienprobe ${bulkPrefix}`,
         created_by: user!.id,
         sample_group: group,
-        hazard_categories: [],
+        hazard_categories: bulkForm.hazard_categories,
+        is_hazardous: bulkForm.is_hazardous,
+        post_measurement_action: bulkForm.post_measurement_action || undefined,
+        post_measurement_action_text: bulkForm.post_measurement_action_text || undefined,
+        storage_min_duration: bulkForm.storage_min_duration || undefined,
+        storage_hints: bulkForm.storage_hints || undefined,
+        storage_expiry_date: bulkForm.storage_expiry_date || undefined,
+        disposal_method: bulkForm.disposal_method || undefined,
+        disposal_hints: bulkForm.disposal_hints || undefined,
+        disposal_category: bulkForm.disposal_category || undefined,
+        location_id: bulkForm.location_id || undefined,
+        tags: bulkForm.tags,
       }));
       let total = 0;
       for (let i = 0; i < samples.length; i += 50) {
