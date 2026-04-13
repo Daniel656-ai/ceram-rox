@@ -736,6 +736,25 @@ export default function SamplesPage() {
                         placeholder={t("tags_placeholder")}
                       />
                     </div>
+
+                    {/* Preview */}
+                    <div className="rounded-md border p-3 space-y-2">
+                      <p className="text-sm font-medium">{bulkCount} Proben werden erstellt:</p>
+                      <div className="bg-muted rounded-md p-3 font-mono text-sm space-y-1">
+                        {bulkPreviewNames.map(n => (
+                          <div key={n} className="flex items-center gap-2">
+                            <FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />
+                            {n}
+                          </div>
+                        ))}
+                        {bulkCount > 5 && <div className="text-muted-foreground">… und {bulkCount - 5} weitere</div>}
+                      </div>
+                    </div>
+
+                    <Button className="w-full" size="lg" onClick={handleBulkCreate} disabled={isBulkCreating || bulkCount <= 0 || !bulkProjectId}>
+                      <CopyPlus className="h-4 w-4 mr-2" />
+                      {isBulkCreating ? "Erstelle…" : `${bulkCount} Proben erstellen`}
+                    </Button>
                   </>
                 )}
               </div>
