@@ -80,7 +80,7 @@ const App = () => (
               <Route path="/verbrauchsmaterialien" element={<ConsumablesPage />} />
               
               <Route path="/batch-planung" element={<BatchPlanningPage />} />
-              <Route path="/serien-proben" element={<BulkSamplePage />} />
+              
               <Route path="/laborplanung" element={<LabPlanningPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />

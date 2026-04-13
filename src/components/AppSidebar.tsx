@@ -62,7 +62,7 @@ export function AppSidebar() {
     { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: (hasPerm("measurements.view") || hasPerm("measurements.enter")) && role !== "auftraggeber" },
     
     { title: t("navigation:batch_planning"), url: "/batch-planung", icon: Zap, show: hasPerm("orders.create") || isAdmin },
-    { title: t("navigation:bulk_samples"), url: "/serien-proben", icon: CopyPlus, show: hasPerm("samples.create") || isAdmin },
+    
     { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master" },
   ].filter((item) => item.show);
 
