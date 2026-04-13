@@ -441,7 +441,7 @@ export default function ProjectDetailPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </TabsContent>}
 
         {/* MATERIAL COSTS TAB */}
         <TabsContent value="material_costs">
