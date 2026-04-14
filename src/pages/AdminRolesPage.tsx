@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCustomRoles, useCreateCustomRole, useUpdateCustomRole, useDeleteCustomRole, CustomRole } from "@/hooks/useCustomRoles";
-import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, PermissionKey, NAV_PERMISSIONS, NAV_TREE, NAV_PERMISSION_LABELS, NavPermissionKey } from "@/hooks/usePermissions";
+import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, PermissionKey, NAV_PERMISSIONS, NAV_TREE, NAV_PERMISSION_LABELS } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -254,7 +254,7 @@ export default function AdminRolesPage() {
                         {adminOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         <Checkbox
                           checked={selectedNavPerms.has("nav.admin")}
-                          onCheckedChange={(e) => { e.stopPropagation?.(); toggleNavPerm("nav.admin"); }}
+                          onCheckedChange={() => toggleNavPerm("nav.admin")}
                           onClick={(e) => e.stopPropagation()}
                         />
                         <span className="text-sm font-medium">{t("admin:nav_admin_sections")}</span>
