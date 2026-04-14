@@ -49,33 +49,37 @@ export function AppSidebar() {
   const hasPerm = (key: string) => permissions.includes(key);
   const isAdmin = hasPerm("admin.system");
 
-  // Build navigation items based on permissions
+  // Nav visibility check with backward compatibility
+  const hasNavPerm = (key: string) => {
+    const hasAnyNavPerm = permissions.some((p) => p.startsWith("nav."));
+    if (!hasAnyNavPerm) return true; // backward compat: no nav perms set = show all
+    return permissions.includes(key);
+  };
+
+  // Build navigation items based on permissions AND nav visibility
   const navItems = [
-    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard, show: true },
-    { title: role === "master" ? t("navigation:all_orders") : role === "durchfuehrer" ? t("navigation:my_orders") : t("navigation:orders"), url: "/auftraege", icon: ClipboardList, show: hasPerm("orders.view") || hasPerm("orders.create") },
-    { title: t("navigation:projects"), url: "/projekte", icon: FolderOpen, show: hasPerm("projects.view") || hasPerm("projects.create") },
-    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical, show: hasPerm("samples.view") || hasPerm("samples.create") },
-    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database, show: hasPerm("measurements.view") || hasPerm("samples.view") },
-    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
-    { title: t("navigation:consumables"), url: "/verbrauchsmaterialien", icon: Package, show: (hasPerm("raw_materials.manage") || hasPerm("samples.view")) && role !== "auftraggeber" },
-    { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays, show: hasPerm("measurements.enter") },
-    { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: (hasPerm("measurements.view") || hasPerm("measurements.enter")) && role !== "auftraggeber" },
-    
-    
-    
-    { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master" },
-  ].filter((item) => item.show);
+    { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard, show: true, nav: "nav.dashboard" },
+    { title: role === "master" ? t("navigation:all_orders") : role === "durchfuehrer" ? t("navigation:my_orders") : t("navigation:orders"), url: "/auftraege", icon: ClipboardList, show: hasPerm("orders.view") || hasPerm("orders.create"), nav: "nav.orders" },
+    { title: t("navigation:projects"), url: "/projekte", icon: FolderOpen, show: hasPerm("projects.view") || hasPerm("projects.create"), nav: "nav.projects" },
+    { title: t("navigation:samples"), url: "/proben", icon: FlaskConical, show: hasPerm("samples.view") || hasPerm("samples.create"), nav: "nav.samples" },
+    { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database, show: hasPerm("measurements.view") || hasPerm("samples.view"), nav: "nav.results_database" },
+    { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view"), nav: "nav.raw_materials" },
+    { title: t("navigation:consumables"), url: "/verbrauchsmaterialien", icon: Package, show: (hasPerm("raw_materials.manage") || hasPerm("samples.view")) && role !== "auftraggeber", nav: "nav.consumables" },
+    { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays, show: hasPerm("measurements.enter"), nav: "nav.work_planning" },
+    { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: (hasPerm("measurements.view") || hasPerm("measurements.enter")) && role !== "auftraggeber", nav: "nav.lab_planning" },
+    { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master", nav: "nav.calendar" },
+  ].filter((item) => item.show && hasNavPerm(item.nav));
 
   const adminItems = [
-    { title: t("navigation:users"), url: "/admin/benutzer", icon: Users, show: isAdmin },
-    { title: t("navigation:roles"), url: "/admin/rollen", icon: KeyRound, show: isAdmin },
-    { title: t("navigation:measurement_services"), url: "/admin/messdienstleistungen", icon: Beaker, show: hasPerm("services.manage") },
-    { title: t("navigation:workstations"), url: "/admin/arbeitsplaetze", icon: Building2, show: hasPerm("workstations.manage") },
-    { title: t("navigation:statistics"), url: "/admin/statistiken", icon: BarChart3, show: isAdmin },
-    { title: t("navigation:permissions"), url: "/admin/berechtigungen", icon: ShieldCheck, show: isAdmin },
-    { title: t("navigation:sync"), url: "/admin/synchronisation", icon: RefreshCw, show: isAdmin },
-    { title: t("navigation:database"), url: "/admin/datenbank", icon: Database, show: isAdmin },
-  ].filter((item) => item.show);
+    { title: t("navigation:users"), url: "/admin/benutzer", icon: Users, show: isAdmin, nav: "nav.admin.users" },
+    { title: t("navigation:roles"), url: "/admin/rollen", icon: KeyRound, show: isAdmin, nav: "nav.admin.roles" },
+    { title: t("navigation:measurement_services"), url: "/admin/messdienstleistungen", icon: Beaker, show: hasPerm("services.manage"), nav: "nav.admin.services" },
+    { title: t("navigation:workstations"), url: "/admin/arbeitsplaetze", icon: Building2, show: hasPerm("workstations.manage"), nav: "nav.admin.workstations" },
+    { title: t("navigation:statistics"), url: "/admin/statistiken", icon: BarChart3, show: isAdmin, nav: "nav.admin.statistics" },
+    { title: t("navigation:permissions"), url: "/admin/berechtigungen", icon: ShieldCheck, show: isAdmin, nav: "nav.admin.permissions" },
+    { title: t("navigation:sync"), url: "/admin/synchronisation", icon: RefreshCw, show: isAdmin, nav: "nav.admin.sync" },
+    { title: t("navigation:database"), url: "/admin/datenbank", icon: Database, show: isAdmin, nav: "nav.admin.database" },
+  ].filter((item) => item.show && hasNavPerm(item.nav));
 
   const roleLabel = customRoleName || (
     role === "master" ? t("common:role_master") :
