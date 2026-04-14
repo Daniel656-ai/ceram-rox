@@ -94,7 +94,7 @@
   "task_table_title": "Title",
   "task_table_assigned": "Assigned to",
   "task_table_due": "Due",
-  "permissions_title": "Permission Matrix",
+  "permissions_title": "Competency Matrix",
   "permissions_subtitle": "Define which technicians are allowed to perform which measurements.",
   "permissions_matrix": "Matrix",
   "permissions_audit": "Change Log",
