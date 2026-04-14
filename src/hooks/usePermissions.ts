@@ -32,6 +32,84 @@ export const ALL_PERMISSIONS = [
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
 
+// Navigation visibility permission keys
+export const NAV_PERMISSIONS = [
+  "nav.dashboard",
+  "nav.orders",
+  "nav.projects",
+  "nav.samples",
+  "nav.results_database",
+  "nav.raw_materials",
+  "nav.consumables",
+  "nav.work_planning",
+  "nav.lab_planning",
+  "nav.calendar",
+  "nav.admin",
+  "nav.admin.users",
+  "nav.admin.roles",
+  "nav.admin.services",
+  "nav.admin.workstations",
+  "nav.admin.statistics",
+  "nav.admin.permissions",
+  "nav.admin.sync",
+  "nav.admin.database",
+] as const;
+
+export type NavPermissionKey = (typeof NAV_PERMISSIONS)[number];
+
+export const NAV_PERMISSION_LABELS: Record<NavPermissionKey, { de: string; en: string }> = {
+  "nav.dashboard": { de: "Dashboard", en: "Dashboard" },
+  "nav.orders": { de: "Messaufträge", en: "Measurement Orders" },
+  "nav.projects": { de: "Projekte", en: "Projects" },
+  "nav.samples": { de: "Proben", en: "Samples" },
+  "nav.results_database": { de: "Ergebnisdatenbank", en: "Results Database" },
+  "nav.raw_materials": { de: "Rohstoffe", en: "Raw Materials" },
+  "nav.consumables": { de: "Verbrauchsmaterialien", en: "Consumables" },
+  "nav.work_planning": { de: "Arbeitsplanung", en: "Work Planning" },
+  "nav.lab_planning": { de: "Laborplanung", en: "Lab Planning" },
+  "nav.calendar": { de: "Kalender", en: "Calendar" },
+  "nav.admin": { de: "Administration (Hauptordner)", en: "Administration (Main)" },
+  "nav.admin.users": { de: "Benutzer", en: "Users" },
+  "nav.admin.roles": { de: "Rollen", en: "Roles" },
+  "nav.admin.services": { de: "Messdienstleistungen", en: "Measurement Services" },
+  "nav.admin.workstations": { de: "Arbeitsplätze", en: "Workstations" },
+  "nav.admin.statistics": { de: "Statistiken", en: "Statistics" },
+  "nav.admin.permissions": { de: "Kompetenzmatrix", en: "Competency Matrix" },
+  "nav.admin.sync": { de: "Synchronisation", en: "Synchronization" },
+  "nav.admin.database": { de: "Datenbank", en: "Database" },
+};
+
+export interface NavTreeNode {
+  key: NavPermissionKey;
+  children?: NavTreeNode[];
+}
+
+export const NAV_TREE: NavTreeNode[] = [
+  { key: "nav.dashboard" },
+  { key: "nav.orders" },
+  { key: "nav.projects" },
+  { key: "nav.samples" },
+  { key: "nav.results_database" },
+  { key: "nav.raw_materials" },
+  { key: "nav.consumables" },
+  { key: "nav.work_planning" },
+  { key: "nav.lab_planning" },
+  { key: "nav.calendar" },
+  {
+    key: "nav.admin",
+    children: [
+      { key: "nav.admin.users" },
+      { key: "nav.admin.roles" },
+      { key: "nav.admin.services" },
+      { key: "nav.admin.workstations" },
+      { key: "nav.admin.statistics" },
+      { key: "nav.admin.permissions" },
+      { key: "nav.admin.sync" },
+      { key: "nav.admin.database" },
+    ],
+  },
+];
+
 export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }> = {
   "samples.create": { de: "Proben anlegen", en: "Create samples" },
   "samples.view": { de: "Proben ansehen", en: "View samples" },
@@ -88,5 +166,25 @@ export function usePermissions() {
     [permissions]
   );
 
-  return { permissions, hasPermission, hasAnyPermission, hasAllPermissions };
+  const hasNavPermission = useCallback(
+    (key: NavPermissionKey) => {
+      // If no nav permissions are set at all, default to showing everything (backward compatibility)
+      const hasAnyNavPerm = permissions.some((p) => p.startsWith("nav."));
+      if (!hasAnyNavPerm) return true;
+      // For admin sub-items, check if parent "nav.admin" is set; if parent is set, children inherit unless overridden
+      if (key.startsWith("nav.admin.")) {
+        const parentSet = permissions.includes("nav.admin");
+        const childSet = permissions.includes(key);
+        // If child is explicitly set, use it; otherwise inherit from parent
+        if (childSet) return true;
+        if (parentSet && !permissions.some((p) => p.startsWith("nav.admin.") && p !== key)) return true;
+        if (parentSet) return childSet;
+        return false;
+      }
+      return permissions.includes(key);
+    },
+    [permissions]
+  );
+
+  return { permissions, hasPermission, hasAnyPermission, hasAllPermissions, hasNavPermission };
 }

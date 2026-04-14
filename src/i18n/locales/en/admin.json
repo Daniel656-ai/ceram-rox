@@ -94,7 +94,7 @@
   "task_table_title": "Title",
   "task_table_assigned": "Assigned to",
   "task_table_due": "Due",
-  "permissions_title": "Permission Matrix",
+  "permissions_title": "Competency Matrix",
   "permissions_subtitle": "Define which technicians are allowed to perform which measurements.",
   "permissions_matrix": "Matrix",
   "permissions_audit": "Change Log",
@@ -176,5 +176,11 @@
   "role_define_description": "Define name, description and permissions for this role.",
   "base_role_master": "Administrator",
   "base_role_auftraggeber": "Client",
-  "base_role_durchfuehrer": "Technician"
+  "base_role_durchfuehrer": "Technician",
+  "nav_visibility": "Navigation Visibility",
+  "nav_visibility_description": "Define which navigation sections are visible for this role.",
+  "nav_select_all": "Show all",
+  "nav_select_none": "Hide all",
+  "nav_main_sections": "Main Sections",
+  "nav_admin_sections": "Administration (Sub-sections)"
 }

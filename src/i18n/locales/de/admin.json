@@ -94,7 +94,7 @@
   "task_table_title": "Titel",
   "task_table_assigned": "Zugewiesen an",
   "task_table_due": "Fällig",
-  "permissions_title": "Berechtigungs-Matrix",
+  "permissions_title": "Kompetenzmatrix",
   "permissions_subtitle": "Legen Sie fest, welche Messdienstleister welche Messungen durchführen dürfen.",
   "permissions_matrix": "Matrix",
   "permissions_audit": "Änderungsprotokoll",
@@ -176,5 +176,11 @@
   "role_define_description": "Definieren Sie Name, Beschreibung und Berechtigungen für diese Rolle.",
   "base_role_master": "Administrator",
   "base_role_auftraggeber": "Auftraggeber",
-  "base_role_durchfuehrer": "Messdienstleister"
+  "base_role_durchfuehrer": "Messdienstleister",
+  "nav_visibility": "Navigations-Sichtbarkeit",
+  "nav_visibility_description": "Legen Sie fest, welche Bereiche in der Navigation für diese Rolle sichtbar sind.",
+  "nav_select_all": "Alle anzeigen",
+  "nav_select_none": "Alle ausblenden",
+  "nav_main_sections": "Hauptbereiche",
+  "nav_admin_sections": "Administration (Unterbereiche)"
 }
