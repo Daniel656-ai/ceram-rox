@@ -10,6 +10,7 @@ import { useServiceParameterDefs } from "@/hooks/useServiceParameters";
 import { useTemplates, useApplyTemplate } from "@/hooks/useTemplates";
 import { useSamples } from "@/hooks/useSamples";
 import { supabase } from "@/integrations/supabase/client";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
