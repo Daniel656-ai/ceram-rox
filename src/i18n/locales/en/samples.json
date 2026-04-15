@@ -30,7 +30,7 @@
   "status": "Status",
   "location": "Storage Location",
   "hazardous": "Hazardous",
-  "measurements_count": "Measurements",
+  "measurements_count": "Tasks",
   "creator": "Requester",
   "created_at": "Created",
   "project": "Project",
@@ -59,7 +59,7 @@
   "status_entsorgt": "Disposed",
   "status_zurueckgesendet": "Returned",
 
-  "post_measurement": "After Measurement *",
+  "post_measurement": "After Task *",
   "post_aufbewahren": "Store sample",
   "post_entsorgen": "Dispose sample",
   "post_zurueck": "Return to requester",
@@ -112,7 +112,7 @@
   "history_action_stored": "Sample stored",
   "history_action_location_changed": "Location changed",
   "history_action_taken_out": "Sample taken out",
-  "history_action_measurement": "Measurement performed",
+  "history_action_measurement": "Task performed",
   "history_action_subsample_created": "Sub-sample created",
   "history_action_handover": "Sample handed over",
   "history_action_returned": "Sample returned",
@@ -150,7 +150,7 @@
   "tab_history": "History",
   "tab_documents": "Documents",
   "tab_subsamples": "Sub-samples",
-  "tab_measurements": "Measurements",
+  "tab_measurements": "Tasks",
 
   "print_label": "Print Label",
   "label_size": "Label Size",
@@ -172,8 +172,8 @@
 
   "filter_project": "Project",
   "filter_project_all": "All Projects",
-  "filter_measurement_type": "Measurement Type",
-  "filter_measurement_type_all": "All Types",
+  "filter_measurement_type": "Service",
+  "filter_measurement_type_all": "All Services",
   "filter_hazardous": "Hazardous",
   "filter_hazardous_all": "All",
   "filter_hazardous_yes": "Hazardous only",
@@ -193,5 +193,5 @@
   "tags": "Tags",
   "tags_placeholder": "Enter tag and press Enter",
   "tags_section": "Tags / Keywords",
-  "measurement_type": "Measurement Type"
+  "measurement_type": "Service"
 }

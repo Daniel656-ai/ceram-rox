@@ -64,7 +64,7 @@ export default function BatchPlanningPage() {
         dueDate: dueDate || undefined,
       });
       setResult(orderIds);
-      toast.success(`${orderIds.length} Auftrag/Aufträge mit ${totalMeasurements} Messungen erstellt`);
+      toast.success(`${orderIds.length} Auftrag/Aufträge mit ${totalMeasurements} Aufgaben erstellt`);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -78,7 +78,7 @@ export default function BatchPlanningPage() {
             <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-500" />
             <h2 className="text-xl font-bold mb-2">Batch-Planung abgeschlossen!</h2>
             <p className="text-muted-foreground mb-4">
-              {result.length} Auftrag/Aufträge mit insgesamt {totalMeasurements} Messungen wurden erstellt.
+              {result.length} Auftrag/Aufträge mit insgesamt {totalMeasurements} Aufgaben wurden erstellt.
             </p>
             <div className="flex gap-2 justify-center">
               <Button variant="outline" onClick={() => { setResult(null); setSelectedSampleIds([]); }}>
@@ -97,8 +97,8 @@ export default function BatchPlanningPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Batch-Messplanung</h1>
-        <p className="text-muted-foreground">Template auf mehrere Proben anwenden – Messungen werden automatisch erstellt</p>
+        <h1 className="text-2xl font-bold text-foreground">Batch-Planung</h1>
+        <p className="text-muted-foreground">Template auf mehrere Proben anwenden – Aufgaben werden automatisch erstellt</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -116,7 +116,7 @@ export default function BatchPlanningPage() {
                   <SelectContent>
                     {(templates as any[]).map(t => (
                       <SelectItem key={t.id} value={t.id}>
-                        {t.name} ({(t.measurement_template_items || []).length} Messungen)
+                        {t.name} ({(t.measurement_template_items || []).length} Aufgaben)
                       </SelectItem>
                     ))}
                   </SelectContent>

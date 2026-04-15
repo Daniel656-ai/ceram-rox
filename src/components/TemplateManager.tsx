@@ -28,7 +28,7 @@ export default function TemplateManager({ selectedServiceIds, onApplyTemplate }:
 
   const handleSaveAsTemplate = async () => {
     if (!templateName.trim() || selectedServiceIds.length === 0) {
-      toast.error("Name und mindestens eine Messung erforderlich");
+      toast.error("Name und mindestens eine Dienstleistung erforderlich");
       return;
     }
     try {
@@ -85,7 +85,7 @@ export default function TemplateManager({ selectedServiceIds, onApplyTemplate }:
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium truncate block">{tpl.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {(tpl.measurement_template_items || []).length} Messung(en)
+                      {(tpl.measurement_template_items || []).length} Dienstleistung(en)
                     </span>
                   </div>
                   <Button
@@ -130,7 +130,7 @@ export default function TemplateManager({ selectedServiceIds, onApplyTemplate }:
             </div>
             <div>
               <p className="text-xs text-muted-foreground">
-                {selectedServiceIds.length} Messung(en) werden gespeichert
+                {selectedServiceIds.length} Dienstleistung(en) werden gespeichert
               </p>
             </div>
           </div>
