@@ -201,5 +201,18 @@
   "pstats_table_title": "Project Overview",
   "pstats_no_data": "No projects found.",
   "pstats_show_chart": "Show Chart",
-  "pstats_hide_chart": "Hide Chart"
+  "pstats_hide_chart": "Hide Chart",
+  "sstats_title": "Service Utilization",
+  "sstats_total_services": "Services",
+  "sstats_total_tasks": "Total Tasks",
+  "sstats_total_hours": "Total Hours",
+  "sstats_avg_tasks": "Avg Tasks / Service",
+  "sstats_chart_title": "Tasks & Hours per Service (Top 15)",
+  "sstats_trend_title": "Trend Over Time (Tasks & Hours)",
+  "sstats_table_title": "Service Overview",
+  "sstats_service": "Service",
+  "sstats_tasks": "Tasks",
+  "sstats_hours": "Hours",
+  "sstats_utilization": "Utilization",
+  "sstats_no_data": "No data for selected period."
 }

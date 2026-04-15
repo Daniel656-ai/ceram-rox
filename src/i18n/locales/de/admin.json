@@ -201,5 +201,18 @@
   "pstats_table_title": "Projektübersicht",
   "pstats_no_data": "Keine Projekte gefunden.",
   "pstats_show_chart": "Diagramm anzeigen",
-  "pstats_hide_chart": "Diagramm ausblenden"
+  "pstats_hide_chart": "Diagramm ausblenden",
+  "sstats_title": "Dienstleistungs-Auslastung",
+  "sstats_total_services": "Dienstleistungen",
+  "sstats_total_tasks": "Aufgaben gesamt",
+  "sstats_total_hours": "Stunden gesamt",
+  "sstats_avg_tasks": "Ø Aufgaben / DL",
+  "sstats_chart_title": "Aufgaben & Stunden pro Dienstleistung (Top 15)",
+  "sstats_trend_title": "Zeitverlauf (Aufgaben & Stunden)",
+  "sstats_table_title": "Dienstleistungs-Übersicht",
+  "sstats_service": "Dienstleistung",
+  "sstats_tasks": "Aufgaben",
+  "sstats_hours": "Stunden",
+  "sstats_utilization": "Auslastung",
+  "sstats_no_data": "Keine Daten im gewählten Zeitraum."
 }
