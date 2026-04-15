@@ -132,7 +132,7 @@ export default function AdminDatabasePage() {
           const orderIds = new Set(parsed.data.orders.map((o: any) => o.id));
           const orphaned = parsed.data.measurements.filter((m: any) => !orderIds.has(m.order_id));
           if (orphaned.length > 0) {
-            errors.push(`${orphaned.length} Messungen referenzieren nicht-existierende Aufträge`);
+            errors.push(`${orphaned.length} Aufgaben referenzieren nicht-existierende Aufträge`);
           }
         }
       }
@@ -144,12 +144,12 @@ export default function AdminDatabasePage() {
 
   const tableLabels: Record<string, string> = {
     projects: "Projekte",
-    measurement_orders: "Messaufträge",
-    order_measurements: "Messungen",
+    measurement_orders: "Aufträge",
+    order_measurements: "Aufgaben",
     samples: "Proben",
     profiles: "Benutzerprofile",
     work_logs: "Arbeitsprotokolle",
-    measurement_services: "Messdienstleistungen",
+    measurement_services: "Dienstleistungen",
     measurement_templates: "Templates",
     raw_materials: "Rohstoffe",
     consumables: "Verbrauchsmaterialien",
@@ -342,7 +342,7 @@ export default function AdminDatabasePage() {
                   <Download className="h-4 w-4" /> JSON-Export
                 </CardTitle>
                 <CardDescription>
-                  Exportiert Projekte, Aufträge, Messungen, Proben und Ergebnisse als JSON.
+                  Exportiert Projekte, Aufträge, Aufgaben, Proben und Ergebnisse als JSON.
                 </CardDescription>
               </CardHeader>
               <CardContent>

@@ -432,7 +432,7 @@ export default function OrderDetailPage() {
       {/* Completion Dialog with actual duration */}
       <Dialog open={completeOpen} onOpenChange={setCompleteOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Messung abschließen</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Aufgabe abschließen</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Standarddauer</Label>

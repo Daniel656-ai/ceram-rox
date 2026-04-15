@@ -56,7 +56,7 @@ export default function TemplatesPage() {
 
   const handleSave = async () => {
     if (!name.trim() || selectedServiceIds.length === 0) {
-      toast.error("Name und mindestens eine Messung erforderlich");
+      toast.error("Name und mindestens eine Aufgabe erforderlich");
       return;
     }
     const items = selectedServiceIds.map((sid, idx) => ({ service_id: sid, sort_order: idx }));
@@ -103,8 +103,8 @@ export default function TemplatesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Mess-Templates</h1>
-          <p className="text-muted-foreground">Vordefinierte Messungssets für schnelle Auftragserstellung</p>
+          <h1 className="text-2xl font-bold text-foreground">Aufgaben-Templates</h1>
+          <p className="text-muted-foreground">Vordefinierte Aufgabensets für schnelle Auftragserstellung</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4 mr-2" />
@@ -145,7 +145,7 @@ export default function TemplatesPage() {
                 {tpl.description && <p className="text-sm text-muted-foreground mb-2">{tpl.description}</p>}
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">
-                    {(tpl.measurement_template_items || []).length} Messung(en):
+                    {(tpl.measurement_template_items || []).length} Aufgabe(n):
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {(tpl.measurement_template_items || []).map((item: any) => (
@@ -184,7 +184,7 @@ export default function TemplatesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Messungen auswählen *</Label>
+              <Label>Aufgaben auswählen *</Label>
               <p className="text-xs text-muted-foreground">{selectedServiceIds.length} ausgewählt</p>
               <div className="border rounded-md max-h-60 overflow-y-auto">
                 {Object.entries(servicesByCategory).map(([cat, services]) => (

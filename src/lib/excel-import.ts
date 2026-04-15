@@ -155,7 +155,7 @@ export function groupRowsIntoOrders(
       };
     });
 
-    if (measurements.length === 0) errors.push("Keine Messungen angegeben");
+    if (measurements.length === 0) errors.push("Keine Aufgaben angegeben");
 
     return {
       project_number: first.project_number,

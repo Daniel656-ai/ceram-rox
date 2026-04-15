@@ -285,12 +285,12 @@ export default function ImportOrderPage() {
               Laden Sie die <strong>Vorlage</strong> herunter und füllen Sie sie mit Ihren Auftragsdaten aus.
             </p>
             <p>
-              Jede Zeile entspricht einer Messung. Mehrere Zeilen mit gleicher Projektnummer, Probenname und
+              Jede Zeile entspricht einer Aufgabe. Mehrere Zeilen mit gleicher Projektnummer, Probenname und
               Auftragstyp werden zu einem Auftrag zusammengefasst.
             </p>
             <p>
               <strong>Pflichtfelder:</strong> Projektnummer, Probenname, Probenbeschreibung, Auftragstyp,
-              Messdienstleistung
+              Dienstleistung
             </p>
             <p><strong>Auftragstypen:</strong> Kundenauftrag, Produktionsauftrag, F&E-Auftrag</p>
             <p><strong>Prioritäten:</strong> Normal, Wichtig, Höchste</p>

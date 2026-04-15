@@ -99,7 +99,7 @@ export default function LabPlanningPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Laborplanung</h1>
-          <p className="text-muted-foreground">Drag & Drop Messungsplanung</p>
+          <p className="text-muted-foreground">Drag & Drop Aufgabenplanung</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={filterAssigned} onValueChange={setFilterAssigned}>
@@ -107,7 +107,7 @@ export default function LabPlanningPage() {
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Messungen</SelectItem>
+              <SelectItem value="all">Alle Aufgaben</SelectItem>
               <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
               {(users as any[]).filter(u => u.is_active).map(u => (
                 <SelectItem key={u.user_id} value={u.user_id}>
@@ -195,7 +195,7 @@ export default function LabPlanningPage() {
                 ))}
                 {col.items.length === 0 && (
                   <div className="text-center py-8 text-sm text-muted-foreground opacity-60">
-                    Keine Messungen
+                    Keine Aufgaben
                   </div>
                 )}
               </div>
