@@ -28,6 +28,8 @@ export const ALL_PERMISSIONS = [
   "admin.system",
   "costs.manage",
   "costs.view_personnel",
+  "costs.view_hourly_rates",
+  "costs.edit_hourly_rates",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
