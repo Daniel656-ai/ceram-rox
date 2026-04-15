@@ -58,6 +58,9 @@ export default function AdminServicesPage() {
   const { data: workstations = [] } = useWorkstations();
   const updateService = useUpdateService();
   const createService = useCreateService();
+  const { hasPermission } = usePermissions();
+  const canViewRates = hasPermission("costs.view_hourly_rates");
+  const canEditRates = hasPermission("costs.edit_hourly_rates");
   const [newOpen, setNewOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<string>("labor");
