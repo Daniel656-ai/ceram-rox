@@ -18,11 +18,6 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
-import { useState, useMemo } from "react";
-import { toast } from "sonner";
-import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 
 type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs";
 
