@@ -30,7 +30,7 @@
   "status": "Status",
   "location": "Lagerort",
   "hazardous": "Gefahrstoff",
-  "measurements_count": "Messungen",
+  "measurements_count": "Aufgaben",
   "creator": "Auftraggeber",
   "created_at": "Erstellt",
   "project": "Projekt",
@@ -59,7 +59,7 @@
   "status_entsorgt": "Entsorgt",
   "status_zurueckgesendet": "Zurückgesendet",
 
-  "post_measurement": "Nach der Messung *",
+  "post_measurement": "Nach der Aufgabe *",
   "post_aufbewahren": "Probe aufbewahren",
   "post_entsorgen": "Probe entsorgen",
   "post_zurueck": "Probe zurück an Auftraggeber",
@@ -112,7 +112,7 @@
   "history_action_stored": "Probe eingelagert",
   "history_action_location_changed": "Lagerort geändert",
   "history_action_taken_out": "Probe entnommen",
-  "history_action_measurement": "Messung durchgeführt",
+  "history_action_measurement": "Aufgabe durchgeführt",
   "history_action_subsample_created": "Teilprobe erstellt",
   "history_action_handover": "Probe übergeben",
   "history_action_returned": "Probe zurückgelegt",
@@ -150,7 +150,7 @@
   "tab_history": "Historie",
   "tab_documents": "Dokumente",
   "tab_subsamples": "Teilproben",
-  "tab_measurements": "Messungen",
+  "tab_measurements": "Aufgaben",
 
   "print_label": "Etikett drucken",
   "label_size": "Etikettengröße",
@@ -172,8 +172,8 @@
 
   "filter_project": "Projekt",
   "filter_project_all": "Alle Projekte",
-  "filter_measurement_type": "Messart",
-  "filter_measurement_type_all": "Alle Messarten",
+  "filter_measurement_type": "Dienstleistung",
+  "filter_measurement_type_all": "Alle Dienstleistungen",
   "filter_hazardous": "Gefahrstoff",
   "filter_hazardous_all": "Alle",
   "filter_hazardous_yes": "Nur Gefahrstoffe",
@@ -193,5 +193,5 @@
   "tags": "Schlagworte",
   "tags_placeholder": "Schlagwort eingeben und Enter drücken",
   "tags_section": "Schlagworte / Tags",
-  "measurement_type": "Messart"
+  "measurement_type": "Dienstleistung"
 }
