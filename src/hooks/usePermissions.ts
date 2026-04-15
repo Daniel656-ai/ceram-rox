@@ -138,6 +138,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "admin.system": { de: "Systemadministration", en: "System administration" },
   "costs.manage": { de: "Kosten & Kostensätze verwalten", en: "Manage costs & rates" },
   "costs.view_personnel": { de: "Personenbezogene Kosten sehen", en: "View personnel costs" },
+  "costs.view_hourly_rates": { de: "Stundensätze sehen", en: "View hourly rates" },
+  "costs.edit_hourly_rates": { de: "Stundensätze bearbeiten", en: "Edit hourly rates" },
 };
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
