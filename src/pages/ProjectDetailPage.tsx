@@ -269,20 +269,83 @@ export default function ProjectDetailPage() {
           <Link to="/projekte"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">
-            {project.project_number}{project.project_name ? ` – ${project.project_name}` : ""}
-          </h1>
-          <p className="text-muted-foreground">{project.description || t("description")}</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight">
+              {project.project_number}{project.project_name ? ` – ${project.project_name}` : ""}
+            </h1>
+            <TrafficLightBadge
+              value={(project as any).traffic_light || "green"}
+              editable={canEditTrafficLight && !isProjectCompleted}
+              onChange={(v) => handleUpdateProject({ traffic_light: v })}
+            />
+            {isProjectCompleted && (
+              <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                {t("project_status_completed")}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+            <p>{project.description || t("description")}</p>
+            {myProjectRole && (
+              <Badge variant="secondary" className="text-xs">{t("your_role")}: {t(`role_${myProjectRole}`)}</Badge>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleCsvExport} className="print:hidden">
+        <div className="flex gap-2 print:hidden">
+          {canManagePlanning && !isProjectCompleted && (
+            <Button variant="outline" onClick={() => { handleUpdateProject({ project_status: "completed" }); toast.success(t("project_completed")); }}>
+              <CheckCircle2 className="h-4 w-4 mr-2" />{t("complete_project")}
+            </Button>
+          )}
+          {canManagePlanning && isProjectCompleted && (
+            <Button variant="outline" onClick={() => { handleUpdateProject({ project_status: "active" }); toast.success(t("project_reopened")); }}>
+              <RotateCcw className="h-4 w-4 mr-2" />{t("reopen_project")}
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleCsvExport}>
             <Download className="h-4 w-4 mr-2" />{t("csv_export")}
           </Button>
-          <Button variant="outline" onClick={handlePrint} className="print:hidden">
+          <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />{t("print_report")}
           </Button>
         </div>
       </div>
+
+      {/* Planning dates */}
+      {(canManagePlanning || (project as any).start_date || (project as any).end_date) && (
+        <Card>
+          <CardContent className="p-4 flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{t("project_start_date")}:</span>
+              {canManagePlanning && !isProjectCompleted ? (
+                <Input
+                  type="date"
+                  className="w-40 h-8"
+                  value={(project as any).start_date || ""}
+                  onChange={(e) => handleUpdateProject({ start_date: e.target.value || null })}
+                />
+              ) : (
+                <span className="text-sm">{(project as any).start_date ? new Date((project as any).start_date).toLocaleDateString("de-DE") : "–"}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{t("project_end_date")}:</span>
+              {canManagePlanning && !isProjectCompleted ? (
+                <Input
+                  type="date"
+                  className="w-40 h-8"
+                  value={(project as any).end_date || ""}
+                  onChange={(e) => handleUpdateProject({ end_date: e.target.value || null })}
+                />
+              ) : (
+                <span className="text-sm">{(project as any).end_date ? new Date((project as any).end_date).toLocaleDateString("de-DE") : "–"}</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4">
