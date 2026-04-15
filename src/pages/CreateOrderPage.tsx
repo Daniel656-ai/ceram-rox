@@ -91,6 +91,8 @@ export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canViewRates = hasPermission("costs.view_hourly_rates");
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
   const { data: workstations = [] } = useWorkstations();
