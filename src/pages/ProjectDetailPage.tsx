@@ -396,9 +396,11 @@ export default function ProjectDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="samples" className="print:block">
-        <TabsList className="print:hidden">
+        <TabsList className="print:hidden flex-wrap">
           <TabsTrigger value="samples">{t("tab_samples")}</TabsTrigger>
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
+          <TabsTrigger value="team"><Users className="h-3.5 w-3.5 mr-1" />{t("tab_team")}</TabsTrigger>
+          <TabsTrigger value="milestones">{t("tab_milestones")}</TabsTrigger>
           {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
