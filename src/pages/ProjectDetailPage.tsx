@@ -38,8 +38,9 @@ function getUserName(users: any[], userId: string) {
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation("projects");
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const queryClient = useQueryClient();
   const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
   const { data: project, isLoading } = useProjectDetail(id);
   const { data: samples = [] } = useProjectSamples(id);
@@ -48,8 +49,7 @@ export default function ProjectDetailPage() {
   const { data: projectConsumables = [] } = useProjectConsumables(id);
   const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
   const { data: timeEntries = [] } = useProjectTimeEntries(id);
-  const etaMap = useEstimatedCompletion();
-  const reportRef = useRef<HTMLDivElement>(null);
+  const { data: members = [] } = useProjectMembers(id);
 
   const sampleIds = useMemo(() => (samples as any[]).map((s: any) => s.id), [samples]);
   const { data: history = [] } = useProjectSampleHistory(sampleIds);
