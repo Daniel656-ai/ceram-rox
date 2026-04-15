@@ -50,6 +50,30 @@ export default function ProjectDetailPage() {
   const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
   const { data: timeEntries = [] } = useProjectTimeEntries(id);
   const { data: members = [] } = useProjectMembers(id);
+  const etaMap = useEstimatedCompletion();
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  // Determine current user's project role
+  const myProjectRole = useMemo(() => {
+    if (!user) return null;
+    const m = (members as any[]).find((m: any) => m.user_id === user.id);
+    return m?.role || null;
+  }, [members, user]);
+
+  const isMaster = role === "master";
+  const isLeaderOrOwner = myProjectRole === "leader" || myProjectRole === "owner";
+  const canManageTeam = isMaster || isLeaderOrOwner;
+  const canManagePlanning = isMaster || myProjectRole === "leader";
+  const canEditTrafficLight = isMaster || myProjectRole === "leader";
+  const isProjectCompleted = (project as any)?.project_status === "completed";
+
+  const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
+    if (!id) return;
+    const { error } = await supabase.from("projects").update(updates).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    queryClient.invalidateQueries({ queryKey: ["project-detail", id] });
+    queryClient.invalidateQueries({ queryKey: ["projects-with-stats"] });
+  }, [id, queryClient]);
 
   const sampleIds = useMemo(() => (samples as any[]).map((s: any) => s.id), [samples]);
   const { data: history = [] } = useProjectSampleHistory(sampleIds);
