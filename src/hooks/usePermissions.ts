@@ -147,7 +147,7 @@ export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string;
   { key: "measurements", labelDe: "Messungen", labelEn: "Measurements", permissions: ["measurements.enter", "measurements.view"] },
   { key: "orders", labelDe: "Aufträge", labelEn: "Orders", permissions: ["orders.create", "orders.view", "orders.edit", "orders.delete"] },
   { key: "projects", labelDe: "Projekte", labelEn: "Projects", permissions: ["projects.create", "projects.view", "projects.edit", "projects.assign"] },
-  { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel"] },
+  { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel", "costs.view_hourly_rates", "costs.edit_hourly_rates"] },
   { key: "general", labelDe: "Allgemein", labelEn: "General", permissions: ["priorities.edit", "locations.edit", "reports.create", "sds.manage", "raw_materials.manage"] },
   { key: "admin", labelDe: "Administration", labelEn: "Administration", permissions: ["workstations.manage", "users.manage", "services.manage", "absences.manage_all", "admin.system"] },
 ];
