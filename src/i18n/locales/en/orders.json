@@ -41,6 +41,7 @@
   "created_success": "Measurement order created successfully!",
   "create_error": "Error creating",
   "required_params": "Required parameters:",
+  "optional_params": "Optional parameters:",
   "please_select": "Please select",
   "detail_title": "Order: ",
   "planned_hours": "Planned Hours",

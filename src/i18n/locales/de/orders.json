@@ -41,6 +41,7 @@
   "created_success": "Messauftrag erfolgreich erstellt!",
   "create_error": "Fehler beim Erstellen",
   "required_params": "Pflichtparameter:",
+  "optional_params": "Optionale Parameter:",
   "please_select": "Bitte wählen",
   "detail_title": "Auftrag: {{number}}",
   "planned_hours": "Geplante Stunden",
