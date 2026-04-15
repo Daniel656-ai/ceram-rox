@@ -498,7 +498,16 @@ export default function ProjectDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* COSTS TAB - personnel costs, admin only */}
+        {/* TEAM TAB */}
+        <TabsContent value="team">
+          <ProjectTeamTab projectId={id!} canManage={canManageTeam && !isProjectCompleted} />
+        </TabsContent>
+
+        {/* MILESTONES TAB */}
+        <TabsContent value="milestones">
+          <ProjectMilestonesTab projectId={id!} canManage={canManagePlanning && !isProjectCompleted} />
+        </TabsContent>
+
         {canViewPersonnelCosts && <TabsContent value="costs">
           <div className="space-y-4">
             <Card>
