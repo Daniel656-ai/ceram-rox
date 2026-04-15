@@ -28,7 +28,7 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
   return (
     <div className="space-y-3 mb-6">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold">Zugewiesene Messungen</h4>
+        <h4 className="text-sm font-semibold">Zugewiesene Aufgaben</h4>
         <div className="flex items-center gap-2">
           <Label className="text-xs">Filter:</Label>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -46,13 +46,13 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Keine Messungen mit diesem Filter.</p>
+        <p className="text-sm text-muted-foreground">Keine Aufgaben mit diesem Filter.</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Mess-Nr.</TableHead>
-              <TableHead>Messung</TableHead>
+              <TableHead>Aufg.-Nr.</TableHead>
+              <TableHead>Aufgabe</TableHead>
               <TableHead>Priorität</TableHead>
               <TableHead>Projekt</TableHead>
               <TableHead>Zugewiesen an</TableHead>
