@@ -1,7 +1,7 @@
 {
   "dashboard": "Dashboard",
-  "orders": "Measurement Orders",
-  "all_orders": "All Measurement Orders",
+  "orders": "Orders",
+  "all_orders": "All Orders",
   "my_orders": "My Orders",
   "projects": "Projects",
   "samples": "Samples",
@@ -12,7 +12,7 @@
   "navigation": "Navigation",
   "administration": "Administration",
   "users": "Users",
-  "measurement_services": "Measurements",
+  "measurement_services": "Services",
   "workstations": "Workstations",
   "statistics": "Statistics",
   "permissions": "Competency Matrix",
