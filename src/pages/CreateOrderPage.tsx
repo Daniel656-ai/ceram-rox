@@ -179,7 +179,7 @@ export default function CreateOrderPage() {
         dueDate: batchDueDate || undefined,
       });
       setBatchResult(orderIds);
-      toast.success(`${orderIds.length} Auftrag/Aufträge mit ${batchTotalMeasurements} Messungen erstellt`);
+      toast.success(`${orderIds.length} Auftrag/Aufträge mit ${batchTotalMeasurements} Aufgaben erstellt`);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -434,7 +434,7 @@ export default function CreateOrderPage() {
               <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-500" />
               <h2 className="text-xl font-bold mb-2">Batch-Planung abgeschlossen!</h2>
               <p className="text-muted-foreground mb-4">
-                {batchResult.length} Auftrag/Aufträge mit insgesamt {batchTotalMeasurements} Messungen wurden erstellt.
+                {batchResult.length} Auftrag/Aufträge mit insgesamt {batchTotalMeasurements} Aufgaben wurden erstellt.
               </p>
               <div className="flex gap-2 justify-center">
                 <Button variant="outline" onClick={() => { setBatchResult(null); setBatchSelectedSampleIds([]); }}>
@@ -462,7 +462,7 @@ export default function CreateOrderPage() {
                         <SelectContent>
                           {(templates as any[]).map(tmpl => (
                             <SelectItem key={tmpl.id} value={tmpl.id}>
-                              {tmpl.name} ({(tmpl.measurement_template_items || []).length} Messungen)
+                              {tmpl.name} ({(tmpl.measurement_template_items || []).length} Aufgaben)
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -565,10 +565,10 @@ export default function CreateOrderPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">
-                        {batchSelectedSampleIds.length} Probe(n) × {batchTemplateItemCount} Messung(en) = <strong>{batchTotalMeasurements} Messungen</strong>
+                        {batchSelectedSampleIds.length} Probe(n) × {batchTemplateItemCount} Aufgabe(n) = <strong>{batchTotalMeasurements} Aufgaben</strong>
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Es werden {batchSelectedSampleIds.length} Auftrag/Aufträge erstellt, jeweils mit {batchTemplateItemCount} Messungen.
+                        Es werden {batchSelectedSampleIds.length} Auftrag/Aufträge erstellt, jeweils mit {batchTemplateItemCount} Aufgaben.
                       </p>
                     </div>
                     <Button size="lg" onClick={handleBatchApply} disabled={applyTemplate.isPending}>

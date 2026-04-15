@@ -66,7 +66,7 @@ const FIXED_COLUMNS = new Set([
   "priorität", "priority",
   "fälligkeitsdatum", "due_date",
   "anmerkungen", "notes",
-  "messdienstleistung", "service_name",
+  "dienstleistung", "service_name",
   "geplante stunden", "planned_hours",
 ]);
 
@@ -103,7 +103,7 @@ export function parseExcelFile(buffer: ArrayBuffer): { rows: ImportedOrderRow[];
       priority: String(row["Priorität"] || row["priority"] || "normal").trim(),
       due_date: row["Fälligkeitsdatum"] || row["due_date"] ? String(row["Fälligkeitsdatum"] || row["due_date"]).trim() : undefined,
       notes: String(row["Anmerkungen"] || row["notes"] || "").trim() || undefined,
-      service_name: String(row["Messdienstleistung"] || row["service_name"] || "").trim(),
+      service_name: String(row["Dienstleistung"] || row["Messdienstleistung"] || row["service_name"] || "").trim(),
       planned_hours: Number(row["Geplante Stunden"] || row["planned_hours"]) || 1,
       parameters: Object.keys(params).length > 0 ? params : undefined,
     };
@@ -145,7 +145,7 @@ export function groupRowsIntoOrders(
       const match = existingServices.find(
         (s) => s.service_name.toLowerCase() === r.service_name.toLowerCase()
       );
-      if (!match) errors.push(`Messdienstleistung nicht gefunden: "${r.service_name}"`);
+      if (!match) errors.push(`Dienstleistung nicht gefunden: "${r.service_name}"`);
       return {
         service_name: r.service_name,
         planned_hours: r.planned_hours,
@@ -184,7 +184,7 @@ export function generateTemplate(): void {
     "Priorität",
     "Fälligkeitsdatum",
     "Anmerkungen",
-    "Messdienstleistung",
+    "Dienstleistung",
     "Geplante Stunden",
   ];
 
@@ -197,7 +197,7 @@ export function generateTemplate(): void {
     "Normal",
     "2025-12-31",
     "",
-    "Name der Messdienstleistung",
+    "Name der Dienstleistung",
     "2",
   ];
 
@@ -233,7 +233,7 @@ export function validateRows(
     }
 
     if (!row.service_name.trim()) {
-      errors.service_name = "Messdienstleistung fehlt";
+      errors.service_name = "Dienstleistung fehlt";
     } else {
       const match = existingServices.find(
         (s) => s.service_name.toLowerCase() === row.service_name.toLowerCase()

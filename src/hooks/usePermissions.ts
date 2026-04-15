@@ -73,7 +73,7 @@ export const NAV_PERMISSION_LABELS: Record<NavPermissionKey, { de: string; en: s
   "nav.admin": { de: "Administration (Hauptordner)", en: "Administration (Main)" },
   "nav.admin.users": { de: "Benutzer", en: "Users" },
   "nav.admin.roles": { de: "Rollen", en: "Roles" },
-  "nav.admin.services": { de: "Messdienstleistungen", en: "Measurement Services" },
+  "nav.admin.services": { de: "Dienstleistungen", en: "Services" },
   "nav.admin.workstations": { de: "Arbeitsplätze", en: "Workstations" },
   "nav.admin.statistics": { de: "Statistiken", en: "Statistics" },
   "nav.admin.permissions": { de: "Kompetenzmatrix", en: "Competency Matrix" },
