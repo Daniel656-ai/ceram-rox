@@ -5,17 +5,25 @@ import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectConsumables, useProjectKnetungMaterials } from "@/hooks/useProjectMaterials";
 import { useProjectTimeEntries } from "@/hooks/useProjectTimeEntries";
+import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem, Download, CheckCircle2, RotateCcw, Users } from "lucide-react";
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
+import { ProjectTeamTab } from "@/components/ProjectTeamTab";
+import { ProjectMilestonesTab } from "@/components/ProjectMilestonesTab";
+import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
