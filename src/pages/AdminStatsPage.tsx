@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { ClipboardList, FolderOpen, Beaker, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { UtilizationSidebar } from "@/components/UtilizationSidebar";
+import { ProjectStatistics } from "@/components/ProjectStatistics";
 
 const COLORS = ["hsl(200, 60%, 32%)", "hsl(16, 75%, 48%)", "hsl(152, 55%, 36%)", "hsl(38, 85%, 50%)", "hsl(270, 50%, 50%)"];
 
@@ -71,6 +72,8 @@ export default function AdminStatsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ProjectStatistics />
 
       <UtilizationSidebar />
     </div>
