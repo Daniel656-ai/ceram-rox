@@ -17,6 +17,12 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
+import { TrafficLightBadge } from "@/components/TrafficLightBadge";
+import { useState, useMemo } from "react";
+import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 
 type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs";
 
@@ -147,6 +153,7 @@ export default function ProjectsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">{t("traffic_light")}</TableHead>
                 <TableHead>{t("project_number")}</TableHead>
                 <TableHead>{t("project_name")}</TableHead>
                 <TableHead>{t("creator")}</TableHead>
@@ -174,6 +181,9 @@ export default function ProjectsPage() {
               ) : (
                 filtered.map(p => (
                   <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell>
+                      <TrafficLightBadge value={(p as any).traffic_light || "green"} />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <Link to={`/projekte/${p.id}`} className="text-primary hover:underline">{p.project_number}</Link>
                     </TableCell>
