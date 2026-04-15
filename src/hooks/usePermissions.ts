@@ -28,6 +28,8 @@ export const ALL_PERMISSIONS = [
   "admin.system",
   "costs.manage",
   "costs.view_personnel",
+  "costs.view_hourly_rates",
+  "costs.edit_hourly_rates",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
@@ -136,6 +138,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "admin.system": { de: "Systemadministration", en: "System administration" },
   "costs.manage": { de: "Kosten & Kostensätze verwalten", en: "Manage costs & rates" },
   "costs.view_personnel": { de: "Personenbezogene Kosten sehen", en: "View personnel costs" },
+  "costs.view_hourly_rates": { de: "Stundensätze sehen", en: "View hourly rates" },
+  "costs.edit_hourly_rates": { de: "Stundensätze bearbeiten", en: "Edit hourly rates" },
 };
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
@@ -143,7 +147,7 @@ export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string;
   { key: "measurements", labelDe: "Messungen", labelEn: "Measurements", permissions: ["measurements.enter", "measurements.view"] },
   { key: "orders", labelDe: "Aufträge", labelEn: "Orders", permissions: ["orders.create", "orders.view", "orders.edit", "orders.delete"] },
   { key: "projects", labelDe: "Projekte", labelEn: "Projects", permissions: ["projects.create", "projects.view", "projects.edit", "projects.assign"] },
-  { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel"] },
+  { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel", "costs.view_hourly_rates", "costs.edit_hourly_rates"] },
   { key: "general", labelDe: "Allgemein", labelEn: "General", permissions: ["priorities.edit", "locations.edit", "reports.create", "sds.manage", "raw_materials.manage"] },
   { key: "admin", labelDe: "Administration", labelEn: "Administration", permissions: ["workstations.manage", "users.manage", "services.manage", "absences.manage_all", "admin.system"] },
 ];

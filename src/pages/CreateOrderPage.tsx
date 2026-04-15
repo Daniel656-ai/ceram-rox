@@ -10,6 +10,7 @@ import { useServiceParameterDefs } from "@/hooks/useServiceParameters";
 import { useTemplates, useApplyTemplate } from "@/hooks/useTemplates";
 import { useSamples } from "@/hooks/useSamples";
 import { supabase } from "@/integrations/supabase/client";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +91,8 @@ export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canViewRates = hasPermission("costs.view_hourly_rates");
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
   const { data: workstations = [] } = useWorkstations();
@@ -352,13 +355,13 @@ export default function CreateOrderPage() {
                   {laborServices.length > 0 && (
                     <>
                       <SelectItem value="__labor_header" disabled>{t("orders:header_lab", { defaultValue: "── Lab ──" })}</SelectItem>
-                      {laborServices.map((s) => (<SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>{s.service_name} ({s.hourly_rate} €/h)</SelectItem>))}
+                      {laborServices.map((s) => (<SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
                     </>
                   )}
                   {pilotServices.length > 0 && (
                     <>
                       <SelectItem value="__pilot_header" disabled>{t("orders:header_pilot", { defaultValue: "── Pilot Plant ──" })}</SelectItem>
-                      {pilotServices.map((s) => (<SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>{s.service_name} ({s.hourly_rate} €/h)</SelectItem>))}
+                      {pilotServices.map((s) => (<SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
                     </>
                   )}
                 </SelectContent>

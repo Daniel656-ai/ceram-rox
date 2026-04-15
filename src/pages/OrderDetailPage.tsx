@@ -31,6 +31,7 @@ export default function OrderDetailPage() {
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
+  const canViewHourlyRates = role === "master" || hasPermission("costs.view_hourly_rates");
   const { data: order, isLoading } = useOrderDetail(id);
   const { data: auditLogs = [] } = useOrderAuditLog(id);
   const updateMeasurementStatus = useUpdateMeasurementStatus();
@@ -264,7 +265,7 @@ export default function OrderDetailPage() {
                 <TableHead>Std-Dauer</TableHead>
                 <TableHead>Ist-Dauer</TableHead>
                 <TableHead>Stunden (Plan/Ist)</TableHead>
-                {canViewPersonnelCosts && <TableHead>Stundensatz</TableHead>}
+                {canViewHourlyRates && <TableHead>Stundensatz</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead>Dokumente</TableHead>
                 <TableHead>Aktionen</TableHead>
@@ -355,7 +356,7 @@ export default function OrderDetailPage() {
                       ) : '–'}
                     </TableCell>
                     <TableCell>{parseFloat(m.planned_hours || 0).toFixed(1)} / {actualHours.toFixed(1)} h</TableCell>
-                    {canViewPersonnelCosts && <TableCell>{m.measurement_services?.hourly_rate} €/h</TableCell>}
+                    {canViewHourlyRates && <TableCell>{m.measurement_services?.hourly_rate} €/h</TableCell>}
                     <TableCell><StatusBadge status={m.status} /></TableCell>
                     <TableCell className="min-w-[200px]">
                       <MeasurementDocuments
