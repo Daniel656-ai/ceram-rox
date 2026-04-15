@@ -773,6 +773,85 @@ export type Database = {
           },
         ]
       }
+      project_members: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          role: Database["public"]["Enums"]["project_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          role?: Database["public"]["Enums"]["project_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          role?: Database["public"]["Enums"]["project_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_milestones: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          id: string
+          project_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["milestone_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          project_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["milestone_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          project_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["milestone_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_time_entries: {
         Row: {
           created_at: string
@@ -832,27 +911,39 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          end_date: string | null
           id: string
           project_name: string | null
           project_number: string
+          project_status: Database["public"]["Enums"]["project_status"]
+          start_date: string | null
+          traffic_light: Database["public"]["Enums"]["traffic_light_status"]
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by: string
           description?: string | null
+          end_date?: string | null
           id?: string
           project_name?: string | null
           project_number: string
+          project_status?: Database["public"]["Enums"]["project_status"]
+          start_date?: string | null
+          traffic_light?: Database["public"]["Enums"]["traffic_light_status"]
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           project_name?: string | null
           project_number?: string
+          project_status?: Database["public"]["Enums"]["project_status"]
+          start_date?: string | null
+          traffic_light?: Database["public"]["Enums"]["traffic_light_status"]
           updated_at?: string
         }
         Relationships: []
@@ -1667,6 +1758,14 @@ export type Database = {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
       }
+      has_project_role: {
+        Args: {
+          _project_id: string
+          _role: Database["public"]["Enums"]["project_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1690,6 +1789,10 @@ export type Database = {
         Args: { _measurement_id: string; _user_id: string }
         Returns: boolean
       }
+      is_project_member: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       priority_enum_to_int: {
         Args: { p: Database["public"]["Enums"]["order_priority"] }
         Returns: number
@@ -1701,6 +1804,7 @@ export type Database = {
       downtime_status: "geplant" | "aktiv" | "abgeschlossen"
       downtime_type: "wartung" | "reparatur" | "sonstiges"
       measurement_status: "open" | "in_progress" | "completed"
+      milestone_status: "planned" | "in_progress" | "completed"
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
@@ -1709,6 +1813,8 @@ export type Database = {
         | "entsorgen"
         | "zurueck"
         | "andere"
+      project_role: "owner" | "leader" | "member"
+      project_status: "active" | "completed"
       sample_status:
         | "neu"
         | "eingelagert"
@@ -1719,6 +1825,7 @@ export type Database = {
         | "zurueckgesendet"
       service_category: "labor" | "pilot_plant"
       task_status: "open" | "in_progress" | "completed"
+      traffic_light_status: "green" | "yellow" | "red"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1851,6 +1958,7 @@ export const Constants = {
       downtime_status: ["geplant", "aktiv", "abgeschlossen"],
       downtime_type: ["wartung", "reparatur", "sonstiges"],
       measurement_status: ["open", "in_progress", "completed"],
+      milestone_status: ["planned", "in_progress", "completed"],
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
@@ -1860,6 +1968,8 @@ export const Constants = {
         "zurueck",
         "andere",
       ],
+      project_role: ["owner", "leader", "member"],
+      project_status: ["active", "completed"],
       sample_status: [
         "neu",
         "eingelagert",
@@ -1871,6 +1981,7 @@ export const Constants = {
       ],
       service_category: ["labor", "pilot_plant"],
       task_status: ["open", "in_progress", "completed"],
+      traffic_light_status: ["green", "yellow", "red"],
     },
   },
 } as const

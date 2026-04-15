@@ -24,9 +24,18 @@ export function useCreateProject() {
     mutationFn: async (project: { project_number: string; project_name?: string; description?: string; created_by: string }) => {
       const { data, error } = await supabase.from("projects").insert(project).select().single();
       if (error) throw error;
+      // Auto-add creator as project owner
+      await supabase.from("project_members").insert({
+        project_id: data.id,
+        user_id: project.created_by,
+        role: "owner",
+      } as any);
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["projects-with-stats"] });
+    },
   });
 }
 

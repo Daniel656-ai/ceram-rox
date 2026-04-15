@@ -5,17 +5,25 @@ import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectConsumables, useProjectKnetungMaterials } from "@/hooks/useProjectMaterials";
 import { useProjectTimeEntries } from "@/hooks/useProjectTimeEntries";
+import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Gem, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users } from "lucide-react";
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
+import { ProjectTeamTab } from "@/components/ProjectTeamTab";
+import { ProjectMilestonesTab } from "@/components/ProjectMilestonesTab";
+import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
@@ -30,8 +38,9 @@ function getUserName(users: any[], userId: string) {
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation("projects");
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { hasPermission } = usePermissions();
+  const queryClient = useQueryClient();
   const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
   const { data: project, isLoading } = useProjectDetail(id);
   const { data: samples = [] } = useProjectSamples(id);
@@ -40,8 +49,31 @@ export default function ProjectDetailPage() {
   const { data: projectConsumables = [] } = useProjectConsumables(id);
   const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
   const { data: timeEntries = [] } = useProjectTimeEntries(id);
+  const { data: members = [] } = useProjectMembers(id);
   const etaMap = useEstimatedCompletion();
   const reportRef = useRef<HTMLDivElement>(null);
+
+  // Determine current user's project role
+  const myProjectRole = useMemo(() => {
+    if (!user) return null;
+    const m = (members as any[]).find((m: any) => m.user_id === user.id);
+    return m?.role || null;
+  }, [members, user]);
+
+  const isMaster = role === "master";
+  const isLeaderOrOwner = myProjectRole === "leader" || myProjectRole === "owner";
+  const canManageTeam = isMaster || isLeaderOrOwner;
+  const canManagePlanning = isMaster || myProjectRole === "leader";
+  const canEditTrafficLight = isMaster || myProjectRole === "leader";
+  const isProjectCompleted = (project as any)?.project_status === "completed";
+
+  const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
+    if (!id) return;
+    const { error } = await supabase.from("projects").update(updates).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    queryClient.invalidateQueries({ queryKey: ["project-detail", id] });
+    queryClient.invalidateQueries({ queryKey: ["projects-with-stats"] });
+  }, [id, queryClient]);
 
   const sampleIds = useMemo(() => (samples as any[]).map((s: any) => s.id), [samples]);
   const { data: history = [] } = useProjectSampleHistory(sampleIds);
@@ -237,20 +269,83 @@ export default function ProjectDetailPage() {
           <Link to="/projekte"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">
-            {project.project_number}{project.project_name ? ` – ${project.project_name}` : ""}
-          </h1>
-          <p className="text-muted-foreground">{project.description || t("description")}</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight">
+              {project.project_number}{project.project_name ? ` – ${project.project_name}` : ""}
+            </h1>
+            <TrafficLightBadge
+              value={(project as any).traffic_light || "green"}
+              editable={canEditTrafficLight && !isProjectCompleted}
+              onChange={(v) => handleUpdateProject({ traffic_light: v })}
+            />
+            {isProjectCompleted && (
+              <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                {t("project_status_completed")}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+            <p>{project.description || t("description")}</p>
+            {myProjectRole && (
+              <Badge variant="secondary" className="text-xs">{t("your_role")}: {t(`role_${myProjectRole}`)}</Badge>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleCsvExport} className="print:hidden">
+        <div className="flex gap-2 print:hidden">
+          {canManagePlanning && !isProjectCompleted && (
+            <Button variant="outline" onClick={() => { handleUpdateProject({ project_status: "completed" }); toast.success(t("project_completed")); }}>
+              <CheckCircle2 className="h-4 w-4 mr-2" />{t("complete_project")}
+            </Button>
+          )}
+          {canManagePlanning && isProjectCompleted && (
+            <Button variant="outline" onClick={() => { handleUpdateProject({ project_status: "active" }); toast.success(t("project_reopened")); }}>
+              <RotateCcw className="h-4 w-4 mr-2" />{t("reopen_project")}
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleCsvExport}>
             <Download className="h-4 w-4 mr-2" />{t("csv_export")}
           </Button>
-          <Button variant="outline" onClick={handlePrint} className="print:hidden">
+          <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />{t("print_report")}
           </Button>
         </div>
       </div>
+
+      {/* Planning dates */}
+      {(canManagePlanning || (project as any).start_date || (project as any).end_date) && (
+        <Card>
+          <CardContent className="p-4 flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{t("project_start_date")}:</span>
+              {canManagePlanning && !isProjectCompleted ? (
+                <Input
+                  type="date"
+                  className="w-40 h-8"
+                  value={(project as any).start_date || ""}
+                  onChange={(e) => handleUpdateProject({ start_date: e.target.value || null })}
+                />
+              ) : (
+                <span className="text-sm">{(project as any).start_date ? new Date((project as any).start_date).toLocaleDateString("de-DE") : "–"}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{t("project_end_date")}:</span>
+              {canManagePlanning && !isProjectCompleted ? (
+                <Input
+                  type="date"
+                  className="w-40 h-8"
+                  value={(project as any).end_date || ""}
+                  onChange={(e) => handleUpdateProject({ end_date: e.target.value || null })}
+                />
+              ) : (
+                <span className="text-sm">{(project as any).end_date ? new Date((project as any).end_date).toLocaleDateString("de-DE") : "–"}</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4">
@@ -301,9 +396,11 @@ export default function ProjectDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="samples" className="print:block">
-        <TabsList className="print:hidden">
+        <TabsList className="print:hidden flex-wrap">
           <TabsTrigger value="samples">{t("tab_samples")}</TabsTrigger>
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
+          <TabsTrigger value="team"><Users className="h-3.5 w-3.5 mr-1" />{t("tab_team")}</TabsTrigger>
+          <TabsTrigger value="milestones">{t("tab_milestones")}</TabsTrigger>
           {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
@@ -401,7 +498,16 @@ export default function ProjectDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* COSTS TAB - personnel costs, admin only */}
+        {/* TEAM TAB */}
+        <TabsContent value="team">
+          <ProjectTeamTab projectId={id!} canManage={canManageTeam && !isProjectCompleted} />
+        </TabsContent>
+
+        {/* MILESTONES TAB */}
+        <TabsContent value="milestones">
+          <ProjectMilestonesTab projectId={id!} canManage={canManagePlanning && !isProjectCompleted} />
+        </TabsContent>
+
         {canViewPersonnelCosts && <TabsContent value="costs">
           <div className="space-y-4">
             <Card>
