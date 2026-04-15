@@ -225,10 +225,10 @@ export default function BatchPlanningPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">
-                  {selectedSampleIds.length} Probe(n) × {templateItemCount} Messung(en) = <strong>{totalMeasurements} Messungen</strong>
+                  {selectedSampleIds.length} Probe(n) × {templateItemCount} Aufgabe(n) = <strong>{totalMeasurements} Aufgaben</strong>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Es werden {selectedSampleIds.length} Auftrag/Aufträge erstellt, jeweils mit {templateItemCount} Messungen.
+                  Es werden {selectedSampleIds.length} Auftrag/Aufträge erstellt, jeweils mit {templateItemCount} Aufgaben.
                 </p>
               </div>
               <Button size="lg" onClick={handleApply} disabled={applyTemplate.isPending}>
