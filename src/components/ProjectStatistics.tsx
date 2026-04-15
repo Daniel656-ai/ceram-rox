@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useProjects } from "@/hooks/useProjects";
 import { useOrders } from "@/hooks/useOrders";
-import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useUsers } from "@/hooks/useUsers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -83,13 +82,6 @@ export function ProjectStatistics() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showChart, setShowChart] = useState(true);
-
-  // Build order->project mapping
-  const orderProjectMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    orders.forEach(o => { map[o.id] = o.project_id; });
-    return map;
-  }, [orders]);
 
   // Order IDs per project
   const orderIdsByProject = useMemo(() => {
@@ -347,7 +339,7 @@ export function ProjectStatistics() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <TrafficLightBadge status={p.traffic_light as "green" | "yellow" | "red"} />
+                      <TrafficLightBadge value={p.traffic_light} />
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {p.completedMeasurements}/{p.totalMeasurements}
