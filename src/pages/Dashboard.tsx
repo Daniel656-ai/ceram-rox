@@ -174,7 +174,7 @@ export default function Dashboard() {
           <div className="relative max-w-lg">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Projekte, Aufträge, Messungen, Proben durchsuchen..."
+              placeholder="Projekte, Aufträge, Aufgaben, Proben durchsuchen..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9"
@@ -260,14 +260,14 @@ export default function Dashboard() {
                 <div>
                   <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
                     <Clock className="h-4 w-4 text-primary" />
-                    Messungen ({filteredMeasurements.length})
+                    Aufgaben ({filteredMeasurements.length})
                   </h3>
                   <div className="rounded-md border overflow-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Mess-Nr.</TableHead>
-                          <TableHead>Messart</TableHead>
+                          <TableHead>Aufg.-Nr.</TableHead>
+                          <TableHead>Dienstleistung</TableHead>
                           <TableHead>Auftrag</TableHead>
                           <TableHead>{t("common:status")}</TableHead>
                           <TableHead className="w-16"></TableHead>
@@ -340,7 +340,7 @@ export default function Dashboard() {
           )}
 
           {!hasSearch && (
-            <p className="text-sm text-muted-foreground">Mindestens 2 Zeichen eingeben, um Projekte, Aufträge, Messungen und Proben zu durchsuchen.</p>
+            <p className="text-sm text-muted-foreground">Mindestens 2 Zeichen eingeben, um Projekte, Aufträge, Aufgaben und Proben zu durchsuchen.</p>
           )}
         </CardContent>
       </Card>
@@ -349,7 +349,7 @@ export default function Dashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            {role === "durchfuehrer" ? t("measurements:no_measurements", "Meine offenen Messungen") : t("orders:title")}
+            {role === "durchfuehrer" ? t("measurements:no_measurements", "Meine offenen Aufgaben") : t("orders:title")}
           </CardTitle>
         </CardHeader>
         <CardContent>

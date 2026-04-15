@@ -108,7 +108,7 @@ export default function OrderDetailPage() {
       if (deviationReason.trim()) updatePayload.duration_deviation_reason = deviationReason.trim();
       const { error } = await supabase.from("order_measurements").update(updatePayload).eq("id", completeMeasurementId);
       if (error) throw error;
-      toast.success("Messung abgeschlossen");
+      toast.success("Aufgabe abgeschlossen");
       setCompleteOpen(false);
       // Refresh
       window.location.reload();
@@ -203,9 +203,9 @@ export default function OrderDetailPage() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Messauftrag löschen?</AlertDialogTitle>
+                  <AlertDialogTitle>Auftrag löschen?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Dieser Messauftrag und alle zugehörigen Messungen werden unwiderruflich gelöscht.
+                    Dieser Auftrag und alle zugehörigen Aufgaben werden unwiderruflich gelöscht.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -251,15 +251,15 @@ export default function OrderDetailPage() {
 
       {/* Measurements Table */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Messungen ({measurements.length})</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Aufgaben ({measurements.length})</CardTitle></CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Mess-Nr.</TableHead>
-                <TableHead>Messung</TableHead>
+                <TableHead>Aufg.-Nr.</TableHead>
+                <TableHead>Aufgabe</TableHead>
                 <TableHead>Priorität</TableHead>
-                <TableHead>Messtechniker</TableHead>
+                <TableHead>Techniker</TableHead>
                 <TableHead>Arbeitsplatz</TableHead>
                 <TableHead>Kategorie</TableHead>
                 <TableHead>Std-Dauer</TableHead>
@@ -313,7 +313,7 @@ export default function OrderDetailPage() {
                           onValueChange={(val) => {
                             const newVal = val === "unassigned" ? null : val;
                             assignMeasurement.mutate({ id: m.id, assigned_to: newVal }, {
-                              onSuccess: () => toast.success("Messtechniker zugewiesen"),
+                              onSuccess: () => toast.success("Techniker zugewiesen"),
                               onError: (err: any) => toast.error("Fehler", { description: err.message }),
                             });
                           }}

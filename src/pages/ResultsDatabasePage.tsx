@@ -197,7 +197,7 @@ export default function ResultsDatabasePage() {
             Ergebnisdatenbank
           </h1>
           <p className="text-muted-foreground">
-            {filteredRecords.length} von {records.length} abgeschlossenen Messungen
+            {filteredRecords.length} von {records.length} abgeschlossenen Aufgaben
           </p>
         </div>
         <div className="flex gap-2">
@@ -297,7 +297,7 @@ export default function ResultsDatabasePage() {
                     {filteredRecords.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={9 + Math.min(outputParameterNames.length, 5)} className="text-center text-muted-foreground py-8">
-                          Keine abgeschlossenen Messungen gefunden
+                          Keine abgeschlossenen Aufgaben gefunden
                         </TableCell>
                       </TableRow>
                     ) : (
