@@ -15,6 +15,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ServiceParameterEditor from "@/components/ServiceParameterEditor";
+import { usePermissions } from "@/hooks/usePermissions";
 
 function DurationCell({ service, onUpdate, t }: { service: any; onUpdate: (id: string, val: number) => void; t: any }) {
   const [editing, setEditing] = useState(false);
@@ -149,7 +150,7 @@ export default function AdminServicesPage() {
               <TableHead>{t("admin:service_workstation")}</TableHead>
               <TableHead>{t("admin:service_responsible")}</TableHead>
               <TableHead>{t("admin:service_duration")}</TableHead>
-              <TableHead>{t("admin:service_rate")}</TableHead>
+              {canViewRates && <TableHead>{t("admin:service_rate")}</TableHead>}
               <TableHead>{t("admin:service_parameters")}</TableHead>
               <TableHead>{t("admin:service_status")}</TableHead>
             </TableRow>
@@ -200,19 +201,23 @@ export default function AdminServicesPage() {
                     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
                   }} />
                 </TableCell>
+                {canViewRates && (
                 <TableCell>
-                  {editId === s.id ? (
+                  {canEditRates && editId === s.id ? (
                     <div className="flex gap-2">
                       <Input type="number" value={editRate} onChange={e => setEditRate(e.target.value)} className="w-24 h-8" />
                       <Button size="sm" onClick={() => handleRateUpdate(s.id)}>OK</Button>
                       <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>✕</Button>
                     </div>
-                  ) : (
+                  ) : canEditRates ? (
                     <button className="hover:underline text-left" onClick={() => { setEditId(s.id); setEditRate(String(s.hourly_rate)); }}>
                       {s.hourly_rate} €/h
                     </button>
+                  ) : (
+                    <span>{s.hourly_rate} €/h</span>
                   )}
                 </TableCell>
+                )}
                 <TableCell>
                   <Button
                     size="sm"
@@ -280,7 +285,7 @@ export default function AdminServicesPage() {
                 </Select>
               </div>
               <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
-              <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>
+              {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
               <Button onClick={handleCreate}>{t("common:create")}</Button>
             </div>
           </DialogContent>
