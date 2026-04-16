@@ -185,5 +185,11 @@
   "milestone_none": "No milestones yet",
   "milestone_title_required": "Title is required",
   "milestone_timeline": "Timeline",
-  "your_role": "Your Role"
+  "your_role": "Your Role",
+  "active_projects": "Active Projects",
+  "completed_projects": "Completed Projects",
+  "no_completed_projects": "No completed projects",
+  "show_completed": "Show completed",
+  "hide_completed": "Hide completed",
+  "completed_at": "Completed on"
 }
