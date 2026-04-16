@@ -50,5 +50,8 @@
   "description_optional": "Description (optional)",
   "weekend": "Weekend",
   "holiday": "Holiday",
-  "no_events": "No events"
+  "no_events": "No events",
+  "vacation_summary": "Vacation Overview",
+  "vacation_entitlement_info": "Legal vacation entitlement: {{days}} working days/year (5 weeks)",
+  "days_used": "days used"
 }
