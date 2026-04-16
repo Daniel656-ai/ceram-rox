@@ -107,6 +107,12 @@ export function isWorkingDay(date: Date, holidaySet?: Set<string>): boolean {
   return !set.has(formatDateKey(date));
 }
 
+/** Get working hours for a specific date (0 if weekend/holiday). */
+export function getWorkingHoursForDate(date: Date, holidaySet?: Set<string>): number {
+  if (!isWorkingDay(date, holidaySet)) return 0;
+  return HOURS_PER_WEEKDAY[date.getDay()];
+}
+
 /**
  * Add N working days to a date, skipping weekends and Austrian holidays.
  * Returns the resulting date.
