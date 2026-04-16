@@ -1,7 +1,7 @@
 import { useProjectsWithStats } from "@/hooks/useProjectDetail";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign } from "lucide-react";
+import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -33,13 +33,14 @@ export default function ProjectsPage() {
   const [sortBy, setSortBy] = useState<SortOption>("created_desc");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ project_number: "", project_name: "", description: "" });
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const getUserName = (userId: string) => {
     const u = (users as any[]).find((u: any) => u.user_id === userId);
     return u ? `${u.first_name} ${u.last_name}`.trim() || "–" : "–";
   };
 
-  const filtered = useMemo(() => {
+  const { activeProjects, completedProjects } = useMemo(() => {
     let result = [...projects];
     const q = search.toLowerCase().trim();
 
@@ -63,7 +64,11 @@ export default function ProjectsPage() {
       }
     });
 
-    return result;
+    const active = result.filter(p => p.project_status !== "completed");
+    const completed = result.filter(p => p.project_status === "completed")
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+    return { activeProjects: active, completedProjects: completed };
   }, [projects, search, sortBy, users]);
 
   const handleCreate = async () => {
@@ -85,6 +90,96 @@ export default function ProjectsPage() {
       toast.error(e.message || t("create_error"));
     }
   };
+
+  const dateLocale = i18n.language === "en" ? "en-GB" : "de-DE";
+
+  const renderProjectRow = (p: any) => (
+    <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50">
+      <TableCell>
+        <TrafficLightBadge value={(p as any).traffic_light || "green"} />
+      </TableCell>
+      <TableCell className="font-medium">
+        <Link to={`/projekte/${p.id}`} className="text-primary hover:underline">{p.project_number}</Link>
+      </TableCell>
+      <TableCell>
+        <Link to={`/projekte/${p.id}`} className="hover:underline">{p.project_name || "–"}</Link>
+      </TableCell>
+      <TableCell>{getUserName(p.created_by)}</TableCell>
+      <TableCell className="text-center">
+        <Badge variant="secondary">{p.stats.sampleCount}</Badge>
+      </TableCell>
+      <TableCell className="text-center">
+        <Badge variant="secondary">{p.stats.measurementCount}</Badge>
+      </TableCell>
+      <TableCell className="text-center">
+        {p.stats.totalHours > 0 ? `${p.stats.totalHours.toFixed(1)}h` : "–"}
+      </TableCell>
+      <TableCell className="text-center">
+        {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${(p.stats.totalCost + p.stats.materialCost).toFixed(0)}€` : "–"}
+      </TableCell>
+      <TableCell>{new Date(p.created_at).toLocaleDateString(dateLocale)}</TableCell>
+      {role === "master" && (
+        <TableCell>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={e => e.stopPropagation()}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("delete_description_prefix")}„{p.project_number}"{t("delete_description_suffix")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("cancel", { ns: "common" })}</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={async () => {
+                    try {
+                      await deleteProject.mutateAsync(p.id);
+                      toast.success(t("deleted"));
+                    } catch (e: any) {
+                      toast.error(e.message || t("delete_error"));
+                    }
+                  }}
+                >
+                  {t("delete", { ns: "common" })}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </TableCell>
+      )}
+    </TableRow>
+  );
+
+  const tableHeaders = (
+    <TableHeader>
+      <TableRow>
+        <TableHead className="w-12">{t("traffic_light")}</TableHead>
+        <TableHead>{t("project_number")}</TableHead>
+        <TableHead>{t("project_name")}</TableHead>
+        <TableHead>{t("creator")}</TableHead>
+        <TableHead className="text-center">
+          <div className="flex items-center justify-center gap-1"><Package className="h-3.5 w-3.5" />{t("samples")}</div>
+        </TableHead>
+        <TableHead className="text-center">
+          <div className="flex items-center justify-center gap-1"><FlaskConical className="h-3.5 w-3.5" />{t("measurements")}</div>
+        </TableHead>
+        <TableHead className="text-center">
+          <div className="flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" />{t("hours")}</div>
+        </TableHead>
+        <TableHead className="text-center">
+          <div className="flex items-center justify-center gap-1"><DollarSign className="h-3.5 w-3.5" />{t("costs")}</div>
+        </TableHead>
+        <TableHead>{t("created_at")}</TableHead>
+        {role === "master" && <TableHead className="w-12"></TableHead>}
+      </TableRow>
+    </TableHeader>
+  );
 
   return (
     <div className="space-y-6">
@@ -143,104 +238,63 @@ export default function ProjectsPage() {
         </Select>
       </div>
 
+      {/* Active Projects */}
       <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            {t("active_projects")}
+            <Badge variant="secondary">{activeProjects.length}</Badge>
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">{t("traffic_light")}</TableHead>
-                <TableHead>{t("project_number")}</TableHead>
-                <TableHead>{t("project_name")}</TableHead>
-                <TableHead>{t("creator")}</TableHead>
-                <TableHead className="text-center">
-                  <div className="flex items-center justify-center gap-1"><Package className="h-3.5 w-3.5" />{t("samples")}</div>
-                </TableHead>
-                <TableHead className="text-center">
-                  <div className="flex items-center justify-center gap-1"><FlaskConical className="h-3.5 w-3.5" />{t("measurements")}</div>
-                </TableHead>
-                <TableHead className="text-center">
-                  <div className="flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" />{t("hours")}</div>
-                </TableHead>
-                <TableHead className="text-center">
-                  <div className="flex items-center justify-center gap-1"><DollarSign className="h-3.5 w-3.5" />{t("costs")}</div>
-                </TableHead>
-                <TableHead>{t("created_at")}</TableHead>
-                {role === "master" && <TableHead className="w-12"></TableHead>}
-              </TableRow>
-            </TableHeader>
+            {tableHeaders}
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8">{t("loading")}</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("no_projects")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8">{t("loading")}</TableCell></TableRow>
+              ) : activeProjects.length === 0 ? (
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("no_projects")}</TableCell></TableRow>
               ) : (
-                filtered.map(p => (
-                  <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell>
-                      <TrafficLightBadge value={(p as any).traffic_light || "green"} />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <Link to={`/projekte/${p.id}`} className="text-primary hover:underline">{p.project_number}</Link>
-                    </TableCell>
-                    <TableCell>
-                      <Link to={`/projekte/${p.id}`} className="hover:underline">{p.project_name || "–"}</Link>
-                    </TableCell>
-                    <TableCell>{getUserName(p.created_by)}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">{p.stats.sampleCount}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">{p.stats.measurementCount}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {p.stats.totalHours > 0 ? `${p.stats.totalHours.toFixed(1)}h` : "–"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${(p.stats.totalCost + p.stats.materialCost).toFixed(0)}€` : "–"}
-                    </TableCell>
-                    <TableCell>{new Date(p.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
-                    {role === "master" && (
-                      <TableCell>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={e => e.stopPropagation()}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {t("delete_description_prefix")}„{p.project_number}"{t("delete_description_suffix")}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>{t("cancel", { ns: "common" })}</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                onClick={async () => {
-                                  try {
-                                    await deleteProject.mutateAsync(p.id);
-                                    toast.success(t("deleted"));
-                                  } catch (e: any) {
-                                    toast.error(e.message || t("delete_error"));
-                                  }
-                                }}
-                              >
-                                {t("delete", { ns: "common" })}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
+                activeProjects.map(renderProjectRow)
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Completed Projects */}
+      {completedProjects.length > 0 && (
+        <div className="space-y-2">
+          <Button
+            variant="ghost"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => setShowCompleted(v => !v)}
+          >
+            {showCompleted ? <ChevronUp className="h-4 w-4 mr-2" /> : <ChevronDown className="h-4 w-4 mr-2" />}
+            {showCompleted ? t("hide_completed") : t("show_completed")}
+            <Badge variant="outline" className="ml-2">{completedProjects.length}</Badge>
+          </Button>
+
+          {showCompleted && (
+            <Card className="border-muted bg-muted/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2 text-muted-foreground">
+                  <CheckCircle2 className="h-5 w-5" />
+                  {t("completed_projects")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  {tableHeaders}
+                  <TableBody>
+                    {completedProjects.map(renderProjectRow)}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
