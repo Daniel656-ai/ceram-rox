@@ -63,6 +63,18 @@ export function ServiceStatistics() {
     },
   });
 
+  // Calculate working days in date range (Mo-Fr, excluding Austrian holidays)
+  const workingDaysInRange = useMemo(() => {
+    const days = eachDayOfInterval({ start: dateFrom, end: dateTo });
+    const years = [...new Set(days.map(d => d.getFullYear()))];
+    const holidayDates = new Set(
+      years.flatMap(y => getAustrianHolidays(y).map(h => format(h.date, "yyyy-MM-dd")))
+    );
+    return days.filter(d => !isWeekend(d) && !holidayDates.has(format(d, "yyyy-MM-dd"))).length;
+  }, [dateFrom, dateTo]);
+
+  const capacityHours = workingDaysInRange * 8; // 1 FTE = 8h/day
+
   const stats = useMemo(() => {
     const filtered = categoryFilter === "all" ? services : services.filter(s => s.category === categoryFilter);
 
@@ -73,7 +85,11 @@ export function ServiceStatistics() {
         return sum + Number(m.actual_duration_hours ?? m.planned_hours ?? svc.standard_duration_hours ?? 0);
       }, 0);
 
-      // Utilization: ratio of tasks to max tasks across all services (normalized later)
+      // Absolute utilization: actual hours / available capacity (1 FTE)
+      const utilization = capacityHours > 0
+        ? Math.round((totalHours / capacityHours) * 100 * 10) / 10
+        : 0;
+
       return {
         id: svc.id,
         name: svc.service_name,
@@ -83,14 +99,9 @@ export function ServiceStatistics() {
         completedCount: completed.length,
         totalHours: Math.round(totalHours * 10) / 10,
         standardDuration: svc.standard_duration_hours,
-        utilization: 0,
+        utilization,
+        capacityHours,
       };
-    });
-
-    // Calculate relative utilization (highest = 100%)
-    const maxTasks = Math.max(1, ...result.map(r => r.taskCount));
-    result.forEach(r => {
-      r.utilization = Math.round((r.taskCount / maxTasks) * 100 * 10) / 10;
     });
 
     // Sort
@@ -104,7 +115,7 @@ export function ServiceStatistics() {
     });
 
     return result;
-  }, [services, measurements, sortKey, sortDir, categoryFilter]);
+  }, [services, measurements, sortKey, sortDir, categoryFilter, capacityHours]);
 
   // Trend data: group by month
   const trendData = useMemo(() => {
