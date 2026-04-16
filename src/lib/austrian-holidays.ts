@@ -1,7 +1,20 @@
 /**
  * Austrian public holidays calculation including Easter-based movable holidays.
  * Uses the Anonymous Gregorian algorithm (Meeus/Jones/Butcher) for Easter.
+ *
+ * Austrian standard working hours (38.5h/week):
+ * - Monday–Thursday: 7.75h/day
+ * - Friday: 7.5h/day
+ * - Saturday/Sunday: 0h
+ *
+ * Vacation entitlement: 5 weeks (25 working days) per year.
  */
+
+/** Hours per weekday: index 0 = Sunday, 6 = Saturday */
+export const HOURS_PER_WEEKDAY: readonly number[] = [0, 7.75, 7.75, 7.75, 7.75, 7.5, 0];
+export const WEEKLY_HOURS = 38.5;
+export const VACATION_WEEKS_PER_YEAR = 5;
+export const VACATION_DAYS_PER_YEAR = 25;
 
 interface Holiday {
   date: Date;
@@ -94,6 +107,12 @@ export function isWorkingDay(date: Date, holidaySet?: Set<string>): boolean {
   return !set.has(formatDateKey(date));
 }
 
+/** Get working hours for a specific date (0 if weekend/holiday). */
+export function getWorkingHoursForDate(date: Date, holidaySet?: Set<string>): number {
+  if (!isWorkingDay(date, holidaySet)) return 0;
+  return HOURS_PER_WEEKDAY[date.getDay()];
+}
+
 /**
  * Add N working days to a date, skipping weekends and Austrian holidays.
  * Returns the resulting date.
@@ -129,6 +148,26 @@ export function countWorkingDays(start: Date, end: Date, holidaySet?: Set<string
     if (isWorkingDay(current, set)) count++;
   }
   return count;
+}
+
+/**
+ * Sum the actual working hours between two dates,
+ * respecting Mo-Thu 7.75h, Fr 7.5h, weekends 0, holidays 0.
+ */
+export function countWorkingHours(start: Date, end: Date, holidaySet?: Set<string>): number {
+  const minYear = Math.min(start.getFullYear(), end.getFullYear());
+  const maxYear = Math.max(start.getFullYear(), end.getFullYear());
+  const years = [];
+  for (let y = minYear; y <= maxYear; y++) years.push(y);
+  const set = holidaySet ?? getHolidaySet(minYear, years.slice(1));
+
+  let hours = 0;
+  const current = new Date(start);
+  while (current < end) {
+    current.setDate(current.getDate() + 1);
+    hours += getWorkingHoursForDate(current, set);
+  }
+  return hours;
 }
 
 /**

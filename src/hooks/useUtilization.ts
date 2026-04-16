@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
-import { countWorkingDays } from "@/lib/austrian-holidays";
+import { countWorkingHours } from "@/lib/austrian-holidays";
 
 export type TimePeriod = "week" | "month" | "quarter" | "year";
 
@@ -15,9 +15,9 @@ function getDateRange(period: TimePeriod, reference = new Date()) {
 }
 
 function getWorkingHours(start: Date, end: Date, downtimeHours: number): number {
-  // Count actual working days (Mon-Fri, excluding Austrian holidays)
-  const workingDays = countWorkingDays(start, end);
-  return Math.max(1, workingDays * 8 - downtimeHours);
+  // Sum actual Austrian working hours (Mo-Thu 7.75h, Fr 7.5h, holidays 0)
+  const totalHours = countWorkingHours(start, end);
+  return Math.max(1, totalHours - downtimeHours);
 }
 
 export function useWorkstationUtilization(period: TimePeriod) {

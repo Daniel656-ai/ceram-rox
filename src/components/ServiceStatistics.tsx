@@ -14,7 +14,7 @@ import { format, subDays, subMonths, startOfYear, startOfMonth, endOfMonth, each
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import { getAustrianHolidays } from "@/lib/austrian-holidays";
+import { getAustrianHolidays, HOURS_PER_WEEKDAY } from "@/lib/austrian-holidays";
 
 type SortKey = "name" | "taskCount" | "totalHours" | "utilization";
 type SortDir = "asc" | "desc";
@@ -63,17 +63,23 @@ export function ServiceStatistics() {
     },
   });
 
-  // Calculate working days in date range (Mo-Fr, excluding Austrian holidays)
-  const workingDaysInRange = useMemo(() => {
+  // Calculate working hours in date range (Mo-Thu 7.75h, Fr 7.5h, excluding AT holidays)
+  const { workingDaysInRange, capacityHours } = useMemo(() => {
     const days = eachDayOfInterval({ start: dateFrom, end: dateTo });
     const years = [...new Set(days.map(d => d.getFullYear()))];
     const holidayDates = new Set(
       years.flatMap(y => getAustrianHolidays(y).map(h => format(h.date, "yyyy-MM-dd")))
     );
-    return days.filter(d => !isWeekend(d) && !holidayDates.has(format(d, "yyyy-MM-dd"))).length;
+    let wdCount = 0;
+    let hours = 0;
+    days.forEach(d => {
+      if (!isWeekend(d) && !holidayDates.has(format(d, "yyyy-MM-dd"))) {
+        wdCount++;
+        hours += HOURS_PER_WEEKDAY[d.getDay()];
+      }
+    });
+    return { workingDaysInRange: wdCount, capacityHours: hours };
   }, [dateFrom, dateTo]);
-
-  const capacityHours = workingDaysInRange * 8; // 1 FTE = 8h/day
 
   const stats = useMemo(() => {
     const filtered = categoryFilter === "all" ? services : services.filter(s => s.category === categoryFilter);
@@ -232,8 +238,8 @@ export function ServiceStatistics() {
         </Card>
         <Card>
           <CardContent className="p-3">
-            <div className="text-xs text-muted-foreground">{isDE ? "Kapazität (1 FTE)" : "Capacity (1 FTE)"}</div>
-            <div className="text-xl font-bold">{capacityHours} h</div>
+            <div className="text-xs text-muted-foreground">{isDE ? "Kapazität (1 FTE, 38,5h/Wo)" : "Capacity (1 FTE, 38.5h/wk)"}</div>
+            <div className="text-xl font-bold">{Math.round(capacityHours * 10) / 10} h</div>
             <div className="text-[10px] text-muted-foreground">{workingDaysInRange} {isDE ? "Arbeitstage" : "working days"}</div>
           </CardContent>
         </Card>

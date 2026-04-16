@@ -19,7 +19,7 @@ import {
   parseISO,
 } from "date-fns";
 import { de, enGB } from "date-fns/locale";
-import { isWorkingDay, getHolidaysInRange, getHolidaySet } from "@/lib/austrian-holidays";
+import { isWorkingDay, getHolidaysInRange, getHolidaySet, VACATION_DAYS_PER_YEAR, countWorkingDays } from "@/lib/austrian-holidays";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -409,6 +409,43 @@ export default function CalendarPage() {
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
+
+      {/* Vacation summary */}
+      {isMaster && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t("calendar:vacation_summary")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xs text-muted-foreground mb-2">
+              {t("calendar:vacation_entitlement_info", { days: VACATION_DAYS_PER_YEAR })}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+              {durchfuehrerUsers.map((u: any) => {
+                const year = currentDate.getFullYear();
+                const userVacations = absences.filter(
+                  a => a.user_id === u.user_id && a.absence_type === "urlaub"
+                );
+                const usedDays = userVacations.reduce((sum, a) => {
+                  const s = parseISO(a.start_at);
+                  const e = parseISO(a.end_at);
+                  if (s.getFullYear() !== year && e.getFullYear() !== year) return sum;
+                  return sum + countWorkingDays(s, e);
+                }, 0);
+                const remaining = VACATION_DAYS_PER_YEAR - usedDays;
+                return (
+                  <div key={u.user_id} className="flex items-center justify-between border rounded p-2">
+                    <span className="text-sm font-medium truncate">{u.first_name} {u.last_name}</span>
+                    <span className={`text-xs font-semibold ${remaining < 5 ? "text-destructive" : remaining < 10 ? "text-warning" : "text-muted-foreground"}`}>
+                      {usedDays}/{VACATION_DAYS_PER_YEAR} {t("calendar:days_used")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs">
