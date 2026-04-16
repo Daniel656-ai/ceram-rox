@@ -10,10 +10,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { CalendarIcon, BarChart3, TrendingUp, Clock, Briefcase, ChevronUp, ChevronDown } from "lucide-react";
-import { format, subDays, subMonths, startOfYear, startOfMonth, endOfMonth } from "date-fns";
+import { format, subDays, subMonths, startOfYear, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { getAustrianHolidays } from "@/lib/austrian-holidays";
 
 type SortKey = "name" | "taskCount" | "totalHours" | "utilization";
 type SortDir = "asc" | "desc";
@@ -62,6 +63,18 @@ export function ServiceStatistics() {
     },
   });
 
+  // Calculate working days in date range (Mo-Fr, excluding Austrian holidays)
+  const workingDaysInRange = useMemo(() => {
+    const days = eachDayOfInterval({ start: dateFrom, end: dateTo });
+    const years = [...new Set(days.map(d => d.getFullYear()))];
+    const holidayDates = new Set(
+      years.flatMap(y => getAustrianHolidays(y).map(h => format(h.date, "yyyy-MM-dd")))
+    );
+    return days.filter(d => !isWeekend(d) && !holidayDates.has(format(d, "yyyy-MM-dd"))).length;
+  }, [dateFrom, dateTo]);
+
+  const capacityHours = workingDaysInRange * 8; // 1 FTE = 8h/day
+
   const stats = useMemo(() => {
     const filtered = categoryFilter === "all" ? services : services.filter(s => s.category === categoryFilter);
 
@@ -72,7 +85,11 @@ export function ServiceStatistics() {
         return sum + Number(m.actual_duration_hours ?? m.planned_hours ?? svc.standard_duration_hours ?? 0);
       }, 0);
 
-      // Utilization: ratio of tasks to max tasks across all services (normalized later)
+      // Absolute utilization: actual hours / available capacity (1 FTE)
+      const utilization = capacityHours > 0
+        ? Math.round((totalHours / capacityHours) * 100 * 10) / 10
+        : 0;
+
       return {
         id: svc.id,
         name: svc.service_name,
@@ -82,14 +99,9 @@ export function ServiceStatistics() {
         completedCount: completed.length,
         totalHours: Math.round(totalHours * 10) / 10,
         standardDuration: svc.standard_duration_hours,
-        utilization: 0,
+        utilization,
+        capacityHours,
       };
-    });
-
-    // Calculate relative utilization (highest = 100%)
-    const maxTasks = Math.max(1, ...result.map(r => r.taskCount));
-    result.forEach(r => {
-      r.utilization = Math.round((r.taskCount / maxTasks) * 100 * 10) / 10;
     });
 
     // Sort
@@ -103,7 +115,7 @@ export function ServiceStatistics() {
     });
 
     return result;
-  }, [services, measurements, sortKey, sortDir, categoryFilter]);
+  }, [services, measurements, sortKey, sortDir, categoryFilter, capacityHours]);
 
   // Trend data: group by month
   const trendData = useMemo(() => {
@@ -193,7 +205,7 @@ export function ServiceStatistics() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-5">
         <Card>
           <CardContent className="p-3">
             <div className="text-xs text-muted-foreground">{t("admin:sstats_total_services")}</div>
@@ -216,6 +228,13 @@ export function ServiceStatistics() {
           <CardContent className="p-3">
             <div className="text-xs text-muted-foreground">{t("admin:sstats_avg_tasks")}</div>
             <div className="text-xl font-bold">{stats.length > 0 ? Math.round(totalTasks / stats.length * 10) / 10 : 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-xs text-muted-foreground">{isDE ? "Kapazität (1 FTE)" : "Capacity (1 FTE)"}</div>
+            <div className="text-xl font-bold">{capacityHours} h</div>
+            <div className="text-[10px] text-muted-foreground">{workingDaysInRange} {isDE ? "Arbeitstage" : "working days"}</div>
           </CardContent>
         </Card>
       </div>
@@ -315,11 +334,11 @@ export function ServiceStatistics() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Progress
-                            value={row.utilization}
-                            className={cn("h-2 flex-1", row.utilization > 80 ? "[&>div]:bg-destructive" : row.utilization > 50 ? "[&>div]:bg-warning" : "")}
+                            value={Math.min(row.utilization, 100)}
+                            className={cn("h-2 flex-1", row.utilization > 100 ? "[&>div]:bg-destructive" : row.utilization > 80 ? "[&>div]:bg-warning" : "")}
                           />
-                          <span className={cn("text-xs font-medium w-10 text-right",
-                            row.utilization > 80 ? "text-destructive" : row.utilization > 50 ? "text-warning" : "text-muted-foreground"
+                          <span className={cn("text-xs font-medium w-12 text-right",
+                            row.utilization > 100 ? "text-destructive" : row.utilization > 80 ? "text-warning" : "text-muted-foreground"
                           )}>
                             {row.utilization}%
                           </span>
