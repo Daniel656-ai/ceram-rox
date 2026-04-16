@@ -1,7 +1,20 @@
 /**
  * Austrian public holidays calculation including Easter-based movable holidays.
  * Uses the Anonymous Gregorian algorithm (Meeus/Jones/Butcher) for Easter.
+ *
+ * Austrian standard working hours (38.5h/week):
+ * - Monday–Thursday: 7.75h/day
+ * - Friday: 7.5h/day
+ * - Saturday/Sunday: 0h
+ *
+ * Vacation entitlement: 5 weeks (25 working days) per year.
  */
+
+/** Hours per weekday: index 0 = Sunday, 6 = Saturday */
+export const HOURS_PER_WEEKDAY: readonly number[] = [0, 7.75, 7.75, 7.75, 7.75, 7.5, 0];
+export const WEEKLY_HOURS = 38.5;
+export const VACATION_WEEKS_PER_YEAR = 5;
+export const VACATION_DAYS_PER_YEAR = 25;
 
 interface Holiday {
   date: Date;
