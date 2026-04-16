@@ -238,8 +238,8 @@ export function ServiceStatistics() {
         </Card>
         <Card>
           <CardContent className="p-3">
-            <div className="text-xs text-muted-foreground">{isDE ? "Kapazität (1 FTE)" : "Capacity (1 FTE)"}</div>
-            <div className="text-xl font-bold">{capacityHours} h</div>
+            <div className="text-xs text-muted-foreground">{isDE ? "Kapazität (1 FTE, 38,5h/Wo)" : "Capacity (1 FTE, 38.5h/wk)"}</div>
+            <div className="text-xl font-bold">{Math.round(capacityHours * 10) / 10} h</div>
             <div className="text-[10px] text-muted-foreground">{workingDaysInRange} {isDE ? "Arbeitstage" : "working days"}</div>
           </CardContent>
         </Card>
