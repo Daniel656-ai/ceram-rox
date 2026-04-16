@@ -205,7 +205,7 @@ export function ServiceStatistics() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-5">
         <Card>
           <CardContent className="p-3">
             <div className="text-xs text-muted-foreground">{t("admin:sstats_total_services")}</div>
