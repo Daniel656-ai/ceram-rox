@@ -230,6 +230,13 @@ export function ServiceStatistics() {
             <div className="text-xl font-bold">{stats.length > 0 ? Math.round(totalTasks / stats.length * 10) / 10 : 0}</div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-xs text-muted-foreground">{isDE ? "Kapazität (1 FTE)" : "Capacity (1 FTE)"}</div>
+            <div className="text-xl font-bold">{capacityHours} h</div>
+            <div className="text-[10px] text-muted-foreground">{workingDaysInRange} {isDE ? "Arbeitstage" : "working days"}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Chart toggles */}
