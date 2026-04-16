@@ -10,10 +10,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { CalendarIcon, BarChart3, TrendingUp, Clock, Briefcase, ChevronUp, ChevronDown } from "lucide-react";
-import { format, subDays, subMonths, startOfYear, startOfMonth, endOfMonth } from "date-fns";
+import { format, subDays, subMonths, startOfYear, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { getAustrianHolidays } from "@/lib/austrian-holidays";
 
 type SortKey = "name" | "taskCount" | "totalHours" | "utilization";
 type SortDir = "asc" | "desc";
