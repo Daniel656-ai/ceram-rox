@@ -132,6 +132,26 @@ export function countWorkingDays(start: Date, end: Date, holidaySet?: Set<string
 }
 
 /**
+ * Sum the actual working hours between two dates,
+ * respecting Mo-Thu 7.75h, Fr 7.5h, weekends 0, holidays 0.
+ */
+export function countWorkingHours(start: Date, end: Date, holidaySet?: Set<string>): number {
+  const minYear = Math.min(start.getFullYear(), end.getFullYear());
+  const maxYear = Math.max(start.getFullYear(), end.getFullYear());
+  const years = [];
+  for (let y = minYear; y <= maxYear; y++) years.push(y);
+  const set = holidaySet ?? getHolidaySet(minYear, years.slice(1));
+
+  let hours = 0;
+  const current = new Date(start);
+  while (current < end) {
+    current.setDate(current.getDate() + 1);
+    hours += getWorkingHoursForDate(current, set);
+  }
+  return hours;
+}
+
+/**
  * Get holidays for a date range (for calendar display).
  */
 export function getHolidaysInRange(start: Date, end: Date): Holiday[] {
