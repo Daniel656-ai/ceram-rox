@@ -334,11 +334,11 @@ export function ServiceStatistics() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Progress
-                            value={row.utilization}
-                            className={cn("h-2 flex-1", row.utilization > 80 ? "[&>div]:bg-destructive" : row.utilization > 50 ? "[&>div]:bg-warning" : "")}
+                            value={Math.min(row.utilization, 100)}
+                            className={cn("h-2 flex-1", row.utilization > 100 ? "[&>div]:bg-destructive" : row.utilization > 80 ? "[&>div]:bg-warning" : "")}
                           />
-                          <span className={cn("text-xs font-medium w-10 text-right",
-                            row.utilization > 80 ? "text-destructive" : row.utilization > 50 ? "text-warning" : "text-muted-foreground"
+                          <span className={cn("text-xs font-medium w-12 text-right",
+                            row.utilization > 100 ? "text-destructive" : row.utilization > 80 ? "text-warning" : "text-muted-foreground"
                           )}>
                             {row.utilization}%
                           </span>
