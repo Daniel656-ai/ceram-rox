@@ -185,5 +185,11 @@
   "milestone_none": "Keine Meilensteine vorhanden",
   "milestone_title_required": "Titel ist erforderlich",
   "milestone_timeline": "Timeline",
-  "your_role": "Deine Rolle"
+  "your_role": "Deine Rolle",
+  "active_projects": "Aktive Projekte",
+  "completed_projects": "Abgeschlossene Projekte",
+  "no_completed_projects": "Keine abgeschlossenen Projekte",
+  "show_completed": "Abgeschlossene anzeigen",
+  "hide_completed": "Abgeschlossene ausblenden",
+  "completed_at": "Abgeschlossen am"
 }
