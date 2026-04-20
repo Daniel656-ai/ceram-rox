@@ -398,6 +398,8 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      <ActivityFeed />
+
     </div>
   );
 }
