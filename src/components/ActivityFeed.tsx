@@ -27,6 +27,8 @@ function eventIcon(type: string) {
       return <AlertTriangle className="h-4 w-4 text-primary" />;
     case "ranking_changed":
       return <ArrowUpDown className="h-4 w-4 text-primary" />;
+    case "priority_violation":
+      return <AlertTriangle className="h-4 w-4 text-destructive" />;
     default:
       return <Activity className="h-4 w-4 text-muted-foreground" />;
   }
@@ -83,6 +85,17 @@ export function ActivityFeed() {
                   const oldV = e.metadata?.old_value ?? "—";
                   const newV = e.metadata?.new_value ?? "—";
                   return `${orderNumber || "—"}: ${oldV} → ${newV}`;
+                }
+                if (e.event_type === "priority_violation") {
+                  const violated = (e.metadata?.violated_measurements ?? []) as Array<{ measurement_number: string }>;
+                  const first = violated[0]?.measurement_number ?? "—";
+                  const rest = violated.length - 1;
+                  const subtype = e.metadata?.event_subtype === "completed" ? "completed" : "started";
+                  const base = t(`activity:priority_violation_detail_${subtype}`, {
+                    current: e.metadata?.measurement_number ?? "—",
+                    violated: first,
+                  });
+                  return rest > 0 ? `${base} ${t("activity:priority_violation_more", { count: rest })}` : base;
                 }
                 return [measurementNumber, serviceName].filter(Boolean).join(" · ");
               })();
