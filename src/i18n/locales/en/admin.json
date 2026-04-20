@@ -214,5 +214,18 @@
   "sstats_tasks": "Tasks",
   "sstats_hours": "Hours",
   "sstats_utilization": "Utilization",
-  "sstats_no_data": "No data for selected period."
+  "sstats_no_data": "No data for selected period.",
+  "schedule_button": "Working time",
+  "schedule_title": "Working time of {{name}}",
+  "schedule_description": "Define weekdays, weekly hours and from when this configuration applies.",
+  "schedule_weekdays": "Working days",
+  "schedule_weekly_hours": "Weekly hours",
+  "schedule_valid_from": "Valid from",
+  "schedule_workdays_per_week": "Days / week",
+  "schedule_weekly_hours_sum": "Hours / week",
+  "schedule_vacation_entitlement": "Vacation entitlement (days)",
+  "schedule_history": "History",
+  "schedule_days": "days",
+  "schedule_saved": "Working time saved",
+  "schedule_select_day": "Please select at least one working day"
 }

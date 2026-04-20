@@ -53,5 +53,8 @@
   "no_events": "Keine Ereignisse",
   "vacation_summary": "Urlaubsübersicht",
   "vacation_entitlement_info": "Gesetzlicher Urlaubsanspruch: {{days}} Arbeitstage/Jahr (5 Wochen)",
+  "vacation_entitlement_dynamic": "Anspruch berechnet aliquot zu den individuellen Arbeitstagen pro Woche (5 Wochen).",
+  "vacation_remaining": "{{days}} verbleibend",
+  "days_per_week_short": "Tage/Wo.",
   "days_used": "Tage verbraucht"
 }

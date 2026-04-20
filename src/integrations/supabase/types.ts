@@ -1647,6 +1647,60 @@ export type Database = {
           },
         ]
       }
+      user_work_schedules: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+          valid_from: string
+          weekly_hours: number
+          works_friday: boolean
+          works_monday: boolean
+          works_saturday: boolean
+          works_sunday: boolean
+          works_thursday: boolean
+          works_tuesday: boolean
+          works_wednesday: boolean
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          valid_from?: string
+          weekly_hours?: number
+          works_friday?: boolean
+          works_monday?: boolean
+          works_saturday?: boolean
+          works_sunday?: boolean
+          works_thursday?: boolean
+          works_tuesday?: boolean
+          works_wednesday?: boolean
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          valid_from?: string
+          weekly_hours?: number
+          works_friday?: boolean
+          works_monday?: boolean
+          works_saturday?: boolean
+          works_sunday?: boolean
+          works_thursday?: boolean
+          works_tuesday?: boolean
+          works_wednesday?: boolean
+        }
+        Relationships: []
+      }
       work_logs: {
         Row: {
           comment: string | null
@@ -1814,6 +1868,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_others_vacation: { Args: { _user_id: string }; Returns: boolean }
       check_user_absence_conflict: {
         Args: { _end: string; _start: string; _user_id: string }
         Returns: {
@@ -1836,6 +1891,32 @@ export type Database = {
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_user_work_schedule: {
+        Args: { _on_date?: string; _user_id: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+          valid_from: string
+          weekly_hours: number
+          works_friday: boolean
+          works_monday: boolean
+          works_saturday: boolean
+          works_sunday: boolean
+          works_thursday: boolean
+          works_tuesday: boolean
+          works_wednesday: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "user_work_schedules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       has_permission: {
         Args: { _permission: string; _user_id: string }

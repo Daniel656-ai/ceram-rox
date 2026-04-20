@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import { UserWorkScheduleDialog } from "@/components/UserWorkScheduleDialog";
 
 export default function AdminUsersPage() {
   const { t, i18n } = useTranslation(["admin", "common"]);
@@ -30,6 +31,7 @@ export default function AdminUsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [scheduleUser, setScheduleUser] = useState<any>(null);
 
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -144,6 +146,7 @@ export default function AdminUsersPage() {
                       <TableCell>{new Date(u.created_at).toLocaleDateString(dateFmt)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" title={t("admin:schedule_button")} onClick={() => setScheduleUser(u)}><CalendarClock className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => openEdit(u)}><Pencil className="h-4 w-4" /></Button>
                           {!isSelf && (<Button variant="ghost" size="icon" onClick={() => setDeleteTarget(u)}><Trash2 className="h-4 w-4 text-destructive" /></Button>)}
                         </div>
@@ -218,6 +221,15 @@ export default function AdminUsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {scheduleUser && (
+        <UserWorkScheduleDialog
+          open={!!scheduleUser}
+          onOpenChange={(v) => { if (!v) setScheduleUser(null); }}
+          userId={scheduleUser.user_id}
+          userName={`${scheduleUser.first_name} ${scheduleUser.last_name}`}
+        />
+      )}
     </div>
   );
 }

@@ -30,6 +30,7 @@ export const ALL_PERMISSIONS = [
   "costs.view_personnel",
   "costs.view_hourly_rates",
   "costs.edit_hourly_rates",
+  "calendar.view_others_vacation",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
@@ -140,6 +141,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "costs.view_personnel": { de: "Personenbezogene Kosten sehen", en: "View personnel costs" },
   "costs.view_hourly_rates": { de: "Stundensätze sehen", en: "View hourly rates" },
   "costs.edit_hourly_rates": { de: "Stundensätze bearbeiten", en: "Edit hourly rates" },
+  "calendar.view_others_vacation": { de: "Urlaubstage anderer sehen", en: "View others' vacation days" },
 };
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
@@ -150,6 +152,7 @@ export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string;
   { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel", "costs.view_hourly_rates", "costs.edit_hourly_rates"] },
   { key: "general", labelDe: "Allgemein", labelEn: "General", permissions: ["priorities.edit", "locations.edit", "reports.create", "sds.manage", "raw_materials.manage"] },
   { key: "admin", labelDe: "Administration", labelEn: "Administration", permissions: ["workstations.manage", "users.manage", "services.manage", "absences.manage_all", "admin.system"] },
+  { key: "calendar", labelDe: "Kalender & Urlaub", labelEn: "Calendar & Vacation", permissions: ["calendar.view_others_vacation"] },
 ];
 
 export function usePermissions() {

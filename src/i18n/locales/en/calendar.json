@@ -53,5 +53,8 @@
   "no_events": "No events",
   "vacation_summary": "Vacation Overview",
   "vacation_entitlement_info": "Legal vacation entitlement: {{days}} working days/year (5 weeks)",
+  "vacation_entitlement_dynamic": "Entitlement is calculated pro-rata based on individual working days per week (5 weeks).",
+  "vacation_remaining": "{{days}} remaining",
+  "days_per_week_short": "days/wk",
   "days_used": "days used"
 }

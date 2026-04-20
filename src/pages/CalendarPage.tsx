@@ -19,7 +19,14 @@ import {
   parseISO,
 } from "date-fns";
 import { de, enGB } from "date-fns/locale";
-import { isWorkingDay, getHolidaysInRange, getHolidaySet, VACATION_DAYS_PER_YEAR, countWorkingDays } from "@/lib/austrian-holidays";
+import { isWorkingDay, getHolidaysInRange, getHolidaySet } from "@/lib/austrian-holidays";
+import {
+  useEffectiveSchedules,
+  countVacationDaysUsed,
+  vacationDaysForSchedule,
+  workingDaysPerWeek,
+} from "@/hooks/useWorkSchedules";
+import { usePermissions } from "@/hooks/usePermissions";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +63,9 @@ export default function CalendarPage() {
   const { t, i18n } = useTranslation(["calendar", "common"]);
   const dateFnsLocale = i18n.language === "en" ? enGB : de;
   const { user, role } = useAuth();
+  const { hasPermission } = usePermissions();
   const isMaster = role === "master";
+  const canViewOthersVacation = isMaster || hasPermission("calendar.view_others_vacation");
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("month");
@@ -75,6 +84,7 @@ export default function CalendarPage() {
   const { data: downtimes = [] } = useDowntimes();
   const { data: workstations = [] } = useWorkstations();
   const { data: users = [] } = useUsers();
+  const { data: schedulesMap = new Map() } = useEffectiveSchedules(currentDate);
   const createAbsence = useCreateAbsence();
   const updateAbsence = useUpdateAbsence();
   const deleteAbsence = useDeleteAbsence();
@@ -411,41 +421,49 @@ export default function CalendarPage() {
       </div>
 
       {/* Vacation summary */}
-      {isMaster && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t("calendar:vacation_summary")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground mb-2">
-              {t("calendar:vacation_entitlement_info", { days: VACATION_DAYS_PER_YEAR })}
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-              {durchfuehrerUsers.map((u: any) => {
-                const year = currentDate.getFullYear();
-                const userVacations = absences.filter(
-                  a => a.user_id === u.user_id && a.absence_type === "urlaub"
-                );
-                const usedDays = userVacations.reduce((sum, a) => {
-                  const s = parseISO(a.start_at);
-                  const e = parseISO(a.end_at);
-                  if (s.getFullYear() !== year && e.getFullYear() !== year) return sum;
-                  return sum + countWorkingDays(s, e);
-                }, 0);
-                const remaining = VACATION_DAYS_PER_YEAR - usedDays;
-                return (
-                  <div key={u.user_id} className="flex items-center justify-between border rounded p-2">
-                    <span className="text-sm font-medium truncate">{u.first_name} {u.last_name}</span>
-                    <span className={`text-xs font-semibold ${remaining < 5 ? "text-destructive" : remaining < 10 ? "text-warning" : "text-muted-foreground"}`}>
-                      {usedDays}/{VACATION_DAYS_PER_YEAR} {t("calendar:days_used")}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {(() => {
+        const year = currentDate.getFullYear();
+        const visibleUsers = canViewOthersVacation
+          ? durchfuehrerUsers
+          : durchfuehrerUsers.filter((u: any) => u.user_id === user?.id);
+        if (visibleUsers.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">{t("calendar:vacation_summary")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xs text-muted-foreground mb-2">
+                {t("calendar:vacation_entitlement_dynamic")}
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                {visibleUsers.map((u: any) => {
+                  const sched = schedulesMap.get(u.user_id) ?? null;
+                  const userAbsences = absences.filter((a) => a.user_id === u.user_id);
+                  const usedDays = countVacationDaysUsed(userAbsences, sched, year);
+                  const totalDays = vacationDaysForSchedule(sched);
+                  const remaining = totalDays - usedDays;
+                  const dpw = sched ? workingDaysPerWeek(sched) : 5;
+                  return (
+                    <div key={u.user_id} className="flex flex-col border rounded p-2 gap-0.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium truncate">{u.first_name} {u.last_name}</span>
+                        <span className={`text-xs font-semibold ${remaining < 5 ? "text-destructive" : remaining < 10 ? "text-warning" : "text-muted-foreground"}`}>
+                          {usedDays}/{totalDays}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span>{dpw} {t("calendar:days_per_week_short")}</span>
+                        <span>{t("calendar:vacation_remaining", { days: remaining })}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs">
