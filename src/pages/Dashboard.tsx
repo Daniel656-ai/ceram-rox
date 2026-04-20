@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { ActivityFeed } from "@/components/ActivityFeed";
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
