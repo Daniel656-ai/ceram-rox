@@ -346,6 +346,8 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      <ActivityFeed />
+
       {/* Recent orders / measurements */}
       <Card>
         <CardHeader>
@@ -397,8 +399,6 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
-
-      <ActivityFeed />
 
     </div>
   );
