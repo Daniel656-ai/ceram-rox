@@ -11,7 +11,7 @@ export function useProjectMilestones(projectId?: string) {
         .from("project_milestones")
         .select("*")
         .eq("project_id", projectId!)
-        .order("start_date", { ascending: true, nullsFirst: false });
+        .order("milestone_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data;
     },
@@ -26,8 +26,7 @@ export function useCreateMilestone() {
       project_id: string;
       title: string;
       description?: string;
-      start_date?: string;
-      end_date?: string;
+      milestone_date?: string;
       status?: string;
       created_by: string;
     }) => {
@@ -53,8 +52,7 @@ export function useUpdateMilestone() {
       projectId: string;
       title?: string;
       description?: string;
-      start_date?: string | null;
-      end_date?: string | null;
+      milestone_date?: string | null;
       status?: string;
     }) => {
       const { error } = await supabase
