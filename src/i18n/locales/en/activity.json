@@ -1,0 +1,18 @@
+{
+  "title": "Recent Activity",
+  "empty": "No activity yet",
+  "unread": "Unread",
+  "mark_all_read": "Mark all as read",
+  "view_all_unread": "{{count}} unread",
+  "event_measurement_started": "Measurement started",
+  "event_measurement_completed": "Measurement completed",
+  "event_priority_changed": "Priority changed",
+  "event_ranking_changed": "Ranking changed",
+  "by_actor": "by {{name}}",
+  "open_order": "Open order",
+  "open_measurement": "Open measurement",
+  "time_just_now": "just now",
+  "time_minutes_ago": "{{count}} min ago",
+  "time_hours_ago": "{{count}} h ago",
+  "time_days_ago": "{{count}} d ago"
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Letzte Aktivitäten",
+  "empty": "Noch keine Aktivitäten",
+  "unread": "Ungelesen",
+  "mark_all_read": "Alle als gelesen markieren",
+  "view_all_unread": "{{count}} ungelesen",
+  "event_measurement_started": "Messung gestartet",
+  "event_measurement_completed": "Messung abgeschlossen",
+  "event_priority_changed": "Priorität geändert",
+  "event_ranking_changed": "Reihung geändert",
+  "by_actor": "von {{name}}",
+  "open_order": "Auftrag öffnen",
+  "open_measurement": "Messung öffnen",
+  "time_just_now": "gerade eben",
+  "time_minutes_ago": "vor {{count}} Min.",
+  "time_hours_ago": "vor {{count}} Std.",
+  "time_days_ago": "vor {{count}} Tagen"
+}
