@@ -214,5 +214,18 @@
   "sstats_tasks": "Aufgaben",
   "sstats_hours": "Stunden",
   "sstats_utilization": "Auslastung",
-  "sstats_no_data": "Keine Daten im gewählten Zeitraum."
+  "sstats_no_data": "Keine Daten im gewählten Zeitraum.",
+  "schedule_button": "Arbeitszeit",
+  "schedule_title": "Arbeitszeit von {{name}}",
+  "schedule_description": "Definieren Sie Wochentage, Wochenstunden und ab wann diese Konfiguration gilt.",
+  "schedule_weekdays": "Anwesenheitstage",
+  "schedule_weekly_hours": "Wochenstunden",
+  "schedule_valid_from": "Gültig ab",
+  "schedule_workdays_per_week": "Tage / Woche",
+  "schedule_weekly_hours_sum": "Stunden / Woche",
+  "schedule_vacation_entitlement": "Urlaubsanspruch (Tage)",
+  "schedule_history": "Historie",
+  "schedule_days": "Tage",
+  "schedule_saved": "Arbeitszeit gespeichert",
+  "schedule_select_day": "Bitte mindestens einen Arbeitstag auswählen"
 }
