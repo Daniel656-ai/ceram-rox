@@ -810,10 +810,9 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
-          end_date: string | null
           id: string
+          milestone_date: string | null
           project_id: string
-          start_date: string | null
           status: Database["public"]["Enums"]["milestone_status"]
           title: string
           updated_at: string
@@ -822,10 +821,9 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
-          end_date?: string | null
           id?: string
+          milestone_date?: string | null
           project_id: string
-          start_date?: string | null
           status?: Database["public"]["Enums"]["milestone_status"]
           title: string
           updated_at?: string
@@ -834,10 +832,9 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
-          end_date?: string | null
           id?: string
+          milestone_date?: string | null
           project_id?: string
-          start_date?: string | null
           status?: Database["public"]["Enums"]["milestone_status"]
           title?: string
           updated_at?: string
@@ -899,6 +896,92 @@ export type Database = {
           },
           {
             foreignKeyName: "project_time_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_work_package_assignees: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          work_package_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          work_package_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          work_package_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_work_package_assignees_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "project_work_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_work_packages: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          id: string
+          milestone_id: string | null
+          project_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["milestone_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          milestone_id?: string | null
+          project_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["milestone_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          milestone_id?: string | null
+          project_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["milestone_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_work_packages_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "project_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_work_packages_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
