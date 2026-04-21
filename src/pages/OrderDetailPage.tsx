@@ -506,17 +506,6 @@ export default function OrderDetailPage() {
                 </Select>
               </div>
             )}
-            <div>
-              <Label>Priorität</Label>
-              <Select value={editPriority} onValueChange={setEditPriority}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(ORDER_PRIORITY_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             {canEditDelete && (
               <div>
                 <Label>Fälligkeitsdatum</Label>
