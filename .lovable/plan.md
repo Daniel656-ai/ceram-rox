@@ -1,81 +1,103 @@
 
 
-## Prioritaet als Pflichtfeld fuer Messauftraege
+## Ziel
 
-### Uebersicht
-Ein neues Pflichtfeld "Prioritaet" wird auf Auftragsebene (`measurement_orders`) eingefuehrt -- nicht zu verwechseln mit der bestehenden Messungs-Prioritaet auf `order_measurements`. Aenderungen werden in einer neuen Audit-Log-Tabelle protokolliert.
+Ein Benutzer mit Rolle `auftraggeber` darf in der Auftragsliste nur noch sehen:
+- Aufträge, die er selbst erstellt hat (`created_by = auth.uid()`), **plus**
+- Aufträge in Projekten, in denen er die Projekt-Rolle `owner` oder `leader` hat.
 
-### 1. Datenbank-Migration
+Eine reine Projekt-Mitgliedschaft (`member`) reicht für Auftraggeber nicht mehr aus, um fremde Aufträge zu sehen. Master und Durchführer behalten ihre bisherige Sichtbarkeit unverändert.
 
-**Neuer Enum-Typ:**
+## Umsetzung
+
+### 1. RLS-Policy `Users see relevant orders` neu schreiben (Migration)
+
+Die bestehende `SELECT`-Policy auf `measurement_orders` wird ersetzt. Neue Logik:
+
+```text
+master                                              -> sieht alles
+created_by = auth.uid()                             -> eigener Auftrag
+durchfuehrer und assigned_to_order                  -> zugewiesener Auftrag
+NICHT auftraggeber UND project_member               -> Mitgliedschaft (alte Logik
+                                                       für Durchführer/sonstige Rollen)
+auftraggeber UND (owner ODER leader des Projekts)   -> nur Leitungsrolle reicht
+```
+
+In SQL:
+
 ```sql
-CREATE TYPE public.order_priority AS ENUM ('normal', 'wichtig', 'hoechste');
+DROP POLICY "Users see relevant orders" ON public.measurement_orders;
+
+CREATE POLICY "Users see relevant orders"
+ON public.measurement_orders
+FOR SELECT
+USING (
+  has_role(auth.uid(), 'master'::app_role)
+  OR created_by = auth.uid()
+  OR is_assigned_to_order(auth.uid(), id)
+  OR (
+    NOT has_role(auth.uid(), 'auftraggeber'::app_role)
+    AND is_project_member(auth.uid(), project_id)
+  )
+  OR (
+    has_role(auth.uid(), 'auftraggeber'::app_role)
+    AND (
+      has_project_role(auth.uid(), project_id, 'owner'::project_role)
+      OR has_project_role(auth.uid(), project_id, 'leader'::project_role)
+    )
+  )
+);
 ```
 
-**Neue Spalte auf `measurement_orders`:**
+Genutzte SECURITY-DEFINER-Helfer existieren bereits: `has_role`, `is_assigned_to_order`, `is_project_member`, `has_project_role`. Damit bleibt RLS rekursionsfrei.
+
+### 2. Konsistente Einschränkung auf abhängigen Tabellen
+
+Damit ein Auftraggeber nicht über Umwege (verknüpfte Sub-Selects) doch Inhalte fremder Aufträge sieht, müssen die analogen `project_member`-Zweige in folgenden bestehenden Policies ebenfalls für Auftraggeber neutralisiert werden:
+
+- `order_measurements` – Policy „Users see relevant measurements“
+- `measurement_parameters` – Policy „Users see relevant params“
+- `measurement_results` – Policy „Users see relevant results“
+- `documents` – Policy „Users see relevant docs“
+- `order_audit_log` – Policy „Users see relevant audit logs“
+
+Pattern überall identisch: der Teil
 ```sql
-ALTER TABLE public.measurement_orders
-  ADD COLUMN priority order_priority NOT NULL DEFAULT 'normal';
+EXISTS (... WHERE ... AND is_project_member(auth.uid(), mo.project_id))
+```
+wird zu
+```sql
+EXISTS (
+  ... WHERE ... AND (
+    (NOT has_role(auth.uid(), 'auftraggeber'::app_role)
+       AND is_project_member(auth.uid(), mo.project_id))
+    OR (has_role(auth.uid(), 'auftraggeber'::app_role)
+       AND (has_project_role(auth.uid(), mo.project_id, 'owner'::project_role)
+            OR has_project_role(auth.uid(), mo.project_id, 'leader'::project_role)))
+  )
+)
 ```
 
-**Neue Tabelle `order_audit_log`:**
+Der direkte `created_by`/`assigned_to`/`master`-Pfad bleibt jeweils unverändert – Auftraggeber sehen ihre eigenen Inhalte weiterhin uneingeschränkt.
 
-| Spalte | Typ | Beschreibung |
-|--------|-----|-------------|
-| id | uuid (PK) | Eindeutige ID |
-| order_id | uuid (FK) | Verweis auf measurement_orders |
-| changed_by | uuid | User-ID des Aendernden |
-| changed_at | timestamptz | Zeitpunkt der Aenderung |
-| field_name | text | Geaendertes Feld (z.B. 'priority') |
-| old_value | text | Alter Wert |
-| new_value | text | Neuer Wert |
+### 3. Keine Frontend-Änderungen nötig
 
-RLS-Policies fuer `order_audit_log`:
-- SELECT: Master sehen alles; Auftraggeber sehen Logs eigener Auftraege; Durchfuehrer sehen Logs zugewiesener Auftraege
-- INSERT: Nur ueber Trigger (kein direkter Client-Insert noetig, aber Policy fuer authentifizierte User mit `changed_by = auth.uid()`)
+`useOrders` und `useOrderDetail` führen keine eigene Filterung durch – sie verlassen sich vollständig auf RLS. Sobald die Policies aktualisiert sind, verschwinden die fremden Aufträge automatisch aus Liste, Suche (Dashboard) und Detailaufrufen. Direkter URL-Zugriff (`/auftraege/<fremde-id>`) liefert dann ebenfalls kein Ergebnis und führt zur Not-Found-Behandlung der Detail-Seite.
 
-**Datenbank-Trigger `log_order_priority_change`:**
-Ein `BEFORE UPDATE`-Trigger auf `measurement_orders`, der bei Aenderung von `priority` automatisch einen Eintrag in `order_audit_log` schreibt.
+### 4. Verifikation nach dem Deployment
 
-### 2. Typ-Definitionen (`src/lib/types.ts`)
+- Test als Auftraggeber A:
+  - Eigener Auftrag in Projekt P1 (Rolle: owner) → sichtbar.
+  - Fremder Auftrag in Projekt P1 (Auftraggeber B, A ist owner/leader) → sichtbar.
+  - Fremder Auftrag in Projekt P2, in dem A nur `member` ist → **nicht** sichtbar.
+  - Fremder Auftrag in Projekt P3, in dem A keine Mitgliedschaft hat → **nicht** sichtbar.
+- Test als Master: alle Aufträge sichtbar (unverändert).
+- Test als Durchführer: zugewiesene Aufträge + Projektmitgliedschaft wirken weiter wie bisher.
 
-Neuer Export:
-```typescript
-export type OrderPriority = Database["public"]["Enums"]["order_priority"];
+## Technische Notizen
 
-export const ORDER_PRIORITY_LABELS: Record<OrderPriority, string> = {
-  normal: "Normal",
-  wichtig: "Wichtig",
-  hoechste: "Höchste",
-};
-```
+- Reine Policy-Änderung, keine Schemaänderungen, keine Datenmigration.
+- Wird als eine SQL-Migration ausgeliefert (DROP + CREATE für jede betroffene Policy).
+- Keine neuen Helper-Funktionen erforderlich.
+- `is_project_member` bleibt erhalten und wird weiterhin von `projects`, `project_milestones`, `project_work_packages` etc. genutzt – diese Module sollen sich für Auftraggeber-Mitglieder nicht ändern.
 
-### 3. Hooks (`src/hooks/useOrders.ts`)
-
-- `useUpdateOrder`: Feld `priority` als optionalen Parameter aufnehmen
-- Neuer Hook `useOrderAuditLog(orderId)`: Laedt die Audit-Log-Eintraege fuer einen Auftrag
-
-### 4. Auftragserstellung (`src/pages/CreateOrderPage.tsx`)
-
-- Neuer State `priority` mit Standardwert `"normal"`
-- Neues Auswahlfeld (Select-Dropdown) im Abschnitt "Auftragsdetails" mit den drei Optionen: Hoechste, Wichtig, Normal
-- Der Wert wird beim `createOrder.mutateAsync`-Aufruf mitgegeben
-
-### 5. Auftragsdetailseite (`src/pages/OrderDetailPage.tsx`)
-
-- Prioritaet im Header anzeigen (als Badge neben dem Status)
-- Im Bearbeiten-Dialog: Prioritaets-Dropdown hinzufuegen
-- Berechtigungslogik: Prioritaetsaenderung nur fuer Master oder Ersteller (unabhaengig vom Status, da die Anforderung sich nur auf die Prioritaet bezieht -- die bestehende canEditDelete-Logik bleibt fuer andere Felder bestehen)
-- Neuer Abschnitt "Aenderungsverlauf" am Ende der Seite mit Tabelle der Audit-Log-Eintraege (Datum, Benutzer, altes/neues Feld)
-
-### 6. Auftragsuebersicht (`src/pages/OrdersPage.tsx`)
-
-- Neue Spalte "Prioritaet" in der Tabelle mit farbigem Badge
-
-### Betroffene Dateien
-- Datenbank-Migration (Enum, Spalte, Audit-Tabelle, Trigger, RLS)
-- `src/lib/types.ts` -- neuer Typ und Labels
-- `src/hooks/useOrders.ts` -- Update-Hook erweitern, neuer Audit-Log-Hook
-- `src/pages/CreateOrderPage.tsx` -- Prioritaets-Dropdown
-- `src/pages/OrderDetailPage.tsx` -- Anzeige, Bearbeitung, Aenderungsverlauf
-- `src/pages/OrdersPage.tsx` -- Prioritaets-Spalte
