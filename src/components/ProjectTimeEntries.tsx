@@ -49,8 +49,6 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const updateEntry = useUpdateProjectTimeEntry();
   const deleteEntry = useDeleteProjectTimeEntry();
 
-  if (role === "auftraggeber") return null;
-
 
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
