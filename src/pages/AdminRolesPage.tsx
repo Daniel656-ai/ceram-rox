@@ -20,6 +20,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 export default function AdminRolesPage() {
   const { t, i18n } = useTranslation(["admin", "common"]);
   const lang = i18n.language?.startsWith("de") ? "de" : "en";
+  const { hasPermission } = usePermissions();
+  const canManageRoles = hasPermission("admin.system");
   const { data: roles = [], isLoading } = useCustomRoles();
   const createRole = useCreateCustomRole();
   const updateRole = useUpdateCustomRole();
