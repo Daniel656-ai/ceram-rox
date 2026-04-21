@@ -71,7 +71,7 @@ export default function OrdersPage() {
           </h1>
           <p className="text-muted-foreground">{t("orders:subtitle")}</p>
         </div>
-        {(role === "auftraggeber" || role === "master") && (
+        {canCreateOrder && (
           <div className="flex gap-2">
             <Link to="/auftraege/neu">
               <Button><Plus className="h-4 w-4 mr-2" />{t("orders:new_order")}</Button>
