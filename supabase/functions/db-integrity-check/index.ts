@@ -27,8 +27,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
-    if (roleData?.role !== 'master') {
+    // Allow masters OR users with admin.database / admin.system permission
+    const { data: isMaster } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'master' });
+    const { data: hasDbPerm } = await supabase.rpc('has_permission', { _user_id: user.id, _permission: 'admin.database' });
+    const { data: hasSysPerm } = await supabase.rpc('has_permission', { _user_id: user.id, _permission: 'admin.system' });
+    if (!isMaster && !hasDbPerm && !hasSysPerm) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
