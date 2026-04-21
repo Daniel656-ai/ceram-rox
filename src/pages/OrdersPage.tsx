@@ -121,7 +121,7 @@ export default function OrdersPage() {
                 <TableHead>{t("common:status")}</TableHead>
                 <TableHead>{t("orders:due_date")}</TableHead>
                 <TableHead>{t("common:created")}</TableHead>
-                {(role === "master" || role === "auftraggeber") && <TableHead className="w-[60px]">{t("common:actions")}</TableHead>}
+                {canShowActions && <TableHead className="w-[60px]">{t("common:actions")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
