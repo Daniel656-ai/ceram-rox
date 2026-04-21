@@ -109,7 +109,9 @@ export default function AdminRolesPage() {
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2"><Shield className="h-6 w-6" />{t("admin:roles_title")}</h1>
           <p className="text-muted-foreground">{t("admin:roles_subtitle")}</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />{t("admin:new_role")}</Button>
+        {canManageRoles && (
+          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />{t("admin:new_role")}</Button>
+        )}
       </div>
 
       <Card>
