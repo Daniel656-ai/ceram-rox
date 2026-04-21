@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   projectId: string;
@@ -41,11 +42,13 @@ function getUserName(users: any[], userId: string) {
 
 export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const { t, i18n } = useTranslation("projects");
+  const { role } = useAuth();
   const { data: entries = [] } = useProjectTimeEntries(projectId, orderId);
   const { data: users = [] } = useUsers();
   const addEntry = useAddProjectTimeEntry();
   const updateEntry = useUpdateProjectTimeEntry();
   const deleteEntry = useDeleteProjectTimeEntry();
+
 
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -201,6 +204,8 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
       </div>
     </div>
   );
+
+  if (role === "auftraggeber") return null;
 
   return (
     <div className="space-y-4">
