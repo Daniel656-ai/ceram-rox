@@ -186,9 +186,6 @@ export default function OrderDetailPage() {
             {(order as any).order_number ? `Projekt: ${(order as any).projects?.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]} · Erstellt am {new Date(order.created_at).toLocaleDateString("de-DE")}
           </p>
         </div>
-        <Badge variant={(order as any).priority === "hoechste" ? "destructive" : (order as any).priority === "wichtig" ? "default" : "secondary"}>
-          {ORDER_PRIORITY_LABELS[(order as any).priority as keyof typeof ORDER_PRIORITY_LABELS] || "Normal"}
-        </Badge>
         <StatusBadge status={order.status} />
         {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
