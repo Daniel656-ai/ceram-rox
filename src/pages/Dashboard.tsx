@@ -122,14 +122,6 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold tracking-tight">{greeting}</h1>
           <p className="text-muted-foreground">{roleLabel}-Dashboard</p>
         </div>
-        {(role === "auftraggeber" || role === "master") && (
-          <Link to="/auftraege/neu">
-            <Button>
-              <ClipboardList className="h-4 w-4 mr-2" />
-              {t("orders:new_order")}
-            </Button>
-          </Link>
-        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
