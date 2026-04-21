@@ -26,9 +26,12 @@ export default function ProjectsPage() {
   const { t, i18n } = useTranslation("projects");
   const { data: projects = [], isLoading } = useProjectsWithStats();
   const { data: users = [] } = useUsers();
-  const { user, role } = useAuth();
+const { user, role } = useAuth();
+  const { hasPermission } = usePermissions();
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
+
+  const canCreateProject = hasPermission('admin.system') || hasPermission('users.manage');
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("created_desc");
