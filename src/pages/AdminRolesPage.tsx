@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCustomRoles, useCreateCustomRole, useUpdateCustomRole, useDeleteCustomRole, CustomRole } from "@/hooks/useCustomRoles";
-import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, PermissionKey, NAV_PERMISSIONS, NAV_TREE, NAV_PERMISSION_LABELS } from "@/hooks/usePermissions";
+import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, PermissionKey, NAV_PERMISSIONS, NAV_TREE, NAV_PERMISSION_LABELS, usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
