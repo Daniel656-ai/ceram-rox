@@ -34,9 +34,12 @@ export default function OrdersPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const canCreateOrder = role === "master" || role === "auftraggeber" || isAnyProjectLead;
+  const canShowActions = role === "master" || role === "auftraggeber" || isAnyProjectLead;
+
   const canDelete = (o: any) => {
     if (role === "master") return true;
-    if (role === "auftraggeber" && o.created_by === user?.id && o.status === "open") return true;
+    if (o.created_by === user?.id && o.status === "open") return true;
     return false;
   };
 
