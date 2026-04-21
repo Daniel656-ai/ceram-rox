@@ -127,7 +127,6 @@ export default function CreateOrderPage() {
   // Single order state
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [orderType, setOrderType] = useState<string>("");
-  const [priority, setPriority] = useState<string>("normal");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
@@ -230,7 +229,7 @@ export default function CreateOrderPage() {
 
       const order = await createOrder.mutateAsync({
         project_id: projectId, order_type: orderType as any, created_by: user.id,
-        due_date: dueDate || undefined, notes: notes || undefined, priority: priority as any, sample_id: selectedSampleId,
+        due_date: dueDate || undefined, notes: notes || undefined, sample_id: selectedSampleId,
       });
 
       for (let idx = 0; idx < measurements.length; idx++) {
@@ -331,25 +330,14 @@ export default function CreateOrderPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>{t("orders:order_type")}</Label>
-                <Select value={orderType} onValueChange={setOrderType}>
-                  <SelectTrigger><SelectValue placeholder={t("orders:choose_type")} /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>{t("orders:priority")} *</Label>
-                <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(priorityLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label>{t("orders:order_type")}</Label>
+              <Select value={orderType} onValueChange={setOrderType}>
+                <SelectTrigger><SelectValue placeholder={t("orders:choose_type")} /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
             <div><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
             <div><Label>{t("orders:notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders:notes_placeholder")} rows={3} /></div>
