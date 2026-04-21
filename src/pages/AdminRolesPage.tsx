@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCustomRoles, useCreateCustomRole, useUpdateCustomRole, useDeleteCustomRole, CustomRole } from "@/hooks/useCustomRoles";
-import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, PermissionKey, NAV_PERMISSIONS, NAV_TREE, NAV_PERMISSION_LABELS } from "@/hooks/usePermissions";
+import { ALL_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_LABELS, PermissionKey, NAV_PERMISSIONS, NAV_TREE, NAV_PERMISSION_LABELS, usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 export default function AdminRolesPage() {
   const { t, i18n } = useTranslation(["admin", "common"]);
   const lang = i18n.language?.startsWith("de") ? "de" : "en";
+  const { hasPermission } = usePermissions();
+  const canManageRoles = hasPermission("admin.system");
   const { data: roles = [], isLoading } = useCustomRoles();
   const createRole = useCreateCustomRole();
   const updateRole = useUpdateCustomRole();
@@ -107,7 +109,9 @@ export default function AdminRolesPage() {
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2"><Shield className="h-6 w-6" />{t("admin:roles_title")}</h1>
           <p className="text-muted-foreground">{t("admin:roles_subtitle")}</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />{t("admin:new_role")}</Button>
+        {canManageRoles && (
+          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />{t("admin:new_role")}</Button>
+        )}
       </div>
 
       <Card>
