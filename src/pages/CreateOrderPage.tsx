@@ -127,7 +127,6 @@ export default function CreateOrderPage() {
   // Single order state
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [orderType, setOrderType] = useState<string>("");
-  const [priority, setPriority] = useState<string>("normal");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
