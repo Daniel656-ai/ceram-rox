@@ -2,102 +2,79 @@
 
 ## Ziel
 
-Ein Benutzer mit Rolle `auftraggeber` darf in der Auftragsliste nur noch sehen:
-- Aufträge, die er selbst erstellt hat (`created_by = auth.uid()`), **plus**
-- Aufträge in Projekten, in denen er die Projekt-Rolle `owner` oder `leader` hat.
-
-Eine reine Projekt-Mitgliedschaft (`member`) reicht für Auftraggeber nicht mehr aus, um fremde Aufträge zu sehen. Master und Durchführer behalten ihre bisherige Sichtbarkeit unverändert.
+Ein **Projektleiter** (Mitglied mit Projekt-Rolle `leader`, ebenso `owner`) soll Messungen innerhalb von Aufträgen seines Projekts an Durchführer zuweisen können – aktuell ist das nur für `master` möglich.
 
 ## Umsetzung
 
-### 1. RLS-Policy `Users see relevant orders` neu schreiben (Migration)
+### 1. RLS-Policy `Relevant users update measurements` erweitern (Migration)
 
-Die bestehende `SELECT`-Policy auf `measurement_orders` wird ersetzt. Neue Logik:
-
-```text
-master                                              -> sieht alles
-created_by = auth.uid()                             -> eigener Auftrag
-durchfuehrer und assigned_to_order                  -> zugewiesener Auftrag
-NICHT auftraggeber UND project_member               -> Mitgliedschaft (alte Logik
-                                                       für Durchführer/sonstige Rollen)
-auftraggeber UND (owner ODER leader des Projekts)   -> nur Leitungsrolle reicht
+Aktuell:
+```sql
+USING (
+  has_role(auth.uid(), 'master')
+  OR assigned_to = auth.uid()
+  OR is_order_creator(auth.uid(), order_id)
+)
 ```
 
-In SQL:
-
+Neu — zusätzlich Projekt-Owner/Leader des Projekts, zu dem der Auftrag gehört:
 ```sql
-DROP POLICY "Users see relevant orders" ON public.measurement_orders;
+DROP POLICY "Relevant users update measurements" ON public.order_measurements;
 
-CREATE POLICY "Users see relevant orders"
-ON public.measurement_orders
-FOR SELECT
+CREATE POLICY "Relevant users update measurements"
+ON public.order_measurements
+FOR UPDATE
 USING (
   has_role(auth.uid(), 'master'::app_role)
-  OR created_by = auth.uid()
-  OR is_assigned_to_order(auth.uid(), id)
-  OR (
-    NOT has_role(auth.uid(), 'auftraggeber'::app_role)
-    AND is_project_member(auth.uid(), project_id)
-  )
-  OR (
-    has_role(auth.uid(), 'auftraggeber'::app_role)
-    AND (
-      has_project_role(auth.uid(), project_id, 'owner'::project_role)
-      OR has_project_role(auth.uid(), project_id, 'leader'::project_role)
-    )
+  OR assigned_to = auth.uid()
+  OR is_order_creator(auth.uid(), order_id)
+  OR EXISTS (
+    SELECT 1 FROM measurement_orders mo
+    WHERE mo.id = order_measurements.order_id
+      AND (
+        has_project_role(auth.uid(), mo.project_id, 'owner'::project_role)
+        OR has_project_role(auth.uid(), mo.project_id, 'leader'::project_role)
+      )
   )
 );
 ```
 
-Genutzte SECURITY-DEFINER-Helfer existieren bereits: `has_role`, `is_assigned_to_order`, `is_project_member`, `has_project_role`. Damit bleibt RLS rekursionsfrei.
+Damit darf ein Projektleiter Felder wie `assigned_to`, `ranking`, `status` etc. seiner Projekt-Messungen aktualisieren.
 
-### 2. Konsistente Einschränkung auf abhängigen Tabellen
+### 2. Frontend: Zuweisung in `OrderDetailPage` für Leiter/Owner freischalten
 
-Damit ein Auftraggeber nicht über Umwege (verknüpfte Sub-Selects) doch Inhalte fremder Aufträge sieht, müssen die analogen `project_member`-Zweige in folgenden bestehenden Policies ebenfalls für Auftraggeber neutralisiert werden:
+In `src/pages/OrderDetailPage.tsx`:
 
-- `order_measurements` – Policy „Users see relevant measurements“
-- `measurement_parameters` – Policy „Users see relevant params“
-- `measurement_results` – Policy „Users see relevant results“
-- `documents` – Policy „Users see relevant docs“
-- `order_audit_log` – Policy „Users see relevant audit logs“
+- Projekt-Mitglieder des Auftragsprojekts laden (via `useProjectMembers((order as any).project_id)`).
+- Neue Berechtigungs-Flags ableiten:
+  ```ts
+  const myMembership = projectMembers.find(m => m.user_id === user?.id);
+  const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
+  const canAssign = role === "master" || isProjectLead;
+  ```
+- Die beiden Stellen, die heute `role === "master"` für die Bearbeitung in der Messungs-Tabelle prüfen, auf `canAssign` umstellen:
+  - Spalte „Priorität/Ranking" (Zeile ~281)
+  - Spalte „Zugewiesen an" (Zeile ~307)
 
-Pattern überall identisch: der Teil
-```sql
-EXISTS (... WHERE ... AND is_project_member(auth.uid(), mo.project_id))
-```
-wird zu
-```sql
-EXISTS (
-  ... WHERE ... AND (
-    (NOT has_role(auth.uid(), 'auftraggeber'::app_role)
-       AND is_project_member(auth.uid(), mo.project_id))
-    OR (has_role(auth.uid(), 'auftraggeber'::app_role)
-       AND (has_project_role(auth.uid(), mo.project_id, 'owner'::project_role)
-            OR has_project_role(auth.uid(), mo.project_id, 'leader'::project_role)))
-  )
-)
-```
+Anzeigelogik bleibt sonst unverändert; wenn `canAssign` falsch ist, wird wie bisher der reine Text/Badge gerendert.
 
-Der direkte `created_by`/`assigned_to`/`master`-Pfad bleibt jeweils unverändert – Auftraggeber sehen ihre eigenen Inhalte weiterhin uneingeschränkt.
+### 3. Keine weiteren Änderungen nötig
 
-### 3. Keine Frontend-Änderungen nötig
+- `useAssignMeasurement` und `useUpdateMeasurementRanking` rufen bereits ein einfaches `update` auf `order_measurements` – die neue Policy deckt das ab.
+- `useDurchfuehrer` ist bereits öffentlich lesbar (Profile + user_roles SELECT), funktioniert für Projektleiter ebenso.
+- Sichtbarkeit der Aufträge bleibt durch die zuvor aktualisierten SELECT-Policies geregelt: Auftraggeber ohne Projekt-Leitungsrolle sehen den Auftrag nicht, kommen also gar nicht erst auf die Detailseite.
 
-`useOrders` und `useOrderDetail` führen keine eigene Filterung durch – sie verlassen sich vollständig auf RLS. Sobald die Policies aktualisiert sind, verschwinden die fremden Aufträge automatisch aus Liste, Suche (Dashboard) und Detailaufrufen. Direkter URL-Zugriff (`/auftraege/<fremde-id>`) liefert dann ebenfalls kein Ergebnis und führt zur Not-Found-Behandlung der Detail-Seite.
+## Verifikation
 
-### 4. Verifikation nach dem Deployment
-
-- Test als Auftraggeber A:
-  - Eigener Auftrag in Projekt P1 (Rolle: owner) → sichtbar.
-  - Fremder Auftrag in Projekt P1 (Auftraggeber B, A ist owner/leader) → sichtbar.
-  - Fremder Auftrag in Projekt P2, in dem A nur `member` ist → **nicht** sichtbar.
-  - Fremder Auftrag in Projekt P3, in dem A keine Mitgliedschaft hat → **nicht** sichtbar.
-- Test als Master: alle Aufträge sichtbar (unverändert).
-- Test als Durchführer: zugewiesene Aufträge + Projektmitgliedschaft wirken weiter wie bisher.
+- **Master**: kann wie bisher zuweisen.
+- **Projektleiter (Owner/Leader)**: sieht im Detail eines Auftrags seines Projekts die Auswahlboxen für Ranking und „Zugewiesen an" und kann diese ändern.
+- **Reines Projektmitglied (`member`)**: sieht weiterhin nur Anzeige, keine Auswahl.
+- **Auftragsersteller**: kann seinen eigenen Auftrag wie bisher öffnen, ohne neue Rechte für Zuweisung (außer er ist selbst Owner/Leader).
+- **Durchführer ohne Leitungsrolle**: unverändert – nur Statuswechsel an eigenen zugewiesenen Messungen.
 
 ## Technische Notizen
 
-- Reine Policy-Änderung, keine Schemaänderungen, keine Datenmigration.
-- Wird als eine SQL-Migration ausgeliefert (DROP + CREATE für jede betroffene Policy).
-- Keine neuen Helper-Funktionen erforderlich.
-- `is_project_member` bleibt erhalten und wird weiterhin von `projects`, `project_milestones`, `project_work_packages` etc. genutzt – diese Module sollen sich für Auftraggeber-Mitglieder nicht ändern.
+- Eine SQL-Migration (DROP + CREATE der UPDATE-Policy auf `order_measurements`).
+- Frontend-Änderung in genau einer Datei (`OrderDetailPage.tsx`): Hook-Import + zwei Bedingungen.
+- Keine neuen Hilfsfunktionen, kein Schema-Change.
 
