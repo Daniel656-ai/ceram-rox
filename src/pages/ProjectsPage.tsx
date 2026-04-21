@@ -1,6 +1,7 @@
 import { useProjectsWithStats } from "@/hooks/useProjectDetail";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -25,9 +26,12 @@ export default function ProjectsPage() {
   const { t, i18n } = useTranslation("projects");
   const { data: projects = [], isLoading } = useProjectsWithStats();
   const { data: users = [] } = useUsers();
-  const { user, role } = useAuth();
+const { user, role } = useAuth();
+  const { hasPermission } = usePermissions();
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
+
+  const canCreateProject = hasPermission('admin.system') || hasPermission('users.manage');
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("created_desc");
@@ -188,7 +192,7 @@ export default function ProjectsPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-        {(role === "master" || role === "auftraggeber") && (
+{canCreateProject && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />{t("new_project")}</Button>
