@@ -42,11 +42,15 @@ function getUserName(users: any[], userId: string) {
 
 export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const { t, i18n } = useTranslation("projects");
+  const { role } = useAuth();
   const { data: entries = [] } = useProjectTimeEntries(projectId, orderId);
   const { data: users = [] } = useUsers();
   const addEntry = useAddProjectTimeEntry();
   const updateEntry = useUpdateProjectTimeEntry();
   const deleteEntry = useDeleteProjectTimeEntry();
+
+  if (role === "auftraggeber") return null;
+
 
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
