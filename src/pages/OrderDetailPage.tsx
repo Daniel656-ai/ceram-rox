@@ -42,6 +42,7 @@ export default function OrderDetailPage() {
   const { data: durchfuehrerList = [] } = useDurchfuehrer();
   const assignMeasurement = useAssignMeasurement();
   const updateMeasurementRanking = useUpdateMeasurementRanking();
+  const { data: projectMembers = [] } = useProjectMembers((order as any)?.project_id);
   const [logOpen, setLogOpen] = useState(false);
   const [logMeasurementId, setLogMeasurementId] = useState("");
   const [logHours, setLogHours] = useState("1");
