@@ -192,7 +192,7 @@ const { user, role } = useAuth();
           <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-        {(role === "master" || role === "auftraggeber") && (
+{canCreateProject && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />{t("new_project")}</Button>
