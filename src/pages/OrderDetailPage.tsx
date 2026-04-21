@@ -453,13 +453,15 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Time Entries for this Order */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">Arbeitszeiten</CardTitle></CardHeader>
-        <CardContent>
-          <ProjectTimeEntries projectId={(order as any).project_id} orderId={order.id} />
-        </CardContent>
-      </Card>
+      {/* Time Entries for this Order - hidden for auftraggeber */}
+      {role !== "auftraggeber" && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Arbeitszeiten</CardTitle></CardHeader>
+          <CardContent>
+            <ProjectTimeEntries projectId={(order as any).project_id} orderId={order.id} />
+          </CardContent>
+        </Card>
+      )}
 
       {auditLogs.length > 0 && (
         <Card>
