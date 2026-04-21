@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useProjectMembers } from "@/hooks/useProjectMembers";
 
 
 export default function OrderDetailPage() {
@@ -41,6 +42,7 @@ export default function OrderDetailPage() {
   const { data: durchfuehrerList = [] } = useDurchfuehrer();
   const assignMeasurement = useAssignMeasurement();
   const updateMeasurementRanking = useUpdateMeasurementRanking();
+  const { data: projectMembers = [] } = useProjectMembers((order as any)?.project_id);
   const [logOpen, setLogOpen] = useState(false);
   const [logMeasurementId, setLogMeasurementId] = useState("");
   const [logHours, setLogHours] = useState("1");
@@ -66,6 +68,9 @@ export default function OrderDetailPage() {
 
   const canEditDelete = role === "master" || (role === "auftraggeber" && (order as any).created_by === user?.id && order.status === "open");
   const canEditPriority = role === "master" || (order as any).created_by === user?.id;
+  const myMembership = (projectMembers as any[]).find((m) => m.user_id === user?.id);
+  const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
+  const canAssign = role === "master" || isProjectLead;
 
   const measurements = (order as any).order_measurements || [];
   const totalPlanned = measurements.reduce((s: number, m: any) => s + (parseFloat(m.planned_hours) || 0), 0);
@@ -278,7 +283,7 @@ export default function OrderDetailPage() {
                     <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
                     <TableCell>
-                      {role === "master" ? (
+                      {canAssign ? (
                         <Select
                           value={m.ranking != null ? String(m.ranking) : "none"}
                           onValueChange={(val) => {
@@ -304,7 +309,7 @@ export default function OrderDetailPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {role === "master" ? (
+                      {canAssign ? (
                         <Select
                           value={m.assigned_to || "unassigned"}
                           onValueChange={(val) => {
