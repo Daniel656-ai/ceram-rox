@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Search, Trash2, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAnyProjectLead } from "@/hooks/useProjectMembers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -18,6 +19,7 @@ export default function OrdersPage() {
   const { user, role } = useAuth();
   const { t, i18n } = useTranslation(["orders", "common"]);
   const { data: orders = [], isLoading } = useOrders();
+  const { data: isAnyProjectLead = false } = useIsAnyProjectLead();
   const deleteOrder = useDeleteOrder();
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
