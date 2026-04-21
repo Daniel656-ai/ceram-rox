@@ -67,6 +67,9 @@ export default function OrderDetailPage() {
 
   const canEditDelete = role === "master" || (role === "auftraggeber" && (order as any).created_by === user?.id && order.status === "open");
   const canEditPriority = role === "master" || (order as any).created_by === user?.id;
+  const myMembership = (projectMembers as any[]).find((m) => m.user_id === user?.id);
+  const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
+  const canAssign = role === "master" || isProjectLead;
 
   const measurements = (order as any).order_measurements || [];
   const totalPlanned = measurements.reduce((s: number, m: any) => s + (parseFloat(m.planned_hours) || 0), 0);
