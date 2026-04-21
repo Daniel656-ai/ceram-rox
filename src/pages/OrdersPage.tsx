@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Search, Trash2, FileSpreadsheet } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsAnyProjectLead } from "@/hooks/useProjectMembers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -18,6 +19,7 @@ export default function OrdersPage() {
   const { user, role } = useAuth();
   const { t, i18n } = useTranslation(["orders", "common"]);
   const { data: orders = [], isLoading } = useOrders();
+  const { data: isAnyProjectLead = false } = useIsAnyProjectLead();
   const deleteOrder = useDeleteOrder();
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
@@ -32,9 +34,12 @@ export default function OrdersPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const canCreateOrder = role === "master" || role === "auftraggeber" || isAnyProjectLead;
+  const canShowActions = role === "master" || role === "auftraggeber" || isAnyProjectLead;
+
   const canDelete = (o: any) => {
     if (role === "master") return true;
-    if (role === "auftraggeber" && o.created_by === user?.id && o.status === "open") return true;
+    if (o.created_by === user?.id && o.status === "open") return true;
     return false;
   };
 
@@ -66,7 +71,7 @@ export default function OrdersPage() {
           </h1>
           <p className="text-muted-foreground">{t("orders:subtitle")}</p>
         </div>
-        {(role === "auftraggeber" || role === "master") && (
+        {canCreateOrder && (
           <div className="flex gap-2">
             <Link to="/auftraege/neu">
               <Button><Plus className="h-4 w-4 mr-2" />{t("orders:new_order")}</Button>
@@ -116,7 +121,7 @@ export default function OrdersPage() {
                 <TableHead>{t("common:status")}</TableHead>
                 <TableHead>{t("orders:due_date")}</TableHead>
                 <TableHead>{t("common:created")}</TableHead>
-                {(role === "master" || role === "auftraggeber") && <TableHead className="w-[60px]">{t("common:actions")}</TableHead>}
+                {canShowActions && <TableHead className="w-[60px]">{t("common:actions")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -166,7 +171,7 @@ export default function OrdersPage() {
                     <TableCell><StatusBadge status={o.status} /></TableCell>
                     <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
                     <TableCell>{new Date(o.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
-                    {(role === "master" || role === "auftraggeber") && (
+                    {canShowActions && (
                       <TableCell>
                         {canDelete(o) && (
                           <AlertDialog>

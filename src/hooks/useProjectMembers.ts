@@ -2,6 +2,24 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+export function useIsAnyProjectLead() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["is-any-project-lead", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_members")
+        .select("id")
+        .eq("user_id", user!.id)
+        .in("role", ["owner", "leader"])
+        .limit(1);
+      if (error) throw error;
+      return (data?.length ?? 0) > 0;
+    },
+    enabled: !!user,
+  });
+}
+
 export function useProjectMembers(projectId?: string) {
   const { user } = useAuth();
   return useQuery({
