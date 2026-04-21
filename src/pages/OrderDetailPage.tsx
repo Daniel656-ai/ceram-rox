@@ -309,7 +309,7 @@ export default function OrderDetailPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {role === "master" ? (
+                      {canAssign ? (
                         <Select
                           value={m.assigned_to || "unassigned"}
                           onValueChange={(val) => {
