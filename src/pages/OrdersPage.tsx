@@ -171,7 +171,7 @@ export default function OrdersPage() {
                     <TableCell><StatusBadge status={o.status} /></TableCell>
                     <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
                     <TableCell>{new Date(o.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
-                    {(role === "master" || role === "auftraggeber") && (
+                    {canShowActions && (
                       <TableCell>
                         {canDelete(o) && (
                           <AlertDialog>
