@@ -96,14 +96,7 @@ export default function OrdersPage() {
                     <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                     <TableCell>{m.measurement_orders?.projects?.project_number || "–"}</TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
-                    <TableCell>{(() => {
-                      const r = m.ranking ?? m.measurement_orders?.ranking;
-                      return r ? (
-                        <Badge variant={r === 1 ? "destructive" : r === 2 ? "default" : "secondary"}>Prio {r}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">–</span>
-                      );
-                    })()}</TableCell>
+                    <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
                     <TableCell>{m.due_date ? new Date(m.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
                   </TableRow>
                 ))}
@@ -251,13 +244,7 @@ export default function OrdersPage() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        o.ranking ? (
-                          <Badge variant={o.ranking === 1 ? "destructive" : o.ranking === 2 ? "default" : "secondary"}>
-                            Prio {o.ranking}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )
+                        <PriorityBadge ranking={o.ranking} />
                       )}
                     </TableCell>
                     <TableCell><StatusBadge status={o.status} /></TableCell>

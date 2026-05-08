@@ -313,13 +313,7 @@ export default function OrderDetailPage() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        m.ranking ? (
-                          <Badge variant={m.ranking === 1 ? "destructive" : m.ranking === 2 ? "default" : "secondary"}>
-                            Prio {m.ranking}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )
+                        <PriorityBadge ranking={m.ranking} />
                       )}
                     </TableCell>
                     <TableCell>
