@@ -29,6 +29,8 @@ import { useServicePermissions } from "@/hooks/useServicePermissions";
 
 export default function OrderDetailPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const measurementFilter = searchParams.get("measurement");
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
