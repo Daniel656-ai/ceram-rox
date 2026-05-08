@@ -75,6 +75,7 @@ export default function OrderDetailPage() {
   const myMembership = (projectMembers as any[]).find((m) => m.user_id === user?.id);
   const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
   const canAssign = role === "master" || isProjectLead;
+  const canEditMeasurementPriority = canAssign && role !== "durchfuehrer";
 
   const allMeasurements = (order as any).order_measurements || [];
   const measurements = measurementFilter
