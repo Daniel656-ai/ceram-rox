@@ -68,6 +68,7 @@ export default function OrdersPage() {
                   <TableHead>Dienstleistung</TableHead>
                   <TableHead>Arbeitsplatz</TableHead>
                   <TableHead>{t("orders:order_number")}</TableHead>
+                  <TableHead>Ersteller</TableHead>
                   <TableHead>{t("orders:project_number")}</TableHead>
                   <TableHead>{t("common:status")}</TableHead>
                   <TableHead>{t("orders:due_date")}</TableHead>
@@ -75,9 +76,9 @@ export default function OrdersPage() {
               </TableHeader>
               <TableBody>
                 {isLoadingMine ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
                 ) : filteredTasks.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
                 ) : filteredTasks.map((m: any) => (
                   <TableRow key={m.id}>
                     <TableCell className="font-mono font-medium">
@@ -90,6 +91,7 @@ export default function OrdersPage() {
                     <TableCell className="font-mono">
                       {m.measurement_orders?.order_number || "–"}
                     </TableCell>
+                    <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                     <TableCell>{m.measurement_orders?.projects?.project_number || "–"}</TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
                     <TableCell>{m.due_date ? new Date(m.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
