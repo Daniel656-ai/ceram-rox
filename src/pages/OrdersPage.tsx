@@ -68,6 +68,7 @@ export default function OrdersPage() {
                   <TableHead>Dienstleistung</TableHead>
                   <TableHead>Arbeitsplatz</TableHead>
                   <TableHead>{t("orders:order_number")}</TableHead>
+                  <TableHead>Ersteller</TableHead>
                   <TableHead>{t("orders:project_number")}</TableHead>
                   <TableHead>{t("common:status")}</TableHead>
                   <TableHead>{t("orders:due_date")}</TableHead>
