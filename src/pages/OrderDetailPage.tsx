@@ -317,7 +317,7 @@ export default function OrderDetailPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {canAssign ? (
+                      {canEditMeasurementPriority ? (
                         <Select
                           value={m.assigned_to || "unassigned"}
                           onValueChange={(val) => {
