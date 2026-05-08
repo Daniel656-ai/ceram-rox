@@ -80,7 +80,11 @@ export default function OrdersPage() {
                   <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
                 ) : filteredTasks.map((m: any) => (
                   <TableRow key={m.id}>
-                    <TableCell className="font-mono font-medium">{m.measurement_number}</TableCell>
+                    <TableCell className="font-mono font-medium">
+                      <Link to={`/auftraege/${m.measurement_orders?.id}?measurement=${m.id}`} className="text-primary hover:underline">
+                        {m.measurement_number}
+                      </Link>
+                    </TableCell>
                     <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
                     <TableCell>{m.workstations?.name || "–"}</TableCell>
                     <TableCell>
