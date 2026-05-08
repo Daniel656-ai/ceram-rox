@@ -96,7 +96,14 @@ export default function OrdersPage() {
                     <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                     <TableCell>{m.measurement_orders?.projects?.project_number || "–"}</TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
-                    <TableCell><PriorityBadge priority={m.measurement_orders?.priority} /></TableCell>
+                    <TableCell>{(() => {
+                      const r = m.ranking ?? m.measurement_orders?.ranking;
+                      return r ? (
+                        <Badge variant={r === 1 ? "destructive" : r === 2 ? "default" : "secondary"}>Prio {r}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">–</span>
+                      );
+                    })()}</TableCell>
                     <TableCell>{m.due_date ? new Date(m.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
                   </TableRow>
                 ))}
