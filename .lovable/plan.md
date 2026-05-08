@@ -1,80 +1,21 @@
-
-
 ## Ziel
+Die Tabelle "Meine Aufgaben" (Rolle Messdienstleister) nach den vier vorgegebenen Regeln sortieren.
 
-Ein **Projektleiter** (Mitglied mit Projekt-Rolle `leader`, ebenso `owner`) soll Messungen innerhalb von Aufträgen seines Projekts an Durchführer zuweisen können – aktuell ist das nur für `master` möglich.
+## Sortier-Reihenfolge (Priorität von oben nach unten)
 
-## Umsetzung
+1. **Status "abgeschlossen" nach unten** – `completed` immer ans Tabellenende, unabhängig von allen anderen Regeln.
+2. **Überfällige Messungen ganz nach oben** – alle Messungen mit `due_date < heute` (und nicht abgeschlossen) werden vor allen nicht-überfälligen einsortiert. Innerhalb der Überfälligen: ältestes Datum zuerst (am längsten überfällig oben).
+3. **Priorität (ranking)** – `1` vor `2` vor `3`, kein Ranking zuletzt.
+4. **Auftragstyp** – `Produktionsauftrag` vor `Kundenauftrag` und `F&E-Auftrag`.
+5. **Fälligkeit** – je näher am heutigen Datum, desto weiter oben (aufsteigend nach `due_date`); Messungen ohne Fälligkeitsdatum ans Ende dieser Gruppe.
 
-### 1. RLS-Policy `Relevant users update measurements` erweitern (Migration)
+## Technische Umsetzung
 
-Aktuell:
-```sql
-USING (
-  has_role(auth.uid(), 'master')
-  OR assigned_to = auth.uid()
-  OR is_order_creator(auth.uid(), order_id)
-)
-```
+- Anpassung in `src/hooks/useMeasurements.ts` in `useMyMeasurements` → `merged.sort(...)`.
+- `order_type` ist bereits über `measurement_orders(*)` im Select enthalten, keine zusätzliche Query nötig.
+- Vergleichsfunktion in der Reihenfolge: completed-Flag → overdue-Flag → ranking → order_type-Gewicht (Produktion=0, sonst=1) → due_date asc.
+- Heutiges Datum als `YYYY-MM-DD` String, Vergleich per `localeCompare` konsistent zur bestehenden Logik.
 
-Neu — zusätzlich Projekt-Owner/Leader des Projekts, zu dem der Auftrag gehört:
-```sql
-DROP POLICY "Relevant users update measurements" ON public.order_measurements;
-
-CREATE POLICY "Relevant users update measurements"
-ON public.order_measurements
-FOR UPDATE
-USING (
-  has_role(auth.uid(), 'master'::app_role)
-  OR assigned_to = auth.uid()
-  OR is_order_creator(auth.uid(), order_id)
-  OR EXISTS (
-    SELECT 1 FROM measurement_orders mo
-    WHERE mo.id = order_measurements.order_id
-      AND (
-        has_project_role(auth.uid(), mo.project_id, 'owner'::project_role)
-        OR has_project_role(auth.uid(), mo.project_id, 'leader'::project_role)
-      )
-  )
-);
-```
-
-Damit darf ein Projektleiter Felder wie `assigned_to`, `ranking`, `status` etc. seiner Projekt-Messungen aktualisieren.
-
-### 2. Frontend: Zuweisung in `OrderDetailPage` für Leiter/Owner freischalten
-
-In `src/pages/OrderDetailPage.tsx`:
-
-- Projekt-Mitglieder des Auftragsprojekts laden (via `useProjectMembers((order as any).project_id)`).
-- Neue Berechtigungs-Flags ableiten:
-  ```ts
-  const myMembership = projectMembers.find(m => m.user_id === user?.id);
-  const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
-  const canAssign = role === "master" || isProjectLead;
-  ```
-- Die beiden Stellen, die heute `role === "master"` für die Bearbeitung in der Messungs-Tabelle prüfen, auf `canAssign` umstellen:
-  - Spalte „Priorität/Ranking" (Zeile ~281)
-  - Spalte „Zugewiesen an" (Zeile ~307)
-
-Anzeigelogik bleibt sonst unverändert; wenn `canAssign` falsch ist, wird wie bisher der reine Text/Badge gerendert.
-
-### 3. Keine weiteren Änderungen nötig
-
-- `useAssignMeasurement` und `useUpdateMeasurementRanking` rufen bereits ein einfaches `update` auf `order_measurements` – die neue Policy deckt das ab.
-- `useDurchfuehrer` ist bereits öffentlich lesbar (Profile + user_roles SELECT), funktioniert für Projektleiter ebenso.
-- Sichtbarkeit der Aufträge bleibt durch die zuvor aktualisierten SELECT-Policies geregelt: Auftraggeber ohne Projekt-Leitungsrolle sehen den Auftrag nicht, kommen also gar nicht erst auf die Detailseite.
-
-## Verifikation
-
-- **Master**: kann wie bisher zuweisen.
-- **Projektleiter (Owner/Leader)**: sieht im Detail eines Auftrags seines Projekts die Auswahlboxen für Ranking und „Zugewiesen an" und kann diese ändern.
-- **Reines Projektmitglied (`member`)**: sieht weiterhin nur Anzeige, keine Auswahl.
-- **Auftragsersteller**: kann seinen eigenen Auftrag wie bisher öffnen, ohne neue Rechte für Zuweisung (außer er ist selbst Owner/Leader).
-- **Durchführer ohne Leitungsrolle**: unverändert – nur Statuswechsel an eigenen zugewiesenen Messungen.
-
-## Technische Notizen
-
-- Eine SQL-Migration (DROP + CREATE der UPDATE-Policy auf `order_measurements`).
-- Frontend-Änderung in genau einer Datei (`OrderDetailPage.tsx`): Hook-Import + zwei Bedingungen.
-- Keine neuen Hilfsfunktionen, kein Schema-Change.
-
+## Nicht betroffen
+- UI / Spaltenlayout der Tabelle bleibt unverändert.
+- Andere Rollen/Tabellen werden nicht verändert.

@@ -75,10 +75,30 @@ export function useMyMeasurements() {
         const cb = m.measurement_orders?.created_by;
         m.creator_profile = cb ? creators.get(cb) || null : null;
       });
+      const today = new Date().toISOString().slice(0, 10);
+      const typeWeight = (t?: string) => (t === "produktionsauftrag" ? 0 : 1);
       merged.sort((a: any, b: any) => {
+        // 1. completed always to the bottom
+        const ac = a.status === "completed" ? 1 : 0;
+        const bc = b.status === "completed" ? 1 : 0;
+        if (ac !== bc) return ac - bc;
+        // 2. overdue always to the top
+        const ao = a.due_date && a.due_date < today ? 0 : 1;
+        const bo = b.due_date && b.due_date < today ? 0 : 1;
+        if (ao !== bo) return ao - bo;
+        if (ao === 0 && bo === 0) {
+          // both overdue: oldest due_date first
+          const cmp = (a.due_date || "").localeCompare(b.due_date || "");
+          if (cmp !== 0) return cmp;
+        }
+        // 3. ranking (priority)
         const ra = a.ranking ?? 999, rb = b.ranking ?? 999;
         if (ra !== rb) return ra - rb;
-        if ((b.priority ?? 0) !== (a.priority ?? 0)) return (b.priority ?? 0) - (a.priority ?? 0);
+        // 4. order_type: Produktionsauftrag first
+        const ta = typeWeight(a.measurement_orders?.order_type);
+        const tb = typeWeight(b.measurement_orders?.order_type);
+        if (ta !== tb) return ta - tb;
+        // 5. due_date ascending (closer first), missing last
         return (a.due_date || "9999").localeCompare(b.due_date || "9999");
       });
       return merged;
