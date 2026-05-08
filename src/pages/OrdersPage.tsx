@@ -87,10 +87,8 @@ export default function OrdersPage() {
                     </TableCell>
                     <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
                     <TableCell>{m.workstations?.name || "–"}</TableCell>
-                    <TableCell>
-                      <Link to={`/auftraege/${m.measurement_orders?.id}`} className="font-mono text-primary hover:underline">
-                        {m.measurement_orders?.order_number || "–"}
-                      </Link>
+                    <TableCell className="font-mono">
+                      {m.measurement_orders?.order_number || "–"}
                     </TableCell>
                     <TableCell>{m.measurement_orders?.projects?.project_number || "–"}</TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
