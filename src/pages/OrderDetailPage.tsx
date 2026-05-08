@@ -327,11 +327,17 @@ export default function OrderDetailPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
-                            {durchfuehrerList.map((u: any) => (
-                              <SelectItem key={u.user_id} value={u.user_id}>
-                                {u.first_name} {u.last_name}
-                              </SelectItem>
-                            ))}
+                            {durchfuehrerList
+                              .filter((u: any) =>
+                                (servicePermissions as any[]).some(
+                                  (p) => p.user_id === u.user_id && p.service_id === m.service_id
+                                )
+                              )
+                              .map((u: any) => (
+                                <SelectItem key={u.user_id} value={u.user_id}>
+                                  {u.first_name} {u.last_name}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       ) : (
