@@ -10,7 +10,7 @@ export function useOrders() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("measurement_orders")
-        .select(`*, projects(project_number, project_name)`)
+        .select(`*, projects(project_number, project_name), order_measurements(assigned_to, workstations(responsible_user_id))`)
         .order("ranking", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) throw error;

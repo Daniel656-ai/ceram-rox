@@ -25,7 +25,15 @@ export default function OrdersPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filtered = orders.filter((o: any) => {
+  const visibleOrders = role === "durchfuehrer"
+    ? orders.filter((o: any) =>
+        (o.order_measurements || []).some((m: any) =>
+          m.assigned_to === user?.id || m.workstations?.responsible_user_id === user?.id
+        )
+      )
+    : orders;
+
+  const filtered = visibleOrders.filter((o: any) => {
     const matchesSearch = !search ||
       o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
       o.projects?.project_number?.toLowerCase().includes(search.toLowerCase()) ||
