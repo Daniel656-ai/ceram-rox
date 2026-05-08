@@ -126,7 +126,7 @@ export default function WorkPlanPage() {
                       {m.measurement_services?.service_name}
                     </CardTitle>
                   </div>
-                  <PriorityBadge priority={m.measurement_orders?.priority} />
+                  <PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} />
                 </div>
               </CardHeader>
               <CardContent className="flex-1 space-y-3">
