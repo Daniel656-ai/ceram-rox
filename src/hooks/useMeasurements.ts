@@ -39,6 +39,12 @@ export function useMyMeasurements() {
     queryKey: ["my-measurements", user?.id],
     queryFn: async () => {
       const select = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), workstations(id, name, responsible_user_id), measurement_orders(*, projects(project_number, project_name))`;
+      const fetchCreators = async (rows: any[]) => {
+        const ids = Array.from(new Set(rows.map((r) => r.measurement_orders?.created_by).filter(Boolean)));
+        if (ids.length === 0) return new Map<string, any>();
+        const { data } = await supabase.from("profiles").select("user_id, first_name, last_name").in("user_id", ids);
+        return new Map((data || []).map((p: any) => [p.user_id, p]));
+      };
       // Assigned to me
       const { data: assigned, error: e1 } = await supabase
         .from("order_measurements")
