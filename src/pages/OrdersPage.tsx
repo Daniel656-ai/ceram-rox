@@ -91,6 +91,7 @@ export default function OrdersPage() {
                     <TableCell className="font-mono">
                       {m.measurement_orders?.order_number || "–"}
                     </TableCell>
+                    <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                     <TableCell>{m.measurement_orders?.projects?.project_number || "–"}</TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
                     <TableCell>{m.due_date ? new Date(m.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
