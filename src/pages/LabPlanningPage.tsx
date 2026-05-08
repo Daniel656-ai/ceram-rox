@@ -6,6 +6,7 @@ import { useUsers } from "@/hooks/useUsers";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PriorityBadge } from "@/components/PriorityBadge";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -154,15 +155,7 @@ export default function LabPlanningPage() {
                           <GripVertical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <span className="font-mono text-xs font-medium">{m.measurement_number}</span>
                         </div>
-                        {m.ranking ? (
-                          <Badge className={`text-[10px] ${m.ranking === 1 ? "text-red-600 bg-red-50" : m.ranking === 2 ? "text-orange-600 bg-orange-50" : "text-yellow-600 bg-yellow-50"}`} variant="outline">
-                            Prio {m.ranking}
-                          </Badge>
-                        ) : (
-                          <Badge className={`text-[10px] ${priorityColor(m.priority)}`} variant="outline">
-                            {priorityLabel(m.priority)}
-                          </Badge>
-                        )}
+                        <PriorityBadge ranking={m.ranking} className="text-[10px]" />
                       </div>
                       <p className="text-sm font-medium truncate">
                         {m.measurement_services?.service_name || "–"}

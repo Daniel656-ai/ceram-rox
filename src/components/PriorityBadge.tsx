@@ -1,32 +1,36 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
 
 interface PriorityBadgeProps {
-  priority: number | string | null | undefined;
+  /** Ranking value: 1 = highest, 2 = high, 3 = normal. Null/undefined => "–". */
+  ranking?: number | string | null;
   className?: string;
 }
 
-export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
-  const { t } = useTranslation("common");
+/**
+ * Resolves the effective ranking for a measurement row.
+ * Priority order: measurement.ranking -> order.ranking.
+ */
+export function getEffectiveRanking(measurement: any): number | null {
+  const r = measurement?.ranking ?? measurement?.measurement_orders?.ranking ?? null;
+  if (r == null) return null;
+  const n = typeof r === "string" ? parseInt(r, 10) : r;
+  return Number.isFinite(n) ? n : null;
+}
 
-  // Normalize: support both numeric (0/1/2) and string ("normal"/"important"/"highest") values
-  const normalize = (p: number | string | null | undefined): "normal" | "important" | "highest" => {
-    if (p === 1 || p === "1" || p === "important") return "important";
-    if (p === 2 || p === "2" || p === "highest" || p === "high") return "highest";
-    return "normal";
-  };
+export function PriorityBadge({ ranking, className }: PriorityBadgeProps) {
+  const r = ranking == null ? null : (typeof ranking === "string" ? parseInt(ranking, 10) : ranking);
 
-  const priorityConfig: Record<string, { labelKey: string; className: string }> = {
-    normal: { labelKey: "priority_normal", className: "bg-muted text-muted-foreground" },
-    important: { labelKey: "priority_important", className: "bg-warning/15 text-warning border-warning/30" },
-    highest: { labelKey: "priority_highest", className: "bg-destructive/15 text-destructive border-destructive/30" },
-  };
+  if (!r || !Number.isFinite(r)) {
+    return <span className={cn("text-muted-foreground", className)}>–</span>;
+  }
 
-  const config = priorityConfig[normalize(priority)];
+  const variant: "destructive" | "default" | "secondary" =
+    r === 1 ? "destructive" : r === 2 ? "default" : "secondary";
+
   return (
-    <Badge variant="outline" className={cn("font-medium", config.className, className)}>
-      {t(config.labelKey)}
+    <Badge variant={variant} className={cn("font-medium", className)}>
+      Prio {r}
     </Badge>
   );
 }
