@@ -75,7 +75,7 @@ export default function OrderDetailPage() {
   const myMembership = (projectMembers as any[]).find((m) => m.user_id === user?.id);
   const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
   const canAssign = role === "master" || isProjectLead;
-  const canEditMeasurementPriority = canAssign && role !== "durchfuehrer";
+  const canManageMeasurement = canAssign && role !== "durchfuehrer";
 
   const allMeasurements = (order as any).order_measurements || [];
   const measurements = measurementFilter
@@ -291,7 +291,7 @@ export default function OrderDetailPage() {
                     <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
                     <TableCell>
-                      {canEditMeasurementPriority ? (
+                      {canManageMeasurement ? (
                         <Select
                           value={m.ranking != null ? String(m.ranking) : "none"}
                           onValueChange={(val) => {
@@ -317,7 +317,7 @@ export default function OrderDetailPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {canEditMeasurementPriority ? (
+                      {canManageMeasurement ? (
                         <Select
                           value={m.assigned_to || "unassigned"}
                           onValueChange={(val) => {
