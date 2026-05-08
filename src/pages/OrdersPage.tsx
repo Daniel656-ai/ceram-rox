@@ -1,6 +1,7 @@
 import { useOrders, useDeleteOrder, useUpdateOrderRanking } from "@/hooks/useOrders";
 import { useMyMeasurements } from "@/hooks/useMeasurements";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PriorityBadge } from "@/components/PriorityBadge";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -71,14 +72,15 @@ export default function OrdersPage() {
                   <TableHead>Ersteller</TableHead>
                   <TableHead>{t("orders:project_number")}</TableHead>
                   <TableHead>{t("common:status")}</TableHead>
+                  <TableHead>{t("orders:priority")}</TableHead>
                   <TableHead>{t("orders:due_date")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoadingMine ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
                 ) : filteredTasks.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
                 ) : filteredTasks.map((m: any) => (
                   <TableRow key={m.id}>
                     <TableCell className="font-mono font-medium">
@@ -94,6 +96,7 @@ export default function OrdersPage() {
                     <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                     <TableCell>{m.measurement_orders?.projects?.project_number || "–"}</TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
+                    <TableCell><PriorityBadge priority={m.measurement_orders?.priority} /></TableCell>
                     <TableCell>{m.due_date ? new Date(m.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
                   </TableRow>
                 ))}
