@@ -291,7 +291,7 @@ export default function OrderDetailPage() {
                     <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                     <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
                     <TableCell>
-                      {canAssign ? (
+                      {canEditMeasurementPriority ? (
                         <Select
                           value={m.ranking != null ? String(m.ranking) : "none"}
                           onValueChange={(val) => {
