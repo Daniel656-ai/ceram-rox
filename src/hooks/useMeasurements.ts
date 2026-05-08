@@ -36,17 +36,41 @@ export function useAllServices() {
 export function useMyMeasurements() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["my-measurements"],
+    queryKey: ["my-measurements", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const select = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), workstations(id, name, responsible_user_id), measurement_orders(*, projects(project_number, project_name))`;
+      // Assigned to me
+      const { data: assigned, error: e1 } = await supabase
         .from("order_measurements")
-        .select(`*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_orders(*, projects(project_number, project_name))`)
-        .eq("assigned_to", user!.id)
-        .order("ranking", { ascending: true, nullsFirst: false })
-        .order("priority", { ascending: false })
-        .order("due_date");
-      if (error) throw error;
-      return data;
+        .select(select)
+        .eq("assigned_to", user!.id);
+      if (e1) throw e1;
+      // Workstations I'm responsible for
+      const { data: myStations, error: eS } = await supabase
+        .from("workstations")
+        .select("id")
+        .eq("responsible_user_id", user!.id);
+      if (eS) throw eS;
+      let viaStation: any[] = [];
+      const stationIds = (myStations || []).map((s: any) => s.id);
+      if (stationIds.length > 0) {
+        const { data, error: e2 } = await supabase
+          .from("order_measurements")
+          .select(select)
+          .in("workstation_id", stationIds);
+        if (e2) throw e2;
+        viaStation = data || [];
+      }
+      const map = new Map<string, any>();
+      [...(assigned || []), ...viaStation].forEach((m: any) => map.set(m.id, m));
+      const merged = Array.from(map.values());
+      merged.sort((a: any, b: any) => {
+        const ra = a.ranking ?? 999, rb = b.ranking ?? 999;
+        if (ra !== rb) return ra - rb;
+        if ((b.priority ?? 0) !== (a.priority ?? 0)) return (b.priority ?? 0) - (a.priority ?? 0);
+        return (a.due_date || "9999").localeCompare(b.due_date || "9999");
+      });
+      return merged;
     },
     enabled: !!user,
   });
