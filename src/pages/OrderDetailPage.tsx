@@ -24,6 +24,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
+import { useServicePermissions } from "@/hooks/useServicePermissions";
 
 
 export default function OrderDetailPage() {
@@ -40,6 +41,7 @@ export default function OrderDetailPage() {
   const deleteOrder = useDeleteOrder();
   const addWorkLog = useAddWorkLog();
   const { data: durchfuehrerList = [] } = useDurchfuehrer();
+  const { data: servicePermissions = [] } = useServicePermissions();
   const assignMeasurement = useAssignMeasurement();
   const updateMeasurementRanking = useUpdateMeasurementRanking();
   const { data: projectMembers = [] } = useProjectMembers((order as any)?.project_id);
