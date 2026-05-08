@@ -82,7 +82,7 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell><PriorityBadge priority={m.priority} /></TableCell>
+                  <TableCell><PriorityBadge priority={(order as any)?.priority} /></TableCell>
                   <TableCell>
                     {project
                       ? `${project.project_number}${project.project_name ? ` – ${project.project_name}` : ""}`
