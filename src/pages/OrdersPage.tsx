@@ -145,7 +145,7 @@ export default function OrdersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {role === "master" ? t("orders:all_title") : role === "durchfuehrer" ? t("orders:my_title") : t("orders:title")}
+            {role === "master" ? t("orders:all_title") : t("orders:title")}
           </h1>
           <p className="text-muted-foreground">{t("orders:subtitle")}</p>
         </div>
