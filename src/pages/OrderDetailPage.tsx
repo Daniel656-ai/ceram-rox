@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog } from "@/hooks/useOrders";
 import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,8 @@ import { useServicePermissions } from "@/hooks/useServicePermissions";
 
 export default function OrderDetailPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const measurementFilter = searchParams.get("measurement");
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
@@ -74,7 +76,10 @@ export default function OrderDetailPage() {
   const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
   const canAssign = role === "master" || isProjectLead;
 
-  const measurements = (order as any).order_measurements || [];
+  const allMeasurements = (order as any).order_measurements || [];
+  const measurements = measurementFilter
+    ? allMeasurements.filter((m: any) => m.id === measurementFilter)
+    : allMeasurements;
   const totalPlanned = measurements.reduce((s: number, m: any) => s + (parseFloat(m.planned_hours) || 0), 0);
   const totalActual = measurements.reduce((s: number, m: any) => s + (m.work_logs || []).reduce((ws: number, w: any) => ws + (parseFloat(w.hours) || 0), 0), 0);
   const totalCost = measurements.reduce((s: number, m: any) => {
