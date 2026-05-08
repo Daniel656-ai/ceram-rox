@@ -70,6 +70,11 @@ export function useMyMeasurements() {
       const map = new Map<string, any>();
       [...(assigned || []), ...viaStation].forEach((m: any) => map.set(m.id, m));
       const merged = Array.from(map.values());
+      const creators = await fetchCreators(merged);
+      merged.forEach((m: any) => {
+        const cb = m.measurement_orders?.created_by;
+        m.creator_profile = cb ? creators.get(cb) || null : null;
+      });
       merged.sort((a: any, b: any) => {
         const ra = a.ranking ?? 999, rb = b.ranking ?? 999;
         if (ra !== rb) return ra - rb;
