@@ -408,6 +408,7 @@ export default function OrderDetailPage() {
                         )}
                       </div>
                     </TableCell>
+                    )}
                   </TableRow>
                   <TableRow key={`${m.id}-data`}>
                     <TableCell colSpan={13} className="p-0 border-b">
