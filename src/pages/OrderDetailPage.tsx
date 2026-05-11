@@ -278,7 +278,7 @@ export default function OrderDetailPage() {
                 {canViewHourlyRates && <TableHead>Stundensatz</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead>Dokumente</TableHead>
-                <TableHead>Aktionen</TableHead>
+                {role !== "durchfuehrer" && <TableHead>Aktionen</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -383,9 +383,10 @@ export default function OrderDetailPage() {
                         orderId={order.id}
                       />
                     </TableCell>
+                    {role !== "durchfuehrer" && (
                     <TableCell>
                       <div className="flex gap-1">
-                        {(role === "durchfuehrer" || role === "master") && m.status !== "completed" && (
+                        {role === "master" && m.status !== "completed" && (
                           <>
                             {m.status === "open" && (
                               <Button size="sm" variant="outline" onClick={() => handleStatusChange(m.id, "in_progress")}>
@@ -407,6 +408,7 @@ export default function OrderDetailPage() {
                         )}
                       </div>
                     </TableCell>
+                    )}
                   </TableRow>
                   <TableRow key={`${m.id}-data`}>
                     <TableCell colSpan={13} className="p-0 border-b">
