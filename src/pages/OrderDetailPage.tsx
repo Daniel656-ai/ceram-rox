@@ -271,7 +271,7 @@ export default function OrderDetailPage() {
                 <TableHead>Priorität</TableHead>
                 <TableHead>Techniker</TableHead>
                 <TableHead>Arbeitsplatz</TableHead>
-                <TableHead>Kategorie</TableHead>
+                {role !== "durchfuehrer" && <TableHead>Kategorie</TableHead>}
                 <TableHead>Std-Dauer</TableHead>
                 <TableHead>Ist-Dauer</TableHead>
                 <TableHead>Stunden (Plan/Ist)</TableHead>
