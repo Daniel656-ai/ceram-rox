@@ -478,7 +478,10 @@ export default function ProjectDetailPage() {
                     <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("no_measurements")}</TableCell></TableRow>
                   ) : (
                     allMeasurements.map((m: any) => {
-                      const actualH = (m.work_logs || []).reduce((s: number, wl: any) => s + (wl.hours || 0), 0);
+                      const workLogH = (m.work_logs || []).reduce((s: number, wl: any) => s + (wl.hours || 0), 0);
+                      const actualH = m.status === "completed" && m.actual_duration_hours != null
+                        ? Number(m.actual_duration_hours)
+                        : workLogH;
                       return (
                         <TableRow key={m.id}>
                           <TableCell className="font-medium">{m.measurement_number}</TableCell>
