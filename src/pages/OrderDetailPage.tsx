@@ -274,7 +274,7 @@ export default function OrderDetailPage() {
                 {role !== "durchfuehrer" && <TableHead>Kategorie</TableHead>}
                 <TableHead>Std-Dauer</TableHead>
                 <TableHead>Ist-Dauer</TableHead>
-                <TableHead>Stunden (Plan/Ist)</TableHead>
+                {role !== "durchfuehrer" && <TableHead>Stunden (Plan/Ist)</TableHead>}
                 {canViewHourlyRates && <TableHead>Stundensatz</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead>Dokumente</TableHead>
@@ -373,7 +373,7 @@ export default function OrderDetailPage() {
                         </span>
                       ) : '–'}
                     </TableCell>
-                    <TableCell>{parseFloat(m.planned_hours || 0).toFixed(1)} / {actualHours.toFixed(1)} h</TableCell>
+                    {role !== "durchfuehrer" && <TableCell>{parseFloat(m.planned_hours || 0).toFixed(1)} / {actualHours.toFixed(1)} h</TableCell>}
                     {canViewHourlyRates && <TableCell>{m.measurement_services?.hourly_rate} €/h</TableCell>}
                     <TableCell><StatusBadge status={m.status} /></TableCell>
                     <TableCell className="min-w-[200px]">
