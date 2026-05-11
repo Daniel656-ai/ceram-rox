@@ -274,7 +274,7 @@ export default function OrderDetailPage() {
                 {role !== "durchfuehrer" && <TableHead>Kategorie</TableHead>}
                 <TableHead>Std-Dauer</TableHead>
                 <TableHead>Ist-Dauer</TableHead>
-                <TableHead>Stunden (Plan/Ist)</TableHead>
+                {role !== "durchfuehrer" && <TableHead>Stunden (Plan/Ist)</TableHead>}
                 {canViewHourlyRates && <TableHead>Stundensatz</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead>Dokumente</TableHead>
