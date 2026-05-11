@@ -469,8 +469,8 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Time Entries for this Order - hidden for auftraggeber */}
-      {role !== "auftraggeber" && (
+      {/* Time Entries for this Order - hidden for auftraggeber and durchfuehrer */}
+      {role !== "auftraggeber" && role !== "durchfuehrer" && (
         <Card>
           <CardHeader><CardTitle className="text-base">Arbeitszeiten</CardTitle></CardHeader>
           <CardContent>
