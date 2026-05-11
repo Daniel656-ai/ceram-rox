@@ -427,6 +427,57 @@ export default function OrderDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Sample Card */}
+      {(order as any).samples && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Probe</CardTitle></CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Probennummer</dt>
+                <dd>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/proben/${(order as any).samples.id}`)}
+                    className="font-mono text-primary hover:underline"
+                  >
+                    {(order as any).samples.sample_number}
+                  </button>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Name</dt>
+                <dd className="font-medium">{(order as any).samples.sample_name}</dd>
+              </div>
+              <div className="md:col-span-2">
+                <dt className="text-muted-foreground">Beschreibung</dt>
+                <dd>{(order as any).samples.description || "–"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Gefahrgut</dt>
+                <dd>
+                  {(order as any).samples.is_hazardous ? (
+                    <Badge variant="destructive">Ja</Badge>
+                  ) : (
+                    <Badge variant="outline">Nein</Badge>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Lagerort</dt>
+                <dd>
+                  {(() => {
+                    const loc = (order as any).samples.storage_locations;
+                    if (!loc) return "–";
+                    return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" / ") || "–";
+                  })()}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Work Log Dialog */}
       <Dialog open={logOpen} onOpenChange={setLogOpen}>
         <DialogContent>
