@@ -156,6 +156,8 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      <GitHubCommitStatus />
+
       {/* Universal Search */}
       <Card>
         <CardHeader className="pb-3">
