@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ActivityFeed } from "@/components/ActivityFeed";
+import { GitHubCommitStatus } from "@/components/GitHubCommitStatus";
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -154,6 +155,8 @@ export default function Dashboard() {
           <CardContent><div className="text-2xl font-bold">{completedOrders}</div></CardContent>
         </Card>
       </div>
+
+      <GitHubCommitStatus />
 
       {/* Universal Search */}
       <Card>
