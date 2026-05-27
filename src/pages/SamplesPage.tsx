@@ -304,15 +304,10 @@ export default function SamplesPage() {
         location_id: bulkForm.location_id || undefined,
         tags: bulkForm.tags,
       }));
-      let total = 0;
-      for (let i = 0; i < samples.length; i += 50) {
-        const batch = samples.slice(i, i + 50);
-        const { error } = await api.from("samples").insert(batch as any);
-        if (error) throw error;
-        total += batch.length;
-      }
+      const total = await api.samples.bulkInsert(samples);
       setBulkCreatedCount(total);
       toast.success(`${total} Proben erstellt`);
+
     } catch (e: any) {
       toast.error(e.message);
     } finally {
