@@ -26,58 +26,42 @@ export function useRecentActivity(limit = 15) {
   const { user } = useAuth();
   const qc = useQueryClient();
 
-  // Realtime subscription
   useEffect(() => {
     if (!user) return;
-    const channel = api
-      .channel("activity-log-feed")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_log" }, () => {
-        qc.invalidateQueries({ queryKey: ["activity-log"] });
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => {
-        qc.invalidateQueries({ queryKey: ["activity-log"] });
-        qc.invalidateQueries({ queryKey: ["unread-notifications-count"] });
-      })
-      .subscribe();
-    return () => {
-      api.removeChannel(channel);
-    };
+    return api.realtime.onActivityAndNotifications(user.id, () => {
+      qc.invalidateQueries({ queryKey: ["activity-log"] });
+      qc.invalidateQueries({ queryKey: ["unread-notifications-count"] });
+    });
   }, [user, qc]);
 
   return useQuery({
     queryKey: ["activity-log", limit],
     enabled: !!user,
     queryFn: async (): Promise<ActivityEntry[]> => {
-      const { data, error } = await api
-        .from("activity_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      const entries = (data || []) as any[];
-      if (entries.length === 0) return [];
+      const entries = (await api.activityLog.listRecent(limit)) as any[];
+      if (!entries.length) return [];
 
-      const actorIds = Array.from(new Set(entries.map((e) => e.actor_user_id).filter(Boolean)));
-      const serviceIds = Array.from(new Set(entries.map((e) => e.service_id).filter(Boolean)));
-      const orderIds = Array.from(new Set(entries.map((e) => e.order_id).filter(Boolean)));
-      const measurementIds = Array.from(new Set(entries.map((e) => e.order_measurement_id).filter(Boolean)));
-      const projectIds = Array.from(new Set(entries.map((e) => e.project_id).filter(Boolean)));
+      const actorIds = Array.from(new Set(entries.map((e) => e.actor_user_id).filter(Boolean))) as string[];
+      const serviceIds = Array.from(new Set(entries.map((e) => e.service_id).filter(Boolean))) as string[];
+      const orderIds = Array.from(new Set(entries.map((e) => e.order_id).filter(Boolean))) as string[];
+      const measurementIds = Array.from(new Set(entries.map((e) => e.order_measurement_id).filter(Boolean))) as string[];
+      const projectIds = Array.from(new Set(entries.map((e) => e.project_id).filter(Boolean))) as string[];
 
       const [profilesRes, servicesRes, ordersRes, measurementsRes, projectsRes, notificationsRes] = await Promise.all([
-        actorIds.length ? api.from("profiles").select("user_id, first_name, last_name").in("user_id", actorIds) : Promise.resolve({ data: [] as any[], error: null }),
-        serviceIds.length ? api.from("measurement_services").select("id, service_name").in("id", serviceIds) : Promise.resolve({ data: [] as any[], error: null }),
-        orderIds.length ? api.from("measurement_orders").select("id, order_number").in("id", orderIds) : Promise.resolve({ data: [] as any[], error: null }),
-        measurementIds.length ? api.from("order_measurements").select("id, measurement_number").in("id", measurementIds) : Promise.resolve({ data: [] as any[], error: null }),
-        projectIds.length ? api.from("projects").select("id, project_number, project_name").in("id", projectIds) : Promise.resolve({ data: [] as any[], error: null }),
-        api.from("notifications").select("id, activity_id, read_at").eq("user_id", user!.id).in("activity_id", entries.map((e) => e.id)),
+        actorIds.length ? api.profiles.listByIds(actorIds) : Promise.resolve([] as any[]),
+        serviceIds.length ? api.measurementServicesLookup.listByIds(serviceIds) : Promise.resolve([] as any[]),
+        orderIds.length ? api.ordersLookup.listByIds(orderIds) : Promise.resolve([] as any[]),
+        measurementIds.length ? api.measurementsLookup.listByIds(measurementIds) : Promise.resolve([] as any[]),
+        projectIds.length ? api.projectsLookup.listByIds(projectIds) : Promise.resolve([] as any[]),
+        api.notifications.listForActivities(user!.id, entries.map((e) => e.id)),
       ]);
 
-      const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p]));
-      const serviceMap = new Map((servicesRes.data || []).map((s: any) => [s.id, s]));
-      const orderMap = new Map((ordersRes.data || []).map((o: any) => [o.id, o]));
-      const measurementMap = new Map((measurementsRes.data || []).map((m: any) => [m.id, m]));
-      const projectMap = new Map((projectsRes.data || []).map((p: any) => [p.id, p]));
-      const notificationMap = new Map((notificationsRes.data || []).map((n: any) => [n.activity_id, n]));
+      const profileMap = new Map((profilesRes as any[]).map((p: any) => [p.user_id, p]));
+      const serviceMap = new Map((servicesRes as any[]).map((s: any) => [s.id, s]));
+      const orderMap = new Map((ordersRes as any[]).map((o: any) => [o.id, o]));
+      const measurementMap = new Map((measurementsRes as any[]).map((m: any) => [m.id, m]));
+      const projectMap = new Map((projectsRes as any[]).map((p: any) => [p.id, p]));
+      const notificationMap = new Map((notificationsRes as any[]).map((n: any) => [n.activity_id, n]));
 
       return entries.map((e) => {
         const notification = notificationMap.get(e.id);
@@ -101,28 +85,14 @@ export function useUnreadNotificationsCount() {
   return useQuery({
     queryKey: ["unread-notifications-count"],
     enabled: !!user,
-    queryFn: async () => {
-      const { count, error } = await api
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user!.id)
-        .is("read_at", null);
-      if (error) throw error;
-      return count || 0;
-    },
+    queryFn: () => api.notifications.unreadCount(user!.id),
   });
 }
 
 export function useMarkNotificationRead() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (notificationId: string) => {
-      const { error } = await api
-        .from("notifications")
-        .update({ read_at: new Date().toISOString() })
-        .eq("id", notificationId);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.notifications.markRead(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["unread-notifications-count"] });
@@ -134,14 +104,7 @@ export function useMarkAllNotificationsRead() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const { error } = await api
-        .from("notifications")
-        .update({ read_at: new Date().toISOString() })
-        .eq("user_id", user!.id)
-        .is("read_at", null);
-      if (error) throw error;
-    },
+    mutationFn: () => api.notifications.markAllRead(user!.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["activity-log"] });
       qc.invalidateQueries({ queryKey: ["unread-notifications-count"] });

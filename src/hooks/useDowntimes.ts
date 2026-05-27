@@ -1,36 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export interface WorkstationDowntime {
-  id: string;
-  workstation_id: string;
-  downtime_type: "wartung" | "reparatur" | "sonstiges";
-  status: "geplant" | "aktiv" | "abgeschlossen";
-  start_at: string;
-  end_at: string;
-  description: string | null;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
+export type { WorkstationDowntime } from "@/lib/api/downtimes";
+import type { WorkstationDowntime } from "@/lib/api/downtimes";
 
 export function useDowntimes(workstationId?: string) {
   return useQuery({
     queryKey: ["workstation_downtimes", workstationId],
-    queryFn: async () => {
-      let q = api.from("workstation_downtimes").select("*").order("start_at");
-      if (workstationId) q = q.eq("workstation_id", workstationId);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as WorkstationDowntime[];
-    },
+    queryFn: () => api.downtimes.list(workstationId),
   });
 }
 
 export function useCreateDowntime() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (d: {
+    mutationFn: (d: {
       workstation_id: string;
       downtime_type: WorkstationDowntime["downtime_type"];
       status?: WorkstationDowntime["status"];
@@ -38,11 +22,7 @@ export function useCreateDowntime() {
       end_at: string;
       description?: string;
       created_by: string;
-    }) => {
-      const { data, error } = await api.from("workstation_downtimes").insert(d).select().single();
-      if (error) throw error;
-      return data;
-    },
+    }) => api.downtimes.create(d as any),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workstation_downtimes"] }),
   });
 }
@@ -50,14 +30,7 @@ export function useCreateDowntime() {
 export function useUpdateDowntime() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      id,
-      ...updates
-    }: Partial<WorkstationDowntime> & { id: string }) => {
-      const { data, error } = await api.from("workstation_downtimes").update(updates).eq("id", id).select().single();
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: (input: Partial<WorkstationDowntime> & { id: string }) => api.downtimes.update(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workstation_downtimes"] }),
   });
 }
@@ -65,38 +38,16 @@ export function useUpdateDowntime() {
 export function useDeleteDowntime() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.from("workstation_downtimes").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.downtimes.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workstation_downtimes"] }),
   });
 }
 
 export function useCheckDowntimeConflict() {
   return useMutation({
-    mutationFn: async ({
-      workstationId,
-      start,
-      end,
-    }: {
-      workstationId: string;
-      start: string;
-      end: string;
-    }) => {
-      const { data, error } = await api.rpc("check_workstation_downtime_conflict", {
-        _workstation_id: workstationId,
-        _start: start,
-        _end: end,
-      });
-      if (error) throw error;
-      return data as Array<{
-        id: string;
-        downtime_type: string;
-        start_at: string;
-        end_at: string;
-        status: string;
-      }>;
-    },
+    mutationFn: ({ workstationId, start, end }: { workstationId: string; start: string; end: string }) =>
+      api.downtimes.checkConflict(workstationId, start, end) as Promise<
+        Array<{ id: string; downtime_type: string; start_at: string; end_at: string; status: string }>
+      >,
   });
 }

@@ -1,61 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export interface CustomRole {
-  id: string;
-  name: string;
-  description: string | null;
-  base_role: string;
-  is_system: boolean;
-  created_at: string;
-  permissions: string[];
-}
+export type { CustomRole } from "@/lib/api/customRoles";
 
 export function useCustomRoles() {
-  return useQuery({
-    queryKey: ["custom_roles"],
-    queryFn: async () => {
-      const [rolesRes, permsRes] = await Promise.all([
-        api.from("custom_roles").select("*").order("created_at"),
-        api.from("role_permissions").select("*"),
-      ]);
-      if (rolesRes.error) throw rolesRes.error;
-      if (permsRes.error) throw permsRes.error;
-
-      const permsByRole = new Map<string, string[]>();
-      for (const p of permsRes.data || []) {
-        const existing = permsByRole.get(p.role_id) || [];
-        existing.push(p.permission_key);
-        permsByRole.set(p.role_id, existing);
-      }
-
-      return (rolesRes.data || []).map((r: any) => ({
-        ...r,
-        permissions: permsByRole.get(r.id) || [],
-      })) as CustomRole[];
-    },
-  });
+  return useQuery({ queryKey: ["custom_roles"], queryFn: () => api.customRoles.listWithPermissions() });
 }
 
 export function useCreateCustomRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { name: string; description: string; base_role: string; permissions: string[] }) => {
-      const { data: role, error } = await api
-        .from("custom_roles")
-        .insert({ name: params.name, description: params.description, base_role: params.base_role as any })
-        .select()
-        .single();
-      if (error) throw error;
-
-      if (params.permissions.length > 0) {
-        const { error: permError } = await api
-          .from("role_permissions")
-          .insert(params.permissions.map((p) => ({ role_id: role.id, permission_key: p })));
-        if (permError) throw permError;
-      }
-      return role;
-    },
+    mutationFn: (params: { name: string; description: string; base_role: string; permissions: string[] }) =>
+      api.customRoles.create(params),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["custom_roles"] }),
   });
 }
@@ -63,24 +19,8 @@ export function useCreateCustomRole() {
 export function useUpdateCustomRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { id: string; name: string; description: string; base_role: string; permissions: string[] }) => {
-      const { error } = await api
-        .from("custom_roles")
-        .update({ name: params.name, description: params.description, base_role: params.base_role as any })
-        .eq("id", params.id);
-      if (error) throw error;
-
-      // Delete existing permissions and re-insert
-      const { error: delError } = await api.from("role_permissions").delete().eq("role_id", params.id);
-      if (delError) throw delError;
-
-      if (params.permissions.length > 0) {
-        const { error: permError } = await api
-          .from("role_permissions")
-          .insert(params.permissions.map((p) => ({ role_id: params.id, permission_key: p })));
-        if (permError) throw permError;
-      }
-    },
+    mutationFn: (params: { id: string; name: string; description: string; base_role: string; permissions: string[] }) =>
+      api.customRoles.update(params),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["custom_roles"] });
       qc.invalidateQueries({ queryKey: ["users"] });
@@ -91,10 +31,7 @@ export function useUpdateCustomRole() {
 export function useDeleteCustomRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.from("custom_roles").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.customRoles.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["custom_roles"] }),
   });
 }
