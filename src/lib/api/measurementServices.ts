@@ -94,6 +94,16 @@ export const serviceParameters = {
         .order("sort_order")
     ),
 
+  /** Lookup of parameter_name/unit for a given set of definition ids in a service. */
+  listByIdsForService: (serviceId: string, ids: string[]) =>
+    unwrap(
+      dbClient
+        .from("service_parameter_definitions")
+        .select("id, parameter_name, unit")
+        .eq("service_id", serviceId)
+        .in("id", ids)
+    ),
+
   listAll: () =>
     unwrap(
       dbClient
