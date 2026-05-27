@@ -4,15 +4,7 @@ import { api } from "@/lib/api";
 export function useMeasurementResults(measurementId: string | undefined) {
   return useQuery({
     queryKey: ["measurement-results", measurementId],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("measurement_results")
-        .select("*")
-        .eq("order_measurement_id", measurementId!)
-        .order("created_at");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => api.measurementResults.list(measurementId!),
     enabled: !!measurementId,
   });
 }
@@ -20,7 +12,7 @@ export function useMeasurementResults(measurementId: string | undefined) {
 export function useAddMeasurementResult() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (result: {
+    mutationFn: (result: {
       order_measurement_id: string;
       result_name: string;
       unit?: string;
@@ -31,15 +23,7 @@ export function useAddMeasurementResult() {
       remarks?: string;
       measured_at?: string;
       measured_by?: string;
-    }) => {
-      const { data, error } = await api
-        .from("measurement_results")
-        .insert(result)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    }) => api.measurementResults.create(result),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["measurement-results"] });
       qc.invalidateQueries({ queryKey: ["order"] });
@@ -50,7 +34,7 @@ export function useAddMeasurementResult() {
 export function useUpdateMeasurementResult() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: {
+    mutationFn: ({ id, ...updates }: {
       id: string;
       result_name?: string;
       unit?: string;
@@ -61,13 +45,7 @@ export function useUpdateMeasurementResult() {
       remarks?: string;
       measured_at?: string;
       measured_by?: string;
-    }) => {
-      const { error } = await api
-        .from("measurement_results")
-        .update(updates)
-        .eq("id", id);
-      if (error) throw error;
-    },
+    }) => api.measurementResults.update(id, updates),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["measurement-results"] });
       qc.invalidateQueries({ queryKey: ["order"] });
@@ -78,13 +56,7 @@ export function useUpdateMeasurementResult() {
 export function useDeleteMeasurementResult() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api
-        .from("measurement_results")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.measurementResults.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["measurement-results"] });
       qc.invalidateQueries({ queryKey: ["order"] });
