@@ -71,6 +71,8 @@ import { utilization } from "./utilization";
 import { documents, sampleStorage, rawMaterialStorage } from "./documents";
 import { measurementParameters } from "./measurementParameters";
 import { adminDatabase, durchfuehrerUsers } from "./adminDatabase";
+import { auth } from "./auth";
+
 
 
 
@@ -129,16 +131,19 @@ export const api = {
 
 
 
+  // ---- auth domain (preferred wrapper around the auth client) ----
+  auth,
+
   // ---- legacy low-level facade (DO NOT use outside src/lib/api/**) ----
   from: dbClient.from.bind(dbClient) as typeof dbClient.from,
   rpc: dbClient.rpc.bind(dbClient) as typeof dbClient.rpc,
-  auth: dbClient.auth,
   storage: dbClient.storage,
   functions: dbClient.functions,
   channel: dbClient.channel.bind(dbClient) as typeof dbClient.channel,
   removeChannel: dbClient.removeChannel.bind(dbClient) as typeof dbClient.removeChannel,
   getChannels: dbClient.getChannels.bind(dbClient) as typeof dbClient.getChannels,
 };
+
 
 export type Api = typeof api;
 export { dbClient } from "./client";

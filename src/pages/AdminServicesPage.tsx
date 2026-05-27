@@ -35,22 +35,10 @@ function DurationCell({ service, onUpdate, t }: { service: any; onUpdate: (id: s
 function useDurchfuehrerUsers() {
   return useQuery({
     queryKey: ["durchfuehrer-users"],
-    queryFn: async () => {
-      const [profilesRes, rolesRes] = await Promise.all([
-        api.from("profiles").select("*"),
-        api.from("user_roles").select("user_id, role"),
-      ]);
-      if (profilesRes.error) throw profilesRes.error;
-      if (rolesRes.error) throw rolesRes.error;
-      const durchfuehrerIds = new Set(
-        (rolesRes.data || [])
-          .filter((r: any) => r.role === "durchfuehrer" || r.role === "master")
-          .map((r: any) => r.user_id)
-      );
-      return (profilesRes.data || []).filter((p: any) => durchfuehrerIds.has(p.user_id));
-    },
+    queryFn: () => api.durchfuehrerUsers.list(),
   });
 }
+
 
 export default function AdminServicesPage() {
   const { t } = useTranslation(["admin", "common"]);

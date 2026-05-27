@@ -36,10 +36,7 @@ export default function AdminDatabasePage() {
   const runIntegrityCheck = async () => {
     setLoading(true);
     try {
-      const { data, error } = await api.functions.invoke("db-integrity-check", {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (error) throw error;
+      const data = await api.adminDatabase.runIntegrityCheck(session?.access_token);
       setResult(data);
       toast({
         title: "Integritätsprüfung abgeschlossen",
@@ -55,21 +52,8 @@ export default function AdminDatabasePage() {
   const exportJson = async () => {
     setExporting(true);
     try {
-      const [
-        { data: projects },
-        { data: orders },
-        { data: measurements },
-        { data: samples },
-        { data: results },
-        { data: services },
-      ] = await Promise.all([
-        api.from("projects").select("*"),
-        api.from("measurement_orders").select("*"),
-        api.from("order_measurements").select("*"),
-        api.from("samples").select("*"),
-        api.from("measurement_results").select("*"),
-        api.from("measurement_services").select("*"),
-      ]);
+      const { projects, orders, measurements, samples, results, services } =
+        await api.adminDatabase.exportAll();
 
       const exportData = {
         schema_version: 1,
@@ -106,6 +90,7 @@ export default function AdminDatabasePage() {
       setExporting(false);
     }
   };
+
 
   const validateJson = () => {
     const errors: string[] = [];

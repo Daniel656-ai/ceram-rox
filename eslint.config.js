@@ -36,15 +36,29 @@ export default tseslint.config(
           ],
         },
       ],
+      // Forbid the legacy low-level facade outside the API layer.
+      // Hooks/pages/components must call domain functions (api.<domain>.<method>)
+      // — not api.from / api.rpc / api.storage / api.functions / api.channel.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "MemberExpression[object.name='api'][property.name=/^(from|rpc|storage|functions|channel|removeChannel|getChannels)$/]",
+          message:
+            "Do not use the legacy api.<facade> escape hatches. Add or use a domain function in src/lib/api/<domain>.ts instead.",
+        },
+      ],
     },
   },
   {
     // The API layer itself and the auto-generated integration are allowed to
-    // talk to the supabase client.
+    // talk to the supabase client and use the low-level facade.
     files: ["src/lib/api/**", "src/integrations/supabase/**"],
     rules: {
       "no-restricted-imports": "off",
+      "no-restricted-syntax": "off",
     },
   },
 );
+
 

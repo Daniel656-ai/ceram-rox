@@ -4,6 +4,16 @@ import { unwrap, run } from "./_helpers";
 const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), workstations(id, name, responsible_user_id), measurement_orders(*, projects(project_number, project_name))`;
 
 export const measurements = {
+  /** Compact projection for ServiceStatistics widget, filtered by created_at range. */
+  listForServiceStats: (fromIso: string, toIso: string) =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select("service_id, status, actual_duration_hours, planned_hours, updated_at, created_at")
+        .gte("created_at", fromIso)
+        .lte("created_at", toIso)
+    ),
+
   /** Measurements assigned to a user. */
   listAssignedTo: (userId: string) =>
     unwrap(
