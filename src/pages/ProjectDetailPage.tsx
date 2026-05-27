@@ -69,8 +69,9 @@ export default function ProjectDetailPage() {
 
   const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
     if (!id) return;
-    const { error } = await api.from("projects").update(updates).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    try {
+      await api.projects.update(id, updates);
+    } catch (err: any) { toast.error(err.message); return; }
     queryClient.invalidateQueries({ queryKey: ["project-detail", id] });
     queryClient.invalidateQueries({ queryKey: ["projects-with-stats"] });
   }, [id, queryClient]);

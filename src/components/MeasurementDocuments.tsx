@@ -32,17 +32,7 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
     if (!user) return;
     setUploading(true);
     try {
-      const path = `${user.id}/${measurementId}/${Date.now()}_${file.name}`;
-      const { error: uploadErr } = await api.storage.from("measurement-documents").upload(path, file);
-      if (uploadErr) throw uploadErr;
-      const { error: dbErr } = await api.from("documents").insert({
-        order_measurement_id: measurementId,
-        file_name: file.name,
-        file_type: file.type,
-        storage_path: path,
-        uploaded_by: user.id,
-      });
-      if (dbErr) throw dbErr;
+      await api.documents.upload({ measurementId, file, userId: user.id });
       toast.success("Datei hochgeladen");
       qc.invalidateQueries({ queryKey: ["order", orderId] });
     } catch (err: any) {
@@ -53,14 +43,17 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
   };
 
   const handleDownload = async (doc: Document) => {
-    const { data, error } = await api.storage.from("measurement-documents").download(doc.storage_path);
-    if (error) { toast.error("Download fehlgeschlagen", { description: error.message }); return; }
-    const url = URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = doc.file_name;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const data = await api.documents.download(doc.storage_path);
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.file_name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error("Download fehlgeschlagen", { description: err.message });
+    }
   };
 
   return (

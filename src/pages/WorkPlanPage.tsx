@@ -201,10 +201,7 @@ export default function WorkPlanPage() {
                 return;
               }
               try {
-                const updatePayload: any = { actual_duration_hours: dur, status: 'completed' };
-                if (completeReason.trim()) updatePayload.duration_deviation_reason = completeReason.trim();
-                const { error } = await api.from("order_measurements").update(updatePayload).eq("id", completeMId);
-                if (error) throw error;
+                await api.measurements.complete(completeMId!, dur, completeReason);
                 toast.success(t("measurements:completed"));
                 setCompleteOpen(false);
               } catch (err: any) {

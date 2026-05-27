@@ -77,7 +77,7 @@ export default function DynamicParameterForm({ measurementId, serviceId, existin
     setSaving(true);
     try {
       // Delete existing params for this measurement
-      await api.from("measurement_parameters").delete().eq("order_measurement_id", measurementId);
+      await api.measurementParameters.deleteByMeasurement(measurementId);
 
       // Insert visible params with values
       const inserts = visibleDefs
@@ -90,8 +90,7 @@ export default function DynamicParameterForm({ measurementId, serviceId, existin
         }));
 
       if (inserts.length > 0) {
-        const { error } = await api.from("measurement_parameters").insert(inserts);
-        if (error) throw error;
+        await api.measurementParameters.bulkInsert(inserts);
       }
 
       toast.success("Parameter gespeichert");
