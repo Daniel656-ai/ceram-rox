@@ -68,6 +68,11 @@ import {
   projectsLookup,
 } from "./activityLog";
 import { utilization } from "./utilization";
+import { documents, sampleStorage, rawMaterialStorage } from "./documents";
+import { measurementParameters } from "./measurementParameters";
+import { adminDatabase, durchfuehrerUsers } from "./adminDatabase";
+
+
 
 export const api = {
   // ---- domain modules (preferred) ----
@@ -115,6 +120,14 @@ export const api = {
   measurementsLookup,
   projectsLookup,
   utilization,
+  documents,
+  sampleStorage,
+  rawMaterialStorage,
+  measurementParameters,
+  adminDatabase,
+  durchfuehrerUsers,
+
+
 
   // ---- legacy low-level facade (DO NOT use outside src/lib/api/**) ----
   from: dbClient.from.bind(dbClient) as typeof dbClient.from,

@@ -79,6 +79,8 @@ export const projects = {
     unwrap(dbClient.from("project_knetung_materials").select("project_id, total_cost")),
   listTimeEntryIndex: () =>
     unwrap(dbClient.from("project_time_entries").select("project_id, duration_minutes")),
+  update: (id: string, updates: Record<string, any>) =>
+    run(dbClient.from("projects").update(updates as any).eq("id", id)),
 };
 
 // ============================================================

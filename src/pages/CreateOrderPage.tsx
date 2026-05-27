@@ -240,10 +240,10 @@ export default function CreateOrderPage() {
         });
         const params = measurementParams[idx];
         if (params && Object.keys(params).length > 0) {
-          const { data: defs } = await api.from("service_parameter_definitions").select("id, parameter_name, unit").eq("service_id", m.service_id).in("id", Object.keys(params));
+          const defs = await api.serviceParameters.listByIdsForService(m.service_id, Object.keys(params));
           if (defs && defs.length > 0) {
-            const inserts = defs.filter((d) => (params[d.id] || "").trim()).map((d) => ({ order_measurement_id: createdMeasurement.id, parameter_name: d.parameter_name, parameter_value: params[d.id], unit: d.unit || null }));
-            if (inserts.length > 0) { const { error } = await api.from("measurement_parameters").insert(inserts); if (error) throw error; }
+            const inserts = defs.filter((d: any) => (params[d.id] || "").trim()).map((d: any) => ({ order_measurement_id: createdMeasurement.id, parameter_name: d.parameter_name, parameter_value: params[d.id], unit: d.unit || null }));
+            if (inserts.length > 0) { await api.measurementParameters.bulkInsert(inserts); }
           }
         }
       }

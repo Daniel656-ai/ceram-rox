@@ -116,11 +116,7 @@ export default function OrderDetailPage() {
       return;
     }
     try {
-      // Update actual duration and reason
-      const updatePayload: any = { actual_duration_hours: dur, status: 'completed' };
-      if (deviationReason.trim()) updatePayload.duration_deviation_reason = deviationReason.trim();
-      const { error } = await api.from("order_measurements").update(updatePayload).eq("id", completeMeasurementId);
-      if (error) throw error;
+      await api.measurements.complete(completeMeasurementId!, dur, deviationReason);
       toast.success("Aufgabe abgeschlossen");
       setCompleteOpen(false);
       // Refresh

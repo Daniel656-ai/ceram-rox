@@ -90,6 +90,22 @@ export const measurements = {
         .update({ assigned_to: assignedTo })
         .eq("id", id)
     ),
+
+  /** Generic update for a measurement by id. */
+  update: (id: string, updates: Record<string, any>) =>
+    run(dbClient.from("order_measurements").update(updates as any).eq("id", id)),
+
+  /** Complete a measurement with actual duration and optional deviation reason. */
+  complete: (id: string, actualDurationHours: number, deviationReason?: string) => {
+    const payload: Record<string, any> = {
+      actual_duration_hours: actualDurationHours,
+      status: "completed",
+    };
+    if (deviationReason && deviationReason.trim()) {
+      payload.duration_deviation_reason = deviationReason.trim();
+    }
+    return run(dbClient.from("order_measurements").update(payload as any).eq("id", id));
+  },
 };
 
 export const workLogs = {

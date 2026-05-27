@@ -126,10 +126,8 @@ export default function SampleDetailPage() {
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const path = `${s.id}/${Date.now()}_${file.name}`;
-    const { error: upErr } = await api.storage.from("sample-documents").upload(path, file);
-    if (upErr) { toast.error(t("document_upload_error")); return; }
     try {
+      const { path } = await api.sampleStorage.upload(s.id, file);
       await addDocument.mutateAsync({
         sample_id: s.id,
         file_name: file.name,
@@ -139,12 +137,14 @@ export default function SampleDetailPage() {
         uploaded_by: user!.id,
       });
       toast.success(t("document_uploaded"));
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) {
+      toast.error(err?.message ?? t("document_upload_error"));
+    }
   };
 
   const handleDocDownload = async (doc: any) => {
-    const { data } = await api.storage.from("sample-documents").createSignedUrl(doc.storage_path, 300);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    const url = await api.sampleStorage.signedUrl(doc.storage_path, 300);
+    if (url) window.open(url, "_blank");
   };
 
   const getUserName = (userId: string) => {

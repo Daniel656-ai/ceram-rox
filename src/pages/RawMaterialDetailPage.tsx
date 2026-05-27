@@ -162,12 +162,13 @@ export default function RawMaterialDetailPage() {
   };
 
   const handleDownload = async (doc: any) => {
-    const { data, error } = await api.storage.from("raw-material-documents").download(doc.storage_path);
-    if (error) { toast.error(error.message); return; }
-    const url = URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url; a.download = doc.file_name; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const data = await api.rawMaterialStorage.download(doc.storage_path);
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url; a.download = doc.file_name; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) { toast.error(e.message); }
   };
 
   return (

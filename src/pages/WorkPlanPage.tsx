@@ -77,18 +77,14 @@ export default function WorkPlanPage() {
 
   const handleFileUpload = async (measurementId: string, file: File) => {
     if (!user) return;
-    const path = `${user.id}/${measurementId}/${Date.now()}_${file.name}`;
-    const { error: uploadErr } = await api.storage.from("measurement-documents").upload(path, file);
-    if (uploadErr) { toast.error(t("measurements:upload_failed")); return; }
-    await api.from("documents").insert({
-      order_measurement_id: measurementId,
-      file_name: file.name,
-      file_type: file.type,
-      storage_path: path,
-      uploaded_by: user.id,
-    });
-    toast.success(t("measurements:protocol_uploaded"));
+    try {
+      await api.documents.upload({ measurementId, file, userId: user.id });
+      toast.success(t("measurements:protocol_uploaded"));
+    } catch {
+      toast.error(t("measurements:upload_failed"));
+    }
   };
+
 
   return (
     <div className="space-y-6">
@@ -205,10 +201,7 @@ export default function WorkPlanPage() {
                 return;
               }
               try {
-                const updatePayload: any = { actual_duration_hours: dur, status: 'completed' };
-                if (completeReason.trim()) updatePayload.duration_deviation_reason = completeReason.trim();
-                const { error } = await api.from("order_measurements").update(updatePayload).eq("id", completeMId);
-                if (error) throw error;
+                await api.measurements.complete(completeMId!, dur, completeReason);
                 toast.success(t("measurements:completed"));
                 setCompleteOpen(false);
               } catch (err: any) {
