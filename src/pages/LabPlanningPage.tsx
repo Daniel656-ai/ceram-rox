@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useUsers } from "@/hooks/useUsers";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,7 +23,7 @@ function useLabMeasurements() {
   return useQuery({
     queryKey: ["lab-planning-measurements"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("order_measurements")
         .select(`
           id, measurement_number, status, assigned_to, due_date, priority, ranking,
@@ -68,7 +68,7 @@ export default function LabPlanningPage() {
 
   const handleDrop = async (measurementId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("order_measurements")
         .update({ status: newStatus as any })
         .eq("id", measurementId);

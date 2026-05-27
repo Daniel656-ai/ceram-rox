@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useServiceParameterDefs, type ServiceParameterDefinition } from "@/hooks/useServiceParameters";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,7 +77,7 @@ export default function DynamicParameterForm({ measurementId, serviceId, existin
     setSaving(true);
     try {
       // Delete existing params for this measurement
-      await supabase.from("measurement_parameters").delete().eq("order_measurement_id", measurementId);
+      await api.from("measurement_parameters").delete().eq("order_measurement_id", measurementId);
 
       // Insert visible params with values
       const inserts = visibleDefs
@@ -90,7 +90,7 @@ export default function DynamicParameterForm({ measurementId, serviceId, existin
         }));
 
       if (inserts.length > 0) {
-        const { error } = await supabase.from("measurement_parameters").insert(inserts);
+        const { error } = await api.from("measurement_parameters").insert(inserts);
         if (error) throw error;
       }
 
@@ -117,7 +117,7 @@ export default function DynamicParameterForm({ measurementId, serviceId, existin
           unit: d.unit || null,
         }));
       if (inserts.length > 0) {
-        const { error } = await supabase.from("measurement_parameters").insert(inserts);
+        const { error } = await api.from("measurement_parameters").insert(inserts);
         if (error) throw error;
       }
       toast.success("Parameter aus Vorlage geladen");

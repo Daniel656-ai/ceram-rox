@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface ActivityEntry {
@@ -29,7 +29,7 @@ export function useRecentActivity(limit = 15) {
   // Realtime subscription
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
+    const channel = api
       .channel("activity-log-feed")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "activity_log" }, () => {
         qc.invalidateQueries({ queryKey: ["activity-log"] });
@@ -40,7 +40,7 @@ export function useRecentActivity(limit = 15) {
       })
       .subscribe();
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [user, qc]);
 
@@ -48,7 +48,7 @@ export function useRecentActivity(limit = 15) {
     queryKey: ["activity-log", limit],
     enabled: !!user,
     queryFn: async (): Promise<ActivityEntry[]> => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("activity_log")
         .select("*")
         .order("created_at", { ascending: false })
@@ -64,12 +64,12 @@ export function useRecentActivity(limit = 15) {
       const projectIds = Array.from(new Set(entries.map((e) => e.project_id).filter(Boolean)));
 
       const [profilesRes, servicesRes, ordersRes, measurementsRes, projectsRes, notificationsRes] = await Promise.all([
-        actorIds.length ? supabase.from("profiles").select("user_id, first_name, last_name").in("user_id", actorIds) : Promise.resolve({ data: [] as any[], error: null }),
-        serviceIds.length ? supabase.from("measurement_services").select("id, service_name").in("id", serviceIds) : Promise.resolve({ data: [] as any[], error: null }),
-        orderIds.length ? supabase.from("measurement_orders").select("id, order_number").in("id", orderIds) : Promise.resolve({ data: [] as any[], error: null }),
-        measurementIds.length ? supabase.from("order_measurements").select("id, measurement_number").in("id", measurementIds) : Promise.resolve({ data: [] as any[], error: null }),
-        projectIds.length ? supabase.from("projects").select("id, project_number, project_name").in("id", projectIds) : Promise.resolve({ data: [] as any[], error: null }),
-        supabase.from("notifications").select("id, activity_id, read_at").eq("user_id", user!.id).in("activity_id", entries.map((e) => e.id)),
+        actorIds.length ? api.from("profiles").select("user_id, first_name, last_name").in("user_id", actorIds) : Promise.resolve({ data: [] as any[], error: null }),
+        serviceIds.length ? api.from("measurement_services").select("id, service_name").in("id", serviceIds) : Promise.resolve({ data: [] as any[], error: null }),
+        orderIds.length ? api.from("measurement_orders").select("id, order_number").in("id", orderIds) : Promise.resolve({ data: [] as any[], error: null }),
+        measurementIds.length ? api.from("order_measurements").select("id, measurement_number").in("id", measurementIds) : Promise.resolve({ data: [] as any[], error: null }),
+        projectIds.length ? api.from("projects").select("id, project_number, project_name").in("id", projectIds) : Promise.resolve({ data: [] as any[], error: null }),
+        api.from("notifications").select("id, activity_id, read_at").eq("user_id", user!.id).in("activity_id", entries.map((e) => e.id)),
       ]);
 
       const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p]));
@@ -102,7 +102,7 @@ export function useUnreadNotificationsCount() {
     queryKey: ["unread-notifications-count"],
     enabled: !!user,
     queryFn: async () => {
-      const { count, error } = await supabase
+      const { count, error } = await api
         .from("notifications")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user!.id)
@@ -117,7 +117,7 @@ export function useMarkNotificationRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("notifications")
         .update({ read_at: new Date().toISOString() })
         .eq("id", notificationId);
@@ -135,7 +135,7 @@ export function useMarkAllNotificationsRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { error } = await api
         .from("notifications")
         .update({ read_at: new Date().toISOString() })
         .eq("user_id", user!.id)

@@ -21,7 +21,7 @@ import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -69,7 +69,7 @@ export default function ProjectDetailPage() {
 
   const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
     if (!id) return;
-    const { error } = await supabase.from("projects").update(updates).eq("id", id);
+    const { error } = await api.from("projects").update(updates).eq("id", id);
     if (error) { toast.error(error.message); return; }
     queryClient.invalidateQueries({ queryKey: ["project-detail", id] });
     queryClient.invalidateQueries({ queryKey: ["projects-with-stats"] });

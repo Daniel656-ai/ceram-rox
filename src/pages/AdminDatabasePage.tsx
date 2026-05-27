@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database, ShieldCheck, AlertTriangle, CheckCircle2, Download, Upload, RefreshCw, FileJson, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
@@ -36,7 +36,7 @@ export default function AdminDatabasePage() {
   const runIntegrityCheck = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("db-integrity-check", {
+      const { data, error } = await api.functions.invoke("db-integrity-check", {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (error) throw error;
@@ -63,12 +63,12 @@ export default function AdminDatabasePage() {
         { data: results },
         { data: services },
       ] = await Promise.all([
-        supabase.from("projects").select("*"),
-        supabase.from("measurement_orders").select("*"),
-        supabase.from("order_measurements").select("*"),
-        supabase.from("samples").select("*"),
-        supabase.from("measurement_results").select("*"),
-        supabase.from("measurement_services").select("*"),
+        api.from("projects").select("*"),
+        api.from("measurement_orders").select("*"),
+        api.from("order_measurements").select("*"),
+        api.from("samples").select("*"),
+        api.from("measurement_results").select("*"),
+        api.from("measurement_services").select("*"),
       ]);
 
       const exportData = {

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -27,7 +27,7 @@ export function SampleScannerInput() {
     }
 
     // Otherwise treat as sample_number
-    const { data } = await supabase
+    const { data } = await api
       .from("samples")
       .select("id")
       .eq("sample_number", trimmed)

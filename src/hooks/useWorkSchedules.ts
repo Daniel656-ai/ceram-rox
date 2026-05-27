@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { parseISO, isWithinInterval } from "date-fns";
 import { isWorkingDay, getHolidaySet, VACATION_WEEKS_PER_YEAR } from "@/lib/austrian-holidays";
 
@@ -99,7 +99,7 @@ export function useUserWorkSchedules(userId?: string) {
   return useQuery({
     queryKey: ["user_work_schedules", userId ?? "all"],
     queryFn: async () => {
-      let q = supabase.from("user_work_schedules").select("*").order("valid_from", { ascending: false });
+      let q = api.from("user_work_schedules").select("*").order("valid_from", { ascending: false });
       if (userId) q = q.eq("user_id", userId);
       const { data, error } = await q;
       if (error) throw error;
@@ -113,7 +113,7 @@ export function useEffectiveSchedules(onDate: Date = new Date()) {
   return useQuery({
     queryKey: ["effective_schedules", onDate.toISOString().slice(0, 10)],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("user_work_schedules")
         .select("*")
         .lte("valid_from", onDate.toISOString().slice(0, 10))
@@ -132,7 +132,7 @@ export function useUpsertWorkSchedule() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<UserWorkSchedule> & { user_id: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await api.auth.getUser();
       const payload = {
         user_id: input.user_id,
         weekly_hours: input.weekly_hours ?? 38.5,
@@ -147,7 +147,7 @@ export function useUpsertWorkSchedule() {
         notes: input.notes ?? null,
         created_by: user!.id,
       };
-      const { error } = await supabase
+      const { error } = await api
         .from("user_work_schedules")
         .upsert(payload, { onConflict: "user_id,valid_from" });
       if (error) throw error;
@@ -163,7 +163,7 @@ export function useDeleteWorkSchedule() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("user_work_schedules").delete().eq("id", id);
+      const { error } = await api.from("user_work_schedules").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

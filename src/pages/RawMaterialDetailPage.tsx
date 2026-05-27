@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useStorageLocations, calculateStock } from "@/hooks/useRawMaterials";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,7 +162,7 @@ export default function RawMaterialDetailPage() {
   };
 
   const handleDownload = async (doc: any) => {
-    const { data, error } = await supabase.storage.from("raw-material-documents").download(doc.storage_path);
+    const { data, error } = await api.storage.from("raw-material-documents").download(doc.storage_path);
     if (error) { toast.error(error.message); return; }
     const url = URL.createObjectURL(data);
     const a = document.createElement("a");

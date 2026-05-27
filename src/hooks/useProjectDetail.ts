@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useProjectDetail(projectId?: string) {
@@ -7,7 +7,7 @@ export function useProjectDetail(projectId?: string) {
   return useQuery({
     queryKey: ["project-detail", projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("projects")
         .select("*")
         .eq("id", projectId!)
@@ -24,7 +24,7 @@ export function useProjectSamples(projectId?: string) {
   return useQuery({
     queryKey: ["project-samples", projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("samples")
         .select("*, storage_locations:location_id(id, hall, room, shelf, position)")
         .eq("project_id", projectId!)
@@ -41,7 +41,7 @@ export function useProjectOrders(projectId?: string) {
   return useQuery({
     queryKey: ["project-orders", projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_orders")
         .select(`
           *,
@@ -68,7 +68,7 @@ export function useProjectSampleHistory(sampleIds: string[]) {
     queryKey: ["project-sample-history", sampleIds],
     queryFn: async () => {
       if (sampleIds.length === 0) return [];
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("sample_history")
         .select("*")
         .in("sample_id", sampleIds)
@@ -87,37 +87,37 @@ export function useProjectsWithStats() {
     queryKey: ["projects-with-stats"],
     queryFn: async () => {
       // Fetch projects
-      const { data: projects, error: pErr } = await supabase
+      const { data: projects, error: pErr } = await api
         .from("projects")
         .select("*")
         .order("created_at", { ascending: false });
       if (pErr) throw pErr;
 
       // Fetch sample counts per project
-      const { data: samples, error: sErr } = await supabase
+      const { data: samples, error: sErr } = await api
         .from("samples")
         .select("id, project_id");
       if (sErr) throw sErr;
 
       // Fetch orders with measurements & work_logs
-      const { data: orders, error: oErr } = await supabase
+      const { data: orders, error: oErr } = await api
         .from("measurement_orders")
         .select("id, project_id, status, order_measurements(id, status, processing_time_hours, planned_hours, actual_duration_hours, measurement_services(hourly_rate), work_logs(hours))");
       if (oErr) throw oErr;
 
       // Fetch material costs
-      const { data: projCon, error: pcErr } = await supabase
+      const { data: projCon, error: pcErr } = await api
         .from("project_consumables")
         .select("project_id, total_cost");
       if (pcErr) throw pcErr;
 
-      const { data: projKn, error: pkErr } = await supabase
+      const { data: projKn, error: pkErr } = await api
         .from("project_knetung_materials")
         .select("project_id, total_cost");
       if (pkErr) throw pkErr;
 
       // Fetch time entries
-      const { data: timeEntries, error: teErr } = await supabase
+      const { data: timeEntries, error: teErr } = await api
         .from("project_time_entries")
         .select("project_id, duration_minutes");
       if (teErr) throw teErr;

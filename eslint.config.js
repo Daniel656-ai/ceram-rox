@@ -21,6 +21,30 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Enforce: all backend access must go through src/lib/api.
+      // The supabase client may only be imported inside src/lib/api/** and
+      // src/integrations/supabase/** (and as a type-only import elsewhere).
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/integrations/supabase/client",
+              message:
+                "Do not import the supabase client directly. Use `import { api } from '@/lib/api'` instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The API layer itself and the auto-generated integration are allowed to
+    // talk to the supabase client.
+    files: ["src/lib/api/**", "src/integrations/supabase/**"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 );
+

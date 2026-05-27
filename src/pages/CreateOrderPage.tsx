@@ -9,7 +9,7 @@ import { useWorkstations } from "@/hooks/useWorkstations";
 import { useServiceParameterDefs } from "@/hooks/useServiceParameters";
 import { useTemplates, useApplyTemplate } from "@/hooks/useTemplates";
 import { useSamples } from "@/hooks/useSamples";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -240,10 +240,10 @@ export default function CreateOrderPage() {
         });
         const params = measurementParams[idx];
         if (params && Object.keys(params).length > 0) {
-          const { data: defs } = await supabase.from("service_parameter_definitions").select("id, parameter_name, unit").eq("service_id", m.service_id).in("id", Object.keys(params));
+          const { data: defs } = await api.from("service_parameter_definitions").select("id, parameter_name, unit").eq("service_id", m.service_id).in("id", Object.keys(params));
           if (defs && defs.length > 0) {
             const inserts = defs.filter((d) => (params[d.id] || "").trim()).map((d) => ({ order_measurement_id: createdMeasurement.id, parameter_name: d.parameter_name, parameter_value: params[d.id], unit: d.unit || null }));
-            if (inserts.length > 0) { const { error } = await supabase.from("measurement_parameters").insert(inserts); if (error) throw error; }
+            if (inserts.length > 0) { const { error } = await api.from("measurement_parameters").insert(inserts); if (error) throw error; }
           }
         }
       }

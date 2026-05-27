@@ -17,7 +17,7 @@ import { GitHubCommitStatus } from "@/components/GitHubCommitStatus";
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export default function Dashboard() {
   const { user, profile, role } = useAuth();
@@ -31,7 +31,7 @@ export default function Dashboard() {
   const { data: allMeasurements = [] } = useQuery({
     queryKey: ["dashboard-all-measurements"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("order_measurements")
         .select(`
           id, measurement_number, status, assigned_to,

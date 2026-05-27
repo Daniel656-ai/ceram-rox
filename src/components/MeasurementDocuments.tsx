@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,9 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
     setUploading(true);
     try {
       const path = `${user.id}/${measurementId}/${Date.now()}_${file.name}`;
-      const { error: uploadErr } = await supabase.storage.from("measurement-documents").upload(path, file);
+      const { error: uploadErr } = await api.storage.from("measurement-documents").upload(path, file);
       if (uploadErr) throw uploadErr;
-      const { error: dbErr } = await supabase.from("documents").insert({
+      const { error: dbErr } = await api.from("documents").insert({
         order_measurement_id: measurementId,
         file_name: file.name,
         file_type: file.type,
@@ -53,7 +53,7 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
   };
 
   const handleDownload = async (doc: Document) => {
-    const { data, error } = await supabase.storage.from("measurement-documents").download(doc.storage_path);
+    const { data, error } = await api.storage.from("measurement-documents").download(doc.storage_path);
     if (error) { toast.error("Download fehlgeschlagen", { description: error.message }); return; }
     const url = URL.createObjectURL(data);
     const a = document.createElement("a");

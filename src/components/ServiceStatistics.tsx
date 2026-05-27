@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -43,7 +43,7 @@ export function ServiceStatistics() {
   const { data: services = [] } = useQuery({
     queryKey: ["all-services-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("measurement_services").select("id, service_name, category, standard_duration_hours, active").order("service_name");
+      const { data, error } = await api.from("measurement_services").select("id, service_name, category, standard_duration_hours, active").order("service_name");
       if (error) throw error;
       return data;
     },
@@ -53,7 +53,7 @@ export function ServiceStatistics() {
   const { data: measurements = [], isLoading } = useQuery({
     queryKey: ["service-stats-measurements", dateFrom.toISOString(), dateTo.toISOString()],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("order_measurements")
         .select("service_id, status, actual_duration_hours, planned_hours, updated_at, created_at")
         .gte("created_at", dateFrom.toISOString())

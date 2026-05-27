@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface WorkPackage {
@@ -22,7 +22,7 @@ export function useWorkPackages(projectId?: string) {
   return useQuery({
     queryKey: ["work-packages", projectId],
     queryFn: async (): Promise<WorkPackage[]> => {
-      const { data: wps, error } = await supabase
+      const { data: wps, error } = await api
         .from("project_work_packages")
         .select("*")
         .eq("project_id", projectId!)
@@ -32,7 +32,7 @@ export function useWorkPackages(projectId?: string) {
       const ids = (wps || []).map((w: any) => w.id);
       let assigneesByWp = new Map<string, string[]>();
       if (ids.length > 0) {
-        const { data: assignees, error: aErr } = await supabase
+        const { data: assignees, error: aErr } = await api
           .from("project_work_package_assignees")
           .select("work_package_id, user_id")
           .in("work_package_id", ids);
@@ -68,7 +68,7 @@ export function useCreateWorkPackage() {
       created_by: string;
     }) => {
       const { assignee_ids, ...wp } = params;
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("project_work_packages")
         .insert(wp as any)
         .select()
@@ -80,7 +80,7 @@ export function useCreateWorkPackage() {
           work_package_id: data.id,
           user_id: uid,
         }));
-        const { error: aErr } = await supabase
+        const { error: aErr } = await api
           .from("project_work_package_assignees")
           .insert(rows);
         if (aErr) throw aErr;
@@ -113,7 +113,7 @@ export function useUpdateWorkPackage() {
       assignee_ids?: string[];
     }) => {
       if (Object.keys(updates).length > 0) {
-        const { error } = await supabase
+        const { error } = await api
           .from("project_work_packages")
           .update(updates as any)
           .eq("id", id);
@@ -122,7 +122,7 @@ export function useUpdateWorkPackage() {
 
       if (assignee_ids !== undefined) {
         // Replace assignees: delete old, insert new
-        const { error: delErr } = await supabase
+        const { error: delErr } = await api
           .from("project_work_package_assignees")
           .delete()
           .eq("work_package_id", id);
@@ -133,7 +133,7 @@ export function useUpdateWorkPackage() {
             work_package_id: id,
             user_id: uid,
           }));
-          const { error: insErr } = await supabase
+          const { error: insErr } = await api
             .from("project_work_package_assignees")
             .insert(rows);
           if (insErr) throw insErr;
@@ -150,7 +150,7 @@ export function useDeleteWorkPackage() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("project_work_packages")
         .delete()
         .eq("id", id);

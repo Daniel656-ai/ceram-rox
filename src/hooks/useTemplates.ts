@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useTemplates() {
@@ -7,7 +7,7 @@ export function useTemplates() {
   return useQuery({
     queryKey: ["measurement-templates"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_templates")
         .select("*, measurement_template_items(id, service_id, sort_order, measurement_services(id, service_name, category, standard_duration_hours, hourly_rate))")
         .order("name");
@@ -23,7 +23,7 @@ export function useCreateTemplate() {
   return useMutation({
     mutationFn: async (template: { name: string; category?: string; description?: string; created_by: string; items: { service_id: string; sort_order: number }[] }) => {
       const { items, ...rest } = template;
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_templates")
         .insert(rest as any)
         .select()
@@ -31,7 +31,7 @@ export function useCreateTemplate() {
       if (error) throw error;
 
       if (items.length > 0) {
-        const { error: itemsError } = await supabase
+        const { error: itemsError } = await api
           .from("measurement_template_items")
           .insert(items.map(i => ({ ...i, template_id: data.id })) as any);
         if (itemsError) throw itemsError;
@@ -46,21 +46,21 @@ export function useUpdateTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, name, category, description, items }: { id: string; name: string; category?: string; description?: string; items: { service_id: string; sort_order: number }[] }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("measurement_templates")
         .update({ name, category, description } as any)
         .eq("id", id);
       if (error) throw error;
 
       // Replace items
-      const { error: delErr } = await supabase
+      const { error: delErr } = await api
         .from("measurement_template_items")
         .delete()
         .eq("template_id", id);
       if (delErr) throw delErr;
 
       if (items.length > 0) {
-        const { error: insErr } = await supabase
+        const { error: insErr } = await api
           .from("measurement_template_items")
           .insert(items.map(i => ({ ...i, template_id: id })) as any);
         if (insErr) throw insErr;
@@ -74,7 +74,7 @@ export function useDeleteTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("measurement_templates").delete().eq("id", id);
+      const { error } = await api.from("measurement_templates").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["measurement-templates"] }),
@@ -103,7 +103,7 @@ export function useApplyTemplate() {
       dueDate?: string;
     }) => {
       // Get template items
-      const { data: items, error: itemsErr } = await supabase
+      const { data: items, error: itemsErr } = await api
         .from("measurement_template_items")
         .select("service_id, sort_order")
         .eq("template_id", templateId)
@@ -115,7 +115,7 @@ export function useApplyTemplate() {
 
       for (const sampleId of sampleIds) {
         // Create order per sample
-        const { data: order, error: orderErr } = await supabase
+        const { data: order, error: orderErr } = await api
           .from("measurement_orders")
           .insert({
             project_id: projectId,
@@ -133,7 +133,7 @@ export function useApplyTemplate() {
 
         // Create measurements for each template item
         for (const item of items) {
-          const { error: mErr } = await supabase
+          const { error: mErr } = await api
             .from("order_measurements")
             .insert({
               order_id: order.id,

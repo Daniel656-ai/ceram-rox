@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useServices() {
   return useQuery({
     queryKey: ["services"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_services")
         .select("*")
         .eq("active", true)
@@ -22,7 +22,7 @@ export function useAllServices() {
   return useQuery({
     queryKey: ["all-services"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_services")
         .select("*, workstations(id, name)")
         .order("category")
@@ -42,17 +42,17 @@ export function useMyMeasurements() {
       const fetchCreators = async (rows: any[]) => {
         const ids = Array.from(new Set(rows.map((r) => r.measurement_orders?.created_by).filter(Boolean)));
         if (ids.length === 0) return new Map<string, any>();
-        const { data } = await supabase.from("profiles").select("user_id, first_name, last_name").in("user_id", ids);
+        const { data } = await api.from("profiles").select("user_id, first_name, last_name").in("user_id", ids);
         return new Map((data || []).map((p: any) => [p.user_id, p]));
       };
       // Assigned to me
-      const { data: assigned, error: e1 } = await supabase
+      const { data: assigned, error: e1 } = await api
         .from("order_measurements")
         .select(select)
         .eq("assigned_to", user!.id);
       if (e1) throw e1;
       // Workstations I'm responsible for
-      const { data: myStations, error: eS } = await supabase
+      const { data: myStations, error: eS } = await api
         .from("workstations")
         .select("id")
         .eq("responsible_user_id", user!.id);
@@ -60,7 +60,7 @@ export function useMyMeasurements() {
       let viaStation: any[] = [];
       const stationIds = (myStations || []).map((s: any) => s.id);
       if (stationIds.length > 0) {
-        const { data, error: e2 } = await supabase
+        const { data, error: e2 } = await api
           .from("order_measurements")
           .select(select)
           .in("workstation_id", stationIds);
@@ -111,7 +111,7 @@ export function useAddOrderMeasurement() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (m: { order_id: string; service_id: string; planned_hours?: number; due_date?: string; workstation_id?: string }) => {
-      const { data, error } = await supabase.from("order_measurements").insert({ ...m, measurement_number: "WILL_BE_OVERWRITTEN" } as any).select().single();
+      const { data, error } = await api.from("order_measurements").insert({ ...m, measurement_number: "WILL_BE_OVERWRITTEN" } as any).select().single();
       if (error) throw error;
       return data;
     },
@@ -126,7 +126,7 @@ export function useUpdateMeasurementStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("order_measurements").update({ status: status as any }).eq("id", id);
+      const { error } = await api.from("order_measurements").update({ status: status as any }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -140,7 +140,7 @@ export function useUpdateMeasurementRanking() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ranking }: { id: string; ranking: number | null }) => {
-      const { error } = await supabase.from("order_measurements").update({ ranking } as any).eq("id", id);
+      const { error } = await api.from("order_measurements").update({ ranking } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -155,7 +155,7 @@ export function useAddWorkLog() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (log: { order_measurement_id: string; user_id: string; work_date: string; hours: number; comment?: string }) => {
-      const { data, error } = await supabase.from("work_logs").insert(log).select().single();
+      const { data, error } = await api.from("work_logs").insert(log).select().single();
       if (error) throw error;
       return data;
     },
@@ -171,7 +171,7 @@ export function useUpdateService() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; hourly_rate?: number; active?: boolean; service_name?: string; responsible_user_id?: string | null; workstation_id?: string | null; standard_duration_hours?: number }) => {
-      const { error } = await supabase.from("measurement_services").update(updates as any).eq("id", id);
+      const { error } = await api.from("measurement_services").update(updates as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -185,14 +185,14 @@ export function useDurchfuehrer() {
   return useQuery({
     queryKey: ["durchfuehrer-users"],
     queryFn: async () => {
-      const { data: roles, error: rolesErr } = await supabase
+      const { data: roles, error: rolesErr } = await api
         .from("user_roles")
         .select("user_id")
         .in("role", ["durchfuehrer", "master"]);
       if (rolesErr) throw rolesErr;
       const userIds = (roles || []).map((r: any) => r.user_id);
       if (userIds.length === 0) return [];
-      const { data: profiles, error: profErr } = await supabase
+      const { data: profiles, error: profErr } = await api
         .from("profiles")
         .select("user_id, first_name, last_name")
         .in("user_id", userIds)
@@ -207,7 +207,7 @@ export function useAssignMeasurement() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, assigned_to }: { id: string; assigned_to: string | null }) => {
-      const { error } = await supabase.from("order_measurements").update({ assigned_to }).eq("id", id);
+      const { error } = await api.from("order_measurements").update({ assigned_to }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -221,7 +221,7 @@ export function useCreateService() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (service: { service_name: string; category: string; hourly_rate: number; responsible_user_id?: string | null; workstation_id?: string | null }) => {
-      const { data, error } = await supabase.from("measurement_services").insert(service as any).select().single();
+      const { data, error } = await api.from("measurement_services").insert(service as any).select().single();
       if (error) throw error;
       return data;
     },

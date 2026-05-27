@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export interface CustomRole {
   id: string;
@@ -16,8 +16,8 @@ export function useCustomRoles() {
     queryKey: ["custom_roles"],
     queryFn: async () => {
       const [rolesRes, permsRes] = await Promise.all([
-        supabase.from("custom_roles").select("*").order("created_at"),
-        supabase.from("role_permissions").select("*"),
+        api.from("custom_roles").select("*").order("created_at"),
+        api.from("role_permissions").select("*"),
       ]);
       if (rolesRes.error) throw rolesRes.error;
       if (permsRes.error) throw permsRes.error;
@@ -41,7 +41,7 @@ export function useCreateCustomRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: { name: string; description: string; base_role: string; permissions: string[] }) => {
-      const { data: role, error } = await supabase
+      const { data: role, error } = await api
         .from("custom_roles")
         .insert({ name: params.name, description: params.description, base_role: params.base_role as any })
         .select()
@@ -49,7 +49,7 @@ export function useCreateCustomRole() {
       if (error) throw error;
 
       if (params.permissions.length > 0) {
-        const { error: permError } = await supabase
+        const { error: permError } = await api
           .from("role_permissions")
           .insert(params.permissions.map((p) => ({ role_id: role.id, permission_key: p })));
         if (permError) throw permError;
@@ -64,18 +64,18 @@ export function useUpdateCustomRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (params: { id: string; name: string; description: string; base_role: string; permissions: string[] }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("custom_roles")
         .update({ name: params.name, description: params.description, base_role: params.base_role as any })
         .eq("id", params.id);
       if (error) throw error;
 
       // Delete existing permissions and re-insert
-      const { error: delError } = await supabase.from("role_permissions").delete().eq("role_id", params.id);
+      const { error: delError } = await api.from("role_permissions").delete().eq("role_id", params.id);
       if (delError) throw delError;
 
       if (params.permissions.length > 0) {
-        const { error: permError } = await supabase
+        const { error: permError } = await api
           .from("role_permissions")
           .insert(params.permissions.map((p) => ({ role_id: params.id, permission_key: p })));
         if (permError) throw permError;
@@ -92,7 +92,7 @@ export function useDeleteCustomRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("custom_roles").delete().eq("id", id);
+      const { error } = await api.from("custom_roles").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["custom_roles"] }),

@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export function useMeasurementResults(measurementId: string | undefined) {
   return useQuery({
     queryKey: ["measurement-results", measurementId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_results")
         .select("*")
         .eq("order_measurement_id", measurementId!)
@@ -32,7 +32,7 @@ export function useAddMeasurementResult() {
       measured_at?: string;
       measured_by?: string;
     }) => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_results")
         .insert(result)
         .select()
@@ -62,7 +62,7 @@ export function useUpdateMeasurementResult() {
       measured_at?: string;
       measured_by?: string;
     }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("measurement_results")
         .update(updates)
         .eq("id", id);
@@ -79,7 +79,7 @@ export function useDeleteMeasurementResult() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("measurement_results")
         .delete()
         .eq("id", id);

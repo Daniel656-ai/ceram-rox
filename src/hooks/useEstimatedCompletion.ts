@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { addWorkingDays } from "@/lib/austrian-holidays";
 
@@ -43,7 +43,7 @@ export function useEstimatedCompletion() {
   const { data: orders = [] } = useQuery({
     queryKey: ["eta-orders"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_orders")
         .select("id, sample_id, priority, created_at, status, order_measurements(id, status, processing_time_hours, planned_hours)")
         .in("status", ["open", "in_progress"])

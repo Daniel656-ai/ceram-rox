@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from "date-fns";
 import { countWorkingHours } from "@/lib/austrian-holidays";
 
@@ -26,13 +26,13 @@ export function useWorkstationUtilization(period: TimePeriod) {
     queryFn: async () => {
       const { start, end } = getDateRange(period);
 
-      const { data: workstations, error: wsErr } = await supabase
+      const { data: workstations, error: wsErr } = await api
         .from("workstations")
         .select("id, name")
         .eq("status", "active");
       if (wsErr) throw wsErr;
 
-      const { data: measurements, error: mErr } = await supabase
+      const { data: measurements, error: mErr } = await api
         .from("order_measurements")
         .select("workstation_id, actual_duration_hours, measurement_services(standard_duration_hours)")
         .not("workstation_id", "is", null)
@@ -40,7 +40,7 @@ export function useWorkstationUtilization(period: TimePeriod) {
         .lte("updated_at", end.toISOString());
       if (mErr) throw mErr;
 
-      const { data: downtimes, error: dtErr } = await supabase
+      const { data: downtimes, error: dtErr } = await api
         .from("workstation_downtimes")
         .select("workstation_id, start_at, end_at")
         .gte("end_at", start.toISOString())

@@ -14,7 +14,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { WorkstationMeasurementsList } from "@/components/WorkstationMeasurementsList";
 import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import {
   useWorkstations,
   useCreateWorkstation,
@@ -33,12 +33,12 @@ function useAssignableUsers() {
   return useQuery({
     queryKey: ["assignable-users"],
     queryFn: async () => {
-      const { data: roles, error: rolesErr } = await supabase
+      const { data: roles, error: rolesErr } = await api
         .from("user_roles").select("user_id, role").in("role", ["durchfuehrer", "master"]);
       if (rolesErr) throw rolesErr;
       if (!roles?.length) return [];
       const userIds = [...new Set(roles.map((r) => r.user_id))];
-      const { data: profiles, error: profErr } = await supabase
+      const { data: profiles, error: profErr } = await api
         .from("profiles").select("user_id, first_name, last_name").in("user_id", userIds);
       if (profErr) throw profErr;
       const roleMap = new Map<string, string>();

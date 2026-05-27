@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export interface WorkstationDowntime {
   id: string;
@@ -18,7 +18,7 @@ export function useDowntimes(workstationId?: string) {
   return useQuery({
     queryKey: ["workstation_downtimes", workstationId],
     queryFn: async () => {
-      let q = supabase.from("workstation_downtimes").select("*").order("start_at");
+      let q = api.from("workstation_downtimes").select("*").order("start_at");
       if (workstationId) q = q.eq("workstation_id", workstationId);
       const { data, error } = await q;
       if (error) throw error;
@@ -39,7 +39,7 @@ export function useCreateDowntime() {
       description?: string;
       created_by: string;
     }) => {
-      const { data, error } = await supabase.from("workstation_downtimes").insert(d).select().single();
+      const { data, error } = await api.from("workstation_downtimes").insert(d).select().single();
       if (error) throw error;
       return data;
     },
@@ -54,7 +54,7 @@ export function useUpdateDowntime() {
       id,
       ...updates
     }: Partial<WorkstationDowntime> & { id: string }) => {
-      const { data, error } = await supabase.from("workstation_downtimes").update(updates).eq("id", id).select().single();
+      const { data, error } = await api.from("workstation_downtimes").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -66,7 +66,7 @@ export function useDeleteDowntime() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("workstation_downtimes").delete().eq("id", id);
+      const { error } = await api.from("workstation_downtimes").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workstation_downtimes"] }),
@@ -84,7 +84,7 @@ export function useCheckDowntimeConflict() {
       start: string;
       end: string;
     }) => {
-      const { data, error } = await supabase.rpc("check_workstation_downtime_conflict", {
+      const { data, error } = await api.rpc("check_workstation_downtime_conflict", {
         _workstation_id: workstationId,
         _start: start,
         _end: end,
