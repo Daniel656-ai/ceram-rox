@@ -146,7 +146,7 @@ export default function ImportOrderPage() {
             }))
           );
         if (paramInserts.length > 0) {
-          await api.from("measurement_parameters").insert(paramInserts);
+          await api.measurementParameters.bulkInsert(paramInserts);
         }
 
         created++;

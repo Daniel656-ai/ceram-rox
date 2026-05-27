@@ -116,8 +116,7 @@ export default function DynamicParameterForm({ measurementId, serviceId, existin
           unit: d.unit || null,
         }));
       if (inserts.length > 0) {
-        const { error } = await api.from("measurement_parameters").insert(inserts);
-        if (error) throw error;
+        await api.measurementParameters.bulkInsert(inserts);
       }
       toast.success("Parameter aus Vorlage geladen");
       qc.invalidateQueries({ queryKey: ["order"] });

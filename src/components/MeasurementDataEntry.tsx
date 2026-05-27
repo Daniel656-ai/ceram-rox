@@ -38,15 +38,19 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
   const handleSaveParam = async () => {
     try {
       if (editingParamId) {
-        const { error } = await api.from("measurement_parameters")
-          .update({ parameter_name: paramForm.parameter_name, parameter_value: paramForm.parameter_value || null, unit: paramForm.unit || null })
-          .eq("id", editingParamId);
-        if (error) throw error;
+        await api.measurementParameters.update(editingParamId, {
+          parameter_name: paramForm.parameter_name,
+          parameter_value: paramForm.parameter_value || null,
+          unit: paramForm.unit || null,
+        });
         toast.success("Parameter aktualisiert");
       } else {
-        const { error } = await api.from("measurement_parameters")
-          .insert({ order_measurement_id: measurement.id, parameter_name: paramForm.parameter_name, parameter_value: paramForm.parameter_value || null, unit: paramForm.unit || null });
-        if (error) throw error;
+        await api.measurementParameters.insertOne({
+          order_measurement_id: measurement.id,
+          parameter_name: paramForm.parameter_name,
+          parameter_value: paramForm.parameter_value || null,
+          unit: paramForm.unit || null,
+        });
         toast.success("Parameter hinzugefügt");
       }
       setEditingParamId(null);
@@ -60,8 +64,7 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
 
   const handleDeleteParam = async (paramId: string) => {
     try {
-      const { error } = await api.from("measurement_parameters").delete().eq("id", paramId);
-      if (error) throw error;
+      await api.measurementParameters.delete(paramId);
       toast.success("Parameter gelöscht");
       qc.invalidateQueries({ queryKey: ["order"] });
     } catch (err: any) {
