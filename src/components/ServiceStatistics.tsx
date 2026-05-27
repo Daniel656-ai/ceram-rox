@@ -42,26 +42,15 @@ export function ServiceStatistics() {
   // Fetch services
   const { data: services = [] } = useQuery({
     queryKey: ["all-services-stats"],
-    queryFn: async () => {
-      const { data, error } = await api.from("measurement_services").select("id, service_name, category, standard_duration_hours, active").order("service_name");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => api.measurementServices.listForStats(),
   });
 
   // Fetch measurements in date range
   const { data: measurements = [], isLoading } = useQuery({
     queryKey: ["service-stats-measurements", dateFrom.toISOString(), dateTo.toISOString()],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("order_measurements")
-        .select("service_id, status, actual_duration_hours, planned_hours, updated_at, created_at")
-        .gte("created_at", dateFrom.toISOString())
-        .lte("created_at", dateTo.toISOString());
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => api.measurements.listForServiceStats(dateFrom.toISOString(), dateTo.toISOString()),
   });
+
 
   // Calculate working hours in date range (Mo-Thu 7.75h, Fr 7.5h, excluding AT holidays)
   const { workingDaysInRange, capacityHours } = useMemo(() => {
