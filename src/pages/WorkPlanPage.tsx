@@ -77,18 +77,14 @@ export default function WorkPlanPage() {
 
   const handleFileUpload = async (measurementId: string, file: File) => {
     if (!user) return;
-    const path = `${user.id}/${measurementId}/${Date.now()}_${file.name}`;
-    const { error: uploadErr } = await api.storage.from("measurement-documents").upload(path, file);
-    if (uploadErr) { toast.error(t("measurements:upload_failed")); return; }
-    await api.from("documents").insert({
-      order_measurement_id: measurementId,
-      file_name: file.name,
-      file_type: file.type,
-      storage_path: path,
-      uploaded_by: user.id,
-    });
-    toast.success(t("measurements:protocol_uploaded"));
+    try {
+      await api.documents.upload({ measurementId, file, userId: user.id });
+      toast.success(t("measurements:protocol_uploaded"));
+    } catch {
+      toast.error(t("measurements:upload_failed"));
+    }
   };
+
 
   return (
     <div className="space-y-6">
