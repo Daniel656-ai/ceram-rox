@@ -13,6 +13,15 @@ export const measurementServices = {
         .order("service_name")
     ),
 
+  /** Compact projection used by stats widgets. */
+  listForStats: () =>
+    unwrap(
+      dbClient
+        .from("measurement_services")
+        .select("id, service_name, category, standard_duration_hours, active")
+        .order("service_name")
+    ),
+
   /** All services incl. inactive, with workstation join (admin). */
   listAll: () =>
     unwrap(

@@ -116,6 +116,17 @@ export const samples = {
       } as any)
     );
   },
+
+  /** Bulk-insert samples in chunks of 50. Returns total inserted. */
+  async bulkInsert(rows: Array<Record<string, any>>, chunkSize = 50): Promise<number> {
+    let total = 0;
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const batch = rows.slice(i, i + chunkSize);
+      await run(dbClient.from("samples").insert(batch as any));
+      total += batch.length;
+    }
+    return total;
+  },
 };
 
 export const sampleHistory = {
