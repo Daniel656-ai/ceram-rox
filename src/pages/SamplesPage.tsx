@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 const HAZARD_CATEGORIES = [
   "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
@@ -59,7 +59,7 @@ export default function SamplesPage() {
   const { data: services = [] } = useQuery({
     queryKey: ["measurement-services-filter"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_services")
         .select("id, service_name")
         .eq("active", true)
@@ -74,7 +74,7 @@ export default function SamplesPage() {
   const { data: sampleMeasurementTypes = new Map<string, string[]>() } = useQuery({
     queryKey: ["sample-measurement-types"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("measurement_orders")
         .select("sample_id, order_measurements(service_id, measurement_services:service_id(service_name))")
         .not("sample_id", "is", null);
@@ -307,7 +307,7 @@ export default function SamplesPage() {
       let total = 0;
       for (let i = 0; i < samples.length; i += 50) {
         const batch = samples.slice(i, i + 50);
-        const { error } = await supabase.from("samples").insert(batch as any);
+        const { error } = await api.from("samples").insert(batch as any);
         if (error) throw error;
         total += batch.length;
       }

@@ -14,7 +14,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, BarChart3 } from "lucide-react";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,7 +26,7 @@ function useAllOrderMeasurements() {
   return useQuery({
     queryKey: ["all_order_measurements_stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("order_measurements")
         .select("id, order_id, status, actual_duration_hours, processing_time_hours");
       if (error) throw error;
@@ -41,7 +41,7 @@ function useAllProjectTimeEntries() {
   return useQuery({
     queryKey: ["all_project_time_entries_stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("project_time_entries")
         .select("project_id, duration_minutes, entry_date");
       if (error) throw error;
@@ -56,7 +56,7 @@ function useAllProjectMembers() {
   return useQuery({
     queryKey: ["all_project_members_stats"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("project_members")
         .select("project_id, user_id, role");
       if (error) throw error;

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,13 +38,13 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
   const handleSaveParam = async () => {
     try {
       if (editingParamId) {
-        const { error } = await supabase.from("measurement_parameters")
+        const { error } = await api.from("measurement_parameters")
           .update({ parameter_name: paramForm.parameter_name, parameter_value: paramForm.parameter_value || null, unit: paramForm.unit || null })
           .eq("id", editingParamId);
         if (error) throw error;
         toast.success("Parameter aktualisiert");
       } else {
-        const { error } = await supabase.from("measurement_parameters")
+        const { error } = await api.from("measurement_parameters")
           .insert({ order_measurement_id: measurement.id, parameter_name: paramForm.parameter_name, parameter_value: paramForm.parameter_value || null, unit: paramForm.unit || null });
         if (error) throw error;
         toast.success("Parameter hinzugefügt");
@@ -60,7 +60,7 @@ export default function MeasurementDataEntry({ measurement, sampleInfo, projectI
 
   const handleDeleteParam = async (paramId: string) => {
     try {
-      const { error } = await supabase.from("measurement_parameters").delete().eq("id", paramId);
+      const { error } = await api.from("measurement_parameters").delete().eq("id", paramId);
       if (error) throw error;
       toast.success("Parameter gelöscht");
       qc.invalidateQueries({ queryKey: ["order"] });

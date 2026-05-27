@@ -1,14 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export function useUsers() {
   return useQuery({
     queryKey: ["users"],
     queryFn: async () => {
       const [profilesRes, rolesRes, customRolesRes] = await Promise.all([
-        supabase.from("profiles").select("*"),
-        supabase.from("user_roles").select("user_id, role, custom_role_id"),
-        supabase.from("custom_roles").select("id, name"),
+        api.from("profiles").select("*"),
+        api.from("user_roles").select("user_id, role, custom_role_id"),
+        api.from("custom_roles").select("id, name"),
       ]);
       if (profilesRes.error) throw profilesRes.error;
       if (rolesRes.error) throw rolesRes.error;
@@ -39,7 +39,7 @@ export function useUpdateUserRole() {
     mutationFn: async ({ userId, role, customRoleId }: { userId: string; role: string; customRoleId?: string }) => {
       const updateData: any = { role: role as any };
       if (customRoleId !== undefined) updateData.custom_role_id = customRoleId;
-      const { error } = await supabase.from("user_roles").update(updateData).eq("user_id", userId);
+      const { error } = await api.from("user_roles").update(updateData).eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
@@ -50,7 +50,7 @@ export function useUpdateUserStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
-      const { error } = await supabase.from("profiles").update({ is_active: isActive }).eq("user_id", userId);
+      const { error } = await api.from("profiles").update({ is_active: isActive }).eq("user_id", userId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
@@ -58,10 +58,10 @@ export function useUpdateUserStatus() {
 }
 
 async function callAdminUsers(body: Record<string, unknown>) {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await api.auth.getSession();
   if (!session) throw new Error("Nicht eingeloggt");
 
-  const res = await supabase.functions.invoke("admin-users", {
+  const res = await api.functions.invoke("admin-users", {
     body,
   });
 

@@ -11,7 +11,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useStorageLocations } from "@/hooks/useRawMaterials";
 import { useUsers } from "@/hooks/useUsers";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,7 +127,7 @@ export default function SampleDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const path = `${s.id}/${Date.now()}_${file.name}`;
-    const { error: upErr } = await supabase.storage.from("sample-documents").upload(path, file);
+    const { error: upErr } = await api.storage.from("sample-documents").upload(path, file);
     if (upErr) { toast.error(t("document_upload_error")); return; }
     try {
       await addDocument.mutateAsync({
@@ -143,7 +143,7 @@ export default function SampleDetailPage() {
   };
 
   const handleDocDownload = async (doc: any) => {
-    const { data } = await supabase.storage.from("sample-documents").createSignedUrl(doc.storage_path, 300);
+    const { data } = await api.storage.from("sample-documents").createSignedUrl(doc.storage_path, 300);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useProjectMilestones(projectId?: string) {
@@ -7,7 +7,7 @@ export function useProjectMilestones(projectId?: string) {
   return useQuery({
     queryKey: ["project-milestones", projectId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("project_milestones")
         .select("*")
         .eq("project_id", projectId!)
@@ -30,7 +30,7 @@ export function useCreateMilestone() {
       status?: string;
       created_by: string;
     }) => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("project_milestones")
         .insert(milestone as any)
         .select()
@@ -55,7 +55,7 @@ export function useUpdateMilestone() {
       milestone_date?: string | null;
       status?: string;
     }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("project_milestones")
         .update(updates as any)
         .eq("id", id);
@@ -71,7 +71,7 @@ export function useDeleteMilestone() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("project_milestones")
         .delete()
         .eq("id", id);

@@ -21,7 +21,7 @@ import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import MeasurementDataEntry from "@/components/MeasurementDataEntry";
 import { toast } from "sonner";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useServicePermissions } from "@/hooks/useServicePermissions";
@@ -119,7 +119,7 @@ export default function OrderDetailPage() {
       // Update actual duration and reason
       const updatePayload: any = { actual_duration_hours: dur, status: 'completed' };
       if (deviationReason.trim()) updatePayload.duration_deviation_reason = deviationReason.trim();
-      const { error } = await supabase.from("order_measurements").update(updatePayload).eq("id", completeMeasurementId);
+      const { error } = await api.from("order_measurements").update(updatePayload).eq("id", completeMeasurementId);
       if (error) throw error;
       toast.success("Aufgabe abgeschlossen");
       setCompleteOpen(false);

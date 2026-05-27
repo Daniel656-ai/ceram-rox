@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface ResultRecord {
@@ -46,7 +46,7 @@ export function useResultsDatabase() {
     queryKey: ["results-database"],
     queryFn: async () => {
       // Fetch completed measurements with all related data
-      const { data: measurements, error } = await supabase
+      const { data: measurements, error } = await api
         .from("order_measurements")
         .select(`
           id, measurement_number, status, assigned_to, actual_duration_hours,
@@ -67,7 +67,7 @@ export function useResultsDatabase() {
       if (error) throw error;
 
       // Fetch all profiles for name resolution
-      const { data: profiles } = await supabase
+      const { data: profiles } = await api
         .from("profiles")
         .select("user_id, first_name, last_name");
       

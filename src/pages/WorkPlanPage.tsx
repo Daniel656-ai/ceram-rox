@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Clock, Play, CheckCircle2, Upload, Beaker } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
 export default function WorkPlanPage() {
@@ -78,9 +78,9 @@ export default function WorkPlanPage() {
   const handleFileUpload = async (measurementId: string, file: File) => {
     if (!user) return;
     const path = `${user.id}/${measurementId}/${Date.now()}_${file.name}`;
-    const { error: uploadErr } = await supabase.storage.from("measurement-documents").upload(path, file);
+    const { error: uploadErr } = await api.storage.from("measurement-documents").upload(path, file);
     if (uploadErr) { toast.error(t("measurements:upload_failed")); return; }
-    await supabase.from("documents").insert({
+    await api.from("documents").insert({
       order_measurement_id: measurementId,
       file_name: file.name,
       file_type: file.type,
@@ -207,7 +207,7 @@ export default function WorkPlanPage() {
               try {
                 const updatePayload: any = { actual_duration_hours: dur, status: 'completed' };
                 if (completeReason.trim()) updatePayload.duration_deviation_reason = completeReason.trim();
-                const { error } = await supabase.from("order_measurements").update(updatePayload).eq("id", completeMId);
+                const { error } = await api.from("order_measurements").update(updatePayload).eq("id", completeMId);
                 if (error) throw error;
                 toast.success(t("measurements:completed"));
                 setCompleteOpen(false);

@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/hooks/useProjects";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,7 +59,7 @@ export default function BulkSamplePage() {
       let total = 0;
       for (let i = 0; i < samples.length; i += 50) {
         const batch = samples.slice(i, i + 50);
-        const { error } = await supabase.from("samples").insert(batch as any);
+        const { error } = await api.from("samples").insert(batch as any);
         if (error) throw error;
         total += batch.length;
       }

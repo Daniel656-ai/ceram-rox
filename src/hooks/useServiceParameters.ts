@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export interface ServiceParameterDefinition {
   id: string;
@@ -23,7 +23,7 @@ export function useServiceParameterDefs(serviceId: string | undefined) {
   return useQuery({
     queryKey: ["service-param-defs", serviceId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("service_parameter_definitions")
         .select("*")
         .eq("service_id", serviceId!)
@@ -40,7 +40,7 @@ export function useAllServiceParameterDefs() {
   return useQuery({
     queryKey: ["all-service-param-defs"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("service_parameter_definitions")
         .select("*")
         .order("sort_order");
@@ -66,7 +66,7 @@ export function useCreateParameterDef() {
       conditional_on?: string | null;
       conditional_value?: string;
     }) => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("service_parameter_definitions")
         .insert(def as any)
         .select()
@@ -97,7 +97,7 @@ export function useUpdateParameterDef() {
       conditional_on?: string | null;
       conditional_value?: string | null;
     }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("service_parameter_definitions")
         .update(updates as any)
         .eq("id", id);
@@ -114,7 +114,7 @@ export function useDeleteParameterDef() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("service_parameter_definitions")
         .delete()
         .eq("id", id);

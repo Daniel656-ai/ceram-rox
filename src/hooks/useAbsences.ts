@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 
 export interface UserAbsence {
   id: string;
@@ -16,7 +16,7 @@ export function useAbsences(userId?: string) {
   return useQuery({
     queryKey: ["user_absences", userId],
     queryFn: async () => {
-      let q = supabase.from("user_absences").select("*").order("start_at");
+      let q = api.from("user_absences").select("*").order("start_at");
       if (userId) q = q.eq("user_id", userId);
       const { data, error } = await q;
       if (error) throw error;
@@ -35,7 +35,7 @@ export function useCreateAbsence() {
       end_at: string;
       comment?: string;
     }) => {
-      const { data, error } = await supabase.from("user_absences").insert(a).select().single();
+      const { data, error } = await api.from("user_absences").insert(a).select().single();
       if (error) throw error;
       return data;
     },
@@ -50,7 +50,7 @@ export function useUpdateAbsence() {
       id,
       ...updates
     }: Partial<UserAbsence> & { id: string }) => {
-      const { data, error } = await supabase.from("user_absences").update(updates).eq("id", id).select().single();
+      const { data, error } = await api.from("user_absences").update(updates).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },
@@ -62,7 +62,7 @@ export function useDeleteAbsence() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("user_absences").delete().eq("id", id);
+      const { error } = await api.from("user_absences").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["user_absences"] }),
@@ -80,7 +80,7 @@ export function useCheckAbsenceConflict() {
       start: string;
       end: string;
     }) => {
-      const { data, error } = await supabase.rpc("check_user_absence_conflict", {
+      const { data, error } = await api.rpc("check_user_absence_conflict", {
         _user_id: userId,
         _start: start,
         _end: end,

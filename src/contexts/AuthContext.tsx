@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { Session, User } from "@api/api-js";
+import { api } from "@/lib/api";
+import type { Database } from "@/integrations/api/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -51,8 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     const [profileRes, roleRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", userId).single(),
-      supabase.from("user_roles").select("role, custom_role_id").eq("user_id", userId).single(),
+      api.from("profiles").select("*").eq("user_id", userId).single(),
+      api.from("user_roles").select("role, custom_role_id").eq("user_id", userId).single(),
     ]);
 
     if (profileRes.data) setProfile(profileRes.data);
@@ -64,8 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (crid) {
         // Fetch custom role name and permissions in parallel
         const [crRes, permRes] = await Promise.all([
-          supabase.from("custom_roles").select("name").eq("id", crid).single(),
-          supabase.from("role_permissions").select("permission_key").eq("role_id", crid),
+          api.from("custom_roles").select("name").eq("id", crid).single(),
+          api.from("role_permissions").select("permission_key").eq("role_id", crid),
         ]);
         if (crRes.data) setCustomRoleName(crRes.data.name);
         if (permRes.data) setPermissions(permRes.data.map((p: any) => p.permission_key));
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = api.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    api.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await api.auth.signOut();
     setProfile(null);
     setRole(null);
     setCustomRoleId(null);
