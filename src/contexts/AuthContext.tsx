@@ -51,28 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
-    const [profileRes, roleRes] = await Promise.all([
-      api.from("profiles").select("*").eq("user_id", userId).single(),
-      api.from("user_roles").select("role, custom_role_id").eq("user_id", userId).single(),
-    ]);
-
-    if (profileRes.data) setProfile(profileRes.data);
-    if (roleRes.data) {
-      setRole(roleRes.data.role);
-      const crid = roleRes.data.custom_role_id;
-      setCustomRoleId(crid);
-
-      if (crid) {
-        // Fetch custom role name and permissions in parallel
-        const [crRes, permRes] = await Promise.all([
-          api.from("custom_roles").select("name").eq("id", crid).single(),
-          api.from("role_permissions").select("permission_key").eq("role_id", crid),
-        ]);
-        if (crRes.data) setCustomRoleName(crRes.data.name);
-        if (permRes.data) setPermissions(permRes.data.map((p: any) => p.permission_key));
-      }
-    }
+    const { profile, role, customRoleId, customRoleName, permissions } =
+      await api.users.loadAuthContext(userId);
+    if (profile) setProfile(profile);
+    if (role) setRole(role as AppRole);
+    setCustomRoleId(customRoleId);
+    setCustomRoleName(customRoleName);
+    setPermissions(permissions);
   };
+
 
   useEffect(() => {
     const { data: { subscription } } = api.auth.onAuthStateChange(
