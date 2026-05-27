@@ -92,7 +92,7 @@ export function useUpsertWorkSchedule() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<UserWorkSchedule> & { user_id: string }) => {
-      const { data: { user } } = await (await import("@/lib/api")).api.auth.getUser();
+      const { data: { user } } = await api.auth.getUser();
       await api.workSchedules.upsert({
         user_id: input.user_id,
         weekly_hours: input.weekly_hours ?? 38.5,
