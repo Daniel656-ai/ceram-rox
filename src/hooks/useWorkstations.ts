@@ -29,25 +29,15 @@ export interface WorkstationTask {
 export function useWorkstations() {
   return useQuery({
     queryKey: ["workstations"],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("workstations")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data as Workstation[];
-    },
+    queryFn: () => api.workstations.list() as Promise<Workstation[]>,
   });
 }
 
 export function useCreateWorkstation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (ws: { name: string; description?: string; status?: string; responsible_user_id?: string | null }) => {
-      const { data, error } = await api.from("workstations").insert(ws).select().single();
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: (ws: { name: string; description?: string; status?: string; responsible_user_id?: string | null }) =>
+      api.workstations.create(ws),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workstations"] }),
   });
 }
@@ -55,11 +45,8 @@ export function useCreateWorkstation() {
 export function useUpdateWorkstation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; status?: string; responsible_user_id?: string | null }) => {
-      const { data, error } = await api.from("workstations").update(updates).eq("id", id).select().single();
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: ({ id, ...updates }: { id: string; name?: string; description?: string; status?: string; responsible_user_id?: string | null }) =>
+      api.workstations.update(id, updates),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workstations"] }),
   });
 }
@@ -67,10 +54,7 @@ export function useUpdateWorkstation() {
 export function useDeleteWorkstation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.from("workstations").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.workstations.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workstations"] }),
   });
 }
@@ -80,26 +64,15 @@ export function useWorkstationTasks(workstationId?: string) {
   return useQuery({
     queryKey: ["workstation_tasks", workstationId],
     enabled: !!workstationId,
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("workstation_tasks")
-        .select("*")
-        .eq("workstation_id", workstationId!)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as WorkstationTask[];
-    },
+    queryFn: () => api.workstationTasks.list(workstationId!) as Promise<WorkstationTask[]>,
   });
 }
 
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (task: { workstation_id: string; title: string; description?: string; assigned_to?: string | null; due_date?: string | null; hourly_rate?: number; status?: "open" | "in_progress" | "completed" }) => {
-      const { data, error } = await api.from("workstation_tasks").insert([task]).select().single();
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: (task: { workstation_id: string; title: string; description?: string; assigned_to?: string | null; due_date?: string | null; hourly_rate?: number; status?: "open" | "in_progress" | "completed" }) =>
+      api.workstationTasks.create(task),
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ["workstation_tasks", vars.workstation_id] }),
   });
 }
@@ -107,11 +80,8 @@ export function useCreateTask() {
 export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, workstation_id: _wid, ...updates }: { id: string; workstation_id: string; title?: string; description?: string; assigned_to?: string | null; due_date?: string | null; hourly_rate?: number; status?: "open" | "in_progress" | "completed" }) => {
-      const { data, error } = await api.from("workstation_tasks").update(updates).eq("id", id).select().single();
-      if (error) throw error;
-      return data;
-    },
+    mutationFn: ({ id, workstation_id: _wid, ...updates }: { id: string; workstation_id: string; title?: string; description?: string; assigned_to?: string | null; due_date?: string | null; hourly_rate?: number; status?: "open" | "in_progress" | "completed" }) =>
+      api.workstationTasks.update(id, updates),
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ["workstation_tasks", vars.workstation_id] }),
   });
 }
@@ -119,27 +89,17 @@ export function useUpdateTask() {
 export function useDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, workstation_id: _wid }: { id: string; workstation_id: string }) => {
-      const { error } = await api.from("workstation_tasks").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: ({ id }: { id: string; workstation_id: string }) =>
+      api.workstationTasks.delete(id),
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ["workstation_tasks", vars.workstation_id] }),
   });
 }
 
-// ── Workstation Measurements (from order_measurements) ──
+// ── Workstation Measurements ──
 export function useWorkstationMeasurements(workstationId?: string) {
   return useQuery({
     queryKey: ["workstation_measurements", workstationId],
     enabled: !!workstationId,
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("order_measurements")
-        .select(`*, measurement_services(service_name, category), measurement_orders(*, projects(project_number, project_name))`)
-        .eq("workstation_id", workstationId!)
-        .order("due_date");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => api.measurements.listForWorkstation(workstationId!),
   });
 }
