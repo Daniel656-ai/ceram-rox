@@ -33,6 +33,24 @@ import {
   projectConsumables,
   projectKnetungMaterials,
 } from "./projectMaterials";
+import { orders } from "./orders";
+import { measurements, workLogs } from "./measurements";
+import {
+  measurementServices,
+  measurementUsers,
+  serviceParameters,
+  servicePermissions,
+} from "./measurementServices";
+import { templates } from "./templates";
+import { workstations, workstationTasks } from "./workstations";
+import {
+  storageLocations,
+  rawMaterials,
+  rawMaterialBatches,
+  rawMaterialAnalyses,
+  inventoryMovements,
+  rawMaterialDocuments,
+} from "./rawMaterials";
 
 export const api = {
   // ---- domain modules (preferred) ----
@@ -48,6 +66,22 @@ export const api = {
   projectTimeEntries,
   projectConsumables,
   projectKnetungMaterials,
+  orders,
+  measurements,
+  workLogs,
+  measurementServices,
+  measurementUsers,
+  serviceParameters,
+  servicePermissions,
+  templates,
+  workstations,
+  workstationTasks,
+  storageLocations,
+  rawMaterials,
+  rawMaterialBatches,
+  rawMaterialAnalyses,
+  inventoryMovements,
+  rawMaterialDocuments,
 
   // ---- legacy low-level facade (DO NOT use outside src/lib/api/**) ----
   from: dbClient.from.bind(dbClient) as typeof dbClient.from,
