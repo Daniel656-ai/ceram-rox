@@ -58,7 +58,36 @@ export const users = {
     if ((res.data as any)?.error) throw new Error((res.data as any).error);
     return res.data;
   },
+  /**
+   * Load everything needed by the AuthContext for the given user in one call:
+   * profile, base role, custom role id+name and permission keys.
+   */
+  async loadAuthContext(userId: string) {
+    const [profileRes, roleRes] = await Promise.all([
+      dbClient.from("profiles").select("*").eq("user_id", userId).single(),
+      dbClient.from("user_roles").select("role, custom_role_id").eq("user_id", userId).single(),
+    ]);
+
+    const profile = profileRes.data ?? null;
+    const role = (roleRes.data?.role as string | undefined) ?? null;
+    const customRoleId = roleRes.data?.custom_role_id ?? null;
+
+    let customRoleName: string | null = null;
+    let permissions: string[] = [];
+
+    if (customRoleId) {
+      const [crRes, permRes] = await Promise.all([
+        dbClient.from("custom_roles").select("name").eq("id", customRoleId).single(),
+        dbClient.from("role_permissions").select("permission_key").eq("role_id", customRoleId),
+      ]);
+      customRoleName = crRes.data?.name ?? null;
+      permissions = (permRes.data ?? []).map((p: any) => p.permission_key);
+    }
+
+    return { profile, role, customRoleId, customRoleName, permissions };
+  },
 };
+
 
 export const profiles = {
   listByIds: (ids: string[]) =>
