@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { Session, User } from "@api/api-js";
+import { Session, User } from "@supabase/supabase-js";
 import { api } from "@/lib/api";
-import type { Database } from "@/integrations/api/types";
+import type { Database } from "@/integrations/supabase/types";
+
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 

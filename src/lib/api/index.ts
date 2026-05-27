@@ -18,20 +18,23 @@
  */
 import { dbClient } from "./client";
 
+// Note: we delegate via arrow functions (not Function.prototype.bind) so that
+// TypeScript preserves the generic overloads of `from<T>` and `rpc<T>`.
 export const api = {
-  // raw access (PostgREST-compatible escape hatch)
-  from: dbClient.from.bind(dbClient),
-  rpc: dbClient.rpc.bind(dbClient),
+  from: ((...args: Parameters<typeof dbClient.from>) =>
+    dbClient.from(...args)) as typeof dbClient.from,
+  rpc: ((...args: Parameters<typeof dbClient.rpc>) =>
+    dbClient.rpc(...args)) as typeof dbClient.rpc,
 
-  // sub-systems
   auth: dbClient.auth,
   storage: dbClient.storage,
   functions: dbClient.functions,
 
-  // realtime
-  channel: dbClient.channel.bind(dbClient),
-  removeChannel: dbClient.removeChannel.bind(dbClient),
-  getChannels: dbClient.getChannels.bind(dbClient),
+  channel: ((...args: Parameters<typeof dbClient.channel>) =>
+    dbClient.channel(...args)) as typeof dbClient.channel,
+  removeChannel: ((...args: Parameters<typeof dbClient.removeChannel>) =>
+    dbClient.removeChannel(...args)) as typeof dbClient.removeChannel,
+  getChannels: () => dbClient.getChannels(),
 };
 
 export type Api = typeof api;
