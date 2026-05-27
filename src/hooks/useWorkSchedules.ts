@@ -1,25 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { parseISO, isWithinInterval } from "date-fns";
+import { parseISO } from "date-fns";
 import { isWorkingDay, getHolidaySet, VACATION_WEEKS_PER_YEAR } from "@/lib/austrian-holidays";
 
-export interface UserWorkSchedule {
-  id: string;
-  user_id: string;
-  weekly_hours: number;
-  works_monday: boolean;
-  works_tuesday: boolean;
-  works_wednesday: boolean;
-  works_thursday: boolean;
-  works_friday: boolean;
-  works_saturday: boolean;
-  works_sunday: boolean;
-  valid_from: string;
-  notes: string | null;
-  created_at: string;
-  created_by: string;
-  updated_at: string;
-}
+export type { UserWorkSchedule } from "@/lib/api/workSchedules";
+import type { UserWorkSchedule } from "@/lib/api/workSchedules";
 
 export const DEFAULT_SCHEDULE = {
   weekly_hours: 38.5,
@@ -38,12 +23,8 @@ export function workingDaysPerWeek(s: Pick<UserWorkSchedule,
   return [s.works_monday, s.works_tuesday, s.works_wednesday, s.works_thursday, s.works_friday, s.works_saturday, s.works_sunday].filter(Boolean).length;
 }
 
-/** day: 0=Sun..6=Sat */
 export function isScheduledWeekday(s: UserWorkSchedule | null | undefined, day: number): boolean {
-  if (!s) {
-    // Default Mo-Fr
-    return day >= 1 && day <= 5;
-  }
+  if (!s) return day >= 1 && day <= 5;
   switch (day) {
     case 0: return s.works_sunday;
     case 1: return s.works_monday;
@@ -56,13 +37,11 @@ export function isScheduledWeekday(s: UserWorkSchedule | null | undefined, day: 
   }
 }
 
-/** Total annual vacation days (rounded to 0.5) based on weekly working days */
 export function vacationDaysForSchedule(s: UserWorkSchedule | null | undefined): number {
   const days = s ? workingDaysPerWeek(s) : 5;
   return Math.round(days * VACATION_WEEKS_PER_YEAR * 2) / 2;
 }
 
-/** Count vacation days consumed in `year` for a user, only counting that user's actual workdays. */
 export function countVacationDaysUsed(
   absences: Array<{ start_at: string; end_at: string; absence_type: string }>,
   schedule: UserWorkSchedule | null | undefined,
@@ -71,24 +50,18 @@ export function countVacationDaysUsed(
   const yearStart = new Date(year, 0, 1);
   const yearEnd = new Date(year, 11, 31, 23, 59, 59);
   const holidaySet = getHolidaySet(year, [year - 1, year + 1]);
-
   let used = 0;
   for (const a of absences) {
     if (a.absence_type !== "urlaub") continue;
     const start = parseISO(a.start_at);
     const end = parseISO(a.end_at);
     if (end < yearStart || start > yearEnd) continue;
-
     const cur = new Date(Math.max(start.getTime(), yearStart.getTime()));
     cur.setHours(0, 0, 0, 0);
     const last = new Date(Math.min(end.getTime(), yearEnd.getTime()));
-
     while (cur <= last) {
       const dow = cur.getDay();
-      // Must be a normal working day (no weekend/holiday) AND a scheduled day for this user
-      if (isWorkingDay(cur, holidaySet) && isScheduledWeekday(schedule, dow)) {
-        used++;
-      }
+      if (isWorkingDay(cur, holidaySet) && isScheduledWeekday(schedule, dow)) used++;
       cur.setDate(cur.getDate() + 1);
     }
   }
@@ -98,31 +71,18 @@ export function countVacationDaysUsed(
 export function useUserWorkSchedules(userId?: string) {
   return useQuery({
     queryKey: ["user_work_schedules", userId ?? "all"],
-    queryFn: async () => {
-      let q = api.from("user_work_schedules").select("*").order("valid_from", { ascending: false });
-      if (userId) q = q.eq("user_id", userId);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data as UserWorkSchedule[]) || [];
-    },
+    queryFn: () => api.workSchedules.list(userId),
   });
 }
 
-/** Returns the most recent schedule effective on `onDate` for each user. */
 export function useEffectiveSchedules(onDate: Date = new Date()) {
+  const dateStr = onDate.toISOString().slice(0, 10);
   return useQuery({
-    queryKey: ["effective_schedules", onDate.toISOString().slice(0, 10)],
+    queryKey: ["effective_schedules", dateStr],
     queryFn: async () => {
-      const { data, error } = await api
-        .from("user_work_schedules")
-        .select("*")
-        .lte("valid_from", onDate.toISOString().slice(0, 10))
-        .order("valid_from", { ascending: false });
-      if (error) throw error;
+      const rows = await api.workSchedules.listEffective(dateStr);
       const map = new Map<string, UserWorkSchedule>();
-      for (const row of (data as UserWorkSchedule[]) || []) {
-        if (!map.has(row.user_id)) map.set(row.user_id, row);
-      }
+      for (const r of rows) if (!map.has(r.user_id)) map.set(r.user_id, r);
       return map;
     },
   });
@@ -133,7 +93,7 @@ export function useUpsertWorkSchedule() {
   return useMutation({
     mutationFn: async (input: Partial<UserWorkSchedule> & { user_id: string }) => {
       const { data: { user } } = await api.auth.getUser();
-      const payload = {
+      await api.workSchedules.upsert({
         user_id: input.user_id,
         weekly_hours: input.weekly_hours ?? 38.5,
         works_monday: input.works_monday ?? true,
@@ -146,11 +106,7 @@ export function useUpsertWorkSchedule() {
         valid_from: input.valid_from ?? new Date().toISOString().slice(0, 10),
         notes: input.notes ?? null,
         created_by: user!.id,
-      };
-      const { error } = await api
-        .from("user_work_schedules")
-        .upsert(payload, { onConflict: "user_id,valid_from" });
-      if (error) throw error;
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["user_work_schedules"] });
@@ -162,10 +118,7 @@ export function useUpsertWorkSchedule() {
 export function useDeleteWorkSchedule() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.from("user_work_schedules").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.workSchedules.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["user_work_schedules"] });
       qc.invalidateQueries({ queryKey: ["effective_schedules"] });

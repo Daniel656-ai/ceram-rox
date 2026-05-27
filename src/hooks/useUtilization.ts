@@ -15,7 +15,6 @@ function getDateRange(period: TimePeriod, reference = new Date()) {
 }
 
 function getWorkingHours(start: Date, end: Date, downtimeHours: number): number {
-  // Sum actual Austrian working hours (Mo-Thu 7.75h, Fr 7.5h, holidays 0)
   const totalHours = countWorkingHours(start, end);
   return Math.max(1, totalHours - downtimeHours);
 }
@@ -25,29 +24,13 @@ export function useWorkstationUtilization(period: TimePeriod) {
     queryKey: ["workstation-utilization", period],
     queryFn: async () => {
       const { start, end } = getDateRange(period);
+      const [workstations, measurements, downtimes] = await Promise.all([
+        api.utilization.activeWorkstations() as Promise<any[]>,
+        api.utilization.measurementsInRange(start.toISOString(), end.toISOString()) as Promise<any[]>,
+        api.utilization.downtimesInRange(start.toISOString(), end.toISOString()) as Promise<any[]>,
+      ]);
 
-      const { data: workstations, error: wsErr } = await api
-        .from("workstations")
-        .select("id, name")
-        .eq("status", "active");
-      if (wsErr) throw wsErr;
-
-      const { data: measurements, error: mErr } = await api
-        .from("order_measurements")
-        .select("workstation_id, actual_duration_hours, measurement_services(standard_duration_hours)")
-        .not("workstation_id", "is", null)
-        .gte("updated_at", start.toISOString())
-        .lte("updated_at", end.toISOString());
-      if (mErr) throw mErr;
-
-      const { data: downtimes, error: dtErr } = await api
-        .from("workstation_downtimes")
-        .select("workstation_id, start_at, end_at")
-        .gte("end_at", start.toISOString())
-        .lte("start_at", end.toISOString());
-      if (dtErr) throw dtErr;
-
-      return (workstations || []).map(ws => {
+      return (workstations || []).map((ws: any) => {
         const wsMeasurements = (measurements || []).filter((m: any) => m.workstation_id === ws.id);
         const totalDurationHours = wsMeasurements.reduce((sum: number, m: any) => {
           const duration = m.actual_duration_hours ?? m.measurement_services?.standard_duration_hours ?? 0;
@@ -79,5 +62,5 @@ export function useWorkstationUtilization(period: TimePeriod) {
 }
 
 export function useUpdateMeasurementDuration() {
-  // This is handled via the existing useUpdateMeasurementStatus or a dedicated mutation
+  // No-op: handled via useUpdateMeasurementStatus
 }
