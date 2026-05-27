@@ -51,6 +51,23 @@ import {
   inventoryMovements,
   rawMaterialDocuments,
 } from "./rawMaterials";
+import { users, profiles } from "./users";
+import { customRoles } from "./customRoles";
+import { absences } from "./absences";
+import { downtimes } from "./downtimes";
+import { workSchedules } from "./workSchedules";
+import { syncSettings } from "./syncSettings";
+import { workPackages } from "./workPackages";
+import {
+  activityLog,
+  notifications,
+  realtime,
+  measurementServicesLookup,
+  ordersLookup,
+  measurementsLookup,
+  projectsLookup,
+} from "./activityLog";
+import { utilization } from "./utilization";
 
 export const api = {
   // ---- domain modules (preferred) ----
@@ -82,6 +99,22 @@ export const api = {
   rawMaterialAnalyses,
   inventoryMovements,
   rawMaterialDocuments,
+  users,
+  profiles,
+  customRoles,
+  absences,
+  downtimes,
+  workSchedules,
+  syncSettings,
+  workPackages,
+  activityLog,
+  notifications,
+  realtime,
+  measurementServicesLookup,
+  ordersLookup,
+  measurementsLookup,
+  projectsLookup,
+  utilization,
 
   // ---- legacy low-level facade (DO NOT use outside src/lib/api/**) ----
   from: dbClient.from.bind(dbClient) as typeof dbClient.from,
