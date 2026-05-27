@@ -6,14 +6,7 @@ export function useProjects() {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => api.projects.list(),
     enabled: !!user,
   });
 }
@@ -21,17 +14,12 @@ export function useProjects() {
 export function useCreateProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (project: { project_number: string; project_name?: string; description?: string; created_by: string }) => {
-      const { data, error } = await api.from("projects").insert(project).select().single();
-      if (error) throw error;
-      // Auto-add creator as project owner
-      await api.from("project_members").insert({
-        project_id: data.id,
-        user_id: project.created_by,
-        role: "owner",
-      } as any);
-      return data;
-    },
+    mutationFn: (project: {
+      project_number: string;
+      project_name?: string;
+      description?: string;
+      created_by: string;
+    }) => api.projects.create(project),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["projects"] });
       qc.invalidateQueries({ queryKey: ["projects-with-stats"] });
@@ -42,10 +30,7 @@ export function useCreateProject() {
 export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.from("projects").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.projects.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
   });
 }

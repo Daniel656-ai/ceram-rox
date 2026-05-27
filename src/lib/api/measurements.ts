@@ -1,0 +1,103 @@
+import { dbClient } from "./client";
+import { unwrap, run } from "./_helpers";
+
+const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), workstations(id, name, responsible_user_id), measurement_orders(*, projects(project_number, project_name))`;
+
+export const measurements = {
+  /** Measurements assigned to a user. */
+  listAssignedTo: (userId: string) =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(MY_MEASUREMENT_SELECT)
+        .eq("assigned_to", userId)
+    ),
+
+  /** Measurements on workstations the user is responsible for. */
+  async listForUserResponsibleWorkstations(userId: string) {
+    const stations = await unwrap(
+      dbClient.from("workstations").select("id").eq("responsible_user_id", userId)
+    );
+    const ids = (stations || []).map((s: any) => s.id);
+    if (ids.length === 0) return [];
+    return unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(MY_MEASUREMENT_SELECT)
+        .in("workstation_id", ids)
+    );
+  },
+
+  /** Lookup profiles by user_id for "creator" display. */
+  fetchProfiles: (userIds: string[]) =>
+    userIds.length === 0
+      ? Promise.resolve([] as any[])
+      : unwrap(
+          dbClient
+            .from("profiles")
+            .select("user_id, first_name, last_name")
+            .in("user_id", userIds)
+        ),
+
+  /** All measurements assigned to a workstation. */
+  listForWorkstation: (workstationId: string) =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(
+          "*, measurement_services(service_name, category), measurement_orders(*, projects(project_number, project_name))"
+        )
+        .eq("workstation_id", workstationId)
+        .order("due_date")
+    ),
+
+  // ---- writes ----
+  add: (m: {
+    order_id: string;
+    service_id: string;
+    planned_hours?: number;
+    due_date?: string;
+    workstation_id?: string;
+  }) =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .insert({ ...m, measurement_number: "WILL_BE_OVERWRITTEN" } as any)
+        .select()
+        .single()
+    ),
+
+  updateStatus: (id: string, status: string) =>
+    run(
+      dbClient
+        .from("order_measurements")
+        .update({ status: status as any })
+        .eq("id", id)
+    ),
+
+  updateRanking: (id: string, ranking: number | null) =>
+    run(
+      dbClient
+        .from("order_measurements")
+        .update({ ranking } as any)
+        .eq("id", id)
+    ),
+
+  assign: (id: string, assignedTo: string | null) =>
+    run(
+      dbClient
+        .from("order_measurements")
+        .update({ assigned_to: assignedTo })
+        .eq("id", id)
+    ),
+};
+
+export const workLogs = {
+  add: (log: {
+    order_measurement_id: string;
+    user_id: string;
+    work_date: string;
+    hours: number;
+    comment?: string;
+  }) => unwrap(dbClient.from("work_logs").insert(log).select().single()),
+};

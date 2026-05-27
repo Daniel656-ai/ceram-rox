@@ -22,16 +22,7 @@ export interface ServiceParameterDefinition {
 export function useServiceParameterDefs(serviceId: string | undefined) {
   return useQuery({
     queryKey: ["service-param-defs", serviceId],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("service_parameter_definitions")
-        .select("*")
-        .eq("service_id", serviceId!)
-        .order("parameter_category")
-        .order("sort_order");
-      if (error) throw error;
-      return (data || []) as unknown as ServiceParameterDefinition[];
-    },
+    queryFn: async () => (await api.serviceParameters.listForService(serviceId!)) as unknown as ServiceParameterDefinition[],
     enabled: !!serviceId,
   });
 }
@@ -39,21 +30,14 @@ export function useServiceParameterDefs(serviceId: string | undefined) {
 export function useAllServiceParameterDefs() {
   return useQuery({
     queryKey: ["all-service-param-defs"],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("service_parameter_definitions")
-        .select("*")
-        .order("sort_order");
-      if (error) throw error;
-      return (data || []) as unknown as ServiceParameterDefinition[];
-    },
+    queryFn: async () => (await api.serviceParameters.listAll()) as unknown as ServiceParameterDefinition[],
   });
 }
 
 export function useCreateParameterDef() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (def: {
+    mutationFn: (def: {
       service_id: string;
       parameter_name: string;
       unit?: string;
@@ -65,15 +49,7 @@ export function useCreateParameterDef() {
       select_options?: string[];
       conditional_on?: string | null;
       conditional_value?: string;
-    }) => {
-      const { data, error } = await api
-        .from("service_parameter_definitions")
-        .insert(def as any)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    }) => api.serviceParameters.create(def),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["service-param-defs"] });
       qc.invalidateQueries({ queryKey: ["all-service-param-defs"] });
@@ -84,7 +60,7 @@ export function useCreateParameterDef() {
 export function useUpdateParameterDef() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: {
+    mutationFn: ({ id, ...updates }: {
       id: string;
       parameter_name?: string;
       unit?: string | null;
@@ -96,13 +72,7 @@ export function useUpdateParameterDef() {
       select_options?: string[];
       conditional_on?: string | null;
       conditional_value?: string | null;
-    }) => {
-      const { error } = await api
-        .from("service_parameter_definitions")
-        .update(updates as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
+    }) => api.serviceParameters.update(id, updates),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["service-param-defs"] });
       qc.invalidateQueries({ queryKey: ["all-service-param-defs"] });
@@ -113,13 +83,7 @@ export function useUpdateParameterDef() {
 export function useDeleteParameterDef() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api
-        .from("service_parameter_definitions")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => api.serviceParameters.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["service-param-defs"] });
       qc.invalidateQueries({ queryKey: ["all-service-param-defs"] });

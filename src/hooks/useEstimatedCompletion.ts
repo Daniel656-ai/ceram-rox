@@ -42,15 +42,7 @@ export function useEstimatedCompletion() {
 
   const { data: orders = [] } = useQuery({
     queryKey: ["eta-orders"],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("measurement_orders")
-        .select("id, sample_id, priority, created_at, status, order_measurements(id, status, processing_time_hours, planned_hours)")
-        .in("status", ["open", "in_progress"])
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data as unknown as OrderWithMeasurements[];
-    },
+    queryFn: async () => (await api.orders.listOpenForETA()) as unknown as OrderWithMeasurements[],
     enabled: !!user,
     staleTime: 30_000,
   });

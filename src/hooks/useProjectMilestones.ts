@@ -6,15 +6,7 @@ export function useProjectMilestones(projectId?: string) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["project-milestones", projectId],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("project_milestones")
-        .select("*")
-        .eq("project_id", projectId!)
-        .order("milestone_date", { ascending: true, nullsFirst: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => api.projectMilestones.list(projectId!),
     enabled: !!user && !!projectId,
   });
 }
@@ -22,22 +14,14 @@ export function useProjectMilestones(projectId?: string) {
 export function useCreateMilestone() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (milestone: {
+    mutationFn: (milestone: {
       project_id: string;
       title: string;
       description?: string;
       milestone_date?: string;
       status?: string;
       created_by: string;
-    }) => {
-      const { data, error } = await api
-        .from("project_milestones")
-        .insert(milestone as any)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    }) => api.projectMilestones.create(milestone),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["project-milestones", vars.project_id] });
     },
@@ -47,20 +31,14 @@ export function useCreateMilestone() {
 export function useUpdateMilestone() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, projectId, ...updates }: {
+    mutationFn: ({ id, projectId, ...updates }: {
       id: string;
       projectId: string;
       title?: string;
       description?: string;
       milestone_date?: string | null;
       status?: string;
-    }) => {
-      const { error } = await api
-        .from("project_milestones")
-        .update(updates as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
+    }) => api.projectMilestones.update(id, updates),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["project-milestones", vars.projectId] });
     },
@@ -70,13 +48,8 @@ export function useUpdateMilestone() {
 export function useDeleteMilestone() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, projectId }: { id: string; projectId: string }) => {
-      const { error } = await api
-        .from("project_milestones")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: ({ id }: { id: string; projectId: string }) =>
+      api.projectMilestones.delete(id),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["project-milestones", vars.projectId] });
     },
