@@ -1,0 +1,55 @@
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Create .env.production
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env.production
+          echo "VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}" >> .env.production
+
+      - name: Auto-increment version
+        shell: bash
+        run: |
+          cd src-tauri
+          current=$(grep '"version"' tauri.conf.json | head -1 | sed 's/.*: "\(.*\)".*/\1/')
+          major=$(echo $current | cut -d. -f1)
+          minor=$(echo $current | cut -d. -f2)
+          patch=$(echo $current | cut -d. -f3)
+          new="$major.$minor.$((patch + 1))"
+          sed -i "s/\"version\": \"$current\"/\"version\": \"$new\"/" tauri.conf.json
+          echo "NEW_VERSION=$new" >> $GITHUB_ENV
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          tagName: v${{ env.NEW_VERSION }}
+          releaseName: "Ceram Rox v${{ env.NEW_VERSION }}"
+          releaseBody: "Neue Version verfügbar"
+          releaseDraft: false
+          prerelease: false

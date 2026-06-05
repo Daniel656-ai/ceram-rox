@@ -30,11 +30,9 @@ import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import ConsumablesPage from "./pages/ConsumablesPage";
-
-
-
 import LabPlanningPage from "./pages/LabPlanningPage";
 import NotFound from "./pages/NotFound";
+import { UpdateChecker } from "@/components/UpdateChecker";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +41,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <UpdateChecker />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
@@ -78,9 +77,6 @@ const App = () => (
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
               <Route path="/verbrauchsmaterialien" element={<ConsumablesPage />} />
-              
-              
-              
               <Route path="/laborplanung" element={<LabPlanningPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
