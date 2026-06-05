@@ -48,6 +48,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
+          tauriScript: npx tauri
           tagName: v${{ env.NEW_VERSION }}
           releaseName: "Ceram Rox v${{ env.NEW_VERSION }}"
           releaseBody: "Neue Version verfügbar"
