@@ -48,6 +48,7 @@ export default function RawMaterialsPage() {
   const [desc, setDesc] = useState("");
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
+  const [hazardCats, setHazardCats] = useState<string[]>([]);
 
   const [lHall, setLHall] = useState("");
   const [lRoom, setLRoom] = useState("");
@@ -55,6 +56,11 @@ export default function RawMaterialsPage() {
   const [lPos, setLPos] = useState("");
 
   const canManage = role === "master" || role === "auftraggeber";
+
+  const toggleHazard = (cat: string) => {
+    setHazardCats((cs) => cs.includes(cat) ? cs.filter(c => c !== cat) : [...cs, cat]);
+  };
+
 
   const stockMap = new Map<string, number>();
   allMovements?.forEach((m) => {
