@@ -201,24 +201,27 @@ export default function RawMaterialsPage() {
                 <TableHead>{t("raw_materials:name")}</TableHead>
                 <TableHead>{t("common:supplier")}</TableHead>
                 <TableHead>{t("raw_materials:location")}</TableHead>
+                <TableHead>{t("raw_materials:hazardous")}</TableHead>
                 <TableHead className="text-right">{t("raw_materials:stock")}</TableHead>
                 <TableHead className="text-right">{t("common:unit")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered?.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("raw_materials:no_materials")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("raw_materials:no_materials")}</TableCell></TableRow>
               ) : (
                 filtered?.map((m) => {
                   const stock = stockMap.get(m.id) || 0;
+                  const isHazardous = (m as any).is_hazardous;
                   return (
                     <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="font-mono text-xs"><Link to={`/rohstoffe/${m.id}`} className="text-primary hover:underline">{m.material_number}</Link></TableCell>
                       <TableCell className="font-medium"><Link to={`/rohstoffe/${m.id}`} className="hover:underline">{m.material_name}</Link></TableCell>
                       <TableCell>{m.supplier || "–"}</TableCell>
                       <TableCell className="text-xs">{formatLocation(m.storage_locations)}</TableCell>
+                      <TableCell>{isHazardous ? <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />{t("raw_materials:hazard_yes")}</Badge> : <span className="text-muted-foreground text-sm">–</span>}</TableCell>
                       <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{stock.toFixed(1)}</Badge></TableCell>
                       <TableCell className="text-right text-muted-foreground">{m.unit}</TableCell>
                     </TableRow>
