@@ -90,6 +90,8 @@ export default function RawMaterialDetailPage() {
         unit: editUnit,
         default_location_id: editLocationId || null,
         price_per_kg: Number(editPricePerKg) || 0,
+        is_hazardous: editHazardCats.length > 0,
+        hazard_categories: editHazardCats,
       });
       toast.success("Rohstoff aktualisiert");
       setEditOpen(false);
