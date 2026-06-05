@@ -44,13 +44,15 @@ export const rawMaterials = {
       description?: string;
       unit?: string;
       default_location_id?: string;
+      is_hazardous?: boolean;
+      hazard_categories?: string[];
     },
     createdBy: string
   ) =>
     unwrap(
       dbClient
         .from("raw_materials")
-        .insert({ ...m, created_by: createdBy })
+        .insert({ ...m, created_by: createdBy } as any)
         .select()
         .single()
     ),
@@ -64,8 +66,10 @@ export const rawMaterials = {
       unit?: string;
       default_location_id?: string | null;
       price_per_kg?: number;
+      is_hazardous?: boolean;
+      hazard_categories?: string[];
     }
-  ) => run(dbClient.from("raw_materials").update(updates).eq("id", id)),
+  ) => run(dbClient.from("raw_materials").update(updates as any).eq("id", id)),
 };
 
 export const rawMaterialBatches = {
