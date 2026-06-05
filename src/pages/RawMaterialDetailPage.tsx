@@ -15,7 +15,14 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
+const HAZARD_CATEGORIES = [
+  "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
+] as const;
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
@@ -24,6 +31,7 @@ function formatLocation(loc: any) {
 
 export default function RawMaterialDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation(["raw_materials", "common"]);
   const { user, role } = useAuth();
   const { data: mat, isLoading } = useRawMaterialDetail(id);
   const { data: movements } = useInventoryMovements(id);
@@ -55,6 +63,11 @@ export default function RawMaterialDetailPage() {
   const [editUnit, setEditUnit] = useState("");
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
+  const [editHazardCats, setEditHazardCats] = useState<string[]>([]);
+
+  const toggleEditHazard = (cat: string) => {
+    setEditHazardCats((cs) => cs.includes(cat) ? cs.filter(c => c !== cat) : [...cs, cat]);
+  };
 
   const openEditDialog = () => {
     if (!mat) return;
@@ -64,6 +77,7 @@ export default function RawMaterialDetailPage() {
     setEditUnit(mat.unit);
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
+    setEditHazardCats(((mat as any).hazard_categories as string[]) || []);
     setEditOpen(true);
   };
 
@@ -78,6 +92,8 @@ export default function RawMaterialDetailPage() {
         unit: editUnit,
         default_location_id: editLocationId || null,
         price_per_kg: Number(editPricePerKg) || 0,
+        is_hazardous: editHazardCats.length > 0,
+        hazard_categories: editHazardCats,
       });
       toast.success("Rohstoff aktualisiert");
       setEditOpen(false);
@@ -185,9 +201,28 @@ export default function RawMaterialDetailPage() {
         <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{stock.toFixed(1)} {mat.unit}</Badge>
       </div>
 
+      {/* Hazard warning banner */}
+      {(mat as any).is_hazardous && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription className="font-semibold">
+            ⚠️ Warnung: Dieser Rohstoff ist als Gefahrstoff gekennzeichnet.
+            {(((mat as any).hazard_categories as string[]) || []).length > 0 && (
+              <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                {(((mat as any).hazard_categories as string[]) || []).map((cat) => (
+                  <Badge key={cat} variant="outline" className="border-destructive-foreground/40 text-destructive-foreground">
+                    {t(`raw_materials:hazard_${cat}`)}
+                  </Badge>
+                ))}
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Edit Material Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Rohstoff bearbeiten</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -214,6 +249,26 @@ export default function RawMaterialDetailPage() {
             </div>
             <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
             <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
+            <div className="space-y-2 rounded-md border p-3">
+              <Label className="font-semibold flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                {t("raw_materials:hazard_section")}
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {HAZARD_CATEGORIES.map((cat) => (
+                  <div key={cat} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-haz-${cat}`}
+                      checked={editHazardCats.includes(cat)}
+                      onCheckedChange={() => toggleEditHazard(cat)}
+                    />
+                    <Label htmlFor={`edit-haz-${cat}`} className="text-sm font-normal cursor-pointer">
+                      {t(`raw_materials:hazard_${cat}`)}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
             <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>
           </div>
         </DialogContent>

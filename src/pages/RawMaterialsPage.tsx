@@ -10,11 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Search, MapPin } from "lucide-react";
+import { Plus, Search, MapPin, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useInventoryMovements } from "@/hooks/useRawMaterials";
 import { useTranslation } from "react-i18next";
+
+const HAZARD_CATEGORIES = [
+  "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
+] as const;
+
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
@@ -42,6 +48,7 @@ export default function RawMaterialsPage() {
   const [desc, setDesc] = useState("");
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
+  const [hazardCats, setHazardCats] = useState<string[]>([]);
 
   const [lHall, setLHall] = useState("");
   const [lRoom, setLRoom] = useState("");
@@ -49,6 +56,11 @@ export default function RawMaterialsPage() {
   const [lPos, setLPos] = useState("");
 
   const canManage = role === "master" || role === "auftraggeber";
+
+  const toggleHazard = (cat: string) => {
+    setHazardCats((cs) => cs.includes(cat) ? cs.filter(c => c !== cat) : [...cs, cat]);
+  };
+
 
   const stockMap = new Map<string, number>();
   allMovements?.forEach((m) => {
@@ -69,9 +81,9 @@ export default function RawMaterialsPage() {
   const handleAddMaterial = async () => {
     if (!name || !number) { toast.error(t("raw_materials:name_number_required")); return; }
     try {
-      await addMaterial.mutateAsync({ material_name: name, material_number: number, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined });
+      await addMaterial.mutateAsync({ material_name: name, material_number: number, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
       toast.success(t("raw_materials:material_created"));
-      setOpen(false); setName(""); setNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId("");
+      setOpen(false); setName(""); setNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
   };
 
@@ -133,6 +145,17 @@ export default function RawMaterialsPage() {
                       </Select>
                     </div>
                     <div><Label>{t("common:description")}</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
+                    <div className="space-y-2 rounded-md border p-3">
+                      <Label className="font-semibold flex items-center gap-1"><AlertTriangle className="h-4 w-4 text-destructive" />{t("raw_materials:hazard_section")}</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {HAZARD_CATEGORIES.map(cat => (
+                          <div key={cat} className="flex items-center space-x-2">
+                            <Checkbox id={`new-haz-${cat}`} checked={hazardCats.includes(cat)} onCheckedChange={() => toggleHazard(cat)} />
+                            <Label htmlFor={`new-haz-${cat}`} className="text-sm font-normal cursor-pointer">{t(`raw_materials:hazard_${cat}`)}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                     <Button onClick={handleAddMaterial} className="w-full" disabled={addMaterial.isPending}>{t("common:create")}</Button>
                   </div>
                 </DialogContent>
@@ -178,24 +201,27 @@ export default function RawMaterialsPage() {
                 <TableHead>{t("raw_materials:name")}</TableHead>
                 <TableHead>{t("common:supplier")}</TableHead>
                 <TableHead>{t("raw_materials:location")}</TableHead>
+                <TableHead>{t("raw_materials:hazardous")}</TableHead>
                 <TableHead className="text-right">{t("raw_materials:stock")}</TableHead>
                 <TableHead className="text-right">{t("common:unit")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered?.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("raw_materials:no_materials")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("raw_materials:no_materials")}</TableCell></TableRow>
               ) : (
                 filtered?.map((m) => {
                   const stock = stockMap.get(m.id) || 0;
+                  const isHazardous = (m as any).is_hazardous;
                   return (
                     <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="font-mono text-xs"><Link to={`/rohstoffe/${m.id}`} className="text-primary hover:underline">{m.material_number}</Link></TableCell>
                       <TableCell className="font-medium"><Link to={`/rohstoffe/${m.id}`} className="hover:underline">{m.material_name}</Link></TableCell>
                       <TableCell>{m.supplier || "–"}</TableCell>
                       <TableCell className="text-xs">{formatLocation(m.storage_locations)}</TableCell>
+                      <TableCell>{isHazardous ? <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />{t("raw_materials:hazard_yes")}</Badge> : <span className="text-muted-foreground text-sm">–</span>}</TableCell>
                       <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{stock.toFixed(1)}</Badge></TableCell>
                       <TableCell className="text-right text-muted-foreground">{m.unit}</TableCell>
                     </TableRow>

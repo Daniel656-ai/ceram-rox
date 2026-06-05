@@ -1282,7 +1282,9 @@ export type Database = {
           created_by: string
           default_location_id: string | null
           description: string | null
+          hazard_categories: Json
           id: string
+          is_hazardous: boolean
           material_name: string
           material_number: string
           price_per_kg: number | null
@@ -1295,7 +1297,9 @@ export type Database = {
           created_by: string
           default_location_id?: string | null
           description?: string | null
+          hazard_categories?: Json
           id?: string
+          is_hazardous?: boolean
           material_name: string
           material_number: string
           price_per_kg?: number | null
@@ -1308,7 +1312,9 @@ export type Database = {
           created_by?: string
           default_location_id?: string | null
           description?: string | null
+          hazard_categories?: Json
           id?: string
+          is_hazardous?: boolean
           material_name?: string
           material_number?: string
           price_per_kg?: number | null
