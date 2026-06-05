@@ -61,6 +61,11 @@ export default function RawMaterialDetailPage() {
   const [editUnit, setEditUnit] = useState("");
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
+  const [editHazardCats, setEditHazardCats] = useState<string[]>([]);
+
+  const toggleEditHazard = (cat: string) => {
+    setEditHazardCats((cs) => cs.includes(cat) ? cs.filter(c => c !== cat) : [...cs, cat]);
+  };
 
   const openEditDialog = () => {
     if (!mat) return;
@@ -70,6 +75,7 @@ export default function RawMaterialDetailPage() {
     setEditUnit(mat.unit);
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
+    setEditHazardCats(((mat as any).hazard_categories as string[]) || []);
     setEditOpen(true);
   };
 
