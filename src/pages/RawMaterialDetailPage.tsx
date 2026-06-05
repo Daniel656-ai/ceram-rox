@@ -31,6 +31,7 @@ function formatLocation(loc: any) {
 
 export default function RawMaterialDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation(["raw_materials", "common"]);
   const { user, role } = useAuth();
   const { data: mat, isLoading } = useRawMaterialDetail(id);
   const { data: movements } = useInventoryMovements(id);
