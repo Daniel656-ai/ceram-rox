@@ -546,17 +546,13 @@ export default function SamplesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3 rounded-md border p-3">
-                  <Label className="font-semibold">{t("hazard_section")}</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {HAZARD_CATEGORIES.map(cat => (
-                      <div key={cat} className="flex items-center space-x-2">
-                        <Checkbox checked={form.hazard_categories.includes(cat)} onCheckedChange={() => toggleHazard(cat)} />
-                        <Label className="text-sm font-normal">{t(`hazard_${cat}`)}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <HazardClassSelector
+                  value={form.hazard_categories}
+                  onChange={(next) => setForm(f => ({ ...f, hazard_categories: next as string[], is_hazardous: next.length > 0 }))}
+                  label={t("hazard_section")}
+                  idPrefix="sample-haz"
+                />
+
                 <div className="space-y-2">
                   <Label>{t("tags_section")}</Label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
@@ -697,17 +693,13 @@ export default function SamplesPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-3 rounded-md border p-3">
-                      <Label className="font-semibold">{t("hazard_section")}</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {HAZARD_CATEGORIES.map(cat => (
-                          <div key={cat} className="flex items-center space-x-2">
-                            <Checkbox checked={bulkForm.hazard_categories.includes(cat)} onCheckedChange={() => toggleBulkHazard(cat)} />
-                            <Label className="text-sm font-normal">{t(`hazard_${cat}`)}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <HazardClassSelector
+                      value={bulkForm.hazard_categories}
+                      onChange={(next) => setBulkForm(f => ({ ...f, hazard_categories: next as string[], is_hazardous: next.length > 0 }))}
+                      label={t("hazard_section")}
+                      idPrefix="bulk-haz"
+                    />
+
                     <div className="space-y-2">
                       <Label>{t("tags_section")}</Label>
                       <div className="flex flex-wrap gap-1.5 mb-2">
