@@ -21,16 +21,22 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList } from "lucide-react";
+import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 
 interface SelectedMeasurement {
+  uid: string;
   service_id: string;
   service_name: string;
   planned_hours: number;
   workstation_id: string;
 }
+
+const newUid = () =>
+  (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    ? crypto.randomUUID()
+    : `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
 function ServiceRequiredParams({ serviceId, paramValues, onParamChange, t }: {
   serviceId: string; paramValues: Record<string, string>;
