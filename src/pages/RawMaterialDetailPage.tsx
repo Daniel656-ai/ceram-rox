@@ -78,13 +78,10 @@ export default function RawMaterialDetailPage() {
     setEditUnit(mat.unit);
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
-    // normalisiere bestehende (ggf. legacy) Werte
-    const raw = ((mat as any).hazard_categories as string[]) || [];
-    import("@/lib/hazardClasses").then(({ normalizeHazardClasses }) => {
-      setEditHazardCats(normalizeHazardClasses(raw));
-    });
+    setEditHazardCats(normalizeHazardClasses(((mat as any).hazard_categories as string[]) || []));
     setEditOpen(true);
   };
+
 
   const handleUpdateMaterial = async () => {
     if (!editName) { toast.error(t("raw_materials:name_required")); return; }
@@ -214,11 +211,40 @@ export default function RawMaterialDetailPage() {
       <div className="flex items-center gap-3">
         <Link to="/rohstoffe"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{mat.material_name}</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <span>{mat.material_name}</span>
+            <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
+          </h1>
           <p className="text-sm text-muted-foreground">{mat.material_number} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg</p>
         </div>
         {canManage && (
-          <Button variant="outline" size="sm" onClick={openEditDialog}><Pencil className="h-4 w-4 mr-1" />Bearbeiten</Button>
+          <>
+            <Button variant="outline" size="sm" onClick={openEditDialog}><Pencil className="h-4 w-4 mr-1" />{t("common:edit")}</Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-1" />{t("common:delete")}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("raw_materials:delete_title")}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("raw_materials:delete_description", { name: mat.material_name })}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleDeleteMaterial}
+                  >
+                    {t("common:delete")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         )}
         <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{stock.toFixed(1)} {mat.unit}</Badge>
       </div>
