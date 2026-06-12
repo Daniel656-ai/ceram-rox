@@ -253,20 +253,13 @@ export default function RawMaterialDetailPage() {
       {(mat as any).is_hazardous && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription className="font-semibold">
-            ⚠️ Warnung: Dieser Rohstoff ist als Gefahrstoff gekennzeichnet.
-            {(((mat as any).hazard_categories as string[]) || []).length > 0 && (
-              <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
-                {(((mat as any).hazard_categories as string[]) || []).map((cat) => (
-                  <Badge key={cat} variant="outline" className="border-destructive-foreground/40 text-destructive-foreground">
-                    {t(`raw_materials:hazard_${cat}`)}
-                  </Badge>
-                ))}
-              </span>
-            )}
+          <AlertDescription className="font-semibold flex flex-wrap items-center gap-3">
+            <span>{t("raw_materials:hazard_warning")}</span>
+            <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
           </AlertDescription>
         </Alert>
       )}
+
 
       {/* Edit Material Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
