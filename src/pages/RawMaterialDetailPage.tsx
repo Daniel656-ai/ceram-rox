@@ -53,6 +53,8 @@ export default function RawMaterialDetailPage() {
   const addMovement = useAddMovement();
   const addDocument = useAddRawMaterialDocument();
   const updateMaterial = useUpdateRawMaterial();
+  const deleteMaterial = useDeleteRawMaterial();
+  const navigate = useNavigate();
 
   const canManage = role === "master" || role === "auftraggeber";
   const stock = movements ? calculateStock(movements) : 0;
@@ -65,11 +67,7 @@ export default function RawMaterialDetailPage() {
   const [editUnit, setEditUnit] = useState("");
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
-  const [editHazardCats, setEditHazardCats] = useState<string[]>([]);
-
-  const toggleEditHazard = (cat: string) => {
-    setEditHazardCats((cs) => cs.includes(cat) ? cs.filter(c => c !== cat) : [...cs, cat]);
-  };
+  const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
 
   const openEditDialog = () => {
     if (!mat) return;
@@ -79,12 +77,21 @@ export default function RawMaterialDetailPage() {
     setEditUnit(mat.unit);
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
-    setEditHazardCats(((mat as any).hazard_categories as string[]) || []);
+    // normalisiere bestehende (ggf. legacy) Werte
+    const raw = ((mat as any).hazard_categories as string[]) || [];
+    import("@/lib/hazardClasses").then(({ normalizeHazardClasses }) => {
+      setEditHazardCats(normalizeHazardClasses(raw));
+    });
     setEditOpen(true);
   };
 
   const handleUpdateMaterial = async () => {
-    if (!editName) { toast.error("Name ist Pflicht"); return; }
+    if (!editName) { toast.error(t("raw_materials:name_required")); return; }
+    // Duplicate name check (excluding self)
+    const dup = allMaterials?.find(
+      (m: any) => m.id !== id && m.material_name.toLowerCase() === editName.trim().toLowerCase(),
+    );
+    if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
       await updateMaterial.mutateAsync({
         id: id!,
@@ -97,10 +104,22 @@ export default function RawMaterialDetailPage() {
         is_hazardous: editHazardCats.length > 0,
         hazard_categories: editHazardCats,
       });
-      toast.success("Rohstoff aktualisiert");
+      toast.success(t("raw_materials:material_updated"));
       setEditOpen(false);
     } catch (e: any) { toast.error(e.message); }
   };
+
+  const handleDeleteMaterial = async () => {
+    if (!id) return;
+    try {
+      await deleteMaterial.mutateAsync(id);
+      toast.success(t("raw_materials:material_deleted", { name: mat?.material_name }));
+      navigate("/rohstoffe");
+    } catch (e: any) {
+      toast.error(t("common:error"), { description: e.message });
+    }
+  };
+
 
   // Batch form
   const [batchOpen, setBatchOpen] = useState(false);
