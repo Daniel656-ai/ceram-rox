@@ -1,25 +1,26 @@
 import { useState } from "react";
-import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation } from "@/hooks/useRawMaterials";
+import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation, useDeleteRawMaterial } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Search, MapPin, AlertTriangle } from "lucide-react";
+import { Plus, Search, MapPin, AlertTriangle, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useInventoryMovements } from "@/hooks/useRawMaterials";
 import { useTranslation } from "react-i18next";
+import { HazardClassSelector } from "@/components/HazardClassSelector";
+import { GhsPictogramList } from "@/components/GhsPictogram";
+import type { HazardClassKey } from "@/lib/hazardClasses";
 
-const HAZARD_CATEGORIES = [
-  "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
-] as const;
+
 
 
 function formatLocation(loc: any) {
