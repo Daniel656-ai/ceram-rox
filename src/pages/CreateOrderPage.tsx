@@ -264,7 +264,7 @@ export default function CreateOrderPage() {
           order_id: order.id, service_id: m.service_id, planned_hours: m.planned_hours,
           due_date: dueDate || undefined, workstation_id: m.workstation_id || undefined,
         });
-        const params = measurementParams[idx];
+        const params = measurementParams[m.uid];
         if (params && Object.keys(params).length > 0) {
           const defs = await api.serviceParameters.listByIdsForService(m.service_id, Object.keys(params));
           if (defs && defs.length > 0) {
