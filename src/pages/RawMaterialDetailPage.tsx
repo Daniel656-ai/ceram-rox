@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
-import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useStorageLocations, calculateStock } from "@/hooks/useRawMaterials";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock } from "@/hooks/useRawMaterials";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -19,10 +20,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { HazardClassSelector } from "@/components/HazardClassSelector";
+import { GhsPictogramList } from "@/components/GhsPictogram";
+import type { HazardClassKey } from "@/lib/hazardClasses";
 
-const HAZARD_CATEGORIES = [
-  "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
-] as const;
+
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
