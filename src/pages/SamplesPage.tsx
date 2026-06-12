@@ -24,10 +24,9 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-
-const HAZARD_CATEGORIES = [
-  "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
-] as const;
+import { HazardClassSelector } from "@/components/HazardClassSelector";
+import { GhsPictogramList } from "@/components/GhsPictogram";
+import { type HazardClassKey } from "@/lib/hazardClasses";
 
 const DISPOSAL_CATEGORIES = ["laborabfall", "gefahrstoff", "sondermuell"] as const;
 
@@ -547,17 +546,13 @@ export default function SamplesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-3 rounded-md border p-3">
-                  <Label className="font-semibold">{t("hazard_section")}</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {HAZARD_CATEGORIES.map(cat => (
-                      <div key={cat} className="flex items-center space-x-2">
-                        <Checkbox checked={form.hazard_categories.includes(cat)} onCheckedChange={() => toggleHazard(cat)} />
-                        <Label className="text-sm font-normal">{t(`hazard_${cat}`)}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <HazardClassSelector
+                  value={form.hazard_categories}
+                  onChange={(next) => setForm(f => ({ ...f, hazard_categories: next as string[], is_hazardous: next.length > 0 }))}
+                  label={t("hazard_section")}
+                  idPrefix="sample-haz"
+                />
+
                 <div className="space-y-2">
                   <Label>{t("tags_section")}</Label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
@@ -698,17 +693,13 @@ export default function SamplesPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-3 rounded-md border p-3">
-                      <Label className="font-semibold">{t("hazard_section")}</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {HAZARD_CATEGORIES.map(cat => (
-                          <div key={cat} className="flex items-center space-x-2">
-                            <Checkbox checked={bulkForm.hazard_categories.includes(cat)} onCheckedChange={() => toggleBulkHazard(cat)} />
-                            <Label className="text-sm font-normal">{t(`hazard_${cat}`)}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <HazardClassSelector
+                      value={bulkForm.hazard_categories}
+                      onChange={(next) => setBulkForm(f => ({ ...f, hazard_categories: next as string[], is_hazardous: next.length > 0 }))}
+                      label={t("hazard_section")}
+                      idPrefix="bulk-haz"
+                    />
+
                     <div className="space-y-2">
                       <Label>{t("tags_section")}</Label>
                       <div className="flex flex-wrap gap-1.5 mb-2">
@@ -989,9 +980,7 @@ export default function SamplesPage() {
                       </TableCell>
                       <TableCell>
                         {s.is_hazardous ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <AlertTriangle className="h-3 w-3" />{t("hazard_yes")}
-                          </Badge>
+                          <GhsPictogramList hazardClasses={s.hazard_categories} size="sm" max={5} />
                         ) : (
                           <span className="text-muted-foreground text-sm">{t("hazard_no")}</span>
                         )}

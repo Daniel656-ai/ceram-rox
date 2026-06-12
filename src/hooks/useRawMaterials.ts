@@ -57,6 +57,16 @@ export function useUpdateRawMaterial() {
   });
 }
 
+export function useDeleteRawMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.rawMaterials.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["raw_materials"] });
+    },
+  });
+}
+
 // ---- Batches ----
 export function useAddBatch() {
   const qc = useQueryClient();

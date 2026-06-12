@@ -1,0 +1,14 @@
+{
+  "selector_title": "Hazard classification",
+  "pictograms": "GHS pictograms",
+  "none": "No hazards",
+  "class_explosionsgefaehrlich": "Explosive",
+  "class_entzuendlich": "Flammable",
+  "class_oxidierend": "Oxidising",
+  "class_gas_unter_druck": "Gas under pressure",
+  "class_aetzend": "Corrosive",
+  "class_giftig": "Toxic",
+  "class_gefaehrlich": "Harmful / Irritant",
+  "class_gesundheitsgefaehrdend": "Health hazard",
+  "class_umweltgefaehrlich": "Environmental hazard"
+}

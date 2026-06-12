@@ -1,25 +1,26 @@
 import { useState } from "react";
-import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation } from "@/hooks/useRawMaterials";
+import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation, useDeleteRawMaterial } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Search, MapPin, AlertTriangle } from "lucide-react";
+import { Plus, Search, MapPin, AlertTriangle, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useInventoryMovements } from "@/hooks/useRawMaterials";
 import { useTranslation } from "react-i18next";
+import { HazardClassSelector } from "@/components/HazardClassSelector";
+import { GhsPictogramList } from "@/components/GhsPictogram";
+import type { HazardClassKey } from "@/lib/hazardClasses";
 
-const HAZARD_CATEGORIES = [
-  "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
-] as const;
+
 
 
 function formatLocation(loc: any) {
@@ -48,7 +49,7 @@ export default function RawMaterialsPage() {
   const [desc, setDesc] = useState("");
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
-  const [hazardCats, setHazardCats] = useState<string[]>([]);
+  const [hazardCats, setHazardCats] = useState<HazardClassKey[]>([]);
 
   const [lHall, setLHall] = useState("");
   const [lRoom, setLRoom] = useState("");
@@ -56,10 +57,8 @@ export default function RawMaterialsPage() {
   const [lPos, setLPos] = useState("");
 
   const canManage = role === "master" || role === "auftraggeber";
+  const deleteMaterial = useDeleteRawMaterial();
 
-  const toggleHazard = (cat: string) => {
-    setHazardCats((cs) => cs.includes(cat) ? cs.filter(c => c !== cat) : [...cs, cat]);
-  };
 
 
   const stockMap = new Map<string, number>();
@@ -80,12 +79,25 @@ export default function RawMaterialsPage() {
 
   const handleAddMaterial = async () => {
     if (!name || !number) { toast.error(t("raw_materials:name_number_required")); return; }
+    // Duplicate name detection (case-insensitive)
+    const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
+    if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
       await addMaterial.mutateAsync({ material_name: name, material_number: number, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
       toast.success(t("raw_materials:material_created"));
       setOpen(false); setName(""); setNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
   };
+
+  const handleDeleteMaterial = async (id: string, label: string) => {
+    try {
+      await deleteMaterial.mutateAsync(id);
+      toast.success(t("raw_materials:material_deleted", { name: label }));
+    } catch (e: any) {
+      toast.error(t("common:error"), { description: e.message });
+    }
+  };
+
 
   const handleAddLocation = async () => {
     if (!lHall) { toast.error(t("raw_materials:hall_is_required")); return; }
@@ -145,17 +157,13 @@ export default function RawMaterialsPage() {
                       </Select>
                     </div>
                     <div><Label>{t("common:description")}</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
-                    <div className="space-y-2 rounded-md border p-3">
-                      <Label className="font-semibold flex items-center gap-1"><AlertTriangle className="h-4 w-4 text-destructive" />{t("raw_materials:hazard_section")}</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {HAZARD_CATEGORIES.map(cat => (
-                          <div key={cat} className="flex items-center space-x-2">
-                            <Checkbox id={`new-haz-${cat}`} checked={hazardCats.includes(cat)} onCheckedChange={() => toggleHazard(cat)} />
-                            <Label htmlFor={`new-haz-${cat}`} className="text-sm font-normal cursor-pointer">{t(`raw_materials:hazard_${cat}`)}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <HazardClassSelector
+                      value={hazardCats}
+                      onChange={setHazardCats}
+                      label={t("raw_materials:hazard_section")}
+                      idPrefix="new-haz"
+                    />
+
                     <Button onClick={handleAddMaterial} className="w-full" disabled={addMaterial.isPending}>{t("common:create")}</Button>
                   </div>
                 </DialogContent>
@@ -204,26 +212,61 @@ export default function RawMaterialsPage() {
                 <TableHead>{t("raw_materials:hazardous")}</TableHead>
                 <TableHead className="text-right">{t("raw_materials:stock")}</TableHead>
                 <TableHead className="text-right">{t("common:unit")}</TableHead>
+                {canManage && <TableHead className="w-12" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered?.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("raw_materials:no_materials")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center py-8 text-muted-foreground">{t("raw_materials:no_materials")}</TableCell></TableRow>
               ) : (
                 filtered?.map((m) => {
                   const stock = stockMap.get(m.id) || 0;
+                  const hazards = ((m as any).hazard_categories as string[]) || [];
                   const isHazardous = (m as any).is_hazardous;
                   return (
-                    <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableRow key={m.id} className="hover:bg-muted/50">
                       <TableCell className="font-mono text-xs"><Link to={`/rohstoffe/${m.id}`} className="text-primary hover:underline">{m.material_number}</Link></TableCell>
                       <TableCell className="font-medium"><Link to={`/rohstoffe/${m.id}`} className="hover:underline">{m.material_name}</Link></TableCell>
                       <TableCell>{m.supplier || "–"}</TableCell>
                       <TableCell className="text-xs">{formatLocation(m.storage_locations)}</TableCell>
-                      <TableCell>{isHazardous ? <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />{t("raw_materials:hazard_yes")}</Badge> : <span className="text-muted-foreground text-sm">–</span>}</TableCell>
+                      <TableCell>
+                        {hazards.length > 0 ? (
+                          <GhsPictogramList hazardClasses={hazards} size="sm" max={5} />
+                        ) : isHazardous ? (
+                          <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />{t("raw_materials:hazard_yes")}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">–</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{stock.toFixed(1)}</Badge></TableCell>
                       <TableCell className="text-right text-muted-foreground">{m.unit}</TableCell>
+                      {canManage && (
+                        <TableCell className="text-right">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("raw_materials:delete_title")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("raw_materials:delete_description", { name: m.material_name })}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+                                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDeleteMaterial(m.id, m.material_name)}>
+                                  {t("common:delete")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })

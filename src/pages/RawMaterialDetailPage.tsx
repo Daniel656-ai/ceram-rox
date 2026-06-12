@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
-import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useStorageLocations, calculateStock } from "@/hooks/useRawMaterials";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock } from "@/hooks/useRawMaterials";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -19,10 +20,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { HazardClassSelector } from "@/components/HazardClassSelector";
+import { GhsPictogramList } from "@/components/GhsPictogram";
+import { normalizeHazardClasses, type HazardClassKey } from "@/lib/hazardClasses";
 
-const HAZARD_CATEGORIES = [
-  "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
-] as const;
+
+
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
@@ -51,6 +54,8 @@ export default function RawMaterialDetailPage() {
   const addMovement = useAddMovement();
   const addDocument = useAddRawMaterialDocument();
   const updateMaterial = useUpdateRawMaterial();
+  const deleteMaterial = useDeleteRawMaterial();
+  const navigate = useNavigate();
 
   const canManage = role === "master" || role === "auftraggeber";
   const stock = movements ? calculateStock(movements) : 0;
@@ -63,11 +68,7 @@ export default function RawMaterialDetailPage() {
   const [editUnit, setEditUnit] = useState("");
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
-  const [editHazardCats, setEditHazardCats] = useState<string[]>([]);
-
-  const toggleEditHazard = (cat: string) => {
-    setEditHazardCats((cs) => cs.includes(cat) ? cs.filter(c => c !== cat) : [...cs, cat]);
-  };
+  const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
 
   const openEditDialog = () => {
     if (!mat) return;
@@ -77,12 +78,18 @@ export default function RawMaterialDetailPage() {
     setEditUnit(mat.unit);
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
-    setEditHazardCats(((mat as any).hazard_categories as string[]) || []);
+    setEditHazardCats(normalizeHazardClasses(((mat as any).hazard_categories as string[]) || []));
     setEditOpen(true);
   };
 
+
   const handleUpdateMaterial = async () => {
-    if (!editName) { toast.error("Name ist Pflicht"); return; }
+    if (!editName) { toast.error(t("raw_materials:name_required")); return; }
+    // Duplicate name check (excluding self)
+    const dup = allMaterials?.find(
+      (m: any) => m.id !== id && m.material_name.toLowerCase() === editName.trim().toLowerCase(),
+    );
+    if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
       await updateMaterial.mutateAsync({
         id: id!,
@@ -95,10 +102,22 @@ export default function RawMaterialDetailPage() {
         is_hazardous: editHazardCats.length > 0,
         hazard_categories: editHazardCats,
       });
-      toast.success("Rohstoff aktualisiert");
+      toast.success(t("raw_materials:material_updated"));
       setEditOpen(false);
     } catch (e: any) { toast.error(e.message); }
   };
+
+  const handleDeleteMaterial = async () => {
+    if (!id) return;
+    try {
+      await deleteMaterial.mutateAsync(id);
+      toast.success(t("raw_materials:material_deleted", { name: mat?.material_name }));
+      navigate("/rohstoffe");
+    } catch (e: any) {
+      toast.error(t("common:error"), { description: e.message });
+    }
+  };
+
 
   // Batch form
   const [batchOpen, setBatchOpen] = useState(false);
@@ -192,11 +211,40 @@ export default function RawMaterialDetailPage() {
       <div className="flex items-center gap-3">
         <Link to="/rohstoffe"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{mat.material_name}</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <span>{mat.material_name}</span>
+            <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
+          </h1>
           <p className="text-sm text-muted-foreground">{mat.material_number} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg</p>
         </div>
         {canManage && (
-          <Button variant="outline" size="sm" onClick={openEditDialog}><Pencil className="h-4 w-4 mr-1" />Bearbeiten</Button>
+          <>
+            <Button variant="outline" size="sm" onClick={openEditDialog}><Pencil className="h-4 w-4 mr-1" />{t("common:edit")}</Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-1" />{t("common:delete")}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("raw_materials:delete_title")}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("raw_materials:delete_description", { name: mat.material_name })}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleDeleteMaterial}
+                  >
+                    {t("common:delete")}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         )}
         <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{stock.toFixed(1)} {mat.unit}</Badge>
       </div>
@@ -205,20 +253,13 @@ export default function RawMaterialDetailPage() {
       {(mat as any).is_hazardous && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription className="font-semibold">
-            ⚠️ Warnung: Dieser Rohstoff ist als Gefahrstoff gekennzeichnet.
-            {(((mat as any).hazard_categories as string[]) || []).length > 0 && (
-              <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
-                {(((mat as any).hazard_categories as string[]) || []).map((cat) => (
-                  <Badge key={cat} variant="outline" className="border-destructive-foreground/40 text-destructive-foreground">
-                    {t(`raw_materials:hazard_${cat}`)}
-                  </Badge>
-                ))}
-              </span>
-            )}
+          <AlertDescription className="font-semibold flex flex-wrap items-center gap-3">
+            <span>{t("raw_materials:hazard_warning")}</span>
+            <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
           </AlertDescription>
         </Alert>
       )}
+
 
       {/* Edit Material Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -249,26 +290,13 @@ export default function RawMaterialDetailPage() {
             </div>
             <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
             <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
-            <div className="space-y-2 rounded-md border p-3">
-              <Label className="font-semibold flex items-center gap-1">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                {t("raw_materials:hazard_section")}
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                {HAZARD_CATEGORIES.map((cat) => (
-                  <div key={cat} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`edit-haz-${cat}`}
-                      checked={editHazardCats.includes(cat)}
-                      onCheckedChange={() => toggleEditHazard(cat)}
-                    />
-                    <Label htmlFor={`edit-haz-${cat}`} className="text-sm font-normal cursor-pointer">
-                      {t(`raw_materials:hazard_${cat}`)}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <HazardClassSelector
+              value={editHazardCats}
+              onChange={setEditHazardCats}
+              label={t("raw_materials:hazard_section")}
+              idPrefix="edit-haz"
+            />
+
             <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>
           </div>
         </DialogContent>

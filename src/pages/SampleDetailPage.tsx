@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, FileText, GitBranch, CalendarClock } from "lucide-react";
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
+import { GhsPictogramList } from "@/components/GhsPictogram";
 
 const STATUSES = ["neu", "eingelagert", "in_bearbeitung", "teilweise_verbraucht", "vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"] as const;
 
@@ -332,11 +333,7 @@ export default function SampleDetailPage() {
               <Card className="border-destructive">
                 <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-destructive" />{t("hazard_section")}</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {(s.hazard_categories as string[] || []).map((cat: string) => (
-                      <Badge key={cat} variant="destructive">{t(`hazard_${cat}`)}</Badge>
-                    ))}
-                  </div>
+                  <GhsPictogramList hazardClasses={s.hazard_categories} size="lg" />
                 </CardContent>
               </Card>
             )}

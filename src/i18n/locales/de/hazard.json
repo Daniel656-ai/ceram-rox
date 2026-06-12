@@ -1,0 +1,14 @@
+{
+  "selector_title": "Gefahrstoff-Kennzeichnung",
+  "pictograms": "GHS-Piktogramme",
+  "none": "Keine Gefahrstoffe",
+  "class_explosionsgefaehrlich": "Explosionsgefährlich",
+  "class_entzuendlich": "Entzündlich",
+  "class_oxidierend": "Oxidierend",
+  "class_gas_unter_druck": "Gase unter Druck",
+  "class_aetzend": "Ätzend",
+  "class_giftig": "Giftig",
+  "class_gefaehrlich": "Gefährlich",
+  "class_gesundheitsgefaehrdend": "Gesundheitsgefährdend",
+  "class_umweltgefaehrlich": "Umweltgefährlich"
+}
