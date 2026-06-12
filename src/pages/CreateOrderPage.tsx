@@ -21,16 +21,22 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList } from "lucide-react";
+import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 
 interface SelectedMeasurement {
+  uid: string;
   service_id: string;
   service_name: string;
   planned_hours: number;
   workstation_id: string;
 }
+
+const newUid = () =>
+  (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    ? crypto.randomUUID()
+    : `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
 function ServiceRequiredParams({ serviceId, paramValues, onParamChange, t }: {
   serviceId: string; paramValues: Record<string, string>;
@@ -132,7 +138,7 @@ export default function CreateOrderPage() {
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
   const [selectedSampleId, setSelectedSampleId] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [measurementParams, setMeasurementParams] = useState<Record<number, Record<string, string>>>({});
+  const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
 
   // Batch state
   const [batchTemplateId, setBatchTemplateId] = useState("");
@@ -187,33 +193,53 @@ export default function CreateOrderPage() {
   // Single order functions
   const addService = (serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
-    if (!svc || measurements.some((m) => m.service_id === serviceId)) return;
-    setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" }]);
+    if (!svc) return;
+    setMeasurements((prev) => [
+      ...prev,
+      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" },
+    ]);
   };
 
   const handleApplyTemplate = (serviceIds: string[]) => {
     const newMeasurements: SelectedMeasurement[] = [];
     for (const sid of serviceIds) {
       const svc = services.find((s) => s.id === sid);
-      if (svc && !newMeasurements.some((m) => m.service_id === sid)) {
-        newMeasurements.push({ service_id: sid, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" });
+      if (svc) {
+        newMeasurements.push({ uid: newUid(), service_id: sid, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" });
       }
     }
     setMeasurements(newMeasurements);
     setMeasurementParams({});
   };
 
-  const removeMeasurement = (idx: number) => {
-    setMeasurements(measurements.filter((_, i) => i !== idx));
-    setMeasurementParams((prev) => { const next = { ...prev }; delete next[idx]; return next; });
+  const removeMeasurement = (uid: string) => {
+    setMeasurements((prev) => prev.filter((m) => m.uid !== uid));
+    setMeasurementParams((prev) => { const next = { ...prev }; delete next[uid]; return next; });
   };
 
-  const updateMeasurement = (idx: number, field: string, value: any) => {
-    setMeasurements(measurements.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  const duplicateMeasurement = (uid: string) => {
+    const newUidValue = newUid();
+    setMeasurements((prev) => {
+      const idx = prev.findIndex((m) => m.uid === uid);
+      if (idx === -1) return prev;
+      const copy: SelectedMeasurement = { ...prev[idx], uid: newUidValue };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+    setMeasurementParams((prev) => {
+      const srcParams = prev[uid];
+      if (!srcParams) return prev;
+      return { ...prev, [newUidValue]: { ...srcParams } };
+    });
   };
 
-  const updateParam = (measurementIdx: number, paramId: string, value: string) => {
-    setMeasurementParams((prev) => ({ ...prev, [measurementIdx]: { ...(prev[measurementIdx] || {}), [paramId]: value } }));
+  const updateMeasurement = (uid: string, field: string, value: any) => {
+    setMeasurements((prev) => prev.map((m) => m.uid === uid ? { ...m, [field]: value } : m));
+  };
+
+  const updateParam = (uid: string, paramId: string, value: string) => {
+    setMeasurementParams((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [paramId]: value } }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -238,7 +264,7 @@ export default function CreateOrderPage() {
           order_id: order.id, service_id: m.service_id, planned_hours: m.planned_hours,
           due_date: dueDate || undefined, workstation_id: m.workstation_id || undefined,
         });
-        const params = measurementParams[idx];
+        const params = measurementParams[m.uid];
         if (params && Object.keys(params).length > 0) {
           const defs = await api.serviceParameters.listByIdsForService(m.service_id, Object.keys(params));
           if (defs && defs.length > 0) {
@@ -363,17 +389,20 @@ export default function CreateOrderPage() {
                   {laborServices.length > 0 && (
                     <>
                       <SelectItem value="__labor_header" disabled>{t("orders:header_lab", { defaultValue: "── Lab ──" })}</SelectItem>
-                      {laborServices.map((s) => (<SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
+                      {laborServices.map((s) => (<SelectItem key={s.id} value={s.id}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
                     </>
                   )}
                   {pilotServices.length > 0 && (
                     <>
                       <SelectItem value="__pilot_header" disabled>{t("orders:header_pilot", { defaultValue: "── Pilot Plant ──" })}</SelectItem>
-                      {pilotServices.map((s) => (<SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
+                      {pilotServices.map((s) => (<SelectItem key={s.id} value={s.id}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
                     </>
                   )}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {t("orders:duplicate_hint", { defaultValue: "Dieselbe Dienstleistung kann mehrfach hinzugefügt werden – jede Position ist unabhängig." })}
+              </p>
             </div>
 
             {measurements.length === 0 ? (
@@ -381,12 +410,17 @@ export default function CreateOrderPage() {
             ) : (
               <div className="space-y-3">
                 {measurements.map((m, idx) => (
-                  <div key={idx} className="p-3 border rounded-md space-y-2">
+                  <div key={m.uid} className="p-3 border rounded-md space-y-2">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <div className="flex-1 min-w-[120px]"><p className="font-medium text-sm">{m.service_name}</p></div>
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="font-medium text-sm">
+                          <span className="text-muted-foreground mr-1">#{idx + 1}</span>
+                          {m.service_name}
+                        </p>
+                      </div>
                       <div className="w-36">
                         <Label className="text-xs">{t("orders:workstation")}</Label>
-                        <Select value={m.workstation_id || "__none"} onValueChange={(v) => updateMeasurement(idx, "workstation_id", v === "__none" ? "" : v)}>
+                        <Select value={m.workstation_id || "__none"} onValueChange={(v) => updateMeasurement(m.uid, "workstation_id", v === "__none" ? "" : v)}>
                           <SelectTrigger className="h-8"><SelectValue placeholder={t("orders:choose_workstation")} /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none">{t("orders:none_workstation")}</SelectItem>
@@ -396,11 +430,12 @@ export default function CreateOrderPage() {
                       </div>
                       <div className="w-24">
                         <Label className="text-xs">{t("common:hours")}</Label>
-                        <Input type="number" min={0.5} step={0.5} value={m.planned_hours} onChange={(e) => updateMeasurement(idx, "planned_hours", parseFloat(e.target.value) || 0)} className="h-8" />
+                        <Input type="number" min={0.5} step={0.5} value={m.planned_hours} onChange={(e) => updateMeasurement(m.uid, "planned_hours", parseFloat(e.target.value) || 0)} className="h-8" />
                       </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(idx)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateMeasurement(m.uid)} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(m.uid)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <ServiceRequiredParams serviceId={m.service_id} paramValues={measurementParams[idx] || {}} onParamChange={(paramId, value) => updateParam(idx, paramId, value)} t={t} />
+                    <ServiceRequiredParams serviceId={m.service_id} paramValues={measurementParams[m.uid] || {}} onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)} t={t} />
                   </div>
                 ))}
               </div>
