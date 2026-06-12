@@ -157,17 +157,13 @@ export default function RawMaterialsPage() {
                       </Select>
                     </div>
                     <div><Label>{t("common:description")}</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
-                    <div className="space-y-2 rounded-md border p-3">
-                      <Label className="font-semibold flex items-center gap-1"><AlertTriangle className="h-4 w-4 text-destructive" />{t("raw_materials:hazard_section")}</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {HAZARD_CATEGORIES.map(cat => (
-                          <div key={cat} className="flex items-center space-x-2">
-                            <Checkbox id={`new-haz-${cat}`} checked={hazardCats.includes(cat)} onCheckedChange={() => toggleHazard(cat)} />
-                            <Label htmlFor={`new-haz-${cat}`} className="text-sm font-normal cursor-pointer">{t(`raw_materials:hazard_${cat}`)}</Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <HazardClassSelector
+                      value={hazardCats}
+                      onChange={setHazardCats}
+                      label={t("raw_materials:hazard_section")}
+                      idPrefix="new-haz"
+                    />
+
                     <Button onClick={handleAddMaterial} className="w-full" disabled={addMaterial.isPending}>{t("common:create")}</Button>
                   </div>
                 </DialogContent>
