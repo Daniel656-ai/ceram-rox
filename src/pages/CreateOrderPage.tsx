@@ -218,11 +218,11 @@ export default function CreateOrderPage() {
   };
 
   const duplicateMeasurement = (uid: string) => {
+    const newUidValue = newUid();
     setMeasurements((prev) => {
       const idx = prev.findIndex((m) => m.uid === uid);
       if (idx === -1) return prev;
-      const src = prev[idx];
-      const copy: SelectedMeasurement = { ...src, uid: newUid() };
+      const copy: SelectedMeasurement = { ...prev[idx], uid: newUidValue };
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
       return next;
@@ -230,9 +230,7 @@ export default function CreateOrderPage() {
     setMeasurementParams((prev) => {
       const srcParams = prev[uid];
       if (!srcParams) return prev;
-      // duplicated entry has a new uid; we need it after setMeasurements applies.
-      // Defer copy via functional update by using a microtask.
-      return prev;
+      return { ...prev, [newUidValue]: { ...srcParams } };
     });
   };
 
