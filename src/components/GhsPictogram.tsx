@@ -34,9 +34,9 @@ const ICON_MAP = {
 type Size = "sm" | "md" | "lg";
 
 const SIZES: Record<Size, { box: number; icon: number }> = {
-  sm: { box: 20, icon: 10 },
-  md: { box: 28, icon: 14 },
-  lg: { box: 44, icon: 22 },
+  sm: { box: 28, icon: 14 },
+  md: { box: 40, icon: 20 },
+  lg: { box: 60, icon: 30 },
 };
 
 interface GhsPictogramProps {
