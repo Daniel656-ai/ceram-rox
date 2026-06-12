@@ -49,7 +49,7 @@ export default function RawMaterialsPage() {
   const [desc, setDesc] = useState("");
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
-  const [hazardCats, setHazardCats] = useState<string[]>([]);
+  const [hazardCats, setHazardCats] = useState<HazardClassKey[]>([]);
 
   const [lHall, setLHall] = useState("");
   const [lRoom, setLRoom] = useState("");
@@ -57,10 +57,8 @@ export default function RawMaterialsPage() {
   const [lPos, setLPos] = useState("");
 
   const canManage = role === "master" || role === "auftraggeber";
+  const deleteMaterial = useDeleteRawMaterial();
 
-  const toggleHazard = (cat: string) => {
-    setHazardCats((cs) => cs.includes(cat) ? cs.filter(c => c !== cat) : [...cs, cat]);
-  };
 
 
   const stockMap = new Map<string, number>();
@@ -81,12 +79,25 @@ export default function RawMaterialsPage() {
 
   const handleAddMaterial = async () => {
     if (!name || !number) { toast.error(t("raw_materials:name_number_required")); return; }
+    // Duplicate name detection (case-insensitive)
+    const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
+    if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
       await addMaterial.mutateAsync({ material_name: name, material_number: number, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
       toast.success(t("raw_materials:material_created"));
       setOpen(false); setName(""); setNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
   };
+
+  const handleDeleteMaterial = async (id: string, label: string) => {
+    try {
+      await deleteMaterial.mutateAsync(id);
+      toast.success(t("raw_materials:material_deleted", { name: label }));
+    } catch (e: any) {
+      toast.error(t("common:error"), { description: e.message });
+    }
+  };
+
 
   const handleAddLocation = async () => {
     if (!lHall) { toast.error(t("raw_materials:hall_is_required")); return; }
