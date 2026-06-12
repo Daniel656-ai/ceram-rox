@@ -297,26 +297,13 @@ export default function RawMaterialDetailPage() {
             </div>
             <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
             <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
-            <div className="space-y-2 rounded-md border p-3">
-              <Label className="font-semibold flex items-center gap-1">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                {t("raw_materials:hazard_section")}
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                {HAZARD_CATEGORIES.map((cat) => (
-                  <div key={cat} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`edit-haz-${cat}`}
-                      checked={editHazardCats.includes(cat)}
-                      onCheckedChange={() => toggleEditHazard(cat)}
-                    />
-                    <Label htmlFor={`edit-haz-${cat}`} className="text-sm font-normal cursor-pointer">
-                      {t(`raw_materials:hazard_${cat}`)}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <HazardClassSelector
+              value={editHazardCats}
+              onChange={setEditHazardCats}
+              label={t("raw_materials:hazard_section")}
+              idPrefix="edit-haz"
+            />
+
             <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>
           </div>
         </DialogContent>
