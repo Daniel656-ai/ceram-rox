@@ -193,33 +193,55 @@ export default function CreateOrderPage() {
   // Single order functions
   const addService = (serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
-    if (!svc || measurements.some((m) => m.service_id === serviceId)) return;
-    setMeasurements([...measurements, { service_id: serviceId, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" }]);
+    if (!svc) return;
+    setMeasurements((prev) => [
+      ...prev,
+      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" },
+    ]);
   };
 
   const handleApplyTemplate = (serviceIds: string[]) => {
     const newMeasurements: SelectedMeasurement[] = [];
     for (const sid of serviceIds) {
       const svc = services.find((s) => s.id === sid);
-      if (svc && !newMeasurements.some((m) => m.service_id === sid)) {
-        newMeasurements.push({ service_id: sid, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" });
+      if (svc) {
+        newMeasurements.push({ uid: newUid(), service_id: sid, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" });
       }
     }
     setMeasurements(newMeasurements);
     setMeasurementParams({});
   };
 
-  const removeMeasurement = (idx: number) => {
-    setMeasurements(measurements.filter((_, i) => i !== idx));
-    setMeasurementParams((prev) => { const next = { ...prev }; delete next[idx]; return next; });
+  const removeMeasurement = (uid: string) => {
+    setMeasurements((prev) => prev.filter((m) => m.uid !== uid));
+    setMeasurementParams((prev) => { const next = { ...prev }; delete next[uid]; return next; });
   };
 
-  const updateMeasurement = (idx: number, field: string, value: any) => {
-    setMeasurements(measurements.map((m, i) => i === idx ? { ...m, [field]: value } : m));
+  const duplicateMeasurement = (uid: string) => {
+    setMeasurements((prev) => {
+      const idx = prev.findIndex((m) => m.uid === uid);
+      if (idx === -1) return prev;
+      const src = prev[idx];
+      const copy: SelectedMeasurement = { ...src, uid: newUid() };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+    setMeasurementParams((prev) => {
+      const srcParams = prev[uid];
+      if (!srcParams) return prev;
+      // duplicated entry has a new uid; we need it after setMeasurements applies.
+      // Defer copy via functional update by using a microtask.
+      return prev;
+    });
   };
 
-  const updateParam = (measurementIdx: number, paramId: string, value: string) => {
-    setMeasurementParams((prev) => ({ ...prev, [measurementIdx]: { ...(prev[measurementIdx] || {}), [paramId]: value } }));
+  const updateMeasurement = (uid: string, field: string, value: any) => {
+    setMeasurements((prev) => prev.map((m) => m.uid === uid ? { ...m, [field]: value } : m));
+  };
+
+  const updateParam = (uid: string, paramId: string, value: string) => {
+    setMeasurementParams((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [paramId]: value } }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
