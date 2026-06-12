@@ -389,17 +389,20 @@ export default function CreateOrderPage() {
                   {laborServices.length > 0 && (
                     <>
                       <SelectItem value="__labor_header" disabled>{t("orders:header_lab", { defaultValue: "── Lab ──" })}</SelectItem>
-                      {laborServices.map((s) => (<SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
+                      {laborServices.map((s) => (<SelectItem key={s.id} value={s.id}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
                     </>
                   )}
                   {pilotServices.length > 0 && (
                     <>
                       <SelectItem value="__pilot_header" disabled>{t("orders:header_pilot", { defaultValue: "── Pilot Plant ──" })}</SelectItem>
-                      {pilotServices.map((s) => (<SelectItem key={s.id} value={s.id} disabled={measurements.some((m) => m.service_id === s.id)}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
+                      {pilotServices.map((s) => (<SelectItem key={s.id} value={s.id}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
                     </>
                   )}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {t("orders:duplicate_hint", { defaultValue: "Dieselbe Dienstleistung kann mehrfach hinzugefügt werden – jede Position ist unabhängig." })}
+              </p>
             </div>
 
             {measurements.length === 0 ? (
@@ -407,12 +410,17 @@ export default function CreateOrderPage() {
             ) : (
               <div className="space-y-3">
                 {measurements.map((m, idx) => (
-                  <div key={idx} className="p-3 border rounded-md space-y-2">
+                  <div key={m.uid} className="p-3 border rounded-md space-y-2">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <div className="flex-1 min-w-[120px]"><p className="font-medium text-sm">{m.service_name}</p></div>
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="font-medium text-sm">
+                          <span className="text-muted-foreground mr-1">#{idx + 1}</span>
+                          {m.service_name}
+                        </p>
+                      </div>
                       <div className="w-36">
                         <Label className="text-xs">{t("orders:workstation")}</Label>
-                        <Select value={m.workstation_id || "__none"} onValueChange={(v) => updateMeasurement(idx, "workstation_id", v === "__none" ? "" : v)}>
+                        <Select value={m.workstation_id || "__none"} onValueChange={(v) => updateMeasurement(m.uid, "workstation_id", v === "__none" ? "" : v)}>
                           <SelectTrigger className="h-8"><SelectValue placeholder={t("orders:choose_workstation")} /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none">{t("orders:none_workstation")}</SelectItem>
@@ -422,11 +430,12 @@ export default function CreateOrderPage() {
                       </div>
                       <div className="w-24">
                         <Label className="text-xs">{t("common:hours")}</Label>
-                        <Input type="number" min={0.5} step={0.5} value={m.planned_hours} onChange={(e) => updateMeasurement(idx, "planned_hours", parseFloat(e.target.value) || 0)} className="h-8" />
+                        <Input type="number" min={0.5} step={0.5} value={m.planned_hours} onChange={(e) => updateMeasurement(m.uid, "planned_hours", parseFloat(e.target.value) || 0)} className="h-8" />
                       </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(idx)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateMeasurement(m.uid)} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(m.uid)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <ServiceRequiredParams serviceId={m.service_id} paramValues={measurementParams[idx] || {}} onParamChange={(paramId, value) => updateParam(idx, paramId, value)} t={t} />
+                    <ServiceRequiredParams serviceId={m.service_id} paramValues={measurementParams[m.uid] || {}} onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)} t={t} />
                   </div>
                 ))}
               </div>
