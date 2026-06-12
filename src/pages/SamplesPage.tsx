@@ -980,9 +980,7 @@ export default function SamplesPage() {
                       </TableCell>
                       <TableCell>
                         {s.is_hazardous ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <AlertTriangle className="h-3 w-3" />{t("hazard_yes")}
-                          </Badge>
+                          <GhsPictogramList hazardClasses={s.hazard_categories} size="sm" max={5} />
                         ) : (
                           <span className="text-muted-foreground text-sm">{t("hazard_no")}</span>
                         )}
