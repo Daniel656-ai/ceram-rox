@@ -138,7 +138,7 @@ export default function CreateOrderPage() {
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
   const [selectedSampleId, setSelectedSampleId] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [measurementParams, setMeasurementParams] = useState<Record<number, Record<string, string>>>({});
+  const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
 
   // Batch state
   const [batchTemplateId, setBatchTemplateId] = useState("");
