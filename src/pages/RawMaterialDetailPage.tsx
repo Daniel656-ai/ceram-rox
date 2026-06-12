@@ -22,7 +22,8 @@ import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConi
 import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
-import type { HazardClassKey } from "@/lib/hazardClasses";
+import { normalizeHazardClasses, type HazardClassKey } from "@/lib/hazardClasses";
+
 
 
 
