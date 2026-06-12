@@ -70,6 +70,9 @@ export const rawMaterials = {
       hazard_categories?: string[];
     }
   ) => run(dbClient.from("raw_materials").update(updates as any).eq("id", id)),
+
+  delete: (id: string) =>
+    run(dbClient.from("raw_materials").delete().eq("id", id)),
 };
 
 export const rawMaterialBatches = {
