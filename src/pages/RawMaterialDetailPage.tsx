@@ -63,6 +63,7 @@ export default function RawMaterialDetailPage() {
   // Edit material form
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
+  const [editNumber, setEditNumber] = useState("");
   const [editSupplier, setEditSupplier] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editUnit, setEditUnit] = useState("");
@@ -73,6 +74,7 @@ export default function RawMaterialDetailPage() {
   const openEditDialog = () => {
     if (!mat) return;
     setEditName(mat.material_name);
+    setEditNumber(mat.material_number || "");
     setEditSupplier(mat.supplier || "");
     setEditDesc(mat.description || "");
     setEditUnit(mat.unit);
