@@ -33,9 +33,9 @@ const GHS_SVG: Record<string, string> = {
 type Size = "sm" | "md" | "lg";
 
 const SIZES: Record<Size, number> = {
-  sm: 28,
-  md: 40,
-  lg: 60,
+  sm: 40,
+  md: 56,
+  lg: 80,
 };
 
 interface GhsPictogramProps {
