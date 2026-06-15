@@ -379,6 +379,7 @@ export default function MixtureDetailPage() {
                     <TableHead>{t("mixtures:produced_quantity")}</TableHead>
                     <TableHead>{t("mixtures:concentration")}</TableHead>
                     <TableHead>{t("mixtures:consumptions")}</TableHead>
+                    <TableHead className="w-40">Proben</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -409,6 +410,9 @@ export default function MixtureDetailPage() {
                             )}
                           </div>
                         ))}
+                      </TableCell>
+                      <TableCell>
+                        <BatchSamplesCell batchId={b.id} batchNumber={b.batch_number} mixtureName={mixture.name} />
                       </TableCell>
                     </TableRow>
                   ))}
