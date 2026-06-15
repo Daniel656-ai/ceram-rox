@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   useSampleDetail, useSampleHistory, useSampleDocuments, useSubSamples,
   useUpdateSampleStatus, useUpdateSampleLocation, useHandoverSample,
-  useCreateSample, useAddSampleDocument, useAddSampleHistory,
+  useCreateSample, useAddSampleDocument, useAddSampleHistory, useSampleMeasurements,
 } from "@/hooks/useSamples";
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useProjects } from "@/hooks/useProjects";
