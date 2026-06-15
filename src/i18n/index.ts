@@ -15,6 +15,7 @@ import calendarDe from "./locales/de/calendar.json";
 import materialsDe from "./locales/de/materials.json";
 import activityDe from "./locales/de/activity.json";
 import hazardDe from "./locales/de/hazard.json";
+import mixturesDe from "./locales/de/mixtures.json";
 
 import commonEn from "./locales/en/common.json";
 import navigationEn from "./locales/en/navigation.json";
@@ -29,6 +30,7 @@ import calendarEn from "./locales/en/calendar.json";
 import materialsEn from "./locales/en/materials.json";
 import activityEn from "./locales/en/activity.json";
 import hazardEn from "./locales/en/hazard.json";
+import mixturesEn from "./locales/en/mixtures.json";
 
 const resources = {
   de: {
@@ -45,6 +47,7 @@ const resources = {
     materials: materialsDe,
     activity: activityDe,
     hazard: hazardDe,
+    mixtures: mixturesDe,
   },
   en: {
     common: commonEn,
@@ -60,6 +63,7 @@ const resources = {
     materials: materialsEn,
     activity: activityEn,
     hazard: hazardEn,
+    mixtures: mixturesEn,
   },
 };
 
@@ -70,7 +74,7 @@ i18n
     resources,
     fallbackLng: "de",
     defaultNS: "common",
-    ns: ["common", "navigation", "auth", "orders", "projects", "samples", "measurements", "raw_materials", "admin", "calendar", "materials", "activity", "hazard"],
+    ns: ["common", "navigation", "auth", "orders", "projects", "samples", "measurements", "raw_materials", "admin", "calendar", "materials", "activity", "hazard", "mixtures"],
     interpolation: {
       escapeValue: false,
     },
