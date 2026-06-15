@@ -9,6 +9,8 @@
   "event_priority_changed": "Priorität geändert",
   "event_ranking_changed": "Reihung geändert",
   "event_priority_violation": "Prioritätsverletzung",
+  "event_hazard_material_created": "Neuer Gefahrstoff angelegt",
+  "event_hazard_material_updated": "Gefahrstoff bearbeitet",
   "priority_violation_detail_started": "{{current}} wurde gestartet vor höher priorisierter {{violated}}",
   "priority_violation_detail_completed": "{{current}} wurde abgeschlossen vor höher priorisierter {{violated}}",
   "priority_violation_more": "und {{count}} weitere",
