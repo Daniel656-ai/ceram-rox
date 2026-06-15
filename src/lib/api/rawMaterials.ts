@@ -7,14 +7,21 @@ export const storageLocations = {
       dbClient
         .from("storage_locations")
         .select("*")
-        .order("hall")
-        .order("room")
-        .order("shelf")
+        .order("name")
     ),
 
-  add: (loc: { hall: string; room?: string; shelf?: string; position?: string }) =>
-    unwrap(dbClient.from("storage_locations").insert(loc).select().single()),
+  add: (loc: { name: string; description?: string; hall?: string; room?: string; shelf?: string; position?: string }) =>
+    unwrap(dbClient.from("storage_locations").insert(loc as any).select().single()),
+
+  update: (
+    id: string,
+    updates: { name?: string; description?: string; hall?: string | null; room?: string | null; shelf?: string | null; position?: string | null }
+  ) => run(dbClient.from("storage_locations").update(updates as any).eq("id", id)),
+
+  delete: (id: string) =>
+    run(dbClient.from("storage_locations").delete().eq("id", id)),
 };
+
 
 export const rawMaterials = {
   list: () =>
