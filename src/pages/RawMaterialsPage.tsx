@@ -19,14 +19,18 @@ import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import type { HazardClassKey } from "@/lib/hazardClasses";
+import { StorageLocationsManager } from "@/components/StorageLocationsManager";
+
 
 
 
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
-  return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" › ");
+  if (loc.name) return loc.name;
+  return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" › ") || "–";
 }
+
 
 export default function RawMaterialsPage() {
   const { t } = useTranslation(["raw_materials", "common"]);
@@ -99,14 +103,8 @@ export default function RawMaterialsPage() {
   };
 
 
-  const handleAddLocation = async () => {
-    if (!lHall) { toast.error(t("raw_materials:hall_is_required")); return; }
-    try {
-      await addLocation.mutateAsync({ hall: lHall, room: lRoom || undefined, shelf: lShelf || undefined, position: lPos || undefined });
-      toast.success(t("raw_materials:location_created"));
-      setLocOpen(false); setLHall(""); setLRoom(""); setLShelf(""); setLPos("");
-    } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
-  };
+
+
 
   return (
     <div className="space-y-6">
@@ -118,19 +116,8 @@ export default function RawMaterialsPage() {
         <div className="flex gap-2">
           {canManage && (
             <>
-              <Dialog open={locOpen} onOpenChange={setLocOpen}>
-                <DialogTrigger asChild><Button variant="outline" size="sm"><MapPin className="h-4 w-4 mr-1" />{t("raw_materials:new_location")}</Button></DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>{t("raw_materials:new_location_title")}</DialogTitle></DialogHeader>
-                  <div className="space-y-3">
-                    <div><Label>{t("raw_materials:hall_required")}</Label><Input value={lHall} onChange={(e) => setLHall(e.target.value)} placeholder={t("raw_materials:hall_placeholder")} /></div>
-                    <div><Label>{t("raw_materials:room")}</Label><Input value={lRoom} onChange={(e) => setLRoom(e.target.value)} placeholder={t("raw_materials:room_placeholder")} /></div>
-                    <div><Label>{t("raw_materials:shelf")}</Label><Input value={lShelf} onChange={(e) => setLShelf(e.target.value)} placeholder={t("raw_materials:shelf_placeholder")} /></div>
-                    <div><Label>{t("raw_materials:position")}</Label><Input value={lPos} onChange={(e) => setLPos(e.target.value)} placeholder={t("raw_materials:position_placeholder")} /></div>
-                    <Button onClick={handleAddLocation} className="w-full">{t("common:create")}</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <StorageLocationsManager triggerLabel={t("raw_materials:new_location")} />
+
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />{t("raw_materials:new_material")}</Button></DialogTrigger>
                 <DialogContent className="max-w-lg">

@@ -13,11 +13,32 @@ export function useStorageLocations() {
 export function useAddStorageLocation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (loc: { hall: string; room?: string; shelf?: string; position?: string }) =>
+    mutationFn: (loc: { name: string; description?: string; hall?: string; room?: string; shelf?: string; position?: string }) =>
       api.storageLocations.add(loc),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["storage_locations"] }),
   });
 }
+
+export function useUpdateStorageLocation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...updates }: { id: string; name?: string; description?: string; hall?: string | null; room?: string | null; shelf?: string | null; position?: string | null }) =>
+      api.storageLocations.update(id, updates),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["storage_locations"] }),
+  });
+}
+
+export function useDeleteStorageLocation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.storageLocations.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["storage_locations"] });
+      qc.invalidateQueries({ queryKey: ["raw_materials"] });
+    },
+  });
+}
+
 
 // ---- Raw Materials ----
 export function useRawMaterials() {
