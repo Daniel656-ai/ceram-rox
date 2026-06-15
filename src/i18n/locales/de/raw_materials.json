@@ -35,7 +35,7 @@
   "no_materials": "Keine Rohstoffe gefunden",
   "new_material_title": "Neuer Rohstoff",
   "material_name": "Name *",
-  "material_number": "Nummer *",
+  "material_number": "Nummer",
   "material_number_placeholder": "z.B. RM-001",
   "select_location": "Lagerort wählen",
   "name_number_required": "Name und Nummer sind Pflicht",

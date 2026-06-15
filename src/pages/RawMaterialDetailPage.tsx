@@ -63,6 +63,7 @@ export default function RawMaterialDetailPage() {
   // Edit material form
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
+  const [editNumber, setEditNumber] = useState("");
   const [editSupplier, setEditSupplier] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editUnit, setEditUnit] = useState("");
@@ -73,6 +74,7 @@ export default function RawMaterialDetailPage() {
   const openEditDialog = () => {
     if (!mat) return;
     setEditName(mat.material_name);
+    setEditNumber(mat.material_number || "");
     setEditSupplier(mat.supplier || "");
     setEditDesc(mat.description || "");
     setEditUnit(mat.unit);
@@ -94,6 +96,7 @@ export default function RawMaterialDetailPage() {
       await updateMaterial.mutateAsync({
         id: id!,
         material_name: editName,
+        material_number: editNumber.trim() || null,
         supplier: editSupplier || undefined,
         description: editDesc || undefined,
         unit: editUnit,
@@ -215,7 +218,7 @@ export default function RawMaterialDetailPage() {
             <span>{mat.material_name}</span>
             <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
           </h1>
-          <p className="text-sm text-muted-foreground">{mat.material_number} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg</p>
+          <p className="text-sm text-muted-foreground">{mat.material_number || "—"} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg</p>
         </div>
         {canManage && (
           <>
@@ -268,6 +271,9 @@ export default function RawMaterialDetailPage() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+              <div><Label>{t("raw_materials:material_number")}</Label><Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Einheit</Label>
                 <Select value={editUnit} onValueChange={setEditUnit}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -276,8 +282,8 @@ export default function RawMaterialDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div><Label>Lieferant</Label><Input value={editSupplier} onChange={(e) => setEditSupplier(e.target.value)} /></div>
             </div>
-            <div><Label>Lieferant</Label><Input value={editSupplier} onChange={(e) => setEditSupplier(e.target.value)} /></div>
             <div>
               <Label>Lagerort</Label>
               <Select value={editLocationId || "__none__"} onValueChange={(v) => setEditLocationId(v === "__none__" ? "" : v)}>

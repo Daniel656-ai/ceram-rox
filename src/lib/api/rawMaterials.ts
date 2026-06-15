@@ -46,7 +46,7 @@ export const rawMaterials = {
   create: (
     m: {
       material_name: string;
-      material_number: string;
+      material_number?: string | null;
       supplier?: string;
       description?: string;
       unit?: string;
@@ -68,6 +68,7 @@ export const rawMaterials = {
     id: string,
     updates: {
       material_name?: string;
+      material_number?: string | null;
       supplier?: string;
       description?: string;
       unit?: string;

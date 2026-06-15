@@ -1,0 +1,1 @@
+ALTER TABLE public.raw_materials ALTER COLUMN material_number DROP NOT NULL;
