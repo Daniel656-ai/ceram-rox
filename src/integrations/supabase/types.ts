@@ -170,6 +170,81 @@ export type Database = {
           },
         ]
       }
+      hazard_notification_log: {
+        Row: {
+          activity_id: string | null
+          channel: string
+          event_type: string
+          id: string
+          material_snapshot: Json
+          raw_material_id: string
+          recipient_user_ids: string[]
+          triggered_at: string
+          triggered_by: string | null
+        }
+        Insert: {
+          activity_id?: string | null
+          channel?: string
+          event_type: string
+          id?: string
+          material_snapshot?: Json
+          raw_material_id: string
+          recipient_user_ids?: string[]
+          triggered_at?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          activity_id?: string | null
+          channel?: string
+          event_type?: string
+          id?: string
+          material_snapshot?: Json
+          raw_material_id?: string
+          recipient_user_ids?: string[]
+          triggered_at?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hazard_notification_log_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activity_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hazard_notification_log_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hazard_notification_recipients: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role_label: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role_label?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role_label?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       inventory_movements: {
         Row: {
           batch_id: string | null

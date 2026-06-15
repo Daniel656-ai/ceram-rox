@@ -72,6 +72,7 @@ import { documents, sampleStorage, rawMaterialStorage } from "./documents";
 import { measurementParameters } from "./measurementParameters";
 import { adminDatabase, durchfuehrerUsers } from "./adminDatabase";
 import { auth } from "./auth";
+import { hazardNotifications } from "./hazardNotifications";
 
 
 
@@ -128,6 +129,7 @@ export const api = {
   measurementParameters,
   adminDatabase,
   durchfuehrerUsers,
+  hazardNotifications,
 
 
 

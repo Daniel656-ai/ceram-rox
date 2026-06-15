@@ -9,6 +9,8 @@
   "event_priority_changed": "Priority changed",
   "event_ranking_changed": "Ranking changed",
   "event_priority_violation": "Priority violation",
+  "event_hazard_material_created": "Hazardous material created",
+  "event_hazard_material_updated": "Hazardous material updated",
   "priority_violation_detail_started": "{{current}} was started before higher-priority {{violated}}",
   "priority_violation_detail_completed": "{{current}} was completed before higher-priority {{violated}}",
   "priority_violation_more": "and {{count}} more",
