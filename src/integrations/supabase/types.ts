@@ -695,6 +695,7 @@ export type Database = {
           batch_number: string
           concentration: string | null
           created_at: string
+          expiry_date: string | null
           id: string
           mixture_id: string
           notes: string | null
@@ -709,6 +710,7 @@ export type Database = {
           batch_number: string
           concentration?: string | null
           created_at?: string
+          expiry_date?: string | null
           id?: string
           mixture_id: string
           notes?: string | null
@@ -723,6 +725,7 @@ export type Database = {
           batch_number?: string
           concentration?: string | null
           created_at?: string
+          expiry_date?: string | null
           id?: string
           mixture_id?: string
           notes?: string | null
@@ -1793,6 +1796,8 @@ export type Database = {
           sample_group: string | null
           sample_name: string
           sample_number: string
+          sampled_at: string | null
+          sampled_by: string | null
           status: Database["public"]["Enums"]["sample_status"]
           storage_expiry_date: string | null
           storage_hints: string | null
@@ -1822,6 +1827,8 @@ export type Database = {
           sample_group?: string | null
           sample_name: string
           sample_number: string
+          sampled_at?: string | null
+          sampled_by?: string | null
           status?: Database["public"]["Enums"]["sample_status"]
           storage_expiry_date?: string | null
           storage_hints?: string | null
@@ -1851,6 +1858,8 @@ export type Database = {
           sample_group?: string | null
           sample_name?: string
           sample_number?: string
+          sampled_at?: string | null
+          sampled_by?: string | null
           status?: Database["public"]["Enums"]["sample_status"]
           storage_expiry_date?: string | null
           storage_hints?: string | null
@@ -2310,7 +2319,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      unified_batches: {
+        Row: {
+          batch_kind: string | null
+          batch_number: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string | null
+          notes: string | null
+          produced_at: string | null
+          produced_by: string | null
+          product_name: string | null
+          quantity: number | null
+          recipe_id: string | null
+          recipe_name: string | null
+          source_id: string | null
+          status: string | null
+          unit: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_view_others_vacation: { Args: { _user_id: string }; Returns: boolean }
