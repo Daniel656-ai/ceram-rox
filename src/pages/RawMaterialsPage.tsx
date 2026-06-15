@@ -25,8 +25,10 @@ import type { HazardClassKey } from "@/lib/hazardClasses";
 
 function formatLocation(loc: any) {
   if (!loc) return "–";
-  return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" › ");
+  if (loc.name) return loc.name;
+  return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" › ") || "–";
 }
+
 
 export default function RawMaterialsPage() {
   const { t } = useTranslation(["raw_materials", "common"]);
