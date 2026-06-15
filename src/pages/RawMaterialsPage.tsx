@@ -116,19 +116,8 @@ export default function RawMaterialsPage() {
         <div className="flex gap-2">
           {canManage && (
             <>
-              <Dialog open={locOpen} onOpenChange={setLocOpen}>
-                <DialogTrigger asChild><Button variant="outline" size="sm"><MapPin className="h-4 w-4 mr-1" />{t("raw_materials:new_location")}</Button></DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>{t("raw_materials:new_location_title")}</DialogTitle></DialogHeader>
-                  <div className="space-y-3">
-                    <div><Label>{t("raw_materials:hall_required")}</Label><Input value={lHall} onChange={(e) => setLHall(e.target.value)} placeholder={t("raw_materials:hall_placeholder")} /></div>
-                    <div><Label>{t("raw_materials:room")}</Label><Input value={lRoom} onChange={(e) => setLRoom(e.target.value)} placeholder={t("raw_materials:room_placeholder")} /></div>
-                    <div><Label>{t("raw_materials:shelf")}</Label><Input value={lShelf} onChange={(e) => setLShelf(e.target.value)} placeholder={t("raw_materials:shelf_placeholder")} /></div>
-                    <div><Label>{t("raw_materials:position")}</Label><Input value={lPos} onChange={(e) => setLPos(e.target.value)} placeholder={t("raw_materials:position_placeholder")} /></div>
-                    <Button onClick={handleAddLocation} className="w-full">{t("common:create")}</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <StorageLocationsManager triggerLabel={t("raw_materials:new_location")} />
+
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />{t("raw_materials:new_material")}</Button></DialogTrigger>
                 <DialogContent className="max-w-lg">
