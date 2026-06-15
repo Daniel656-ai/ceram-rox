@@ -1,11 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS08 Gesundheitsgefahr">
-  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
-  <g fill="#111827">
-    <circle cx="50" cy="26" r="8"/>
-    <path d="M30 86 L36 50 L40 50 L40 86 Z"/>
-    <path d="M70 86 L64 50 L60 50 L60 86 Z"/>
-    <path d="M40 40 h20 v22 h-20 z"/>
-    <path d="M50 44 l4 8 l9 -2 l-6 6 l6 6 l-9 -2 l-4 8 l-4 -8 l-9 2 l6 -6 l-6 -6 l9 2 z" fill="#fff" stroke="#fff" stroke-width="1"/>
-    <path d="M50 44 l4 8 l9 -2 l-6 6 l6 6 l-9 -2 l-4 8 l-4 -8 l-9 2 l6 -6 l-6 -6 l9 2 z" fill="none" stroke="#111827" stroke-width="2"/>
+  <defs>
+    <linearGradient id="g08frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ef3b3b"/>
+      <stop offset="1" stop-color="#c81a1a"/>
+    </linearGradient>
+    <radialGradient id="g08torso" cx="0.4" cy="0.3" r="0.9">
+      <stop offset="0" stop-color="#2a2a2a"/>
+      <stop offset="1" stop-color="#000"/>
+    </radialGradient>
+  </defs>
+  <polygon points="50,2 98,50 50,98 2,50" fill="#fff" stroke="url(#g08frame)" stroke-width="6" stroke-linejoin="round"/>
+  <!-- head -->
+  <circle cx="50" cy="22" r="9" fill="url(#g08torso)"/>
+  <!-- shoulders/torso silhouette -->
+  <path d="M30 44
+           C 32 36, 42 32, 50 32
+           C 58 32, 68 36, 70 44
+           L 74 86
+           L 26 86 Z"
+        fill="url(#g08torso)"/>
+  <!-- chest white field for star -->
+  <path d="M34 50 L 66 50 L 70 84 L 30 84 Z" fill="#fff"/>
+  <!-- 8-point burst star (asterisk-like) -->
+  <g transform="translate(50 64)" fill="#000">
+    <polygon points="0,-18 3,-6 0,0 -3,-6"/>
+    <polygon points="0,18 3,6 0,0 -3,6"/>
+    <polygon points="-18,0 -6,3 0,0 -6,-3"/>
+    <polygon points="18,0 6,3 0,0 6,-3"/>
+    <g transform="rotate(45)">
+      <polygon points="0,-15 2.5,-5 0,0 -2.5,-5"/>
+      <polygon points="0,15 2.5,5 0,0 -2.5,5"/>
+      <polygon points="-15,0 -5,2.5 0,0 -5,-2.5"/>
+      <polygon points="15,0 5,2.5 0,0 5,-2.5"/>
+    </g>
+    <circle r="3.5"/>
   </g>
 </svg>

@@ -1,7 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS03 Flamme über Kreis">
-  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
-  <g fill="#111827">
-    <path d="M55 18 C 60 32 75 38 68 54 C 78 52 76 64 70 70 L 30 70 C 22 64 28 50 38 52 C 30 42 38 28 55 18 Z"/>
-    <path d="M14 76 a 36 18 0 0 0 72 0 Z"/>
-  </g>
+  <defs>
+    <linearGradient id="g03frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ef3b3b"/>
+      <stop offset="1" stop-color="#c81a1a"/>
+    </linearGradient>
+    <linearGradient id="g03flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3a3a"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+  </defs>
+  <polygon points="50,2 98,50 50,98 2,50" fill="#fff" stroke="url(#g03frame)" stroke-width="6" stroke-linejoin="round"/>
+  <!-- circle (oxidizer) -->
+  <circle cx="50" cy="68" r="20" fill="none" stroke="#000" stroke-width="4"/>
+  <!-- inner highlight on circle -->
+  <path d="M36 60 A 20 20 0 0 1 56 50" stroke="#fff" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <!-- flame above -->
+  <path d="M50 8
+           C 56 20, 68 24, 68 38
+           C 68 46, 62 50, 60 48
+           C 62 44, 58 40, 56 42
+           C 60 48, 54 54, 50 54
+           C 46 54, 40 48, 44 42
+           C 42 40, 38 44, 40 48
+           C 38 50, 32 46, 32 38
+           C 32 24, 44 20, 50 8 Z"
+        fill="url(#g03flame)"/>
+  <path d="M50 18 C 54 26, 60 32, 58 42 C 56 46, 52 46, 52 44 C 54 40, 50 38, 48 42 C 48 46, 44 46, 42 42 C 40 32, 46 26, 50 18 Z"
+        fill="#fff" opacity="0.1"/>
 </svg>
