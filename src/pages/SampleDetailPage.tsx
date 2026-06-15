@@ -278,6 +278,7 @@ export default function SampleDetailPage() {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">{t("tab_overview")}</TabsTrigger>
+          <TabsTrigger value="services">{t("tab_services", { defaultValue: "Dienstleistungen" })} ({sampleMeasurements.length})</TabsTrigger>
           <TabsTrigger value="history">{t("tab_history")}</TabsTrigger>
           <TabsTrigger value="documents">{t("tab_documents")}</TabsTrigger>
           <TabsTrigger value="subsamples">{t("tab_subsamples")} ({subSamples.length})</TabsTrigger>
