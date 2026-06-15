@@ -23,6 +23,7 @@ import AdminPermissionsPage from "./pages/AdminPermissionsPage";
 import AdminSyncPage from "./pages/AdminSyncPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
 import AdminDatabasePage from "./pages/AdminDatabasePage";
+import AdminHazardNotificationsPage from "./pages/AdminHazardNotificationsPage";
 import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
 import SampleDetailPage from "./pages/SampleDetailPage";
