@@ -66,13 +66,16 @@ export function AppSidebar() {
     { title: t("navigation:samples"), url: "/proben", icon: FlaskConical, show: hasPerm("samples.view") || hasPerm("samples.create"), nav: "nav.samples" },
     { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database, show: hasPerm("measurements.view") || hasPerm("samples.view"), nav: "nav.results_database" },
     { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view"), nav: "nav.raw_materials" },
-    { title: t("navigation:mixtures"), url: "/mischungen", icon: FlaskRound, show: hasPerm("raw_materials.manage") || hasPerm("samples.view"), nav: null as string | null },
-    { title: "Chargen", url: "/chargen", icon: Layers, show: hasPerm("raw_materials.manage") || hasPerm("samples.view"), nav: null as string | null },
     { title: t("navigation:consumables"), url: "/verbrauchsmaterialien", icon: Package, show: (hasPerm("raw_materials.manage") || hasPerm("samples.view")) && role !== "auftraggeber", nav: "nav.consumables" },
     { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays, show: hasPerm("measurements.enter"), nav: "nav.work_planning" },
     { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: (hasPerm("measurements.view") || hasPerm("measurements.enter")) && role !== "auftraggeber", nav: "nav.lab_planning" },
     { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master", nav: "nav.calendar" },
   ].filter((item) => item.show && (item.nav === null || hasNavPerm(item.nav)));
+
+  const mixtureItems = [
+    { title: t("navigation:mixtures"), url: "/mischungen", icon: FlaskRound, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
+    { title: "Chargen", url: "/chargen", icon: Layers, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") },
+  ].filter((item) => item.show);
 
   const adminItems = [
     { title: t("navigation:users"), url: "/admin/benutzer", icon: Users, show: isAdmin, nav: "nav.admin.users" },
@@ -125,6 +128,30 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {mixtureItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Mischungen & Lösungen</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {mixtureItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className="hover:bg-sidebar-accent"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {adminItems.length > 0 && (
           <SidebarGroup>
