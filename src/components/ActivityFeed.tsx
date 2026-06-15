@@ -29,6 +29,9 @@ function eventIcon(type: string) {
       return <ArrowUpDown className="h-4 w-4 text-primary" />;
     case "priority_violation":
       return <AlertTriangle className="h-4 w-4 text-destructive" />;
+    case "hazard_material_created":
+    case "hazard_material_updated":
+      return <AlertTriangle className="h-4 w-4 text-warning" />;
     default:
       return <Activity className="h-4 w-4 text-muted-foreground" />;
   }
