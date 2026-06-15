@@ -1361,7 +1361,7 @@ export type Database = {
           id: string
           is_hazardous: boolean
           material_name: string
-          material_number: string
+          material_number: string | null
           price_per_kg: number | null
           supplier: string | null
           unit: string
@@ -1376,7 +1376,7 @@ export type Database = {
           id?: string
           is_hazardous?: boolean
           material_name: string
-          material_number: string
+          material_number?: string | null
           price_per_kg?: number | null
           supplier?: string | null
           unit?: string
@@ -1391,7 +1391,7 @@ export type Database = {
           id?: string
           is_hazardous?: boolean
           material_name?: string
-          material_number?: string
+          material_number?: string | null
           price_per_kg?: number | null
           supplier?: string | null
           unit?: string
