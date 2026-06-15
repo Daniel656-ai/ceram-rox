@@ -131,7 +131,7 @@ export function CreateSampleFromBatchDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Abbrechen
           </Button>
-          <Button onClick={handleCreate} disabled={!name.trim() || submitting}>
+          <Button onClick={handleCreate} disabled={!name.trim() || projectId === "__none__" || submitting}>
             Probe erzeugen
           </Button>
         </DialogFooter>
