@@ -1002,9 +1002,6 @@ export default function SamplesPage() {
                       <TableCell>{new Date(s.created_at).toLocaleDateString("de-DE")}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link to={`/proben/${s.id}`}><Eye className="h-4 w-4" /></Link>
-                          </Button>
                           {canCreate && canDelete && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
