@@ -73,6 +73,12 @@ import { measurementParameters } from "./measurementParameters";
 import { adminDatabase, durchfuehrerUsers } from "./adminDatabase";
 import { auth } from "./auth";
 import { hazardNotifications } from "./hazardNotifications";
+import {
+  mixtures,
+  mixtureRecipes,
+  mixtureBatches,
+  mixtureInventory,
+} from "./mixtures";
 
 
 
@@ -130,6 +136,10 @@ export const api = {
   adminDatabase,
   durchfuehrerUsers,
   hazardNotifications,
+  mixtures,
+  mixtureRecipes,
+  mixtureBatches,
+  mixtureInventory,
 
 
 

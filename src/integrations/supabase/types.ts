@@ -635,6 +635,261 @@ export type Database = {
         }
         Relationships: []
       }
+      mixture_batch_consumptions: {
+        Row: {
+          created_at: string
+          id: string
+          inventory_movement_id: string | null
+          mixture_batch_id: string
+          quantity: number
+          raw_material_batch_id: string | null
+          raw_material_id: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inventory_movement_id?: string | null
+          mixture_batch_id: string
+          quantity: number
+          raw_material_batch_id?: string | null
+          raw_material_id: string
+          unit?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inventory_movement_id?: string | null
+          mixture_batch_id?: string
+          quantity?: number
+          raw_material_batch_id?: string | null
+          raw_material_id?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_batch_consumptions_mixture_batch_id_fkey"
+            columns: ["mixture_batch_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_consumptions_raw_material_batch_id_fkey"
+            columns: ["raw_material_batch_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_consumptions_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixture_batches: {
+        Row: {
+          batch_number: string
+          concentration: string | null
+          created_at: string
+          id: string
+          mixture_id: string
+          notes: string | null
+          produced_at: string
+          produced_by: string
+          produced_quantity: number
+          status: Database["public"]["Enums"]["mixture_batch_status"]
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          concentration?: string | null
+          created_at?: string
+          id?: string
+          mixture_id: string
+          notes?: string | null
+          produced_at?: string
+          produced_by: string
+          produced_quantity: number
+          status?: Database["public"]["Enums"]["mixture_batch_status"]
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          concentration?: string | null
+          created_at?: string
+          id?: string
+          mixture_id?: string
+          notes?: string | null
+          produced_at?: string
+          produced_by?: string
+          produced_quantity?: number
+          status?: Database["public"]["Enums"]["mixture_batch_status"]
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_batches_mixture_id_fkey"
+            columns: ["mixture_id"]
+            isOneToOne: false
+            referencedRelation: "mixtures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixture_inventory_movements: {
+        Row: {
+          comment: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          mixture_batch_id: string | null
+          mixture_id: string
+          movement_date: string
+          movement_type: Database["public"]["Enums"]["mixture_movement_type"]
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mixture_batch_id?: string | null
+          mixture_id: string
+          movement_date?: string
+          movement_type: Database["public"]["Enums"]["mixture_movement_type"]
+          quantity: number
+          unit?: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mixture_batch_id?: string | null
+          mixture_id?: string
+          movement_date?: string
+          movement_type?: Database["public"]["Enums"]["mixture_movement_type"]
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_inventory_movements_mixture_batch_id_fkey"
+            columns: ["mixture_batch_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_inventory_movements_mixture_id_fkey"
+            columns: ["mixture_id"]
+            isOneToOne: false
+            referencedRelation: "mixtures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixture_recipe_items: {
+        Row: {
+          created_at: string
+          id: string
+          mixture_id: string
+          notes: string | null
+          position: number
+          quantity: number
+          raw_material_id: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mixture_id: string
+          notes?: string | null
+          position?: number
+          quantity: number
+          raw_material_id: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mixture_id?: string
+          notes?: string | null
+          position?: number
+          quantity?: number
+          raw_material_id?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_recipe_items_mixture_id_fkey"
+            columns: ["mixture_id"]
+            isOneToOne: false
+            referencedRelation: "mixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_recipe_items_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixtures: {
+        Row: {
+          category: Database["public"]["Enums"]["mixture_category"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          mixture_number: string | null
+          name: string
+          target_concentration: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["mixture_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          mixture_number?: string | null
+          name: string
+          target_concentration?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["mixture_category"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          mixture_number?: string | null
+          name?: string
+          target_concentration?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           activity_id: string
@@ -2141,6 +2396,17 @@ export type Database = {
         Args: { p: Database["public"]["Enums"]["order_priority"] }
         Returns: number
       }
+      produce_mixture_batch: {
+        Args: {
+          _concentration: string
+          _consumptions: Json
+          _mixture_id: string
+          _notes: string
+          _produced_quantity: number
+          _unit: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       absence_type: "urlaub" | "krankheit" | "weiterbildung" | "sonstiges"
@@ -2149,6 +2415,9 @@ export type Database = {
       downtime_type: "wartung" | "reparatur" | "sonstiges"
       measurement_status: "open" | "in_progress" | "completed"
       milestone_status: "planned" | "in_progress" | "completed"
+      mixture_batch_status: "produced" | "discarded"
+      mixture_category: "mischung" | "loesung"
+      mixture_movement_type: "eingang" | "ausgang"
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
@@ -2303,6 +2572,9 @@ export const Constants = {
       downtime_type: ["wartung", "reparatur", "sonstiges"],
       measurement_status: ["open", "in_progress", "completed"],
       milestone_status: ["planned", "in_progress", "completed"],
+      mixture_batch_status: ["produced", "discarded"],
+      mixture_category: ["mischung", "loesung"],
+      mixture_movement_type: ["eingang", "ausgang"],
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
