@@ -94,7 +94,16 @@ export default function OrdersPage() {
                       {m.measurement_orders?.order_number || "–"}
                     </TableCell>
                     <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
-                    <TableCell>{m.measurement_orders?.projects?.project_number || "–"}</TableCell>
+                    <TableCell>
+                      {m.measurement_orders?.projects?.project_number ? (
+                        <Link
+                          to={`/projekte/${m.measurement_orders.project_id}`}
+                          className="text-destructive underline underline-offset-2 hover:opacity-80"
+                        >
+                          {m.measurement_orders.projects.project_number}
+                        </Link>
+                      ) : "–"}
+                    </TableCell>
                     <TableCell><StatusBadge status={m.status} /></TableCell>
                     <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
                     <TableCell>{m.due_date ? new Date(m.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
@@ -223,7 +232,14 @@ export default function OrdersPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      {o.projects?.project_number}
+                      {o.projects?.project_number ? (
+                        <Link
+                          to={`/projekte/${o.project_id}`}
+                          className="text-destructive underline underline-offset-2 hover:opacity-80"
+                        >
+                          {o.projects.project_number}
+                        </Link>
+                      ) : "–"}
                     </TableCell>
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}</TableCell>
