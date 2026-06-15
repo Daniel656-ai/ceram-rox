@@ -952,7 +952,11 @@ export default function SamplesPage() {
                   const sampleTags: string[] = Array.isArray(s.tags) ? s.tags : [];
                   return (
                     <TableRow key={s.id}>
-                      <TableCell className="font-medium">{s.sample_number}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link to={`/proben/${s.id}`} className="text-destructive underline underline-offset-2 hover:opacity-80">
+                          {s.sample_number}
+                        </Link>
+                      </TableCell>
                       <TableCell>{s.sample_name}</TableCell>
                       <TableCell>{project?.project_number || "–"}</TableCell>
                       <TableCell>{getStatusBadge(s.status || "neu")}</TableCell>
@@ -998,9 +1002,6 @@ export default function SamplesPage() {
                       <TableCell>{new Date(s.created_at).toLocaleDateString("de-DE")}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" asChild>
-                            <Link to={`/proben/${s.id}`}><Eye className="h-4 w-4" /></Link>
-                          </Button>
                           {canCreate && canDelete && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
