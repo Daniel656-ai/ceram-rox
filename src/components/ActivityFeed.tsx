@@ -81,7 +81,14 @@ export function ActivityFeed() {
               const measurementNumber = e.measurement?.measurement_number;
               const orderNumber = e.order?.order_number;
               const projectInfo = e.project ? `${e.project.project_number}${e.project.project_name ? " – " + e.project.project_name : ""}` : null;
-              const linkTo = e.order_id ? `/auftraege/${e.order_id}` : e.project_id ? `/projekte/${e.project_id}` : null;
+              const rawMaterialId = e.metadata?.raw_material_id as string | undefined;
+              const linkTo = e.order_id
+                ? `/auftraege/${e.order_id}`
+                : e.project_id
+                ? `/projekte/${e.project_id}`
+                : rawMaterialId
+                ? `/rohstoffe/${rawMaterialId}`
+                : null;
 
               const detailLine = (() => {
                 if (e.event_type === "priority_changed" || e.event_type === "ranking_changed") {
@@ -99,6 +106,11 @@ export function ActivityFeed() {
                     violated: first,
                   });
                   return rest > 0 ? `${base} ${t("activity:priority_violation_more", { count: rest })}` : base;
+                }
+                if (e.event_type === "hazard_material_created" || e.event_type === "hazard_material_updated") {
+                  const num = e.metadata?.material_number ?? "";
+                  const name = e.metadata?.material_name ?? "—";
+                  return `${num ? num + " · " : ""}${name}`;
                 }
                 return [measurementNumber, serviceName].filter(Boolean).join(" · ");
               })();
