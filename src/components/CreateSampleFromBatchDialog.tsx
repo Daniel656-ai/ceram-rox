@@ -99,13 +99,12 @@ export function CreateSampleFromBatchDialog({
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Projekt (optional)</Label>
+            <Label>Projekt *</Label>
             <Select value={projectId} onValueChange={setProjectId}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Projekt auswählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Kein Projekt</SelectItem>
                 {(projects as any[]).map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.project_number} · {p.project_name}
