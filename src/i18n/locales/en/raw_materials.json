@@ -35,7 +35,7 @@
   "no_materials": "No raw materials found",
   "new_material_title": "New Raw Material",
   "material_name": "Name *",
-  "material_number": "Number *",
+  "material_number": "Number",
   "material_number_placeholder": "e.g. RM-001",
   "select_location": "Select location",
   "name_number_required": "Name and number are required",
