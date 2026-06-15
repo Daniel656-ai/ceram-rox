@@ -1783,6 +1783,7 @@ export type Database = {
           id: string
           is_hazardous: boolean
           location_id: string | null
+          mixture_batch_id: string | null
           parent_sample_id: string | null
           post_measurement_action:
             | Database["public"]["Enums"]["post_measurement_action"]
@@ -1811,6 +1812,7 @@ export type Database = {
           id?: string
           is_hazardous?: boolean
           location_id?: string | null
+          mixture_batch_id?: string | null
           parent_sample_id?: string | null
           post_measurement_action?:
             | Database["public"]["Enums"]["post_measurement_action"]
@@ -1839,6 +1841,7 @@ export type Database = {
           id?: string
           is_hazardous?: boolean
           location_id?: string | null
+          mixture_batch_id?: string | null
           parent_sample_id?: string | null
           post_measurement_action?:
             | Database["public"]["Enums"]["post_measurement_action"]
@@ -1861,6 +1864,13 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samples_mixture_batch_id_fkey"
+            columns: ["mixture_batch_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_batches"
             referencedColumns: ["id"]
           },
           {
@@ -2323,6 +2333,24 @@ export type Database = {
           status: Database["public"]["Enums"]["downtime_status"]
         }[]
       }
+      get_raw_material_derived_samples: {
+        Args: { _raw_material_batch_id?: string; _raw_material_id: string }
+        Returns: {
+          consumed_quantity: number
+          consumed_unit: string
+          mixture_batch_id: string
+          mixture_batch_number: string
+          mixture_id: string
+          mixture_name: string
+          raw_material_batch_id: string
+          raw_material_batch_number: string
+          sample_created_at: string
+          sample_id: string
+          sample_name: string
+          sample_number: string
+        }[]
+      }
+      get_sample_traceability: { Args: { _sample_id: string }; Returns: Json }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

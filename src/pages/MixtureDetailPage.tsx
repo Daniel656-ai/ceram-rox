@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Plus, Trash2, Play } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Play, FlaskConical } from "lucide-react";
+import { api } from "@/lib/api";
+import { CreateSampleFromBatchDialog } from "@/components/CreateSampleFromBatchDialog";
 import {
   useMixture,
   useUpdateMixture,
@@ -379,6 +382,7 @@ export default function MixtureDetailPage() {
                     <TableHead>{t("mixtures:produced_quantity")}</TableHead>
                     <TableHead>{t("mixtures:concentration")}</TableHead>
                     <TableHead>{t("mixtures:consumptions")}</TableHead>
+                    <TableHead className="w-40">Proben</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -409,6 +413,9 @@ export default function MixtureDetailPage() {
                             )}
                           </div>
                         ))}
+                      </TableCell>
+                      <TableCell>
+                        <BatchSamplesCell batchId={b.id} batchNumber={b.batch_number} mixtureName={mixture.name} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -635,6 +642,63 @@ export default function MixtureDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function BatchSamplesCell({
+  batchId,
+  batchNumber,
+  mixtureName,
+}: {
+  batchId: string;
+  batchNumber: string;
+  mixtureName: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { data: samples = [] } = useQuery({
+    queryKey: ["mixture_batch_samples", batchId],
+    queryFn: () => api.mixtureBatches.listSamples(batchId),
+  });
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex flex-col text-xs">
+        {(samples as any[]).length === 0 ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          (samples as any[]).slice(0, 3).map((s) => (
+            <Link
+              key={s.id}
+              to={`/proben/${s.id}`}
+              className="font-mono hover:underline text-primary"
+            >
+              {s.sample_number}
+            </Link>
+          ))
+        )}
+        {(samples as any[]).length > 3 && (
+          <span className="text-muted-foreground">
+            +{(samples as any[]).length - 3}
+          </span>
+        )}
+      </div>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-7 w-7"
+        onClick={() => setOpen(true)}
+        title="Probe erzeugen"
+      >
+        <FlaskConical className="h-4 w-4" />
+      </Button>
+      <CreateSampleFromBatchDialog
+        open={open}
+        onOpenChange={setOpen}
+        mixtureBatchId={batchId}
+        mixtureBatchNumber={batchNumber}
+        mixtureName={mixtureName}
+      />
     </div>
   );
 }

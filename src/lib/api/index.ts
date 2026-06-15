@@ -78,6 +78,7 @@ import {
   mixtureRecipes,
   mixtureBatches,
   mixtureInventory,
+  mixtureTraceability,
 } from "./mixtures";
 
 
@@ -140,6 +141,7 @@ export const api = {
   mixtureRecipes,
   mixtureBatches,
   mixtureInventory,
+  mixtureTraceability,
 
 
 

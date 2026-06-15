@@ -18,11 +18,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil, AlertTriangle, GitBranch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { normalizeHazardClasses, type HazardClassKey } from "@/lib/hazardClasses";
+import { DerivedSamples } from "@/components/DerivedSamples";
 
 
 
@@ -314,6 +315,7 @@ export default function RawMaterialDetailPage() {
           <TabsTrigger value="analysen"><FlaskConical className="h-4 w-4 mr-1" />Analysen</TabsTrigger>
           <TabsTrigger value="dokumente"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
           <TabsTrigger value="lager"><BarChart3 className="h-4 w-4 mr-1" />Lagerbewegungen</TabsTrigger>
+          <TabsTrigger value="proben"><GitBranch className="h-4 w-4 mr-1" />Proben</TabsTrigger>
         </TabsList>
 
         {/* CHARGEN */}
@@ -591,6 +593,10 @@ export default function RawMaterialDetailPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="proben">
+          {id && <DerivedSamples rawMaterialId={id} />}
         </TabsContent>
       </Tabs>
     </div>

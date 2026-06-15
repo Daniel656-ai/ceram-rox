@@ -128,6 +128,31 @@ export const mixtureBatches = {
         _consumptions: args.consumptions,
       })
     ),
+
+  /** Samples derived from a single mixture batch. */
+  listSamples: (mixtureBatchId: string) =>
+    unwrap<any>(
+      db
+        .from("samples")
+        .select("id, sample_number, sample_name, status, created_at, created_by")
+        .eq("mixture_batch_id", mixtureBatchId)
+        .order("created_at", { ascending: false })
+    ),
+};
+
+export const mixtureTraceability = {
+  /** Complete origin of a sample: batch + recipe + consumed raw material batches. */
+  forSample: (sampleId: string) =>
+    unwrap<any>(db.rpc("get_sample_traceability", { _sample_id: sampleId })),
+
+  /** All samples derived from any batch consuming this raw material. */
+  derivedSamples: (rawMaterialId: string, rawMaterialBatchId?: string | null) =>
+    unwrap<any>(
+      db.rpc("get_raw_material_derived_samples", {
+        _raw_material_id: rawMaterialId,
+        _raw_material_batch_id: rawMaterialBatchId ?? null,
+      })
+    ),
 };
 
 export const mixtureInventory = {
