@@ -28,7 +28,7 @@ import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, F
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { StatusBadge } from "@/components/StatusBadge";
-import { FlaskRound, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 const STATUSES = ["neu", "eingelagert", "in_bearbeitung", "teilweise_verbraucht", "vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"] as const;
 
