@@ -1,96 +1,78 @@
-# Domain-API-Architektur
+# Mischungen und Lösungen
 
-## Ziel
+Neuer eigenständiger Hauptbereich, fachlich getrennt von Rohstoffen, nutzt diese aber als Ausgangsstoffe. Jede Mischung hat eine Rezeptur (n Rohstoffe), eine Herstellung erzeugt eine Charge, bucht Rohstoffe aus und Mischungsbestand ein und schreibt ein revisionssicheres Protokoll.
 
-Aktuell rufen Hooks/Pages/Components die zentrale Facade direkt auf (`api.from("projects").select(...)`). Das soll durch echte Domain-Funktionen ersetzt werden:
+## Datenmodell (neue Tabellen)
 
-```
-Hooks / Pages / Components
-   ↓
-api.projects.list() / api.samples.get(id) / api.measurementResults.create(data) ...
-   ↓
-src/lib/api/<domain>.ts   ← einzige Schicht, die noch Supabase kennt
-   ↓
-Backend (heute Supabase, später z. B. Node/PostgreSQL)
-```
+1. **mixtures** — Stammdaten einer Mischung/Lösung
+   - `name`, `mixture_number` (optional, frei änderbar wie bei Rohstoffen), `description`, `category` (`mischung` | `loesung`), `unit` (kg/l/g), `target_concentration` (nullable), `is_active`, `created_by`
 
-Die bestehende `api`-Facade (`api.from`, `api.rpc`, `api.auth`, `api.storage`, `api.functions`, `api.channel`) bleibt **intern** in `src/lib/api/*` weiterhin nutzbar, ist aber außerhalb tabu — durchgesetzt per ESLint.
+2. **mixture_recipe_items** — Rezeptur (n Rohstoffe pro Mischung)
+   - `mixture_id`, `raw_material_id`, `quantity`, `unit`, `position`, `notes`
+   - Mengen werden später proportional zur Herstellungsmenge skaliert.
 
-## Wichtige Realität (bitte vorab lesen)
+3. **mixture_batches** — Herstellungsprotokoll / Charge
+   - `mixture_id`, `batch_number` (Format `MIXYYNNNN`, advisory-lock generiert), `produced_at`, `produced_by`, `produced_quantity`, `unit`, `concentration` (nullable), `notes`, `status` (`produced` | `discarded`)
 
-Die Beispiel-Signaturen `list / get / create / update / delete` reichen für die meisten Tabellen, aber der Code enthält viele **spezialisierte Queries** (komplexe Joins, gefilterte Listen, Sortierungen, RPCs, Realtime-Channels, Storage-Uploads). Beispiele:
+4. **mixture_batch_consumptions** — verwendete Rohstoffchargen pro Herstellung (Traceability)
+   - `mixture_batch_id`, `raw_material_id`, `raw_material_batch_id` (nullable), `quantity`, `unit`
 
-- `useMyMeasurements`: zwei separate Queries (assigned_to + workstation responsible), Merge, Sortierung, Creator-Profile-Lookup
-- `useProjectDetail`: `projects` + `measurement_orders` + `order_measurements` + `samples` + Profile in einem Aufruf
-- `useEstimatedCompletion`: RPC-Call
-- `OrderDetailPage`: Realtime-Subscription auf `order_measurements`
-- `MeasurementDocuments`: `api.storage.from("...").upload(...)` + signed URLs
+5. **mixture_inventory_movements** — Bestandsbewegungen der Mischungen (analog `inventory_movements`)
+   - `mixture_id`, `mixture_batch_id`, `movement_type` (`eingang`|`ausgang`), `quantity`, `movement_date`, `comment`, `created_by`
 
-Diese Logik wird **nicht in ein generisches `list()` gepresst**. Stattdessen exportiert jedes Domain-Modul genau die Funktionen, die der Aufrufer braucht — z. B. `api.measurements.listMine(userId)`, `api.projects.getDetail(id)`, `api.measurements.estimateCompletion(...)`, `api.documents.uploadMeasurementDocument(...)`, `api.realtime.onMeasurementsForOrder(orderId, cb)`. Das ist der eigentliche Wert: nach dem Refactor kann jede dieser Funktionen 1:1 gegen ein Node/PostgreSQL-Backend ausgetauscht werden, ohne dass der Aufrufer es merkt.
+Alle Tabellen: RLS aktiv, `GRANT` für `authenticated` + `service_role`, `updated_at`-Trigger, Policies nutzen `has_permission` analog `raw_materials`.
 
-## Domain-Module (in `src/lib/api/`)
+## Geschäftslogik (DB)
 
-| Modul | Inhalt |
-|---|---|
-| `projects.ts` | list, get, getDetail (mit Orders/Measurements), create, update, delete, listMembers, addMember, removeMember, updateMember |
-| `projectMilestones.ts` | list, create, update, delete |
-| `projectWorkPackages.ts` | list, create, update, delete, listAssignees, addAssignee, removeAssignee |
-| `projectTimeEntries.ts` | list, create, update, delete |
-| `projectMaterials.ts` | listConsumables, addConsumable, listKnetung, addKnetung, delete… |
-| `orders.ts` | list, get (mit Joins), create, update, delete, audit log |
-| `measurements.ts` | listMine, listForOrder, create, updateStatus, updateRanking, assign, addWorkLog, estimateCompletion (RPC) |
-| `measurementResults.ts` | list, create, update, delete |
-| `measurementServices.ts` | list, listAll, create, update, listParameters, upsertParameter, listPermissions, grant, revoke |
-| `samples.ts` | list, get, create, update, listDocuments, addDocument, listHistory, addHistory |
-| `consumables.ts` | list, create, update, delete |
-| `rawMaterials.ts` | list, get, create, update, batches, analyses, documents, movements |
-| `templates.ts` | list, get, create, update, delete, listItems, upsertItems |
-| `workstations.ts` | list, get, create, update, delete |
-| `workSchedules.ts` | listForUser, upsert, delete |
-| `absences.ts` | list, create, update, delete |
-| `downtimes.ts` | list, create, update, delete |
-| `utilization.ts` | listMeasurementsForUtilization, listWorkLogs |
-| `users.ts` | list, listProfiles, getProfile, updateProfile, invokeAdmin (Edge Function) |
-| `roles.ts` | listCustomRoles, listUserRoles, listRolePermissions, assign, revoke |
-| `permissions.ts` | list, hasPermission, navVisibility |
-| `activityLog.ts` | list, listForProject, listForOrder |
-| `syncSettings.ts` | get, upsert |
-| `documents.ts` + `storage.ts` | listMeasurementDocuments, uploadMeasurementDocument, getSignedUrl, delete |
-| `realtime.ts` | `onMeasurementsForOrder(orderId, cb)`, `onOrderChanges(orderId, cb)` etc. — gibt unsubscribe-Funktion zurück |
-| `auth.ts` (optional) | signIn, signUp, signOut, onAuthStateChange — falls AuthContext umgestellt wird |
+- Trigger `generate_mixture_batch_number` mit `pg_advisory_xact_lock` (analog Sample/Measurement).
+- RPC `produce_mixture_batch(mixture_id, quantity, concentration, notes, consumptions[])`:
+  - Erstellt `mixture_batches` Eintrag
+  - Schreibt für jede `consumption` einen `inventory_movements` `ausgang` auf den Rohstoff (und optional Charge) **und** einen Eintrag in `mixture_batch_consumptions`
+  - Schreibt einen `mixture_inventory_movements` `eingang` über die hergestellte Menge
+  - Alles in einer Transaktion → vollständige Rückverfolgbarkeit, kein Teilzustand.
+- Aktivitätslog: Event `mixture_batch_produced` in `activity_log`.
 
-`src/lib/api/index.ts` re-exportiert alles als `api.projects`, `api.samples`, …  
-Die bestehende Low-Level-Facade (`api.from`, `api.rpc`, `api.storage`, `api.functions`, `api.channel`, `api.auth`) bleibt verfügbar, wird aber **nur noch innerhalb von `src/lib/api/`** genutzt.
+## API Layer (`src/lib/api/`)
 
-## Umsetzung in Wellen (jede Welle einzeln getestet)
+- `mixtures.ts` — list/get/create/update/delete
+- `mixtureRecipes.ts` — list/add/update/delete Rezeptpositionen
+- `mixtureBatches.ts` — list/get + `produce()` (ruft RPC)
+- `mixtureInventory.ts` — Bewegungen + Bestand
+- Registrierung in `src/lib/api/index.ts`
 
-1. **Welle 1 — Foundation**: `projects`, `samples`, `consumables`, `measurementResults`, `projectMilestones`, `projectTimeEntries`, `projectMaterials` (kleine, klar abgegrenzte Hooks).
-2. **Welle 2 — Kern**: `orders`, `measurements`, `measurementServices`, `templates`, `rawMaterials`, `workstations`.
-3. **Welle 3 — Admin & Querschnitt**: `users`, `roles`, `permissions`, `workSchedules`, `absences`, `downtimes`, `activityLog`, `syncSettings`, `utilization`.
-4. **Welle 4 — Pages & Components**: alle direkten Aufrufe in `src/pages/*` und `src/components/*` ersetzen (CreateOrderPage, OrderDetailPage, ProjectDetailPage, MeasurementDocuments, BulkSamplePage, ImportOrderPage, AdminServicesPage, AdminDatabasePage, SamplesPage, SampleDetailPage, WorkPlanPage, RawMaterialDetailPage, DynamicParameterForm, MeasurementDataEntry, ServiceStatistics).
-5. **Welle 5 — Storage, Realtime, Edge Functions**: `documents.ts`, `storage.ts`, `realtime.ts`. Hier wird die API bewusst minimal und backend-agnostisch gehalten (Realtime → Callback-API; Storage → `uploadFile`/`getSignedUrl`).
-6. **Welle 6 — ESLint-Lockdown**: `no-restricted-imports`/`no-restricted-syntax` verbietet außerhalb `src/lib/api/**` jede Nutzung von `api.from`, `api.rpc`, `api.storage`, `api.functions`, `api.channel`. `AuthContext` ggf. via `api.auth`-Wrapper umstellen oder explizit whitelisten.
+## Hooks (`src/hooks/useMixtures.ts`)
 
-Pro Welle: betroffene Files lesen → Domain-Funktionen schreiben → Aufrufer umstellen → Typecheck.
+React-Query Hooks für alle obigen API-Funktionen inkl. Cache-Invalidierung von Rohstoff-Beständen nach Herstellung.
 
-## Was sich am Verhalten **nicht** ändert
+## UI / Routen
 
-- Keine UI-Änderungen.
-- Keine Query-Logik-Änderungen (Sortierung, Filter, Joins bleiben 1:1).
-- React Query Keys / Invalidation bleiben in den Hooks.
-- Supabase bleibt das Backend; nur die Aufrufstelle wandert.
+- `/mischungen` → `MixturesPage` (Liste: Name, Nummer, Kategorie, akt. Bestand, letzte Charge)
+- `/mischungen/neu` → Anlegen (Stammdaten + Rezeptur in einem Schritt)
+- `/mischungen/:id` → `MixtureDetailPage` mit Tabs:
+  - **Rezeptur** (editierbar)
+  - **Herstellung** (Dialog „Charge herstellen": Menge, Konzentration, Chargenauswahl pro Rohstoff, Validierung gegen Lagerbestand)
+  - **Chargen / Protokolle** (Tabelle aller `mixture_batches` inkl. Verbrauch)
+  - **Bestandsbewegungen**
+- Sidebar: neuer Eintrag „Mischungen & Lösungen" (Icon `FlaskRound`/`Beaker`-Variante), Sichtbarkeit über bestehende Berechtigung `raw_materials.manage` ODER neue `mixtures.manage` (vorerst an `raw_materials.manage` gekoppelt, erweiterbar).
+- App-Routing in `src/App.tsx` registrieren.
+- i18n DE/EN Dateien `mixtures.json`.
 
-## Was sich ändert
+## Trennung von Rohstoffen
 
-- ~30 neue Module unter `src/lib/api/`.
-- Jeder Hook/Component-Aufruf wird zu einer Funktion umgebogen.
-- ESLint-Regel verschärft: `api.from` etc. außerhalb `src/lib/api/**` verboten.
-- README in `src/lib/api/` aktualisiert.
+- Eigene Tabellen, eigene Seiten, eigener Sidebar-Eintrag.
+- Rohstoff-Liste/Detail bleibt unverändert; Mischungen tauchen dort nicht als Material auf.
+- Verbrauch der Rohstoffe läuft über die bestehende `inventory_movements`-Tabelle (Konsistenz mit aktueller Bestandsanzeige) — Rohstoff-UI bleibt aufgeräumt, da nur Bewegungen erscheinen, keine neuen Stammdaten.
 
-## Aufwand & Risiko
+## Akzeptanzkriterien-Abdeckung
 
-Großer mechanischer Refactor. Es gibt ~30 Hooks, ~12 Pages und ~6 Components mit Supabase-Aufrufen, viele davon mehrfach. Ich gehe wellenweise vor und committe nach jeder Welle einen typ-checkbaren Zwischenstand, damit Probleme früh sichtbar werden. Realtime und Storage sind die heikelsten Punkte (API-Design backend-agnostisch halten), Rest ist Fleißarbeit.
+- Rezeptur mit n Rohstoffen ✔ (`mixture_recipe_items`)
+- Herstellung bucht Rohstoffe ab + Mischungsbestand auf ✔ (RPC, transaktional)
+- Protokoll mit Verantwortlichem, Datum, Charge, Konzentration, Rohstoffchargen ✔ (`mixture_batches` + `mixture_batch_consumptions`)
+- Rückverfolgbarkeit ✔ (FK auf `raw_material_batches`, unveränderlicher Audit über Protokoll-Tabelle)
+- Rohstoffverwaltung bleibt übersichtlich ✔ (eigener Bereich)
 
-## Frage vor Start
+## Offene Punkte vor Implementierung
 
-Soll ich **direkt mit Welle 1 starten** und mich danach durch die Wellen arbeiten (jede Welle ein klarer Commit), oder möchtest du erst eine kleinere **Pilot-Welle** sehen (nur `projects` + `consumables` + `measurementResults`), um das API-Design zu beurteilen, bevor die restlichen 25+ Module folgen?
+1. Soll die **Konzentration** ein freies Textfeld (z. B. „37 % HCl") oder numerisch + Einheit (`%`, `mol/l`) sein?
+2. Sollen **Mischungen selbst wieder als Zutat** in anderen Mischungen verwendet werden können, oder nur Rohstoffe?
+3. Berechtigungen: reicht vorerst **`raw_materials.manage`** für Anlegen und Herstellen, oder soll ich gleich eine eigene Permission `mixtures.manage` einführen?
