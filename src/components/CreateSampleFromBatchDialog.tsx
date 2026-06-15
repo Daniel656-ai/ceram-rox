@@ -58,6 +58,10 @@ export function CreateSampleFromBatchDialog({
 
   const handleCreate = async () => {
     if (!name.trim() || !user) return;
+    if (projectId === "__none__") {
+      toast.error("Bitte ein Projekt auswählen");
+      return;
+    }
     setSubmitting(true);
     try {
       const sample = await api.samples.create({
@@ -65,7 +69,7 @@ export function CreateSampleFromBatchDialog({
         description:
           description.trim() ||
           `Aus Herstellungscharge ${mixtureBatchNumber} (${mixtureName})`,
-        project_id: projectId === "__none__" ? null : projectId,
+        project_id: projectId,
         mixture_batch_id: mixtureBatchId,
         created_by: user.id,
         status: "neu",
@@ -95,13 +99,12 @@ export function CreateSampleFromBatchDialog({
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Projekt (optional)</Label>
+            <Label>Projekt *</Label>
             <Select value={projectId} onValueChange={setProjectId}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Projekt auswählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Kein Projekt</SelectItem>
                 {(projects as any[]).map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.project_number} · {p.project_name}
@@ -128,7 +131,7 @@ export function CreateSampleFromBatchDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Abbrechen
           </Button>
-          <Button onClick={handleCreate} disabled={!name.trim() || submitting}>
+          <Button onClick={handleCreate} disabled={!name.trim() || projectId === "__none__" || submitting}>
             Probe erzeugen
           </Button>
         </DialogFooter>
