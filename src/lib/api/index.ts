@@ -129,6 +129,7 @@ export const api = {
   measurementParameters,
   adminDatabase,
   durchfuehrerUsers,
+  hazardNotifications,
 
 
 
