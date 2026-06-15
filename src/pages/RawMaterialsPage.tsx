@@ -19,6 +19,8 @@ import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import type { HazardClassKey } from "@/lib/hazardClasses";
+import { StorageLocationsManager } from "@/components/StorageLocationsManager";
+
 
 
 
