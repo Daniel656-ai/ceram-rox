@@ -43,6 +43,7 @@ export default function SampleDetailPage() {
   const { data: history = [] } = useSampleHistory(id);
   const { data: documents = [] } = useSampleDocuments(id);
   const { data: subSamples = [] } = useSubSamples(id);
+  const { data: sampleMeasurements = [] } = useSampleMeasurements(id);
   const { data: locations = [] } = useStorageLocations();
   const { data: users = [] } = useUsers();
   const { data: projects = [] } = useProjects();
