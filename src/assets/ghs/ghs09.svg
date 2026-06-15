@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS09 Umweltgefährlich">
+  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="#111827">
+    <rect x="14" y="60" width="72" height="4"/>
+    <path d="M18 32 L42 32 L36 40 L42 40 L30 56 L34 48 L20 48 Z"/>
+    <path d="M52 70 q14 -10 28 0 q-6 4 -12 4 l-4 -3 l-2 3 q-6 0 -10 -4 z"/>
+    <circle cx="74" cy="71" r="1.5" fill="#fff"/>
+    <path d="M78 70 l6 -3 l-6 -2 z"/>
+  </g>
+</svg>

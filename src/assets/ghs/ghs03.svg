@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS03 Flamme über Kreis">
+  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="#111827">
+    <path d="M55 18 C 60 32 75 38 68 54 C 78 52 76 64 70 70 L 30 70 C 22 64 28 50 38 52 C 30 42 38 28 55 18 Z"/>
+    <path d="M14 76 a 36 18 0 0 0 72 0 Z"/>
+  </g>
+</svg>

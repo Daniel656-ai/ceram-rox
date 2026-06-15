@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS01 Explodierende Bombe">
+  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="#111827">
+    <circle cx="50" cy="58" r="14"/>
+    <path d="M50 25 L54 40 L65 31 L58 44 L72 42 L60 50 L72 58 L58 56 L65 69 L54 60 L50 75 L46 60 L35 69 L42 56 L28 58 L40 50 L28 42 L42 44 L35 31 L46 40 Z" opacity=".95"/>
+  </g>
+</svg>

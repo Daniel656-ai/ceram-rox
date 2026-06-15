@@ -1,15 +1,4 @@
 import { useTranslation } from "react-i18next";
-import {
-  Bomb,
-  Flame,
-  Cylinder,
-  TestTube2,
-  Skull,
-  AlertTriangle,
-  HeartPulse,
-  Leaf,
-  Sparkles,
-} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
@@ -19,24 +8,34 @@ import {
   normalizeHazardClasses,
 } from "@/lib/hazardClasses";
 
-const ICON_MAP = {
-  bomb: Bomb,
-  flame: Flame,
-  "circle-flame": Sparkles, // Flamme über Kreis (Oxidierend) – Lucide-Annäherung
-  cylinder: Cylinder,
-  "test-tube": TestTube2,
-  skull: Skull,
-  alert: AlertTriangle,
-  health: HeartPulse,
-  leaf: Leaf,
-} as const;
+import ghs01 from "@/assets/ghs/ghs01.svg";
+import ghs02 from "@/assets/ghs/ghs02.svg";
+import ghs03 from "@/assets/ghs/ghs03.svg";
+import ghs04 from "@/assets/ghs/ghs04.svg";
+import ghs05 from "@/assets/ghs/ghs05.svg";
+import ghs06 from "@/assets/ghs/ghs06.svg";
+import ghs07 from "@/assets/ghs/ghs07.svg";
+import ghs08 from "@/assets/ghs/ghs08.svg";
+import ghs09 from "@/assets/ghs/ghs09.svg";
+
+const GHS_SVG: Record<string, string> = {
+  GHS01: ghs01,
+  GHS02: ghs02,
+  GHS03: ghs03,
+  GHS04: ghs04,
+  GHS05: ghs05,
+  GHS06: ghs06,
+  GHS07: ghs07,
+  GHS08: ghs08,
+  GHS09: ghs09,
+};
 
 type Size = "sm" | "md" | "lg";
 
-const SIZES: Record<Size, { box: number; icon: number }> = {
-  sm: { box: 28, icon: 14 },
-  md: { box: 40, icon: 20 },
-  lg: { box: 60, icon: 30 },
+const SIZES: Record<Size, number> = {
+  sm: 28,
+  md: 40,
+  lg: 60,
 };
 
 interface GhsPictogramProps {
@@ -47,51 +46,28 @@ interface GhsPictogramProps {
 }
 
 /**
- * GHS-Piktogramm: rot umrandete weiße Raute mit zentriertem Symbol.
- * Standardisierte Annäherung (kein offizielles GHS-Asset, aber sofort erkennbar).
+ * Offizielles GHS-Piktogramm aus dem zentralen SVG-Asset-Ordner.
+ * Wiederverwendbar in Listen, Detailansichten, Etiketten, PDF-Berichten.
  */
 export function GhsPictogram({ hazardKey, size = "md", className, showTooltip = true }: GhsPictogramProps) {
   const { t } = useTranslation("hazard");
   const meta = getHazardMeta(hazardKey);
   if (!meta) return null;
 
-  const Icon = ICON_MAP[meta.iconKey];
-  const { box, icon } = SIZES[size];
+  const src = GHS_SVG[meta.ghsCode];
+  const box = SIZES[size];
   const label = t(`class_${meta.key}`);
 
   const node = (
-    <span
-      className={cn(
-        "inline-flex items-center justify-center shrink-0",
-        className,
-      )}
-      style={{ width: box, height: box }}
-      aria-label={`${meta.ghsCode} – ${label}`}
-      role="img"
-    >
-      <span
-        className="relative flex items-center justify-center"
-        style={{
-          width: box,
-          height: box,
-          transform: "rotate(45deg)",
-          background: "white",
-          border: `2px solid #DC2626`, // GHS-Rot
-          borderRadius: 3,
-          boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-        }}
-      >
-        <Icon
-          style={{
-            width: icon,
-            height: icon,
-            transform: "rotate(-45deg)",
-            color: "#111827",
-          }}
-          strokeWidth={2.25}
-        />
-      </span>
-    </span>
+    <img
+      src={src}
+      alt={`${meta.ghsCode} – ${label}`}
+      width={box}
+      height={box}
+      className={cn("inline-block shrink-0 select-none", className)}
+      draggable={false}
+      loading="lazy"
+    />
   );
 
   if (!showTooltip) return node;
