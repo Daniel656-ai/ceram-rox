@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS05 Ätzwirkung">
+  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="#111827">
+    <path d="M22 22 l16 0 l-2 22 l-16 8 z"/>
+    <path d="M78 22 l-16 0 l2 22 l16 8 z"/>
+    <path d="M24 50 q4 8 14 10 q-6 4 -14 4 z"/>
+    <path d="M76 50 q-4 8 -14 10 q6 4 14 4 z"/>
+    <rect x="20" y="78" width="60" height="6"/>
+    <path d="M30 78 q4 -10 14 -8 q-2 4 -4 8 z"/>
+    <path d="M70 78 q-4 -10 -14 -8 q2 4 4 8 z"/>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS07 Ausrufezeichen">
+  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="#111827">
+    <path d="M44 22 h12 l-3 42 h-6 z"/>
+    <circle cx="50" cy="76" r="6"/>
+  </g>
+</svg>
