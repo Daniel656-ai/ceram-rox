@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Plus, Trash2, Play } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Play, FlaskConical } from "lucide-react";
+import { api } from "@/lib/api";
+import { CreateSampleFromBatchDialog } from "@/components/CreateSampleFromBatchDialog";
 import {
   useMixture,
   useUpdateMixture,
