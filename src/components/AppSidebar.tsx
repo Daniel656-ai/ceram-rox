@@ -80,6 +80,7 @@ export function AppSidebar() {
     { title: t("navigation:permissions"), url: "/admin/berechtigungen", icon: ShieldCheck, show: isAdmin, nav: "nav.admin.permissions" },
     { title: t("navigation:sync"), url: "/admin/synchronisation", icon: RefreshCw, show: isAdmin, nav: "nav.admin.sync" },
     { title: t("navigation:database"), url: "/admin/datenbank", icon: Database, show: isAdmin, nav: "nav.admin.database" },
+    { title: "Gefahrstoff-Verteiler", url: "/admin/gefahrstoff-verteiler", icon: AlertTriangle, show: isAdmin, nav: "nav.admin.hazard_notifications" },
   ].filter((item) => item.show && hasNavPerm(item.nav));
 
   const roleLabel = customRoleName || (
