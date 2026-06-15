@@ -28,6 +28,7 @@ import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, F
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SampleTraceability } from "@/components/SampleTraceability";
 import { Search } from "lucide-react";
 
 const STATUSES = ["neu", "eingelagert", "in_bearbeitung", "teilweise_verbraucht", "vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"] as const;
@@ -274,6 +275,8 @@ export default function SampleDetailPage() {
           </>
         )}
       </div>
+
+      <SampleTraceability sampleId={s.id} />
 
       <Tabs defaultValue="overview">
         <TabsList>
