@@ -96,6 +96,7 @@ export default function RawMaterialDetailPage() {
       await updateMaterial.mutateAsync({
         id: id!,
         material_name: editName,
+        material_number: editNumber.trim() || null,
         supplier: editSupplier || undefined,
         description: editDesc || undefined,
         unit: editUnit,
