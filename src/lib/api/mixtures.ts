@@ -8,7 +8,7 @@ export type MixtureCategory = "mischung" | "loesung";
 
 export const mixtures = {
   list: () =>
-    unwrap(
+    unwrap<any>(
       db
         .from("mixtures")
         .select("*")
@@ -16,7 +16,7 @@ export const mixtures = {
     ),
 
   get: (id: string) =>
-    unwrap(
+    unwrap<any>(
       db
         .from("mixtures")
         .select("*")
@@ -35,7 +35,7 @@ export const mixtures = {
     },
     createdBy: string
   ) =>
-    unwrap(
+    unwrap<any>(
       db
         .from("mixtures")
         .insert({ ...m, created_by: createdBy })
@@ -61,7 +61,7 @@ export const mixtures = {
 
 export const mixtureRecipes = {
   list: (mixtureId: string) =>
-    unwrap(
+    unwrap<any>(
       db
         .from("mixture_recipe_items")
         .select("*, raw_materials(id, material_name, material_number, unit)")
@@ -76,7 +76,7 @@ export const mixtureRecipes = {
     unit?: string;
     position?: number;
     notes?: string | null;
-  }) => unwrap(db.from("mixture_recipe_items").insert(item).select().single()),
+  }) => unwrap<any>(db.from("mixture_recipe_items").insert(item).select().single()),
 
   update: (
     id: string,
@@ -102,7 +102,7 @@ export const mixtureBatches = {
       )
       .order("produced_at", { ascending: false });
     if (mixtureId) q = q.eq("mixture_id", mixtureId);
-    return unwrap(q);
+    return unwrap<any>(q);
   },
 
   produce: (args: {
@@ -118,7 +118,7 @@ export const mixtureBatches = {
       unit?: string;
     }>;
   }) =>
-    unwrap(
+    unwrap<any>(
       db.rpc("produce_mixture_batch", {
         _mixture_id: args.mixture_id,
         _produced_quantity: args.produced_quantity,
@@ -132,7 +132,7 @@ export const mixtureBatches = {
 
 export const mixtureInventory = {
   list: (mixtureId: string) =>
-    unwrap(
+    unwrap<any>(
       db
         .from("mixture_inventory_movements")
         .select("*, mixture_batches(batch_number)")
