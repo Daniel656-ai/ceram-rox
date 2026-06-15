@@ -1,12 +1,60 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS05 Ätzwirkung">
-  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
-  <g fill="#111827">
-    <path d="M22 22 l16 0 l-2 22 l-16 8 z"/>
-    <path d="M78 22 l-16 0 l2 22 l16 8 z"/>
-    <path d="M24 50 q4 8 14 10 q-6 4 -14 4 z"/>
-    <path d="M76 50 q-4 8 -14 10 q6 4 14 4 z"/>
-    <rect x="20" y="78" width="60" height="6"/>
-    <path d="M30 78 q4 -10 14 -8 q-2 4 -4 8 z"/>
-    <path d="M70 78 q-4 -10 -14 -8 q2 4 4 8 z"/>
+  <defs>
+    <linearGradient id="g05frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ef3b3b"/>
+      <stop offset="1" stop-color="#c81a1a"/>
+    </linearGradient>
+  </defs>
+  <polygon points="50,2 98,50 50,98 2,50" fill="#fff" stroke="url(#g05frame)" stroke-width="6" stroke-linejoin="round"/>
+
+  <!-- LEFT: hand being corroded -->
+  <g fill="#000">
+    <!-- forearm -->
+    <path d="M14 78 L 30 78 L 36 64 L 24 60 Z"/>
+    <!-- hand back -->
+    <path d="M22 56 L 40 56 L 42 66 L 28 70 Z"/>
+    <!-- fingers -->
+    <rect x="40" y="52" width="3" height="10" rx="1.5"/>
+    <rect x="36" y="48" width="3" height="14" rx="1.5"/>
+    <rect x="32" y="48" width="3" height="14" rx="1.5"/>
+    <rect x="28" y="50" width="3" height="12" rx="1.5"/>
+  </g>
+  <!-- corrosion holes on hand -->
+  <g fill="#fff">
+    <circle cx="30" cy="62" r="2"/>
+    <circle cx="34" cy="56" r="1.5"/>
+  </g>
+  <!-- test tube pouring left -->
+  <g transform="rotate(-55 36 30)">
+    <rect x="32" y="14" width="10" height="22" fill="#000"/>
+    <rect x="30" y="12" width="14" height="3" fill="#000"/>
+    <path d="M32 36 Q 37 42 42 36 Z" fill="#000"/>
+  </g>
+  <!-- drops left -->
+  <g fill="#000">
+    <path d="M30 38 q -2 4 0 6 q 2 -2 0 -6 z"/>
+    <path d="M26 44 q -1.5 3 0 5 q 1.5 -2 0 -5 z"/>
+    <path d="M34 42 q -1 2 0 4 q 1 -1.5 0 -4 z"/>
+  </g>
+
+  <!-- RIGHT: corroded plate -->
+  <g fill="#000">
+    <path d="M58 70 L 90 70 L 86 80 L 62 80 Z"/>
+  </g>
+  <g fill="#fff">
+    <ellipse cx="68" cy="74" rx="3" ry="1.5"/>
+    <ellipse cx="78" cy="76" rx="2.5" ry="1.2"/>
+  </g>
+  <!-- test tube pouring right -->
+  <g transform="rotate(35 70 32)">
+    <rect x="66" y="14" width="10" height="22" fill="#000"/>
+    <rect x="64" y="12" width="14" height="3" fill="#000"/>
+    <path d="M66 36 Q 71 42 76 36 Z" fill="#000"/>
+  </g>
+  <!-- drops right -->
+  <g fill="#000">
+    <path d="M76 44 q -2 4 0 6 q 2 -2 0 -6 z"/>
+    <path d="M82 50 q -1.5 3 0 5 q 1.5 -2 0 -5 z"/>
+    <path d="M72 52 q -1 2 0 4 q 1 -1.5 0 -4 z"/>
   </g>
 </svg>

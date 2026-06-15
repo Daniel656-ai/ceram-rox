@@ -1,10 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS09 Umweltgefährlich">
-  <polygon points="50,3 97,50 50,97 3,50" fill="#fff" stroke="#DC2626" stroke-width="6" stroke-linejoin="round"/>
-  <g fill="#111827">
-    <rect x="14" y="60" width="72" height="4"/>
-    <path d="M18 32 L42 32 L36 40 L42 40 L30 56 L34 48 L20 48 Z"/>
-    <path d="M52 70 q14 -10 28 0 q-6 4 -12 4 l-4 -3 l-2 3 q-6 0 -10 -4 z"/>
-    <circle cx="74" cy="71" r="1.5" fill="#fff"/>
-    <path d="M78 70 l6 -3 l-6 -2 z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="GHS09 Umwelt">
+  <defs>
+    <linearGradient id="g09frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ef3b3b"/>
+      <stop offset="1" stop-color="#c81a1a"/>
+    </linearGradient>
+    <linearGradient id="g09water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2a2a"/>
+      <stop offset="1" stop-color="#000"/>
+    </linearGradient>
+  </defs>
+  <polygon points="50,2 98,50 50,98 2,50" fill="#fff" stroke="url(#g09frame)" stroke-width="6" stroke-linejoin="round"/>
+
+  <!-- waves -->
+  <path d="M10 50 Q 22 42 34 50 T 58 50 T 82 50 T 100 50 L 100 56 Q 88 64 76 56 T 52 56 T 28 56 T 10 56 Z" fill="url(#g09water)"/>
+  <path d="M10 60 Q 22 54 34 60 T 58 60 T 82 60 L 82 64 Q 70 70 58 64 T 34 64 T 10 64 Z" fill="url(#g09water)" opacity="0.7"/>
+
+  <!-- shoreline -->
+  <path d="M62 56 L 90 56 L 92 62 L 60 62 Z" fill="#000"/>
+
+  <!-- dead tree -->
+  <g fill="#000">
+    <rect x="36" y="36" width="3" height="20"/>
+    <path d="M37.5 36 L 30 28 L 33 30 L 32 22"/>
+    <path d="M37.5 38 L 44 32 L 42 35 L 46 30"/>
+    <path d="M37.5 44 L 30 42"/>
+    <path d="M37.5 46 L 44 44"/>
+    <!-- thicker strokes -->
+    <line x1="37.5" y1="36" x2="30" y2="26" stroke="#000" stroke-width="2"/>
+    <line x1="37.5" y1="36" x2="44" y2="28" stroke="#000" stroke-width="2"/>
+    <line x1="37.5" y1="42" x2="28" y2="38" stroke="#000" stroke-width="1.8"/>
+    <line x1="37.5" y1="42" x2="46" y2="38" stroke="#000" stroke-width="1.8"/>
+  </g>
+
+  <!-- dead fish -->
+  <g fill="#000" transform="translate(64 76)">
+    <path d="M0 0 Q 10 -6 20 0 Q 10 6 0 0 Z"/>
+    <polygon points="20,0 26,-5 26,5"/>
+    <circle cx="6" cy="-1.5" r="0.9" fill="#fff"/>
+    <line x1="4" y1="-3" x2="8" y2="0" stroke="#fff" stroke-width="0.8"/>
+    <line x1="8" y1="-3" x2="4" y2="0" stroke="#fff" stroke-width="0.8"/>
   </g>
 </svg>
