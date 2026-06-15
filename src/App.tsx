@@ -33,6 +33,7 @@ import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import ConsumablesPage from "./pages/ConsumablesPage";
 import LabPlanningPage from "./pages/LabPlanningPage";
 import MixturesPage from "./pages/MixturesPage";
+import ChargenPage from "./pages/ChargenPage";
 import MixtureDetailPage from "./pages/MixtureDetailPage";
 import NotFound from "./pages/NotFound";
 import { UpdateChecker } from "@/components/UpdateChecker";
