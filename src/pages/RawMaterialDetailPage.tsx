@@ -594,6 +594,10 @@ export default function RawMaterialDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="proben">
+          {id && <DerivedSamples rawMaterialId={id} />}
+        </TabsContent>
       </Tabs>
     </div>
   );
