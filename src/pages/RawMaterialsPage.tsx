@@ -214,7 +214,7 @@ export default function RawMaterialsPage() {
                   const isHazardous = (m as any).is_hazardous;
                   return (
                     <TableRow key={m.id} className="hover:bg-muted/50">
-                      <TableCell className="font-mono text-xs"><Link to={`/rohstoffe/${m.id}`} className="text-primary hover:underline">{m.material_number}</Link></TableCell>
+                      <TableCell className="font-mono text-xs"><Link to={`/rohstoffe/${m.id}`} className="text-primary hover:underline">{m.material_number || "—"}</Link></TableCell>
                       <TableCell className="font-medium"><Link to={`/rohstoffe/${m.id}`} className="hover:underline">{m.material_name}</Link></TableCell>
                       <TableCell>{m.supplier || "–"}</TableCell>
                       <TableCell className="text-xs">{formatLocation(m.storage_locations)}</TableCell>
