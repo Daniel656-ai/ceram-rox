@@ -1621,27 +1621,36 @@ export type Database = {
       storage_locations: {
         Row: {
           created_at: string
-          hall: string
+          description: string | null
+          hall: string | null
           id: string
+          name: string
           position: string | null
           room: string | null
           shelf: string | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          hall: string
+          description?: string | null
+          hall?: string | null
           id?: string
+          name: string
           position?: string | null
           room?: string | null
           shelf?: string | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
-          hall?: string
+          description?: string | null
+          hall?: string | null
           id?: string
+          name?: string
           position?: string | null
           room?: string | null
           shelf?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
