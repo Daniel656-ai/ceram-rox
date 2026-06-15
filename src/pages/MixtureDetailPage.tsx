@@ -645,3 +645,60 @@ export default function MixtureDetailPage() {
     </div>
   );
 }
+
+function BatchSamplesCell({
+  batchId,
+  batchNumber,
+  mixtureName,
+}: {
+  batchId: string;
+  batchNumber: string;
+  mixtureName: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { data: samples = [] } = useQuery({
+    queryKey: ["mixture_batch_samples", batchId],
+    queryFn: () => api.mixtureBatches.listSamples(batchId),
+  });
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex flex-col text-xs">
+        {(samples as any[]).length === 0 ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          (samples as any[]).slice(0, 3).map((s) => (
+            <Link
+              key={s.id}
+              to={`/proben/${s.id}`}
+              className="font-mono hover:underline text-primary"
+            >
+              {s.sample_number}
+            </Link>
+          ))
+        )}
+        {(samples as any[]).length > 3 && (
+          <span className="text-muted-foreground">
+            +{(samples as any[]).length - 3}
+          </span>
+        )}
+      </div>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-7 w-7"
+        onClick={() => setOpen(true)}
+        title="Probe erzeugen"
+      >
+        <FlaskConical className="h-4 w-4" />
+      </Button>
+      <CreateSampleFromBatchDialog
+        open={open}
+        onOpenChange={setOpen}
+        mixtureBatchId={batchId}
+        mixtureBatchNumber={batchNumber}
+        mixtureName={mixtureName}
+      />
+    </div>
+  );
+}
