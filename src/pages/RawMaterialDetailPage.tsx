@@ -271,6 +271,9 @@ export default function RawMaterialDetailPage() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+              <div><Label>{t("raw_materials:material_number")}</Label><Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Einheit</Label>
                 <Select value={editUnit} onValueChange={setEditUnit}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -279,8 +282,8 @@ export default function RawMaterialDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div><Label>Lieferant</Label><Input value={editSupplier} onChange={(e) => setEditSupplier(e.target.value)} /></div>
             </div>
-            <div><Label>Lieferant</Label><Input value={editSupplier} onChange={(e) => setEditSupplier(e.target.value)} /></div>
             <div>
               <Label>Lagerort</Label>
               <Select value={editLocationId || "__none__"} onValueChange={(v) => setEditLocationId(v === "__none__" ? "" : v)}>
