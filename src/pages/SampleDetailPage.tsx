@@ -66,6 +66,8 @@ export default function SampleDetailPage() {
   const [actionComment, setActionComment] = useState("");
   const [subName, setSubName] = useState("");
   const [subDesc, setSubDesc] = useState("");
+  const [svcSearch, setSvcSearch] = useState("");
+  const [svcSort, setSvcSort] = useState<"updated" | "name" | "status">("updated");
 
   const canManage = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
