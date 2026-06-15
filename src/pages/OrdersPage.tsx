@@ -232,7 +232,14 @@ export default function OrdersPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      {o.projects?.project_number}
+                      {o.projects?.project_number ? (
+                        <Link
+                          to={`/projekte/${o.project_id}`}
+                          className="text-destructive underline underline-offset-2 hover:opacity-80"
+                        >
+                          {o.projects.project_number}
+                        </Link>
+                      ) : "–"}
                     </TableCell>
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}</TableCell>
