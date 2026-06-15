@@ -58,6 +58,10 @@ export function CreateSampleFromBatchDialog({
 
   const handleCreate = async () => {
     if (!name.trim() || !user) return;
+    if (projectId === "__none__") {
+      toast.error("Bitte ein Projekt auswählen");
+      return;
+    }
     setSubmitting(true);
     try {
       const sample = await api.samples.create({
@@ -65,7 +69,7 @@ export function CreateSampleFromBatchDialog({
         description:
           description.trim() ||
           `Aus Herstellungscharge ${mixtureBatchNumber} (${mixtureName})`,
-        project_id: projectId === "__none__" ? null : projectId,
+        project_id: projectId,
         mixture_batch_id: mixtureBatchId,
         created_by: user.id,
         status: "neu",
