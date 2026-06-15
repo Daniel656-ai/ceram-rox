@@ -103,14 +103,8 @@ export default function RawMaterialsPage() {
   };
 
 
-  const handleAddLocation = async () => {
-    if (!lHall) { toast.error(t("raw_materials:hall_is_required")); return; }
-    try {
-      await addLocation.mutateAsync({ hall: lHall, room: lRoom || undefined, shelf: lShelf || undefined, position: lPos || undefined });
-      toast.success(t("raw_materials:location_created"));
-      setLocOpen(false); setLHall(""); setLRoom(""); setLShelf(""); setLPos("");
-    } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
-  };
+
+
 
   return (
     <div className="space-y-6">
