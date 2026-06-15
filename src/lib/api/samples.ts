@@ -22,6 +22,32 @@ export const samples = {
         .order("created_at", { ascending: false })
     ),
 
+  /** All order_measurements (services) linked to a sample via its orders. */
+  async listMeasurements(sampleId: string) {
+    const orders = await unwrap(
+      dbClient
+        .from("measurement_orders")
+        .select("id, order_number")
+        .eq("sample_id", sampleId)
+    );
+    const orderIds = (orders || []).map((o: any) => o.id);
+    if (orderIds.length === 0) return [];
+    const orderMap = new Map((orders || []).map((o: any) => [o.id, o]));
+    const measurements = await unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(
+          "id, measurement_number, status, updated_at, created_at, order_id, service_id, measurement_services(service_name, category), measurement_results(id, result_name, value, unit, measured_at)"
+        )
+        .in("order_id", orderIds)
+        .order("updated_at", { ascending: false })
+    );
+    return (measurements || []).map((m: any) => ({
+      ...m,
+      measurement_orders: orderMap.get(m.order_id) || null,
+    }));
+  },
+
   async create(sample: Record<string, any>) {
     const data = await unwrap(
       dbClient

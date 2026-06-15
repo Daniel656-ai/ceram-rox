@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import {
   useSampleDetail, useSampleHistory, useSampleDocuments, useSubSamples,
   useUpdateSampleStatus, useUpdateSampleLocation, useHandoverSample,
-  useCreateSample, useAddSampleDocument, useAddSampleHistory,
+  useCreateSample, useAddSampleDocument, useAddSampleHistory, useSampleMeasurements,
 } from "@/hooks/useSamples";
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useProjects } from "@/hooks/useProjects";
@@ -27,6 +27,8 @@ import { toast } from "sonner";
 import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, FileText, GitBranch, CalendarClock } from "lucide-react";
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
 import { GhsPictogramList } from "@/components/GhsPictogram";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Search } from "lucide-react";
 
 const STATUSES = ["neu", "eingelagert", "in_bearbeitung", "teilweise_verbraucht", "vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"] as const;
 
@@ -43,6 +45,7 @@ export default function SampleDetailPage() {
   const { data: history = [] } = useSampleHistory(id);
   const { data: documents = [] } = useSampleDocuments(id);
   const { data: subSamples = [] } = useSubSamples(id);
+  const { data: sampleMeasurements = [] } = useSampleMeasurements(id);
   const { data: locations = [] } = useStorageLocations();
   const { data: users = [] } = useUsers();
   const { data: projects = [] } = useProjects();
@@ -65,6 +68,8 @@ export default function SampleDetailPage() {
   const [actionComment, setActionComment] = useState("");
   const [subName, setSubName] = useState("");
   const [subDesc, setSubDesc] = useState("");
+  const [svcSearch, setSvcSearch] = useState("");
+  const [svcSort, setSvcSort] = useState<"updated" | "name" | "status">("updated");
 
   const canManage = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
@@ -273,6 +278,7 @@ export default function SampleDetailPage() {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">{t("tab_overview")}</TabsTrigger>
+          <TabsTrigger value="services">{t("tab_services", { defaultValue: "Dienstleistungen" })} ({sampleMeasurements.length})</TabsTrigger>
           <TabsTrigger value="history">{t("tab_history")}</TabsTrigger>
           <TabsTrigger value="documents">{t("tab_documents")}</TabsTrigger>
           <TabsTrigger value="subsamples">{t("tab_subsamples")} ({subSamples.length})</TabsTrigger>
@@ -347,6 +353,127 @@ export default function SampleDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Services */}
+        <TabsContent value="services">
+          <Card>
+            <CardHeader className="space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FlaskConical className="h-4 w-4" />
+                  {t("tab_services", { defaultValue: "Dienstleistungen" })}
+                  <Badge variant="secondary">{sampleMeasurements.length}</Badge>
+                </CardTitle>
+                <div className="flex gap-2 items-center">
+                  <div className="relative">
+                    <Search className="h-4 w-4 absolute left-2 top-2.5 text-muted-foreground" />
+                    <Input
+                      value={svcSearch}
+                      onChange={(e) => setSvcSearch(e.target.value)}
+                      placeholder={t("search_placeholder")}
+                      className="pl-8 h-9 w-56"
+                    />
+                  </div>
+                  <Select value={svcSort} onValueChange={(v) => setSvcSort(v as any)}>
+                    <SelectTrigger className="w-44 h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="updated">{t("sort_created_desc")}</SelectItem>
+                      <SelectItem value="name">{t("sort_name")}</SelectItem>
+                      <SelectItem value="status">{t("status")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {sampleMeasurements.length === 0 ? (
+                <p className="p-6 text-center text-muted-foreground">
+                  {t("no_services_linked", { defaultValue: "Keine Dienstleistungen mit dieser Probe verknüpft" })}
+                </p>
+              ) : (() => {
+                const q = svcSearch.trim().toLowerCase();
+                const filtered = (sampleMeasurements as any[])
+                  .filter((m) => {
+                    if (!q) return true;
+                    const name = m.measurement_services?.service_name?.toLowerCase() || "";
+                    const status = m.status?.toLowerCase() || "";
+                    const num = m.measurement_number?.toLowerCase() || "";
+                    return name.includes(q) || status.includes(q) || num.includes(q);
+                  })
+                  .sort((a, b) => {
+                    if (svcSort === "name") {
+                      return (a.measurement_services?.service_name || "").localeCompare(b.measurement_services?.service_name || "");
+                    }
+                    if (svcSort === "status") {
+                      return (a.status || "").localeCompare(b.status || "");
+                    }
+                    return (b.updated_at || "").localeCompare(a.updated_at || "");
+                  });
+
+                if (filtered.length === 0) {
+                  return <p className="p-6 text-center text-muted-foreground">{t("no_samples")}</p>;
+                }
+
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("measurement_type")}</TableHead>
+                        <TableHead>Nr.</TableHead>
+                        <TableHead>{t("status")}</TableHead>
+                        <TableHead>{t("result", { defaultValue: "Ergebnis" })}</TableHead>
+                        <TableHead>{t("updated_at", { defaultValue: "Aktualisiert" })}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((m: any) => {
+                        const results = m.measurement_results || [];
+                        const hasResults = results.length > 0;
+                        return (
+                          <TableRow
+                            key={m.id}
+                            className="cursor-pointer"
+                            onClick={() => { window.location.href = `/auftraege/${m.order_id}`; }}
+                          >
+                            <TableCell className="font-medium">
+                              {m.measurement_services?.service_name || "–"}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {m.measurement_number}
+                            </TableCell>
+                            <TableCell><StatusBadge status={m.status} /></TableCell>
+                            <TableCell>
+                              {hasResults ? (
+                                <div className="space-y-0.5 text-sm">
+                                  {results.slice(0, 3).map((r: any) => (
+                                    <div key={r.id}>
+                                      <span className="text-muted-foreground">{r.result_name}: </span>
+                                      <span className="font-medium">{r.value ?? "–"}{r.unit ? ` ${r.unit}` : ""}</span>
+                                    </div>
+                                  ))}
+                                  {results.length > 3 && (
+                                    <div className="text-xs text-muted-foreground">+{results.length - 3} weitere</div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">
+                                  {t("no_result", { defaultValue: "Kein Ergebnis vorhanden" })}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {m.updated_at ? new Date(m.updated_at).toLocaleString("de-DE") : "–"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* History */}

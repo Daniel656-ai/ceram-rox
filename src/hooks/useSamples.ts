@@ -47,6 +47,15 @@ export function useSubSamples(parentId?: string) {
   });
 }
 
+export function useSampleMeasurements(sampleId?: string) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["sample_measurements", sampleId],
+    queryFn: () => api.samples.listMeasurements(sampleId!),
+    enabled: !!user && !!sampleId,
+  });
+}
+
 export function useCreateSample() {
   const qc = useQueryClient();
   return useMutation({
