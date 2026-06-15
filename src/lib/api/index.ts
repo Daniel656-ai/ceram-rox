@@ -80,6 +80,7 @@ import {
   mixtureInventory,
   mixtureTraceability,
 } from "./mixtures";
+import { batches } from "./batches";
 
 
 
@@ -142,6 +143,9 @@ export const api = {
   mixtureBatches,
   mixtureInventory,
   mixtureTraceability,
+  batches,
+
+
 
 
 
