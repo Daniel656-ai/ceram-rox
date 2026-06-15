@@ -75,19 +75,19 @@ export default function RawMaterialsPage() {
 
   const filtered = materials?.filter((m) => {
     const q = search.toLowerCase();
-    const matchSearch = !q || m.material_name.toLowerCase().includes(q) || m.material_number.toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
+    const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
     const matchSupplier = !filterSupplier || m.supplier === filterSupplier;
     const matchLocation = !filterLocation || m.default_location_id === filterLocation;
     return matchSearch && matchSupplier && matchLocation;
   });
 
   const handleAddMaterial = async () => {
-    if (!name || !number) { toast.error(t("raw_materials:name_number_required")); return; }
+    if (!name) { toast.error(t("raw_materials:name_required")); return; }
     // Duplicate name detection (case-insensitive)
     const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
     if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
-      await addMaterial.mutateAsync({ material_name: name, material_number: number, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
+      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
       toast.success(t("raw_materials:material_created"));
       setOpen(false); setName(""); setNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
