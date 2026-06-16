@@ -102,6 +102,195 @@ export type Database = {
         }
         Relationships: []
       }
+      container_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          comment: string | null
+          container_id: string
+          field_name: string | null
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          comment?: string | null
+          container_id: string
+          field_name?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          comment?: string | null
+          container_id?: string
+          field_name?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "container_audit_log_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_containers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      container_location_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          comment: string | null
+          container_id: string
+          from_location_id: string | null
+          from_location_note: string | null
+          id: string
+          movement_id: string | null
+          to_location_id: string | null
+          to_location_note: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          comment?: string | null
+          container_id: string
+          from_location_id?: string | null
+          from_location_note?: string | null
+          id?: string
+          movement_id?: string | null
+          to_location_id?: string | null
+          to_location_note?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          comment?: string | null
+          container_id?: string
+          from_location_id?: string | null
+          from_location_note?: string | null
+          id?: string
+          movement_id?: string | null
+          to_location_id?: string | null
+          to_location_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "container_location_history_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_containers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_location_history_from_location_id_fkey"
+            columns: ["from_location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_location_history_movement_id_fkey"
+            columns: ["movement_id"]
+            isOneToOne: false
+            referencedRelation: "container_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_location_history_to_location_id_fkey"
+            columns: ["to_location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      container_movements: {
+        Row: {
+          comment: string | null
+          container_id: string
+          created_at: string
+          created_by: string
+          from_location_id: string | null
+          id: string
+          inventory_movement_id: string | null
+          movement_type: Database["public"]["Enums"]["container_movement_type"]
+          quantity: number
+          quantity_after: number | null
+          quantity_before: number | null
+          reference: string | null
+          to_location_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          container_id: string
+          created_at?: string
+          created_by: string
+          from_location_id?: string | null
+          id?: string
+          inventory_movement_id?: string | null
+          movement_type: Database["public"]["Enums"]["container_movement_type"]
+          quantity?: number
+          quantity_after?: number | null
+          quantity_before?: number | null
+          reference?: string | null
+          to_location_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          container_id?: string
+          created_at?: string
+          created_by?: string
+          from_location_id?: string | null
+          id?: string
+          inventory_movement_id?: string | null
+          movement_type?: Database["public"]["Enums"]["container_movement_type"]
+          quantity?: number
+          quantity_after?: number | null
+          quantity_before?: number | null
+          reference?: string | null
+          to_location_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "container_movements_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_containers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_movements_from_location_id_fkey"
+            columns: ["from_location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_movements_inventory_movement_id_fkey"
+            columns: ["inventory_movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_movements_to_location_id_fkey"
+            columns: ["to_location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_roles: {
         Row: {
           base_role: Database["public"]["Enums"]["app_role"]
@@ -3161,6 +3350,19 @@ export type Database = {
         }
         Returns: string
       }
+      record_container_movement: {
+        Args: {
+          _comment?: string
+          _container_id: string
+          _movement_type: Database["public"]["Enums"]["container_movement_type"]
+          _new_quantity?: number
+          _quantity?: number
+          _reference?: string
+          _to_location_id?: string
+          _to_location_note?: string
+        }
+        Returns: string
+      }
       record_mixture_weighing: {
         Args: {
           _actual_quantity: number
@@ -3189,6 +3391,16 @@ export type Database = {
         | "tank"
         | "flasche"
         | "sonstige"
+      container_movement_type:
+        | "eingang"
+        | "umlagerung"
+        | "verbrauch"
+        | "korrektur_plus"
+        | "korrektur_minus"
+        | "inventur"
+        | "entsorgung"
+        | "reservierung"
+        | "freigabe_reservierung"
       container_status:
         | "verfuegbar"
         | "reserviert"
@@ -3392,6 +3604,17 @@ export const Constants = {
         "tank",
         "flasche",
         "sonstige",
+      ],
+      container_movement_type: [
+        "eingang",
+        "umlagerung",
+        "verbrauch",
+        "korrektur_plus",
+        "korrektur_minus",
+        "inventur",
+        "entsorgung",
+        "reservierung",
+        "freigabe_reservierung",
       ],
       container_status: [
         "verfuegbar",
