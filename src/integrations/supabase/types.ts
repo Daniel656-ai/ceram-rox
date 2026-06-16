@@ -1035,6 +1035,13 @@ export type Database = {
       }
       mixture_planned_measurements: {
         Row: {
+          absolute_time: string | null
+          condition_kind:
+            | Database["public"]["Enums"]["step_condition_kind"]
+            | null
+          condition_text: string | null
+          condition_unit: string | null
+          condition_value: number | null
           created_at: string
           id: string
           offset_minutes: number | null
@@ -1042,11 +1049,19 @@ export type Database = {
           section_id: string
           sort_order: number
           target_value: number | null
+          time_mode: Database["public"]["Enums"]["step_time_mode"]
           tolerance: number | null
           unit: string | null
           updated_at: string
         }
         Insert: {
+          absolute_time?: string | null
+          condition_kind?:
+            | Database["public"]["Enums"]["step_condition_kind"]
+            | null
+          condition_text?: string | null
+          condition_unit?: string | null
+          condition_value?: number | null
           created_at?: string
           id?: string
           offset_minutes?: number | null
@@ -1054,11 +1069,19 @@ export type Database = {
           section_id: string
           sort_order?: number
           target_value?: number | null
+          time_mode?: Database["public"]["Enums"]["step_time_mode"]
           tolerance?: number | null
           unit?: string | null
           updated_at?: string
         }
         Update: {
+          absolute_time?: string | null
+          condition_kind?:
+            | Database["public"]["Enums"]["step_condition_kind"]
+            | null
+          condition_text?: string | null
+          condition_unit?: string | null
+          condition_value?: number | null
           created_at?: string
           id?: string
           offset_minutes?: number | null
@@ -1066,6 +1089,7 @@ export type Database = {
           section_id?: string
           sort_order?: number
           target_value?: number | null
+          time_mode?: Database["public"]["Enums"]["step_time_mode"]
           tolerance?: number | null
           unit?: string | null
           updated_at?: string
@@ -1132,6 +1156,13 @@ export type Database = {
       }
       mixture_process_steps: {
         Row: {
+          absolute_time: string | null
+          condition_kind:
+            | Database["public"]["Enums"]["step_condition_kind"]
+            | null
+          condition_text: string | null
+          condition_unit: string | null
+          condition_value: number | null
           created_at: string
           id: string
           instruction: string | null
@@ -1140,11 +1171,19 @@ export type Database = {
           raw_material_id: string | null
           section_id: string
           sort_order: number
+          time_mode: Database["public"]["Enums"]["step_time_mode"]
           unit: string | null
           updated_at: string
           window_minutes: number | null
         }
         Insert: {
+          absolute_time?: string | null
+          condition_kind?:
+            | Database["public"]["Enums"]["step_condition_kind"]
+            | null
+          condition_text?: string | null
+          condition_unit?: string | null
+          condition_value?: number | null
           created_at?: string
           id?: string
           instruction?: string | null
@@ -1153,11 +1192,19 @@ export type Database = {
           raw_material_id?: string | null
           section_id: string
           sort_order?: number
+          time_mode?: Database["public"]["Enums"]["step_time_mode"]
           unit?: string | null
           updated_at?: string
           window_minutes?: number | null
         }
         Update: {
+          absolute_time?: string | null
+          condition_kind?:
+            | Database["public"]["Enums"]["step_condition_kind"]
+            | null
+          condition_text?: string | null
+          condition_unit?: string | null
+          condition_value?: number | null
           created_at?: string
           id?: string
           instruction?: string | null
@@ -1166,6 +1213,7 @@ export type Database = {
           raw_material_id?: string | null
           section_id?: string
           sort_order?: number
+          time_mode?: Database["public"]["Enums"]["step_time_mode"]
           unit?: string | null
           updated_at?: string
           window_minutes?: number | null
@@ -1250,33 +1298,45 @@ export type Database = {
       }
       mixture_recipe_versions: {
         Row: {
+          change_reason: string | null
+          change_summary: string | null
           created_at: string
           created_by: string | null
           id: string
           is_active: boolean
           mixture_id: string
           notes: string | null
+          parent_version_id: string | null
           updated_at: string
+          version_label: string | null
           version_no: number
         }
         Insert: {
+          change_reason?: string | null
+          change_summary?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
           mixture_id: string
           notes?: string | null
+          parent_version_id?: string | null
           updated_at?: string
+          version_label?: string | null
           version_no: number
         }
         Update: {
+          change_reason?: string | null
+          change_summary?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           is_active?: boolean
           mixture_id?: string
           notes?: string | null
+          parent_version_id?: string | null
           updated_at?: string
+          version_label?: string | null
           version_no?: number
         }
         Relationships: [
@@ -1287,49 +1347,79 @@ export type Database = {
             referencedRelation: "mixtures"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mixture_recipe_versions_parent_version_id_fkey"
+            columns: ["parent_version_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_recipe_versions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       mixtures: {
         Row: {
           category: Database["public"]["Enums"]["mixture_category"]
+          copied_from_mixture_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           is_active: boolean
+          is_template: boolean
           mixture_number: string | null
           name: string
           target_concentration: string | null
+          template_kind:
+            | Database["public"]["Enums"]["mixture_template_kind"]
+            | null
           unit: string
           updated_at: string
         }
         Insert: {
           category?: Database["public"]["Enums"]["mixture_category"]
+          copied_from_mixture_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
+          is_template?: boolean
           mixture_number?: string | null
           name: string
           target_concentration?: string | null
+          template_kind?:
+            | Database["public"]["Enums"]["mixture_template_kind"]
+            | null
           unit?: string
           updated_at?: string
         }
         Update: {
           category?: Database["public"]["Enums"]["mixture_category"]
+          copied_from_mixture_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
+          is_template?: boolean
           mixture_number?: string | null
           name?: string
           target_concentration?: string | null
+          template_kind?:
+            | Database["public"]["Enums"]["mixture_template_kind"]
+            | null
           unit?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mixtures_copied_from_mixture_id_fkey"
+            columns: ["copied_from_mixture_id"]
+            isOneToOne: false
+            referencedRelation: "mixtures"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -2807,9 +2897,34 @@ export type Database = {
         Args: { _batch_id: string; _produced_quantity?: number }
         Returns: undefined
       }
-      create_mixture_recipe_version: {
-        Args: { _copy_from?: string; _mixture_id: string; _notes?: string }
+      copy_mixture: {
+        Args: {
+          _as_template?: boolean
+          _new_name: string
+          _new_number?: string
+          _source_id: string
+        }
         Returns: string
+      }
+      create_mixture_recipe_version:
+        | {
+            Args: { _copy_from?: string; _mixture_id: string; _notes?: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              _change_reason?: string
+              _change_summary?: string
+              _copy_from?: string
+              _mixture_id: string
+              _notes?: string
+              _version_label?: string
+            }
+            Returns: string
+          }
+      diff_recipe_versions: {
+        Args: { _version_a: string; _version_b: string }
+        Returns: Json
       }
       get_raw_material_derived_samples: {
         Args: { _raw_material_batch_id?: string; _raw_material_id: string }
@@ -2958,6 +3073,12 @@ export type Database = {
         | "abgebrochen"
         | "freigegeben"
       mixture_movement_type: "eingang" | "ausgang"
+      mixture_template_kind:
+        | "standard"
+        | "customer"
+        | "development"
+        | "pilot"
+        | "production"
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
@@ -2977,6 +3098,13 @@ export type Database = {
         | "entsorgt"
         | "zurueckgesendet"
       service_category: "labor" | "pilot_plant"
+      step_condition_kind:
+        | "temperature"
+        | "ph"
+        | "previous_step"
+        | "manual_release"
+        | "custom"
+      step_time_mode: "relative" | "absolute" | "condition"
       task_status: "open" | "in_progress" | "completed"
       traffic_light_status: "green" | "yellow" | "red"
     }
@@ -3123,6 +3251,13 @@ export const Constants = {
         "freigegeben",
       ],
       mixture_movement_type: ["eingang", "ausgang"],
+      mixture_template_kind: [
+        "standard",
+        "customer",
+        "development",
+        "pilot",
+        "production",
+      ],
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
@@ -3144,6 +3279,14 @@ export const Constants = {
         "zurueckgesendet",
       ],
       service_category: ["labor", "pilot_plant"],
+      step_condition_kind: [
+        "temperature",
+        "ph",
+        "previous_step",
+        "manual_release",
+        "custom",
+      ],
+      step_time_mode: ["relative", "absolute", "condition"],
       task_status: ["open", "in_progress", "completed"],
       traffic_light_status: ["green", "yellow", "red"],
     },

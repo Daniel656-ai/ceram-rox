@@ -22,12 +22,22 @@ export const recipeVersions = {
     unwrap<RecipeVersion>(
       db.from("mixture_recipe_versions").select("*").eq("mixture_id", mixtureId).eq("is_active", true).maybeSingle()
     ),
-  create: (mixtureId: string, copyFrom?: string | null, notes?: string | null) =>
+  create: (
+    mixtureId: string,
+    copyFrom?: string | null,
+    notes?: string | null,
+    versionLabel?: string | null,
+    changeSummary?: string | null,
+    changeReason?: string | null
+  ) =>
     unwrap<string>(
       db.rpc("create_mixture_recipe_version", {
         _mixture_id: mixtureId,
         _copy_from: copyFrom ?? null,
         _notes: notes ?? null,
+        _version_label: versionLabel ?? null,
+        _change_summary: changeSummary ?? null,
+        _change_reason: changeReason ?? null,
       })
     ),
   activate: (versionId: string) =>

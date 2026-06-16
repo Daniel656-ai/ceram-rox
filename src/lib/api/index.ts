@@ -83,6 +83,7 @@ import {
 import { batches } from "./batches";
 import { recipeVersions, processSections, processSteps, plannedMeasurements } from "./mixtureProcess";
 import { mixtureExecution } from "./mixtureExecution";
+import { mixtureTemplates } from "./mixtureTemplates";
 
 
 
@@ -151,6 +152,7 @@ export const api = {
   processSteps,
   plannedMeasurements,
   mixtureExecution,
+  mixtureTemplates,
 
 
 

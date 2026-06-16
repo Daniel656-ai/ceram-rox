@@ -21,8 +21,22 @@ export function useActiveRecipeVersion(mixtureId: string | undefined) {
 export function useCreateRecipeVersion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { mixtureId: string; copyFrom?: string | null; notes?: string | null }) =>
-      api.recipeVersions.create(args.mixtureId, args.copyFrom, args.notes),
+    mutationFn: (args: {
+      mixtureId: string;
+      copyFrom?: string | null;
+      notes?: string | null;
+      versionLabel?: string | null;
+      changeSummary?: string | null;
+      changeReason?: string | null;
+    }) =>
+      api.recipeVersions.create(
+        args.mixtureId,
+        args.copyFrom,
+        args.notes,
+        args.versionLabel,
+        args.changeSummary,
+        args.changeReason
+      ),
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["mixture_recipe_versions", v.mixtureId] });
       qc.invalidateQueries({ queryKey: ["mixture_active_version", v.mixtureId] });

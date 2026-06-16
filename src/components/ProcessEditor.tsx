@@ -31,6 +31,8 @@ import {
   useDeletePlannedMeasurement,
 } from "@/hooks/useMixtureProcess";
 import { useRawMaterials } from "@/hooks/useMixtures";
+import { StepTimePicker, StepTimeValue, defaultStepTime } from "@/components/StepTimePicker";
+import { formatStepTime } from "@/lib/processTime";
 
 interface Props {
   versionId: string;
@@ -49,7 +51,6 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
   const addMeas = useAddPlannedMeasurement(versionId);
   const delMeas = useDeletePlannedMeasurement(versionId);
 
-  // Add section dialog
   const [secOpen, setSecOpen] = useState(false);
   const [secName, setSecName] = useState("");
   const [secDesc, setSecDesc] = useState("");
@@ -66,10 +67,7 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
       target_temperature: secTemp ? Number(secTemp) : null,
       sort_order: (sections as any[]).length,
     });
-    setSecName("");
-    setSecDesc("");
-    setSecDuration("");
-    setSecTemp("");
+    setSecName(""); setSecDesc(""); setSecDuration(""); setSecTemp("");
     setSecOpen(false);
   };
 
@@ -79,13 +77,10 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
         <div className="flex justify-end">
           <Dialog open={secOpen} onOpenChange={setSecOpen}>
             <Button size="sm" onClick={() => setSecOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Prozessabschnitt hinzufügen
+              <Plus className="h-4 w-4 mr-2" /> Prozessabschnitt hinzufügen
             </Button>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Prozessabschnitt</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Prozessabschnitt</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div>
                   <Label>Name *</Label>
@@ -107,9 +102,7 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setSecOpen(false)}>
-                  Abbrechen
-                </Button>
+                <Button variant="outline" onClick={() => setSecOpen(false)}>Abbrechen</Button>
                 <Button onClick={handleAddSection}>Speichern</Button>
               </DialogFooter>
             </DialogContent>
@@ -144,29 +137,21 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
 }
 
 function SectionCard({
-  section,
-  index,
-  rawMaterials,
-  readOnly,
-  onDelete,
-  onAddStep,
-  onDelStep,
-  onAddMeas,
-  onDelMeas,
+  section, index, rawMaterials, readOnly, onDelete, onAddStep, onDelStep, onAddMeas, onDelMeas,
 }: any) {
   const [stepOpen, setStepOpen] = useState(false);
   const [stepMaterial, setStepMaterial] = useState("");
   const [stepQty, setStepQty] = useState("");
   const [stepUnit, setStepUnit] = useState("kg");
-  const [stepOffset, setStepOffset] = useState("");
   const [stepInstr, setStepInstr] = useState("");
+  const [stepTime, setStepTime] = useState<StepTimeValue>(defaultStepTime);
 
   const [measOpen, setMeasOpen] = useState(false);
   const [measName, setMeasName] = useState("");
   const [measUnit, setMeasUnit] = useState("");
   const [measTarget, setMeasTarget] = useState("");
   const [measTol, setMeasTol] = useState("");
-  const [measOffset, setMeasOffset] = useState("");
+  const [measTime, setMeasTime] = useState<StepTimeValue>(defaultStepTime);
 
   const submitStep = async () => {
     await onAddStep({
@@ -174,14 +159,11 @@ function SectionCard({
       raw_material_id: stepMaterial || null,
       planned_quantity: stepQty ? Number(stepQty) : null,
       unit: stepUnit || null,
-      offset_minutes: stepOffset ? Number(stepOffset) : null,
       instruction: stepInstr.trim() || null,
       sort_order: (section.mixture_process_steps || []).length,
+      ...stepTime,
     });
-    setStepMaterial("");
-    setStepQty("");
-    setStepOffset("");
-    setStepInstr("");
+    setStepMaterial(""); setStepQty(""); setStepInstr(""); setStepTime(defaultStepTime);
     setStepOpen(false);
   };
 
@@ -193,14 +175,10 @@ function SectionCard({
       unit: measUnit || null,
       target_value: measTarget ? Number(measTarget) : null,
       tolerance: measTol ? Number(measTol) : null,
-      offset_minutes: measOffset ? Number(measOffset) : null,
       sort_order: (section.mixture_planned_measurements || []).length,
+      ...measTime,
     });
-    setMeasName("");
-    setMeasUnit("");
-    setMeasTarget("");
-    setMeasTol("");
-    setMeasOffset("");
+    setMeasName(""); setMeasUnit(""); setMeasTarget(""); setMeasTol(""); setMeasTime(defaultStepTime);
     setMeasOpen(false);
   };
 
@@ -235,7 +213,6 @@ function SectionCard({
         )}
       </div>
 
-      {/* Steps (timed additions) */}
       <div className="mt-3">
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-sm font-medium">Zeitgesteuerte Zugaben & Schritte</h4>
@@ -244,27 +221,21 @@ function SectionCard({
               <Button variant="outline" size="sm" onClick={() => setStepOpen(true)}>
                 <Plus className="h-3 w-3 mr-1" /> Schritt
               </Button>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Schritt / Zugabe</DialogTitle>
-                </DialogHeader>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>Schritt / Zugabe</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   <div>
                     <Label>Rohstoff (optional)</Label>
                     <Select value={stepMaterial} onValueChange={setStepMaterial}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Kein Rohstoff (nur Anweisung)" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Kein Rohstoff (nur Anweisung)" /></SelectTrigger>
                       <SelectContent>
                         {rawMaterials.map((r: any) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            {r.material_name}
-                          </SelectItem>
+                          <SelectItem key={r.id} value={r.id}>{r.material_name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>Menge</Label>
                       <Input type="number" step="0.001" value={stepQty} onChange={(e) => setStepQty(e.target.value)} />
@@ -273,11 +244,8 @@ function SectionCard({
                       <Label>Einheit</Label>
                       <Input value={stepUnit} onChange={(e) => setStepUnit(e.target.value)} />
                     </div>
-                    <div>
-                      <Label>Offset (min)</Label>
-                      <Input type="number" value={stepOffset} onChange={(e) => setStepOffset(e.target.value)} />
-                    </div>
                   </div>
+                  <StepTimePicker value={stepTime} onChange={setStepTime} />
                   <div>
                     <Label>Anweisung</Label>
                     <Textarea rows={2} value={stepInstr} onChange={(e) => setStepInstr(e.target.value)} />
@@ -299,10 +267,8 @@ function SectionCard({
               .sort((a: any, b: any) => a.sort_order - b.sort_order)
               .map((step: any) => (
                 <li key={step.id} className="flex items-center justify-between text-sm bg-muted/30 rounded px-2 py-1">
-                  <div className="flex items-center gap-2">
-                    {step.offset_minutes != null && (
-                      <Badge variant="secondary" className="font-mono">+{step.offset_minutes}'</Badge>
-                    )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className="font-mono">{formatStepTime(step)}</Badge>
                     {step.raw_materials ? (
                       <span>
                         <strong>{step.raw_materials.material_name}</strong>
@@ -330,7 +296,6 @@ function SectionCard({
         )}
       </div>
 
-      {/* Planned measurements */}
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-sm font-medium flex items-center gap-1">
@@ -341,23 +306,17 @@ function SectionCard({
               <Button variant="outline" size="sm" onClick={() => setMeasOpen(true)}>
                 <Plus className="h-3 w-3 mr-1" /> Messung
               </Button>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Geplante Messung</DialogTitle>
-                </DialogHeader>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>Geplante Messung</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   <div>
                     <Label>Parameter *</Label>
                     <Input value={measName} onChange={(e) => setMeasName(e.target.value)} placeholder="z.B. Temperatur, pH-Wert" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <Label>Einheit</Label>
-                      <Input value={measUnit} onChange={(e) => setMeasUnit(e.target.value)} placeholder="°C, pH, %, A" />
-                    </div>
-                    <div>
-                      <Label>Offset (min)</Label>
-                      <Input type="number" value={measOffset} onChange={(e) => setMeasOffset(e.target.value)} />
+                      <Input value={measUnit} onChange={(e) => setMeasUnit(e.target.value)} placeholder="°C, pH, %" />
                     </div>
                     <div>
                       <Label>Sollwert</Label>
@@ -368,6 +327,7 @@ function SectionCard({
                       <Input type="number" step="0.01" value={measTol} onChange={(e) => setMeasTol(e.target.value)} />
                     </div>
                   </div>
+                  <StepTimePicker value={measTime} onChange={setMeasTime} />
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setMeasOpen(false)}>Abbrechen</Button>
@@ -383,10 +343,8 @@ function SectionCard({
           <ul className="space-y-1">
             {(section.mixture_planned_measurements || []).map((m: any) => (
               <li key={m.id} className="flex items-center justify-between text-sm bg-muted/30 rounded px-2 py-1">
-                <div className="flex items-center gap-2">
-                  {m.offset_minutes != null && (
-                    <Badge variant="secondary" className="font-mono">+{m.offset_minutes}'</Badge>
-                  )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="secondary" className="font-mono">{formatStepTime(m)}</Badge>
                   <strong>{m.parameter_name}</strong>
                   {m.target_value != null && (
                     <span className="text-muted-foreground">
