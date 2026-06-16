@@ -2048,9 +2048,15 @@ export type Database = {
           created_at: string
           delivery_date: string | null
           delivery_quantity: number | null
+          goods_receipt_date: string | null
           id: string
+          inspection_status: Database["public"]["Enums"]["raw_batch_inspection_status"]
+          manufacturer_batch: string | null
           notes: string | null
           raw_material_id: string
+          release_status: Database["public"]["Enums"]["raw_batch_release_status"]
+          released_at: string | null
+          released_by: string | null
           supplier: string | null
           updated_at: string
         }
@@ -2059,9 +2065,15 @@ export type Database = {
           created_at?: string
           delivery_date?: string | null
           delivery_quantity?: number | null
+          goods_receipt_date?: string | null
           id?: string
+          inspection_status?: Database["public"]["Enums"]["raw_batch_inspection_status"]
+          manufacturer_batch?: string | null
           notes?: string | null
           raw_material_id: string
+          release_status?: Database["public"]["Enums"]["raw_batch_release_status"]
+          released_at?: string | null
+          released_by?: string | null
           supplier?: string | null
           updated_at?: string
         }
@@ -2070,15 +2082,103 @@ export type Database = {
           created_at?: string
           delivery_date?: string | null
           delivery_quantity?: number | null
+          goods_receipt_date?: string | null
           id?: string
+          inspection_status?: Database["public"]["Enums"]["raw_batch_inspection_status"]
+          manufacturer_batch?: string | null
           notes?: string | null
           raw_material_id?: string
+          release_status?: Database["public"]["Enums"]["raw_batch_release_status"]
+          released_at?: string | null
+          released_by?: string | null
           supplier?: string | null
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "raw_material_batches_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raw_material_containers: {
+        Row: {
+          barcode: string | null
+          batch_id: string | null
+          container_code: string
+          created_at: string
+          created_by: string
+          current_quantity: number
+          id: string
+          initial_quantity: number
+          kind: Database["public"]["Enums"]["container_kind"]
+          location_id: string | null
+          location_note: string | null
+          notes: string | null
+          raw_material_id: string
+          reserved_quantity: number
+          status: Database["public"]["Enums"]["container_status"]
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          batch_id?: string | null
+          container_code: string
+          created_at?: string
+          created_by: string
+          current_quantity?: number
+          id?: string
+          initial_quantity?: number
+          kind?: Database["public"]["Enums"]["container_kind"]
+          location_id?: string | null
+          location_note?: string | null
+          notes?: string | null
+          raw_material_id: string
+          reserved_quantity?: number
+          status?: Database["public"]["Enums"]["container_status"]
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          batch_id?: string | null
+          container_code?: string
+          created_at?: string
+          created_by?: string
+          current_quantity?: number
+          id?: string
+          initial_quantity?: number
+          kind?: Database["public"]["Enums"]["container_kind"]
+          location_id?: string | null
+          location_note?: string | null
+          notes?: string | null
+          raw_material_id?: string
+          reserved_quantity?: number
+          status?: Database["public"]["Enums"]["container_status"]
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raw_material_containers_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_material_containers_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_material_containers_raw_material_id_fkey"
             columns: ["raw_material_id"]
             isOneToOne: false
             referencedRelation: "raw_materials"
@@ -2144,13 +2244,18 @@ export type Database = {
           created_by: string
           default_location_id: string | null
           description: string | null
+          eg_number: string | null
           hazard_categories: Json
           id: string
           is_hazardous: boolean
+          manufacturer: string | null
           material_name: string
           material_number: string | null
           mrs_number: string | null
           price_per_kg: number | null
+          sds_file_name: string | null
+          sds_storage_path: string | null
+          sds_uploaded_at: string | null
           supplier: string | null
           unit: string
           updated_at: string
@@ -2161,13 +2266,18 @@ export type Database = {
           created_by: string
           default_location_id?: string | null
           description?: string | null
+          eg_number?: string | null
           hazard_categories?: Json
           id?: string
           is_hazardous?: boolean
+          manufacturer?: string | null
           material_name: string
           material_number?: string | null
           mrs_number?: string | null
           price_per_kg?: number | null
+          sds_file_name?: string | null
+          sds_storage_path?: string | null
+          sds_uploaded_at?: string | null
           supplier?: string | null
           unit?: string
           updated_at?: string
@@ -2178,13 +2288,18 @@ export type Database = {
           created_by?: string
           default_location_id?: string | null
           description?: string | null
+          eg_number?: string | null
           hazard_categories?: Json
           id?: string
           is_hazardous?: boolean
+          manufacturer?: string | null
           material_name?: string
           material_number?: string | null
           mrs_number?: string | null
           price_per_kg?: number | null
+          sds_file_name?: string | null
+          sds_storage_path?: string | null
+          sds_uploaded_at?: string | null
           supplier?: string | null
           unit?: string
           updated_at?: string
@@ -3065,6 +3180,22 @@ export type Database = {
     Enums: {
       absence_type: "urlaub" | "krankheit" | "weiterbildung" | "sonstiges"
       app_role: "master" | "auftraggeber" | "durchfuehrer"
+      container_kind:
+        | "fass"
+        | "kanister"
+        | "sack"
+        | "big_bag"
+        | "ibc"
+        | "tank"
+        | "flasche"
+        | "sonstige"
+      container_status:
+        | "verfuegbar"
+        | "reserviert"
+        | "in_verwendung"
+        | "leer"
+        | "gesperrt"
+        | "entsorgt"
       downtime_status: "geplant" | "aktiv" | "abgeschlossen"
       downtime_type: "wartung" | "reparatur" | "sonstiges"
       measurement_status: "open" | "in_progress" | "completed"
@@ -3095,6 +3226,16 @@ export type Database = {
         | "andere"
       project_role: "owner" | "leader" | "member"
       project_status: "active" | "completed"
+      raw_batch_inspection_status:
+        | "ausstehend"
+        | "laufend"
+        | "bestanden"
+        | "nicht_bestanden"
+      raw_batch_release_status:
+        | "gesperrt"
+        | "in_pruefung"
+        | "freigegeben"
+        | "abgelehnt"
       sample_status:
         | "neu"
         | "eingelagert"
@@ -3242,6 +3383,24 @@ export const Constants = {
     Enums: {
       absence_type: ["urlaub", "krankheit", "weiterbildung", "sonstiges"],
       app_role: ["master", "auftraggeber", "durchfuehrer"],
+      container_kind: [
+        "fass",
+        "kanister",
+        "sack",
+        "big_bag",
+        "ibc",
+        "tank",
+        "flasche",
+        "sonstige",
+      ],
+      container_status: [
+        "verfuegbar",
+        "reserviert",
+        "in_verwendung",
+        "leer",
+        "gesperrt",
+        "entsorgt",
+      ],
       downtime_status: ["geplant", "aktiv", "abgeschlossen"],
       downtime_type: ["wartung", "reparatur", "sonstiges"],
       measurement_status: ["open", "in_progress", "completed"],
@@ -3275,6 +3434,18 @@ export const Constants = {
       ],
       project_role: ["owner", "leader", "member"],
       project_status: ["active", "completed"],
+      raw_batch_inspection_status: [
+        "ausstehend",
+        "laufend",
+        "bestanden",
+        "nicht_bestanden",
+      ],
+      raw_batch_release_status: [
+        "gesperrt",
+        "in_pruefung",
+        "freigegeben",
+        "abgelehnt",
+      ],
       sample_status: [
         "neu",
         "eingelagert",
