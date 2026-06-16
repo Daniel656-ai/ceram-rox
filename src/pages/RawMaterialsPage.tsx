@@ -233,7 +233,7 @@ export default function RawMaterialsPage() {
                           <span className="text-muted-foreground text-sm">–</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{stock.toFixed(1)}</Badge></TableCell>
+                      <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{stock.toFixed(2)}</Badge></TableCell>
                       <TableCell className="text-right text-muted-foreground">{m.unit}</TableCell>
                       {canManage && (
                         <TableCell className="text-right">
