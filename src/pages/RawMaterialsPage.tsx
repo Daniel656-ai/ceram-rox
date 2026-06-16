@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, MapPin, AlertTriangle, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Plus, Search, MapPin, AlertTriangle, Trash2, ArrowUp, ArrowDown, ArrowUpDown, ScanLine } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useInventoryMovements } from "@/hooks/useRawMaterials";
 import { useTranslation } from "react-i18next";
@@ -136,6 +136,9 @@ export default function RawMaterialsPage() {
           <p className="text-muted-foreground">{t("raw_materials:subtitle")}</p>
         </div>
         <div className="flex gap-2">
+          <Link to="/rohstoffe/scan">
+            <Button size="sm" variant="outline"><ScanLine className="h-4 w-4 mr-1" />Scannen</Button>
+          </Link>
           {canManage && (
             <>
               <StorageLocationsManager triggerLabel={t("raw_materials:new_location")} />

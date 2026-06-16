@@ -30,6 +30,7 @@ import SampleDetailPage from "./pages/SampleDetailPage";
 import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
+import ContainerScanPage from "./pages/ContainerScanPage";
 import ConsumablesPage from "./pages/ConsumablesPage";
 import LabPlanningPage from "./pages/LabPlanningPage";
 import MixturesPage from "./pages/MixturesPage";
@@ -80,6 +81,7 @@ const App = () => (
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
+              <Route path="/rohstoffe/scan" element={<ContainerScanPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
               <Route path="/verbrauchsmaterialien" element={<ConsumablesPage />} />
               <Route path="/laborplanung" element={<LabPlanningPage />} />
