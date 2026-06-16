@@ -65,6 +65,8 @@ export default function RawMaterialDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editNumber, setEditNumber] = useState("");
+  const [editCasNumber, setEditCasNumber] = useState("");
+  const [editMrsNumber, setEditMrsNumber] = useState("");
   const [editSupplier, setEditSupplier] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editUnit, setEditUnit] = useState("");
