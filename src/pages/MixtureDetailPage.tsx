@@ -570,6 +570,27 @@ export default function MixtureDetailPage() {
                 rows={3}
               />
             </div>
+            <div className="border-t pt-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox id="tpl" checked={editIsTemplate} onCheckedChange={(c) => setEditIsTemplate(!!c)} />
+                <Label htmlFor="tpl" className="cursor-pointer">Als Vorlage markieren</Label>
+              </div>
+              {editIsTemplate && (
+                <div>
+                  <Label>Vorlagentyp</Label>
+                  <Select value={editTemplateKind} onValueChange={setEditTemplateKind}>
+                    <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">Standardprodukt</SelectItem>
+                      <SelectItem value="customer">Kundenprodukt</SelectItem>
+                      <SelectItem value="development">Entwicklungsrezeptur</SelectItem>
+                      <SelectItem value="pilot">Pilotanlage</SelectItem>
+                      <SelectItem value="production">Produktionsanlage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter className="justify-between">
             <Button
