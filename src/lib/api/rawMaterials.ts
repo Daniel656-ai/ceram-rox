@@ -37,7 +37,7 @@ export const rawMaterials = {
       dbClient
         .from("raw_materials")
         .select(
-          "*, storage_locations(*), raw_material_batches(*), raw_material_documents(*), raw_material_analyses(*), raw_material_containers(*, storage_locations(*))" as any
+          "*, storage_locations(*), raw_material_batches(*), raw_material_documents(*), raw_material_analyses(*)"
         )
         .eq("id", id)
         .single()
