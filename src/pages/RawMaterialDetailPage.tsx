@@ -67,6 +67,8 @@ export default function RawMaterialDetailPage() {
   const [editNumber, setEditNumber] = useState("");
   const [editCasNumber, setEditCasNumber] = useState("");
   const [editMrsNumber, setEditMrsNumber] = useState("");
+  const [editEgNumber, setEditEgNumber] = useState("");
+  const [editManufacturer, setEditManufacturer] = useState("");
   const [editSupplier, setEditSupplier] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editUnit, setEditUnit] = useState("");
@@ -80,6 +82,8 @@ export default function RawMaterialDetailPage() {
     setEditNumber(mat.material_number || "");
     setEditCasNumber((mat as any).cas_number || "");
     setEditMrsNumber((mat as any).mrs_number || "");
+    setEditEgNumber((mat as any).eg_number || "");
+    setEditManufacturer((mat as any).manufacturer || "");
     setEditSupplier(mat.supplier || "");
     setEditDesc(mat.description || "");
     setEditUnit(mat.unit);
@@ -104,6 +108,8 @@ export default function RawMaterialDetailPage() {
         material_number: editNumber.trim() || null,
         cas_number: editCasNumber.trim() || null,
         mrs_number: editMrsNumber.trim() || null,
+        eg_number: editEgNumber.trim() || null,
+        manufacturer: editManufacturer.trim() || null,
         supplier: editSupplier || undefined,
         description: editDesc || undefined,
         unit: editUnit,
