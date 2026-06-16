@@ -85,6 +85,24 @@ export default function RawMaterialsPage() {
     return matchSearch && matchSupplier && matchLocation;
   });
 
+  const sorted = filtered ? [...filtered].sort((a, b) => {
+    const av = (sortKey === "number" ? (a.material_number || "") : a.material_name) || "";
+    const bv = (sortKey === "number" ? (b.material_number || "") : b.material_name) || "";
+    const cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+    return sortDir === "asc" ? cmp : -cmp;
+  }) : filtered;
+
+  const toggleSort = (key: "number" | "name") => {
+    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ active }: { active: boolean }) =>
+    !active ? <ArrowUpDown className="h-3 w-3 inline ml-1 opacity-50" />
+    : sortDir === "asc" ? <ArrowUp className="h-3 w-3 inline ml-1" />
+    : <ArrowDown className="h-3 w-3 inline ml-1" />;
+
+
   const handleAddMaterial = async () => {
     if (!name) { toast.error(t("raw_materials:name_required")); return; }
     // Duplicate name detection (case-insensitive)
