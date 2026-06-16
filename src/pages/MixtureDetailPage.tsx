@@ -2,9 +2,17 @@ import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Plus, Trash2, Play, FlaskConical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Play, FlaskConical, GitBranch, Settings2, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 import { CreateSampleFromBatchDialog } from "@/components/CreateSampleFromBatchDialog";
+import { ProcessEditor } from "@/components/ProcessEditor";
+import { RecipeAvailability } from "@/components/RecipeAvailability";
+import {
+  useRecipeVersions,
+  useActiveRecipeVersion,
+  useCreateRecipeVersion,
+  useActivateRecipeVersion,
+} from "@/hooks/useMixtureProcess";
 import {
   useMixture,
   useUpdateMixture,
@@ -237,12 +245,19 @@ export default function MixtureDetailPage() {
         </div>
       </div>
 
+      <RecipeVersionBar mixtureId={id!} />
+
       <Tabs defaultValue="recipe">
         <TabsList>
           <TabsTrigger value="recipe">{t("mixtures:recipe")}</TabsTrigger>
+          <TabsTrigger value="process"><Settings2 className="h-4 w-4 mr-2" />Prozess</TabsTrigger>
           <TabsTrigger value="batches">{t("mixtures:batches")}</TabsTrigger>
           <TabsTrigger value="inventory">{t("mixtures:inventory")}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="process">
+          <ProcessTab mixtureId={id!} />
+        </TabsContent>
 
         {/* Recipe */}
         <TabsContent value="recipe">
