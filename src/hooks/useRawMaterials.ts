@@ -60,7 +60,7 @@ export function useAddRawMaterial() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: (m: { material_name: string; material_number?: string | null; supplier?: string; description?: string; unit?: string; default_location_id?: string; is_hazardous?: boolean; hazard_categories?: string[] }) =>
+    mutationFn: (m: { material_name: string; material_number?: string | null; cas_number?: string | null; mrs_number?: string | null; supplier?: string; description?: string; unit?: string; default_location_id?: string; is_hazardous?: boolean; hazard_categories?: string[] }) =>
       api.rawMaterials.create(m, user!.id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["raw_materials"] }),
   });
@@ -69,7 +69,7 @@ export function useAddRawMaterial() {
 export function useUpdateRawMaterial() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...updates }: { id: string; material_name?: string; material_number?: string | null; supplier?: string; description?: string; unit?: string; default_location_id?: string | null; price_per_kg?: number; is_hazardous?: boolean; hazard_categories?: string[] }) =>
+    mutationFn: ({ id, ...updates }: { id: string; material_name?: string; material_number?: string | null; cas_number?: string | null; mrs_number?: string | null; supplier?: string; description?: string; unit?: string; default_location_id?: string | null; price_per_kg?: number; is_hazardous?: boolean; hazard_categories?: string[] }) =>
       api.rawMaterials.update(id, updates),
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["raw_materials"] });
