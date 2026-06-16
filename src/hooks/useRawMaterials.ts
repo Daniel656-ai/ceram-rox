@@ -60,7 +60,7 @@ export function useAddRawMaterial() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: (m: { material_name: string; material_number?: string | null; cas_number?: string | null; mrs_number?: string | null; supplier?: string; description?: string; unit?: string; default_location_id?: string; is_hazardous?: boolean; hazard_categories?: string[] }) =>
+    mutationFn: (m: { material_name: string; material_number?: string | null; cas_number?: string | null; mrs_number?: string | null; eg_number?: string | null; manufacturer?: string | null; supplier?: string; description?: string; unit?: string; default_location_id?: string; is_hazardous?: boolean; hazard_categories?: string[] }) =>
       api.rawMaterials.create(m, user!.id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["raw_materials"] }),
   });
@@ -69,7 +69,7 @@ export function useAddRawMaterial() {
 export function useUpdateRawMaterial() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...updates }: { id: string; material_name?: string; material_number?: string | null; cas_number?: string | null; mrs_number?: string | null; supplier?: string; description?: string; unit?: string; default_location_id?: string | null; price_per_kg?: number; is_hazardous?: boolean; hazard_categories?: string[] }) =>
+    mutationFn: ({ id, ...updates }: { id: string; material_name?: string; material_number?: string | null; cas_number?: string | null; mrs_number?: string | null; eg_number?: string | null; manufacturer?: string | null; supplier?: string; description?: string; unit?: string; default_location_id?: string | null; price_per_kg?: number; is_hazardous?: boolean; hazard_categories?: string[] }) =>
       api.rawMaterials.update(id, updates),
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["raw_materials"] });
@@ -92,8 +92,17 @@ export function useDeleteRawMaterial() {
 export function useAddBatch() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (b: { raw_material_id: string; batch_number: string; delivery_date?: string; delivery_quantity?: number; supplier?: string; notes?: string }) =>
+    mutationFn: (b: { raw_material_id: string; batch_number: string; delivery_date?: string; delivery_quantity?: number; supplier?: string; notes?: string; manufacturer_batch?: string | null; goods_receipt_date?: string | null; release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt"; inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden" }) =>
       api.rawMaterialBatches.add(b),
+    onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] }),
+  });
+}
+
+export function useUpdateBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, raw_material_id, ...updates }: { id: string; raw_material_id: string; batch_number?: string; manufacturer_batch?: string | null; goods_receipt_date?: string | null; delivery_date?: string | null; delivery_quantity?: number | null; supplier?: string | null; notes?: string | null; release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt"; inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden" }) =>
+      api.rawMaterialBatches.update(id, updates),
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] }),
   });
 }
@@ -104,6 +113,50 @@ export function useDeleteBatch() {
     mutationFn: ({ id }: { id: string; raw_material_id: string }) =>
       api.rawMaterialBatches.delete(id),
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] }),
+  });
+}
+
+// ---- Containers (Gebinde) ----
+export function useContainers(rawMaterialId?: string) {
+  return useQuery({
+    queryKey: ["raw_material_containers", rawMaterialId],
+    queryFn: () => api.rawMaterialContainers.list(rawMaterialId),
+    enabled: !!rawMaterialId,
+  });
+}
+
+export function useAddContainer() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: (c: Parameters<typeof api.rawMaterialContainers.create>[0]) =>
+      api.rawMaterialContainers.create(c, user!.id),
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
+    },
+  });
+}
+
+export function useUpdateContainer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, raw_material_id, ...updates }: { id: string; raw_material_id: string } & Parameters<typeof api.rawMaterialContainers.update>[1]) =>
+      api.rawMaterialContainers.update(id, updates),
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+    },
+  });
+}
+
+export function useDeleteContainer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: string; raw_material_id: string }) =>
+      api.rawMaterialContainers.delete(id),
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+    },
   });
 }
 
