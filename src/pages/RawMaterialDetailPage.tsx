@@ -381,6 +381,10 @@ export default function RawMaterialDetailPage() {
               <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={editMrsNumber} onChange={(e) => setEditMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
+              <div><Label>EG-Nummer</Label><Input value={editEgNumber} onChange={(e) => setEditEgNumber(e.target.value)} placeholder="z.B. 200-578-6" /></div>
+              <div><Label>Hersteller</Label><Input value={editManufacturer} onChange={(e) => setEditManufacturer(e.target.value)} placeholder="z.B. BASF" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Einheit</Label>
                 <Select value={editUnit} onValueChange={setEditUnit}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
