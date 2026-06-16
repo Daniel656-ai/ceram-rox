@@ -52,6 +52,7 @@ import {
   rawMaterialDocuments,
 } from "./rawMaterials";
 import { rawMaterialContainers } from "./rawMaterialContainers";
+import { containerMovements } from "./containerMovements";
 import { users, profiles } from "./users";
 import { customRoles } from "./customRoles";
 import { absences } from "./absences";
@@ -120,6 +121,7 @@ export const api = {
   inventoryMovements,
   rawMaterialDocuments,
   rawMaterialContainers,
+  containerMovements,
   users,
   profiles,
   customRoles,
