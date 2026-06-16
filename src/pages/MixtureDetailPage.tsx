@@ -717,3 +717,63 @@ function BatchSamplesCell({
     </div>
   );
 }
+
+function RecipeVersionBar({ mixtureId }: { mixtureId: string }) {
+  const { data: versions = [] } = useRecipeVersions(mixtureId);
+  const { data: active } = useActiveRecipeVersion(mixtureId);
+  const createVersion = useCreateRecipeVersion();
+  const activate = useActivateRecipeVersion(mixtureId);
+
+  return (
+    <Card className="p-3 flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
+        <GitBranch className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">Rezepturversionen:</span>
+        {(versions as any[]).length === 0 && (
+          <span className="text-xs italic text-muted-foreground">Noch keine Version angelegt</span>
+        )}
+        {(versions as any[]).map((v: any) => (
+          <Button
+            key={v.id}
+            size="sm"
+            variant={v.is_active ? "default" : "outline"}
+            onClick={() => activate.mutate(v.id)}
+          >
+            v{v.version_no}
+            {v.is_active && " ✓"}
+          </Button>
+        ))}
+      </div>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() =>
+          createVersion.mutate({
+            mixtureId,
+            copyFrom: active?.id ?? null,
+          })
+        }
+      >
+        <Plus className="h-4 w-4 mr-2" /> Neue Version
+      </Button>
+      <RecipeAvailability versionId={active?.id} />
+    </Card>
+  );
+}
+
+function ProcessTab({ mixtureId }: { mixtureId: string }) {
+  const { data: active } = useActiveRecipeVersion(mixtureId);
+  const createVersion = useCreateRecipeVersion();
+
+  if (!active) {
+    return (
+      <Card className="p-8 text-center space-y-3">
+        <p className="text-muted-foreground">Keine aktive Rezepturversion. Bitte zuerst Version anlegen.</p>
+        <Button onClick={() => createVersion.mutate({ mixtureId })}>
+          <Plus className="h-4 w-4 mr-2" /> Erste Version anlegen
+        </Button>
+      </Card>
+    );
+  }
+  return <ProcessEditor versionId={active.id} />;
+}
