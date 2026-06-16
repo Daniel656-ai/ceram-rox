@@ -49,6 +49,8 @@ export default function RawMaterialsPage() {
 
   const [name, setName] = useState("");
   const [number, setNumber] = useState("");
+  const [casNumber, setCasNumber] = useState("");
+  const [mrsNumber, setMrsNumber] = useState("");
   const [supplier, setSupplier] = useState("");
   const [desc, setDesc] = useState("");
   const [unit, setUnit] = useState("kg");
