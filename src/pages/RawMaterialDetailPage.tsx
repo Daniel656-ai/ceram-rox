@@ -254,9 +254,23 @@ export default function RawMaterialDetailPage() {
   const handleAddBatch = async () => {
     if (!bNum) { toast.error("Chargennummer ist Pflicht"); return; }
     try {
-      await addBatch.mutateAsync({ raw_material_id: id!, batch_number: bNum, delivery_date: bDate || undefined, delivery_quantity: bQty ? Number(bQty) : undefined, supplier: bSupplier || undefined, notes: bNotes || undefined });
+      await addBatch.mutateAsync({
+        raw_material_id: id!,
+        batch_number: bNum,
+        delivery_date: bDate || undefined,
+        delivery_quantity: bQty ? Number(bQty) : undefined,
+        supplier: bSupplier || undefined,
+        notes: bNotes || undefined,
+        manufacturer_batch: bManufacturerBatch.trim() || null,
+        goods_receipt_date: bGoodsReceiptDate || null,
+        release_status: bReleaseStatus,
+        inspection_status: bInspectionStatus,
+      });
       toast.success("Charge angelegt");
-      setBatchOpen(false); setBNum(""); setBDate(""); setBQty(""); setBSupplier(""); setBNotes("");
+      setBatchOpen(false);
+      setBNum(""); setBDate(""); setBQty(""); setBSupplier(""); setBNotes("");
+      setBManufacturerBatch(""); setBGoodsReceiptDate("");
+      setBReleaseStatus("in_pruefung"); setBInspectionStatus("ausstehend");
     } catch (e: any) { toast.error(e.message); }
   };
 
