@@ -244,9 +244,14 @@ export default function MixtureDetailPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{mixture.name}</h1>
-          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground flex-wrap">
             {mixture.mixture_number && <span>{mixture.mixture_number}</span>}
             <Badge variant="secondary">{t(`mixtures:category_${mixture.category}`)}</Badge>
+            {(mixture as any).is_template && (
+              <Badge variant="default" className="bg-blue-600">
+                Vorlage{(mixture as any).template_kind ? ` · ${(mixture as any).template_kind}` : ""}
+              </Badge>
+            )}
             {mixture.target_concentration && (
               <span>· {mixture.target_concentration}</span>
             )}
@@ -263,6 +268,9 @@ export default function MixtureDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setCopyName(mixture.name + " (Kopie)"); setCopyOpen(true); }}>
+              <CopyIcon className="h-4 w-4 mr-2" /> Duplizieren
+            </Button>
             <Button variant="outline" size="sm" onClick={openEdit}>
               {t("mixtures:edit")}
             </Button>
@@ -277,6 +285,7 @@ export default function MixtureDetailPage() {
           </div>
         </div>
       </div>
+
 
       <RecipeVersionBar mixtureId={id!} />
 
