@@ -36,13 +36,14 @@ jobs:
         shell: bash
         run: |
           cd src-tauri
-          current=$(grep '"version"' tauri.conf.json | head -1 | sed 's/.*: "\(.*\)".*/\1/')
+          current=$(grep '"version"' tauri.conf.json | head -1 | grep -oP '\d+\.\d+\.\d+')
           major=$(echo $current | cut -d. -f1)
           minor=$(echo $current | cut -d. -f2)
           patch=$(echo $current | cut -d. -f3)
           new="$major.$minor.$((patch + 1))"
-          sed -i "s/\"version\": \"$current\"/\"version\": \"$new\"/" tauri.conf.json
+          sed -i "s/\"version\": \"[0-9.]*\"/\"version\": \"$new\"/" tauri.conf.json
           echo "NEW_VERSION=$new" >> $GITHUB_ENV
+          cd ..
 
       - name: Commit version bump
         run: |
