@@ -142,12 +142,83 @@ export default function RawMaterialDetailPage() {
   const [bQty, setBQty] = useState("");
   const [bSupplier, setBSupplier] = useState("");
   const [bNotes, setBNotes] = useState("");
+  const [bManufacturerBatch, setBManufacturerBatch] = useState("");
+  const [bGoodsReceiptDate, setBGoodsReceiptDate] = useState("");
+  const [bReleaseStatus, setBReleaseStatus] = useState<"gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt">("in_pruefung");
+  const [bInspectionStatus, setBInspectionStatus] = useState<"ausstehend" | "laufend" | "bestanden" | "nicht_bestanden">("ausstehend");
 
-  // Analysis form
-  const [anaOpen, setAnaOpen] = useState(false);
-  const [aType, setAType] = useState("allgemein");
-  const [aParam, setAParam] = useState("");
-  const [aVal, setAVal] = useState("");
+  // Container (Gebinde) form
+  const { data: containers } = useContainers(id);
+  const addContainer = useAddContainer();
+  const updateContainer = useUpdateContainer();
+  const deleteContainer = useDeleteContainer();
+  const [contOpen, setContOpen] = useState(false);
+  const [cEditId, setCEditId] = useState<string | null>(null);
+  const [cCode, setCCode] = useState("");
+  const [cBarcode, setCBarcode] = useState("");
+  const [cBatchId, setCBatchId] = useState("");
+  const [cKind, setCKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige">("fass");
+  const [cInitial, setCInitial] = useState("");
+  const [cCurrent, setCCurrent] = useState("");
+  const [cUnit, setCUnit] = useState("kg");
+  const [cStatus, setCStatus] = useState<"verfuegbar" | "reserviert" | "in_verwendung" | "leer" | "gesperrt" | "entsorgt">("verfuegbar");
+  const [cLocationId, setCLocationId] = useState("");
+  const [cLocationNote, setCLocationNote] = useState("");
+  const [cNotes, setCNotes] = useState("");
+
+  const openContainerDialog = (existing?: any) => {
+    if (existing) {
+      setCEditId(existing.id);
+      setCCode(existing.container_code || "");
+      setCBarcode(existing.barcode || "");
+      setCBatchId(existing.batch_id || "");
+      setCKind(existing.kind);
+      setCInitial(String(existing.initial_quantity ?? ""));
+      setCCurrent(String(existing.current_quantity ?? ""));
+      setCUnit(existing.unit || "kg");
+      setCStatus(existing.status);
+      setCLocationId(existing.location_id || "");
+      setCLocationNote(existing.location_note || "");
+      setCNotes(existing.notes || "");
+    } else {
+      setCEditId(null);
+      setCCode(""); setCBarcode(""); setCBatchId("");
+      setCKind("fass"); setCInitial(""); setCCurrent("");
+      setCUnit(mat?.unit || "kg"); setCStatus("verfuegbar");
+      setCLocationId(mat?.default_location_id || "");
+      setCLocationNote(""); setCNotes("");
+    }
+    setContOpen(true);
+  };
+
+  const handleSaveContainer = async () => {
+    if (!id) return;
+    if (!cInitial || Number(cInitial) <= 0) { toast.error("Ursprüngliche Menge muss > 0 sein"); return; }
+    const payload = {
+      raw_material_id: id,
+      batch_id: cBatchId || null,
+      container_code: cCode.trim() || null,
+      barcode: cBarcode.trim() || null,
+      kind: cKind,
+      initial_quantity: Number(cInitial),
+      current_quantity: Number(cCurrent || cInitial),
+      unit: cUnit,
+      status: cStatus,
+      location_id: cLocationId || null,
+      location_note: cLocationNote || null,
+      notes: cNotes || null,
+    };
+    try {
+      if (cEditId) {
+        await updateContainer.mutateAsync({ id: cEditId, raw_material_id: id, ...payload });
+        toast.success("Gebinde aktualisiert");
+      } else {
+        await addContainer.mutateAsync(payload);
+        toast.success("Gebinde angelegt");
+      }
+      setContOpen(false);
+    } catch (e: any) { toast.error(e.message); }
+  };
   const [aUnit, setAUnit] = useState("");
   const [aBatchId, setABatchId] = useState("");
   const [aRemarks, setARemarks] = useState("");
