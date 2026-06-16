@@ -44,6 +44,8 @@ export default function RawMaterialsPage() {
   const [search, setSearch] = useState("");
   const [filterSupplier, setFilterSupplier] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
+  const [sortKey, setSortKey] = useState<"number" | "name">("number");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [open, setOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
 
