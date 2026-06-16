@@ -37,7 +37,7 @@ export const rawMaterials = {
       dbClient
         .from("raw_materials")
         .select(
-          "*, storage_locations(*), raw_material_batches(*), raw_material_documents(*), raw_material_analyses(*)"
+          "*, storage_locations(*), raw_material_batches(*), raw_material_documents(*), raw_material_analyses(*), raw_material_containers(*, storage_locations(*))" as any
         )
         .eq("id", id)
         .single()
@@ -49,6 +49,8 @@ export const rawMaterials = {
       material_number?: string | null;
       cas_number?: string | null;
       mrs_number?: string | null;
+      eg_number?: string | null;
+      manufacturer?: string | null;
       supplier?: string;
       description?: string;
       unit?: string;
@@ -73,6 +75,8 @@ export const rawMaterials = {
       material_number?: string | null;
       cas_number?: string | null;
       mrs_number?: string | null;
+      eg_number?: string | null;
+      manufacturer?: string | null;
       supplier?: string;
       description?: string;
       unit?: string;
@@ -80,6 +84,9 @@ export const rawMaterials = {
       price_per_kg?: number;
       is_hazardous?: boolean;
       hazard_categories?: string[];
+      sds_storage_path?: string | null;
+      sds_file_name?: string | null;
+      sds_uploaded_at?: string | null;
     }
   ) => run(dbClient.from("raw_materials").update(updates as any).eq("id", id)),
 
@@ -95,8 +102,29 @@ export const rawMaterialBatches = {
     delivery_quantity?: number;
     supplier?: string;
     notes?: string;
+    manufacturer_batch?: string | null;
+    goods_receipt_date?: string | null;
+    release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt";
+    inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden";
   }) =>
-    unwrap(dbClient.from("raw_material_batches").insert(b).select().single()),
+    unwrap(dbClient.from("raw_material_batches").insert(b as any).select().single()),
+
+  update: (
+    id: string,
+    updates: Partial<{
+      batch_number: string;
+      delivery_date: string | null;
+      delivery_quantity: number | null;
+      supplier: string | null;
+      notes: string | null;
+      manufacturer_batch: string | null;
+      goods_receipt_date: string | null;
+      release_status: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt";
+      inspection_status: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden";
+      released_by: string | null;
+      released_at: string | null;
+    }>
+  ) => run(dbClient.from("raw_material_batches").update(updates as any).eq("id", id)),
 
   delete: (id: string) =>
     run(dbClient.from("raw_material_batches").delete().eq("id", id)),

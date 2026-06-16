@@ -51,6 +51,7 @@ import {
   inventoryMovements,
   rawMaterialDocuments,
 } from "./rawMaterials";
+import { rawMaterialContainers } from "./rawMaterialContainers";
 import { users, profiles } from "./users";
 import { customRoles } from "./customRoles";
 import { absences } from "./absences";
@@ -118,6 +119,7 @@ export const api = {
   rawMaterialAnalyses,
   inventoryMovements,
   rawMaterialDocuments,
+  rawMaterialContainers,
   users,
   profiles,
   customRoles,
