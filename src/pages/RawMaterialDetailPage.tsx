@@ -78,6 +78,8 @@ export default function RawMaterialDetailPage() {
     if (!mat) return;
     setEditName(mat.material_name);
     setEditNumber(mat.material_number || "");
+    setEditCasNumber((mat as any).cas_number || "");
+    setEditMrsNumber((mat as any).mrs_number || "");
     setEditSupplier(mat.supplier || "");
     setEditDesc(mat.description || "");
     setEditUnit(mat.unit);
