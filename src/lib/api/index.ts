@@ -81,6 +81,8 @@ import {
   mixtureTraceability,
 } from "./mixtures";
 import { batches } from "./batches";
+import { recipeVersions, processSections, processSteps, plannedMeasurements } from "./mixtureProcess";
+import { mixtureExecution } from "./mixtureExecution";
 
 
 
@@ -144,6 +146,11 @@ export const api = {
   mixtureInventory,
   mixtureTraceability,
   batches,
+  recipeVersions,
+  processSections,
+  processSteps,
+  plannedMeasurements,
+  mixtureExecution,
 
 
 
