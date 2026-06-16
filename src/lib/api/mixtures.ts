@@ -32,6 +32,8 @@ export const mixtures = {
       category?: MixtureCategory;
       unit?: string;
       target_concentration?: string | null;
+      is_template?: boolean;
+      template_kind?: string | null;
     },
     createdBy: string
   ) =>
@@ -53,6 +55,8 @@ export const mixtures = {
       unit?: string;
       target_concentration?: string | null;
       is_active?: boolean;
+      is_template?: boolean;
+      template_kind?: string | null;
     }
   ) => run(db.from("mixtures").update(updates).eq("id", id)),
 
