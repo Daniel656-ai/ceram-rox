@@ -720,6 +720,36 @@ export default function MixtureDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Copy mixture dialog */}
+      <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mischung duplizieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Eine neue Mischung wird mit allen Rohstoffen, Prozessabschnitten, Schritten und Messpunkten als neue Version 1.0 angelegt.
+            </p>
+            <div>
+              <Label>Neuer Name *</Label>
+              <Input value={copyName} onChange={(e) => setCopyName(e.target.value)} />
+            </div>
+            <div>
+              <Label>Neue Nummer (optional)</Label>
+              <Input value={copyNumber} onChange={(e) => setCopyNumber(e.target.value)} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="cpyTpl" checked={copyAsTemplate} onCheckedChange={(c) => setCopyAsTemplate(!!c)} />
+              <Label htmlFor="cpyTpl" className="cursor-pointer">Als Vorlage speichern</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCopyOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleCopy} disabled={!copyName.trim()}>Duplizieren</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -787,40 +817,90 @@ function RecipeVersionBar({ mixtureId }: { mixtureId: string }) {
   const createVersion = useCreateRecipeVersion();
   const activate = useActivateRecipeVersion(mixtureId);
 
+  const [newOpen, setNewOpen] = useState(false);
+  const [vLabel, setVLabel] = useState("");
+  const [vSummary, setVSummary] = useState("");
+  const [vReason, setVReason] = useState("");
+  const [diffOpen, setDiffOpen] = useState(false);
+
+  const submitNewVersion = async () => {
+    await createVersion.mutateAsync({
+      mixtureId,
+      copyFrom: active?.id ?? null,
+      versionLabel: vLabel.trim() || null,
+      changeSummary: vSummary.trim() || null,
+      changeReason: vReason.trim() || null,
+    });
+    setVLabel(""); setVSummary(""); setVReason("");
+    setNewOpen(false);
+  };
+
   return (
-    <Card className="p-3 flex items-center justify-between gap-3 flex-wrap">
-      <div className="flex items-center gap-2 flex-wrap">
-        <GitBranch className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">Rezepturversionen:</span>
-        {(versions as any[]).length === 0 && (
-          <span className="text-xs italic text-muted-foreground">Noch keine Version angelegt</span>
-        )}
-        {(versions as any[]).map((v: any) => (
-          <Button
-            key={v.id}
-            size="sm"
-            variant={v.is_active ? "default" : "outline"}
-            onClick={() => activate.mutate(v.id)}
-          >
-            v{v.version_no}
-            {v.is_active && " ✓"}
+    <>
+      <Card className="p-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <GitBranch className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Rezepturversionen:</span>
+          {(versions as any[]).length === 0 && (
+            <span className="text-xs italic text-muted-foreground">Noch keine Version angelegt</span>
+          )}
+          {(versions as any[]).map((v: any) => (
+            <Button
+              key={v.id}
+              size="sm"
+              variant={v.is_active ? "default" : "outline"}
+              onClick={() => activate.mutate(v.id)}
+              title={v.change_summary || v.notes || ""}
+            >
+              v{v.version_label || v.version_no}
+              {v.is_active && " ✓"}
+            </Button>
+          ))}
+        </div>
+        <div className="flex gap-2 items-center">
+          {(versions as any[]).length >= 2 && (
+            <Button size="sm" variant="outline" onClick={() => setDiffOpen(true)}>
+              <ArrowRightLeft className="h-4 w-4 mr-2" /> Vergleichen
+            </Button>
+          )}
+          <Button size="sm" variant="secondary" onClick={() => setNewOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Neue Version
           </Button>
-        ))}
-      </div>
-      <Button
-        size="sm"
-        variant="secondary"
-        onClick={() =>
-          createVersion.mutate({
-            mixtureId,
-            copyFrom: active?.id ?? null,
-          })
-        }
-      >
-        <Plus className="h-4 w-4 mr-2" /> Neue Version
-      </Button>
-      <RecipeAvailability versionId={active?.id} />
-    </Card>
+        </div>
+        <RecipeAvailability versionId={active?.id} />
+      </Card>
+
+      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Neue Rezepturversion</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Eine neue Version wird auf Basis der aktuell aktiven Version erstellt. Bereits produzierte Chargen bleiben mit ihrer ursprünglichen Version verknüpft.
+            </p>
+            <div>
+              <Label>Versionsbezeichnung (optional)</Label>
+              <Input value={vLabel} onChange={(e) => setVLabel(e.target.value)} placeholder="z. B. 1.1 oder 2.0" />
+            </div>
+            <div>
+              <Label>Was wurde geändert?</Label>
+              <Textarea rows={2} value={vSummary} onChange={(e) => setVSummary(e.target.value)} />
+            </div>
+            <div>
+              <Label>Warum wurde geändert? (Begründung)</Label>
+              <Textarea rows={2} value={vReason} onChange={(e) => setVReason(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewOpen(false)}>Abbrechen</Button>
+            <Button onClick={submitNewVersion}>Anlegen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <VersionDiffDialog open={diffOpen} onOpenChange={setDiffOpen} mixtureId={mixtureId} />
+    </>
   );
 }
 
