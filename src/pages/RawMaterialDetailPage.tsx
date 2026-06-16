@@ -256,7 +256,7 @@ export default function RawMaterialDetailPage() {
             </AlertDialog>
           </>
         )}
-        <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{stock.toFixed(1)} {mat.unit}</Badge>
+        <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{stock.toFixed(2)} {mat.unit}</Badge>
       </div>
 
       {/* Hazard warning banner */}
