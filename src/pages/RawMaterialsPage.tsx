@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, MapPin, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, Search, MapPin, AlertTriangle, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useInventoryMovements } from "@/hooks/useRawMaterials";
 import { useTranslation } from "react-i18next";
@@ -44,6 +44,8 @@ export default function RawMaterialsPage() {
   const [search, setSearch] = useState("");
   const [filterSupplier, setFilterSupplier] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
+  const [sortKey, setSortKey] = useState<"number" | "name">("number");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [open, setOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
 
@@ -82,6 +84,24 @@ export default function RawMaterialsPage() {
     const matchLocation = !filterLocation || m.default_location_id === filterLocation;
     return matchSearch && matchSupplier && matchLocation;
   });
+
+  const sorted = filtered ? [...filtered].sort((a, b) => {
+    const av = (sortKey === "number" ? (a.material_number || "") : a.material_name) || "";
+    const bv = (sortKey === "number" ? (b.material_number || "") : b.material_name) || "";
+    const cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+    return sortDir === "asc" ? cmp : -cmp;
+  }) : filtered;
+
+  const toggleSort = (key: "number" | "name") => {
+    if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ active }: { active: boolean }) =>
+    !active ? <ArrowUpDown className="h-3 w-3 inline ml-1 opacity-50" />
+    : sortDir === "asc" ? <ArrowUp className="h-3 w-3 inline ml-1" />
+    : <ArrowDown className="h-3 w-3 inline ml-1" />;
+
 
   const handleAddMaterial = async () => {
     if (!name) { toast.error(t("raw_materials:name_required")); return; }
@@ -198,8 +218,8 @@ export default function RawMaterialsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("raw_materials:number")}</TableHead>
-                <TableHead>{t("raw_materials:name")}</TableHead>
+                <TableHead><button type="button" onClick={() => toggleSort("number")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:number")}<SortIcon active={sortKey === "number"} /></button></TableHead>
+                <TableHead><button type="button" onClick={() => toggleSort("name")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:name")}<SortIcon active={sortKey === "name"} /></button></TableHead>
                 <TableHead>{t("common:supplier")}</TableHead>
                 <TableHead>{t("raw_materials:location")}</TableHead>
                 <TableHead>{t("raw_materials:hazardous")}</TableHead>
@@ -211,10 +231,10 @@ export default function RawMaterialsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
-              ) : filtered?.length === 0 ? (
+              ) : sorted?.length === 0 ? (
                 <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center py-8 text-muted-foreground">{t("raw_materials:no_materials")}</TableCell></TableRow>
               ) : (
-                filtered?.map((m) => {
+                sorted?.map((m) => {
                   const stock = stockMap.get(m.id) || 0;
                   const hazards = ((m as any).hazard_categories as string[]) || [];
                   const isHazardous = (m as any).is_hazardous;
