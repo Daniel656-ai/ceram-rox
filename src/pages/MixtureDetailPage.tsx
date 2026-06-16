@@ -87,6 +87,14 @@ export default function MixtureDetailPage() {
   const [editCategory, setEditCategory] = useState<"mischung" | "loesung">("mischung");
   const [editUnit, setEditUnit] = useState("kg");
   const [editConc, setEditConc] = useState("");
+  const [editIsTemplate, setEditIsTemplate] = useState(false);
+  const [editTemplateKind, setEditTemplateKind] = useState<string>("");
+
+  // Copy dialog
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyName, setCopyName] = useState("");
+  const [copyNumber, setCopyNumber] = useState("");
+  const [copyAsTemplate, setCopyAsTemplate] = useState(false);
 
   const openEdit = () => {
     if (!mixture) return;
@@ -96,6 +104,8 @@ export default function MixtureDetailPage() {
     setEditCategory(mixture.category);
     setEditUnit(mixture.unit);
     setEditConc(mixture.target_concentration || "");
+    setEditIsTemplate(!!(mixture as any).is_template);
+    setEditTemplateKind((mixture as any).template_kind || "");
     setEditOpen(true);
   };
 
@@ -109,9 +119,30 @@ export default function MixtureDetailPage() {
       category: editCategory,
       unit: editUnit,
       target_concentration: editConc.trim() || null,
-    });
+      is_template: editIsTemplate,
+      template_kind: editIsTemplate ? (editTemplateKind || null) : null,
+    } as any);
     setEditOpen(false);
   };
+
+  const handleCopy = async () => {
+    if (!id || !copyName.trim()) return;
+    try {
+      const newId = await api.mixtureTemplates.copy(
+        id,
+        copyName.trim(),
+        copyNumber.trim() || null,
+        copyAsTemplate
+      );
+      toast({ title: "Mischung dupliziert" });
+      setCopyOpen(false);
+      setCopyName(""); setCopyNumber(""); setCopyAsTemplate(false);
+      navigate(`/mischungen/${newId}`);
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    }
+  };
+
 
   // Add recipe item
   const [recipeOpen, setRecipeOpen] = useState(false);
