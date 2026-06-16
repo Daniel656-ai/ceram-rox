@@ -219,6 +219,11 @@ export default function RawMaterialDetailPage() {
       setContOpen(false);
     } catch (e: any) { toast.error(e.message); }
   };
+  // Analysis form
+  const [anaOpen, setAnaOpen] = useState(false);
+  const [aType, setAType] = useState("allgemein");
+  const [aParam, setAParam] = useState("");
+  const [aVal, setAVal] = useState("");
   const [aUnit, setAUnit] = useState("");
   const [aBatchId, setABatchId] = useState("");
   const [aRemarks, setARemarks] = useState("");
