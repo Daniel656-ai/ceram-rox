@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   container: any | null;
+  defaultMovementType?: ContainerMovementType;
 }
 
 const MOVEMENT_LABELS: Record<ContainerMovementType, string> = {
@@ -40,14 +41,17 @@ function fmtDateTime(iso: string) {
   return d.toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" });
 }
 
-export function ContainerActionsDialog({ open, onOpenChange, container }: Props) {
+export function ContainerActionsDialog({ open, onOpenChange, container, defaultMovementType }: Props) {
   const { data: locations } = useStorageLocations();
   const { data: movements } = useContainerMovements(container?.id);
   const { data: history } = useContainerLocationHistory(container?.id);
   const { data: audit } = useContainerAuditLog(container?.id);
   const record = useRecordContainerMovement();
 
-  const [movementType, setMovementType] = useState<ContainerMovementType>("verbrauch");
+  const [movementType, setMovementType] = useState<ContainerMovementType>(defaultMovementType ?? "verbrauch");
+  useEffect(() => {
+    if (open && defaultMovementType) setMovementType(defaultMovementType);
+  }, [open, defaultMovementType, container?.id]);
   const [qty, setQty] = useState("");
   const [newQty, setNewQty] = useState("");
   const [toLoc, setToLoc] = useState("");
