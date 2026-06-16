@@ -47,6 +47,8 @@ export const rawMaterials = {
     m: {
       material_name: string;
       material_number?: string | null;
+      cas_number?: string | null;
+      mrs_number?: string | null;
       supplier?: string;
       description?: string;
       unit?: string;
