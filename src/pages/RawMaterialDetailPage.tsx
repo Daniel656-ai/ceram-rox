@@ -281,6 +281,10 @@ export default function RawMaterialDetailPage() {
               <div><Label>{t("raw_materials:material_number")}</Label><Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
+              <div><Label>{t("raw_materials:cas_number")}</Label><Input value={editCasNumber} onChange={(e) => setEditCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
+              <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={editMrsNumber} onChange={(e) => setEditMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div><Label>Einheit</Label>
                 <Select value={editUnit} onValueChange={setEditUnit}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
