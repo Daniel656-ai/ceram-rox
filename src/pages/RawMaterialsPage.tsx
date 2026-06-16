@@ -231,10 +231,10 @@ export default function RawMaterialsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
-              ) : filtered?.length === 0 ? (
+              ) : sorted?.length === 0 ? (
                 <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center py-8 text-muted-foreground">{t("raw_materials:no_materials")}</TableCell></TableRow>
               ) : (
-                filtered?.map((m) => {
+                sorted?.map((m) => {
                   const stock = stockMap.get(m.id) || 0;
                   const hazards = ((m as any).hazard_categories as string[]) || [];
                   const isHazardous = (m as any).is_hazardous;
