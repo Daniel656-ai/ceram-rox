@@ -130,6 +130,10 @@ export default function RawMaterialsPage() {
                       <div><Label>{t("raw_materials:material_number")}</Label><Input value={number} onChange={(e) => setNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
+                      <div><Label>{t("raw_materials:cas_number")}</Label><Input value={casNumber} onChange={(e) => setCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
+                      <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={mrsNumber} onChange={(e) => setMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("common:supplier")}</Label><Input value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div>
                       <div><Label>{t("common:unit")}</Label>
                         <Select value={unit} onValueChange={setUnit}>
