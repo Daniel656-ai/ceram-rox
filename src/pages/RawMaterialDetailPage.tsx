@@ -102,6 +102,8 @@ export default function RawMaterialDetailPage() {
         id: id!,
         material_name: editName,
         material_number: editNumber.trim() || null,
+        cas_number: editCasNumber.trim() || null,
+        mrs_number: editMrsNumber.trim() || null,
         supplier: editSupplier || undefined,
         description: editDesc || undefined,
         unit: editUnit,
