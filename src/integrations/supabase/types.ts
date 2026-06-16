@@ -690,11 +690,221 @@ export type Database = {
           },
         ]
       }
+      mixture_batch_deviations: {
+        Row: {
+          batch_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["mixture_deviation_kind"]
+          new_value: string | null
+          old_value: string | null
+          reason: string
+          section_id: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["mixture_deviation_kind"]
+          new_value?: string | null
+          old_value?: string | null
+          reason: string
+          section_id?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["mixture_deviation_kind"]
+          new_value?: string | null
+          old_value?: string | null
+          reason?: string
+          section_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_batch_deviations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_deviations_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_process_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixture_batch_measurements: {
+        Row: {
+          actual_value: number
+          batch_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          measured_at: string
+          measured_by: string | null
+          parameter_name: string
+          planned_measurement_id: string | null
+          section_id: string | null
+          target_value: number | null
+          unit: string | null
+        }
+        Insert: {
+          actual_value: number
+          batch_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          measured_at?: string
+          measured_by?: string | null
+          parameter_name: string
+          planned_measurement_id?: string | null
+          section_id?: string | null
+          target_value?: number | null
+          unit?: string | null
+        }
+        Update: {
+          actual_value?: number
+          batch_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          measured_at?: string
+          measured_by?: string | null
+          parameter_name?: string
+          planned_measurement_id?: string | null
+          section_id?: string | null
+          target_value?: number | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_batch_measurements_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_measurements_planned_measurement_id_fkey"
+            columns: ["planned_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_planned_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_measurements_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_process_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixture_batch_weighings: {
+        Row: {
+          actual_quantity: number
+          batch_id: string
+          created_at: string
+          deviation_abs: number | null
+          deviation_pct: number | null
+          id: string
+          inventory_movement_id: string | null
+          notes: string | null
+          raw_material_batch_id: string | null
+          raw_material_id: string
+          step_id: string | null
+          target_quantity: number | null
+          unit: string
+          weighed_at: string
+          weighed_by: string | null
+        }
+        Insert: {
+          actual_quantity: number
+          batch_id: string
+          created_at?: string
+          deviation_abs?: number | null
+          deviation_pct?: number | null
+          id?: string
+          inventory_movement_id?: string | null
+          notes?: string | null
+          raw_material_batch_id?: string | null
+          raw_material_id: string
+          step_id?: string | null
+          target_quantity?: number | null
+          unit?: string
+          weighed_at?: string
+          weighed_by?: string | null
+        }
+        Update: {
+          actual_quantity?: number
+          batch_id?: string
+          created_at?: string
+          deviation_abs?: number | null
+          deviation_pct?: number | null
+          id?: string
+          inventory_movement_id?: string | null
+          notes?: string | null
+          raw_material_batch_id?: string | null
+          raw_material_id?: string
+          step_id?: string | null
+          target_quantity?: number | null
+          unit?: string
+          weighed_at?: string
+          weighed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_batch_weighings_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_weighings_inventory_movement_id_fkey"
+            columns: ["inventory_movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_weighings_raw_material_batch_id_fkey"
+            columns: ["raw_material_batch_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_weighings_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_weighings_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_process_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mixture_batches: {
         Row: {
           batch_number: string
           concentration: string | null
           created_at: string
+          ended_at: string | null
+          execution_status: Database["public"]["Enums"]["mixture_exec_status"]
           expiry_date: string | null
           id: string
           mixture_id: string
@@ -702,6 +912,10 @@ export type Database = {
           produced_at: string
           produced_by: string
           produced_quantity: number
+          recipe_version_id: string | null
+          released_at: string | null
+          released_by: string | null
+          started_at: string | null
           status: Database["public"]["Enums"]["mixture_batch_status"]
           unit: string
           updated_at: string
@@ -710,6 +924,8 @@ export type Database = {
           batch_number: string
           concentration?: string | null
           created_at?: string
+          ended_at?: string | null
+          execution_status?: Database["public"]["Enums"]["mixture_exec_status"]
           expiry_date?: string | null
           id?: string
           mixture_id: string
@@ -717,6 +933,10 @@ export type Database = {
           produced_at?: string
           produced_by: string
           produced_quantity: number
+          recipe_version_id?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["mixture_batch_status"]
           unit?: string
           updated_at?: string
@@ -725,6 +945,8 @@ export type Database = {
           batch_number?: string
           concentration?: string | null
           created_at?: string
+          ended_at?: string | null
+          execution_status?: Database["public"]["Enums"]["mixture_exec_status"]
           expiry_date?: string | null
           id?: string
           mixture_id?: string
@@ -732,6 +954,10 @@ export type Database = {
           produced_at?: string
           produced_by?: string
           produced_quantity?: number
+          recipe_version_id?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["mixture_batch_status"]
           unit?: string
           updated_at?: string
@@ -742,6 +968,13 @@ export type Database = {
             columns: ["mixture_id"]
             isOneToOne: false
             referencedRelation: "mixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batches_recipe_version_id_fkey"
+            columns: ["recipe_version_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_recipe_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -800,6 +1033,160 @@ export type Database = {
           },
         ]
       }
+      mixture_planned_measurements: {
+        Row: {
+          created_at: string
+          id: string
+          offset_minutes: number | null
+          parameter_name: string
+          section_id: string
+          sort_order: number
+          target_value: number | null
+          tolerance: number | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          offset_minutes?: number | null
+          parameter_name: string
+          section_id: string
+          sort_order?: number
+          target_value?: number | null
+          tolerance?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          offset_minutes?: number | null
+          parameter_name?: string
+          section_id?: string
+          sort_order?: number
+          target_value?: number | null
+          tolerance?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_planned_measurements_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_process_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixture_process_sections: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          planned_duration_min: number | null
+          recipe_version_id: string
+          remarks: string | null
+          sort_order: number
+          target_temperature: number | null
+          target_unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          planned_duration_min?: number | null
+          recipe_version_id: string
+          remarks?: string | null
+          sort_order?: number
+          target_temperature?: number | null
+          target_unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          planned_duration_min?: number | null
+          recipe_version_id?: string
+          remarks?: string | null
+          sort_order?: number
+          target_temperature?: number | null
+          target_unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_process_sections_recipe_version_id_fkey"
+            columns: ["recipe_version_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_recipe_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixture_process_steps: {
+        Row: {
+          created_at: string
+          id: string
+          instruction: string | null
+          offset_minutes: number | null
+          planned_quantity: number | null
+          raw_material_id: string | null
+          section_id: string
+          sort_order: number
+          unit: string | null
+          updated_at: string
+          window_minutes: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instruction?: string | null
+          offset_minutes?: number | null
+          planned_quantity?: number | null
+          raw_material_id?: string | null
+          section_id: string
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+          window_minutes?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instruction?: string | null
+          offset_minutes?: number | null
+          planned_quantity?: number | null
+          raw_material_id?: string | null
+          section_id?: string
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+          window_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_process_steps_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_process_steps_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_process_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mixture_recipe_items: {
         Row: {
           created_at: string
@@ -809,6 +1196,7 @@ export type Database = {
           position: number
           quantity: number
           raw_material_id: string
+          recipe_version_id: string | null
           unit: string
           updated_at: string
         }
@@ -820,6 +1208,7 @@ export type Database = {
           position?: number
           quantity: number
           raw_material_id: string
+          recipe_version_id?: string | null
           unit?: string
           updated_at?: string
         }
@@ -831,6 +1220,7 @@ export type Database = {
           position?: number
           quantity?: number
           raw_material_id?: string
+          recipe_version_id?: string | null
           unit?: string
           updated_at?: string
         }
@@ -847,6 +1237,54 @@ export type Database = {
             columns: ["raw_material_id"]
             isOneToOne: false
             referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_recipe_items_recipe_version_id_fkey"
+            columns: ["recipe_version_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_recipe_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixture_recipe_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          mixture_id: string
+          notes: string | null
+          updated_at: string
+          version_no: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          mixture_id: string
+          notes?: string | null
+          updated_at?: string
+          version_no: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          mixture_id?: string
+          notes?: string | null
+          updated_at?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_recipe_versions_mixture_id_fkey"
+            columns: ["mixture_id"]
+            isOneToOne: false
+            referencedRelation: "mixtures"
             referencedColumns: ["id"]
           },
         ]
@@ -2341,6 +2779,10 @@ export type Database = {
       }
     }
     Functions: {
+      activate_mixture_recipe_version: {
+        Args: { _version_id: string }
+        Returns: undefined
+      }
       can_view_others_vacation: { Args: { _user_id: string }; Returns: boolean }
       check_user_absence_conflict: {
         Args: { _end: string; _start: string; _user_id: string }
@@ -2360,6 +2802,14 @@ export type Database = {
           start_at: string
           status: Database["public"]["Enums"]["downtime_status"]
         }[]
+      }
+      complete_mixture_batch: {
+        Args: { _batch_id: string; _produced_quantity?: number }
+        Returns: undefined
+      }
+      create_mixture_recipe_version: {
+        Args: { _copy_from?: string; _mixture_id: string; _notes?: string }
+        Returns: string
       }
       get_raw_material_derived_samples: {
         Args: { _raw_material_batch_id?: string; _raw_material_id: string }
@@ -2448,6 +2898,18 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      mixture_recipe_availability: {
+        Args: { _scale?: number; _version_id: string }
+        Returns: {
+          available: number
+          material_name: string
+          material_number: string
+          missing: number
+          raw_material_id: string
+          required: number
+          unit: string
+        }[]
+      }
       priority_enum_to_int: {
         Args: { p: Database["public"]["Enums"]["order_priority"] }
         Returns: number
@@ -2463,6 +2925,21 @@ export type Database = {
         }
         Returns: string
       }
+      record_mixture_weighing: {
+        Args: {
+          _actual_quantity: number
+          _batch_id: string
+          _notes?: string
+          _raw_material_batch_id: string
+          _raw_material_id: string
+          _step_id: string
+          _target_quantity: number
+          _unit: string
+        }
+        Returns: string
+      }
+      release_mixture_batch: { Args: { _batch_id: string }; Returns: undefined }
+      start_mixture_batch: { Args: { _batch_id: string }; Returns: undefined }
     }
     Enums: {
       absence_type: "urlaub" | "krankheit" | "weiterbildung" | "sonstiges"
@@ -2473,6 +2950,13 @@ export type Database = {
       milestone_status: "planned" | "in_progress" | "completed"
       mixture_batch_status: "produced" | "discarded"
       mixture_category: "mischung" | "loesung"
+      mixture_deviation_kind: "time" | "quantity" | "additional_raw" | "process"
+      mixture_exec_status:
+        | "geplant"
+        | "laufend"
+        | "abgeschlossen"
+        | "abgebrochen"
+        | "freigegeben"
       mixture_movement_type: "eingang" | "ausgang"
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
@@ -2630,6 +3114,14 @@ export const Constants = {
       milestone_status: ["planned", "in_progress", "completed"],
       mixture_batch_status: ["produced", "discarded"],
       mixture_category: ["mischung", "loesung"],
+      mixture_deviation_kind: ["time", "quantity", "additional_raw", "process"],
+      mixture_exec_status: [
+        "geplant",
+        "laufend",
+        "abgeschlossen",
+        "abgebrochen",
+        "freigegeben",
+      ],
       mixture_movement_type: ["eingang", "ausgang"],
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
