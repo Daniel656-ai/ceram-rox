@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -41,6 +43,14 @@ jobs:
           new="$major.$minor.$((patch + 1))"
           sed -i "s/\"version\": \"$current\"/\"version\": \"$new\"/" tauri.conf.json
           echo "NEW_VERSION=$new" >> $GITHUB_ENV
+
+      - name: Commit version bump
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add src-tauri/tauri.conf.json
+          git commit -m "chore: bump version to v${{ env.NEW_VERSION }}"
+          git push
 
       - uses: tauri-apps/tauri-action@v0
         env:
