@@ -77,7 +77,7 @@ export default function RawMaterialsPage() {
 
   const filtered = materials?.filter((m) => {
     const q = search.toLowerCase();
-    const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
+    const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || ((m as any).cas_number || "").toLowerCase().includes(q) || ((m as any).mrs_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
     const matchSupplier = !filterSupplier || m.supplier === filterSupplier;
     const matchLocation = !filterLocation || m.default_location_id === filterLocation;
     return matchSearch && matchSupplier && matchLocation;
