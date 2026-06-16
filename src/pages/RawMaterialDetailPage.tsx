@@ -225,7 +225,7 @@ export default function RawMaterialDetailPage() {
             <span>{mat.material_name}</span>
             <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
           </h1>
-          <p className="text-sm text-muted-foreground">{mat.material_number || "—"} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg</p>
+          <p className="text-sm text-muted-foreground">{mat.material_number || "—"} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg{(mat as any).cas_number ? ` · CAS: ${(mat as any).cas_number}` : ""}{(mat as any).mrs_number ? ` · MRS: ${(mat as any).mrs_number}` : ""}</p>
         </div>
         {canManage && (
           <>
