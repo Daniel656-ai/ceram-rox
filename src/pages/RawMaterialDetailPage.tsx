@@ -65,6 +65,8 @@ export default function RawMaterialDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editNumber, setEditNumber] = useState("");
+  const [editCasNumber, setEditCasNumber] = useState("");
+  const [editMrsNumber, setEditMrsNumber] = useState("");
   const [editSupplier, setEditSupplier] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editUnit, setEditUnit] = useState("");
@@ -76,6 +78,8 @@ export default function RawMaterialDetailPage() {
     if (!mat) return;
     setEditName(mat.material_name);
     setEditNumber(mat.material_number || "");
+    setEditCasNumber((mat as any).cas_number || "");
+    setEditMrsNumber((mat as any).mrs_number || "");
     setEditSupplier(mat.supplier || "");
     setEditDesc(mat.description || "");
     setEditUnit(mat.unit);
@@ -98,6 +102,8 @@ export default function RawMaterialDetailPage() {
         id: id!,
         material_name: editName,
         material_number: editNumber.trim() || null,
+        cas_number: editCasNumber.trim() || null,
+        mrs_number: editMrsNumber.trim() || null,
         supplier: editSupplier || undefined,
         description: editDesc || undefined,
         unit: editUnit,
@@ -219,7 +225,7 @@ export default function RawMaterialDetailPage() {
             <span>{mat.material_name}</span>
             <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
           </h1>
-          <p className="text-sm text-muted-foreground">{mat.material_number || "—"} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg</p>
+          <p className="text-sm text-muted-foreground">{mat.material_number || "—"} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg{(mat as any).cas_number ? ` · CAS: ${(mat as any).cas_number}` : ""}{(mat as any).mrs_number ? ` · MRS: ${(mat as any).mrs_number}` : ""}</p>
         </div>
         {canManage && (
           <>
@@ -273,6 +279,10 @@ export default function RawMaterialDetailPage() {
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
               <div><Label>{t("raw_materials:material_number")}</Label><Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>{t("raw_materials:cas_number")}</Label><Input value={editCasNumber} onChange={(e) => setEditCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
+              <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={editMrsNumber} onChange={(e) => setEditMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Einheit</Label>

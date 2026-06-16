@@ -2139,6 +2139,7 @@ export type Database = {
       }
       raw_materials: {
         Row: {
+          cas_number: string | null
           created_at: string
           created_by: string
           default_location_id: string | null
@@ -2148,12 +2149,14 @@ export type Database = {
           is_hazardous: boolean
           material_name: string
           material_number: string | null
+          mrs_number: string | null
           price_per_kg: number | null
           supplier: string | null
           unit: string
           updated_at: string
         }
         Insert: {
+          cas_number?: string | null
           created_at?: string
           created_by: string
           default_location_id?: string | null
@@ -2163,12 +2166,14 @@ export type Database = {
           is_hazardous?: boolean
           material_name: string
           material_number?: string | null
+          mrs_number?: string | null
           price_per_kg?: number | null
           supplier?: string | null
           unit?: string
           updated_at?: string
         }
         Update: {
+          cas_number?: string | null
           created_at?: string
           created_by?: string
           default_location_id?: string | null
@@ -2178,6 +2183,7 @@ export type Database = {
           is_hazardous?: boolean
           material_name?: string
           material_number?: string | null
+          mrs_number?: string | null
           price_per_kg?: number | null
           supplier?: string | null
           unit?: string

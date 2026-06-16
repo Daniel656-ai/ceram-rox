@@ -49,6 +49,8 @@ export default function RawMaterialsPage() {
 
   const [name, setName] = useState("");
   const [number, setNumber] = useState("");
+  const [casNumber, setCasNumber] = useState("");
+  const [mrsNumber, setMrsNumber] = useState("");
   const [supplier, setSupplier] = useState("");
   const [desc, setDesc] = useState("");
   const [unit, setUnit] = useState("kg");
@@ -75,7 +77,7 @@ export default function RawMaterialsPage() {
 
   const filtered = materials?.filter((m) => {
     const q = search.toLowerCase();
-    const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
+    const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || ((m as any).cas_number || "").toLowerCase().includes(q) || ((m as any).mrs_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
     const matchSupplier = !filterSupplier || m.supplier === filterSupplier;
     const matchLocation = !filterLocation || m.default_location_id === filterLocation;
     return matchSearch && matchSupplier && matchLocation;
@@ -87,9 +89,9 @@ export default function RawMaterialsPage() {
     const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
     if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
-      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
+      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
       toast.success(t("raw_materials:material_created"));
-      setOpen(false); setName(""); setNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
+      setOpen(false); setName(""); setNumber(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
   };
 
@@ -126,6 +128,10 @@ export default function RawMaterialsPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("raw_materials:material_name")}</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
                       <div><Label>{t("raw_materials:material_number")}</Label><Input value={number} onChange={(e) => setNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><Label>{t("raw_materials:cas_number")}</Label><Input value={casNumber} onChange={(e) => setCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
+                      <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={mrsNumber} onChange={(e) => setMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("common:supplier")}</Label><Input value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div>
