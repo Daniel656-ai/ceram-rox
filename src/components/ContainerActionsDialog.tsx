@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, AlertTriangle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useRecordContainerMovement, useContainerMovements, useContainerLocationHistory, useContainerAuditLog, useStorageLocations } from "@/hooks/useRawMaterials";
 import type { ContainerMovementType } from "@/lib/api/containerMovements";
@@ -31,6 +34,17 @@ const MOVEMENT_LABELS: Record<ContainerMovementType, string> = {
   freigabe_reservierung: "Reservierung freigeben",
 };
 
+// Schema: positive Menge, max 1 Mio., bis zu 3 Nachkommastellen
+const qtySchema = z.coerce.number({ invalid_type_error: "Menge muss eine Zahl sein" })
+  .positive("Menge muss > 0 sein")
+  .max(1_000_000, "Menge unrealistisch hoch (max 1.000.000)");
+
+const newQtySchema = z.coerce.number({ invalid_type_error: "Ist-Bestand muss eine Zahl sein" })
+  .min(0, "Bestand darf nicht negativ sein")
+  .max(1_000_000, "Wert unrealistisch hoch");
+
+const textSchema = z.string().trim().max(500, "Maximal 500 Zeichen");
+
 function fmtLoc(l: any) {
   if (!l) return "–";
   return [l.name, l.hall, l.room, l.shelf, l.position].filter(Boolean).join(" › ");
@@ -49,15 +63,92 @@ export function ContainerActionsDialog({ open, onOpenChange, container, defaultM
   const record = useRecordContainerMovement();
 
   const [movementType, setMovementType] = useState<ContainerMovementType>(defaultMovementType ?? "verbrauch");
-  useEffect(() => {
-    if (open && defaultMovementType) setMovementType(defaultMovementType);
-  }, [open, defaultMovementType, container?.id]);
   const [qty, setQty] = useState("");
   const [newQty, setNewQty] = useState("");
   const [toLoc, setToLoc] = useState("");
   const [toLocNote, setToLocNote] = useState("");
   const [reference, setReference] = useState("");
   const [comment, setComment] = useState("");
+
+  const resetForm = () => {
+    setQty(""); setNewQty(""); setToLoc(""); setToLocNote(""); setReference(""); setComment("");
+  };
+
+  useEffect(() => {
+    if (open && defaultMovementType) setMovementType(defaultMovementType);
+    if (open) resetForm();
+  }, [open, defaultMovementType, container?.id]);
+
+  // ----- Pre-flight Validierung -----
+  const validation = useMemo(() => {
+    if (!container) return { blockers: [] as string[], warnings: [] as string[], preview: null as number | null };
+    const current = Number(container.current_quantity || 0);
+    const reserved = Number(container.reserved_quantity || 0);
+    const available = Math.max(current - reserved, 0);
+    const qtyNum = Number(qty || 0);
+    const newQtyNum = Number(newQty || 0);
+
+    const blockers: string[] = [];
+    const warnings: string[] = [];
+    let preview: number | null = null;
+
+    // Status-basierte Sperren
+    if (container.status === "entsorgt" && movementType !== "inventur") {
+      blockers.push("Gebinde wurde entsorgt – nur Inventur ist möglich.");
+    }
+    if (container.status === "gesperrt" && !["inventur", "freigabe_reservierung", "umlagerung"].includes(movementType)) {
+      blockers.push("Gebinde ist gesperrt – keine Mengenbuchung möglich. Bitte zuerst Status ändern.");
+    }
+
+    // Mengenlogik pro Bewegungsart
+    switch (movementType) {
+      case "verbrauch":
+      case "korrektur_minus":
+        preview = current - qtyNum;
+        if (qtyNum > 0 && qtyNum > current) {
+          blockers.push(`Bestand reicht nicht aus: angefordert ${qtyNum.toFixed(3)} ${container.unit}, vorhanden ${current.toFixed(3)} ${container.unit}.`);
+        } else if (qtyNum > 0 && qtyNum > available && movementType === "verbrauch") {
+          warnings.push(`Achtung: ${reserved.toFixed(3)} ${container.unit} sind reserviert – frei verfügbar wären nur ${available.toFixed(3)} ${container.unit}.`);
+        }
+        break;
+      case "eingang":
+      case "korrektur_plus":
+        preview = current + qtyNum;
+        if (qtyNum > 0 && preview > Number(container.initial_quantity || 0) * 1.5 && container.initial_quantity > 0) {
+          warnings.push(`Neuer Bestand (${preview.toFixed(3)}) übersteigt 150 % der Ursprungsmenge (${Number(container.initial_quantity).toFixed(3)}).`);
+        }
+        break;
+      case "reservierung":
+        if (qtyNum > 0 && qtyNum > available) {
+          blockers.push(`Reservierung übersteigt freien Bestand: angefordert ${qtyNum.toFixed(3)}, frei ${available.toFixed(3)} ${container.unit}.`);
+        }
+        break;
+      case "freigabe_reservierung":
+        if (qtyNum > 0 && qtyNum > reserved) {
+          blockers.push(`Es sind nur ${reserved.toFixed(3)} ${container.unit} reserviert, ${qtyNum.toFixed(3)} können nicht freigegeben werden.`);
+        }
+        break;
+      case "inventur":
+        preview = newQtyNum;
+        if (newQty !== "" && Math.abs(newQtyNum - current) > current * 0.5 && current > 0) {
+          warnings.push(`Große Abweichung von ${(newQtyNum - current).toFixed(3)} ${container.unit} – bitte verifizieren.`);
+        }
+        break;
+      case "umlagerung":
+        if (toLoc && toLoc === container.location_id) {
+          warnings.push("Ziel-Lagerort entspricht dem aktuellen Lagerort.");
+        }
+        break;
+      case "entsorgung":
+        preview = 0;
+        if (current > 0) {
+          warnings.push(`Restbestand von ${current.toFixed(3)} ${container.unit} wird auf 0 gesetzt.`);
+        }
+        break;
+    }
+
+    return { blockers, warnings, preview };
+  }, [container, movementType, qty, newQty, toLoc]);
 
   if (!container) return null;
 
@@ -66,12 +157,26 @@ export function ContainerActionsDialog({ open, onOpenChange, container, defaultM
   const needsToLoc = movementType === "umlagerung";
 
   const handleSubmit = async () => {
-    if (needsQty && (!qty || Number(qty) <= 0)) {
-      toast.error("Menge muss > 0 sein"); return;
+    // Schema-Validierung
+    if (needsQty) {
+      const r = qtySchema.safeParse(qty);
+      if (!r.success) { toast.error(r.error.issues[0].message); return; }
     }
-    if (needsToLoc && !toLoc) {
-      toast.error("Ziel-Lagerort wählen"); return;
+    if (needsNewQty) {
+      const r = newQtySchema.safeParse(newQty);
+      if (!r.success) { toast.error(r.error.issues[0].message); return; }
     }
+    if (needsToLoc && !toLoc) { toast.error("Ziel-Lagerort wählen"); return; }
+    const refR = textSchema.safeParse(reference);
+    if (!refR.success) { toast.error(`Referenz: ${refR.error.issues[0].message}`); return; }
+    const cmtR = textSchema.safeParse(comment);
+    if (!cmtR.success) { toast.error(`Kommentar: ${cmtR.error.issues[0].message}`); return; }
+
+    if (validation.blockers.length > 0) {
+      toast.error("Buchung blockiert", { description: validation.blockers[0] });
+      return;
+    }
+
     try {
       await record.mutateAsync({
         container_id: container.id,
@@ -80,16 +185,27 @@ export function ContainerActionsDialog({ open, onOpenChange, container, defaultM
         quantity: needsQty ? Number(qty) : null,
         new_quantity: needsNewQty ? Number(newQty || "0") : null,
         to_location_id: needsToLoc ? toLoc : null,
-        to_location_note: needsToLoc ? toLocNote || null : null,
+        to_location_note: needsToLoc ? toLocNote.trim() || null : null,
         reference: reference.trim() || null,
         comment: comment.trim() || null,
       });
       toast.success(`${MOVEMENT_LABELS[movementType]} gebucht`);
-      setQty(""); setNewQty(""); setToLoc(""); setToLocNote(""); setReference(""); setComment("");
+      resetForm();
     } catch (e: any) {
-      toast.error(e.message);
+      // Server-seitige Fehlermeldungen freundlich übersetzen
+      const msg = String(e?.message || e);
+      if (msg.includes("negativ")) {
+        toast.error("Bestand würde negativ – bitte Menge prüfen.");
+      } else if (msg.includes("Berechtigung")) {
+        toast.error("Keine Berechtigung für diese Buchung.");
+      } else {
+        toast.error("Buchung fehlgeschlagen", { description: msg });
+      }
     }
   };
+
+  const canSubmit = validation.blockers.length === 0 && !record.isPending &&
+    (!needsQty || qty !== "") && (!needsNewQty || newQty !== "") && (!needsToLoc || !!toLoc);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,6 +215,9 @@ export function ContainerActionsDialog({ open, onOpenChange, container, defaultM
             Gebinde {container.container_code}
             <span className="ml-3 text-sm font-normal text-muted-foreground">
               Bestand: {Number(container.current_quantity).toFixed(3)} {container.unit}
+              {Number(container.reserved_quantity) > 0 && (
+                <> · reserviert {Number(container.reserved_quantity).toFixed(3)}</>
+              )}
             </span>
           </DialogTitle>
         </DialogHeader>
@@ -126,13 +245,13 @@ export function ContainerActionsDialog({ open, onOpenChange, container, defaultM
             {needsQty && (
               <div>
                 <Label>Menge ({container.unit}) *</Label>
-                <Input type="number" step="0.001" value={qty} onChange={(e) => setQty(e.target.value)} />
+                <Input type="number" step="0.001" min="0" max="1000000" value={qty} onChange={(e) => setQty(e.target.value)} />
               </div>
             )}
             {needsNewQty && (
               <div>
                 <Label>Neuer Ist-Bestand ({container.unit}) *</Label>
-                <Input type="number" step="0.001" value={newQty} onChange={(e) => setNewQty(e.target.value)} placeholder={`alt: ${Number(container.current_quantity).toFixed(3)}`} />
+                <Input type="number" step="0.001" min="0" max="1000000" value={newQty} onChange={(e) => setNewQty(e.target.value)} placeholder={`alt: ${Number(container.current_quantity).toFixed(3)}`} />
               </div>
             )}
             {needsToLoc && (
@@ -148,21 +267,47 @@ export function ContainerActionsDialog({ open, onOpenChange, container, defaultM
                 </div>
                 <div>
                   <Label>Ziel-Lagerort-Notiz</Label>
-                  <Input value={toLocNote} onChange={(e) => setToLocNote(e.target.value)} placeholder="z.B. Stellplatz 7" />
+                  <Input value={toLocNote} maxLength={200} onChange={(e) => setToLocNote(e.target.value)} placeholder="z.B. Stellplatz 7" />
                 </div>
               </>
             )}
+
+            {/* Validierungs-Hinweise */}
+            {validation.blockers.map((b, i) => (
+              <Alert key={`b${i}`} variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{b}</AlertDescription>
+              </Alert>
+            ))}
+            {validation.warnings.map((w, i) => (
+              <Alert key={`w${i}`}>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{w}</AlertDescription>
+              </Alert>
+            ))}
+            {validation.preview !== null && validation.blockers.length === 0 && (qty || newQty) && (
+              <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Neuer Bestand nach Buchung: </span>
+                <span className="font-mono font-semibold">{validation.preview.toFixed(3)} {container.unit}</span>
+              </div>
+            )}
+
             <div>
               <Label>Referenz</Label>
-              <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="z.B. Projekt, Lieferschein, Charge" />
+              <Input value={reference} maxLength={500} onChange={(e) => setReference(e.target.value)} placeholder="z.B. Projekt, Lieferschein, Charge" />
             </div>
             <div>
               <Label>Kommentar</Label>
-              <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} />
+              <Textarea value={comment} maxLength={500} onChange={(e) => setComment(e.target.value)} rows={2} />
             </div>
-            <Button onClick={handleSubmit} className="w-full" disabled={record.isPending}>
-              {MOVEMENT_LABELS[movementType]} buchen
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleSubmit} className="flex-1" disabled={!canSubmit}>
+                {MOVEMENT_LABELS[movementType]} buchen
+              </Button>
+              <Button variant="outline" type="button" onClick={resetForm} disabled={record.isPending}>
+                <RotateCcw className="h-4 w-4 mr-1" />Zurücksetzen
+              </Button>
+            </div>
           </TabsContent>
 
           <TabsContent value="bewegungen" className="pt-3">
