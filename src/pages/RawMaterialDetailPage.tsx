@@ -24,6 +24,8 @@ import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { normalizeHazardClasses, type HazardClassKey } from "@/lib/hazardClasses";
 import { DerivedSamples } from "@/components/DerivedSamples";
+import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
+import { History as HistoryIcon } from "lucide-react";
 
 
 
@@ -165,6 +167,9 @@ export default function RawMaterialDetailPage() {
   const [cLocationId, setCLocationId] = useState("");
   const [cLocationNote, setCLocationNote] = useState("");
   const [cNotes, setCNotes] = useState("");
+
+  // Container actions dialog (movements/history/audit)
+  const [actionsContainer, setActionsContainer] = useState<any | null>(null);
 
   const openContainerDialog = (existing?: any) => {
     if (existing) {
@@ -558,6 +563,7 @@ export default function RawMaterialDetailPage() {
                         <TableCell><Badge variant={statusVariant as any} className="text-xs">{statusLabel[c.status] || c.status}</Badge></TableCell>
                         {canManage && (
                           <TableCell className="flex gap-1">
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Bewegungen & Historie" onClick={() => setActionsContainer(c)}><HistoryIcon className="h-3.5 w-3.5" /></Button>
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openContainerDialog(c)}><Pencil className="h-3.5 w-3.5" /></Button>
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Gebinde ${c.container_code} löschen?`)) deleteContainer.mutate({ id: c.id, raw_material_id: id! }); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                           </TableCell>
@@ -670,6 +676,7 @@ export default function RawMaterialDetailPage() {
               </div>
             </DialogContent>
           </Dialog>
+          <ContainerActionsDialog open={!!actionsContainer} onOpenChange={(o) => !o && setActionsContainer(null)} container={actionsContainer} />
         </TabsContent>
 
 
