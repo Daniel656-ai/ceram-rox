@@ -160,6 +160,49 @@ export function useDeleteContainer() {
   });
 }
 
+// ---- Container Movements / History / Audit ----
+export function useContainerMovements(containerId?: string) {
+  return useQuery({
+    queryKey: ["container_movements", containerId],
+    queryFn: () => api.containerMovements.list(containerId!),
+    enabled: !!containerId,
+  });
+}
+
+export function useContainerLocationHistory(containerId?: string) {
+  return useQuery({
+    queryKey: ["container_location_history", containerId],
+    queryFn: () => api.containerMovements.history(containerId!),
+    enabled: !!containerId,
+  });
+}
+
+export function useContainerAuditLog(containerId?: string) {
+  return useQuery({
+    queryKey: ["container_audit", containerId],
+    queryFn: () => api.containerMovements.audit(containerId!),
+    enabled: !!containerId,
+  });
+}
+
+export function useRecordContainerMovement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.containerMovements.record>[0] & { raw_material_id: string }) => {
+      const { raw_material_id, ...rest } = input;
+      return api.containerMovements.record(rest);
+    },
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ["container_movements", v.container_id] });
+      qc.invalidateQueries({ queryKey: ["container_location_history", v.container_id] });
+      qc.invalidateQueries({ queryKey: ["container_audit", v.container_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["inventory_movements", v.raw_material_id] });
+    },
+  });
+}
+
 // ---- Analyses ----
 export function useAddAnalysis() {
   const qc = useQueryClient();
