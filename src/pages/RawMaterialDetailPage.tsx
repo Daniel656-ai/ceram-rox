@@ -61,7 +61,8 @@ export default function RawMaterialDetailPage() {
   const deleteMaterial = useDeleteRawMaterial();
   const navigate = useNavigate();
 
-  const canManage = role === "master" || role === "auftraggeber";
+  const { hasPermission } = usePermissions();
+  const canManage = role === "master" || hasPermission("raw_materials.manage");
   const stock = movements ? calculateStock(movements) : 0;
 
   // Edit material form
