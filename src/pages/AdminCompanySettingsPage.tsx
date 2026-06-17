@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, Trash2, Image as ImageIcon, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { CompanyBrandingPreview } from "@/components/CompanyBrandingPreview";
 
 const MAX_LOGO_BYTES = 1024 * 1024; // 1 MB
 const ACCEPTED_MIME = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
@@ -86,7 +87,8 @@ export default function AdminCompanySettingsPage() {
   if (isLoading) return <div className="p-6 text-muted-foreground">Lädt...</div>;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-4xl">
+      <style>{`@keyframes fade-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`}</style>
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Firmeneinstellungen</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -181,6 +183,9 @@ export default function AdminCompanySettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <CompanyBrandingPreview />
     </div>
   );
 }
+
