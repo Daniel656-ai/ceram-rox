@@ -513,8 +513,42 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="text-xs">{b.goods_receipt_date ? new Date(b.goods_receipt_date).toLocaleDateString("de-DE") : (b.delivery_date ? new Date(b.delivery_date).toLocaleDateString("de-DE") : "–")}</TableCell>
                         <TableCell>{b.delivery_quantity != null ? `${b.delivery_quantity} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || "–"}</TableCell>
-                        <TableCell><Badge variant={rsVariant as any} className="text-xs">{rsLabel[rs || ""] || "–"}</Badge></TableCell>
-                        <TableCell><Badge variant={isVariant as any} className="text-xs">{isLabel[is || ""] || "–"}</Badge></TableCell>
+                        <TableCell>
+                          {canManage ? (
+                            <Select
+                              value={rs || "gesperrt"}
+                              onValueChange={(v) => updateBatch.mutate({ id: b.id, raw_material_id: id!, release_status: v as any })}
+                            >
+                              <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="gesperrt">Gesperrt</SelectItem>
+                                <SelectItem value="in_pruefung">In Prüfung</SelectItem>
+                                <SelectItem value="freigegeben">Freigegeben</SelectItem>
+                                <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant={rsVariant as any} className="text-xs">{rsLabel[rs || ""] || "–"}</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {canManage ? (
+                            <Select
+                              value={is || "ausstehend"}
+                              onValueChange={(v) => updateBatch.mutate({ id: b.id, raw_material_id: id!, inspection_status: v as any })}
+                            >
+                              <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ausstehend">Ausstehend</SelectItem>
+                                <SelectItem value="laufend">Laufend</SelectItem>
+                                <SelectItem value="bestanden">Bestanden</SelectItem>
+                                <SelectItem value="nicht_bestanden">Nicht bestanden</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant={isVariant as any} className="text-xs">{isLabel[is || ""] || "–"}</Badge>
+                          )}
+                        </TableCell>
                         {canManage && <TableCell><Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteBatch.mutate({ id: b.id, raw_material_id: id! })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button></TableCell>}
                       </TableRow>
                     );
