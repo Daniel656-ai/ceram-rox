@@ -445,44 +445,12 @@ export default function RawMaterialDetailPage() {
                   <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>Neue Charge</DialogTitle></DialogHeader>
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div><Label>Chargennummer *</Label><Input value={bNum} onChange={(e) => setBNum(e.target.value)} /></div>
-                        <div><Label>Herstellercharge</Label><Input value={bManufacturerBatch} onChange={(e) => setBManufacturerBatch(e.target.value)} placeholder="z.B. H-2024-A12" /></div>
-                      </div>
+                      <div><Label>Chargennummer *</Label><Input value={bNum} onChange={(e) => setBNum(e.target.value)} /></div>
                       <div className="grid grid-cols-2 gap-3">
                         <div><Label>Lieferdatum</Label><Input type="date" value={bDate} onChange={(e) => setBDate(e.target.value)} /></div>
-                        <div><Label>Wareneingangsdatum</Label><Input type="date" value={bGoodsReceiptDate} onChange={(e) => setBGoodsReceiptDate(e.target.value)} /></div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
                         <div><Label>Liefermenge</Label><Input type="number" step="0.001" value={bQty} onChange={(e) => setBQty(e.target.value)} /></div>
-                        <div><Label>Lieferant</Label><Input value={bSupplier} onChange={(e) => setBSupplier(e.target.value)} /></div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Freigabestatus</Label>
-                          <Select value={bReleaseStatus} onValueChange={(v: any) => setBReleaseStatus(v)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="gesperrt">Gesperrt</SelectItem>
-                              <SelectItem value="in_pruefung">In Prüfung</SelectItem>
-                              <SelectItem value="freigegeben">Freigegeben</SelectItem>
-                              <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Prüfstatus</Label>
-                          <Select value={bInspectionStatus} onValueChange={(v: any) => setBInspectionStatus(v)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ausstehend">Ausstehend</SelectItem>
-                              <SelectItem value="laufend">Laufend</SelectItem>
-                              <SelectItem value="bestanden">Bestanden</SelectItem>
-                              <SelectItem value="nicht_bestanden">Nicht bestanden</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                      <div><Label>Lieferant</Label><Input value={bSupplier} onChange={(e) => setBSupplier(e.target.value)} /></div>
                       <div><Label>Bemerkungen</Label><Textarea value={bNotes} onChange={(e) => setBNotes(e.target.value)} rows={2} /></div>
                       <Button onClick={handleAddBatch} className="w-full">Anlegen</Button>
                     </div>
