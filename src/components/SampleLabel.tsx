@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Printer } from "lucide-react";
+import { useCompanyLogo } from "@/hooks/useCompanySettings";
 
 interface SampleLabelProps {
   sample: {
@@ -83,6 +84,8 @@ export function SampleLabelPrintDialog({ sample }: SampleLabelProps) {
   const [labelSize, setLabelSize] = useState<LabelSize>("medium");
   const [open, setOpen] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const logo = useCompanyLogo();
+  const showLogo = !!logo && labelSize !== "small";
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -97,10 +100,11 @@ export function SampleLabelPrintDialog({ sample }: SampleLabelProps) {
       <html><head><title>${t("print_label")} – ${sample.sample_number}</title>
       <style>
         @page { size: ${dims.width} ${dims.height}; margin: 0; }
-        body { margin: 0; padding: 2mm; font-family: Arial, sans-serif; }
+        body { margin: 0; padding: 2mm; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .label { width: ${dims.width}; height: ${dims.height}; box-sizing: border-box; overflow: hidden; }
-        .label-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2mm; }
+        .label-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2mm; gap: 2mm; }
         .label-id { font-weight: bold; font-size: ${labelSize === "small" ? "8pt" : "10pt"}; }
+        .label-logo { max-height: ${labelSize === "large" ? "10mm" : "7mm"}; max-width: ${labelSize === "large" ? "30mm" : "22mm"}; object-fit: contain; }
         .label-name { font-size: ${labelSize === "small" ? "6pt" : "8pt"}; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
         .label-codes { display: flex; gap: 2mm; align-items: center; justify-content: center; margin: 1mm 0; }
         .label-codes canvas { max-width: ${labelSize === "small" ? "50px" : "80px"}; max-height: ${labelSize === "small" ? "50px" : "80px"}; }
@@ -109,7 +113,7 @@ export function SampleLabelPrintDialog({ sample }: SampleLabelProps) {
         .hazard-badge { background: #dc2626; color: white; font-size: 6pt; padding: 0.5mm 1.5mm; border-radius: 1mm; display: inline-flex; align-items: center; gap: 1mm; }
       </style>
       </head><body>${content}
-      <script>window.onload=function(){window.print();window.close();}</script>
+      <script>window.onload=function(){setTimeout(function(){window.print();window.close();},150);}</script>
       </body></html>
     `);
     printWindow.document.close();
@@ -143,11 +147,14 @@ export function SampleLabelPrintDialog({ sample }: SampleLabelProps) {
               <div className="label">
                 <div className="label-header">
                   <span className="label-id">{sample.sample_number}</span>
-                  {sample.is_hazardous && (
-                    <span className="hazard-badge">
-                      ⚠ {(sample.hazard_categories || []).map(c => t(`hazard_${c}`)).join(", ")}
-                    </span>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    {sample.is_hazardous && (
+                      <span className="hazard-badge">
+                        ⚠ {(sample.hazard_categories || []).map(c => t(`hazard_${c}`)).join(", ")}
+                      </span>
+                    )}
+                    {showLogo && <img src={logo!} alt="Logo" className="label-logo" />}
+                  </div>
                 </div>
                 <div className="label-name" style={{ fontSize: "0.8rem", color: "#555", marginBottom: "4px" }}>
                   {sample.sample_name}
@@ -172,3 +179,4 @@ export function SampleLabelPrintDialog({ sample }: SampleLabelProps) {
     </Dialog>
   );
 }
+

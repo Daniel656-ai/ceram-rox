@@ -72,6 +72,39 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          company_name: string | null
+          id: string
+          logo_data_url: string | null
+          logo_mime: string | null
+          logo_updated_at: string | null
+          singleton: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          id?: string
+          logo_data_url?: string | null
+          logo_mime?: string | null
+          logo_updated_at?: string | null
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          id?: string
+          logo_data_url?: string | null
+          logo_mime?: string | null
+          logo_updated_at?: string | null
+          singleton?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       consumables: {
         Row: {
           created_at: string
