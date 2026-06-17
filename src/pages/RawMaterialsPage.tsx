@@ -64,7 +64,8 @@ export default function RawMaterialsPage() {
   const [lShelf, setLShelf] = useState("");
   const [lPos, setLPos] = useState("");
 
-  const canManage = role === "master" || role === "auftraggeber";
+  const { hasPermission } = usePermissions();
+  const canManage = role === "master" || hasPermission("raw_materials.manage");
   const deleteMaterial = useDeleteRawMaterial();
 
 
