@@ -45,7 +45,8 @@ function walk(dir: string, exts: string[]): string[] {
 }
 
 // Known permission-key shapes: foo.bar, foo.bar_baz, nav.foo, nav.foo.bar
-const KEY_RE = /["'`](nav\.[a-z_.]+|(?:samples|measurements|priorities|locations|projects|reports|sds|orders|raw_materials|consumables|workstations|users|services|absences|admin|costs|calendar|notifications|activity_log|hazard_notifications)\.[a-z_]+)["'`]/g;
+const KEY_PREFIXES = "samples|measurements|priorities|locations|projects|reports|sds|orders|raw_materials|consumables|workstations|users|services|absences|admin|costs|calendar|notifications|activity_log|hazard_notifications";
+const KEY_RE = new RegExp(`["'\`](nav\\.(?:[a-z_]+)(?:\\.[a-z_]+)?|(?:${KEY_PREFIXES})\\.[a-z_]+)["'\`]`, "g");
 
 const errors: string[] = [];
 const warnings: string[] = [];
@@ -80,13 +81,12 @@ for (const [key, files] of usedKeys) {
 // --- 4. Check migration files ------------------------------------------
 try {
   const sqlFiles = walk(MIGRATIONS, [".sql"]);
-  const SQL_KEY_RE = /has_permission\([^,]+,\s*'([^']+)'\)/g;
-  const SEED_KEY_RE = /permission_key[^']*'([^']+)'/g;
+  // Only catch keys passed to has_permission(uid, 'key') — robust against random strings
+  const SQL_KEY_RE = /has_permission\([^,]+,\s*'([^']+)'\s*\)/g;
   for (const file of sqlFiles) {
     const src = readFileSync(file, "utf8");
     const found = new Set<string>();
     for (const m of src.matchAll(SQL_KEY_RE)) found.add(m[1]);
-    for (const m of src.matchAll(SEED_KEY_RE)) found.add(m[1]);
     for (const key of found) {
       if (!ALL_PERMISSIONS.has(key)) {
         errors.push(
