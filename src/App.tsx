@@ -24,6 +24,7 @@ import AdminSyncPage from "./pages/AdminSyncPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
 import AdminDatabasePage from "./pages/AdminDatabasePage";
 import AdminHazardNotificationsPage from "./pages/AdminHazardNotificationsPage";
+import AdminCompanySettingsPage from "./pages/AdminCompanySettingsPage";
 import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
 import SampleDetailPage from "./pages/SampleDetailPage";
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="/admin/synchronisation" element={<AdminSyncPage />} />
               <Route path="/admin/datenbank" element={<AdminDatabasePage />} />
               <Route path="/admin/gefahrstoff-verteiler" element={<AdminHazardNotificationsPage />} />
+              <Route path="/admin/firmeneinstellungen" element={<AdminCompanySettingsPage />} />
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
