@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer } from "@/hooks/useRawMaterials";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,8 @@ export default function RawMaterialDetailPage() {
   const deleteMaterial = useDeleteRawMaterial();
   const navigate = useNavigate();
 
-  const canManage = role === "master" || role === "auftraggeber";
+  const { hasPermission } = usePermissions();
+  const canManage = role === "master" || hasPermission("raw_materials.manage");
   const stock = movements ? calculateStock(movements) : 0;
 
   // Edit material form
