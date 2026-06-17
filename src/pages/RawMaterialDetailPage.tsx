@@ -52,6 +52,7 @@ export default function RawMaterialDetailPage() {
   }, [allMaterials]);
   const addBatch = useAddBatch();
   const deleteBatch = useDeleteBatch();
+  const updateBatch = useUpdateBatch();
   const addAnalysis = useAddAnalysis();
   const deleteAnalysis = useDeleteAnalysis();
   const addMovement = useAddMovement();
