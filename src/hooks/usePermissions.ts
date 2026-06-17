@@ -1,36 +1,53 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useCallback } from "react";
 
-// All available permission keys in the system
+// All available permission keys in the system.
+// SINGLE SOURCE OF TRUTH — also used by scripts/audit-permissions.ts
 export const ALL_PERMISSIONS = [
+  // Samples
   "samples.create",
   "samples.view",
   "samples.edit",
+  // Measurements / tasks
   "measurements.enter",
   "measurements.view",
+  // General editorial
   "priorities.edit",
   "locations.edit",
+  "reports.create",
+  "sds.manage",
+  // Projects
   "projects.assign",
   "projects.create",
   "projects.view",
   "projects.edit",
-  "reports.create",
-  "sds.manage",
+  // Orders
   "orders.create",
   "orders.view",
   "orders.edit",
   "orders.delete",
+  // Raw materials / consumables / mixtures
   "raw_materials.manage",
+  "consumables.manage",
+  // Admin
   "workstations.manage",
   "users.manage",
   "services.manage",
   "absences.manage_all",
   "admin.system",
+  "admin.database",
+  // Costs
   "costs.manage",
   "costs.view_personnel",
   "costs.view_hourly_rates",
   "costs.edit_hourly_rates",
+  // Calendar
   "calendar.view_others_vacation",
+  // Notifications / audit (DB-driven, now exposed in UI)
+  "notifications.measurement_completed",
+  "notifications.priority_violation",
+  "activity_log.view_all",
+  "hazard_notifications.manage",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
@@ -132,16 +149,22 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "orders.edit": { de: "Aufträge bearbeiten", en: "Edit orders" },
   "orders.delete": { de: "Aufträge löschen", en: "Delete orders" },
   "raw_materials.manage": { de: "Rohstoffe verwalten", en: "Manage raw materials" },
+  "consumables.manage": { de: "Verbrauchsmaterialien verwalten", en: "Manage consumables" },
   "workstations.manage": { de: "Arbeitsplätze verwalten", en: "Manage workstations" },
   "users.manage": { de: "Benutzer verwalten", en: "Manage users" },
   "services.manage": { de: "Dienstleistungen verwalten", en: "Manage services" },
   "absences.manage_all": { de: "Alle Abwesenheiten verwalten", en: "Manage all absences" },
   "admin.system": { de: "Systemadministration", en: "System administration" },
+  "admin.database": { de: "Datenbank-Administration", en: "Database administration" },
   "costs.manage": { de: "Kosten & Kostensätze verwalten", en: "Manage costs & rates" },
   "costs.view_personnel": { de: "Personenbezogene Kosten sehen", en: "View personnel costs" },
   "costs.view_hourly_rates": { de: "Stundensätze sehen", en: "View hourly rates" },
   "costs.edit_hourly_rates": { de: "Stundensätze bearbeiten", en: "Edit hourly rates" },
   "calendar.view_others_vacation": { de: "Urlaubstage anderer sehen", en: "View others' vacation days" },
+  "notifications.measurement_completed": { de: "Benachrichtigung: Messung abgeschlossen", en: "Notification: Measurement completed" },
+  "notifications.priority_violation": { de: "Benachrichtigung: Prioritätsverletzung", en: "Notification: Priority violation" },
+  "activity_log.view_all": { de: "Gesamtes Aktivitätsprotokoll sehen", en: "View full activity log" },
+  "hazard_notifications.manage": { de: "Gefahrstoff-Verteiler verwalten", en: "Manage hazard distribution list" },
 };
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
@@ -150,9 +173,10 @@ export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string;
   { key: "orders", labelDe: "Aufträge", labelEn: "Orders", permissions: ["orders.create", "orders.view", "orders.edit", "orders.delete"] },
   { key: "projects", labelDe: "Projekte", labelEn: "Projects", permissions: ["projects.create", "projects.view", "projects.edit", "projects.assign"] },
   { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel", "costs.view_hourly_rates", "costs.edit_hourly_rates"] },
-  { key: "general", labelDe: "Allgemein", labelEn: "General", permissions: ["priorities.edit", "locations.edit", "reports.create", "sds.manage", "raw_materials.manage"] },
-  { key: "admin", labelDe: "Administration", labelEn: "Administration", permissions: ["workstations.manage", "users.manage", "services.manage", "absences.manage_all", "admin.system"] },
+  { key: "general", labelDe: "Allgemein", labelEn: "General", permissions: ["priorities.edit", "locations.edit", "reports.create", "sds.manage", "raw_materials.manage", "consumables.manage"] },
+  { key: "admin", labelDe: "Administration", labelEn: "Administration", permissions: ["workstations.manage", "users.manage", "services.manage", "absences.manage_all", "admin.system", "admin.database", "hazard_notifications.manage"] },
   { key: "calendar", labelDe: "Kalender & Urlaub", labelEn: "Calendar & Vacation", permissions: ["calendar.view_others_vacation"] },
+  { key: "notifications", labelDe: "Benachrichtigungen & Audit", labelEn: "Notifications & Audit", permissions: ["notifications.measurement_completed", "notifications.priority_violation", "activity_log.view_all"] },
 ];
 
 export function usePermissions() {
