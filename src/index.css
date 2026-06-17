@@ -107,3 +107,53 @@
     font-weight: 600;
   }
 }
+
+/* ===== Print: company branding ===== */
+@media print {
+  @page {
+    margin: 18mm 14mm 14mm 14mm;
+  }
+  html, body {
+    background: white !important;
+    color: black !important;
+  }
+  /* Hide app chrome */
+  [data-sidebar="sidebar"],
+  aside[data-sidebar],
+  .print\:hidden {
+    display: none !important;
+  }
+  /* Global print header injected once via AppLayout */
+  .print-header {
+    display: flex !important;
+    width: 100%;
+    border-bottom: 1px solid #d4d4d4;
+    padding: 0 0 6mm 0;
+    margin: 0 0 6mm 0;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .print-header-inner {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10mm;
+  }
+  .print-header-name {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .print-header-logo {
+    max-height: 18mm;
+    max-width: 60mm;
+    object-fit: contain;
+    /* Force browsers to print background/colors of the logo accurately */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Repeat header logo on each printed page via running element fallback:
+     browsers that don't support `position: running()` will at least keep
+     the in-flow .print-header on page 1. */
+}
