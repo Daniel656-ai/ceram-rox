@@ -56,17 +56,17 @@ export function CompanyBrandingPreview({ logoOverride, nameOverride }: LogoPrevi
             Bericht / PDF-Header
           </div>
           <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 gap-4">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="text-gray-800">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Projektbericht</div>
+                <div className="text-lg font-semibold leading-tight">P2600042 – Demo-Projekt</div>
+                <div className="text-[11px] text-gray-500 mt-0.5">{name || "Firmenname"}</div>
+              </div>
               {logo ? (
                 <img src={logo} alt="Logo" className="max-h-12 max-w-[140px] object-contain" />
               ) : (
                 <LogoPlaceholder size="lg" />
               )}
-              <div className="text-gray-800 text-right">
-                <div className="text-xs uppercase tracking-wide text-gray-500">Projektbericht</div>
-                <div className="text-lg font-semibold leading-tight">P2600042 – Demo-Projekt</div>
-                <div className="text-[11px] text-gray-500 mt-0.5">{name || "Firmenname"}</div>
-              </div>
             </div>
             <div className="px-6 py-3 text-[11px] text-gray-400">
               Berichtsinhalt … (Tabellen, Kostenaufstellung, Messungen)
@@ -81,13 +81,13 @@ export function CompanyBrandingPreview({ logoOverride, nameOverride }: LogoPrevi
             Druckansicht (Browser)
           </div>
           <div className="rounded-md border bg-white shadow-sm">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 gap-4">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+              <span className="text-sm font-medium text-gray-700">{name || "Firmenname"}</span>
               {logo ? (
                 <img src={logo} alt="Logo" className="max-h-9 max-w-[100px] object-contain" />
               ) : (
                 <LogoPlaceholder size="md" />
               )}
-              <span className="text-sm font-medium text-gray-700">{name || "Firmenname"}</span>
             </div>
             <div className="px-5 py-4 text-[11px] text-gray-400 space-y-1">
               <div className="h-2 w-3/4 rounded bg-gray-100" />

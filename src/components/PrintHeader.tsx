@@ -10,10 +10,10 @@ export function PrintHeader() {
   return (
     <div className="hidden print:flex print-header" aria-hidden>
       <div className="print-header-inner">
+        <div className="print-header-name">{settings?.company_name ?? ""}</div>
         {settings?.logo_data_url && (
           <img src={settings.logo_data_url} alt="Logo" className="print-header-logo" />
         )}
-        <div className="print-header-name">{settings?.company_name ?? ""}</div>
       </div>
     </div>
   );
