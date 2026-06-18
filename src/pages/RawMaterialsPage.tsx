@@ -183,6 +183,7 @@ export default function RawMaterialsPage() {
                         <SelectTrigger><SelectValue placeholder={t("raw_materials:select_location")} /></SelectTrigger>
                         <SelectContent>{locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}</SelectContent>
                       </Select>
+                    </div>
                     <div>
                       <Label>Verantwortlicher</Label>
                       <Select value={responsibleUserId || "__none__"} onValueChange={(v) => setResponsibleUserId(v === "__none__" ? "" : v)}>
