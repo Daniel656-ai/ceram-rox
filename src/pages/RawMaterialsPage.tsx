@@ -155,7 +155,11 @@ export default function RawMaterialsPage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("raw_materials:material_name")}</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-                      <div><Label>{t("raw_materials:material_number")}</Label><Input value={number} onChange={(e) => setNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+                      <div><Label>RK-Code</Label><Input value={number} onChange={(e) => setNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+                    </div>
+                    <div>
+                      <Label>Sonstige Bezeichnung</Label>
+                      <Input value={otherDesignation} onChange={(e) => setOtherDesignation(e.target.value)} placeholder="Genauere Beschreibung des Rohstoffs" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("raw_materials:cas_number")}</Label><Input value={casNumber} onChange={(e) => setCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
@@ -177,7 +181,8 @@ export default function RawMaterialsPage() {
                         <SelectContent>{locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                    <div><Label>{t("common:description")}</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
+                    <div><Label>Bemerkung</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
+
                     <HazardClassSelector
                       value={hazardCats}
                       onChange={setHazardCats}
