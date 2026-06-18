@@ -81,6 +81,8 @@ export default function RawMaterialDetailPage() {
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
   const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
+  const [editResponsibleUserId, setEditResponsibleUserId] = useState<string>("");
+  const { data: allUsers } = (require("@/hooks/useUsers") as typeof import("@/hooks/useUsers")).useUsers();
 
 
   const openEditDialog = () => {
