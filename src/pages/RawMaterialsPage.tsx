@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Plus, Search, MapPin, AlertTriangle, Trash2, ArrowUp, ArrowDown, ArrowUpDown, ScanLine } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useInventoryMovements } from "@/hooks/useRawMaterials";
+import { useUsers } from "@/hooks/useUsers";
 import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
@@ -60,6 +61,8 @@ export default function RawMaterialsPage() {
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
   const [hazardCats, setHazardCats] = useState<HazardClassKey[]>([]);
+  const [responsibleUserId, setResponsibleUserId] = useState("");
+  const { data: users } = useUsers();
 
 
   const [lHall, setLHall] = useState("");
@@ -113,9 +116,9 @@ export default function RawMaterialsPage() {
     const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
     if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
-      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, other_designation: otherDesignation.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
+      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, other_designation: otherDesignation.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats, responsible_user_id: responsibleUserId || null });
       toast.success(t("raw_materials:material_created"));
-      setOpen(false); setName(""); setNumber(""); setOtherDesignation(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
+      setOpen(false); setName(""); setNumber(""); setOtherDesignation(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]); setResponsibleUserId("");
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
 
   };
@@ -179,6 +182,19 @@ export default function RawMaterialsPage() {
                       <Select value={locationId} onValueChange={setLocationId}>
                         <SelectTrigger><SelectValue placeholder={t("raw_materials:select_location")} /></SelectTrigger>
                         <SelectContent>{locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}</SelectContent>
+                      </Select>
+                    <div>
+                      <Label>Verantwortlicher</Label>
+                      <Select value={responsibleUserId || "__none__"} onValueChange={(v) => setResponsibleUserId(v === "__none__" ? "" : v)}>
+                        <SelectTrigger><SelectValue placeholder="Verantwortlichen wählen" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
+                          {users?.filter((u: any) => u.is_active !== false).map((u: any) => (
+                            <SelectItem key={u.user_id} value={u.user_id}>
+                              {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || u.user_id}{u.short_code ? ` (${u.short_code})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
                     </div>
                     <div><Label>Bemerkung</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
