@@ -2476,6 +2476,7 @@ export type Database = {
           mrs_number: string | null
           other_designation: string | null
           price_per_kg: number | null
+          responsible_user_id: string | null
           sds_file_name: string | null
           sds_storage_path: string | null
           sds_uploaded_at: string | null
@@ -2499,6 +2500,7 @@ export type Database = {
           mrs_number?: string | null
           other_designation?: string | null
           price_per_kg?: number | null
+          responsible_user_id?: string | null
           sds_file_name?: string | null
           sds_storage_path?: string | null
           sds_uploaded_at?: string | null
@@ -2522,6 +2524,7 @@ export type Database = {
           mrs_number?: string | null
           other_designation?: string | null
           price_per_kg?: number | null
+          responsible_user_id?: string | null
           sds_file_name?: string | null
           sds_storage_path?: string | null
           sds_uploaded_at?: string | null
@@ -2536,6 +2539,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_locations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raw_materials_responsible_user_id_fkey"
+            columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
