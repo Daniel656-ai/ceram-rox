@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer } from "@/hooks/useRawMaterials";
+import { useUsers } from "@/hooks/useUsers";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -45,6 +46,7 @@ export default function RawMaterialDetailPage() {
   const { data: locations } = useStorageLocations();
   const { data: allMaterials } = useRawMaterials();
   const { data: projects } = useProjects();
+  const { data: allUsers } = useUsers();
 
   // Extract unique suppliers from all raw materials
   const suppliers = useMemo(() => {
@@ -81,6 +83,7 @@ export default function RawMaterialDetailPage() {
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
   const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
+  const [editResponsibleUserId, setEditResponsibleUserId] = useState<string>("");
 
 
   const openEditDialog = () => {
@@ -98,6 +101,7 @@ export default function RawMaterialDetailPage() {
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
     setEditHazardCats(normalizeHazardClasses(((mat as any).hazard_categories as string[]) || []));
+    setEditResponsibleUserId((mat as any).responsible_user_id || "");
     setEditOpen(true);
   };
 
@@ -127,6 +131,7 @@ export default function RawMaterialDetailPage() {
         price_per_kg: Number(editPricePerKg) || 0,
         is_hazardous: editHazardCats.length > 0,
         hazard_categories: editHazardCats,
+        responsible_user_id: editResponsibleUserId || null,
       });
       toast.success(t("raw_materials:material_updated"));
       setEditOpen(false);
@@ -461,6 +466,20 @@ export default function RawMaterialDetailPage() {
             </div>
             <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
             <div><Label>Bemerkung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
+            <div>
+              <Label>Verantwortlicher</Label>
+              <Select value={editResponsibleUserId || "__none__"} onValueChange={(v) => setEditResponsibleUserId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Verantwortlichen wählen" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
+                  {allUsers?.filter((u: any) => u.is_active !== false).map((u: any) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || u.user_id}{u.short_code ? ` (${u.short_code})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <HazardClassSelector
               value={editHazardCats}
               onChange={setEditHazardCats}
@@ -475,7 +494,7 @@ export default function RawMaterialDetailPage() {
 
       <Tabs defaultValue="chargen">
         <TabsList>
-          <TabsTrigger value="chargen"><Package className="h-4 w-4 mr-1" />Chargen</TabsTrigger>
+          <TabsTrigger value="chargen"><Package className="h-4 w-4 mr-1" />LOT-Nummern</TabsTrigger>
           <TabsTrigger value="gebinde"><ContainerIcon className="h-4 w-4 mr-1" />Gebinde</TabsTrigger>
           <TabsTrigger value="analysen"><FlaskConical className="h-4 w-4 mr-1" />Analysen</TabsTrigger>
           <TabsTrigger value="dokumente"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
@@ -483,16 +502,16 @@ export default function RawMaterialDetailPage() {
           <TabsTrigger value="proben"><GitBranch className="h-4 w-4 mr-1" />Proben</TabsTrigger>
         </TabsList>
 
-        {/* CHARGEN */}
+        {/* LOT-NUMMERN */}
         <TabsContent value="chargen">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base">Chargen ({batches.length})</CardTitle>
+              <CardTitle className="text-base">LOT-Nummern ({batches.length})</CardTitle>
               {canManage && (
                 <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
-                  <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Charge</Button></DialogTrigger>
+                  <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />LOT-Nummer</Button></DialogTrigger>
                   <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Neue Charge & Gebinde</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Neue LOT-Nummer & Gebinde</DialogTitle></DialogHeader>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div><Label>LOT-Nummer *</Label><Input value={bNum} onChange={(e) => setBNum(e.target.value)} /></div>
@@ -562,15 +581,6 @@ export default function RawMaterialDetailPage() {
                         <TableCell><Badge variant="secondary" className="text-xs">{batchContainers.length}</Badge></TableCell>
                         {canManage && (
                           <TableCell className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-xs"
-                              title="Weiteres Gebinde zu dieser LOT anlegen"
-                              onClick={() => openContainerDialog({ batch_id: b.id, kind: "big_bag", unit: mat.unit, status: "verfuegbar", location_id: mat.default_location_id, initial_quantity: "", current_quantity: "" })}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />Gebinde
-                            </Button>
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteBatch.mutate({ id: b.id, raw_material_id: id! })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                           </TableCell>
                         )}
@@ -598,7 +608,7 @@ export default function RawMaterialDetailPage() {
                 <TableHeader><TableRow>
                   <TableHead>Gebinde-ID</TableHead>
                   <TableHead>Barcode</TableHead>
-                  <TableHead>Charge</TableHead>
+                  <TableHead>LOT-Nummer</TableHead>
                   <TableHead>Art</TableHead>
                   <TableHead className="text-right">Bestand</TableHead>
                   <TableHead>Lagerort</TableHead>
@@ -652,11 +662,11 @@ export default function RawMaterialDetailPage() {
                   </div>
                 </div>
                 <div>
-                  <Label>Charge</Label>
+                  <Label>LOT-Nummer</Label>
                   <Select value={cBatchId || "__none__"} onValueChange={(v) => setCBatchId(v === "__none__" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Charge wählen" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="LOT-Nummer wählen" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Keine Charge</SelectItem>
+                      <SelectItem value="__none__">Keine LOT-Nummer</SelectItem>
                       {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -763,9 +773,9 @@ export default function RawMaterialDetailPage() {
                         </Select>
                       </div>
                       <div>
-                        <Label>Charge (optional)</Label>
+                        <Label>LOT-Nummer (optional)</Label>
                         <Select value={aBatchId || "__none__"} onValueChange={(v) => setABatchId(v === "__none__" ? "" : v)}>
-                          <SelectTrigger><SelectValue placeholder="Keine Charge" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Keine LOT-Nummer" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">Keine</SelectItem>
                             {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
@@ -787,7 +797,7 @@ export default function RawMaterialDetailPage() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Art</TableHead><TableHead>Charge</TableHead><TableHead>Parameter</TableHead><TableHead className="text-right">Wert</TableHead><TableHead>Einheit</TableHead><TableHead>Bemerkung</TableHead>{canManage && <TableHead />}
+                  <TableHead>Art</TableHead><TableHead>LOT-Nummer</TableHead><TableHead>Parameter</TableHead><TableHead className="text-right">Wert</TableHead><TableHead>Einheit</TableHead><TableHead>Bemerkung</TableHead>{canManage && <TableHead />}
                 </TableRow></TableHeader>
                 <TableBody>
                   {analyses.length === 0 ? (
@@ -828,7 +838,7 @@ export default function RawMaterialDetailPage() {
                     </SelectContent>
                   </Select>
                   <Select value={docBatchId || "__none__"} onValueChange={(v) => setDocBatchId(v === "__none__" ? "" : v)}>
-                    <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Charge" /></SelectTrigger>
+                    <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue placeholder="LOT-Nummer" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">Keine</SelectItem>
                       {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
@@ -846,7 +856,7 @@ export default function RawMaterialDetailPage() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Datei</TableHead><TableHead>Typ</TableHead><TableHead>Charge</TableHead><TableHead>Hochgeladen</TableHead><TableHead />
+                  <TableHead>Datei</TableHead><TableHead>Typ</TableHead><TableHead>LOT-Nummer</TableHead><TableHead>Hochgeladen</TableHead><TableHead />
                 </TableRow></TableHeader>
                 <TableBody>
                   {documents.length === 0 ? (
@@ -895,9 +905,9 @@ export default function RawMaterialDetailPage() {
                         <div><Label>Datum</Label><Input type="date" value={mDate} onChange={(e) => setMDate(e.target.value)} /></div>
                       </div>
                       <div>
-                        <Label>Charge</Label>
+                        <Label>LOT-Nummer</Label>
                         <Select value={mBatchId || "__none__"} onValueChange={(v) => setMBatchId(v === "__none__" ? "" : v)}>
-                          <SelectTrigger><SelectValue placeholder="Charge wählen" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="LOT-Nummer wählen" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">Keine</SelectItem>
                             {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
@@ -948,7 +958,7 @@ export default function RawMaterialDetailPage() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Datum</TableHead><TableHead>Art</TableHead><TableHead>Charge</TableHead><TableHead className="text-right">Menge</TableHead><TableHead>Referenz</TableHead><TableHead>Kommentar</TableHead>
+                  <TableHead>Datum</TableHead><TableHead>Art</TableHead><TableHead>LOT-Nummer</TableHead><TableHead className="text-right">Menge</TableHead><TableHead>Referenz</TableHead><TableHead>Kommentar</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {!movements || movements.length === 0 ? (

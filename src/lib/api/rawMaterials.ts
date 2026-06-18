@@ -28,7 +28,7 @@ export const rawMaterials = {
     unwrap(
       dbClient
         .from("raw_materials")
-        .select("*, storage_locations(*)")
+        .select("*, storage_locations(*), responsible:profiles!raw_materials_responsible_user_id_fkey(user_id, first_name, last_name, short_code)")
         .order("material_name")
     ),
 
@@ -37,7 +37,7 @@ export const rawMaterials = {
       dbClient
         .from("raw_materials")
         .select(
-          "*, storage_locations(*), raw_material_batches(*), raw_material_documents(*), raw_material_analyses(*)"
+          "*, storage_locations(*), responsible:profiles!raw_materials_responsible_user_id_fkey(user_id, first_name, last_name, short_code), raw_material_batches(*), raw_material_documents(*), raw_material_analyses(*)"
         )
         .eq("id", id)
         .single()
@@ -58,6 +58,7 @@ export const rawMaterials = {
       default_location_id?: string;
       is_hazardous?: boolean;
       hazard_categories?: string[];
+      responsible_user_id?: string | null;
     },
     createdBy: string
   ) =>
@@ -87,6 +88,7 @@ export const rawMaterials = {
       price_per_kg?: number;
       is_hazardous?: boolean;
       hazard_categories?: string[];
+      responsible_user_id?: string | null;
       sds_storage_path?: string | null;
       sds_file_name?: string | null;
       sds_uploaded_at?: string | null;
