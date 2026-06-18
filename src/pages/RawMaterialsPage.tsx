@@ -52,6 +52,7 @@ export default function RawMaterialsPage() {
 
   const [name, setName] = useState("");
   const [number, setNumber] = useState("");
+  const [otherDesignation, setOtherDesignation] = useState("");
   const [casNumber, setCasNumber] = useState("");
   const [mrsNumber, setMrsNumber] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -59,6 +60,7 @@ export default function RawMaterialsPage() {
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
   const [hazardCats, setHazardCats] = useState<HazardClassKey[]>([]);
+
 
   const [lHall, setLHall] = useState("");
   const [lRoom, setLRoom] = useState("");
@@ -111,10 +113,11 @@ export default function RawMaterialsPage() {
     const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
     if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
-      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
+      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, other_designation: otherDesignation.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats });
       toast.success(t("raw_materials:material_created"));
-      setOpen(false); setName(""); setNumber(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
+      setOpen(false); setName(""); setNumber(""); setOtherDesignation(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]);
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
+
   };
 
   const handleDeleteMaterial = async (id: string, label: string) => {
@@ -152,7 +155,11 @@ export default function RawMaterialsPage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("raw_materials:material_name")}</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-                      <div><Label>{t("raw_materials:material_number")}</Label><Input value={number} onChange={(e) => setNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+                      <div><Label>RK-Code</Label><Input value={number} onChange={(e) => setNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+                    </div>
+                    <div>
+                      <Label>Sonstige Bezeichnung</Label>
+                      <Input value={otherDesignation} onChange={(e) => setOtherDesignation(e.target.value)} placeholder="Genauere Beschreibung des Rohstoffs" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("raw_materials:cas_number")}</Label><Input value={casNumber} onChange={(e) => setCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
@@ -174,7 +181,8 @@ export default function RawMaterialsPage() {
                         <SelectContent>{locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                    <div><Label>{t("common:description")}</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
+                    <div><Label>Bemerkung</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
+
                     <HazardClassSelector
                       value={hazardCats}
                       onChange={setHazardCats}
@@ -223,7 +231,7 @@ export default function RawMaterialsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead><button type="button" onClick={() => toggleSort("number")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:number")}<SortIcon active={sortKey === "number"} /></button></TableHead>
+                <TableHead><button type="button" onClick={() => toggleSort("number")} className="inline-flex items-center hover:text-foreground">RK-Code<SortIcon active={sortKey === "number"} /></button></TableHead>
                 <TableHead><button type="button" onClick={() => toggleSort("name")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:name")}<SortIcon active={sortKey === "name"} /></button></TableHead>
                 <TableHead>{t("common:supplier")}</TableHead>
                 <TableHead>{t("raw_materials:location")}</TableHead>

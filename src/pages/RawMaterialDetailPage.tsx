@@ -70,6 +70,7 @@ export default function RawMaterialDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editNumber, setEditNumber] = useState("");
+  const [editOtherDesignation, setEditOtherDesignation] = useState("");
   const [editCasNumber, setEditCasNumber] = useState("");
   const [editMrsNumber, setEditMrsNumber] = useState("");
   const [editEgNumber, setEditEgNumber] = useState("");
@@ -81,10 +82,12 @@ export default function RawMaterialDetailPage() {
   const [editPricePerKg, setEditPricePerKg] = useState("");
   const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
 
+
   const openEditDialog = () => {
     if (!mat) return;
     setEditName(mat.material_name);
     setEditNumber(mat.material_number || "");
+    setEditOtherDesignation((mat as any).other_designation || "");
     setEditCasNumber((mat as any).cas_number || "");
     setEditMrsNumber((mat as any).mrs_number || "");
     setEditEgNumber((mat as any).eg_number || "");
@@ -99,6 +102,7 @@ export default function RawMaterialDetailPage() {
   };
 
 
+
   const handleUpdateMaterial = async () => {
     if (!editName) { toast.error(t("raw_materials:name_required")); return; }
     // Duplicate name check (excluding self)
@@ -111,6 +115,7 @@ export default function RawMaterialDetailPage() {
         id: id!,
         material_name: editName,
         material_number: editNumber.trim() || null,
+        other_designation: editOtherDesignation.trim() || null,
         cas_number: editCasNumber.trim() || null,
         mrs_number: editMrsNumber.trim() || null,
         eg_number: editEgNumber.trim() || null,
@@ -128,6 +133,7 @@ export default function RawMaterialDetailPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+
   const handleDeleteMaterial = async () => {
     if (!id) return;
     try {
@@ -140,17 +146,19 @@ export default function RawMaterialDetailPage() {
   };
 
 
-  // Batch form
+  // Batch form (kombiniert mit Gebinde + automatischem Wareneingang)
   const [batchOpen, setBatchOpen] = useState(false);
-  const [bNum, setBNum] = useState("");
-  const [bDate, setBDate] = useState("");
-  const [bQty, setBQty] = useState("");
+  const [bNum, setBNum] = useState("");                       // LOT-Nummer
+  const [bDate, setBDate] = useState("");                     // Lieferdatum
+  const [bQty, setBQty] = useState("");                       // Liefermenge
   const [bSupplier, setBSupplier] = useState("");
   const [bNotes, setBNotes] = useState("");
-  const [bManufacturerBatch, setBManufacturerBatch] = useState("");
+  const [bManufacturerBatch, setBManufacturerBatch] = useState(""); // BigBag Nr.
   const [bGoodsReceiptDate, setBGoodsReceiptDate] = useState("");
-  const [bReleaseStatus, setBReleaseStatus] = useState<"gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt">("in_pruefung");
-  const [bInspectionStatus, setBInspectionStatus] = useState<"ausstehend" | "laufend" | "bestanden" | "nicht_bestanden">("ausstehend");
+  // Gebinde-Felder
+  const [bContainerKind, setBContainerKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige">("big_bag");
+  const [bContainerCode, setBContainerCode] = useState("");
+
 
   // Container (Gebinde) form
   const { data: containers } = useContainers(id);
@@ -175,7 +183,7 @@ export default function RawMaterialDetailPage() {
   const [actionsContainer, setActionsContainer] = useState<any | null>(null);
 
   const openContainerDialog = (existing?: any) => {
-    if (existing) {
+    if (existing && existing.id) {
       setCEditId(existing.id);
       setCCode(existing.container_code || "");
       setCBarcode(existing.barcode || "");
@@ -189,15 +197,21 @@ export default function RawMaterialDetailPage() {
       setCLocationNote(existing.location_note || "");
       setCNotes(existing.notes || "");
     } else {
+      // New container — optionally prefill from a partial (e.g. batch_id)
+      const pre = existing || {};
       setCEditId(null);
-      setCCode(""); setCBarcode(""); setCBatchId("");
-      setCKind("fass"); setCInitial(""); setCCurrent("");
-      setCUnit(mat?.unit || "kg"); setCStatus("verfuegbar");
-      setCLocationId(mat?.default_location_id || "");
+      setCCode(""); setCBarcode("");
+      setCBatchId(pre.batch_id || "");
+      setCKind(pre.kind || "fass");
+      setCInitial(""); setCCurrent("");
+      setCUnit(pre.unit || mat?.unit || "kg");
+      setCStatus(pre.status || "verfuegbar");
+      setCLocationId(pre.location_id || mat?.default_location_id || "");
       setCLocationNote(""); setCNotes("");
     }
     setContOpen(true);
   };
+
 
   const handleSaveContainer = async () => {
     if (!id) return;
@@ -260,27 +274,54 @@ export default function RawMaterialDetailPage() {
   const analyses = mat.raw_material_analyses || [];
 
   const handleAddBatch = async () => {
-    if (!bNum) { toast.error("Chargennummer ist Pflicht"); return; }
+    if (!bNum) { toast.error("LOT-Nummer ist Pflicht"); return; }
+    const qty = bQty ? Number(bQty) : 0;
+    if (!qty || qty <= 0) { toast.error("Liefermenge muss > 0 sein"); return; }
     try {
-      await addBatch.mutateAsync({
+      // 1) Charge anlegen
+      const newBatch: any = await addBatch.mutateAsync({
         raw_material_id: id!,
         batch_number: bNum,
         delivery_date: bDate || undefined,
-        delivery_quantity: bQty ? Number(bQty) : undefined,
+        delivery_quantity: qty,
         supplier: bSupplier || undefined,
         notes: bNotes || undefined,
         manufacturer_batch: bManufacturerBatch.trim() || null,
-        goods_receipt_date: bGoodsReceiptDate || null,
-        release_status: bReleaseStatus,
-        inspection_status: bInspectionStatus,
+        goods_receipt_date: bGoodsReceiptDate || bDate || null,
       });
-      toast.success("Charge angelegt");
+
+      // 2) Gebinde automatisch anlegen
+      await addContainer.mutateAsync({
+        raw_material_id: id!,
+        batch_id: newBatch?.id || null,
+        container_code: bContainerCode.trim() || null,
+        kind: bContainerKind,
+        initial_quantity: qty,
+        current_quantity: qty,
+        unit: mat.unit,
+        status: "verfuegbar",
+        location_id: mat.default_location_id || null,
+      });
+
+      // 3) Wareneingang automatisch buchen
+      await addMovement.mutateAsync({
+        raw_material_id: id!,
+        batch_id: newBatch?.id || undefined,
+        movement_type: "eingang",
+        quantity: qty,
+        movement_date: bGoodsReceiptDate || bDate || undefined,
+        supplier: bSupplier || undefined,
+        comment: `Automatischer Wareneingang Charge ${bNum}`,
+      });
+
+      toast.success("Charge & Gebinde angelegt, Wareneingang verbucht");
       setBatchOpen(false);
       setBNum(""); setBDate(""); setBQty(""); setBSupplier(""); setBNotes("");
       setBManufacturerBatch(""); setBGoodsReceiptDate("");
-      setBReleaseStatus("in_pruefung"); setBInspectionStatus("ausstehend");
+      setBContainerKind("big_bag"); setBContainerCode("");
     } catch (e: any) { toast.error(e.message); }
   };
+
 
   const handleAddAnalysis = async () => {
     if (!aParam) { toast.error("Parametername ist Pflicht"); return; }
@@ -329,7 +370,7 @@ export default function RawMaterialDetailPage() {
             <span>{mat.material_name}</span>
             <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
           </h1>
-          <p className="text-sm text-muted-foreground">{mat.material_number || "—"} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg{(mat as any).cas_number ? ` · CAS: ${(mat as any).cas_number}` : ""}{(mat as any).mrs_number ? ` · MRS: ${(mat as any).mrs_number}` : ""}{(mat as any).eg_number ? ` · EG: ${(mat as any).eg_number}` : ""}{(mat as any).manufacturer ? ` · Hersteller: ${(mat as any).manufacturer}` : ""}</p>
+          <p className="text-sm text-muted-foreground">{mat.material_number || "—"}{(mat as any).other_designation ? ` · ${(mat as any).other_designation}` : ""} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg{(mat as any).cas_number ? ` · CAS: ${(mat as any).cas_number}` : ""}{(mat as any).mrs_number ? ` · MRS: ${(mat as any).mrs_number}` : ""}{(mat as any).eg_number ? ` · EG: ${(mat as any).eg_number}` : ""}{(mat as any).manufacturer ? ` · Hersteller: ${(mat as any).manufacturer}` : ""}</p>
         </div>
         {canManage && (
           <>
@@ -382,8 +423,13 @@ export default function RawMaterialDetailPage() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
-              <div><Label>{t("raw_materials:material_number")}</Label><Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+              <div><Label>RK-Code</Label><Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
             </div>
+            <div>
+              <Label>Sonstige Bezeichnung</Label>
+              <Input value={editOtherDesignation} onChange={(e) => setEditOtherDesignation(e.target.value)} placeholder="Genauere Beschreibung des Rohstoffs" />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div><Label>{t("raw_materials:cas_number")}</Label><Input value={editCasNumber} onChange={(e) => setEditCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
               <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={editMrsNumber} onChange={(e) => setEditMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
@@ -414,7 +460,7 @@ export default function RawMaterialDetailPage() {
               </Select>
             </div>
             <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
-            <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
+            <div><Label>Bemerkung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
             <HazardClassSelector
               value={editHazardCats}
               onChange={setEditHazardCats}
@@ -446,48 +492,45 @@ export default function RawMaterialDetailPage() {
                 <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
                   <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Charge</Button></DialogTrigger>
                   <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Neue Charge</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Neue Charge & Gebinde</DialogTitle></DialogHeader>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
-                        <div><Label>Chargennummer *</Label><Input value={bNum} onChange={(e) => setBNum(e.target.value)} /></div>
-                        <div><Label>Herstellercharge</Label><Input value={bManufacturerBatch} onChange={(e) => setBManufacturerBatch(e.target.value)} placeholder="z.B. H-2024-A12" /></div>
+                        <div><Label>LOT-Nummer *</Label><Input value={bNum} onChange={(e) => setBNum(e.target.value)} /></div>
+                        <div><Label>BigBag Nr.</Label><Input value={bManufacturerBatch} onChange={(e) => setBManufacturerBatch(e.target.value)} placeholder="z.B. BB-2024-A12" /></div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div><Label>Lieferdatum</Label><Input type="date" value={bDate} onChange={(e) => setBDate(e.target.value)} /></div>
                         <div><Label>Wareneingangsdatum</Label><Input type="date" value={bGoodsReceiptDate} onChange={(e) => setBGoodsReceiptDate(e.target.value)} /></div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div><Label>Liefermenge</Label><Input type="number" step="0.001" value={bQty} onChange={(e) => setBQty(e.target.value)} /></div>
+                        <div><Label>Liefermenge ({mat.unit}) *</Label><Input type="number" step="0.001" value={bQty} onChange={(e) => setBQty(e.target.value)} /></div>
                         <div><Label>Lieferant</Label><Input value={bSupplier} onChange={(e) => setBSupplier(e.target.value)} /></div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label>Freigabestatus</Label>
-                          <Select value={bReleaseStatus} onValueChange={(v: any) => setBReleaseStatus(v)}>
+                          <Label>Gebinde-Art *</Label>
+                          <Select value={bContainerKind} onValueChange={(v: any) => setBContainerKind(v)}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="gesperrt">Gesperrt</SelectItem>
-                              <SelectItem value="in_pruefung">In Prüfung</SelectItem>
-                              <SelectItem value="freigegeben">Freigegeben</SelectItem>
-                              <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
+                              <SelectItem value="fass">Fass</SelectItem>
+                              <SelectItem value="kanister">Kanister</SelectItem>
+                              <SelectItem value="sack">Sack</SelectItem>
+                              <SelectItem value="big_bag">Big Bag</SelectItem>
+                              <SelectItem value="ibc">IBC</SelectItem>
+                              <SelectItem value="tank">Tank</SelectItem>
+                              <SelectItem value="flasche">Flasche</SelectItem>
+                              <SelectItem value="sonstige">Sonstige</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div>
-                          <Label>Prüfstatus</Label>
-                          <Select value={bInspectionStatus} onValueChange={(v: any) => setBInspectionStatus(v)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ausstehend">Ausstehend</SelectItem>
-                              <SelectItem value="laufend">Laufend</SelectItem>
-                              <SelectItem value="bestanden">Bestanden</SelectItem>
-                              <SelectItem value="nicht_bestanden">Nicht bestanden</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label>Gebinde-ID</Label>
+                          <Input value={bContainerCode} onChange={(e) => setBContainerCode(e.target.value)} placeholder="Auto, falls leer" />
                         </div>
                       </div>
                       <div><Label>Bemerkungen</Label><Textarea value={bNotes} onChange={(e) => setBNotes(e.target.value)} rows={2} /></div>
-                      <Button onClick={handleAddBatch} className="w-full">Anlegen</Button>
+                      <p className="text-xs text-muted-foreground">Die Liefermenge wird automatisch als Wareneingang verbucht und ein erstes Gebinde angelegt. Weitere Gebinde zur selben LOT können später unter „Gebinde" hinzugefügt werden.</p>
+                      <Button onClick={handleAddBatch} className="w-full" disabled={addBatch.isPending || addContainer.isPending || addMovement.isPending}>Anlegen</Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -496,18 +539,19 @@ export default function RawMaterialDetailPage() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Chargennr.</TableHead><TableHead>Herstellercharge</TableHead><TableHead>Wareneingang</TableHead><TableHead>Menge</TableHead><TableHead>Lieferant</TableHead><TableHead>Freigabe</TableHead><TableHead>Prüfung</TableHead>{canManage && <TableHead />}
+                  <TableHead>LOT-Nummer</TableHead>
+                  <TableHead>BigBag Nr.</TableHead>
+                  <TableHead>Wareneingang</TableHead>
+                  <TableHead>Liefermenge</TableHead>
+                  <TableHead>Lieferant</TableHead>
+                  <TableHead>Gebinde</TableHead>
+                  {canManage && <TableHead />}
                 </TableRow></TableHeader>
                 <TableBody>
                   {batches.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Keine Chargen</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Keine Chargen</TableCell></TableRow>
                   ) : batches.map((b: any) => {
-                    const rs = b.release_status as string | undefined;
-                    const is = b.inspection_status as string | undefined;
-                    const rsVariant = rs === "freigegeben" ? "default" : rs === "abgelehnt" || rs === "gesperrt" ? "destructive" : "secondary";
-                    const isVariant = is === "bestanden" ? "default" : is === "nicht_bestanden" ? "destructive" : "secondary";
-                    const rsLabel: Record<string, string> = { gesperrt: "Gesperrt", in_pruefung: "In Prüfung", freigegeben: "Freigegeben", abgelehnt: "Abgelehnt" };
-                    const isLabel: Record<string, string> = { ausstehend: "Ausstehend", laufend: "Laufend", bestanden: "Bestanden", nicht_bestanden: "Nicht best." };
+                    const batchContainers = (containers || []).filter((c: any) => c.batch_id === b.id);
                     return (
                       <TableRow key={b.id}>
                         <TableCell className="font-mono text-sm">{b.batch_number}</TableCell>
@@ -515,49 +559,28 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="text-xs">{b.goods_receipt_date ? new Date(b.goods_receipt_date).toLocaleDateString("de-DE") : (b.delivery_date ? new Date(b.delivery_date).toLocaleDateString("de-DE") : "–")}</TableCell>
                         <TableCell>{b.delivery_quantity != null ? `${b.delivery_quantity} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || "–"}</TableCell>
-                        <TableCell>
-                          {canManage ? (
-                            <Select
-                              value={rs || "gesperrt"}
-                              onValueChange={(v) => updateBatch.mutate({ id: b.id, raw_material_id: id!, release_status: v as any })}
+                        <TableCell><Badge variant="secondary" className="text-xs">{batchContainers.length}</Badge></TableCell>
+                        {canManage && (
+                          <TableCell className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              title="Weiteres Gebinde zu dieser LOT anlegen"
+                              onClick={() => openContainerDialog({ batch_id: b.id, kind: "big_bag", unit: mat.unit, status: "verfuegbar", location_id: mat.default_location_id, initial_quantity: "", current_quantity: "" })}
                             >
-                              <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="gesperrt">Gesperrt</SelectItem>
-                                <SelectItem value="in_pruefung">In Prüfung</SelectItem>
-                                <SelectItem value="freigegeben">Freigegeben</SelectItem>
-                                <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge variant={rsVariant as any} className="text-xs">{rsLabel[rs || ""] || "–"}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {canManage ? (
-                            <Select
-                              value={is || "ausstehend"}
-                              onValueChange={(v) => updateBatch.mutate({ id: b.id, raw_material_id: id!, inspection_status: v as any })}
-                            >
-                              <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="ausstehend">Ausstehend</SelectItem>
-                                <SelectItem value="laufend">Laufend</SelectItem>
-                                <SelectItem value="bestanden">Bestanden</SelectItem>
-                                <SelectItem value="nicht_bestanden">Nicht bestanden</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge variant={isVariant as any} className="text-xs">{isLabel[is || ""] || "–"}</Badge>
-                          )}
-                        </TableCell>
-                        {canManage && <TableCell><Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteBatch.mutate({ id: b.id, raw_material_id: id! })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button></TableCell>}
+                              <Plus className="h-3 w-3 mr-1" />Gebinde
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteBatch.mutate({ id: b.id, raw_material_id: id! })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
             </CardContent>
+
           </Card>
         </TabsContent>
 
