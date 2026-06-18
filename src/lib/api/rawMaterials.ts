@@ -53,6 +53,7 @@ export const rawMaterials = {
       manufacturer?: string | null;
       supplier?: string;
       description?: string;
+      other_designation?: string | null;
       unit?: string;
       default_location_id?: string;
       is_hazardous?: boolean;
@@ -60,6 +61,7 @@ export const rawMaterials = {
     },
     createdBy: string
   ) =>
+
     unwrap(
       dbClient
         .from("raw_materials")
