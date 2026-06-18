@@ -231,7 +231,7 @@ export default function RawMaterialsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead><button type="button" onClick={() => toggleSort("number")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:number")}<SortIcon active={sortKey === "number"} /></button></TableHead>
+                <TableHead><button type="button" onClick={() => toggleSort("number")} className="inline-flex items-center hover:text-foreground">RK-Code<SortIcon active={sortKey === "number"} /></button></TableHead>
                 <TableHead><button type="button" onClick={() => toggleSort("name")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:name")}<SortIcon active={sortKey === "name"} /></button></TableHead>
                 <TableHead>{t("common:supplier")}</TableHead>
                 <TableHead>{t("raw_materials:location")}</TableHead>
