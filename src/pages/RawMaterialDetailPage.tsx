@@ -460,7 +460,7 @@ export default function RawMaterialDetailPage() {
               </Select>
             </div>
             <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
-            <div><Label>Beschreibung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
+            <div><Label>Bemerkung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
             <HazardClassSelector
               value={editHazardCats}
               onChange={setEditHazardCats}
