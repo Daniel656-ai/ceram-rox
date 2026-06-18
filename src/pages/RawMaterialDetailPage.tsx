@@ -115,6 +115,7 @@ export default function RawMaterialDetailPage() {
         id: id!,
         material_name: editName,
         material_number: editNumber.trim() || null,
+        other_designation: editOtherDesignation.trim() || null,
         cas_number: editCasNumber.trim() || null,
         mrs_number: editMrsNumber.trim() || null,
         eg_number: editEgNumber.trim() || null,
@@ -131,6 +132,7 @@ export default function RawMaterialDetailPage() {
       setEditOpen(false);
     } catch (e: any) { toast.error(e.message); }
   };
+
 
   const handleDeleteMaterial = async () => {
     if (!id) return;
