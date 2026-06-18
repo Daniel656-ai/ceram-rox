@@ -87,6 +87,7 @@ export default function RawMaterialDetailPage() {
     if (!mat) return;
     setEditName(mat.material_name);
     setEditNumber(mat.material_number || "");
+    setEditOtherDesignation((mat as any).other_designation || "");
     setEditCasNumber((mat as any).cas_number || "");
     setEditMrsNumber((mat as any).mrs_number || "");
     setEditEgNumber((mat as any).eg_number || "");
@@ -99,6 +100,7 @@ export default function RawMaterialDetailPage() {
     setEditHazardCats(normalizeHazardClasses(((mat as any).hazard_categories as string[]) || []));
     setEditOpen(true);
   };
+
 
 
   const handleUpdateMaterial = async () => {
