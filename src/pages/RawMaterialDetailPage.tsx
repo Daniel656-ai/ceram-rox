@@ -70,6 +70,7 @@ export default function RawMaterialDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editNumber, setEditNumber] = useState("");
+  const [editOtherDesignation, setEditOtherDesignation] = useState("");
   const [editCasNumber, setEditCasNumber] = useState("");
   const [editMrsNumber, setEditMrsNumber] = useState("");
   const [editEgNumber, setEditEgNumber] = useState("");
@@ -80,6 +81,7 @@ export default function RawMaterialDetailPage() {
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
   const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
+
 
   const openEditDialog = () => {
     if (!mat) return;
