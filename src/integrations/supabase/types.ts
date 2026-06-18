@@ -2474,6 +2474,7 @@ export type Database = {
           material_name: string
           material_number: string | null
           mrs_number: string | null
+          other_designation: string | null
           price_per_kg: number | null
           sds_file_name: string | null
           sds_storage_path: string | null
@@ -2496,6 +2497,7 @@ export type Database = {
           material_name: string
           material_number?: string | null
           mrs_number?: string | null
+          other_designation?: string | null
           price_per_kg?: number | null
           sds_file_name?: string | null
           sds_storage_path?: string | null
@@ -2518,6 +2520,7 @@ export type Database = {
           material_name?: string
           material_number?: string | null
           mrs_number?: string | null
+          other_designation?: string | null
           price_per_kg?: number | null
           sds_file_name?: string | null
           sds_storage_path?: string | null
