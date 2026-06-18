@@ -81,6 +81,7 @@ export const rawMaterials = {
       manufacturer?: string | null;
       supplier?: string;
       description?: string;
+      other_designation?: string | null;
       unit?: string;
       default_location_id?: string | null;
       price_per_kg?: number;
@@ -91,6 +92,7 @@ export const rawMaterials = {
       sds_uploaded_at?: string | null;
     }
   ) => run(dbClient.from("raw_materials").update(updates as any).eq("id", id)),
+
 
   delete: (id: string) =>
     run(dbClient.from("raw_materials").delete().eq("id", id)),
