@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer } from "@/hooks/useRawMaterials";
+import { useUsers } from "@/hooks/useUsers";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -45,6 +46,7 @@ export default function RawMaterialDetailPage() {
   const { data: locations } = useStorageLocations();
   const { data: allMaterials } = useRawMaterials();
   const { data: projects } = useProjects();
+  const { data: allUsers } = useUsers();
 
   // Extract unique suppliers from all raw materials
   const suppliers = useMemo(() => {
@@ -82,7 +84,6 @@ export default function RawMaterialDetailPage() {
   const [editPricePerKg, setEditPricePerKg] = useState("");
   const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
   const [editResponsibleUserId, setEditResponsibleUserId] = useState<string>("");
-  const { data: allUsers } = (require("@/hooks/useUsers") as typeof import("@/hooks/useUsers")).useUsers();
 
 
   const openEditDialog = () => {
