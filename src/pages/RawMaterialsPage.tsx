@@ -52,6 +52,7 @@ export default function RawMaterialsPage() {
 
   const [name, setName] = useState("");
   const [number, setNumber] = useState("");
+  const [otherDesignation, setOtherDesignation] = useState("");
   const [casNumber, setCasNumber] = useState("");
   const [mrsNumber, setMrsNumber] = useState("");
   const [supplier, setSupplier] = useState("");
@@ -59,6 +60,7 @@ export default function RawMaterialsPage() {
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
   const [hazardCats, setHazardCats] = useState<HazardClassKey[]>([]);
+
 
   const [lHall, setLHall] = useState("");
   const [lRoom, setLRoom] = useState("");
