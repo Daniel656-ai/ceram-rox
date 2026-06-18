@@ -146,17 +146,19 @@ export default function RawMaterialDetailPage() {
   };
 
 
-  // Batch form
+  // Batch form (kombiniert mit Gebinde + automatischem Wareneingang)
   const [batchOpen, setBatchOpen] = useState(false);
-  const [bNum, setBNum] = useState("");
-  const [bDate, setBDate] = useState("");
-  const [bQty, setBQty] = useState("");
+  const [bNum, setBNum] = useState("");                       // LOT-Nummer
+  const [bDate, setBDate] = useState("");                     // Lieferdatum
+  const [bQty, setBQty] = useState("");                       // Liefermenge
   const [bSupplier, setBSupplier] = useState("");
   const [bNotes, setBNotes] = useState("");
-  const [bManufacturerBatch, setBManufacturerBatch] = useState("");
+  const [bManufacturerBatch, setBManufacturerBatch] = useState(""); // BigBag Nr.
   const [bGoodsReceiptDate, setBGoodsReceiptDate] = useState("");
-  const [bReleaseStatus, setBReleaseStatus] = useState<"gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt">("in_pruefung");
-  const [bInspectionStatus, setBInspectionStatus] = useState<"ausstehend" | "laufend" | "bestanden" | "nicht_bestanden">("ausstehend");
+  // Gebinde-Felder
+  const [bContainerKind, setBContainerKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige">("big_bag");
+  const [bContainerCode, setBContainerCode] = useState("");
+
 
   // Container (Gebinde) form
   const { data: containers } = useContainers(id);
