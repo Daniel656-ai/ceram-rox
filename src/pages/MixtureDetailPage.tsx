@@ -134,7 +134,7 @@ export default function MixtureDetailPage() {
         copyNumber.trim() || null,
         copyAsTemplate
       );
-      toast({ title: "Mischung dupliziert" });
+      toast({ title: "Knetung dupliziert" });
       setCopyOpen(false);
       setCopyName(""); setCopyNumber(""); setCopyAsTemplate(false);
       navigate(`/mischungen/${newId}`);
@@ -725,11 +725,11 @@ export default function MixtureDetailPage() {
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Mischung duplizieren</DialogTitle>
+            <DialogTitle>Knetung duplizieren</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Eine neue Mischung wird mit allen Rohstoffen, Prozessabschnitten, Schritten und Messpunkten als neue Version 1.0 angelegt.
+              Eine neue Knetung wird mit allen Rohstoffen, Prozessabschnitten, Schritten und Messpunkten als neue Version 1.0 angelegt.
             </p>
             <div>
               <Label>Neuer Name *</Label>

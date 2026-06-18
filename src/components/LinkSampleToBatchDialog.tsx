@@ -76,7 +76,7 @@ export function LinkSampleToBatchDialog({
           </DialogTitle>
           <DialogDescription>
             Wähle eine noch nicht verknüpfte Probe aus, um sie nachträglich dieser
-            Mischungscharge zuzuordnen.
+            Knetungscharge zuzuordnen.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">

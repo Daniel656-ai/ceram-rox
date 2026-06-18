@@ -4,7 +4,7 @@ import { unwrap } from "./_helpers";
 const db = dbClient as any;
 
 export const mixtureTemplates = {
-  /** Duplizieren einer kompletten Mischung (Rezeptur + Prozess), liefert neue mixture id. */
+  /** Duplizieren einer kompletten Knetung (Rezeptur + Prozess), liefert neue mixture id. */
   copy: (sourceId: string, newName: string, newNumber?: string | null, asTemplate = false) =>
     unwrap<string>(
       db.rpc("copy_mixture", {
