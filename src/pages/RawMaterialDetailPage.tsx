@@ -423,8 +423,13 @@ export default function RawMaterialDetailPage() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
-              <div><Label>{t("raw_materials:material_number")}</Label><Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
+              <div><Label>RK-Code</Label><Input value={editNumber} onChange={(e) => setEditNumber(e.target.value)} placeholder={t("raw_materials:material_number_placeholder")} /></div>
             </div>
+            <div>
+              <Label>Sonstige Bezeichnung</Label>
+              <Input value={editOtherDesignation} onChange={(e) => setEditOtherDesignation(e.target.value)} placeholder="Genauere Beschreibung des Rohstoffs" />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div><Label>{t("raw_materials:cas_number")}</Label><Input value={editCasNumber} onChange={(e) => setEditCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
               <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={editMrsNumber} onChange={(e) => setEditMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
