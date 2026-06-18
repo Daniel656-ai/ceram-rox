@@ -53,7 +53,7 @@ function KindBadge({ kind }: { kind: BatchKind }) {
     </Badge>
   ) : (
     <Badge variant="outline" className="gap-1">
-      <FlaskConical className="h-3 w-3" /> Mischung
+      <FlaskConical className="h-3 w-3" /> Knetung
     </Badge>
   );
 }
@@ -93,7 +93,7 @@ export function ChargenView() {
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
           <TabsList>
             <TabsTrigger value="all">Alle Chargen</TabsTrigger>
-            <TabsTrigger value="mixture">Mischungschargen</TabsTrigger>
+            <TabsTrigger value="mixture">Knetungschargen</TabsTrigger>
             <TabsTrigger value="raw">Rohstoffchargen</TabsTrigger>
           </TabsList>
         </Tabs>

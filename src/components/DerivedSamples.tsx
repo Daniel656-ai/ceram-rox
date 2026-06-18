@@ -50,7 +50,7 @@ export function DerivedSamples({ rawMaterialId, rawMaterialBatchId }: Props) {
           <TableRow>
             <TableHead>Probe</TableHead>
             <TableHead>Bezeichnung</TableHead>
-            <TableHead>Mischung</TableHead>
+            <TableHead>Knetung</TableHead>
             <TableHead>Herstellungscharge</TableHead>
             <TableHead>Rohstoffcharge</TableHead>
             <TableHead>Menge</TableHead>

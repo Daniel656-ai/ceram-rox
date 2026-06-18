@@ -639,7 +639,7 @@ export default function BatchExecutionPage() {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Nach dem Abschluss wird die hergestellte Menge im Mischungsbestand verbucht. Eine Freigabe ist erst durch eine zweite Person möglich (4-Augen-Prinzip).
+              Nach dem Abschluss wird die hergestellte Menge im Knetungsbestand verbucht. Eine Freigabe ist erst durch eine zweite Person möglich (4-Augen-Prinzip).
             </p>
             <div>
               <Label>Hergestellte Menge ({batch.unit})</Label>
