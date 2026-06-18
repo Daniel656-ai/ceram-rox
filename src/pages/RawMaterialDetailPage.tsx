@@ -101,6 +101,7 @@ export default function RawMaterialDetailPage() {
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
     setEditHazardCats(normalizeHazardClasses(((mat as any).hazard_categories as string[]) || []));
+    setEditResponsibleUserId((mat as any).responsible_user_id || "");
     setEditOpen(true);
   };
 
@@ -130,6 +131,7 @@ export default function RawMaterialDetailPage() {
         price_per_kg: Number(editPricePerKg) || 0,
         is_hazardous: editHazardCats.length > 0,
         hazard_categories: editHazardCats,
+        responsible_user_id: editResponsibleUserId || null,
       });
       toast.success(t("raw_materials:material_updated"));
       setEditOpen(false);
@@ -464,6 +466,20 @@ export default function RawMaterialDetailPage() {
             </div>
             <div><Label>Preis/kg (€)</Label><Input type="number" step="0.01" min="0" value={editPricePerKg} onChange={(e) => setEditPricePerKg(e.target.value)} /></div>
             <div><Label>Bemerkung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
+            <div>
+              <Label>Verantwortlicher</Label>
+              <Select value={editResponsibleUserId || "__none__"} onValueChange={(v) => setEditResponsibleUserId(v === "__none__" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Verantwortlichen wählen" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
+                  {allUsers?.filter((u: any) => u.is_active !== false).map((u: any) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || u.user_id}{u.short_code ? ` (${u.short_code})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <HazardClassSelector
               value={editHazardCats}
               onChange={setEditHazardCats}
