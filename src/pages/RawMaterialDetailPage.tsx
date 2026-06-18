@@ -481,48 +481,45 @@ export default function RawMaterialDetailPage() {
                 <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
                   <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />Charge</Button></DialogTrigger>
                   <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Neue Charge</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Neue Charge & Gebinde</DialogTitle></DialogHeader>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
-                        <div><Label>Chargennummer *</Label><Input value={bNum} onChange={(e) => setBNum(e.target.value)} /></div>
-                        <div><Label>Herstellercharge</Label><Input value={bManufacturerBatch} onChange={(e) => setBManufacturerBatch(e.target.value)} placeholder="z.B. H-2024-A12" /></div>
+                        <div><Label>LOT-Nummer *</Label><Input value={bNum} onChange={(e) => setBNum(e.target.value)} /></div>
+                        <div><Label>BigBag Nr.</Label><Input value={bManufacturerBatch} onChange={(e) => setBManufacturerBatch(e.target.value)} placeholder="z.B. BB-2024-A12" /></div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div><Label>Lieferdatum</Label><Input type="date" value={bDate} onChange={(e) => setBDate(e.target.value)} /></div>
                         <div><Label>Wareneingangsdatum</Label><Input type="date" value={bGoodsReceiptDate} onChange={(e) => setBGoodsReceiptDate(e.target.value)} /></div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div><Label>Liefermenge</Label><Input type="number" step="0.001" value={bQty} onChange={(e) => setBQty(e.target.value)} /></div>
+                        <div><Label>Liefermenge ({mat.unit}) *</Label><Input type="number" step="0.001" value={bQty} onChange={(e) => setBQty(e.target.value)} /></div>
                         <div><Label>Lieferant</Label><Input value={bSupplier} onChange={(e) => setBSupplier(e.target.value)} /></div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label>Freigabestatus</Label>
-                          <Select value={bReleaseStatus} onValueChange={(v: any) => setBReleaseStatus(v)}>
+                          <Label>Gebinde-Art *</Label>
+                          <Select value={bContainerKind} onValueChange={(v: any) => setBContainerKind(v)}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="gesperrt">Gesperrt</SelectItem>
-                              <SelectItem value="in_pruefung">In Prüfung</SelectItem>
-                              <SelectItem value="freigegeben">Freigegeben</SelectItem>
-                              <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
+                              <SelectItem value="fass">Fass</SelectItem>
+                              <SelectItem value="kanister">Kanister</SelectItem>
+                              <SelectItem value="sack">Sack</SelectItem>
+                              <SelectItem value="big_bag">Big Bag</SelectItem>
+                              <SelectItem value="ibc">IBC</SelectItem>
+                              <SelectItem value="tank">Tank</SelectItem>
+                              <SelectItem value="flasche">Flasche</SelectItem>
+                              <SelectItem value="sonstige">Sonstige</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div>
-                          <Label>Prüfstatus</Label>
-                          <Select value={bInspectionStatus} onValueChange={(v: any) => setBInspectionStatus(v)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ausstehend">Ausstehend</SelectItem>
-                              <SelectItem value="laufend">Laufend</SelectItem>
-                              <SelectItem value="bestanden">Bestanden</SelectItem>
-                              <SelectItem value="nicht_bestanden">Nicht bestanden</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label>Gebinde-ID</Label>
+                          <Input value={bContainerCode} onChange={(e) => setBContainerCode(e.target.value)} placeholder="Auto, falls leer" />
                         </div>
                       </div>
                       <div><Label>Bemerkungen</Label><Textarea value={bNotes} onChange={(e) => setBNotes(e.target.value)} rows={2} /></div>
-                      <Button onClick={handleAddBatch} className="w-full">Anlegen</Button>
+                      <p className="text-xs text-muted-foreground">Die Liefermenge wird automatisch als Wareneingang verbucht und ein erstes Gebinde angelegt. Weitere Gebinde zur selben LOT können später unter „Gebinde" hinzugefügt werden.</p>
+                      <Button onClick={handleAddBatch} className="w-full" disabled={addBatch.isPending || addContainer.isPending || addMovement.isPending}>Anlegen</Button>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -531,18 +528,19 @@ export default function RawMaterialDetailPage() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Chargennr.</TableHead><TableHead>Herstellercharge</TableHead><TableHead>Wareneingang</TableHead><TableHead>Menge</TableHead><TableHead>Lieferant</TableHead><TableHead>Freigabe</TableHead><TableHead>Prüfung</TableHead>{canManage && <TableHead />}
+                  <TableHead>LOT-Nummer</TableHead>
+                  <TableHead>BigBag Nr.</TableHead>
+                  <TableHead>Wareneingang</TableHead>
+                  <TableHead>Liefermenge</TableHead>
+                  <TableHead>Lieferant</TableHead>
+                  <TableHead>Gebinde</TableHead>
+                  {canManage && <TableHead />}
                 </TableRow></TableHeader>
                 <TableBody>
                   {batches.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Keine Chargen</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Keine Chargen</TableCell></TableRow>
                   ) : batches.map((b: any) => {
-                    const rs = b.release_status as string | undefined;
-                    const is = b.inspection_status as string | undefined;
-                    const rsVariant = rs === "freigegeben" ? "default" : rs === "abgelehnt" || rs === "gesperrt" ? "destructive" : "secondary";
-                    const isVariant = is === "bestanden" ? "default" : is === "nicht_bestanden" ? "destructive" : "secondary";
-                    const rsLabel: Record<string, string> = { gesperrt: "Gesperrt", in_pruefung: "In Prüfung", freigegeben: "Freigegeben", abgelehnt: "Abgelehnt" };
-                    const isLabel: Record<string, string> = { ausstehend: "Ausstehend", laufend: "Laufend", bestanden: "Bestanden", nicht_bestanden: "Nicht best." };
+                    const batchContainers = (containers || []).filter((c: any) => c.batch_id === b.id);
                     return (
                       <TableRow key={b.id}>
                         <TableCell className="font-mono text-sm">{b.batch_number}</TableCell>
@@ -550,49 +548,28 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="text-xs">{b.goods_receipt_date ? new Date(b.goods_receipt_date).toLocaleDateString("de-DE") : (b.delivery_date ? new Date(b.delivery_date).toLocaleDateString("de-DE") : "–")}</TableCell>
                         <TableCell>{b.delivery_quantity != null ? `${b.delivery_quantity} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || "–"}</TableCell>
-                        <TableCell>
-                          {canManage ? (
-                            <Select
-                              value={rs || "gesperrt"}
-                              onValueChange={(v) => updateBatch.mutate({ id: b.id, raw_material_id: id!, release_status: v as any })}
+                        <TableCell><Badge variant="secondary" className="text-xs">{batchContainers.length}</Badge></TableCell>
+                        {canManage && (
+                          <TableCell className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              title="Weiteres Gebinde zu dieser LOT anlegen"
+                              onClick={() => openContainerDialog({ batch_id: b.id, kind: "big_bag", unit: mat.unit, status: "verfuegbar", location_id: mat.default_location_id, initial_quantity: "", current_quantity: "" })}
                             >
-                              <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="gesperrt">Gesperrt</SelectItem>
-                                <SelectItem value="in_pruefung">In Prüfung</SelectItem>
-                                <SelectItem value="freigegeben">Freigegeben</SelectItem>
-                                <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge variant={rsVariant as any} className="text-xs">{rsLabel[rs || ""] || "–"}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {canManage ? (
-                            <Select
-                              value={is || "ausstehend"}
-                              onValueChange={(v) => updateBatch.mutate({ id: b.id, raw_material_id: id!, inspection_status: v as any })}
-                            >
-                              <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="ausstehend">Ausstehend</SelectItem>
-                                <SelectItem value="laufend">Laufend</SelectItem>
-                                <SelectItem value="bestanden">Bestanden</SelectItem>
-                                <SelectItem value="nicht_bestanden">Nicht bestanden</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge variant={isVariant as any} className="text-xs">{isLabel[is || ""] || "–"}</Badge>
-                          )}
-                        </TableCell>
-                        {canManage && <TableCell><Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteBatch.mutate({ id: b.id, raw_material_id: id! })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button></TableCell>}
+                              <Plus className="h-3 w-3 mr-1" />Gebinde
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteBatch.mutate({ id: b.id, raw_material_id: id! })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
             </CardContent>
+
           </Card>
         </TabsContent>
 
