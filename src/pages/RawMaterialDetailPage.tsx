@@ -183,7 +183,7 @@ export default function RawMaterialDetailPage() {
   const [actionsContainer, setActionsContainer] = useState<any | null>(null);
 
   const openContainerDialog = (existing?: any) => {
-    if (existing) {
+    if (existing && existing.id) {
       setCEditId(existing.id);
       setCCode(existing.container_code || "");
       setCBarcode(existing.barcode || "");
@@ -197,15 +197,21 @@ export default function RawMaterialDetailPage() {
       setCLocationNote(existing.location_note || "");
       setCNotes(existing.notes || "");
     } else {
+      // New container — optionally prefill from a partial (e.g. batch_id)
+      const pre = existing || {};
       setCEditId(null);
-      setCCode(""); setCBarcode(""); setCBatchId("");
-      setCKind("fass"); setCInitial(""); setCCurrent("");
-      setCUnit(mat?.unit || "kg"); setCStatus("verfuegbar");
-      setCLocationId(mat?.default_location_id || "");
+      setCCode(""); setCBarcode("");
+      setCBatchId(pre.batch_id || "");
+      setCKind(pre.kind || "fass");
+      setCInitial(""); setCCurrent("");
+      setCUnit(pre.unit || mat?.unit || "kg");
+      setCStatus(pre.status || "verfuegbar");
+      setCLocationId(pre.location_id || mat?.default_location_id || "");
       setCLocationNote(""); setCNotes("");
     }
     setContOpen(true);
   };
+
 
   const handleSaveContainer = async () => {
     if (!id) return;
