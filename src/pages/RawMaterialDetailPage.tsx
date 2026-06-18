@@ -268,27 +268,54 @@ export default function RawMaterialDetailPage() {
   const analyses = mat.raw_material_analyses || [];
 
   const handleAddBatch = async () => {
-    if (!bNum) { toast.error("Chargennummer ist Pflicht"); return; }
+    if (!bNum) { toast.error("LOT-Nummer ist Pflicht"); return; }
+    const qty = bQty ? Number(bQty) : 0;
+    if (!qty || qty <= 0) { toast.error("Liefermenge muss > 0 sein"); return; }
     try {
-      await addBatch.mutateAsync({
+      // 1) Charge anlegen
+      const newBatch: any = await addBatch.mutateAsync({
         raw_material_id: id!,
         batch_number: bNum,
         delivery_date: bDate || undefined,
-        delivery_quantity: bQty ? Number(bQty) : undefined,
+        delivery_quantity: qty,
         supplier: bSupplier || undefined,
         notes: bNotes || undefined,
         manufacturer_batch: bManufacturerBatch.trim() || null,
-        goods_receipt_date: bGoodsReceiptDate || null,
-        release_status: bReleaseStatus,
-        inspection_status: bInspectionStatus,
+        goods_receipt_date: bGoodsReceiptDate || bDate || null,
       });
-      toast.success("Charge angelegt");
+
+      // 2) Gebinde automatisch anlegen
+      await addContainer.mutateAsync({
+        raw_material_id: id!,
+        batch_id: newBatch?.id || null,
+        container_code: bContainerCode.trim() || null,
+        kind: bContainerKind,
+        initial_quantity: qty,
+        current_quantity: qty,
+        unit: mat.unit,
+        status: "verfuegbar",
+        location_id: mat.default_location_id || null,
+      });
+
+      // 3) Wareneingang automatisch buchen
+      await addMovement.mutateAsync({
+        raw_material_id: id!,
+        batch_id: newBatch?.id || undefined,
+        movement_type: "eingang",
+        quantity: qty,
+        movement_date: bGoodsReceiptDate || bDate || undefined,
+        supplier: bSupplier || undefined,
+        comment: `Automatischer Wareneingang Charge ${bNum}`,
+      });
+
+      toast.success("Charge & Gebinde angelegt, Wareneingang verbucht");
       setBatchOpen(false);
       setBNum(""); setBDate(""); setBQty(""); setBSupplier(""); setBNotes("");
       setBManufacturerBatch(""); setBGoodsReceiptDate("");
-      setBReleaseStatus("in_pruefung"); setBInspectionStatus("ausstehend");
+      setBContainerKind("big_bag"); setBContainerCode("");
     } catch (e: any) { toast.error(e.message); }
   };
+
 
   const handleAddAnalysis = async () => {
     if (!aParam) { toast.error("Parametername ist Pflicht"); return; }
