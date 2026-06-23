@@ -1896,6 +1896,7 @@ export type Database = {
           project_id: string
           quantity_kg: number
           raw_material_id: string
+          source_inventory_movement_id: string | null
           total_cost: number | null
         }
         Insert: {
@@ -1908,6 +1909,7 @@ export type Database = {
           project_id: string
           quantity_kg: number
           raw_material_id: string
+          source_inventory_movement_id?: string | null
           total_cost?: number | null
         }
         Update: {
@@ -1920,6 +1922,7 @@ export type Database = {
           project_id?: string
           quantity_kg?: number
           raw_material_id?: string
+          source_inventory_movement_id?: string | null
           total_cost?: number | null
         }
         Relationships: [
@@ -1942,6 +1945,13 @@ export type Database = {
             columns: ["raw_material_id"]
             isOneToOne: false
             referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_knetung_materials_source_inventory_movement_id_fkey"
+            columns: ["source_inventory_movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements"
             referencedColumns: ["id"]
           },
         ]
