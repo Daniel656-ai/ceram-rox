@@ -1007,12 +1007,13 @@ export default function RawMaterialDetailPage() {
                             <SelectContent>
                               <SelectItem value="__none__">Kein Projekt</SelectItem>
                               {projects?.map((p: any) => (
-                                <SelectItem key={p.id} value={p.project_number}>
+                                <SelectItem key={p.id} value={p.id}>
                                   {p.project_number}{p.project_name ? ` – ${p.project_name}` : ""}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          <p className="text-xs text-muted-foreground mt-1">Bei Auswahl wird der Verbrauch automatisch in den Projektkosten verbucht.</p>
                         </div>
                       )}
                       {mType === "verbrauch" && (
