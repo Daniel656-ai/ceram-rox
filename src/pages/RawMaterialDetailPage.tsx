@@ -59,6 +59,7 @@ export default function RawMaterialDetailPage() {
   const addAnalysis = useAddAnalysis();
   const deleteAnalysis = useDeleteAnalysis();
   const addMovement = useAddMovement();
+  const bookConsumption = useBookContainerConsumption();
   const addDocument = useAddRawMaterialDocument();
   const updateMaterial = useUpdateRawMaterial();
   const deleteMaterial = useDeleteRawMaterial();
