@@ -197,6 +197,8 @@ export const inventoryMovements = {
     movement_date?: string;
     project_reference?: string;
     comment?: string;
+    project_id?: string;
+    order_measurement_id?: string;
   }) =>
     unwrap(
       (dbClient as any).rpc("book_container_consumption", {
@@ -205,6 +207,8 @@ export const inventoryMovements = {
         _movement_date: args.movement_date || null,
         _project_reference: args.project_reference || null,
         _comment: args.comment || null,
+        _project_id: args.project_id || null,
+        _order_measurement_id: args.order_measurement_id || null,
       })
     ),
 };

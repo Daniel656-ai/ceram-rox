@@ -3234,6 +3234,8 @@ export type Database = {
           _comment?: string
           _container_id: string
           _movement_date?: string
+          _order_measurement_id?: string
+          _project_id?: string
           _project_reference?: string
           _quantity: number
         }
