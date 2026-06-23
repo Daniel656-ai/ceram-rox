@@ -340,12 +340,36 @@ export default function RawMaterialDetailPage() {
   };
 
   const handleAddMovement = async () => {
-    if (!mQty || Number(mQty) <= 0) { toast.error("Menge muss > 0 sein"); return; }
+    const qty = Number(mQty);
+    if (!mQty || qty <= 0) { toast.error("Menge muss > 0 sein"); return; }
     const projectRef = [mProject, mExperiment].filter(Boolean).join(" / ") || undefined;
     try {
-      await addMovement.mutateAsync({ raw_material_id: id!, batch_id: mBatchId || undefined, movement_type: mType, quantity: Number(mQty), movement_date: mDate || undefined, supplier: mSupplier || undefined, project_reference: projectRef, comment: mComment || undefined });
-      toast.success(mType === "eingang" ? "Wareneingang gebucht" : "Verbrauch gebucht");
-      setMovOpen(false); setMQty(""); setMDate(""); setMBatchId(""); setMSupplier(""); setMProject(""); setMExperiment(""); setMComment("");
+      if (mType === "verbrauch") {
+        if (!mContainerId) { toast.error("Bitte LOT-Nummer und Gebinde auswählen"); return; }
+        const cont = (containers || []).find((c: any) => c.id === mContainerId);
+        if (!cont) { toast.error("Gebinde nicht gefunden"); return; }
+        if (Number(cont.current_quantity) <= 0) {
+          toast.error(`Bestand des Gebindes ${cont.container_code} ist 0 – kein Verbrauch möglich`);
+          return;
+        }
+        if (qty > Number(cont.current_quantity)) {
+          toast.error(`Verbrauchsmenge (${qty} ${mat.unit}) überschreitet den Bestand (${cont.current_quantity} ${mat.unit}) des Gebindes ${cont.container_code}`);
+          return;
+        }
+        await bookConsumption.mutateAsync({
+          container_id: mContainerId,
+          raw_material_id: id!,
+          quantity: qty,
+          movement_date: mDate || undefined,
+          project_reference: projectRef,
+          comment: mComment || undefined,
+        });
+        toast.success(`Verbrauch gebucht – neuer Bestand: ${Number(cont.current_quantity) - qty} ${mat.unit}`);
+      } else {
+        await addMovement.mutateAsync({ raw_material_id: id!, batch_id: mBatchId || undefined, movement_type: mType, quantity: qty, movement_date: mDate || undefined, supplier: mSupplier || undefined, project_reference: projectRef, comment: mComment || undefined });
+        toast.success("Wareneingang gebucht");
+      }
+      setMovOpen(false); setMQty(""); setMDate(""); setMBatchId(""); setMContainerId(""); setMSupplier(""); setMProject(""); setMExperiment(""); setMComment("");
     } catch (e: any) { toast.error(e.message); }
   };
 
