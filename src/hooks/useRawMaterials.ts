@@ -244,6 +244,28 @@ export function useAddMovement() {
   });
 }
 
+export function useBookContainerConsumption() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { container_id: string; raw_material_id: string; quantity: number; movement_date?: string; project_reference?: string; comment?: string }) =>
+      api.inventoryMovements.bookContainerConsumption({
+        container_id: args.container_id,
+        quantity: args.quantity,
+        movement_date: args.movement_date,
+        project_reference: args.project_reference,
+        comment: args.comment,
+      }),
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ["inventory_movements", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_materials"] });
+      qc.invalidateQueries({ queryKey: ["container_movements", v.container_id] });
+      qc.invalidateQueries({ queryKey: ["container_audit_log", v.container_id] });
+    },
+  });
+}
+
 // ---- Documents ----
 export function useAddRawMaterialDocument() {
   const qc = useQueryClient();

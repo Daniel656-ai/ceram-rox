@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer } from "@/hooks/useRawMaterials";
+import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useBookContainerConsumption, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer } from "@/hooks/useRawMaterials";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
@@ -59,6 +59,7 @@ export default function RawMaterialDetailPage() {
   const addAnalysis = useAddAnalysis();
   const deleteAnalysis = useDeleteAnalysis();
   const addMovement = useAddMovement();
+  const bookConsumption = useBookContainerConsumption();
   const addDocument = useAddRawMaterialDocument();
   const updateMaterial = useUpdateRawMaterial();
   const deleteMaterial = useDeleteRawMaterial();
@@ -261,6 +262,7 @@ export default function RawMaterialDetailPage() {
   const [mQty, setMQty] = useState("");
   const [mDate, setMDate] = useState("");
   const [mBatchId, setMBatchId] = useState("");
+  const [mContainerId, setMContainerId] = useState("");
   const [mSupplier, setMSupplier] = useState("");
   const [mProject, setMProject] = useState("");
   const [mExperiment, setMExperiment] = useState("");
@@ -338,12 +340,36 @@ export default function RawMaterialDetailPage() {
   };
 
   const handleAddMovement = async () => {
-    if (!mQty || Number(mQty) <= 0) { toast.error("Menge muss > 0 sein"); return; }
+    const qty = Number(mQty);
+    if (!mQty || qty <= 0) { toast.error("Menge muss > 0 sein"); return; }
     const projectRef = [mProject, mExperiment].filter(Boolean).join(" / ") || undefined;
     try {
-      await addMovement.mutateAsync({ raw_material_id: id!, batch_id: mBatchId || undefined, movement_type: mType, quantity: Number(mQty), movement_date: mDate || undefined, supplier: mSupplier || undefined, project_reference: projectRef, comment: mComment || undefined });
-      toast.success(mType === "eingang" ? "Wareneingang gebucht" : "Verbrauch gebucht");
-      setMovOpen(false); setMQty(""); setMDate(""); setMBatchId(""); setMSupplier(""); setMProject(""); setMExperiment(""); setMComment("");
+      if (mType === "verbrauch") {
+        if (!mContainerId) { toast.error("Bitte LOT-Nummer und Gebinde auswählen"); return; }
+        const cont = (containers || []).find((c: any) => c.id === mContainerId);
+        if (!cont) { toast.error("Gebinde nicht gefunden"); return; }
+        if (Number(cont.current_quantity) <= 0) {
+          toast.error(`Bestand des Gebindes ${cont.container_code} ist 0 – kein Verbrauch möglich`);
+          return;
+        }
+        if (qty > Number(cont.current_quantity)) {
+          toast.error(`Verbrauchsmenge (${qty} ${mat.unit}) überschreitet den Bestand (${cont.current_quantity} ${mat.unit}) des Gebindes ${cont.container_code}`);
+          return;
+        }
+        await bookConsumption.mutateAsync({
+          container_id: mContainerId,
+          raw_material_id: id!,
+          quantity: qty,
+          movement_date: mDate || undefined,
+          project_reference: projectRef,
+          comment: mComment || undefined,
+        });
+        toast.success(`Verbrauch gebucht – neuer Bestand: ${Number(cont.current_quantity) - qty} ${mat.unit}`);
+      } else {
+        await addMovement.mutateAsync({ raw_material_id: id!, batch_id: mBatchId || undefined, movement_type: mType, quantity: qty, movement_date: mDate || undefined, supplier: mSupplier || undefined, project_reference: projectRef, comment: mComment || undefined });
+        toast.success("Wareneingang gebucht");
+      }
+      setMovOpen(false); setMQty(""); setMDate(""); setMBatchId(""); setMContainerId(""); setMSupplier(""); setMProject(""); setMExperiment(""); setMComment("");
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -905,8 +931,8 @@ export default function RawMaterialDetailPage() {
                         <div><Label>Datum</Label><Input type="date" value={mDate} onChange={(e) => setMDate(e.target.value)} /></div>
                       </div>
                       <div>
-                        <Label>LOT-Nummer</Label>
-                        <Select value={mBatchId || "__none__"} onValueChange={(v) => setMBatchId(v === "__none__" ? "" : v)}>
+                        <Label>LOT-Nummer{mType === "verbrauch" ? " *" : ""}</Label>
+                        <Select value={mBatchId || "__none__"} onValueChange={(v) => { setMBatchId(v === "__none__" ? "" : v); setMContainerId(""); }}>
                           <SelectTrigger><SelectValue placeholder="LOT-Nummer wählen" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">Keine</SelectItem>
@@ -914,6 +940,45 @@ export default function RawMaterialDetailPage() {
                           </SelectContent>
                         </Select>
                       </div>
+                      {mType === "verbrauch" && (() => {
+                        const lotContainers = (containers || []).filter((c: any) => mBatchId ? c.batch_id === mBatchId : true);
+                        const selectedContainer = lotContainers.find((c: any) => c.id === mContainerId);
+                        const current = selectedContainer ? Number(selectedContainer.current_quantity) : 0;
+                        const qtyNum = Number(mQty) || 0;
+                        const remaining = current - qtyNum;
+                        const overdraw = selectedContainer && qtyNum > 0 && qtyNum > current;
+                        const empty = selectedContainer && current <= 0;
+                        return (
+                          <>
+                            <div>
+                              <Label>Gebinde *</Label>
+                              <Select value={mContainerId || "__none__"} onValueChange={(v) => setMContainerId(v === "__none__" ? "" : v)} disabled={lotContainers.length === 0}>
+                                <SelectTrigger><SelectValue placeholder={lotContainers.length === 0 ? "Keine Gebinde verfügbar" : "Gebinde wählen"} /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">Bitte wählen</SelectItem>
+                                  {lotContainers.map((c: any) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                      {c.container_code} – Bestand: {Number(c.current_quantity)} {c.unit}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {selectedContainer && (
+                              <Alert variant={overdraw || empty ? "destructive" : "default"}>
+                                <AlertDescription className="text-xs space-y-1">
+                                  <div>Aktueller Bestand: <span className="font-mono font-medium">{current} {selectedContainer.unit}</span></div>
+                                  {qtyNum > 0 && !overdraw && !empty && (
+                                    <div>Restbestand nach Buchung: <span className="font-mono font-medium">{remaining} {selectedContainer.unit}</span></div>
+                                  )}
+                                  {empty && <div className="font-medium">Bestand des Gebindes ist 0 – kein Verbrauch möglich.</div>}
+                                  {overdraw && <div className="font-medium">Verbrauchsmenge überschreitet den verfügbaren Bestand!</div>}
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </>
+                        );
+                      })()}
                       {mType === "eingang" && (
                         <div>
                           <Label>Lieferant</Label>

@@ -3229,6 +3229,16 @@ export type Database = {
         Args: { _version_id: string }
         Returns: undefined
       }
+      book_container_consumption: {
+        Args: {
+          _comment?: string
+          _container_id: string
+          _movement_date?: string
+          _project_reference?: string
+          _quantity: number
+        }
+        Returns: string
+      }
       can_view_others_vacation: { Args: { _user_id: string }; Returns: boolean }
       check_user_absence_conflict: {
         Args: { _end: string; _start: string; _user_id: string }
