@@ -185,6 +185,28 @@ export const inventoryMovements = {
         .select()
         .single()
     ),
+
+  /**
+   * Books a consumption against a specific container (Gebinde).
+   * Atomically validates stock, writes inventory + container history rows,
+   * and reduces the container's current_quantity in a single transaction.
+   */
+  bookContainerConsumption: (args: {
+    container_id: string;
+    quantity: number;
+    movement_date?: string;
+    project_reference?: string;
+    comment?: string;
+  }) =>
+    unwrap(
+      (dbClient as any).rpc("book_container_consumption", {
+        _container_id: args.container_id,
+        _quantity: args.quantity,
+        _movement_date: args.movement_date || null,
+        _project_reference: args.project_reference || null,
+        _comment: args.comment || null,
+      })
+    ),
 };
 
 export const rawMaterialDocuments = {
