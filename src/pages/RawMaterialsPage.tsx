@@ -22,6 +22,7 @@ import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import type { HazardClassKey } from "@/lib/hazardClasses";
 import { StorageLocationsManager } from "@/components/StorageLocationsManager";
+import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
 
 
 
@@ -150,6 +151,7 @@ export default function RawMaterialsPage() {
           {canManage && (
             <>
               <StorageLocationsManager triggerLabel={t("raw_materials:new_location")} />
+              <ImportRawMaterialsDialog />
 
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />{t("raw_materials:new_material")}</Button></DialogTrigger>
