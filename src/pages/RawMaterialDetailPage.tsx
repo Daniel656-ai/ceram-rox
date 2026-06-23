@@ -342,7 +342,8 @@ export default function RawMaterialDetailPage() {
   const handleAddMovement = async () => {
     const qty = Number(mQty);
     if (!mQty || qty <= 0) { toast.error("Menge muss > 0 sein"); return; }
-    const projectRef = [mProject, mExperiment].filter(Boolean).join(" / ") || undefined;
+    const selectedProject = (projects || []).find((p: any) => p.id === mProject);
+    const projectRef = [selectedProject?.project_number, mExperiment].filter(Boolean).join(" / ") || undefined;
     try {
       if (mType === "verbrauch") {
         if (!mContainerId) { toast.error("Bitte LOT-Nummer und Gebinde auswählen"); return; }
@@ -363,14 +364,21 @@ export default function RawMaterialDetailPage() {
           movement_date: mDate || undefined,
           project_reference: projectRef,
           comment: mComment || undefined,
+          project_id: mProject || undefined,
         });
-        toast.success(`Verbrauch gebucht – neuer Bestand: ${Number(cont.current_quantity) - qty} ${mat.unit}`);
+        toast.success(
+          `Verbrauch gebucht – neuer Bestand: ${Number(cont.current_quantity) - qty} ${mat.unit}` +
+          (selectedProject ? ` · Projekt ${selectedProject.project_number} aktualisiert` : "")
+        );
       } else {
         await addMovement.mutateAsync({ raw_material_id: id!, batch_id: mBatchId || undefined, movement_type: mType, quantity: qty, movement_date: mDate || undefined, supplier: mSupplier || undefined, project_reference: projectRef, comment: mComment || undefined });
         toast.success("Wareneingang gebucht");
       }
       setMovOpen(false); setMQty(""); setMDate(""); setMBatchId(""); setMContainerId(""); setMSupplier(""); setMProject(""); setMExperiment(""); setMComment("");
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) {
+      console.error("Lagerbuchung fehlgeschlagen", e);
+      toast.error(e?.message || "Lagerbuchung fehlgeschlagen");
+    }
   };
 
   const handleUploadDoc = async (file: File) => {
