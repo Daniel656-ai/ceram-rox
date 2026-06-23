@@ -931,8 +931,8 @@ export default function RawMaterialDetailPage() {
                         <div><Label>Datum</Label><Input type="date" value={mDate} onChange={(e) => setMDate(e.target.value)} /></div>
                       </div>
                       <div>
-                        <Label>LOT-Nummer</Label>
-                        <Select value={mBatchId || "__none__"} onValueChange={(v) => setMBatchId(v === "__none__" ? "" : v)}>
+                        <Label>LOT-Nummer{mType === "verbrauch" ? " *" : ""}</Label>
+                        <Select value={mBatchId || "__none__"} onValueChange={(v) => { setMBatchId(v === "__none__" ? "" : v); setMContainerId(""); }}>
                           <SelectTrigger><SelectValue placeholder="LOT-Nummer wählen" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">Keine</SelectItem>
@@ -940,6 +940,45 @@ export default function RawMaterialDetailPage() {
                           </SelectContent>
                         </Select>
                       </div>
+                      {mType === "verbrauch" && (() => {
+                        const lotContainers = (containers || []).filter((c: any) => mBatchId ? c.batch_id === mBatchId : true);
+                        const selectedContainer = lotContainers.find((c: any) => c.id === mContainerId);
+                        const current = selectedContainer ? Number(selectedContainer.current_quantity) : 0;
+                        const qtyNum = Number(mQty) || 0;
+                        const remaining = current - qtyNum;
+                        const overdraw = selectedContainer && qtyNum > 0 && qtyNum > current;
+                        const empty = selectedContainer && current <= 0;
+                        return (
+                          <>
+                            <div>
+                              <Label>Gebinde *</Label>
+                              <Select value={mContainerId || "__none__"} onValueChange={(v) => setMContainerId(v === "__none__" ? "" : v)} disabled={lotContainers.length === 0}>
+                                <SelectTrigger><SelectValue placeholder={lotContainers.length === 0 ? "Keine Gebinde verfügbar" : "Gebinde wählen"} /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">Bitte wählen</SelectItem>
+                                  {lotContainers.map((c: any) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                      {c.container_code} – Bestand: {Number(c.current_quantity)} {c.unit}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {selectedContainer && (
+                              <Alert variant={overdraw || empty ? "destructive" : "default"}>
+                                <AlertDescription className="text-xs space-y-1">
+                                  <div>Aktueller Bestand: <span className="font-mono font-medium">{current} {selectedContainer.unit}</span></div>
+                                  {qtyNum > 0 && !overdraw && !empty && (
+                                    <div>Restbestand nach Buchung: <span className="font-mono font-medium">{remaining} {selectedContainer.unit}</span></div>
+                                  )}
+                                  {empty && <div className="font-medium">Bestand des Gebindes ist 0 – kein Verbrauch möglich.</div>}
+                                  {overdraw && <div className="font-medium">Verbrauchsmenge überschreitet den verfügbaren Bestand!</div>}
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </>
+                        );
+                      })()}
                       {mType === "eingang" && (
                         <div>
                           <Label>Lieferant</Label>
