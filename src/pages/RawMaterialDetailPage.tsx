@@ -262,6 +262,7 @@ export default function RawMaterialDetailPage() {
   const [mQty, setMQty] = useState("");
   const [mDate, setMDate] = useState("");
   const [mBatchId, setMBatchId] = useState("");
+  const [mContainerId, setMContainerId] = useState("");
   const [mSupplier, setMSupplier] = useState("");
   const [mProject, setMProject] = useState("");
   const [mExperiment, setMExperiment] = useState("");
