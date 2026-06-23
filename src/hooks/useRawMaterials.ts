@@ -247,13 +247,15 @@ export function useAddMovement() {
 export function useBookContainerConsumption() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { container_id: string; raw_material_id: string; quantity: number; movement_date?: string; project_reference?: string; comment?: string }) =>
+    mutationFn: (args: { container_id: string; raw_material_id: string; quantity: number; movement_date?: string; project_reference?: string; comment?: string; project_id?: string; order_measurement_id?: string }) =>
       api.inventoryMovements.bookContainerConsumption({
         container_id: args.container_id,
         quantity: args.quantity,
         movement_date: args.movement_date,
         project_reference: args.project_reference,
         comment: args.comment,
+        project_id: args.project_id,
+        order_measurement_id: args.order_measurement_id,
       }),
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["inventory_movements", v.raw_material_id] });
@@ -262,6 +264,11 @@ export function useBookContainerConsumption() {
       qc.invalidateQueries({ queryKey: ["raw_materials"] });
       qc.invalidateQueries({ queryKey: ["container_movements", v.container_id] });
       qc.invalidateQueries({ queryKey: ["container_audit_log", v.container_id] });
+      if (v.project_id) {
+        qc.invalidateQueries({ queryKey: ["project_knetung_materials", v.project_id] });
+        qc.invalidateQueries({ queryKey: ["project", v.project_id] });
+        qc.invalidateQueries({ queryKey: ["projects-with-stats"] });
+      }
     },
   });
 }
