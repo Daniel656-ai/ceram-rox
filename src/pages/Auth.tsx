@@ -8,12 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { FlaskConical } from "lucide-react";
+import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { validatePassword } from "@/lib/passwordPolicy";
 
 type AuthMode = "login" | "register" | "forgot";
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { t } = useTranslation("auth");
+  const { t } = useTranslation(["auth", "common"]);
   const [mode, setMode] = useState<AuthMode>("login");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -21,13 +24,15 @@ export default function Auth() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
+  const pwValid = validatePassword(password).valid;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await api.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast.error(t("login_failed"), { description: error.message });
+      toast.error(t("auth:login_failed"), { description: error.message });
     } else {
       navigate("/dashboard");
     }
@@ -35,20 +40,24 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!pwValid) {
+      toast.error(t("auth:policy_invalid"));
+      return;
+    }
     setLoading(true);
     const { error } = await api.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/auth`,
         data: { first_name: firstName, last_name: lastName },
       },
     });
     setLoading(false);
     if (error) {
-      toast.error(t("register_failed"), { description: error.message });
+      toast.error(t("auth:register_failed"), { description: error.message });
     } else {
-      toast.success(t("register_success"), { description: t("register_success_description") });
+      toast.success(t("auth:register_success"), { description: t("auth:register_success_description") });
       setMode("login");
     }
   };
@@ -57,13 +66,14 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     const { error } = await api.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
-    if (error) {
+    // Stets generische Erfolgsmeldung (kein Account-Enumeration-Hinweis)
+    if (error && error.message.toLowerCase().includes("rate")) {
       toast.error(t("common:error"), { description: error.message });
     } else {
-      toast.success(t("email_sent"), { description: t("email_sent_description") });
+      toast.success(t("auth:email_sent"), { description: t("auth:email_sent_description") });
       setMode("login");
     }
   };
@@ -81,36 +91,33 @@ export default function Auth() {
         <Card className="border-border/60 shadow-lg">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl">
-              {mode === "login" && t("login_title")}
-              {mode === "register" && t("register_title")}
-              {mode === "forgot" && t("forgot_title")}
+              {mode === "login" && t("auth:login_title")}
+              {mode === "register" && t("auth:register_title")}
+              {mode === "forgot" && t("auth:forgot_title")}
             </CardTitle>
             <CardDescription>
-              {mode === "login" && t("login_description")}
-              {mode === "register" && t("register_description")}
-              {mode === "forgot" && t("forgot_description")}
+              {mode === "login" && t("auth:login_description")}
+              {mode === "register" && t("auth:register_description")}
+              {mode === "forgot" && t("auth:forgot_description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {mode === "login" && (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">{t("email")}</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_placeholder")} required />
+                  <Label htmlFor="email">{t("auth:email")}</Label>
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth:email_placeholder")} required autoComplete="email" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">{t("password")}</Label>
-                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+                  <Label htmlFor="password">{t("auth:password")}</Label>
+                  <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t("logging_in") : t("login")}
+                  {loading ? t("auth:logging_in") : t("auth:login")}
                 </Button>
                 <div className="flex items-center justify-between text-sm">
                   <button type="button" onClick={() => setMode("forgot")} className="text-primary hover:underline">
-                    {t("forgot_password_link")}
-                  </button>
-                  <button type="button" onClick={() => setMode("register")} className="text-primary hover:underline">
-                    {t("create_account")}
+                    {t("auth:forgot_password_link")}
                   </button>
                 </div>
               </form>
@@ -120,29 +127,30 @@ export default function Auth() {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">{t("first_name")}</Label>
+                    <Label htmlFor="firstName">{t("auth:first_name")}</Label>
                     <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">{t("last_name")}</Label>
+                    <Label htmlFor="lastName">{t("auth:last_name")}</Label>
                     <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="regEmail">{t("email")}</Label>
-                  <Input id="regEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_placeholder")} required />
+                  <Label htmlFor="regEmail">{t("auth:email")}</Label>
+                  <Input id="regEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth:email_placeholder")} required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="regPassword">{t("password")}</Label>
-                  <Input id="regPassword" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("min_password")} required minLength={6} />
+                  <Label htmlFor="regPassword">{t("auth:password")}</Label>
+                  <PasswordInput id="regPassword" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("auth:min_password")} required autoComplete="new-password" />
+                  <PasswordStrengthMeter password={password} />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t("registering") : t("register")}
+                <Button type="submit" className="w-full" disabled={loading || !pwValid}>
+                  {loading ? t("auth:registering") : t("auth:register")}
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
-                  {t("already_have_account")}{" "}
+                  {t("auth:already_have_account")}{" "}
                   <button type="button" onClick={() => setMode("login")} className="text-primary hover:underline">
-                    {t("login")}
+                    {t("auth:login")}
                   </button>
                 </p>
               </form>
@@ -151,15 +159,15 @@ export default function Auth() {
             {mode === "forgot" && (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="forgotEmail">{t("email")}</Label>
-                  <Input id="forgotEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_placeholder")} required />
+                  <Label htmlFor="forgotEmail">{t("auth:email")}</Label>
+                  <Input id="forgotEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth:email_placeholder")} required />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t("sending") : t("send_link")}
+                  {loading ? t("auth:sending") : t("auth:send_link")}
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
                   <button type="button" onClick={() => setMode("login")} className="text-primary hover:underline">
-                    {t("back_to_login")}
+                    {t("auth:back_to_login")}
                   </button>
                 </p>
               </form>

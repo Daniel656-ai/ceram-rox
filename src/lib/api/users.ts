@@ -8,12 +8,14 @@ export interface UserWithRole {
   last_name: string;
   short_code: string | null;
   is_active: boolean;
+  must_change_password?: boolean;
   created_at: string;
   updated_at: string;
   user_roles: { role: string }[];
   custom_role_id: string | null;
   custom_role_name: string | null;
 }
+
 
 export const users = {
   async listWithRoles(): Promise<UserWithRole[]> {
@@ -86,7 +88,29 @@ export const users = {
 
     return { profile, role, customRoleId, customRoleName, permissions };
   },
+
+  async clearMustChangePassword(userId: string): Promise<void> {
+    await run(dbClient.from("profiles").update({ must_change_password: false }).eq("user_id", userId));
+  },
+
+  async logPasswordEvent(params: {
+    targetUserId: string;
+    performedBy: string | null;
+    action: "admin_reset" | "self_change" | "forgot_reset" | "initial_set";
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await run(
+      dbClient.from("password_reset_log").insert({
+        target_user_id: params.targetUserId,
+        performed_by: params.performedBy ?? undefined,
+        action: params.action,
+        metadata: (params.metadata ?? null) as any,
+      })
+    );
+  },
 };
+
+
 
 
 export const profiles = {

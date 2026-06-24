@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile } from "@/hooks/useUsers";
+import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile, useResetUserPassword } from "@/hooks/useUsers";
 import { useCustomRoles } from "@/hooks/useCustomRoles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -11,14 +11,18 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CalendarClock } from "lucide-react";
+import { Plus, Pencil, Trash2, CalendarClock, KeyRound, Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { UserWorkScheduleDialog } from "@/components/UserWorkScheduleDialog";
+import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { validatePassword, generateStrongPassword } from "@/lib/passwordPolicy";
+
 
 export default function AdminUsersPage() {
-  const { t, i18n } = useTranslation(["admin", "common"]);
+  const { t, i18n } = useTranslation(["admin", "common", "auth"]);
   const { data: users = [], isLoading } = useUsers();
   const { data: customRoles = [] } = useCustomRoles();
   const { user: currentUser } = useAuth();
@@ -27,11 +31,16 @@ export default function AdminUsersPage() {
   const createUser = useCreateUser();
   const deleteUser = useDeleteUser();
   const updateProfile = useUpdateProfile();
+  const resetPassword = useResetUserPassword();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [scheduleUser, setScheduleUser] = useState<any>(null);
+  const [resetUser, setResetUser] = useState<any>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetDoneValue, setResetDoneValue] = useState<string | null>(null);
+
 
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -52,6 +61,7 @@ export default function AdminUsersPage() {
 
   const handleCreate = async () => {
     if (!newEmail || !newPassword) { toast.error(t("admin:email_password_required")); return; }
+    if (!validatePassword(newPassword).valid) { toast.error(t("auth:policy_invalid")); return; }
     if (!newShortCode || newShortCode.length !== 3) { toast.error(t("admin:short_code_error")); return; }
     const selectedRole = customRoles.find((r) => r.id === newCustomRoleId);
     try {
@@ -60,6 +70,17 @@ export default function AdminUsersPage() {
       setCreateOpen(false); resetCreateForm();
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
+
+  const openReset = (u: any) => { setResetUser(u); setResetPasswordValue(generateStrongPassword()); setResetDoneValue(null); };
+  const handleReset = async () => {
+    if (!resetUser) return;
+    if (!validatePassword(resetPasswordValue).valid) { toast.error(t("auth:policy_invalid")); return; }
+    try {
+      await resetPassword.mutateAsync({ userId: resetUser.user_id, password: resetPasswordValue });
+      setResetDoneValue(resetPasswordValue);
+    } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+  };
+
 
   const handleEdit = async () => {
     if (!editUser) return;
@@ -148,7 +169,9 @@ export default function AdminUsersPage() {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" title={t("admin:schedule_button")} onClick={() => setScheduleUser(u)}><CalendarClock className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => openEdit(u)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" title={t("auth:admin_reset_button")} onClick={() => openReset(u)}><KeyRound className="h-4 w-4" /></Button>
                           {!isSelf && (<Button variant="ghost" size="icon" onClick={() => setDeleteTarget(u)}><Trash2 className="h-4 w-4 text-destructive" /></Button>)}
+
                         </div>
                       </TableCell>
                     </TableRow>
@@ -172,7 +195,17 @@ export default function AdminUsersPage() {
               <div className="space-y-2"><Label>{t("admin:last_name")}</Label><Input value={newLastName} onChange={(e) => setNewLastName(e.target.value)} /></div>
             </div>
             <div className="space-y-2"><Label>{t("admin:email_required")}</Label><Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} /></div>
-            <div className="space-y-2"><Label>{t("admin:password_required")}</Label><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>{t("admin:password_required")}</Label>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setNewPassword(generateStrongPassword())}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />{t("auth:admin_generate")}
+                </Button>
+              </div>
+              <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <PasswordStrengthMeter password={newPassword} />
+            </div>
+
             <div className="space-y-2"><Label>{t("admin:short_code_required")}</Label><Input value={newShortCode} onChange={(e) => setNewShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder={t("admin:short_code_placeholder")} /></div>
             <div className="space-y-2">
               <Label>{t("admin:role")}</Label>
@@ -230,6 +263,50 @@ export default function AdminUsersPage() {
           userName={`${scheduleUser.first_name} ${scheduleUser.last_name}`}
         />
       )}
+
+      <Dialog open={!!resetUser} onOpenChange={(v) => { if (!v) { setResetUser(null); setResetPasswordValue(""); setResetDoneValue(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("auth:admin_reset_title")} – {resetUser?.first_name} {resetUser?.last_name}</DialogTitle>
+            <DialogDescription>{t("auth:admin_reset_description")}</DialogDescription>
+          </DialogHeader>
+          {resetDoneValue ? (
+            <div className="space-y-3">
+              <p className="text-sm">{t("auth:admin_reset_done")}</p>
+              <div className="flex items-center gap-2 p-3 rounded-md bg-muted font-mono text-sm break-all">
+                <span className="flex-1">{resetDoneValue}</span>
+                <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(resetDoneValue); toast.success(t("auth:copied")); }}>
+                  <Copy className="h-3.5 w-3.5 mr-1" />{t("auth:copy")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>{t("auth:new_password")}</Label>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setResetPasswordValue(generateStrongPassword())}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />{t("auth:admin_generate")}
+                </Button>
+              </div>
+              <PasswordInput value={resetPasswordValue} onChange={(e) => setResetPasswordValue(e.target.value)} />
+              <PasswordStrengthMeter password={resetPasswordValue} />
+            </div>
+          )}
+          <DialogFooter>
+            {resetDoneValue ? (
+              <Button onClick={() => { setResetUser(null); setResetPasswordValue(""); setResetDoneValue(null); }}>{t("common:close", "Schließen")}</Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setResetUser(null)}>{t("common:cancel")}</Button>
+                <Button onClick={handleReset} disabled={resetPassword.isPending || !validatePassword(resetPasswordValue).valid}>
+                  {resetPassword.isPending ? t("common:saving") : t("auth:admin_reset_button")}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
