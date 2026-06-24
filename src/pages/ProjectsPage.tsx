@@ -139,6 +139,9 @@ const { user, role } = useAuth();
 
   const dateLocale = i18n.language === "en" ? "en-GB" : "de-DE";
 
+  const formatDate = (d: string | null | undefined) =>
+    d ? new Date(d).toLocaleDateString(dateLocale) : "–";
+
   const renderProjectRow = (p: any) => {
     const lead = projectLeads.get(p.id);
     const ownerName = lead?.ownerName?.trim();
@@ -155,7 +158,6 @@ const { user, role } = useAuth();
       <TableCell>
         <Link to={`/projekte/${p.id}`} className="hover:underline">{p.project_name || "–"}</Link>
       </TableCell>
-      <TableCell>{getUserName(p.created_by)}</TableCell>
       <TableCell className={ownerName ? "" : "text-muted-foreground italic"}>
         {ownerName || unassigned}
       </TableCell>
@@ -174,10 +176,9 @@ const { user, role } = useAuth();
       <TableCell className="text-center">
         {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${(p.stats.totalCost + p.stats.materialCost).toFixed(0)}€` : "–"}
       </TableCell>
-      <TableCell>{new Date(p.created_at).toLocaleDateString(dateLocale)}</TableCell>
-      {(p as any).end_date && (
-        <TableCell className="hidden xl:table-cell">{new Date((p as any).end_date).toLocaleDateString(dateLocale)}</TableCell>
-      )}
+      <TableCell>{formatDate((p as any).start_date)}</TableCell>
+      <TableCell>{formatDate((p as any).end_date)}</TableCell>
+      <TableCell>{formatDate((p as any).updated_at)}</TableCell>
       {role === "master" && (
         <TableCell>
           <AlertDialog>
@@ -223,7 +224,6 @@ const { user, role } = useAuth();
         <TableHead className="w-12">{t("traffic_light")}</TableHead>
         <TableHead>{t("project_number")}</TableHead>
         <TableHead>{t("project_name")}</TableHead>
-        <TableHead>{t("creator")}</TableHead>
         <TableHead>
           <div className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{t("project_owner", { defaultValue: "Projekteigner" })}</div>
         </TableHead>
@@ -242,11 +242,14 @@ const { user, role } = useAuth();
         <TableHead className="text-center">
           <div className="flex items-center justify-center gap-1"><DollarSign className="h-3.5 w-3.5" />{t("costs")}</div>
         </TableHead>
-        <TableHead>{t("created_at")}</TableHead>
+        <TableHead>{t("project_start_date", { defaultValue: "Startdatum" })}</TableHead>
+        <TableHead>{t("project_end_date", { defaultValue: "Enddatum" })}</TableHead>
+        <TableHead>{t("last_updated", { defaultValue: "Letzte Aktualisierung" })}</TableHead>
         {role === "master" && <TableHead className="w-12"></TableHead>}
       </TableRow>
     </TableHeader>
   );
+
 
   return (
     <div className="space-y-6">
