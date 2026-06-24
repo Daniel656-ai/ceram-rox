@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
-import { dbClient } from "@/lib/api/client";
+// dbClient unused below — entfernt
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -46,12 +46,13 @@ export default function ChangePassword() {
       setLoading(false);
       return toast.error(t("common:error"), { description: error.message });
     }
-    await dbClient.from("profiles").update({ must_change_password: false }).eq("user_id", user.id);
-    await dbClient.from("password_reset_log").insert({
-      target_user_id: user.id,
-      performed_by: user.id,
+    await api.users.clearMustChangePassword(user.id);
+    await api.users.logPasswordEvent({
+      targetUserId: user.id,
+      performedBy: user.id,
       action: mustChangePassword ? "initial_set" : "self_change",
     });
+
     await refreshProfile();
     setLoading(false);
     toast.success(t("auth:password_changed"));

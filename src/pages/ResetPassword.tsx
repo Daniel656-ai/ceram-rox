@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
+// dbClient nur für PASSWORD_RECOVERY-Event-Subscription (Supabase Auth-State)
 import { dbClient } from "@/lib/api/client";
+
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,14 +52,15 @@ export default function ResetPassword() {
     }
     // Clear must_change_password and log
     if (data.user) {
-      await dbClient.from("profiles").update({ must_change_password: false }).eq("user_id", data.user.id);
-      await dbClient.from("password_reset_log").insert({
-        target_user_id: data.user.id,
-        performed_by: data.user.id,
+      await api.users.clearMustChangePassword(data.user.id);
+      await api.users.logPasswordEvent({
+        targetUserId: data.user.id,
+        performedBy: data.user.id,
         action: "forgot_reset",
       });
     }
     await api.auth.signOut();
+
     setLoading(false);
     toast.success(t("auth:reset_success"));
     navigate("/auth", { replace: true });
