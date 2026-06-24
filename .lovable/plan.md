@@ -1,96 +1,93 @@
-## Ziel
+# R&D Project Weekly Review
 
-Zwei große Erweiterungen im Bereich Mischungen & Lösungen:
+Neues Feature zur wöchentlichen Statuserfassung pro Projekt – mit Verlaufschart, Dashboard-Integration und automatischen Erinnerungen.
 
-1. **Flexible Zeitsteuerung** für Prozessschritte, Messungen & Rohstoffzugaben (relativ, absolut, bedingungsbasiert)
-2. **Rezepturvorlagen, Kopieren & Versionsvergleich** mit Änderungshistorie und Vorlagentypen
+## 1. Datenbank (Migration)
 
-Vorschlag: Umsetzung in **2 Phasen**, weil unabhängig nutzbar und Datenmodell-Änderungen umfangreich.
+Neue Tabelle `project_weekly_reviews`:
+- `project_id` (FK projects)
+- `author_user_id` (FK auth.users)
+- `author_role_snapshot` (text, eingefrorene Rolle im Projekt)
+- `iso_year`, `iso_week` (int, ISO-8601)
+- `review_date` (date)
+- `completed_this_week`, `currently_working_on`, `next_steps`, `help_needed`, `risks`, `other_comments` (text)
+- `overall_rating` (smallint, 1–3, CHECK)
+- Unique-Constraint: `(project_id, author_user_id, iso_year, iso_week)` → ein Review pro Mitarbeiter/Projekt/Woche; bestehende werden NICHT überschrieben (Insert-only, kein Update)
+- RLS:
+  - SELECT: Projektmitglieder + `projects.view_all`-Permission
+  - INSERT: Projektmitglieder (nur eigene `author_user_id`)
+  - UPDATE/DELETE: **nicht erlaubt** (immutable Snapshot)
+- GRANTs für `authenticated` und `service_role`
 
----
+Optional View `project_weekly_review_compliance` für KPI (erwartete vs. eingereichte Reviews je Woche/Projekt).
 
-## Phase A — Flexible Zeitsteuerung (Prozessschritte/Messungen)
+## 2. API-Layer
 
-### Datenbank
+`src/lib/api/weeklyReviews.ts` (über zentralen `dbClient`):
+- `list(projectId)`, `listForUser(userId)`, `listOpen()` (Projekte ohne Review in aktueller KW für aktuellen User)
+- `create(payload)`
+- `compliance({ from, to })`
 
-Erweiterung `mixture_process_steps` und `mixture_planned_measurements`:
+Hook: `src/hooks/useWeeklyReviews.ts` mit React-Query.
 
-| Spalte | Typ | Zweck |
-|---|---|---|
-| `time_mode` | enum `relative` \| `absolute` \| `condition` | Art der Zeitsteuerung |
-| `absolute_time` | `time` | Uhrzeit bei `absolute` (z.B. 08:00) |
-| `condition_kind` | enum `temperature` \| `ph` \| `previous_step` \| `manual_release` \| `custom` | Trigger-Typ |
-| `condition_value` | numeric | Schwelle (80 für 80°C, 6.5 für pH) |
-| `condition_unit` | text | °C, pH, … |
-| `condition_text` | text | Freitext für `custom` / manuelle Freigabe |
+## 3. UI – Projektdetail
 
-Bestehende `offset_minutes` bleibt für `relative` (intern in Minuten gespeichert), UI bietet Eingabe als **Minuten / Stunden / Stunden+Minuten**.
+In `ProjectDetailPage.tsx` neuer Tab/Abschnitt **„Weekly Reviews"**:
+- Button **„Weekly Review erstellen"** (sichtbar nur für Projektmitglieder; deaktiviert wenn Review für aktuelle KW bereits existiert, mit Tooltip)
+- `WeeklyReviewDialog.tsx`:
+  - Read-only Felder: Datum (heute, lokal formatiert), Mitarbeiter (Name), Projektrolle (aus `project_members`, Fallback „Mitglied")
+  - 6 Textarea-Felder gemäß Spezifikation
+  - Flaggen-Auswahl 🚩 / 🚩🚩 / 🚩🚩🚩 (rot/gelb/grün) mit klickbaren Buttons → speichert 1/2/3
+  - Validierung via Zod
+- `WeeklyReviewList.tsx`: chronologisch (neueste zuerst), Karten mit Datum, Mitarbeiter, Rolle, farbiger Flaggen-Badge, ausklappbare Antworten
+- Suche/Filter nach Datum (Range) und Mitarbeiter (Select)
+- `WeeklyReviewTrendChart.tsx` (Recharts LineChart):
+  - X: review_date, Y: 1–3
+  - Punkte farbcodiert (rot/gelb/grün), Linie neutral
+  - Tooltip mit Datum, Mitarbeiter, Kommentar-Snippet
+  - Responsive (`ResponsiveContainer`)
 
-### UI
+## 4. Projektübersicht & Dashboard
 
-- `ProcessEditor.tsx`: pro Step/Messung neuer Time-Picker mit 3 Tabs (Relativ | Uhrzeit | Bedingung)
-  - Relativ: Dauer-Input mit Einheitenumschalter (min / h / h+min)
-  - Uhrzeit: `<input type="time">`
-  - Bedingung: Select (Temperatur/pH/vorheriger Schritt/Freigabe/Custom) + Wert/Einheit
-- `BatchExecutionPage.tsx`: Anzeige der fälligen Aufgaben mit passender Darstellung
-  - Live-Hinweise: Toast/Badge wenn relative Zeit erreicht oder absolute Uhrzeit überschritten
-  - Bedingungs-Trigger: Button „Bedingung erfüllt → freigeben" startet nächste Schritte
+- `ProjectsPage.tsx`: neue Spalte **Status** mit aktuellster Flagge je Projekt (rot/gelb/grün, „–" wenn kein Review)
+- `Dashboard.tsx` (Projektleiter-Sicht via `projects.manage`-Permission): Widget **„Offene Weekly Reviews"** mit Projekt, Mitarbeiter, Rolle, Status (offen/überfällig/erledigt) + KPI-Karten (Quote %, überfällig, ⌀ Bewertung)
 
-### Helper
+## 5. Automatische Reminder (Edge Function + pg_cron)
 
-Neue Util `src/lib/processTime.ts`:
-- `formatStepTime(step) → "+5 min" | "08:00" | "bei 80 °C"`
-- `parseRelative(value, unit) → minutes`
-- `isStepDue(step, batchStartedAt, recordedMeasurements) → boolean`
+Edge Function `weekly-review-reminders`:
+- Ermittelt aktive Projektmitglieder laufender Projekte
+- Prüft pro Mitarbeiter/Projekt, ob in aktueller ISO-KW ein Review existiert
+- Erstellt In-App-`notifications` (bestehende Tabelle) mit Direktlink `/projekte/<id>?weekly=1`
+- Falls Lovable Emails konfiguriert: zusätzlich E-Mail über `send-transactional-email`
+- Modus per Query-Param: `?mode=friday` (Erstreminder) / `?mode=monday` (Eskalation an Mitarbeiter + Projektleiter)
 
----
+pg_cron-Jobs (Europe/Vienna):
+- Freitag 14:00 → `mode=friday`
+- Montag 09:00 → `mode=monday`
 
-## Phase B — Vorlagen, Kopieren & Versionsvergleich
+Reminder-Inhalt gemäß Spezifikation (Betreff, Nachricht, CTA-Button-Link).
 
-### Datenbank
+## 6. Berechtigungen
 
-**`mixtures`** erweitern:
-- `is_template` boolean default false
-- `template_kind` enum `standard` \| `customer` \| `development` \| `pilot` \| `production` \| null
-- `copied_from_mixture_id` uuid nullable
+Neue Permission-Keys in `usePermissions.ts` & `role_permissions`:
+- `weekly_reviews.create` (alle Projektmitglieder per Default)
+- `weekly_reviews.view` (Projektmitglieder + Leitung)
+- `weekly_reviews.view_all` (Master/Admin/PMO)
 
-**`mixture_recipe_versions`** erweitern:
-- `version_label` text (`1.0`, `1.1`, `2.0` — manuell setzbar, fallback `version_no`)
-- `change_summary` text (Was)
-- `change_reason` text (Warum)
-- `parent_version_id` uuid (vorherige Version, für Diff)
+## 7. i18n
 
-**Neue RPCs:**
-- `copy_mixture(_source_id, _new_name, _new_number)` → uuid: dupliziert Mixture + aktive Version + alle items/sections/steps/measurements
-- `create_mixture_from_template(_template_id, _new_name)` → uuid
-- `diff_recipe_versions(_version_a, _version_b)` → jsonb mit { added/removed/changed items, sections, steps, measurements }
+Neue Keys in `de/projects.json` und `en/projects.json` (Felder, Buttons, Reminder-Texte, Statuslabels).
 
-**Chargenbezogene Versionssicherheit**: bereits in `mixture_batches.recipe_version_id` vorhanden, wird beim Erzeugen einer neuen Version NICHT mehr verändert (Pinning).
+## Technische Details
 
-### UI
+- ISO-Wochen über `date-fns` `getISOWeek` / `getISOWeekYear`
+- Snapshots immutable: keine Update/Delete-Policy, UI bietet kein Bearbeiten
+- Charts: bestehendes `recharts` aus Projekt
+- Design-Tokens aus `index.css` (rot/gelb/grün als semantische Klassen via `text-destructive`, `text-warning`, `text-success` falls vorhanden – sonst neue Tokens)
+- API-Aufrufe ausschließlich über `src/lib/api/*` (kein direktes `supabase.from` in Hooks/Pages)
 
-- `MixturesPage.tsx`: 
-  - Toggle „Nur Vorlagen anzeigen"
-  - Button „Aus Vorlage erstellen" → Dialog (Template-Auswahl + neuer Name)
-  - Pro Mischung „Duplizieren"-Action
-- `MixtureDetailPage.tsx`:
-  - Checkbox „Als Vorlage markieren" + Select Vorlagentyp
-  - Im Versions-Bar: Felder `version_label`, `change_summary`, `change_reason` beim Erstellen
-  - Neuer Button „Versionen vergleichen" → Dialog `VersionDiffDialog`
-- Neue Komponente `VersionDiffDialog.tsx`:
-  - 2 Select für Versionen A/B
-  - Tabelle mit farbcodierten Zeilen: grün=neu, rot=entfernt, gelb=geändert
-  - Sektionen: Rohstoffe, Prozessabschnitte, Schritte, Messungen
+## Offene Fragen
 
----
-
-## Technische Hinweise
-
-- Alle DB-Änderungen RLS-konform, GRANTs für authenticated + service_role
-- API strikt über `src/lib/api/mixtureProcess.ts` und neue `src/lib/api/mixtureTemplates.ts`
-- i18n DE/EN in `mixtures.json` erweitern (Zeitmodi, Vorlagentypen, Diff-Labels)
-- Keine breaking changes: bestehende Steps ohne `time_mode` werden als `relative` interpretiert
-
-## Frage vor Start
-
-Beide Phasen jetzt zusammen umsetzen (groß, 1 Migration + ~10 Dateien), oder erst **Phase A** (Zeitsteuerung), dann nach Test **Phase B**?
+1. **E-Mail-Reminder**: Soll ich Lovable Emails einrichten (Domain-Setup nötig) oder reichen In-App-Notifications zunächst?
+2. **Eskalation Montag**: Projektleiter automatisch CC, oder nur bei expliziter Konfiguration?
+3. **Dashboard-Widget**: Auch für normale Mitarbeiter „meine offenen Reviews" anzeigen, oder nur für Projektleiter?

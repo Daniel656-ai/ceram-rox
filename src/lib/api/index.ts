@@ -88,6 +88,10 @@ import { mixtureExecution } from "./mixtureExecution";
 import { mixtureTemplates } from "./mixtureTemplates";
 import { companySettings } from "./companySettings";
 import { labelTemplates, labelPrintHistory } from "./labelTemplates";
+import { weeklyReviews } from "./weeklyReviews";
+
+
+
 
 
 
@@ -163,6 +167,7 @@ export const api = {
   companySettings,
   labelTemplates,
   labelPrintHistory,
+  weeklyReviews,
 
 
 

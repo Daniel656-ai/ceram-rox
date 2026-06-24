@@ -12,12 +12,13 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users } from "lucide-react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList } from "lucide-react";
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import { ProjectTeamTab } from "@/components/ProjectTeamTab";
 import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
+import { WeeklyReviewsTab } from "@/components/WeeklyReviewsTab";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -426,10 +427,16 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
           <TabsTrigger value="team"><Users className="h-3.5 w-3.5 mr-1" />{t("tab_team")}</TabsTrigger>
           <TabsTrigger value="planning">{t("tab_planning")}</TabsTrigger>
+          <TabsTrigger value="weekly_reviews"><ClipboardList className="h-3.5 w-3.5 mr-1" />Weekly Reviews</TabsTrigger>
           {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="weekly_reviews">
+          <WeeklyReviewsTab projectId={id!} />
+        </TabsContent>
+
 
         {/* SAMPLES TAB */}
         <TabsContent value="samples">
