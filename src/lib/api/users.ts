@@ -102,13 +102,14 @@ export const users = {
     await run(
       dbClient.from("password_reset_log").insert({
         target_user_id: params.targetUserId,
-        performed_by: params.performedBy,
+        performed_by: params.performedBy ?? undefined,
         action: params.action,
-        metadata: params.metadata ?? null,
+        metadata: (params.metadata ?? null) as any,
       })
     );
   },
 };
+
 
 
 
