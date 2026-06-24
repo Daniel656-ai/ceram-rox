@@ -224,6 +224,12 @@ const { user, role } = useAuth();
         <TableHead>{t("project_number")}</TableHead>
         <TableHead>{t("project_name")}</TableHead>
         <TableHead>{t("creator")}</TableHead>
+        <TableHead>
+          <div className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{t("project_owner", { defaultValue: "Projekteigner" })}</div>
+        </TableHead>
+        <TableHead>
+          <div className="flex items-center gap-1"><UserCog className="h-3.5 w-3.5" />{t("project_leader", { defaultValue: "Projektleiter" })}</div>
+        </TableHead>
         <TableHead className="text-center">
           <div className="flex items-center justify-center gap-1"><Package className="h-3.5 w-3.5" />{t("samples")}</div>
         </TableHead>
