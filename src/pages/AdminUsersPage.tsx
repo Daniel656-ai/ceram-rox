@@ -263,6 +263,50 @@ export default function AdminUsersPage() {
           userName={`${scheduleUser.first_name} ${scheduleUser.last_name}`}
         />
       )}
+
+      <Dialog open={!!resetUser} onOpenChange={(v) => { if (!v) { setResetUser(null); setResetPasswordValue(""); setResetDoneValue(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("auth:admin_reset_title")} – {resetUser?.first_name} {resetUser?.last_name}</DialogTitle>
+            <DialogDescription>{t("auth:admin_reset_description")}</DialogDescription>
+          </DialogHeader>
+          {resetDoneValue ? (
+            <div className="space-y-3">
+              <p className="text-sm">{t("auth:admin_reset_done")}</p>
+              <div className="flex items-center gap-2 p-3 rounded-md bg-muted font-mono text-sm break-all">
+                <span className="flex-1">{resetDoneValue}</span>
+                <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(resetDoneValue); toast.success(t("auth:copied")); }}>
+                  <Copy className="h-3.5 w-3.5 mr-1" />{t("auth:copy")}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>{t("auth:new_password")}</Label>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setResetPasswordValue(generateStrongPassword())}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />{t("auth:admin_generate")}
+                </Button>
+              </div>
+              <PasswordInput value={resetPasswordValue} onChange={(e) => setResetPasswordValue(e.target.value)} />
+              <PasswordStrengthMeter password={resetPasswordValue} />
+            </div>
+          )}
+          <DialogFooter>
+            {resetDoneValue ? (
+              <Button onClick={() => { setResetUser(null); setResetPasswordValue(""); setResetDoneValue(null); }}>{t("common:close", "Schließen")}</Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setResetUser(null)}>{t("common:cancel")}</Button>
+                <Button onClick={handleReset} disabled={resetPassword.isPending || !validatePassword(resetPasswordValue).valid}>
+                  {resetPassword.isPending ? t("common:saving") : t("auth:admin_reset_button")}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
