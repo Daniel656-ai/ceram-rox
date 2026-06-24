@@ -318,9 +318,9 @@ const { user, role } = useAuth();
             {tableHeaders}
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8">{t("loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center py-8">{t("loading")}</TableCell></TableRow>
               ) : activeProjects.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("no_projects")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">{t("no_projects")}</TableCell></TableRow>
               ) : (
                 activeProjects.map(renderProjectRow)
               )}
