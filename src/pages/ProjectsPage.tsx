@@ -23,7 +23,7 @@ import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 
 
-type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs" | "owner" | "leader";
+type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs" | "owner" | "leader" | "start_date" | "end_date" | "updated_desc";
 
 export default function ProjectsPage() {
   const { t, i18n } = useTranslation("projects");
@@ -85,12 +85,12 @@ const { user, role } = useAuth();
           p.project_number.toLowerCase().includes(q) ||
           (p.project_name || "").toLowerCase().includes(q) ||
           (p.description || "").toLowerCase().includes(q) ||
-          getUserName(p.created_by).toLowerCase().includes(q) ||
           (lead?.ownerName || "").toLowerCase().includes(q) ||
           (lead?.leaderName || "").toLowerCase().includes(q)
         );
       });
     }
+
 
     const leadName = (id: string, kind: "owner" | "leader") => {
       const l = projectLeads.get(id);
@@ -106,8 +106,20 @@ const { user, role } = useAuth();
         case "costs": return ((b.stats?.totalCost || 0) + (b.stats?.materialCost || 0)) - ((a.stats?.totalCost || 0) + (a.stats?.materialCost || 0));
         case "owner": return leadName(a.id, "owner").localeCompare(leadName(b.id, "owner"));
         case "leader": return leadName(a.id, "leader").localeCompare(leadName(b.id, "leader"));
+        case "start_date": {
+          const av = (a as any).start_date ? new Date((a as any).start_date).getTime() : Infinity;
+          const bv = (b as any).start_date ? new Date((b as any).start_date).getTime() : Infinity;
+          return av - bv;
+        }
+        case "end_date": {
+          const av = (a as any).end_date ? new Date((a as any).end_date).getTime() : Infinity;
+          const bv = (b as any).end_date ? new Date((b as any).end_date).getTime() : Infinity;
+          return av - bv;
+        }
+        case "updated_desc": return new Date((b as any).updated_at).getTime() - new Date((a as any).updated_at).getTime();
         default: return 0;
       }
+
     });
 
     const active = result.filter(p => p.project_status !== "completed");
@@ -139,6 +151,9 @@ const { user, role } = useAuth();
 
   const dateLocale = i18n.language === "en" ? "en-GB" : "de-DE";
 
+  const formatDate = (d: string | null | undefined) =>
+    d ? new Date(d).toLocaleDateString(dateLocale) : "–";
+
   const renderProjectRow = (p: any) => {
     const lead = projectLeads.get(p.id);
     const ownerName = lead?.ownerName?.trim();
@@ -155,7 +170,6 @@ const { user, role } = useAuth();
       <TableCell>
         <Link to={`/projekte/${p.id}`} className="hover:underline">{p.project_name || "–"}</Link>
       </TableCell>
-      <TableCell>{getUserName(p.created_by)}</TableCell>
       <TableCell className={ownerName ? "" : "text-muted-foreground italic"}>
         {ownerName || unassigned}
       </TableCell>
@@ -174,10 +188,9 @@ const { user, role } = useAuth();
       <TableCell className="text-center">
         {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${(p.stats.totalCost + p.stats.materialCost).toFixed(0)}€` : "–"}
       </TableCell>
-      <TableCell>{new Date(p.created_at).toLocaleDateString(dateLocale)}</TableCell>
-      {(p as any).end_date && (
-        <TableCell className="hidden xl:table-cell">{new Date((p as any).end_date).toLocaleDateString(dateLocale)}</TableCell>
-      )}
+      <TableCell>{formatDate((p as any).start_date)}</TableCell>
+      <TableCell>{formatDate((p as any).end_date)}</TableCell>
+      <TableCell>{formatDate((p as any).updated_at)}</TableCell>
       {role === "master" && (
         <TableCell>
           <AlertDialog>
@@ -223,7 +236,6 @@ const { user, role } = useAuth();
         <TableHead className="w-12">{t("traffic_light")}</TableHead>
         <TableHead>{t("project_number")}</TableHead>
         <TableHead>{t("project_name")}</TableHead>
-        <TableHead>{t("creator")}</TableHead>
         <TableHead>
           <div className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{t("project_owner", { defaultValue: "Projekteigner" })}</div>
         </TableHead>
@@ -242,11 +254,14 @@ const { user, role } = useAuth();
         <TableHead className="text-center">
           <div className="flex items-center justify-center gap-1"><DollarSign className="h-3.5 w-3.5" />{t("costs")}</div>
         </TableHead>
-        <TableHead>{t("created_at")}</TableHead>
+        <TableHead>{t("project_start_date", { defaultValue: "Startdatum" })}</TableHead>
+        <TableHead>{t("project_end_date", { defaultValue: "Enddatum" })}</TableHead>
+        <TableHead>{t("last_updated", { defaultValue: "Letzte Aktualisierung" })}</TableHead>
         {role === "master" && <TableHead className="w-12"></TableHead>}
       </TableRow>
     </TableHeader>
   );
+
 
   return (
     <div className="space-y-6">
@@ -303,6 +318,10 @@ const { user, role } = useAuth();
             <SelectItem value="costs">{t("sort_costs")}</SelectItem>
             <SelectItem value="owner">{t("sort_owner", { defaultValue: "Sortierung: Projekteigner" })}</SelectItem>
             <SelectItem value="leader">{t("sort_leader", { defaultValue: "Sortierung: Projektleiter" })}</SelectItem>
+            <SelectItem value="start_date">{t("sort_start_date", { defaultValue: "Sortierung: Startdatum" })}</SelectItem>
+            <SelectItem value="end_date">{t("sort_end_date", { defaultValue: "Sortierung: Enddatum" })}</SelectItem>
+            <SelectItem value="updated_desc">{t("sort_updated_desc", { defaultValue: "Sortierung: Zuletzt aktualisiert" })}</SelectItem>
+
           </SelectContent>
         </Select>
       </div>
