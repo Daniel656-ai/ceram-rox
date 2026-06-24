@@ -115,7 +115,7 @@ const { user, role } = useAuth();
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
     return { activeProjects: active, completedProjects: completed };
-  }, [projects, search, sortBy, users]);
+  }, [projects, search, sortBy, users, projectLeads]);
 
   const handleCreate = async () => {
     if (!form.project_number.trim()) {
