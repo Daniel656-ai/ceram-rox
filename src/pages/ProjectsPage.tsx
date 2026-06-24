@@ -214,7 +214,8 @@ const { user, role } = useAuth();
         </TableCell>
       )}
     </TableRow>
-  );
+    );
+  };
 
   const tableHeaders = (
     <TableHeader>
