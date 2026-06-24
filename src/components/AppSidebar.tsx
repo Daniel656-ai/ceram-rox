@@ -88,7 +88,7 @@ export function AppSidebar() {
     // Always visible for admins, independent of nav-permission seeding
     { title: "Gefahrstoff-Verteiler", url: "/admin/gefahrstoff-verteiler", icon: AlertTriangle, show: isAdmin, nav: null as string | null },
     { title: "Firmeneinstellungen", url: "/admin/firmeneinstellungen", icon: ImageIcon, show: isAdmin || role === "master", nav: null as string | null },
-    { title: "Etiketten-Vorlagen", url: "/admin/etiketten", icon: Tag, show: isAdmin || role === "master", nav: null as string | null },
+    { title: "Etiketten-Vorlagen", url: "/admin/etiketten", icon: Tag, show: isAdmin || role === "master" || hasPerm("raw_materials.manage"), nav: null as string | null },
 
   ].filter((item) => item.show && (item.nav === null || hasNavPerm(item.nav)));
 
