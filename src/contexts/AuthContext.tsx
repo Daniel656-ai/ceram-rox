@@ -12,6 +12,7 @@ interface Profile {
   first_name: string;
   last_name: string;
   is_active: boolean;
+  must_change_password?: boolean;
 }
 
 interface AuthContextType {
@@ -22,8 +23,10 @@ interface AuthContextType {
   customRoleId: string | null;
   customRoleName: string | null;
   permissions: string[];
+  mustChangePassword: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -34,8 +37,10 @@ const AuthContext = createContext<AuthContextType>({
   customRoleId: null,
   customRoleName: null,
   permissions: [],
+  mustChangePassword: false,
   loading: true,
   signOut: async () => {},
+  refreshProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -53,13 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserData = async (userId: string) => {
     const { profile, role, customRoleId, customRoleName, permissions } =
       await api.users.loadAuthContext(userId);
-    if (profile) setProfile(profile);
+    if (profile) setProfile(profile as Profile);
     if (role) setRole(role as AppRole);
     setCustomRoleId(customRoleId);
     setCustomRoleName(customRoleName);
     setPermissions(permissions);
   };
 
+  const refreshProfile = async () => {
+    if (user) await fetchUserData(user.id);
+  };
 
   useEffect(() => {
     const { data: { subscription } } = api.auth.onAuthStateChange(
@@ -101,8 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissions([]);
   };
 
+  const mustChangePassword = !!profile?.must_change_password;
+
   return (
-    <AuthContext.Provider value={{ session, user, profile, role, customRoleId, customRoleName, permissions, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, role, customRoleId, customRoleName, permissions, mustChangePassword, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
