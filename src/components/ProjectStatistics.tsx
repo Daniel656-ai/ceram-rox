@@ -324,7 +324,7 @@ export function ProjectStatistics() {
             </TableHeader>
             <TableBody>
               {sorted.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">{t("admin:pstats_no_data")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">{t("admin:pstats_no_data")}</TableCell></TableRow>
               ) : (
                 sorted.map(p => (
                   <TableRow key={p.id}>
