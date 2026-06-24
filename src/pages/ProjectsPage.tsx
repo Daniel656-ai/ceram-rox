@@ -318,6 +318,10 @@ const { user, role } = useAuth();
             <SelectItem value="costs">{t("sort_costs")}</SelectItem>
             <SelectItem value="owner">{t("sort_owner", { defaultValue: "Sortierung: Projekteigner" })}</SelectItem>
             <SelectItem value="leader">{t("sort_leader", { defaultValue: "Sortierung: Projektleiter" })}</SelectItem>
+            <SelectItem value="start_date">{t("sort_start_date", { defaultValue: "Sortierung: Startdatum" })}</SelectItem>
+            <SelectItem value="end_date">{t("sort_end_date", { defaultValue: "Sortierung: Enddatum" })}</SelectItem>
+            <SelectItem value="updated_desc">{t("sort_updated_desc", { defaultValue: "Sortierung: Zuletzt aktualisiert" })}</SelectItem>
+
           </SelectContent>
         </Select>
       </div>
