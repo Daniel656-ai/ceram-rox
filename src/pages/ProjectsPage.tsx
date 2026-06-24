@@ -180,6 +180,26 @@ const { user, role } = useAuth();
       <TableCell>
         <TrafficLightBadge value={(p as any).traffic_light || "green"} />
       </TableCell>
+      <TableCell>
+        {(() => {
+          const r = latestReviewByProject.get(p.id);
+          if (!r) return <span className="text-muted-foreground text-xs italic">–</span>;
+          const meta = r.rating === 1
+            ? { color: "#dc2626", label: "Schlecht", emoji: "🔴" }
+            : r.rating === 2
+            ? { color: "#eab308", label: "Mittel", emoji: "🟡" }
+            : { color: "#16a34a", label: "Gut", emoji: "🟢" };
+          return (
+            <span
+              title={`Letzte Weekly-Review-Bewertung: ${meta.label}`}
+              className="inline-flex items-center justify-center text-lg leading-none"
+              aria-label={`Weekly Review: ${meta.label}`}
+            >
+              {meta.emoji}
+            </span>
+          );
+        })()}
+      </TableCell>
       <TableCell className="font-medium">
         <Link to={`/projekte/${p.id}`} className="text-primary hover:underline">{p.project_number}</Link>
       </TableCell>
@@ -250,6 +270,11 @@ const { user, role } = useAuth();
     <TableHeader>
       <TableRow>
         <TableHead className="w-12">{t("traffic_light")}</TableHead>
+        <TableHead className="w-12">
+          <div className="flex items-center gap-1" title="Letzte Weekly-Review-Bewertung">
+            <Flag className="h-3.5 w-3.5" />Review
+          </div>
+        </TableHead>
         <TableHead>{t("project_number")}</TableHead>
         <TableHead>{t("project_name")}</TableHead>
         <TableHead>
