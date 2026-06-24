@@ -27,7 +27,9 @@ import { GhsPictogramList } from "@/components/GhsPictogram";
 import { normalizeHazardClasses, type HazardClassKey } from "@/lib/hazardClasses";
 import { DerivedSamples } from "@/components/DerivedSamples";
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
-import { History as HistoryIcon } from "lucide-react";
+import { PrintLabelDialog } from "@/components/labels/PrintLabelDialog";
+import { History as HistoryIcon, Tag } from "lucide-react";
+
 
 
 
@@ -187,6 +189,8 @@ export default function RawMaterialDetailPage() {
 
   // Container actions dialog (movements/history/audit)
   const [actionsContainer, setActionsContainer] = useState<any | null>(null);
+  const [labelContainer, setLabelContainer] = useState<any | null>(null);
+
 
   const openContainerDialog = (existing?: any) => {
     if (existing && existing.id) {
@@ -668,6 +672,8 @@ export default function RawMaterialDetailPage() {
                         {canManage && (
                           <TableCell className="flex gap-1">
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Bewegungen & Historie" onClick={() => setActionsContainer(c)}><HistoryIcon className="h-3.5 w-3.5" /></Button>
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Etikett drucken" onClick={() => setLabelContainer(c)}><Tag className="h-3.5 w-3.5" /></Button>
+
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openContainerDialog(c)}><Pencil className="h-3.5 w-3.5" /></Button>
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Gebinde ${c.container_code} löschen?`)) deleteContainer.mutate({ id: c.id, raw_material_id: id! }); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                           </TableCell>
@@ -781,6 +787,18 @@ export default function RawMaterialDetailPage() {
             </DialogContent>
           </Dialog>
           <ContainerActionsDialog open={!!actionsContainer} onOpenChange={(o) => !o && setActionsContainer(null)} container={actionsContainer} />
+
+          {labelContainer && (
+            <PrintLabelDialog
+              open={!!labelContainer}
+              onOpenChange={(o) => !o && setLabelContainer(null)}
+              container={labelContainer}
+              material={material}
+              batch={labelContainer.raw_material_batches}
+              location={labelContainer.storage_locations}
+            />
+          )}
+
         </TabsContent>
 
 
