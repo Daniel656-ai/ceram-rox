@@ -85,12 +85,12 @@ const { user, role } = useAuth();
           p.project_number.toLowerCase().includes(q) ||
           (p.project_name || "").toLowerCase().includes(q) ||
           (p.description || "").toLowerCase().includes(q) ||
-          getUserName(p.created_by).toLowerCase().includes(q) ||
           (lead?.ownerName || "").toLowerCase().includes(q) ||
           (lead?.leaderName || "").toLowerCase().includes(q)
         );
       });
     }
+
 
     const leadName = (id: string, kind: "owner" | "leader") => {
       const l = projectLeads.get(id);
