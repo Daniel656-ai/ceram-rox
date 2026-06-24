@@ -65,10 +65,10 @@ export const labelTemplates = {
         .select("*")
         .order("category", { ascending: true })
         .order("name", { ascending: true })
-    ) as Promise<LabelTemplate[]>,
+    ) as unknown as Promise<LabelTemplate[]>,
 
   get: (id: string) =>
-    unwrap(dbClient.from("label_templates").select("*").eq("id", id).single()) as Promise<LabelTemplate>,
+    unwrap(dbClient.from("label_templates").select("*").eq("id", id).single()) as unknown as Promise<LabelTemplate>,
 
   async create(input: {
     name: string;
@@ -94,7 +94,7 @@ export const labelTemplates = {
       created_by: input.created_by ?? null,
     }).select("*").single();
     if (res.error) throw res.error;
-    return res.data as LabelTemplate;
+    return res.data as unknown as LabelTemplate;
   },
 
   async update(id: string, patch: Partial<LabelTemplate>): Promise<LabelTemplate> {
@@ -122,7 +122,7 @@ export const labelTemplates = {
       .select("*")
       .single();
     if (res.error) throw res.error;
-    return res.data as LabelTemplate;
+    return res.data as unknown as LabelTemplate;
   },
 
   remove: (id: string) => run(dbClient.from("label_templates").delete().eq("id", id)),
@@ -161,7 +161,7 @@ export const labelPrintHistory = {
         .select("*")
         .eq("container_id", containerId)
         .order("printed_at", { ascending: false })
-    ) as Promise<PrintHistoryEntry[]>,
+    ) as unknown as Promise<PrintHistoryEntry[]>,
 
   listRecent: (limit = 100) =>
     unwrap(
@@ -170,7 +170,7 @@ export const labelPrintHistory = {
         .select("*")
         .order("printed_at", { ascending: false })
         .limit(limit)
-    ) as Promise<PrintHistoryEntry[]>,
+    ) as unknown as Promise<PrintHistoryEntry[]>,
 
   log: (entry: {
     template_id: string;
