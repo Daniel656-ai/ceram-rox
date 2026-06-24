@@ -40,6 +40,8 @@ import BatchExecutionPage from "./pages/BatchExecutionPage";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
+import AdminLabelTemplatesPage from "./pages/AdminLabelTemplatesPage";
+
 
 import { UpdateChecker } from "@/components/UpdateChecker";
 
@@ -93,6 +95,8 @@ const App = () => (
               <Route path="/admin/datenbank" element={<AdminDatabasePage />} />
               <Route path="/admin/gefahrstoff-verteiler" element={<AdminHazardNotificationsPage />} />
               <Route path="/admin/firmeneinstellungen" element={<AdminCompanySettingsPage />} />
+              <Route path="/admin/etiketten" element={<AdminLabelTemplatesPage />} />
+
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
