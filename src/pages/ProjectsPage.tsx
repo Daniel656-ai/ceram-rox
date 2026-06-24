@@ -301,6 +301,8 @@ const { user, role } = useAuth();
             <SelectItem value="name">{t("sort_name")}</SelectItem>
             <SelectItem value="samples">{t("sort_samples")}</SelectItem>
             <SelectItem value="costs">{t("sort_costs")}</SelectItem>
+            <SelectItem value="owner">{t("sort_owner", { defaultValue: "Sortierung: Projekteigner" })}</SelectItem>
+            <SelectItem value="leader">{t("sort_leader", { defaultValue: "Sortierung: Projektleiter" })}</SelectItem>
           </SelectContent>
         </Select>
       </div>
