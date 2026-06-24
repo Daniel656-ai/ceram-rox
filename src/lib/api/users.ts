@@ -88,7 +88,28 @@ export const users = {
 
     return { profile, role, customRoleId, customRoleName, permissions };
   },
+
+  async clearMustChangePassword(userId: string): Promise<void> {
+    await run(dbClient.from("profiles").update({ must_change_password: false }).eq("user_id", userId));
+  },
+
+  async logPasswordEvent(params: {
+    targetUserId: string;
+    performedBy: string | null;
+    action: "admin_reset" | "self_change" | "forgot_reset" | "initial_set";
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    await run(
+      dbClient.from("password_reset_log").insert({
+        target_user_id: params.targetUserId,
+        performed_by: params.performedBy,
+        action: params.action,
+        metadata: params.metadata ?? null,
+      })
+    );
+  },
 };
+
 
 
 export const profiles = {
