@@ -38,6 +38,9 @@ import MixturesPage from "./pages/MixturesPage";
 import MixtureDetailPage from "./pages/MixtureDetailPage";
 import BatchExecutionPage from "./pages/BatchExecutionPage";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
+import ChangePassword from "./pages/ChangePassword";
+
 import { UpdateChecker } from "@/components/UpdateChecker";
 
 const queryClient = new QueryClient();
@@ -53,6 +56,16 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route
+              path="/change-password"
+              element={
+                <ProtectedRoute>
+                  <ChangePassword />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               element={
                 <ProtectedRoute>
