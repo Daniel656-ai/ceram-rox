@@ -2,6 +2,8 @@ import { useProjectsWithStats } from "@/hooks/useProjectDetail";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -12,13 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp, User, UserCog } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
+
 
 type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs";
 
