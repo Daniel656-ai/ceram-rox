@@ -79,13 +79,23 @@ const { user, role } = useAuth();
     const q = search.toLowerCase().trim();
 
     if (q) {
-      result = result.filter(p =>
-        p.project_number.toLowerCase().includes(q) ||
-        (p.project_name || "").toLowerCase().includes(q) ||
-        (p.description || "").toLowerCase().includes(q) ||
-        getUserName(p.created_by).toLowerCase().includes(q)
-      );
+      result = result.filter(p => {
+        const lead = projectLeads.get(p.id);
+        return (
+          p.project_number.toLowerCase().includes(q) ||
+          (p.project_name || "").toLowerCase().includes(q) ||
+          (p.description || "").toLowerCase().includes(q) ||
+          getUserName(p.created_by).toLowerCase().includes(q) ||
+          (lead?.ownerName || "").toLowerCase().includes(q) ||
+          (lead?.leaderName || "").toLowerCase().includes(q)
+        );
+      });
     }
+
+    const leadName = (id: string, kind: "owner" | "leader") => {
+      const l = projectLeads.get(id);
+      return (kind === "owner" ? l?.ownerName : l?.leaderName) || "";
+    };
 
     result.sort((a, b) => {
       switch (sortBy) {
@@ -94,6 +104,8 @@ const { user, role } = useAuth();
         case "name": return (a.project_name || a.project_number).localeCompare(b.project_name || b.project_number);
         case "samples": return (b.stats?.sampleCount || 0) - (a.stats?.sampleCount || 0);
         case "costs": return ((b.stats?.totalCost || 0) + (b.stats?.materialCost || 0)) - ((a.stats?.totalCost || 0) + (a.stats?.materialCost || 0));
+        case "owner": return leadName(a.id, "owner").localeCompare(leadName(b.id, "owner"));
+        case "leader": return leadName(a.id, "leader").localeCompare(leadName(b.id, "leader"));
         default: return 0;
       }
     });
