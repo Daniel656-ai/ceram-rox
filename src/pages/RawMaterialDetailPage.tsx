@@ -636,12 +636,14 @@ export default function RawMaterialDetailPage() {
                   <TableHead>Wareneingang</TableHead>
                   <TableHead>Liefermenge</TableHead>
                   <TableHead>Lieferant</TableHead>
+                  <TableHead>Feuchte (%)</TableHead>
+                  <TableHead>pH-Wert</TableHead>
                   <TableHead>Gebinde</TableHead>
                   {canManage && <TableHead />}
                 </TableRow></TableHeader>
                 <TableBody>
                   {batches.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Keine Chargen</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Keine Chargen</TableCell></TableRow>
                   ) : batches.map((b: any) => {
                     const batchContainers = (containers || []).filter((c: any) => c.batch_id === b.id);
                     return (
@@ -651,6 +653,28 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="text-xs">{b.goods_receipt_date ? new Date(b.goods_receipt_date).toLocaleDateString("de-DE") : (b.delivery_date ? new Date(b.delivery_date).toLocaleDateString("de-DE") : "–")}</TableCell>
                         <TableCell>{b.delivery_quantity != null ? `${b.delivery_quantity} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || "–"}</TableCell>
+                        <TableCell>
+                          {canManage ? (
+                            <Input
+                              defaultValue={b.moisture_percent ?? ""}
+                              type="number" step="0.1" min="0" max="100"
+                              className="h-7 w-20 text-xs"
+                              onBlur={(e) => handleBatchQualityEdit(b, "moisture_percent", e.target.value)}
+                              placeholder="–"
+                            />
+                          ) : (b.moisture_percent != null ? `${b.moisture_percent} %` : "–")}
+                        </TableCell>
+                        <TableCell>
+                          {canManage ? (
+                            <Input
+                              defaultValue={b.ph_value ?? ""}
+                              type="number" step="0.1" min="0" max="14"
+                              className="h-7 w-20 text-xs"
+                              onBlur={(e) => handleBatchQualityEdit(b, "ph_value", e.target.value)}
+                              placeholder="–"
+                            />
+                          ) : (b.ph_value != null ? b.ph_value : "–")}
+                        </TableCell>
                         <TableCell><Badge variant="secondary" className="text-xs">{batchContainers.length}</Badge></TableCell>
                         {canManage && (
                           <TableCell className="flex gap-1">
