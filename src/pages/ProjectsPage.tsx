@@ -139,7 +139,12 @@ const { user, role } = useAuth();
 
   const dateLocale = i18n.language === "en" ? "en-GB" : "de-DE";
 
-  const renderProjectRow = (p: any) => (
+  const renderProjectRow = (p: any) => {
+    const lead = projectLeads.get(p.id);
+    const ownerName = lead?.ownerName?.trim();
+    const leaderName = lead?.leaderName?.trim();
+    const unassigned = t("not_assigned", { defaultValue: "Nicht zugewiesen" });
+    return (
     <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50">
       <TableCell>
         <TrafficLightBadge value={(p as any).traffic_light || "green"} />
@@ -151,6 +156,12 @@ const { user, role } = useAuth();
         <Link to={`/projekte/${p.id}`} className="hover:underline">{p.project_name || "–"}</Link>
       </TableCell>
       <TableCell>{getUserName(p.created_by)}</TableCell>
+      <TableCell className={ownerName ? "" : "text-muted-foreground italic"}>
+        {ownerName || unassigned}
+      </TableCell>
+      <TableCell className={leaderName ? "" : "text-muted-foreground italic"}>
+        {leaderName || unassigned}
+      </TableCell>
       <TableCell className="text-center">
         <Badge variant="secondary">{p.stats.sampleCount}</Badge>
       </TableCell>
@@ -164,6 +175,9 @@ const { user, role } = useAuth();
         {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${(p.stats.totalCost + p.stats.materialCost).toFixed(0)}€` : "–"}
       </TableCell>
       <TableCell>{new Date(p.created_at).toLocaleDateString(dateLocale)}</TableCell>
+      {(p as any).end_date && (
+        <TableCell className="hidden xl:table-cell">{new Date((p as any).end_date).toLocaleDateString(dateLocale)}</TableCell>
+      )}
       {role === "master" && (
         <TableCell>
           <AlertDialog>
