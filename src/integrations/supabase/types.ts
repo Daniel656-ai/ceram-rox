@@ -1801,6 +1801,33 @@ export type Database = {
           },
         ]
       }
+      password_reset_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          performed_by: string | null
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1808,6 +1835,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_name: string
+          must_change_password: boolean
           short_code: string | null
           updated_at: string
           user_id: string
@@ -1818,6 +1846,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string
+          must_change_password?: boolean
           short_code?: string | null
           updated_at?: string
           user_id: string
@@ -1828,6 +1857,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_name?: string
+          must_change_password?: boolean
           short_code?: string | null
           updated_at?: string
           user_id?: string
