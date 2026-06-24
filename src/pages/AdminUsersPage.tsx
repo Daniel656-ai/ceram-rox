@@ -22,7 +22,7 @@ import { validatePassword, generateStrongPassword } from "@/lib/passwordPolicy";
 
 
 export default function AdminUsersPage() {
-  const { t, i18n } = useTranslation(["admin", "common"]);
+  const { t, i18n } = useTranslation(["admin", "common", "auth"]);
   const { data: users = [], isLoading } = useUsers();
   const { data: customRoles = [] } = useCustomRoles();
   const { user: currentUser } = useAuth();
@@ -169,7 +169,9 @@ export default function AdminUsersPage() {
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" title={t("admin:schedule_button")} onClick={() => setScheduleUser(u)}><CalendarClock className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => openEdit(u)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" title={t("auth:admin_reset_button")} onClick={() => openReset(u)}><KeyRound className="h-4 w-4" /></Button>
                           {!isSelf && (<Button variant="ghost" size="icon" onClick={() => setDeleteTarget(u)}><Trash2 className="h-4 w-4 text-destructive" /></Button>)}
+
                         </div>
                       </TableCell>
                     </TableRow>
@@ -193,7 +195,17 @@ export default function AdminUsersPage() {
               <div className="space-y-2"><Label>{t("admin:last_name")}</Label><Input value={newLastName} onChange={(e) => setNewLastName(e.target.value)} /></div>
             </div>
             <div className="space-y-2"><Label>{t("admin:email_required")}</Label><Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} /></div>
-            <div className="space-y-2"><Label>{t("admin:password_required")}</Label><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>{t("admin:password_required")}</Label>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setNewPassword(generateStrongPassword())}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />{t("auth:admin_generate")}
+                </Button>
+              </div>
+              <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <PasswordStrengthMeter password={newPassword} />
+            </div>
+
             <div className="space-y-2"><Label>{t("admin:short_code_required")}</Label><Input value={newShortCode} onChange={(e) => setNewShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder={t("admin:short_code_placeholder")} /></div>
             <div className="space-y-2">
               <Label>{t("admin:role")}</Label>
