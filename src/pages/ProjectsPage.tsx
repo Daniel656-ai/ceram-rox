@@ -14,13 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp, User, UserCog } from "lucide-react";
+import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp, User, UserCog, Flag } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
+import { useAllWeeklyReviews } from "@/hooks/useWeeklyReviews";
 
 
 type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs" | "owner" | "leader" | "start_date" | "end_date" | "updated_desc";
@@ -33,6 +34,21 @@ export default function ProjectsPage() {
     queryKey: ["project_members_index"],
     queryFn: () => api.projectMembers.listIndex(),
   });
+  const { data: allReviews = [] } = useAllWeeklyReviews();
+
+  // Map project_id -> latest review rating (1/2/3) based on review_date/created_at
+  const latestReviewByProject = useMemo(() => {
+    const map = new Map<string, { rating: number; date: string }>();
+    for (const r of allReviews as any[]) {
+      const cur = map.get(r.project_id);
+      const key = `${r.review_date}T${r.created_at}`;
+      const curKey = cur ? `${(cur as any).date}` : "";
+      if (!cur || key > curKey) {
+        map.set(r.project_id, { rating: r.overall_rating, date: key });
+      }
+    }
+    return map;
+  }, [allReviews]);
 const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const createProject = useCreateProject();
