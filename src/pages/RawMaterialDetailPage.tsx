@@ -163,6 +163,8 @@ export default function RawMaterialDetailPage() {
   const [bNotes, setBNotes] = useState("");
   const [bManufacturerBatch, setBManufacturerBatch] = useState(""); // BigBag Nr.
   const [bGoodsReceiptDate, setBGoodsReceiptDate] = useState("");
+  const [bMoisture, setBMoisture] = useState("");                   // Feuchte %
+  const [bPh, setBPh] = useState("");                               // pH-Wert
   // Gebinde-Felder
   const [bContainerKind, setBContainerKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige">("big_bag");
   const [bContainerCode, setBContainerCode] = useState("");
