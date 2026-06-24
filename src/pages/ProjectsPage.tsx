@@ -2,6 +2,8 @@ import { useProjectsWithStats } from "@/hooks/useProjectDetail";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -12,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp, User, UserCog } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -20,12 +22,17 @@ import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 
-type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs";
+
+type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs" | "owner" | "leader";
 
 export default function ProjectsPage() {
   const { t, i18n } = useTranslation("projects");
   const { data: projects = [], isLoading } = useProjectsWithStats();
   const { data: users = [] } = useUsers();
+  const { data: memberIndex = [] } = useQuery({
+    queryKey: ["project_members_index"],
+    queryFn: () => api.projectMembers.listIndex(),
+  });
 const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const createProject = useCreateProject();
@@ -43,23 +50,52 @@ const { user, role } = useAuth();
   const [form, setForm] = useState({ project_number: "", project_name: "", description: "" });
   const [showCompleted, setShowCompleted] = useState(false);
 
-  const getUserName = (userId: string) => {
+  const getUserName = (userId: string | null | undefined) => {
+    if (!userId) return "–";
     const u = (users as any[]).find((u: any) => u.user_id === userId);
     return u ? `${u.first_name} ${u.last_name}`.trim() || "–" : "–";
   };
+
+  // Map project_id -> { ownerName, leaderName }
+  const projectLeads = useMemo(() => {
+    const map = new Map<string, { ownerName: string; leaderName: string; ownerId?: string; leaderId?: string }>();
+    for (const m of memberIndex as any[]) {
+      const entry = map.get(m.project_id) || { ownerName: "", leaderName: "" };
+      if (m.role === "owner" && !entry.ownerId) {
+        entry.ownerId = m.user_id;
+        entry.ownerName = getUserName(m.user_id);
+      } else if (m.role === "leader" && !entry.leaderId) {
+        entry.leaderId = m.user_id;
+        entry.leaderName = getUserName(m.user_id);
+      }
+      map.set(m.project_id, entry);
+    }
+    return map;
+  }, [memberIndex, users]);
+
 
   const { activeProjects, completedProjects } = useMemo(() => {
     let result = [...projects];
     const q = search.toLowerCase().trim();
 
     if (q) {
-      result = result.filter(p =>
-        p.project_number.toLowerCase().includes(q) ||
-        (p.project_name || "").toLowerCase().includes(q) ||
-        (p.description || "").toLowerCase().includes(q) ||
-        getUserName(p.created_by).toLowerCase().includes(q)
-      );
+      result = result.filter(p => {
+        const lead = projectLeads.get(p.id);
+        return (
+          p.project_number.toLowerCase().includes(q) ||
+          (p.project_name || "").toLowerCase().includes(q) ||
+          (p.description || "").toLowerCase().includes(q) ||
+          getUserName(p.created_by).toLowerCase().includes(q) ||
+          (lead?.ownerName || "").toLowerCase().includes(q) ||
+          (lead?.leaderName || "").toLowerCase().includes(q)
+        );
+      });
     }
+
+    const leadName = (id: string, kind: "owner" | "leader") => {
+      const l = projectLeads.get(id);
+      return (kind === "owner" ? l?.ownerName : l?.leaderName) || "";
+    };
 
     result.sort((a, b) => {
       switch (sortBy) {
@@ -68,6 +104,8 @@ const { user, role } = useAuth();
         case "name": return (a.project_name || a.project_number).localeCompare(b.project_name || b.project_number);
         case "samples": return (b.stats?.sampleCount || 0) - (a.stats?.sampleCount || 0);
         case "costs": return ((b.stats?.totalCost || 0) + (b.stats?.materialCost || 0)) - ((a.stats?.totalCost || 0) + (a.stats?.materialCost || 0));
+        case "owner": return leadName(a.id, "owner").localeCompare(leadName(b.id, "owner"));
+        case "leader": return leadName(a.id, "leader").localeCompare(leadName(b.id, "leader"));
         default: return 0;
       }
     });
@@ -77,7 +115,7 @@ const { user, role } = useAuth();
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
     return { activeProjects: active, completedProjects: completed };
-  }, [projects, search, sortBy, users]);
+  }, [projects, search, sortBy, users, projectLeads]);
 
   const handleCreate = async () => {
     if (!form.project_number.trim()) {
@@ -101,7 +139,12 @@ const { user, role } = useAuth();
 
   const dateLocale = i18n.language === "en" ? "en-GB" : "de-DE";
 
-  const renderProjectRow = (p: any) => (
+  const renderProjectRow = (p: any) => {
+    const lead = projectLeads.get(p.id);
+    const ownerName = lead?.ownerName?.trim();
+    const leaderName = lead?.leaderName?.trim();
+    const unassigned = t("not_assigned", { defaultValue: "Nicht zugewiesen" });
+    return (
     <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50">
       <TableCell>
         <TrafficLightBadge value={(p as any).traffic_light || "green"} />
@@ -113,6 +156,12 @@ const { user, role } = useAuth();
         <Link to={`/projekte/${p.id}`} className="hover:underline">{p.project_name || "–"}</Link>
       </TableCell>
       <TableCell>{getUserName(p.created_by)}</TableCell>
+      <TableCell className={ownerName ? "" : "text-muted-foreground italic"}>
+        {ownerName || unassigned}
+      </TableCell>
+      <TableCell className={leaderName ? "" : "text-muted-foreground italic"}>
+        {leaderName || unassigned}
+      </TableCell>
       <TableCell className="text-center">
         <Badge variant="secondary">{p.stats.sampleCount}</Badge>
       </TableCell>
@@ -126,6 +175,9 @@ const { user, role } = useAuth();
         {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${(p.stats.totalCost + p.stats.materialCost).toFixed(0)}€` : "–"}
       </TableCell>
       <TableCell>{new Date(p.created_at).toLocaleDateString(dateLocale)}</TableCell>
+      {(p as any).end_date && (
+        <TableCell className="hidden xl:table-cell">{new Date((p as any).end_date).toLocaleDateString(dateLocale)}</TableCell>
+      )}
       {role === "master" && (
         <TableCell>
           <AlertDialog>
@@ -162,7 +214,8 @@ const { user, role } = useAuth();
         </TableCell>
       )}
     </TableRow>
-  );
+    );
+  };
 
   const tableHeaders = (
     <TableHeader>
@@ -171,6 +224,12 @@ const { user, role } = useAuth();
         <TableHead>{t("project_number")}</TableHead>
         <TableHead>{t("project_name")}</TableHead>
         <TableHead>{t("creator")}</TableHead>
+        <TableHead>
+          <div className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{t("project_owner", { defaultValue: "Projekteigner" })}</div>
+        </TableHead>
+        <TableHead>
+          <div className="flex items-center gap-1"><UserCog className="h-3.5 w-3.5" />{t("project_leader", { defaultValue: "Projektleiter" })}</div>
+        </TableHead>
         <TableHead className="text-center">
           <div className="flex items-center justify-center gap-1"><Package className="h-3.5 w-3.5" />{t("samples")}</div>
         </TableHead>
@@ -242,6 +301,8 @@ const { user, role } = useAuth();
             <SelectItem value="name">{t("sort_name")}</SelectItem>
             <SelectItem value="samples">{t("sort_samples")}</SelectItem>
             <SelectItem value="costs">{t("sort_costs")}</SelectItem>
+            <SelectItem value="owner">{t("sort_owner", { defaultValue: "Sortierung: Projekteigner" })}</SelectItem>
+            <SelectItem value="leader">{t("sort_leader", { defaultValue: "Sortierung: Projektleiter" })}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -259,9 +320,9 @@ const { user, role } = useAuth();
             {tableHeaders}
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8">{t("loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center py-8">{t("loading")}</TableCell></TableRow>
               ) : activeProjects.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("no_projects")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">{t("no_projects")}</TableCell></TableRow>
               ) : (
                 activeProjects.map(renderProjectRow)
               )}

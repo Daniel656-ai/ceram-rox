@@ -96,6 +96,15 @@ export const projectMembers = {
         .order("created_at", { ascending: true })
     ),
 
+  /** Lightweight index of all project memberships – used in the projects list. */
+  listIndex: () =>
+    unwrap(
+      dbClient
+        .from("project_members")
+        .select("project_id, user_id, role")
+    ),
+
+
   /** Is the user owner/leader on at least one project? */
   isAnyLead: (userId: string) =>
     unwrap(
