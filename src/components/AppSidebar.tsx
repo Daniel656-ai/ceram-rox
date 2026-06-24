@@ -165,7 +165,15 @@ export function AppSidebar() {
         <div className="px-2">
           <LanguageSwitcher collapsed={collapsed} />
         </div>
-        <div className="px-2 pb-2">
+        <div className="px-2 pb-2 space-y-1">
+          <NavLink
+            to="/change-password"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            activeClassName="bg-sidebar-accent text-sidebar-primary"
+          >
+            <KeyRound className="h-4 w-4" />
+            {!collapsed && <span>{t("common:change_password", "Passwort ändern")}</span>}
+          </NavLink>
           <Button
             variant="ghost"
             size={collapsed ? "icon" : "sm"}
@@ -176,6 +184,7 @@ export function AppSidebar() {
             {!collapsed && <span className="ml-2">{t("common:sign_out")}</span>}
           </Button>
         </div>
+
       </SidebarFooter>
     </Sidebar>
   );
