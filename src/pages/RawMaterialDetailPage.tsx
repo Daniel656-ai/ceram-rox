@@ -290,6 +290,10 @@ export default function RawMaterialDetailPage() {
     if (!bNum) { toast.error("LOT-Nummer ist Pflicht"); return; }
     const qty = bQty ? Number(bQty) : 0;
     if (!qty || qty <= 0) { toast.error("Liefermenge muss > 0 sein"); return; }
+    const moisture = bMoisture.trim() ? Number(bMoisture.replace(",", ".")) : null;
+    const ph = bPh.trim() ? Number(bPh.replace(",", ".")) : null;
+    if (moisture != null && (isNaN(moisture) || moisture < 0 || moisture > 100)) { toast.error("Feuchte muss zwischen 0 und 100 % liegen"); return; }
+    if (ph != null && (isNaN(ph) || ph < 0 || ph > 14)) { toast.error("pH-Wert muss zwischen 0 und 14 liegen"); return; }
     try {
       // 1) Charge anlegen
       const newBatch: any = await addBatch.mutateAsync({
@@ -301,6 +305,8 @@ export default function RawMaterialDetailPage() {
         notes: bNotes || undefined,
         manufacturer_batch: bManufacturerBatch.trim() || null,
         goods_receipt_date: bGoodsReceiptDate || bDate || null,
+        moisture_percent: moisture,
+        ph_value: ph,
       });
 
       // 2) Gebinde automatisch anlegen
@@ -331,7 +337,24 @@ export default function RawMaterialDetailPage() {
       setBatchOpen(false);
       setBNum(""); setBDate(""); setBQty(""); setBSupplier(""); setBNotes("");
       setBManufacturerBatch(""); setBGoodsReceiptDate("");
+      setBMoisture(""); setBPh("");
       setBContainerKind("big_bag"); setBContainerCode("");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleBatchQualityEdit = async (batch: any, field: "moisture_percent" | "ph_value", raw: string) => {
+    const trimmed = raw.trim();
+    let val: number | null = null;
+    if (trimmed !== "") {
+      val = Number(trimmed.replace(",", "."));
+      if (isNaN(val)) { toast.error("Ungültiger Zahlenwert"); return; }
+      if (field === "moisture_percent" && (val < 0 || val > 100)) { toast.error("Feuchte 0–100 %"); return; }
+      if (field === "ph_value" && (val < 0 || val > 14)) { toast.error("pH 0–14"); return; }
+    }
+    if ((batch[field] ?? null) === val) return;
+    try {
+      await updateBatch.mutateAsync({ id: batch.id, raw_material_id: id!, [field]: val } as any);
+      toast.success("Aktualisiert");
     } catch (e: any) { toast.error(e.message); }
   };
 
