@@ -87,6 +87,8 @@ import { recipeVersions, processSections, processSteps, plannedMeasurements } fr
 import { mixtureExecution } from "./mixtureExecution";
 import { mixtureTemplates } from "./mixtureTemplates";
 import { companySettings } from "./companySettings";
+import { labelTemplates, labelPrintHistory } from "./labelTemplates";
+
 
 
 
@@ -159,6 +161,9 @@ export const api = {
   mixtureExecution,
   mixtureTemplates,
   companySettings,
+  labelTemplates,
+  labelPrintHistory,
+
 
 
 
