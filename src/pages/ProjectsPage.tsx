@@ -106,8 +106,20 @@ const { user, role } = useAuth();
         case "costs": return ((b.stats?.totalCost || 0) + (b.stats?.materialCost || 0)) - ((a.stats?.totalCost || 0) + (a.stats?.materialCost || 0));
         case "owner": return leadName(a.id, "owner").localeCompare(leadName(b.id, "owner"));
         case "leader": return leadName(a.id, "leader").localeCompare(leadName(b.id, "leader"));
+        case "start_date": {
+          const av = (a as any).start_date ? new Date((a as any).start_date).getTime() : Infinity;
+          const bv = (b as any).start_date ? new Date((b as any).start_date).getTime() : Infinity;
+          return av - bv;
+        }
+        case "end_date": {
+          const av = (a as any).end_date ? new Date((a as any).end_date).getTime() : Infinity;
+          const bv = (b as any).end_date ? new Date((b as any).end_date).getTime() : Infinity;
+          return av - bv;
+        }
+        case "updated_desc": return new Date((b as any).updated_at).getTime() - new Date((a as any).updated_at).getTime();
         default: return 0;
       }
+
     });
 
     const active = result.filter(p => p.project_status !== "completed");
