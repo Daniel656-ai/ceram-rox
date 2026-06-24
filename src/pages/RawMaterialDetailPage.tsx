@@ -610,6 +610,16 @@ export default function RawMaterialDetailPage() {
                           <Input value={bContainerCode} onChange={(e) => setBContainerCode(e.target.value)} placeholder="Auto, falls leer" />
                         </div>
                       </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Feuchte (%)</Label>
+                          <Input type="number" step="0.1" min="0" max="100" value={bMoisture} onChange={(e) => setBMoisture(e.target.value)} placeholder="z. B. 12.5" />
+                        </div>
+                        <div>
+                          <Label>pH-Wert</Label>
+                          <Input type="number" step="0.1" min="0" max="14" value={bPh} onChange={(e) => setBPh(e.target.value)} placeholder="0.0 – 14.0" />
+                        </div>
+                      </div>
                       <div><Label>Bemerkungen</Label><Textarea value={bNotes} onChange={(e) => setBNotes(e.target.value)} rows={2} /></div>
                       <p className="text-xs text-muted-foreground">Die Liefermenge wird automatisch als Wareneingang verbucht und ein erstes Gebinde angelegt. Weitere Gebinde zur selben LOT können später unter „Gebinde" hinzugefügt werden.</p>
                       <Button onClick={handleAddBatch} className="w-full" disabled={addBatch.isPending || addContainer.isPending || addMovement.isPending}>Anlegen</Button>
