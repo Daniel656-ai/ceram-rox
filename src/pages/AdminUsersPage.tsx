@@ -61,6 +61,7 @@ export default function AdminUsersPage() {
 
   const handleCreate = async () => {
     if (!newEmail || !newPassword) { toast.error(t("admin:email_password_required")); return; }
+    if (!validatePassword(newPassword).valid) { toast.error(t("auth:policy_invalid")); return; }
     if (!newShortCode || newShortCode.length !== 3) { toast.error(t("admin:short_code_error")); return; }
     const selectedRole = customRoles.find((r) => r.id === newCustomRoleId);
     try {
@@ -69,6 +70,17 @@ export default function AdminUsersPage() {
       setCreateOpen(false); resetCreateForm();
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
+
+  const openReset = (u: any) => { setResetUser(u); setResetPasswordValue(generateStrongPassword()); setResetDoneValue(null); };
+  const handleReset = async () => {
+    if (!resetUser) return;
+    if (!validatePassword(resetPasswordValue).valid) { toast.error(t("auth:policy_invalid")); return; }
+    try {
+      await resetPassword.mutateAsync({ userId: resetUser.user_id, password: resetPasswordValue });
+      setResetDoneValue(resetPasswordValue);
+    } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+  };
+
 
   const handleEdit = async () => {
     if (!editUser) return;
