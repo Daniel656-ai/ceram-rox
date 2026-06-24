@@ -59,13 +59,21 @@ serve(async (req: Request) => {
       });
       if (createError) throw createError;
 
-      // Set short_code on profile
+      // Set short_code and force password change on first login
       if (newUser.user) {
         await supabaseAdmin
           .from("profiles")
-          .update({ short_code: shortCode.toUpperCase() })
+          .update({ short_code: shortCode.toUpperCase(), must_change_password: true })
           .eq("user_id", newUser.user.id);
+
+        await supabaseAdmin.from("password_reset_log").insert({
+          target_user_id: newUser.user.id,
+          performed_by: caller.id,
+          action: "admin_reset",
+          metadata: { reason: "user_created" },
+        });
       }
+
 
       // Update role and custom_role_id
       if (newUser.user) {
@@ -127,6 +135,33 @@ serve(async (req: Request) => {
       });
     }
 
+    if (action === "reset_password") {
+      const { userId, password } = params;
+      if (!userId || !password) throw new Error("User-ID und Passwort erforderlich");
+      if (typeof password !== "string" || password.length < 8) {
+        throw new Error("Passwort erfüllt die Mindestanforderungen nicht");
+      }
+
+      const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
+      if (updErr) throw updErr;
+
+      await supabaseAdmin
+        .from("profiles")
+        .update({ must_change_password: true })
+        .eq("user_id", userId);
+
+      await supabaseAdmin.from("password_reset_log").insert({
+        target_user_id: userId,
+        performed_by: caller.id,
+        action: "admin_reset",
+        metadata: { reason: "admin_initiated" },
+      });
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     throw new Error("Unbekannte Aktion");
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
@@ -135,3 +170,4 @@ serve(async (req: Request) => {
     });
   }
 });
+
