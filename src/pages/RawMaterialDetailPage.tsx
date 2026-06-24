@@ -793,7 +793,7 @@ export default function RawMaterialDetailPage() {
               open={!!labelContainer}
               onOpenChange={(o) => !o && setLabelContainer(null)}
               container={labelContainer}
-              material={material}
+              material={mat}
               batch={labelContainer.raw_material_batches}
               location={labelContainer.storage_locations}
             />
