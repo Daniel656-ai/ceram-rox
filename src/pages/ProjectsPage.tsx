@@ -14,13 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp, User, UserCog } from "lucide-react";
+import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, DollarSign, CheckCircle2, ChevronDown, ChevronUp, User, UserCog, Flag } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
+import { useAllWeeklyReviews } from "@/hooks/useWeeklyReviews";
 
 
 type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs" | "owner" | "leader" | "start_date" | "end_date" | "updated_desc";
@@ -33,6 +34,21 @@ export default function ProjectsPage() {
     queryKey: ["project_members_index"],
     queryFn: () => api.projectMembers.listIndex(),
   });
+  const { data: allReviews = [] } = useAllWeeklyReviews();
+
+  // Map project_id -> latest review rating (1/2/3) based on review_date/created_at
+  const latestReviewByProject = useMemo(() => {
+    const map = new Map<string, { rating: number; date: string }>();
+    for (const r of allReviews as any[]) {
+      const cur = map.get(r.project_id);
+      const key = `${r.review_date}T${r.created_at}`;
+      const curKey = cur ? `${(cur as any).date}` : "";
+      if (!cur || key > curKey) {
+        map.set(r.project_id, { rating: r.overall_rating, date: key });
+      }
+    }
+    return map;
+  }, [allReviews]);
 const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const createProject = useCreateProject();
@@ -164,6 +180,26 @@ const { user, role } = useAuth();
       <TableCell>
         <TrafficLightBadge value={(p as any).traffic_light || "green"} />
       </TableCell>
+      <TableCell>
+        {(() => {
+          const r = latestReviewByProject.get(p.id);
+          if (!r) return <span className="text-muted-foreground text-xs italic">–</span>;
+          const meta = r.rating === 1
+            ? { color: "#dc2626", label: "Schlecht", emoji: "🔴" }
+            : r.rating === 2
+            ? { color: "#eab308", label: "Mittel", emoji: "🟡" }
+            : { color: "#16a34a", label: "Gut", emoji: "🟢" };
+          return (
+            <span
+              title={`Letzte Weekly-Review-Bewertung: ${meta.label}`}
+              className="inline-flex items-center justify-center text-lg leading-none"
+              aria-label={`Weekly Review: ${meta.label}`}
+            >
+              {meta.emoji}
+            </span>
+          );
+        })()}
+      </TableCell>
       <TableCell className="font-medium">
         <Link to={`/projekte/${p.id}`} className="text-primary hover:underline">{p.project_number}</Link>
       </TableCell>
@@ -234,6 +270,11 @@ const { user, role } = useAuth();
     <TableHeader>
       <TableRow>
         <TableHead className="w-12">{t("traffic_light")}</TableHead>
+        <TableHead className="w-12">
+          <div className="flex items-center gap-1" title="Letzte Weekly-Review-Bewertung">
+            <Flag className="h-3.5 w-3.5" />Review
+          </div>
+        </TableHead>
         <TableHead>{t("project_number")}</TableHead>
         <TableHead>{t("project_name")}</TableHead>
         <TableHead>
