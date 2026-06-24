@@ -23,7 +23,7 @@ import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 
 
-type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs";
+type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs" | "owner" | "leader";
 
 export default function ProjectsPage() {
   const { t, i18n } = useTranslation("projects");
