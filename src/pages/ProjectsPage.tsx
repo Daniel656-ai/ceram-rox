@@ -29,6 +29,10 @@ export default function ProjectsPage() {
   const { t, i18n } = useTranslation("projects");
   const { data: projects = [], isLoading } = useProjectsWithStats();
   const { data: users = [] } = useUsers();
+  const { data: memberIndex = [] } = useQuery({
+    queryKey: ["project_members_index"],
+    queryFn: () => api.projectMembers.listIndex(),
+  });
 const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const createProject = useCreateProject();
@@ -46,10 +50,29 @@ const { user, role } = useAuth();
   const [form, setForm] = useState({ project_number: "", project_name: "", description: "" });
   const [showCompleted, setShowCompleted] = useState(false);
 
-  const getUserName = (userId: string) => {
+  const getUserName = (userId: string | null | undefined) => {
+    if (!userId) return "–";
     const u = (users as any[]).find((u: any) => u.user_id === userId);
     return u ? `${u.first_name} ${u.last_name}`.trim() || "–" : "–";
   };
+
+  // Map project_id -> { ownerName, leaderName }
+  const projectLeads = useMemo(() => {
+    const map = new Map<string, { ownerName: string; leaderName: string; ownerId?: string; leaderId?: string }>();
+    for (const m of memberIndex as any[]) {
+      const entry = map.get(m.project_id) || { ownerName: "", leaderName: "" };
+      if (m.role === "owner" && !entry.ownerId) {
+        entry.ownerId = m.user_id;
+        entry.ownerName = getUserName(m.user_id);
+      } else if (m.role === "leader" && !entry.leaderId) {
+        entry.leaderId = m.user_id;
+        entry.leaderName = getUserName(m.user_id);
+      }
+      map.set(m.project_id, entry);
+    }
+    return map;
+  }, [memberIndex, users]);
+
 
   const { activeProjects, completedProjects } = useMemo(() => {
     let result = [...projects];
