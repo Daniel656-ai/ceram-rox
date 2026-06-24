@@ -2411,7 +2411,9 @@ export type Database = {
           id: string
           inspection_status: Database["public"]["Enums"]["raw_batch_inspection_status"]
           manufacturer_batch: string | null
+          moisture_percent: number | null
           notes: string | null
+          ph_value: number | null
           raw_material_id: string
           release_status: Database["public"]["Enums"]["raw_batch_release_status"]
           released_at: string | null
@@ -2428,7 +2430,9 @@ export type Database = {
           id?: string
           inspection_status?: Database["public"]["Enums"]["raw_batch_inspection_status"]
           manufacturer_batch?: string | null
+          moisture_percent?: number | null
           notes?: string | null
+          ph_value?: number | null
           raw_material_id: string
           release_status?: Database["public"]["Enums"]["raw_batch_release_status"]
           released_at?: string | null
@@ -2445,7 +2449,9 @@ export type Database = {
           id?: string
           inspection_status?: Database["public"]["Enums"]["raw_batch_inspection_status"]
           manufacturer_batch?: string | null
+          moisture_percent?: number | null
           notes?: string | null
+          ph_value?: number | null
           raw_material_id?: string
           release_status?: Database["public"]["Enums"]["raw_batch_release_status"]
           released_at?: string | null

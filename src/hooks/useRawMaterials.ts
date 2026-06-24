@@ -92,7 +92,7 @@ export function useDeleteRawMaterial() {
 export function useAddBatch() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (b: { raw_material_id: string; batch_number: string; delivery_date?: string; delivery_quantity?: number; supplier?: string; notes?: string; manufacturer_batch?: string | null; goods_receipt_date?: string | null; release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt"; inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden" }) =>
+    mutationFn: (b: { raw_material_id: string; batch_number: string; delivery_date?: string; delivery_quantity?: number; supplier?: string; notes?: string; manufacturer_batch?: string | null; goods_receipt_date?: string | null; release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt"; inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden"; moisture_percent?: number | null; ph_value?: number | null }) =>
       api.rawMaterialBatches.add(b),
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] }),
   });
@@ -101,7 +101,7 @@ export function useAddBatch() {
 export function useUpdateBatch() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, raw_material_id, ...updates }: { id: string; raw_material_id: string; batch_number?: string; manufacturer_batch?: string | null; goods_receipt_date?: string | null; delivery_date?: string | null; delivery_quantity?: number | null; supplier?: string | null; notes?: string | null; release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt"; inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden" }) =>
+    mutationFn: ({ id, raw_material_id, ...updates }: { id: string; raw_material_id: string; batch_number?: string; manufacturer_batch?: string | null; goods_receipt_date?: string | null; delivery_date?: string | null; delivery_quantity?: number | null; supplier?: string | null; notes?: string | null; release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt"; inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden"; moisture_percent?: number | null; ph_value?: number | null }) =>
       api.rawMaterialBatches.update(id, updates),
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] }),
   });

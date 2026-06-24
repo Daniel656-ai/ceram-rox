@@ -112,6 +112,8 @@ export const rawMaterialBatches = {
     goods_receipt_date?: string | null;
     release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt";
     inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden";
+    moisture_percent?: number | null;
+    ph_value?: number | null;
   }) =>
     unwrap(dbClient.from("raw_material_batches").insert(b as any).select().single()),
 
@@ -129,6 +131,8 @@ export const rawMaterialBatches = {
       inspection_status: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden";
       released_by: string | null;
       released_at: string | null;
+      moisture_percent: number | null;
+      ph_value: number | null;
     }>
   ) => run(dbClient.from("raw_material_batches").update(updates as any).eq("id", id)),
 
