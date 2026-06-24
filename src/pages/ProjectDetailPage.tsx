@@ -314,9 +314,15 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Planning dates */}
-      {(canManagePlanning || (project as any).start_date || (project as any).end_date) && (
+      {(canManagePlanning || (project as any).start_date || (project as any).end_date) && (() => {
+        const ownerMember = (members as any[]).find((m: any) => m.role === "owner");
+        const leaderMember = (members as any[]).find((m: any) => m.role === "leader");
+        const ownerName = ownerMember ? getUserName(users as any[], ownerMember.user_id) : null;
+        const leaderName = leaderMember ? getUserName(users as any[], leaderMember.user_id) : null;
+        const unassigned = t("not_assigned", { defaultValue: "Nicht zugewiesen" });
+        return (
         <Card>
-          <CardContent className="p-4 flex items-center gap-6">
+          <CardContent className="p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="flex items-center gap-2">
               <CalendarClock className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">{t("project_start_date")}:</span>
@@ -345,9 +351,25 @@ export default function ProjectDetailPage() {
                 <span className="text-sm">{(project as any).end_date ? new Date((project as any).end_date).toLocaleDateString("de-DE") : "–"}</span>
               )}
             </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{t("project_owner", { defaultValue: "Projekteigner" })}:</span>
+              <span className={`text-sm ${ownerName ? "" : "text-muted-foreground italic"}`}>
+                {ownerName || unassigned}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{t("project_leader", { defaultValue: "Projektleiter" })}:</span>
+              <span className={`text-sm ${leaderName ? "" : "text-muted-foreground italic"}`}>
+                {leaderName || unassigned}
+              </span>
+            </div>
           </CardContent>
         </Card>
-      )}
+        );
+      })()}
+
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-4">
