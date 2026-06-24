@@ -534,6 +534,103 @@ export type Database = {
           },
         ]
       }
+      label_print_history: {
+        Row: {
+          container_id: string | null
+          copies: number
+          data_snapshot: Json | null
+          id: string
+          output: string
+          printed_at: string
+          printed_by: string | null
+          raw_material_id: string | null
+          template_id: string | null
+        }
+        Insert: {
+          container_id?: string | null
+          copies?: number
+          data_snapshot?: Json | null
+          id?: string
+          output?: string
+          printed_at?: string
+          printed_by?: string | null
+          raw_material_id?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          container_id?: string | null
+          copies?: number
+          data_snapshot?: Json | null
+          id?: string
+          output?: string
+          printed_at?: string
+          printed_by?: string | null
+          raw_material_id?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "label_print_history_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_containers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_print_history_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "label_print_history_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "label_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      label_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          height_mm: number
+          id: string
+          is_default: boolean
+          layout: Json
+          name: string
+          updated_at: string
+          width_mm: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          height_mm?: number
+          id?: string
+          is_default?: boolean
+          layout?: Json
+          name: string
+          updated_at?: string
+          width_mm?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          height_mm?: number
+          id?: string
+          is_default?: boolean
+          layout?: Json
+          name?: string
+          updated_at?: string
+          width_mm?: number
+        }
+        Relationships: []
+      }
       mdl_permission_audit_log: {
         Row: {
           action: string
@@ -2516,6 +2613,7 @@ export type Database = {
           mrs_number: string | null
           other_designation: string | null
           price_per_kg: number | null
+          psa_categories: Json
           responsible_user_id: string | null
           sds_file_name: string | null
           sds_storage_path: string | null
@@ -2540,6 +2638,7 @@ export type Database = {
           mrs_number?: string | null
           other_designation?: string | null
           price_per_kg?: number | null
+          psa_categories?: Json
           responsible_user_id?: string | null
           sds_file_name?: string | null
           sds_storage_path?: string | null
@@ -2564,6 +2663,7 @@ export type Database = {
           mrs_number?: string | null
           other_designation?: string | null
           price_per_kg?: number | null
+          psa_categories?: Json
           responsible_user_id?: string | null
           sds_file_name?: string | null
           sds_storage_path?: string | null
