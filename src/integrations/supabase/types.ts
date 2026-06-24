@@ -2213,6 +2213,68 @@ export type Database = {
           },
         ]
       }
+      project_weekly_reviews: {
+        Row: {
+          author_role_snapshot: string
+          author_user_id: string
+          completed_this_week: string
+          created_at: string
+          currently_working_on: string
+          help_needed: string
+          id: string
+          iso_week: number
+          iso_year: number
+          next_steps: string
+          other_comments: string
+          overall_rating: number
+          project_id: string
+          review_date: string
+          risks: string
+        }
+        Insert: {
+          author_role_snapshot?: string
+          author_user_id: string
+          completed_this_week?: string
+          created_at?: string
+          currently_working_on?: string
+          help_needed?: string
+          id?: string
+          iso_week: number
+          iso_year: number
+          next_steps?: string
+          other_comments?: string
+          overall_rating: number
+          project_id: string
+          review_date?: string
+          risks?: string
+        }
+        Update: {
+          author_role_snapshot?: string
+          author_user_id?: string
+          completed_this_week?: string
+          created_at?: string
+          currently_working_on?: string
+          help_needed?: string
+          id?: string
+          iso_week?: number
+          iso_year?: number
+          next_steps?: string
+          other_comments?: string
+          overall_rating?: number
+          project_id?: string
+          review_date?: string
+          risks?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_weekly_reviews_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_work_package_assignees: {
         Row: {
           created_at: string
