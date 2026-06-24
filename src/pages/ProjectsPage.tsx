@@ -31,7 +31,11 @@ const { user, role } = useAuth();
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
 
-  const canCreateProject = hasPermission('admin.system') || hasPermission('users.manage');
+  // Use the dedicated permission key so custom roles (e.g. PMO) work out of the box.
+  // Base role 'master' implicitly has all permissions via has_permission backend logic;
+  // 'auftraggeber' base role can also create projects per existing RLS.
+  const canCreateProject =
+    hasPermission('projects.create') || role === 'master' || role === 'auftraggeber';
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("created_desc");
@@ -192,7 +196,7 @@ const { user, role } = useAuth();
           <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-{canCreateProject && role !== "auftraggeber" && (
+{canCreateProject && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />{t("new_project")}</Button>
