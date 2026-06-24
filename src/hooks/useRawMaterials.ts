@@ -92,7 +92,7 @@ export function useDeleteRawMaterial() {
 export function useAddBatch() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (b: { raw_material_id: string; batch_number: string; delivery_date?: string; delivery_quantity?: number; supplier?: string; notes?: string; manufacturer_batch?: string | null; goods_receipt_date?: string | null; release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt"; inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden" }) =>
+    mutationFn: (b: { raw_material_id: string; batch_number: string; delivery_date?: string; delivery_quantity?: number; supplier?: string; notes?: string; manufacturer_batch?: string | null; goods_receipt_date?: string | null; release_status?: "gesperrt" | "in_pruefung" | "freigegeben" | "abgelehnt"; inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden"; moisture_percent?: number | null; ph_value?: number | null }) =>
       api.rawMaterialBatches.add(b),
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] }),
   });
