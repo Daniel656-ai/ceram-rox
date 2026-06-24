@@ -8,12 +8,14 @@ export interface UserWithRole {
   last_name: string;
   short_code: string | null;
   is_active: boolean;
+  must_change_password?: boolean;
   created_at: string;
   updated_at: string;
   user_roles: { role: string }[];
   custom_role_id: string | null;
   custom_role_name: string | null;
 }
+
 
 export const users = {
   async listWithRoles(): Promise<UserWithRole[]> {
