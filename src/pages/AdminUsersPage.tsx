@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile } from "@/hooks/useUsers";
+import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile, useResetUserPassword } from "@/hooks/useUsers";
 import { useCustomRoles } from "@/hooks/useCustomRoles";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -11,11 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CalendarClock } from "lucide-react";
+import { Plus, Pencil, Trash2, CalendarClock, KeyRound, Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { UserWorkScheduleDialog } from "@/components/UserWorkScheduleDialog";
+import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { validatePassword, generateStrongPassword } from "@/lib/passwordPolicy";
+
 
 export default function AdminUsersPage() {
   const { t, i18n } = useTranslation(["admin", "common"]);
@@ -27,11 +31,16 @@ export default function AdminUsersPage() {
   const createUser = useCreateUser();
   const deleteUser = useDeleteUser();
   const updateProfile = useUpdateProfile();
+  const resetPassword = useResetUserPassword();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [scheduleUser, setScheduleUser] = useState<any>(null);
+  const [resetUser, setResetUser] = useState<any>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetDoneValue, setResetDoneValue] = useState<string | null>(null);
+
 
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
