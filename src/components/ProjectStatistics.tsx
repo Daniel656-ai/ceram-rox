@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, BarChart3 } from "lucide-react";
-import { TrafficLightBadge } from "@/components/TrafficLightBadge";
+
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
@@ -311,7 +311,6 @@ export function ProjectStatistics() {
                   {t("admin:pstats_project")} <SortIcon field="project_number" />
                 </TableHead>
                 <TableHead>{t("admin:pstats_status")}</TableHead>
-                <TableHead>{t("admin:pstats_traffic_light")}</TableHead>
                 <TableHead className="cursor-pointer text-right" onClick={() => toggleSort("measurements")}>
                   {t("admin:pstats_measurements")} <SortIcon field="measurements" />
                 </TableHead>
@@ -325,7 +324,7 @@ export function ProjectStatistics() {
             </TableHeader>
             <TableBody>
               {sorted.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">{t("admin:pstats_no_data")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">{t("admin:pstats_no_data")}</TableCell></TableRow>
               ) : (
                 sorted.map(p => (
                   <TableRow key={p.id}>
@@ -337,9 +336,6 @@ export function ProjectStatistics() {
                       <Badge variant={p.project_status === "active" ? "default" : "secondary"}>
                         {t(`projects:status_${p.project_status}`)}
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <TrafficLightBadge value={p.traffic_light} />
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {p.completedMeasurements}/{p.totalMeasurements}

@@ -19,7 +19,7 @@ import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import { ProjectTeamTab } from "@/components/ProjectTeamTab";
 import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
 import { WeeklyReviewsTab } from "@/components/WeeklyReviewsTab";
-import { TrafficLightBadge } from "@/components/TrafficLightBadge";
+
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
@@ -276,11 +276,6 @@ export default function ProjectDetailPage() {
             <h1 className="text-2xl font-bold tracking-tight">
               {project.project_number}{project.project_name ? ` – ${project.project_name}` : ""}
             </h1>
-            <TrafficLightBadge
-              value={(project as any).traffic_light || "green"}
-              editable={canEditTrafficLight && !isProjectCompleted}
-              onChange={(v) => handleUpdateProject({ traffic_light: v })}
-            />
             {isProjectCompleted && (
               <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                 {t("project_status_completed")}

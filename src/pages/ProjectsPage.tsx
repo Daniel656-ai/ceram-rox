@@ -20,7 +20,6 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
-import { TrafficLightBadge } from "@/components/TrafficLightBadge";
 import { useAllWeeklyReviews } from "@/hooks/useWeeklyReviews";
 
 
@@ -178,9 +177,6 @@ const { user, role } = useAuth();
     return (
     <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50">
       <TableCell>
-        <TrafficLightBadge value={(p as any).traffic_light || "green"} />
-      </TableCell>
-      <TableCell>
         {(() => {
           const r = latestReviewByProject.get(p.id);
           if (!r) return <span className="text-muted-foreground text-xs italic">–</span>;
@@ -269,7 +265,6 @@ const { user, role } = useAuth();
   const tableHeaders = (
     <TableHeader>
       <TableRow>
-        <TableHead className="w-12">{t("traffic_light")}</TableHead>
         <TableHead className="w-12">
           <div className="flex items-center gap-1" title="Letzte Weekly-Review-Bewertung">
             <Flag className="h-3.5 w-3.5" />Review
