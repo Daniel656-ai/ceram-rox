@@ -41,6 +41,7 @@ import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 import AdminLabelTemplatesPage from "./pages/AdminLabelTemplatesPage";
+import AdminSymbolsPage from "./pages/AdminSymbolsPage";
 
 
 import { UpdateChecker } from "@/components/UpdateChecker";
@@ -96,6 +97,7 @@ const App = () => (
               <Route path="/admin/gefahrstoff-verteiler" element={<AdminHazardNotificationsPage />} />
               <Route path="/admin/firmeneinstellungen" element={<AdminCompanySettingsPage />} />
               <Route path="/admin/etiketten" element={<AdminLabelTemplatesPage />} />
+              <Route path="/admin/symbole" element={<AdminSymbolsPage />} />
 
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />

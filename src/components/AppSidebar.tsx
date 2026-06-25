@@ -24,6 +24,7 @@ import {
   FlaskRound,
   Image as ImageIcon,
   Tag,
+  Sparkles,
 
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -89,6 +90,7 @@ export function AppSidebar() {
     { title: "Gefahrstoff-Verteiler", url: "/admin/gefahrstoff-verteiler", icon: AlertTriangle, show: isAdmin, nav: null as string | null },
     { title: "Firmeneinstellungen", url: "/admin/firmeneinstellungen", icon: ImageIcon, show: isAdmin || role === "master", nav: null as string | null },
     { title: "Etiketten-Vorlagen", url: "/admin/etiketten", icon: Tag, show: isAdmin || role === "master" || hasPerm("raw_materials.manage"), nav: null as string | null },
+    { title: "Symbole verwalten", url: "/admin/symbole", icon: Sparkles, show: isAdmin || role === "master", nav: null as string | null },
 
   ].filter((item) => item.show && (item.nav === null || hasNavPerm(item.nav)));
 

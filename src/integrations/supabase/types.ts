@@ -354,6 +354,57 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_symbols: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_size: number | null
+          id: string
+          image_data_url: string
+          is_active: boolean
+          mime_type: string
+          name: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_size?: number | null
+          id?: string
+          image_data_url: string
+          is_active?: boolean
+          mime_type: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_size?: number | null
+          id?: string
+          image_data_url?: string
+          is_active?: boolean
+          mime_type?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           file_name: string

@@ -89,6 +89,7 @@ import { mixtureTemplates } from "./mixtureTemplates";
 import { companySettings } from "./companySettings";
 import { labelTemplates, labelPrintHistory } from "./labelTemplates";
 import { weeklyReviews } from "./weeklyReviews";
+import { customSymbols } from "./customSymbols";
 
 
 
@@ -168,6 +169,7 @@ export const api = {
   labelTemplates,
   labelPrintHistory,
   weeklyReviews,
+  customSymbols,
 
 
 
