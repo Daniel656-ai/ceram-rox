@@ -26,6 +26,8 @@ export function LabelDesigner({ value, sampleData, onChange }: Props) {
   const layout = value.layout;
   const selected = layout.elements.find((e) => e.id === selectedId) || null;
   const previewScale = 2; // designer canvas at 2× for editing comfort
+  const ghsSymbols = useMergedSymbols("ghs");
+  const psaSymbols = useMergedSymbols("psa");
 
   const update = (patch: Partial<typeof value>) => onChange(patch);
   const updateLayout = (mut: (l: LabelLayout) => LabelLayout) => update({ layout: mut(layout) });
@@ -288,7 +290,7 @@ export function LabelDesigner({ value, sampleData, onChange }: Props) {
                 </div>
                 {!selected.auto && (
                   <div className="space-y-1 max-h-48 overflow-auto pr-1">
-                    {(selected.type === "ghs" ? GHS_SYMBOLS : PSA_SYMBOLS).map((s) => {
+                    {(selected.type === "ghs" ? ghsSymbols : psaSymbols).map((s) => {
                       const checked = (selected.symbols || []).includes(s.key);
                       return (
                         <label key={s.key} className="flex items-center gap-2 text-xs cursor-pointer">
