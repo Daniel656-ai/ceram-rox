@@ -45,7 +45,7 @@ function QrCode({ value }: { value: string }) {
   return <canvas ref={ref} style={{ width: "100%", height: "100%" }} />;
 }
 
-function ElementView({ el, data, placeholder }: { el: LabelElement; data: LabelDataContext; placeholder: boolean }) {
+function ElementView({ el, data, placeholder, ghsLookup, psaLookup }: { el: LabelElement; data: LabelDataContext; placeholder: boolean; ghsLookup: (k: string) => { src: string; label: string } | null; psaLookup: (k: string) => { src: string; label: string } | null }) {
   const common: React.CSSProperties = {
     width: "100%",
     height: "100%",
@@ -87,7 +87,7 @@ function ElementView({ el, data, placeholder }: { el: LabelElement; data: LabelD
     return (
       <div style={{ display: "flex", gap: 2, flexWrap: "wrap", width: "100%", height: "100%", alignItems: "center", justifyContent: el.align === "center" ? "center" : "flex-start" }}>
         {keys.map((k) => {
-          const s = ghsByKey(k);
+          const s = ghsLookup(k);
           return s ? <img key={k} src={s.src} alt={s.label} style={{ height: "100%", maxWidth: "100%", objectFit: "contain" }} /> : null;
         })}
       </div>
@@ -98,7 +98,7 @@ function ElementView({ el, data, placeholder }: { el: LabelElement; data: LabelD
     return (
       <div style={{ display: "flex", gap: 2, flexWrap: "wrap", width: "100%", height: "100%", alignItems: "center", justifyContent: el.align === "center" ? "center" : "flex-start" }}>
         {keys.map((k) => {
-          const s = psaByKey(k);
+          const s = psaLookup(k);
           return s ? <img key={k} src={s.src} alt={s.label} style={{ height: "100%", maxWidth: "100%", objectFit: "contain" }} /> : null;
         })}
       </div>
@@ -126,6 +126,20 @@ export function LabelRenderer({ template, data, scale = 1, className, placeholde
   const widthPx = template.width_mm * MM_TO_PX * scale;
   const heightPx = template.height_mm * MM_TO_PX * scale;
   const layout: LabelLayout = template.layout ?? { elements: [] };
+  const ghsMerged = useMergedSymbols("ghs");
+  const psaMerged = useMergedSymbols("psa");
+  const ghsLookup = (k: string) => {
+    const m = ghsMerged.find((s) => s.key === k);
+    if (m) return { src: m.src, label: m.label };
+    const b = ghsByKey(k);
+    return b ? { src: b.src, label: b.label } : null;
+  };
+  const psaLookup = (k: string) => {
+    const m = psaMerged.find((s) => s.key === k);
+    if (m) return { src: m.src, label: m.label };
+    const b = psaByKey(k);
+    return b ? { src: b.src, label: b.label } : null;
+  };
   return (
     <div
       className={className}
@@ -149,7 +163,7 @@ export function LabelRenderer({ template, data, scale = 1, className, placeholde
             height: `${el.h * MM_TO_PX * scale}px`,
           }}
         >
-          <ElementView el={el} data={data} placeholder={placeholder} />
+          <ElementView el={el} data={data} placeholder={placeholder} ghsLookup={ghsLookup} psaLookup={psaLookup} />
         </div>
       ))}
     </div>
