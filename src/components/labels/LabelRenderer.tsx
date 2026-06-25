@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import type { LabelElement, LabelLayout, LabelTemplate } from "@/lib/api/labelTemplates";
 import { LabelDataContext, resolveField } from "@/lib/labels/fields";
 import { ghsByKey, psaByKey } from "@/lib/labels/symbols";
+import { useMergedSymbols } from "@/hooks/useMergedSymbols";
 
 const MM_TO_PX = 3.7795275591; // 96dpi
 
