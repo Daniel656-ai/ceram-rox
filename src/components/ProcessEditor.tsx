@@ -55,7 +55,6 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
   const [secName, setSecName] = useState("");
   const [secDesc, setSecDesc] = useState("");
   const [secDuration, setSecDuration] = useState("");
-  const [secTemp, setSecTemp] = useState("");
 
   const handleAddSection = async () => {
     if (!secName.trim()) return;
@@ -64,10 +63,10 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
       name: secName.trim(),
       description: secDesc.trim() || null,
       planned_duration_min: secDuration ? Number(secDuration) : null,
-      target_temperature: secTemp ? Number(secTemp) : null,
+      target_temperature: null,
       sort_order: (sections as any[]).length,
     });
-    setSecName(""); setSecDesc(""); setSecDuration(""); setSecTemp("");
+    setSecName(""); setSecDesc(""); setSecDuration("");
     setSecOpen(false);
   };
 
