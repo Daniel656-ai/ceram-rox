@@ -63,7 +63,7 @@ export const projectDocuments = {
     const row = await unwrap(
       dbClient.from("project_documents" as any).select("*").eq("id", id).single()
     );
-    return row as ProjectDocument;
+    return row as unknown as ProjectDocument;
   },
 
   async signedUrl(storagePath: string, expiresIn = 300): Promise<string | null> {
