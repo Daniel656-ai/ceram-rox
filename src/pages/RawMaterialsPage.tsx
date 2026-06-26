@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation, useDeleteRawMaterial } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -37,18 +37,25 @@ function formatLocation(loc: any) {
 
 export default function RawMaterialsPage() {
   const { t } = useTranslation(["raw_materials", "common"]);
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { data: materials, isLoading } = useRawMaterials();
   const { data: locations } = useStorageLocations();
   const { data: allMovements } = useInventoryMovements();
   const addMaterial = useAddRawMaterial();
   const addLocation = useAddStorageLocation();
 
+  const prefsKey = `rawMaterials.listPrefs.${user?.id ?? "anon"}`;
+  const loadPrefs = () => {
+    try { return JSON.parse(localStorage.getItem(prefsKey) || "{}"); } catch { return {}; }
+  };
+  const initialPrefs = loadPrefs();
+
   const [search, setSearch] = useState("");
   const [filterSupplier, setFilterSupplier] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
-  const [sortKey, setSortKey] = useState<"number" | "name">("number");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [filterHazard, setFilterHazard] = useState<"all" | "hazardous" | "safe">(initialPrefs.filterHazard ?? "all");
+  const [sortKey, setSortKey] = useState<"number" | "name" | "hazard">(initialPrefs.sortKey ?? "number");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(initialPrefs.sortDir ?? "asc");
   const [open, setOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
 
@@ -90,17 +97,31 @@ export default function RawMaterialsPage() {
     const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || ((m as any).cas_number || "").toLowerCase().includes(q) || ((m as any).mrs_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
     const matchSupplier = !filterSupplier || m.supplier === filterSupplier;
     const matchLocation = !filterLocation || m.default_location_id === filterLocation;
-    return matchSearch && matchSupplier && matchLocation;
+    const isHaz = !!(m as any).is_hazardous || (((m as any).hazard_categories as string[] | null)?.length ?? 0) > 0;
+    const matchHazard = filterHazard === "all" || (filterHazard === "hazardous" ? isHaz : !isHaz);
+    return matchSearch && matchSupplier && matchLocation && matchHazard;
   });
 
   const sorted = filtered ? [...filtered].sort((a, b) => {
-    const av = (sortKey === "number" ? (a.material_number || "") : a.material_name) || "";
-    const bv = (sortKey === "number" ? (b.material_number || "") : b.material_name) || "";
-    const cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+    let cmp = 0;
+    if (sortKey === "hazard") {
+      const ah = (!!(a as any).is_hazardous || (((a as any).hazard_categories as string[] | null)?.length ?? 0) > 0) ? 1 : 0;
+      const bh = (!!(b as any).is_hazardous || (((b as any).hazard_categories as string[] | null)?.length ?? 0) > 0) ? 1 : 0;
+      cmp = ah - bh;
+      if (cmp === 0) cmp = (a.material_name || "").localeCompare(b.material_name || "", undefined, { numeric: true, sensitivity: "base" });
+    } else {
+      const av = (sortKey === "number" ? (a.material_number || "") : a.material_name) || "";
+      const bv = (sortKey === "number" ? (b.material_number || "") : b.material_name) || "";
+      cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+    }
     return sortDir === "asc" ? cmp : -cmp;
   }) : filtered;
 
-  const toggleSort = (key: "number" | "name") => {
+  useEffect(() => {
+    try { localStorage.setItem(prefsKey, JSON.stringify({ sortKey, sortDir, filterHazard })); } catch {}
+  }, [prefsKey, sortKey, sortDir, filterHazard]);
+
+  const toggleSort = (key: "number" | "name" | "hazard") => {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("asc"); }
   };
@@ -237,6 +258,14 @@ export default function RawMaterialsPage() {
             {locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterHazard} onValueChange={(v: "all" | "hazardous" | "safe") => setFilterHazard(v)}>
+          <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle Rohstoffe</SelectItem>
+            <SelectItem value="hazardous">Nur Gefahrstoffe</SelectItem>
+            <SelectItem value="safe">Ohne Gefahrstoffe</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -254,7 +283,7 @@ export default function RawMaterialsPage() {
                 <TableHead><button type="button" onClick={() => toggleSort("name")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:name")}<SortIcon active={sortKey === "name"} /></button></TableHead>
                 <TableHead>{t("common:supplier")}</TableHead>
                 <TableHead>{t("raw_materials:location")}</TableHead>
-                <TableHead>{t("raw_materials:hazardous")}</TableHead>
+                <TableHead><button type="button" onClick={() => toggleSort("hazard")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:hazardous")}<SortIcon active={sortKey === "hazard"} /></button></TableHead>
                 <TableHead className="text-right">{t("raw_materials:stock")}</TableHead>
                 <TableHead className="text-right">{t("common:unit")}</TableHead>
                 {canManage && <TableHead className="w-12" />}
