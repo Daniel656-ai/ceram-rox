@@ -284,7 +284,7 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
           </CardContent>
         </Card>
 
-        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) resetForm(); }}>
+        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { resetForm(); setMeetingPersonIds([]); setAddMode("individual"); } }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -295,10 +295,24 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
             <DialogHeader>
               <DialogTitle>{t("time_add_entry")}</DialogTitle>
             </DialogHeader>
-            {formFields}
-            <Button className="w-full" onClick={handleAdd} disabled={addEntry.isPending}>
-              {addEntry.isPending ? "..." : t("time_save")}
-            </Button>
+            <Tabs value={addMode} onValueChange={(v) => setAddMode(v as any)}>
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="individual"><Clock className="h-4 w-4 mr-2" />{t("time_mode_individual")}</TabsTrigger>
+                <TabsTrigger value="meeting"><Users className="h-4 w-4 mr-2" />{t("time_mode_meeting")}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="individual" className="mt-4">
+                {individualFields}
+                <Button className="w-full mt-4" onClick={handleAdd} disabled={addEntry.isPending}>
+                  {addEntry.isPending ? "..." : t("time_save")}
+                </Button>
+              </TabsContent>
+              <TabsContent value="meeting" className="mt-4">
+                {meetingFields}
+                <Button className="w-full mt-4" onClick={handleAddMeeting} disabled={addMeeting.isPending}>
+                  {addMeeting.isPending ? "..." : t("time_save")}
+                </Button>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>
