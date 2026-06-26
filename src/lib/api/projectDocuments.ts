@@ -24,9 +24,9 @@ export interface ProjectDocument {
 
 export const projectDocuments = {
   list: (projectId: string, kind?: ProjectDocKind) => {
-    let q = dbClient.from("project_documents" as any).select("*").eq("project_id", projectId);
+    let q: any = dbClient.from("project_documents" as any).select("*").eq("project_id", projectId);
     if (kind) q = q.eq("doc_kind", kind);
-    return unwrap(q.order("created_at", { ascending: false })) as Promise<ProjectDocument[]>;
+    return unwrap(q.order("created_at", { ascending: false })) as unknown as Promise<ProjectDocument[]>;
   },
 
   async upload(args: {
