@@ -192,11 +192,6 @@ function SectionCard({
                 <Clock className="h-3 w-3" /> {section.planned_duration_min} min
               </span>
             )}
-            {section.target_temperature != null && (
-              <span className="flex items-center gap-1">
-                <Thermometer className="h-3 w-3" /> {section.target_temperature} {section.target_unit || "°C"}
-              </span>
-            )}
           </div>
         </div>
         {!readOnly && (
