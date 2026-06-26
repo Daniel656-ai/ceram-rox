@@ -20,6 +20,8 @@ import { useUsers } from "@/hooks/useUsers";
 import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
+import { PsaSymbolSelector } from "@/components/PsaSymbolSelector";
+import { PsaSymbolList } from "@/components/PsaSymbolList";
 import type { HazardClassKey } from "@/lib/hazardClasses";
 import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
