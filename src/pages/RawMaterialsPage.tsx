@@ -20,6 +20,8 @@ import { useUsers } from "@/hooks/useUsers";
 import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
+import { PsaSymbolSelector } from "@/components/PsaSymbolSelector";
+import { PsaSymbolList } from "@/components/PsaSymbolList";
 import type { HazardClassKey } from "@/lib/hazardClasses";
 import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
@@ -69,6 +71,7 @@ export default function RawMaterialsPage() {
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
   const [hazardCats, setHazardCats] = useState<HazardClassKey[]>([]);
+  const [psaSymbols, setPsaSymbols] = useState<string[]>([]);
   const [responsibleUserId, setResponsibleUserId] = useState("");
   const { data: users } = useUsers();
 
@@ -138,9 +141,9 @@ export default function RawMaterialsPage() {
     const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
     if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
-      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, other_designation: otherDesignation.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats, responsible_user_id: responsibleUserId || null });
+      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, other_designation: otherDesignation.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats, psa_symbols: psaSymbols, responsible_user_id: responsibleUserId || null });
       toast.success(t("raw_materials:material_created"));
-      setOpen(false); setName(""); setNumber(""); setOtherDesignation(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]); setResponsibleUserId("");
+      setOpen(false); setName(""); setNumber(""); setOtherDesignation(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]); setPsaSymbols([]); setResponsibleUserId("");
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
 
   };
@@ -226,8 +229,15 @@ export default function RawMaterialsPage() {
                     <HazardClassSelector
                       value={hazardCats}
                       onChange={setHazardCats}
-                      label={t("raw_materials:hazard_section")}
+                      label="GHS-Gefahrensymbole"
                       idPrefix="new-haz"
+                    />
+
+                    <PsaSymbolSelector
+                      value={psaSymbols}
+                      onChange={setPsaSymbols}
+                      label="PSA-Schutzausrüstung"
+                      idPrefix="new-psa"
                     />
 
                     <Button onClick={handleAddMaterial} className="w-full" disabled={addMaterial.isPending}>{t("common:create")}</Button>
@@ -298,6 +308,7 @@ export default function RawMaterialsPage() {
                 sorted?.map((m) => {
                   const stock = stockMap.get(m.id) || 0;
                   const hazards = ((m as any).hazard_categories as string[]) || [];
+                  const psa = ((m as any).psa_symbols as string[]) || [];
                   const isHazardous = (m as any).is_hazardous;
                   return (
                     <TableRow key={m.id} className="hover:bg-muted/50">
@@ -306,13 +317,16 @@ export default function RawMaterialsPage() {
                       <TableCell>{m.supplier || "–"}</TableCell>
                       <TableCell className="text-xs">{formatLocation(m.storage_locations)}</TableCell>
                       <TableCell>
-                        {hazards.length > 0 ? (
-                          <GhsPictogramList hazardClasses={hazards} size="sm" max={5} />
-                        ) : isHazardous ? (
-                          <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />{t("raw_materials:hazard_yes")}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">–</span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {hazards.length > 0 ? (
+                            <GhsPictogramList hazardClasses={hazards} size="sm" max={5} />
+                          ) : isHazardous ? (
+                            <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />{t("raw_materials:hazard_yes")}</Badge>
+                          ) : !psa.length ? (
+                            <span className="text-muted-foreground text-sm">–</span>
+                          ) : null}
+                          {psa.length > 0 && <PsaSymbolList psaSymbols={psa} size="sm" max={5} />}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{stock.toFixed(2)}</Badge></TableCell>
                       <TableCell className="text-right text-muted-foreground">{m.unit}</TableCell>

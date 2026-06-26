@@ -24,6 +24,8 @@ import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConi
 import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
+import { PsaSymbolSelector } from "@/components/PsaSymbolSelector";
+import { PsaSymbolList } from "@/components/PsaSymbolList";
 import { normalizeHazardClasses, type HazardClassKey } from "@/lib/hazardClasses";
 import { DerivedSamples } from "@/components/DerivedSamples";
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
@@ -86,7 +88,9 @@ export default function RawMaterialDetailPage() {
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
   const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
+  const [editPsaSymbols, setEditPsaSymbols] = useState<string[]>([]);
   const [editResponsibleUserId, setEditResponsibleUserId] = useState<string>("");
+
 
 
   const openEditDialog = () => {
@@ -104,6 +108,7 @@ export default function RawMaterialDetailPage() {
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
     setEditHazardCats(normalizeHazardClasses(((mat as any).hazard_categories as string[]) || []));
+    setEditPsaSymbols(Array.isArray((mat as any).psa_symbols) ? (mat as any).psa_symbols : []);
     setEditResponsibleUserId((mat as any).responsible_user_id || "");
     setEditOpen(true);
   };
@@ -134,6 +139,7 @@ export default function RawMaterialDetailPage() {
         price_per_kg: Number(editPricePerKg) || 0,
         is_hazardous: editHazardCats.length > 0,
         hazard_categories: editHazardCats,
+        psa_symbols: editPsaSymbols,
         responsible_user_id: editResponsibleUserId || null,
       });
       toast.success(t("raw_materials:material_updated"));
@@ -434,9 +440,10 @@ export default function RawMaterialDetailPage() {
       <div className="flex items-center gap-3">
         <Link to="/rohstoffe"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold flex items-center gap-3">
+          <h1 className="text-2xl font-bold flex items-center gap-3 flex-wrap">
             <span>{mat.material_name}</span>
             <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
+            <PsaSymbolList psaSymbols={(mat as any).psa_symbols} size="md" />
           </h1>
           <p className="text-sm text-muted-foreground">{mat.material_number || "—"}{(mat as any).other_designation ? ` · ${(mat as any).other_designation}` : ""} · {mat.supplier || "Kein Lieferant"} · Lagerort: {formatLocation(mat.storage_locations)} · Preis: {(mat as any).price_per_kg || 0} €/kg{(mat as any).cas_number ? ` · CAS: ${(mat as any).cas_number}` : ""}{(mat as any).mrs_number ? ` · MRS: ${(mat as any).mrs_number}` : ""}{(mat as any).eg_number ? ` · EG: ${(mat as any).eg_number}` : ""}{(mat as any).manufacturer ? ` · Hersteller: ${(mat as any).manufacturer}` : ""}</p>
         </div>
@@ -479,6 +486,7 @@ export default function RawMaterialDetailPage() {
           <AlertDescription className="font-semibold flex flex-wrap items-center gap-3">
             <span>{t("raw_materials:hazard_warning")}</span>
             <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
+            <PsaSymbolList psaSymbols={(mat as any).psa_symbols} size="md" />
           </AlertDescription>
         </Alert>
       )}
@@ -546,8 +554,14 @@ export default function RawMaterialDetailPage() {
             <HazardClassSelector
               value={editHazardCats}
               onChange={setEditHazardCats}
-              label={t("raw_materials:hazard_section")}
+              label="GHS-Gefahrensymbole"
               idPrefix="edit-haz"
+            />
+            <PsaSymbolSelector
+              value={editPsaSymbols}
+              onChange={setEditPsaSymbols}
+              label="PSA-Schutzausrüstung"
+              idPrefix="edit-psa"
             />
 
             <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>

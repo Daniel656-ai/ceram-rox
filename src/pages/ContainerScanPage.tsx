@@ -12,6 +12,7 @@ import { ScanLine, ArrowLeft, Package, MapPin, ExternalLink, AlertTriangle, Rota
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import type { ContainerMovementType } from "@/lib/api/containerMovements";
 import { GhsPictogramList } from "@/components/GhsPictogram";
+import { PsaSymbolList } from "@/components/PsaSymbolList";
 
 // Erlaubt: Buchstaben, Ziffern, - _ . / (typische Barcode-Symbologien)
 const barcodeSchema = z.string()
@@ -209,6 +210,7 @@ export default function ContainerScanPage() {
                   <div className="font-medium flex items-center gap-2">
                     {material?.material_name || container.raw_materials?.material_name || "–"}
                     <GhsPictogramList hazardClasses={material?.hazard_categories} size="sm" />
+                    <PsaSymbolList psaSymbols={(material as any)?.psa_symbols} size="sm" />
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {material?.material_number || ""}
@@ -245,6 +247,7 @@ export default function ContainerScanPage() {
                   <AlertDescription className="font-semibold flex items-center gap-2">
                     Gefahrstoff — Schutzmaßnahmen beachten
                     <GhsPictogramList hazardClasses={material.hazard_categories} size="sm" />
+                    <PsaSymbolList psaSymbols={(material as any).psa_symbols} size="sm" />
                   </AlertDescription>
                 </Alert>
               )}

@@ -2739,6 +2739,7 @@ export type Database = {
           other_designation: string | null
           price_per_kg: number | null
           psa_categories: Json
+          psa_symbols: string[]
           responsible_user_id: string | null
           sds_file_name: string | null
           sds_storage_path: string | null
@@ -2764,6 +2765,7 @@ export type Database = {
           other_designation?: string | null
           price_per_kg?: number | null
           psa_categories?: Json
+          psa_symbols?: string[]
           responsible_user_id?: string | null
           sds_file_name?: string | null
           sds_storage_path?: string | null
@@ -2789,6 +2791,7 @@ export type Database = {
           other_designation?: string | null
           price_per_kg?: number | null
           psa_categories?: Json
+          psa_symbols?: string[]
           responsible_user_id?: string | null
           sds_file_name?: string | null
           sds_storage_path?: string | null

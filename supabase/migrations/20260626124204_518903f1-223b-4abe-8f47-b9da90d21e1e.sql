@@ -1,0 +1,1 @@
+ALTER TABLE public.raw_materials ADD COLUMN IF NOT EXISTS psa_symbols text[] NOT NULL DEFAULT '{}'::text[];
