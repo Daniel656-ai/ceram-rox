@@ -88,7 +88,9 @@ export default function RawMaterialDetailPage() {
   const [editLocationId, setEditLocationId] = useState<string>("");
   const [editPricePerKg, setEditPricePerKg] = useState("");
   const [editHazardCats, setEditHazardCats] = useState<HazardClassKey[]>([]);
+  const [editPsaSymbols, setEditPsaSymbols] = useState<string[]>([]);
   const [editResponsibleUserId, setEditResponsibleUserId] = useState<string>("");
+
 
 
   const openEditDialog = () => {
