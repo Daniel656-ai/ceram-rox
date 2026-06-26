@@ -258,6 +258,14 @@ export default function RawMaterialsPage() {
             {locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterHazard} onValueChange={(v: "all" | "hazardous" | "safe") => setFilterHazard(v)}>
+          <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle Rohstoffe</SelectItem>
+            <SelectItem value="hazardous">Nur Gefahrstoffe</SelectItem>
+            <SelectItem value="safe">Ohne Gefahrstoffe</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
