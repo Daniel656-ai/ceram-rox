@@ -2216,7 +2216,9 @@ export type Database = {
           created_by: string
           duration_minutes: number
           entry_date: string
+          entry_type: string
           id: string
+          meeting_group_id: string | null
           note: string
           order_id: string | null
           person_id: string
@@ -2228,7 +2230,9 @@ export type Database = {
           created_by: string
           duration_minutes: number
           entry_date?: string
+          entry_type?: string
           id?: string
+          meeting_group_id?: string | null
           note?: string
           order_id?: string | null
           person_id: string
@@ -2240,7 +2244,9 @@ export type Database = {
           created_by?: string
           duration_minutes?: number
           entry_date?: string
+          entry_type?: string
           id?: string
+          meeting_group_id?: string | null
           note?: string
           order_id?: string | null
           person_id?: string
