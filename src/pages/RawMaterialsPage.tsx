@@ -37,18 +37,25 @@ function formatLocation(loc: any) {
 
 export default function RawMaterialsPage() {
   const { t } = useTranslation(["raw_materials", "common"]);
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { data: materials, isLoading } = useRawMaterials();
   const { data: locations } = useStorageLocations();
   const { data: allMovements } = useInventoryMovements();
   const addMaterial = useAddRawMaterial();
   const addLocation = useAddStorageLocation();
 
+  const prefsKey = `rawMaterials.listPrefs.${user?.id ?? "anon"}`;
+  const loadPrefs = () => {
+    try { return JSON.parse(localStorage.getItem(prefsKey) || "{}"); } catch { return {}; }
+  };
+  const initialPrefs = loadPrefs();
+
   const [search, setSearch] = useState("");
   const [filterSupplier, setFilterSupplier] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
-  const [sortKey, setSortKey] = useState<"number" | "name">("number");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [filterHazard, setFilterHazard] = useState<"all" | "hazardous" | "safe">(initialPrefs.filterHazard ?? "all");
+  const [sortKey, setSortKey] = useState<"number" | "name" | "hazard">(initialPrefs.sortKey ?? "number");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(initialPrefs.sortDir ?? "asc");
   const [open, setOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
 
