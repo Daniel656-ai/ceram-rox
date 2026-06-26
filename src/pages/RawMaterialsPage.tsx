@@ -301,6 +301,7 @@ export default function RawMaterialsPage() {
                 sorted?.map((m) => {
                   const stock = stockMap.get(m.id) || 0;
                   const hazards = ((m as any).hazard_categories as string[]) || [];
+                  const psa = ((m as any).psa_symbols as string[]) || [];
                   const isHazardous = (m as any).is_hazardous;
                   return (
                     <TableRow key={m.id} className="hover:bg-muted/50">
@@ -309,13 +310,16 @@ export default function RawMaterialsPage() {
                       <TableCell>{m.supplier || "–"}</TableCell>
                       <TableCell className="text-xs">{formatLocation(m.storage_locations)}</TableCell>
                       <TableCell>
-                        {hazards.length > 0 ? (
-                          <GhsPictogramList hazardClasses={hazards} size="sm" max={5} />
-                        ) : isHazardous ? (
-                          <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />{t("raw_materials:hazard_yes")}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">–</span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {hazards.length > 0 ? (
+                            <GhsPictogramList hazardClasses={hazards} size="sm" max={5} />
+                          ) : isHazardous ? (
+                            <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />{t("raw_materials:hazard_yes")}</Badge>
+                          ) : !psa.length ? (
+                            <span className="text-muted-foreground text-sm">–</span>
+                          ) : null}
+                          {psa.length > 0 && <PsaSymbolList psaSymbols={psa} size="sm" max={5} />}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{stock.toFixed(2)}</Badge></TableCell>
                       <TableCell className="text-right text-muted-foreground">{m.unit}</TableCell>
