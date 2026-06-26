@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, Clock, Thermometer, Beaker } from "lucide-react";
+import { Plus, Trash2, Clock, Beaker } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,6 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
   const [secName, setSecName] = useState("");
   const [secDesc, setSecDesc] = useState("");
   const [secDuration, setSecDuration] = useState("");
-  const [secTemp, setSecTemp] = useState("");
 
   const handleAddSection = async () => {
     if (!secName.trim()) return;
@@ -64,10 +63,10 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
       name: secName.trim(),
       description: secDesc.trim() || null,
       planned_duration_min: secDuration ? Number(secDuration) : null,
-      target_temperature: secTemp ? Number(secTemp) : null,
+      target_temperature: null,
       sort_order: (sections as any[]).length,
     });
-    setSecName(""); setSecDesc(""); setSecDuration(""); setSecTemp("");
+    setSecName(""); setSecDesc(""); setSecDuration("");
     setSecOpen(false);
   };
 
@@ -90,15 +89,9 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
                   <Label>Beschreibung</Label>
                   <Textarea value={secDesc} onChange={(e) => setSecDesc(e.target.value)} rows={2} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Geplante Dauer (min)</Label>
-                    <Input type="number" value={secDuration} onChange={(e) => setSecDuration(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Soll-Temperatur (°C)</Label>
-                    <Input type="number" step="0.1" value={secTemp} onChange={(e) => setSecTemp(e.target.value)} />
-                  </div>
+                <div>
+                  <Label>Geplante Dauer (min)</Label>
+                  <Input type="number" value={secDuration} onChange={(e) => setSecDuration(e.target.value)} />
                 </div>
               </div>
               <DialogFooter>
@@ -197,11 +190,6 @@ function SectionCard({
             {section.planned_duration_min != null && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {section.planned_duration_min} min
-              </span>
-            )}
-            {section.target_temperature != null && (
-              <span className="flex items-center gap-1">
-                <Thermometer className="h-3 w-3" /> {section.target_temperature} {section.target_unit || "°C"}
               </span>
             )}
           </div>
