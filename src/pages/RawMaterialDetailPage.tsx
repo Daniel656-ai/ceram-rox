@@ -554,8 +554,14 @@ export default function RawMaterialDetailPage() {
             <HazardClassSelector
               value={editHazardCats}
               onChange={setEditHazardCats}
-              label={t("raw_materials:hazard_section")}
+              label="GHS-Gefahrensymbole"
               idPrefix="edit-haz"
+            />
+            <PsaSymbolSelector
+              value={editPsaSymbols}
+              onChange={setEditPsaSymbols}
+              label="PSA-Schutzausrüstung"
+              idPrefix="edit-psa"
             />
 
             <Button onClick={handleUpdateMaterial} className="w-full" disabled={updateMaterial.isPending}>Speichern</Button>
