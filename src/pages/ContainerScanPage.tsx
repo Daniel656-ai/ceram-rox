@@ -247,6 +247,7 @@ export default function ContainerScanPage() {
                   <AlertDescription className="font-semibold flex items-center gap-2">
                     Gefahrstoff — Schutzmaßnahmen beachten
                     <GhsPictogramList hazardClasses={material.hazard_categories} size="sm" />
+                    <PsaSymbolList psaSymbols={(material as any).psa_symbols} size="sm" />
                   </AlertDescription>
                 </Alert>
               )}
