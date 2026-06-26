@@ -89,15 +89,9 @@ export function ProcessEditor({ versionId, readOnly }: Props) {
                   <Label>Beschreibung</Label>
                   <Textarea value={secDesc} onChange={(e) => setSecDesc(e.target.value)} rows={2} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Geplante Dauer (min)</Label>
-                    <Input type="number" value={secDuration} onChange={(e) => setSecDuration(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Soll-Temperatur (°C)</Label>
-                    <Input type="number" step="0.1" value={secTemp} onChange={(e) => setSecTemp(e.target.value)} />
-                  </div>
+                <div>
+                  <Label>Geplante Dauer (min)</Label>
+                  <Input type="number" value={secDuration} onChange={(e) => setSecDuration(e.target.value)} />
                 </div>
               </div>
               <DialogFooter>
