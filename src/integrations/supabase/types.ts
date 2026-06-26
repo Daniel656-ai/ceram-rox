@@ -3717,6 +3717,7 @@ export type Database = {
         | "tank"
         | "flasche"
         | "sonstige"
+        | "kiste"
       container_movement_type:
         | "eingang"
         | "umlagerung"
@@ -3930,6 +3931,7 @@ export const Constants = {
         "tank",
         "flasche",
         "sonstige",
+        "kiste",
       ],
       container_movement_type: [
         "eingang",

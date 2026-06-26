@@ -42,7 +42,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const KIND_LABEL: Record<string, string> = {
   fass: "Fass", kanister: "Kanister", sack: "Sack", big_bag: "Big Bag",
-  ibc: "IBC", tank: "Tank", flasche: "Flasche", sonstige: "Sonstige",
+  ibc: "IBC", tank: "Tank", flasche: "Flasche", kiste: "Kiste", sonstige: "Sonstige",
 };
 
 interface RecentScan { code: string; ok: boolean; label: string; at: number; containerId?: string }

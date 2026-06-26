@@ -3,7 +3,7 @@ import { unwrap, run } from "./_helpers";
 
 const db = dbClient as any;
 
-export type ContainerKind = "fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige";
+export type ContainerKind = "fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "kiste" | "sonstige";
 export type ContainerStatus = "verfuegbar" | "reserviert" | "in_verwendung" | "leer" | "gesperrt" | "entsorgt";
 
 export interface RawMaterialContainer {
