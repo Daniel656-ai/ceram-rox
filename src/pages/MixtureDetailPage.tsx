@@ -57,6 +57,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -319,19 +323,12 @@ export default function MixtureDetailPage() {
                   <div className="space-y-3">
                     <div>
                       <Label>{t("mixtures:raw_material")} *</Label>
-                      <Select value={recMaterial} onValueChange={setRecMaterial}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("mixtures:select_raw_material")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(rawMaterials as any[]).map((r) => (
-                            <SelectItem key={r.id} value={r.id}>
-                              {r.material_name}
-                              {r.material_number ? ` (${r.material_number})` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <RawMaterialCombobox
+                        materials={rawMaterials as any[]}
+                        value={recMaterial}
+                        onChange={setRecMaterial}
+                        placeholder={t("mixtures:select_raw_material")}
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -919,4 +916,74 @@ function ProcessTab({ mixtureId }: { mixtureId: string }) {
     );
   }
   return <ProcessEditor versionId={active.id} />;
+}
+
+function RawMaterialCombobox({
+  materials,
+  value,
+  onChange,
+  placeholder,
+}: {
+  materials: any[];
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = materials.find((m) => m.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className="truncate">
+            {selected
+              ? `${selected.material_name}${selected.material_number ? ` (${selected.material_number})` : ""}`
+              : placeholder || "..."}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command
+          filter={(itemValue, search) => {
+            const q = search.toLowerCase().trim();
+            if (!q) return 1;
+            return itemValue.toLowerCase().includes(q) ? 1 : 0;
+          }}
+        >
+          <CommandInput placeholder="Name oder RK-Code suchen..." />
+          <CommandList>
+            <CommandEmpty>Keine Treffer.</CommandEmpty>
+            <CommandGroup>
+              {materials.map((m) => {
+                const label = `${m.material_name}${m.material_number ? ` ${m.material_number}` : ""}`;
+                return (
+                  <CommandItem
+                    key={m.id}
+                    value={label}
+                    onSelect={() => {
+                      onChange(m.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", value === m.id ? "opacity-100" : "opacity-0")} />
+                    <span className="flex-1 truncate">{m.material_name}</span>
+                    {m.material_number && (
+                      <span className="ml-2 text-xs text-muted-foreground">{m.material_number}</span>
+                    )}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
