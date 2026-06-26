@@ -600,6 +600,14 @@ export default function ProjectDetailPage() {
           <ProjectTimeEntries projectId={id!} />
         </TabsContent>
 
+        {/* DOCUMENTS TAB */}
+        <TabsContent value="documents">
+          <ProjectDocumentsTab
+            projectId={id!}
+            canEdit={isMaster || isLeaderOrOwner || canEditByPermission}
+          />
+        </TabsContent>
+
         {/* REPORT TAB */}
         <TabsContent value="report">
           <div ref={reportRef} className="space-y-6 print:space-y-4">
