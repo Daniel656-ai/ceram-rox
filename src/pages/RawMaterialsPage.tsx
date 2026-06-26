@@ -229,8 +229,15 @@ export default function RawMaterialsPage() {
                     <HazardClassSelector
                       value={hazardCats}
                       onChange={setHazardCats}
-                      label={t("raw_materials:hazard_section")}
+                      label="GHS-Gefahrensymbole"
                       idPrefix="new-haz"
+                    />
+
+                    <PsaSymbolSelector
+                      value={psaSymbols}
+                      onChange={setPsaSymbols}
+                      label="PSA-Schutzausrüstung"
+                      idPrefix="new-psa"
                     />
 
                     <Button onClick={handleAddMaterial} className="w-full" disabled={addMaterial.isPending}>{t("common:create")}</Button>
