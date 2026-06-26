@@ -154,63 +154,119 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
     }
   };
 
-  const formFields = (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>{t("time_date")} *</Label>
-        <Input
-          type="date"
-          value={form.entry_date}
-          onChange={(e) => setForm((f) => ({ ...f, entry_date: e.target.value }))}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>{t("time_person")} *</Label>
-        <Select
-          value={form.person_id}
-          onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={t("time_select_person")} />
-          </SelectTrigger>
-          <SelectContent>
-            {activeUsers.map((u: any) => (
-              <SelectItem key={u.user_id} value={u.user_id}>
-                {u.first_name} {u.last_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>{t("time_duration")} *</Label>
-        <Select
-          value={form.duration_minutes}
-          onValueChange={(v) => setForm((f) => ({ ...f, duration_minutes: v }))}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {DURATION_OPTIONS.map((mins) => (
-              <SelectItem key={mins} value={String(mins)}>
-                {formatDuration(mins)} ({mins} min)
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>{t("time_note")} *</Label>
-        <Textarea
-          value={form.note}
-          onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-          placeholder={t("time_note_placeholder")}
-          rows={3}
-        />
-      </div>
+  const handleAddMeeting = async () => {
+    if (meetingPersonIds.length === 0) {
+      toast.error(t("time_person_required"));
+      return;
+    }
+    if (!form.note.trim()) {
+      toast.error(t("time_note_required"));
+      return;
+    }
+    try {
+      await addMeeting.mutateAsync({
+        project_id: projectId,
+        person_ids: meetingPersonIds,
+        entry_date: form.entry_date,
+        duration_minutes: Number(form.duration_minutes),
+        note: form.note.trim(),
+        order_id: orderId,
+      });
+      toast.success(t("time_meeting_created", { count: meetingPersonIds.length }));
+      resetForm();
+      setMeetingPersonIds([]);
+      setAddOpen(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const togglePerson = (id: string) =>
+    setMeetingPersonIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+
+  const dateField = (
+    <div className="space-y-2">
+      <Label>{t("time_date")} *</Label>
+      <Input
+        type="date"
+        value={form.entry_date}
+        onChange={(e) => setForm((f) => ({ ...f, entry_date: e.target.value }))}
+      />
     </div>
   );
+
+  const durationField = (
+    <div className="space-y-2">
+      <Label>{t("time_duration")} *</Label>
+      <Select value={form.duration_minutes} onValueChange={(v) => setForm((f) => ({ ...f, duration_minutes: v }))}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {DURATION_OPTIONS.map((mins) => (
+            <SelectItem key={mins} value={String(mins)}>
+              {formatDuration(mins)} ({mins} min)
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  const noteField = (
+    <div className="space-y-2">
+      <Label>{t("time_note")} *</Label>
+      <Textarea
+        value={form.note}
+        onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+        placeholder={t("time_note_placeholder")}
+        rows={3}
+      />
+    </div>
+  );
+
+  const individualFields = (
+    <div className="space-y-4">
+      {dateField}
+      <div className="space-y-2">
+        <Label>{t("time_person")} *</Label>
+        <Select value={form.person_id} onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}>
+          <SelectTrigger><SelectValue placeholder={t("time_select_person")} /></SelectTrigger>
+          <SelectContent>
+            {activeUsers.map((u: any) => (
+              <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {durationField}
+      {noteField}
+    </div>
+  );
+
+  const meetingFields = (
+    <div className="space-y-4">
+      {dateField}
+      <div className="space-y-2">
+        <Label>{t("time_meeting_participants")} * ({meetingPersonIds.length})</Label>
+        <div className="border rounded-md max-h-56 overflow-y-auto divide-y">
+          {activeUsers.map((u: any) => (
+            <label key={u.user_id} className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50">
+              <Checkbox
+                checked={meetingPersonIds.includes(u.user_id)}
+                onCheckedChange={() => togglePerson(u.user_id)}
+              />
+              <span className="text-sm">{u.first_name} {u.last_name}</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">{t("time_meeting_hint")}</p>
+      </div>
+      {durationField}
+      {noteField}
+    </div>
+  );
+
+  const formFields = individualFields;
+
 
   if (role === "auftraggeber") return null;
 
