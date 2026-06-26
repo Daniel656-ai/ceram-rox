@@ -798,6 +798,7 @@ export default function RawMaterialDetailPage() {
                         <SelectItem value="ibc">IBC</SelectItem>
                         <SelectItem value="tank">Tank</SelectItem>
                         <SelectItem value="flasche">Flasche</SelectItem>
+                        <SelectItem value="kiste">Kiste</SelectItem>
                         <SelectItem value="sonstige">Sonstige</SelectItem>
                       </SelectContent>
                     </Select>
