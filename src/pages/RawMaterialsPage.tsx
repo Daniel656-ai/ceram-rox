@@ -141,9 +141,9 @@ export default function RawMaterialsPage() {
     const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
     if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
     try {
-      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, other_designation: otherDesignation.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats, responsible_user_id: responsibleUserId || null });
+      await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, other_designation: otherDesignation.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats, psa_symbols: psaSymbols, responsible_user_id: responsibleUserId || null });
       toast.success(t("raw_materials:material_created"));
-      setOpen(false); setName(""); setNumber(""); setOtherDesignation(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]); setResponsibleUserId("");
+      setOpen(false); setName(""); setNumber(""); setOtherDesignation(""); setCasNumber(""); setMrsNumber(""); setSupplier(""); setDesc(""); setUnit("kg"); setLocationId(""); setHazardCats([]); setPsaSymbols([]); setResponsibleUserId("");
     } catch (e: any) { toast.error(t("common:error"), { description: e.message }); }
 
   };
