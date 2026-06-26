@@ -26,6 +26,22 @@ export function useAddProjectTimeEntry() {
   });
 }
 
+export function useAddProjectMeetingEntry() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: (meeting: {
+      project_id: string;
+      person_ids: string[];
+      entry_date: string;
+      duration_minutes: number;
+      note: string;
+      order_id?: string;
+    }) => api.projectTimeEntries.createMeeting({ ...meeting, created_by: user!.id }),
+    onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["project_time_entries", v.project_id] }),
+  });
+}
+
 export function useUpdateProjectTimeEntry() {
   const qc = useQueryClient();
   return useMutation({

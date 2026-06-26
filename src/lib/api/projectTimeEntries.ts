@@ -24,10 +24,34 @@ export const projectTimeEntries = {
     unwrap(
       dbClient
         .from("project_time_entries")
-        .insert(entry)
+        .insert({ ...entry, entry_type: "individual" })
         .select()
         .single()
     ),
+
+  createMeeting: async (meeting: {
+    project_id: string;
+    person_ids: string[];
+    entry_date: string;
+    duration_minutes: number;
+    note: string;
+    order_id?: string;
+    created_by: string;
+  }) => {
+    const meeting_group_id = (globalThis.crypto as any).randomUUID();
+    const rows = meeting.person_ids.map((pid) => ({
+      project_id: meeting.project_id,
+      person_id: pid,
+      entry_date: meeting.entry_date,
+      duration_minutes: meeting.duration_minutes,
+      note: meeting.note,
+      order_id: meeting.order_id,
+      created_by: meeting.created_by,
+      entry_type: "meeting",
+      meeting_group_id,
+    }));
+    return unwrap(dbClient.from("project_time_entries").insert(rows).select());
+  },
 
   update: (
     id: string,

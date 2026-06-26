@@ -6,6 +6,7 @@ import { useUsers } from "@/hooks/useUsers";
 import {
   useProjectTimeEntries,
   useAddProjectTimeEntry,
+  useAddProjectMeetingEntry,
   useUpdateProjectTimeEntry,
   useDeleteProjectTimeEntry,
 } from "@/hooks/useProjectTimeEntries";
@@ -17,8 +18,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -46,11 +50,14 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const { data: entries = [] } = useProjectTimeEntries(projectId, orderId);
   const { data: users = [] } = useUsers();
   const addEntry = useAddProjectTimeEntry();
+  const addMeeting = useAddProjectMeetingEntry();
   const updateEntry = useUpdateProjectTimeEntry();
   const deleteEntry = useDeleteProjectTimeEntry();
 
 
   const [addOpen, setAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<"individual" | "meeting">("individual");
+  const [meetingPersonIds, setMeetingPersonIds] = useState<string[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -147,63 +154,119 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
     }
   };
 
-  const formFields = (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>{t("time_date")} *</Label>
-        <Input
-          type="date"
-          value={form.entry_date}
-          onChange={(e) => setForm((f) => ({ ...f, entry_date: e.target.value }))}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>{t("time_person")} *</Label>
-        <Select
-          value={form.person_id}
-          onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={t("time_select_person")} />
-          </SelectTrigger>
-          <SelectContent>
-            {activeUsers.map((u: any) => (
-              <SelectItem key={u.user_id} value={u.user_id}>
-                {u.first_name} {u.last_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>{t("time_duration")} *</Label>
-        <Select
-          value={form.duration_minutes}
-          onValueChange={(v) => setForm((f) => ({ ...f, duration_minutes: v }))}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {DURATION_OPTIONS.map((mins) => (
-              <SelectItem key={mins} value={String(mins)}>
-                {formatDuration(mins)} ({mins} min)
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>{t("time_note")} *</Label>
-        <Textarea
-          value={form.note}
-          onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-          placeholder={t("time_note_placeholder")}
-          rows={3}
-        />
-      </div>
+  const handleAddMeeting = async () => {
+    if (meetingPersonIds.length === 0) {
+      toast.error(t("time_person_required"));
+      return;
+    }
+    if (!form.note.trim()) {
+      toast.error(t("time_note_required"));
+      return;
+    }
+    try {
+      await addMeeting.mutateAsync({
+        project_id: projectId,
+        person_ids: meetingPersonIds,
+        entry_date: form.entry_date,
+        duration_minutes: Number(form.duration_minutes),
+        note: form.note.trim(),
+        order_id: orderId,
+      });
+      toast.success(t("time_meeting_created", { count: meetingPersonIds.length }));
+      resetForm();
+      setMeetingPersonIds([]);
+      setAddOpen(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const togglePerson = (id: string) =>
+    setMeetingPersonIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+
+  const dateField = (
+    <div className="space-y-2">
+      <Label>{t("time_date")} *</Label>
+      <Input
+        type="date"
+        value={form.entry_date}
+        onChange={(e) => setForm((f) => ({ ...f, entry_date: e.target.value }))}
+      />
     </div>
   );
+
+  const durationField = (
+    <div className="space-y-2">
+      <Label>{t("time_duration")} *</Label>
+      <Select value={form.duration_minutes} onValueChange={(v) => setForm((f) => ({ ...f, duration_minutes: v }))}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {DURATION_OPTIONS.map((mins) => (
+            <SelectItem key={mins} value={String(mins)}>
+              {formatDuration(mins)} ({mins} min)
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  const noteField = (
+    <div className="space-y-2">
+      <Label>{t("time_note")} *</Label>
+      <Textarea
+        value={form.note}
+        onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+        placeholder={t("time_note_placeholder")}
+        rows={3}
+      />
+    </div>
+  );
+
+  const individualFields = (
+    <div className="space-y-4">
+      {dateField}
+      <div className="space-y-2">
+        <Label>{t("time_person")} *</Label>
+        <Select value={form.person_id} onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}>
+          <SelectTrigger><SelectValue placeholder={t("time_select_person")} /></SelectTrigger>
+          <SelectContent>
+            {activeUsers.map((u: any) => (
+              <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {durationField}
+      {noteField}
+    </div>
+  );
+
+  const meetingFields = (
+    <div className="space-y-4">
+      {dateField}
+      <div className="space-y-2">
+        <Label>{t("time_meeting_participants")} * ({meetingPersonIds.length})</Label>
+        <div className="border rounded-md max-h-56 overflow-y-auto divide-y">
+          {activeUsers.map((u: any) => (
+            <label key={u.user_id} className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50">
+              <Checkbox
+                checked={meetingPersonIds.includes(u.user_id)}
+                onCheckedChange={() => togglePerson(u.user_id)}
+              />
+              <span className="text-sm">{u.first_name} {u.last_name}</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">{t("time_meeting_hint")}</p>
+      </div>
+      {durationField}
+      {noteField}
+    </div>
+  );
+
+  const formFields = individualFields;
+
 
   if (role === "auftraggeber") return null;
 
@@ -221,7 +284,7 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
           </CardContent>
         </Card>
 
-        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) resetForm(); }}>
+        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { resetForm(); setMeetingPersonIds([]); setAddMode("individual"); } }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -232,10 +295,24 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
             <DialogHeader>
               <DialogTitle>{t("time_add_entry")}</DialogTitle>
             </DialogHeader>
-            {formFields}
-            <Button className="w-full" onClick={handleAdd} disabled={addEntry.isPending}>
-              {addEntry.isPending ? "..." : t("time_save")}
-            </Button>
+            <Tabs value={addMode} onValueChange={(v) => setAddMode(v as any)}>
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="individual"><Clock className="h-4 w-4 mr-2" />{t("time_mode_individual")}</TabsTrigger>
+                <TabsTrigger value="meeting"><Users className="h-4 w-4 mr-2" />{t("time_mode_meeting")}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="individual" className="mt-4">
+                {individualFields}
+                <Button className="w-full mt-4" onClick={handleAdd} disabled={addEntry.isPending}>
+                  {addEntry.isPending ? "..." : t("time_save")}
+                </Button>
+              </TabsContent>
+              <TabsContent value="meeting" className="mt-4">
+                {meetingFields}
+                <Button className="w-full mt-4" onClick={handleAddMeeting} disabled={addMeeting.isPending}>
+                  {addMeeting.isPending ? "..." : t("time_save")}
+                </Button>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>
@@ -247,24 +324,40 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("time_date")}</TableHead>
+                <TableHead>{t("time_type")}</TableHead>
                 <TableHead>{t("time_person")}</TableHead>
                 <TableHead>{t("time_duration")}</TableHead>
-                <TableHead className="w-[40%]">{t("time_note")}</TableHead>
+                <TableHead className="w-[35%]">{t("time_note")}</TableHead>
                 <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(entries as any[]).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     {t("time_no_entries")}
                   </TableCell>
                 </TableRow>
               ) : (
-                (entries as any[]).map((e: any) => (
+                (entries as any[]).map((e: any) => {
+                  const isMeeting = e.entry_type === "meeting";
+                  const meetingCount = isMeeting && e.meeting_group_id
+                    ? (entries as any[]).filter((x: any) => x.meeting_group_id === e.meeting_group_id).length
+                    : 0;
+                  return (
                   <TableRow key={e.id}>
                     <TableCell>
                       {format(new Date(e.entry_date), "dd.MM.yyyy", { locale: dateFnsLocale })}
+                    </TableCell>
+                    <TableCell>
+                      {isMeeting ? (
+                        <Badge variant="secondary" className="gap-1">
+                          <Users className="h-3 w-3" />
+                          {t("time_mode_meeting")} ({meetingCount})
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">{t("time_mode_individual")}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>{getUserName(users as any[], e.person_id)}</TableCell>
                     <TableCell className="font-mono">{formatDuration(e.duration_minutes)}</TableCell>
@@ -299,7 +392,8 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
