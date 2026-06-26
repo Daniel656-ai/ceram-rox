@@ -19,6 +19,7 @@ import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import { ProjectTeamTab } from "@/components/ProjectTeamTab";
 import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
 import { WeeklyReviewsTab } from "@/components/WeeklyReviewsTab";
+import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -425,6 +426,7 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="weekly_reviews"><ClipboardList className="h-3.5 w-3.5 mr-1" />Weekly Reviews</TabsTrigger>
           {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
+          <TabsTrigger value="documents"><FileText className="h-3.5 w-3.5 mr-1" />Dokumente</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
 
@@ -596,6 +598,14 @@ export default function ProjectDetailPage() {
         {/* TIME ENTRIES TAB */}
         <TabsContent value="time_entries">
           <ProjectTimeEntries projectId={id!} />
+        </TabsContent>
+
+        {/* DOCUMENTS TAB */}
+        <TabsContent value="documents">
+          <ProjectDocumentsTab
+            projectId={id!}
+            canEdit={isMaster || isLeaderOrOwner || canEditByPermission}
+          />
         </TabsContent>
 
         {/* REPORT TAB */}
