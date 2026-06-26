@@ -171,6 +171,7 @@ export const api = {
   labelPrintHistory,
   weeklyReviews,
   customSymbols,
+  projectDocuments,
 
 
 
