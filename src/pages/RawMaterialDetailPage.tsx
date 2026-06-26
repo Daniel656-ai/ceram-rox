@@ -486,6 +486,7 @@ export default function RawMaterialDetailPage() {
           <AlertDescription className="font-semibold flex flex-wrap items-center gap-3">
             <span>{t("raw_materials:hazard_warning")}</span>
             <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
+            <PsaSymbolList psaSymbols={(mat as any).psa_symbols} size="md" />
           </AlertDescription>
         </Alert>
       )}
