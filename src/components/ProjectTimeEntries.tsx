@@ -324,24 +324,40 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("time_date")}</TableHead>
+                <TableHead>{t("time_type")}</TableHead>
                 <TableHead>{t("time_person")}</TableHead>
                 <TableHead>{t("time_duration")}</TableHead>
-                <TableHead className="w-[40%]">{t("time_note")}</TableHead>
+                <TableHead className="w-[35%]">{t("time_note")}</TableHead>
                 <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {(entries as any[]).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     {t("time_no_entries")}
                   </TableCell>
                 </TableRow>
               ) : (
-                (entries as any[]).map((e: any) => (
+                (entries as any[]).map((e: any) => {
+                  const isMeeting = e.entry_type === "meeting";
+                  const meetingCount = isMeeting && e.meeting_group_id
+                    ? (entries as any[]).filter((x: any) => x.meeting_group_id === e.meeting_group_id).length
+                    : 0;
+                  return (
                   <TableRow key={e.id}>
                     <TableCell>
                       {format(new Date(e.entry_date), "dd.MM.yyyy", { locale: dateFnsLocale })}
+                    </TableCell>
+                    <TableCell>
+                      {isMeeting ? (
+                        <Badge variant="secondary" className="gap-1">
+                          <Users className="h-3 w-3" />
+                          {t("time_mode_meeting")} ({meetingCount})
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">{t("time_mode_individual")}</Badge>
+                      )}
                     </TableCell>
                     <TableCell>{getUserName(users as any[], e.person_id)}</TableCell>
                     <TableCell className="font-mono">{formatDuration(e.duration_minutes)}</TableCell>
