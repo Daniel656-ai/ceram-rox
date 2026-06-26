@@ -2063,6 +2063,65 @@ export type Database = {
           },
         ]
       }
+      project_documents: {
+        Row: {
+          change_comment: string | null
+          created_at: string
+          doc_kind: Database["public"]["Enums"]["project_document_kind"]
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          is_current: boolean
+          project_id: string
+          storage_path: string
+          uploaded_by: string
+          version_label: string | null
+          version_major: number
+          version_minor: number
+        }
+        Insert: {
+          change_comment?: string | null
+          created_at?: string
+          doc_kind: Database["public"]["Enums"]["project_document_kind"]
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          is_current?: boolean
+          project_id: string
+          storage_path: string
+          uploaded_by: string
+          version_label?: string | null
+          version_major?: number
+          version_minor?: number
+        }
+        Update: {
+          change_comment?: string | null
+          created_at?: string
+          doc_kind?: Database["public"]["Enums"]["project_document_kind"]
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          is_current?: boolean
+          project_id?: string
+          storage_path?: string
+          uploaded_by?: string
+          version_label?: string | null
+          version_major?: number
+          version_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_knetung_materials: {
         Row: {
           comment: string | null
@@ -3497,6 +3556,19 @@ export type Database = {
         Args: { _version_id: string }
         Returns: undefined
       }
+      add_project_document: {
+        Args: {
+          _bump_major?: boolean
+          _change_comment?: string
+          _doc_kind: Database["public"]["Enums"]["project_document_kind"]
+          _file_name: string
+          _file_size: number
+          _file_type: string
+          _project_id: string
+          _storage_path: string
+        }
+        Returns: string
+      }
       book_container_consumption: {
         Args: {
           _comment?: string
@@ -3763,6 +3835,7 @@ export type Database = {
         | "entsorgen"
         | "zurueck"
         | "andere"
+      project_document_kind: "application" | "report"
       project_role: "owner" | "leader" | "member"
       project_status: "active" | "completed"
       raw_batch_inspection_status:
@@ -3983,6 +4056,7 @@ export const Constants = {
         "zurueck",
         "andere",
       ],
+      project_document_kind: ["application", "report"],
       project_role: ["owner", "leader", "member"],
       project_status: ["active", "completed"],
       raw_batch_inspection_status: [
