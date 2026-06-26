@@ -71,6 +71,7 @@ export default function RawMaterialsPage() {
   const [unit, setUnit] = useState("kg");
   const [locationId, setLocationId] = useState("");
   const [hazardCats, setHazardCats] = useState<HazardClassKey[]>([]);
+  const [psaSymbols, setPsaSymbols] = useState<string[]>([]);
   const [responsibleUserId, setResponsibleUserId] = useState("");
   const { data: users } = useUsers();
 
