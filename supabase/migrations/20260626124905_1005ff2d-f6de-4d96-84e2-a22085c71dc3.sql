@@ -1,0 +1,1 @@
+ALTER TYPE public.container_kind ADD VALUE IF NOT EXISTS 'kiste';
