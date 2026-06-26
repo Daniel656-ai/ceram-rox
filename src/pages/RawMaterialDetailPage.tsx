@@ -108,6 +108,7 @@ export default function RawMaterialDetailPage() {
     setEditLocationId(mat.default_location_id || "");
     setEditPricePerKg(String((mat as any).price_per_kg || 0));
     setEditHazardCats(normalizeHazardClasses(((mat as any).hazard_categories as string[]) || []));
+    setEditPsaSymbols(Array.isArray((mat as any).psa_symbols) ? (mat as any).psa_symbols : []);
     setEditResponsibleUserId((mat as any).responsible_user_id || "");
     setEditOpen(true);
   };
