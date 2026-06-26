@@ -69,7 +69,7 @@ export function useAddRawMaterial() {
 export function useUpdateRawMaterial() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...updates }: { id: string; material_name?: string; material_number?: string | null; cas_number?: string | null; mrs_number?: string | null; eg_number?: string | null; manufacturer?: string | null; supplier?: string; description?: string; other_designation?: string | null; unit?: string; default_location_id?: string | null; price_per_kg?: number; is_hazardous?: boolean; hazard_categories?: string[]; responsible_user_id?: string | null }) =>
+    mutationFn: ({ id, ...updates }: { id: string; material_name?: string; material_number?: string | null; cas_number?: string | null; mrs_number?: string | null; eg_number?: string | null; manufacturer?: string | null; supplier?: string; description?: string; other_designation?: string | null; unit?: string; default_location_id?: string | null; price_per_kg?: number; is_hazardous?: boolean; hazard_categories?: string[]; psa_symbols?: string[]; responsible_user_id?: string | null }) =>
       api.rawMaterials.update(id, updates),
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["raw_materials"] });
