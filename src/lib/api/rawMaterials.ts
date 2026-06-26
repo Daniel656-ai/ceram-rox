@@ -89,6 +89,7 @@ export const rawMaterials = {
       price_per_kg?: number;
       is_hazardous?: boolean;
       hazard_categories?: string[];
+      psa_symbols?: string[];
       responsible_user_id?: string | null;
       sds_storage_path?: string | null;
       sds_file_name?: string | null;
