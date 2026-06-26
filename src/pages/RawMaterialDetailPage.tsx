@@ -731,7 +731,7 @@ export default function RawMaterialDetailPage() {
                   {!containers || containers.length === 0 ? (
                     <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Keine Gebinde</TableCell></TableRow>
                   ) : containers.map((c: any) => {
-                    const kindLabel: Record<string, string> = { fass: "Fass", kanister: "Kanister", sack: "Sack", big_bag: "Big Bag", ibc: "IBC", tank: "Tank", flasche: "Flasche", sonstige: "Sonstige" };
+                    const kindLabel: Record<string, string> = { fass: "Fass", kanister: "Kanister", sack: "Sack", big_bag: "Big Bag", ibc: "IBC", tank: "Tank", flasche: "Flasche", kiste: "Kiste", sonstige: "Sonstige" };
                     const statusLabel: Record<string, string> = { verfuegbar: "Verfügbar", reserviert: "Reserviert", in_verwendung: "In Verwendung", leer: "Leer", gesperrt: "Gesperrt", entsorgt: "Entsorgt" };
                     const statusVariant = c.status === "verfuegbar" ? "default" : c.status === "leer" || c.status === "entsorgt" ? "secondary" : c.status === "gesperrt" ? "destructive" : "outline";
                     return (
