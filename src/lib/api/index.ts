@@ -90,6 +90,7 @@ import { companySettings } from "./companySettings";
 import { labelTemplates, labelPrintHistory } from "./labelTemplates";
 import { weeklyReviews } from "./weeklyReviews";
 import { customSymbols } from "./customSymbols";
+import { projectDocuments } from "./projectDocuments";
 
 
 
