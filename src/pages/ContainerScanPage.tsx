@@ -12,6 +12,7 @@ import { ScanLine, ArrowLeft, Package, MapPin, ExternalLink, AlertTriangle, Rota
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import type { ContainerMovementType } from "@/lib/api/containerMovements";
 import { GhsPictogramList } from "@/components/GhsPictogram";
+import { PsaSymbolList } from "@/components/PsaSymbolList";
 
 // Erlaubt: Buchstaben, Ziffern, - _ . / (typische Barcode-Symbologien)
 const barcodeSchema = z.string()
