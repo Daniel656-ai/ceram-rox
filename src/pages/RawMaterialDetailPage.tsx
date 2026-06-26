@@ -139,6 +139,7 @@ export default function RawMaterialDetailPage() {
         price_per_kg: Number(editPricePerKg) || 0,
         is_hazardous: editHazardCats.length > 0,
         hazard_categories: editHazardCats,
+        psa_symbols: editPsaSymbols,
         responsible_user_id: editResponsibleUserId || null,
       });
       toast.success(t("raw_materials:material_updated"));
