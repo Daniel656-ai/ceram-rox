@@ -425,6 +425,7 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="weekly_reviews"><ClipboardList className="h-3.5 w-3.5 mr-1" />Weekly Reviews</TabsTrigger>
           {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
+          <TabsTrigger value="documents"><FileText className="h-3.5 w-3.5 mr-1" />Dokumente</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
 
