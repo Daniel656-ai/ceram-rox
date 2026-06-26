@@ -323,19 +323,12 @@ export default function MixtureDetailPage() {
                   <div className="space-y-3">
                     <div>
                       <Label>{t("mixtures:raw_material")} *</Label>
-                      <Select value={recMaterial} onValueChange={setRecMaterial}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("mixtures:select_raw_material")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(rawMaterials as any[]).map((r) => (
-                            <SelectItem key={r.id} value={r.id}>
-                              {r.material_name}
-                              {r.material_number ? ` (${r.material_number})` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <RawMaterialCombobox
+                        materials={rawMaterials as any[]}
+                        value={recMaterial}
+                        onChange={setRecMaterial}
+                        placeholder={t("mixtures:select_raw_material")}
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
