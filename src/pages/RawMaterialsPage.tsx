@@ -283,7 +283,7 @@ export default function RawMaterialsPage() {
                 <TableHead><button type="button" onClick={() => toggleSort("name")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:name")}<SortIcon active={sortKey === "name"} /></button></TableHead>
                 <TableHead>{t("common:supplier")}</TableHead>
                 <TableHead>{t("raw_materials:location")}</TableHead>
-                <TableHead>{t("raw_materials:hazardous")}</TableHead>
+                <TableHead><button type="button" onClick={() => toggleSort("hazard")} className="inline-flex items-center hover:text-foreground">{t("raw_materials:hazardous")}<SortIcon active={sortKey === "hazard"} /></button></TableHead>
                 <TableHead className="text-right">{t("raw_materials:stock")}</TableHead>
                 <TableHead className="text-right">{t("common:unit")}</TableHead>
                 {canManage && <TableHead className="w-12" />}
