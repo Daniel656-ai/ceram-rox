@@ -58,6 +58,7 @@ export const rawMaterials = {
       default_location_id?: string;
       is_hazardous?: boolean;
       hazard_categories?: string[];
+      psa_symbols?: string[];
       responsible_user_id?: string | null;
     },
     createdBy: string
