@@ -392,7 +392,8 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
