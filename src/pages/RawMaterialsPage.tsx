@@ -97,17 +97,31 @@ export default function RawMaterialsPage() {
     const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || ((m as any).cas_number || "").toLowerCase().includes(q) || ((m as any).mrs_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
     const matchSupplier = !filterSupplier || m.supplier === filterSupplier;
     const matchLocation = !filterLocation || m.default_location_id === filterLocation;
-    return matchSearch && matchSupplier && matchLocation;
+    const isHaz = !!(m as any).is_hazardous || (((m as any).hazard_categories as string[] | null)?.length ?? 0) > 0;
+    const matchHazard = filterHazard === "all" || (filterHazard === "hazardous" ? isHaz : !isHaz);
+    return matchSearch && matchSupplier && matchLocation && matchHazard;
   });
 
   const sorted = filtered ? [...filtered].sort((a, b) => {
-    const av = (sortKey === "number" ? (a.material_number || "") : a.material_name) || "";
-    const bv = (sortKey === "number" ? (b.material_number || "") : b.material_name) || "";
-    const cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+    let cmp = 0;
+    if (sortKey === "hazard") {
+      const ah = (!!(a as any).is_hazardous || (((a as any).hazard_categories as string[] | null)?.length ?? 0) > 0) ? 1 : 0;
+      const bh = (!!(b as any).is_hazardous || (((b as any).hazard_categories as string[] | null)?.length ?? 0) > 0) ? 1 : 0;
+      cmp = ah - bh;
+      if (cmp === 0) cmp = (a.material_name || "").localeCompare(b.material_name || "", undefined, { numeric: true, sensitivity: "base" });
+    } else {
+      const av = (sortKey === "number" ? (a.material_number || "") : a.material_name) || "";
+      const bv = (sortKey === "number" ? (b.material_number || "") : b.material_name) || "";
+      cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+    }
     return sortDir === "asc" ? cmp : -cmp;
   }) : filtered;
 
-  const toggleSort = (key: "number" | "name") => {
+  useEffect(() => {
+    try { localStorage.setItem(prefsKey, JSON.stringify({ sortKey, sortDir, filterHazard })); } catch {}
+  }, [prefsKey, sortKey, sortDir, filterHazard]);
+
+  const toggleSort = (key: "number" | "name" | "hazard") => {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("asc"); }
   };
