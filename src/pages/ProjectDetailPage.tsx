@@ -12,7 +12,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield } from "lucide-react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield, ClipboardCheck } from "lucide-react";
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
