@@ -554,6 +554,15 @@ export default function ProjectDetailPage() {
 
         {canViewPersonnelCosts && <TabsContent value="costs">
           <div className="space-y-4">
+            <ProjectBudgetCard
+              budgetTotal={(project as any).budget_total}
+              budgetWarningThreshold={(project as any).budget_warning_threshold}
+              currency={(project as any).budget_currency}
+              actualCosts={totalCosts}
+              projectStartDate={(project as any).start_date}
+              canEdit={canManagePlanning}
+              onSave={(updates) => handleUpdateProject(updates)}
+            />
             <Card>
               <CardHeader><CardTitle>{t("cost_per_measurement")}</CardTitle></CardHeader>
               <CardContent className="p-0">
