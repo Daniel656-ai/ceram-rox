@@ -117,16 +117,16 @@ export default function AdminPermissionsPage() {
               </div>
 
               <div className="rounded-md border relative overflow-auto max-h-[75vh]">
-                <table className="w-full caption-bottom text-sm border-separate border-spacing-0">
+                <table className="caption-bottom text-sm border-separate border-spacing-0">
                   <thead>
                     <tr>
-                      <th className="sticky top-0 left-0 z-30 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b border-r px-4 h-12 text-left align-middle font-medium text-muted-foreground min-w-[200px] shadow-[1px_1px_0_0_hsl(var(--border))]">
-                        {t("admin:permissions_technician")}
+                      <th className="sticky top-0 left-0 z-40 bg-muted border-b border-r px-4 h-12 text-left align-middle font-medium text-muted-foreground min-w-[220px] shadow-[2px_2px_4px_-2px_hsl(var(--border))]">
+                        Dienstleister × Dienstleistungen
                       </th>
                       {filteredServices.map((s: any) => (
                         <th
                           key={s.id}
-                          className="sticky top-0 z-20 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80 border-b px-2 h-12 text-center align-middle font-medium text-muted-foreground min-w-[120px] text-xs"
+                          className="sticky top-0 z-30 bg-muted border-b border-r px-2 h-12 text-center align-middle font-medium text-muted-foreground min-w-[120px] text-xs shadow-[0_2px_4px_-2px_hsl(var(--border))]"
                         >
                           <div className="truncate" title={s.service_name}>{s.service_name}</div>
                           <div className="text-muted-foreground font-normal text-[10px]">
@@ -138,15 +138,15 @@ export default function AdminPermissionsPage() {
                   </thead>
                   <tbody>
                     {filteredUsers.map((u: any) => (
-                      <tr key={u.user_id} className="hover:bg-muted/30">
-                        <td className="sticky left-0 z-10 bg-background border-b border-r px-4 py-2 align-middle font-medium whitespace-nowrap shadow-[1px_0_0_0_hsl(var(--border))]">
+                      <tr key={u.user_id} className="group">
+                        <td className="sticky left-0 z-20 bg-background group-hover:bg-muted/40 border-b border-r px-4 py-2 align-middle font-medium whitespace-nowrap shadow-[2px_0_4px_-2px_hsl(var(--border))]">
                           {u.first_name} {u.last_name}
                         </td>
                         {filteredServices.map((s: any) => {
                           const key = `${u.user_id}__${s.id}`;
                           const isGranted = permSet.has(key);
                           return (
-                            <td key={s.id} className="border-b px-2 py-2 text-center align-middle">
+                            <td key={s.id} className="border-b border-r px-2 py-2 text-center align-middle group-hover:bg-muted/30">
                               <Checkbox checked={isGranted} disabled={toggleMutation.isPending} onCheckedChange={() => handleToggle(u.user_id, s.id, isGranted)} />
                             </td>
                           );
