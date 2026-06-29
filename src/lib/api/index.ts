@@ -97,6 +97,7 @@ import {
   projectStakeholders,
   projectLessonsLearned,
 } from "./projectGovernance";
+import { projectClosure } from "./projectClosure";
 
 
 
