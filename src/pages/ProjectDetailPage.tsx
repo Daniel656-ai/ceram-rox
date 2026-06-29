@@ -21,6 +21,7 @@ import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
 import { WeeklyReviewsTab } from "@/components/WeeklyReviewsTab";
 import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
 import { ProjectGovernanceTab } from "@/components/ProjectGovernanceTab";
+import { ProjectClosureTab } from "@/components/ProjectClosureTab";
 import { ProjectBudgetCard } from "@/components/ProjectBudgetCard";
 
 import { usePermissions } from "@/hooks/usePermissions";
