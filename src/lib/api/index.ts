@@ -178,6 +178,11 @@ export const api = {
   weeklyReviews,
   customSymbols,
   projectDocuments,
+  projectChangeRequests,
+  projectDecisions,
+  projectStakeholders,
+  projectLessonsLearned,
+
 
 
 
