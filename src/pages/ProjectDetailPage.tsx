@@ -12,7 +12,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList } from "lucide-react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield } from "lucide-react";
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
@@ -20,6 +20,8 @@ import { ProjectTeamTab } from "@/components/ProjectTeamTab";
 import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
 import { WeeklyReviewsTab } from "@/components/WeeklyReviewsTab";
 import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
+import { ProjectGovernanceTab } from "@/components/ProjectGovernanceTab";
+import { ProjectBudgetCard } from "@/components/ProjectBudgetCard";
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -427,8 +429,14 @@ export default function ProjectDetailPage() {
           {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="documents"><FileText className="h-3.5 w-3.5 mr-1" />Dokumente</TabsTrigger>
+          <TabsTrigger value="governance"><Shield className="h-3.5 w-3.5 mr-1" />Governance</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="governance">
+          <ProjectGovernanceTab projectId={id!} canEdit={canManagePlanning} canApprove={canManagePlanning} />
+        </TabsContent>
+
 
         <TabsContent value="weekly_reviews">
           <WeeklyReviewsTab projectId={id!} />
@@ -546,6 +554,15 @@ export default function ProjectDetailPage() {
 
         {canViewPersonnelCosts && <TabsContent value="costs">
           <div className="space-y-4">
+            <ProjectBudgetCard
+              budgetTotal={(project as any).budget_total}
+              budgetWarningThreshold={(project as any).budget_warning_threshold}
+              currency={(project as any).budget_currency}
+              actualCosts={totalCosts}
+              projectStartDate={(project as any).start_date}
+              canEdit={canManagePlanning}
+              onSave={(updates) => handleUpdateProject(updates)}
+            />
             <Card>
               <CardHeader><CardTitle>{t("cost_per_measurement")}</CardTitle></CardHeader>
               <CardContent className="p-0">
