@@ -91,6 +91,12 @@ import { labelTemplates, labelPrintHistory } from "./labelTemplates";
 import { weeklyReviews } from "./weeklyReviews";
 import { customSymbols } from "./customSymbols";
 import { projectDocuments } from "./projectDocuments";
+import {
+  projectChangeRequests,
+  projectDecisions,
+  projectStakeholders,
+  projectLessonsLearned,
+} from "./projectGovernance";
 
 
 
