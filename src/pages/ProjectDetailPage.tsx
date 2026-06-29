@@ -431,12 +431,18 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="documents"><FileText className="h-3.5 w-3.5 mr-1" />Dokumente</TabsTrigger>
           <TabsTrigger value="governance"><Shield className="h-3.5 w-3.5 mr-1" />Governance</TabsTrigger>
+          <TabsTrigger value="closure"><ClipboardCheck className="h-3.5 w-3.5 mr-1" />Projektabschluss</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="governance">
           <ProjectGovernanceTab projectId={id!} canEdit={canManagePlanning} canApprove={canManagePlanning} />
         </TabsContent>
+
+        <TabsContent value="closure">
+          <ProjectClosureTab projectId={id!} canEdit={canManagePlanning} />
+        </TabsContent>
+
 
 
         <TabsContent value="weekly_reviews">
