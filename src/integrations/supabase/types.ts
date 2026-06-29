@@ -2012,6 +2012,72 @@ export type Database = {
         }
         Relationships: []
       }
+      project_change_requests: {
+        Row: {
+          approval_date: string | null
+          approval_status: Database["public"]["Enums"]["change_request_status"]
+          approver_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          impact_budget: number | null
+          impact_description: string | null
+          impact_schedule_days: number | null
+          project_id: string
+          related_milestone_id: string | null
+          requested_by: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approval_date?: string | null
+          approval_status?: Database["public"]["Enums"]["change_request_status"]
+          approver_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact_budget?: number | null
+          impact_description?: string | null
+          impact_schedule_days?: number | null
+          project_id: string
+          related_milestone_id?: string | null
+          requested_by: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          approval_date?: string | null
+          approval_status?: Database["public"]["Enums"]["change_request_status"]
+          approver_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact_budget?: number | null
+          impact_description?: string | null
+          impact_schedule_days?: number | null
+          project_id?: string
+          related_milestone_id?: string | null
+          requested_by?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_change_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_change_requests_related_milestone_id_fkey"
+            columns: ["related_milestone_id"]
+            isOneToOne: false
+            referencedRelation: "project_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_consumables: {
         Row: {
           comment: string | null
@@ -2059,6 +2125,76 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_decisions: {
+        Row: {
+          affected_areas: string[] | null
+          created_at: string
+          created_by: string
+          decided_by: string | null
+          decision_date: string
+          id: string
+          project_id: string
+          rationale: string | null
+          related_milestone_id: string | null
+          status: Database["public"]["Enums"]["decision_status"]
+          superseded_by: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_areas?: string[] | null
+          created_at?: string
+          created_by: string
+          decided_by?: string | null
+          decision_date?: string
+          id?: string
+          project_id: string
+          rationale?: string | null
+          related_milestone_id?: string | null
+          status?: Database["public"]["Enums"]["decision_status"]
+          superseded_by?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_areas?: string[] | null
+          created_at?: string
+          created_by?: string
+          decided_by?: string | null
+          decision_date?: string
+          id?: string
+          project_id?: string
+          rationale?: string | null
+          related_milestone_id?: string | null
+          status?: Database["public"]["Enums"]["decision_status"]
+          superseded_by?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_decisions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_decisions_related_milestone_id_fkey"
+            columns: ["related_milestone_id"]
+            isOneToOne: false
+            referencedRelation: "project_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_decisions_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "project_decisions"
             referencedColumns: ["id"]
           },
         ]
@@ -2193,6 +2329,56 @@ export type Database = {
           },
         ]
       }
+      project_lessons_learned: {
+        Row: {
+          created_at: string
+          created_by: string
+          follow_up_actions: string | null
+          id: string
+          overall_rating: number | null
+          project_id: string
+          recommendations: string | null
+          related_weekly_review_ids: string[] | null
+          updated_at: string
+          went_well: string | null
+          went_wrong: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          follow_up_actions?: string | null
+          id?: string
+          overall_rating?: number | null
+          project_id: string
+          recommendations?: string | null
+          related_weekly_review_ids?: string[] | null
+          updated_at?: string
+          went_well?: string | null
+          went_wrong?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          follow_up_actions?: string | null
+          id?: string
+          overall_rating?: number | null
+          project_id?: string
+          recommendations?: string | null
+          related_weekly_review_ids?: string[] | null
+          updated_at?: string
+          went_well?: string | null
+          went_wrong?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_lessons_learned_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           created_at: string
@@ -2262,6 +2448,72 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_stakeholders: {
+        Row: {
+          channel: Database["public"]["Enums"]["stakeholder_channel"] | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string
+          frequency: Database["public"]["Enums"]["stakeholder_frequency"] | null
+          id: string
+          last_contact_at: string | null
+          name: string
+          notes: string | null
+          organization: string | null
+          project_id: string
+          responsible_user_id: string | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel?: Database["public"]["Enums"]["stakeholder_channel"] | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by: string
+          frequency?:
+            | Database["public"]["Enums"]["stakeholder_frequency"]
+            | null
+          id?: string
+          last_contact_at?: string | null
+          name: string
+          notes?: string | null
+          organization?: string | null
+          project_id: string
+          responsible_user_id?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["stakeholder_channel"] | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string
+          frequency?:
+            | Database["public"]["Enums"]["stakeholder_frequency"]
+            | null
+          id?: string
+          last_contact_at?: string | null
+          name?: string
+          notes?: string | null
+          organization?: string | null
+          project_id?: string
+          responsible_user_id?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_stakeholders_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -2479,6 +2731,9 @@ export type Database = {
       }
       projects: {
         Row: {
+          budget_currency: string | null
+          budget_total: number | null
+          budget_warning_threshold: number | null
           created_at: string
           created_by: string
           description: string | null
@@ -2492,6 +2747,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          budget_currency?: string | null
+          budget_total?: number | null
+          budget_warning_threshold?: number | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -2505,6 +2763,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          budget_currency?: string | null
+          budget_total?: number | null
+          budget_warning_threshold?: number | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -3581,7 +3842,15 @@ export type Database = {
         }
         Returns: string
       }
+      can_edit_project_governance: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_view_others_vacation: { Args: { _user_id: string }; Returns: boolean }
+      can_view_project_governance: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_user_absence_conflict: {
         Args: { _end: string; _start: string; _user_id: string }
         Returns: {
@@ -3780,6 +4049,7 @@ export type Database = {
     Enums: {
       absence_type: "urlaub" | "krankheit" | "weiterbildung" | "sonstiges"
       app_role: "master" | "auftraggeber" | "durchfuehrer"
+      change_request_status: "pending" | "approved" | "rejected" | "withdrawn"
       container_kind:
         | "fass"
         | "kanister"
@@ -3807,6 +4077,7 @@ export type Database = {
         | "leer"
         | "gesperrt"
         | "entsorgt"
+      decision_status: "active" | "superseded" | "rejected"
       downtime_status: "geplant" | "aktiv" | "abgeschlossen"
       downtime_type: "wartung" | "reparatur" | "sonstiges"
       measurement_status: "open" | "in_progress" | "completed"
@@ -3857,6 +4128,14 @@ export type Database = {
         | "entsorgt"
         | "zurueckgesendet"
       service_category: "labor" | "pilot_plant"
+      stakeholder_channel: "email" | "phone" | "meeting" | "portal" | "other"
+      stakeholder_frequency:
+        | "daily"
+        | "weekly"
+        | "biweekly"
+        | "monthly"
+        | "quarterly"
+        | "adhoc"
       step_condition_kind:
         | "temperature"
         | "ph"
@@ -3995,6 +4274,7 @@ export const Constants = {
     Enums: {
       absence_type: ["urlaub", "krankheit", "weiterbildung", "sonstiges"],
       app_role: ["master", "auftraggeber", "durchfuehrer"],
+      change_request_status: ["pending", "approved", "rejected", "withdrawn"],
       container_kind: [
         "fass",
         "kanister",
@@ -4025,6 +4305,7 @@ export const Constants = {
         "gesperrt",
         "entsorgt",
       ],
+      decision_status: ["active", "superseded", "rejected"],
       downtime_status: ["geplant", "aktiv", "abgeschlossen"],
       downtime_type: ["wartung", "reparatur", "sonstiges"],
       measurement_status: ["open", "in_progress", "completed"],
@@ -4081,6 +4362,15 @@ export const Constants = {
         "zurueckgesendet",
       ],
       service_category: ["labor", "pilot_plant"],
+      stakeholder_channel: ["email", "phone", "meeting", "portal", "other"],
+      stakeholder_frequency: [
+        "daily",
+        "weekly",
+        "biweekly",
+        "monthly",
+        "quarterly",
+        "adhoc",
+      ],
       step_condition_kind: [
         "temperature",
         "ph",
