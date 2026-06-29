@@ -97,6 +97,7 @@ import {
   projectStakeholders,
   projectLessonsLearned,
 } from "./projectGovernance";
+import { projectClosure } from "./projectClosure";
 
 
 
@@ -182,6 +183,7 @@ export const api = {
   projectDecisions,
   projectStakeholders,
   projectLessonsLearned,
+  projectClosure,
 
 
 

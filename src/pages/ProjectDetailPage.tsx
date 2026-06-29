@@ -12,7 +12,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield } from "lucide-react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield, ClipboardCheck } from "lucide-react";
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
@@ -21,6 +21,7 @@ import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
 import { WeeklyReviewsTab } from "@/components/WeeklyReviewsTab";
 import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
 import { ProjectGovernanceTab } from "@/components/ProjectGovernanceTab";
+import { ProjectClosureTab } from "@/components/ProjectClosureTab";
 import { ProjectBudgetCard } from "@/components/ProjectBudgetCard";
 
 import { usePermissions } from "@/hooks/usePermissions";
@@ -430,12 +431,18 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
           <TabsTrigger value="documents"><FileText className="h-3.5 w-3.5 mr-1" />Dokumente</TabsTrigger>
           <TabsTrigger value="governance"><Shield className="h-3.5 w-3.5 mr-1" />Governance</TabsTrigger>
+          <TabsTrigger value="closure"><ClipboardCheck className="h-3.5 w-3.5 mr-1" />Projektabschluss</TabsTrigger>
           <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="governance">
           <ProjectGovernanceTab projectId={id!} canEdit={canManagePlanning} canApprove={canManagePlanning} />
         </TabsContent>
+
+        <TabsContent value="closure">
+          <ProjectClosureTab projectId={id!} canEdit={canManagePlanning} />
+        </TabsContent>
+
 
 
         <TabsContent value="weekly_reviews">
