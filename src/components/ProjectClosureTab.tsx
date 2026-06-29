@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { useWeeklyReviews } from "@/hooks/useWeeklyReviews";
 import type { ProjectClosureReport, DeliveredResult, OpenItem } from "@/lib/api/projectClosure";
