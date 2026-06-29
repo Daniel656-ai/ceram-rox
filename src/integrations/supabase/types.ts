@@ -2078,6 +2078,140 @@ export type Database = {
           },
         ]
       }
+      project_closure_reports: {
+        Row: {
+          achieved_goals: string | null
+          actual_end_date: string | null
+          approval_date: string | null
+          budget_actual: number | null
+          budget_currency: string | null
+          budget_deviation_explanation: string | null
+          budget_planned: number | null
+          created_at: string
+          created_by: string
+          customer_satisfaction: number | null
+          delivered_results: Json | null
+          deviation_reasons: string | null
+          final_remarks: string | null
+          id: string
+          key_changes_summary: string | null
+          key_decisions_summary: string | null
+          missed_goals: string | null
+          open_items: Json | null
+          original_goals: string | null
+          planned_end_date: string | null
+          project_id: string
+          project_leader_id: string | null
+          project_leader_signed_at: string | null
+          quality_assessment: string | null
+          recommendations: string | null
+          related_change_request_ids: string[] | null
+          related_decision_ids: string[] | null
+          risks_occurred: string | null
+          schedule_deviation_days: number | null
+          schedule_root_cause: string | null
+          sponsor_id: string | null
+          sponsor_name: string | null
+          sponsor_signed_at: string | null
+          status: Database["public"]["Enums"]["project_closure_status"]
+          success_factors: string | null
+          updated_at: string
+          updated_by: string | null
+          went_well: string | null
+          went_wrong: string | null
+        }
+        Insert: {
+          achieved_goals?: string | null
+          actual_end_date?: string | null
+          approval_date?: string | null
+          budget_actual?: number | null
+          budget_currency?: string | null
+          budget_deviation_explanation?: string | null
+          budget_planned?: number | null
+          created_at?: string
+          created_by: string
+          customer_satisfaction?: number | null
+          delivered_results?: Json | null
+          deviation_reasons?: string | null
+          final_remarks?: string | null
+          id?: string
+          key_changes_summary?: string | null
+          key_decisions_summary?: string | null
+          missed_goals?: string | null
+          open_items?: Json | null
+          original_goals?: string | null
+          planned_end_date?: string | null
+          project_id: string
+          project_leader_id?: string | null
+          project_leader_signed_at?: string | null
+          quality_assessment?: string | null
+          recommendations?: string | null
+          related_change_request_ids?: string[] | null
+          related_decision_ids?: string[] | null
+          risks_occurred?: string | null
+          schedule_deviation_days?: number | null
+          schedule_root_cause?: string | null
+          sponsor_id?: string | null
+          sponsor_name?: string | null
+          sponsor_signed_at?: string | null
+          status?: Database["public"]["Enums"]["project_closure_status"]
+          success_factors?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          went_well?: string | null
+          went_wrong?: string | null
+        }
+        Update: {
+          achieved_goals?: string | null
+          actual_end_date?: string | null
+          approval_date?: string | null
+          budget_actual?: number | null
+          budget_currency?: string | null
+          budget_deviation_explanation?: string | null
+          budget_planned?: number | null
+          created_at?: string
+          created_by?: string
+          customer_satisfaction?: number | null
+          delivered_results?: Json | null
+          deviation_reasons?: string | null
+          final_remarks?: string | null
+          id?: string
+          key_changes_summary?: string | null
+          key_decisions_summary?: string | null
+          missed_goals?: string | null
+          open_items?: Json | null
+          original_goals?: string | null
+          planned_end_date?: string | null
+          project_id?: string
+          project_leader_id?: string | null
+          project_leader_signed_at?: string | null
+          quality_assessment?: string | null
+          recommendations?: string | null
+          related_change_request_ids?: string[] | null
+          related_decision_ids?: string[] | null
+          risks_occurred?: string | null
+          schedule_deviation_days?: number | null
+          schedule_root_cause?: string | null
+          sponsor_id?: string | null
+          sponsor_name?: string | null
+          sponsor_signed_at?: string | null
+          status?: Database["public"]["Enums"]["project_closure_status"]
+          success_factors?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          went_well?: string | null
+          went_wrong?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_closure_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_consumables: {
         Row: {
           comment: string | null
@@ -3903,6 +4037,10 @@ export type Database = {
         Args: { _version_a: string; _version_b: string }
         Returns: Json
       }
+      finalize_project_closure: {
+        Args: { _closure_id: string }
+        Returns: undefined
+      }
       get_raw_material_derived_samples: {
         Args: { _raw_material_batch_id?: string; _raw_material_id: string }
         Returns: {
@@ -4106,6 +4244,7 @@ export type Database = {
         | "entsorgen"
         | "zurueck"
         | "andere"
+      project_closure_status: "draft" | "in_approval" | "approved"
       project_document_kind: "application" | "report"
       project_role: "owner" | "leader" | "member"
       project_status: "active" | "completed"
@@ -4337,6 +4476,7 @@ export const Constants = {
         "zurueck",
         "andere",
       ],
+      project_closure_status: ["draft", "in_approval", "approved"],
       project_document_kind: ["application", "report"],
       project_role: ["owner", "leader", "member"],
       project_status: ["active", "completed"],
