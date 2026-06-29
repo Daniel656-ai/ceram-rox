@@ -183,6 +183,7 @@ export const api = {
   projectDecisions,
   projectStakeholders,
   projectLessonsLearned,
+  projectClosure,
 
 
 
