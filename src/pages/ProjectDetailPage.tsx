@@ -12,7 +12,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield, ClipboardCheck, Briefcase } from "lucide-react";
 import { useMemo, useRef, useCallback } from "react";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
@@ -23,6 +23,7 @@ import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
 import { ProjectGovernanceTab } from "@/components/ProjectGovernanceTab";
 import { ProjectClosureTab } from "@/components/ProjectClosureTab";
 import { ProjectBudgetCard } from "@/components/ProjectBudgetCard";
+import { ProjectServicesTab } from "@/components/ProjectServicesTab";
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -422,6 +423,7 @@ export default function ProjectDetailPage() {
       <Tabs defaultValue="samples" className="print:block">
         <TabsList className="print:hidden flex-wrap">
           <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
+          <TabsTrigger value="services"><Briefcase className="h-3.5 w-3.5 mr-1" />Dienstleistungen</TabsTrigger>
           <TabsTrigger value="samples">{t("tab_samples")}</TabsTrigger>
           <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
           <TabsTrigger value="team"><Users className="h-3.5 w-3.5 mr-1" />{t("tab_team")}</TabsTrigger>
@@ -437,6 +439,10 @@ export default function ProjectDetailPage() {
 
         <TabsContent value="governance">
           <ProjectGovernanceTab projectId={id!} canEdit={canManagePlanning} canApprove={canManagePlanning} />
+        </TabsContent>
+
+        <TabsContent value="services">
+          <ProjectServicesTab projectId={id!} canEdit={canManagePlanning} />
         </TabsContent>
 
         <TabsContent value="closure">

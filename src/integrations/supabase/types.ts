@@ -2589,6 +2589,48 @@ export type Database = {
           },
         ]
       }
+      project_services: {
+        Row: {
+          booked_at: string
+          booked_by: string
+          created_at: string
+          id: string
+          project_id: string
+          service_id: string
+        }
+        Insert: {
+          booked_at?: string
+          booked_by: string
+          created_at?: string
+          id?: string
+          project_id: string
+          service_id: string
+        }
+        Update: {
+          booked_at?: string
+          booked_by?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_services_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_stakeholders: {
         Row: {
           channel: Database["public"]["Enums"]["stakeholder_channel"] | null
