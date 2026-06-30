@@ -30,6 +30,8 @@ function DurationCell({ service, onUpdate, t }: { service: any; onUpdate: (id: s
         <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>✕</Button>
       </div>
     );
+  }
+  return <button className="hover:underline text-left" onClick={() => { setVal(String(service.standard_duration_hours ?? 1)); setEditing(true); }}>{service.standard_duration_hours ?? 1} h</button>;
 }
 
 function BookingFormStatusCell({ serviceId, onPreview }: { serviceId: string; onPreview: () => void }) {
