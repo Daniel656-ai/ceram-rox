@@ -510,7 +510,15 @@ export default function CreateOrderPage() {
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateMeasurement(m.uid)} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(m.uid)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <ServiceRequiredParams serviceId={m.service_id} paramValues={measurementParams[m.uid] || {}} onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)} t={t} />
+                    <ServiceBookingOrLegacyParams
+                      serviceId={m.service_id}
+                      roleView={roleView}
+                      formValues={measurementFormValues[m.uid] || {}}
+                      onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
+                      paramValues={measurementParams[m.uid] || {}}
+                      onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)}
+                      t={t}
+                    />
                   </div>
                 ))}
               </div>
