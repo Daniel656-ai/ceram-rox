@@ -124,14 +124,15 @@ function RoleDesigner({
     setDirty(false);
   }, [saved, roleView]);
 
-  const usedFieldIds = useMemo(
-    () => new Set(layout.sections.flatMap((s) => s.fields.map((f) => f.field_id))),
-    [layout]
-  );
-  const palette = useMemo(
-    () => allFields.filter((f) => !usedFieldIds.has(f.id)),
-    [allFields, usedFieldIds]
-  );
+  const usageCount = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of layout.sections) for (const f of s.fields) {
+      m.set(f.field_id, (m.get(f.field_id) ?? 0) + 1);
+    }
+    return m;
+  }, [layout]);
+  // Palette always lists every field — references can be placed multiple times.
+  const palette = allFields;
 
   const update = (next: FormLayoutData) => { setLayout(next); setDirty(true); };
 
