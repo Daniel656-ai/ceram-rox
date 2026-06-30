@@ -45,18 +45,19 @@ export const serviceDataFields = {
         .eq("service_id", serviceId)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true })
-    ) as Promise<ServiceDataField[]>,
+    ) as unknown as Promise<ServiceDataField[]>,
 
   create: (field: Partial<ServiceDataField> & { service_id: string; field_key: string; display_name: string; field_type: ServiceFieldType }) =>
     unwrap(
       dbClient.from("service_data_fields" as any).insert(field as any).select().single()
-    ) as Promise<ServiceDataField>,
+    ) as unknown as Promise<ServiceDataField>,
 
   update: (id: string, updates: Partial<ServiceDataField>) =>
     run(dbClient.from("service_data_fields" as any).update(updates as any).eq("id", id)),
 
   delete: (id: string) =>
     run(dbClient.from("service_data_fields" as any).delete().eq("id", id)),
+
 
   reorder: async (orders: Array<{ id: string; sort_order: number }>) => {
     for (const o of orders) {
