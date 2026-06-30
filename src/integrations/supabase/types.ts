@@ -3657,6 +3657,44 @@ export type Database = {
           },
         ]
       }
+      service_form_layouts: {
+        Row: {
+          created_at: string
+          id: string
+          layout: Json
+          role_view: string
+          service_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          layout?: Json
+          role_view: string
+          service_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          layout?: Json
+          role_view?: string
+          service_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_form_layouts_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_parameter_definitions: {
         Row: {
           conditional_on: string | null
