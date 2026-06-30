@@ -124,14 +124,15 @@ function RoleDesigner({
     setDirty(false);
   }, [saved, roleView]);
 
-  const usedFieldIds = useMemo(
-    () => new Set(layout.sections.flatMap((s) => s.fields.map((f) => f.field_id))),
-    [layout]
-  );
-  const palette = useMemo(
-    () => allFields.filter((f) => !usedFieldIds.has(f.id)),
-    [allFields, usedFieldIds]
-  );
+  const usageCount = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of layout.sections) for (const f of s.fields) {
+      m.set(f.field_id, (m.get(f.field_id) ?? 0) + 1);
+    }
+    return m;
+  }, [layout]);
+  // Palette always lists every field — references can be placed multiple times.
+  const palette = allFields;
 
   const update = (next: FormLayoutData) => { setLayout(next); setDirty(true); };
 
@@ -297,12 +298,19 @@ function RoleDesigner({
       <div className={`grid gap-4 ${showPreview ? "lg:grid-cols-[260px_1fr_380px]" : "lg:grid-cols-[260px_1fr]"}`}>
         {/* Palette */}
         <Card className="h-fit sticky top-4">
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Datenfelder</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Datenfelder</CardTitle>
+            <p className="text-[11px] text-muted-foreground">
+              Per Drag &amp; Drop einfügen. Felder können mehrfach platziert werden – alle Instanzen teilen denselben Wert.
+            </p>
+          </CardHeader>
           <CardContent className="space-y-1.5 max-h-[70vh] overflow-y-auto">
             {palette.length === 0 && (
-              <p className="text-xs text-muted-foreground">Alle Felder werden bereits verwendet.</p>
+              <p className="text-xs text-muted-foreground">Noch keine Datenfelder im Datenmodell.</p>
             )}
-            {palette.map((f) => <PaletteItem key={f.id} field={f} disabled={!canManage} />)}
+            {palette.map((f) => (
+              <PaletteItem key={f.id} field={f} disabled={!canManage} usageCount={usageCount.get(f.id) ?? 0} />
+            ))}
           </CardContent>
         </Card>
 
@@ -361,7 +369,7 @@ function RoleDesigner({
 
 // ============================ Palette item ============================
 
-function PaletteItem({ field, disabled }: { field: ServiceDataField; disabled?: boolean }) {
+function PaletteItem({ field, disabled, usageCount = 0 }: { field: ServiceDataField; disabled?: boolean; usageCount?: number }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${field.id}`,
     data: { kind: "palette", fieldId: field.id },
@@ -381,6 +389,9 @@ function PaletteItem({ field, disabled }: { field: ServiceDataField; disabled?: 
           {field.field_type}{field.unit ? ` · ${field.unit}` : ""}
         </div>
       </div>
+      {usageCount > 0 && (
+        <Badge variant="secondary" className="text-[9px]" title="So oft im Formular verwendet">{usageCount}×</Badge>
+      )}
       {field.is_required && <Badge variant="outline" className="text-[9px]">Pflicht</Badge>}
     </div>
   );
@@ -510,12 +521,30 @@ function FieldBlock({
             <GripVertical className="h-4 w-4" />
           </button>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium truncate">{field.display_name}</div>
+            <div className="text-xs font-medium truncate">
+              {refItem.label_override?.trim() || field.display_name}
+            </div>
             <div className="text-[10px] text-muted-foreground truncate">
               <code>{field.field_key}</code> · {field.field_type}
             </div>
           </div>
           {field.is_required && <Badge variant="outline" className="text-[9px]">Pflicht</Badge>}
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+          <Input
+            value={refItem.label_override ?? ""}
+            disabled={!canManage}
+            onChange={(e) => onChange({ label_override: e.target.value })}
+            placeholder={`Label (Standard: ${field.display_name})`}
+            className="h-7 text-xs"
+          />
+          <Input
+            value={refItem.description_override ?? ""}
+            disabled={!canManage}
+            onChange={(e) => onChange({ description_override: e.target.value })}
+            placeholder="Hilfetext (optional)"
+            className="h-7 text-xs"
+          />
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           <Select
@@ -578,9 +607,12 @@ function LivePreview({
               {visible.map((ref) => {
                 const f = fieldsById.get(ref.field_id);
                 if (!f) return null;
+                const displayField = (ref.label_override?.trim() || ref.description_override?.trim())
+                  ? { ...f, display_name: ref.label_override?.trim() || f.display_name, description: ref.description_override?.trim() || f.description }
+                  : f;
                 return (
                   <div key={ref.id} className={widthCls(ref.width)}>
-                    <PreviewField field={f} readonly={!!ref.readonly} />
+                    <PreviewField field={displayField} readonly={!!ref.readonly} />
                   </div>
                 );
               })}

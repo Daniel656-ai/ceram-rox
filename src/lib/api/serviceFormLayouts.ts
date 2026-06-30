@@ -9,6 +9,10 @@ export interface FormFieldRef {
   width: 12 | 9 | 8 | 6 | 4 | 3;
   readonly?: boolean;
   hidden?: boolean;
+  /** Optional override for the field's display name at this placement only. */
+  label_override?: string;
+  /** Optional override for the field's help text at this placement only. */
+  description_override?: string;
 }
 
 export interface FormSection {
