@@ -192,6 +192,7 @@ export const api = {
   projectServices,
   serviceDataFields,
   serviceFormLayouts,
+  serviceRules,
 
 
 
