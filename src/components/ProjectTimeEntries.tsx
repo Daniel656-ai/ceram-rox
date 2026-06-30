@@ -268,7 +268,8 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const formFields = individualFields;
 
 
-  if (role === "auftraggeber") return null;
+
+
 
   return (
     <div className="space-y-4">
