@@ -53,11 +53,10 @@ const { user, role } = useAuth();
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
 
-  // Use the dedicated permission key so custom roles (e.g. PMO) work out of the box.
-  // Base role 'master' implicitly has all permissions via has_permission backend logic;
-  // 'auftraggeber' base role can also create projects per existing RLS.
-  const canCreateProject =
-    hasPermission('projects.create') || role === 'master' || role === 'auftraggeber';
+  // Strikt nach Kompetenzmatrix: nur Rollen mit explizitem 'projects.create'-Recht
+  // (oder Basisrolle 'master') dürfen Projekte anlegen. Auftraggeber/PO erhalten das
+  // Recht nur, wenn es in ihrer Rolle aktiv gesetzt ist.
+  const canCreateProject = role === 'master' || hasPermission('projects.create');
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("created_desc");
