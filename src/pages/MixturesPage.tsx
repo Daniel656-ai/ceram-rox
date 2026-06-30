@@ -105,7 +105,7 @@ export default function MixturesPage() {
             {t("mixtures:subtitle")}
           </p>
         </div>
-        {tab === "rezepturen" && (
+        {tab === "rezepturen" && canCreate && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>
