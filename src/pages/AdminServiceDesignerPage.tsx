@@ -153,6 +153,10 @@ export default function AdminServiceDesignerPage() {
         <TabsContent value="form">
           <FormDesignerTab serviceId={serviceId} canManage={canManage} />
         </TabsContent>
+
+        <TabsContent value="rules">
+          <RulesDesigner serviceId={serviceId} canManage={canManage} />
+        </TabsContent>
       </Tabs>
     </div>
   );
