@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
-import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
+import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat } from "lucide-react";
+import type { FormRoleView, FormSection, RepeatableConfig } from "@/lib/api/serviceFormLayouts";
 
 interface Props {
   serviceId: string;
@@ -18,10 +19,21 @@ interface Props {
   compact?: boolean;
 }
 
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+export const repeaterStorageKey = (sec: FormSection) =>
+  sec.repeatable?.storage_key || `repeat:${sec.id}`;
+
+/** Public helper: extract repeatable entries from a form value map for a section. */
+export function getRepeaterEntries(values: Record<string, any>, sec: FormSection): Array<Record<string, any>> {
+  const key = repeaterStorageKey(sec);
+  const v = values[key];
+  return Array.isArray(v) ? v : [];
+}
+
 /**
  * Renders the booking form configured in the Service Designer for the
- * given service & role. Falls back to `null` if no layout exists, so the
- * caller can decide whether to render a legacy parameter form instead.
+ * given service & role.
  */
 export default function ServiceBookingForm({ serviceId, roleView, values, onChange, compact }: Props) {
   const { data: fields = [] } = useQuery({
@@ -84,50 +96,243 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
 
   return (
     <div className={compact ? "space-y-2" : "space-y-4"}>
-      {sections.map((sec) => (
-        <div key={sec.id} className="border rounded-md p-3 space-y-2">
+      {sections.map((sec) =>
+        sec.repeatable?.enabled ? (
+          <RepeatableSection
+            key={sec.id}
+            sec={sec}
+            fieldById={fieldById}
+            values={values}
+            onChange={onChange}
+            evaluatedRules={evaluatedRules}
+            inputSize={inputSize}
+            compact={compact}
+          />
+        ) : (
+          <StaticSection
+            key={sec.id}
+            sec={sec}
+            fieldById={fieldById}
+            values={values}
+            onValueChange={(key, v) => onChange(key, v)}
+            evaluatedRules={evaluatedRules}
+            inputSize={inputSize}
+            compact={compact}
+          />
+        )
+      )}
+    </div>
+  );
+}
+
+// ---------------- Static (non-repeatable) section ----------------
+
+function StaticSection({
+  sec, fieldById, values, onValueChange, evaluatedRules, inputSize, compact,
+}: {
+  sec: FormSection;
+  fieldById: Map<string, any>;
+  values: Record<string, any>;
+  onValueChange: (key: string, v: any) => void;
+  evaluatedRules: { hidden: Set<string>; required: Set<string> };
+  inputSize: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="border rounded-md p-3 space-y-2">
+      <div className="text-sm font-semibold flex items-center gap-2">
+        {sec.title}
+        <Badge variant="outline" className="text-[10px]">Designer</Badge>
+      </div>
+      {sec.description && <p className="text-xs text-muted-foreground">{sec.description}</p>}
+      <SectionFieldGrid
+        sec={sec}
+        fieldById={fieldById}
+        values={values}
+        onValueChange={onValueChange}
+        evaluatedRules={evaluatedRules}
+        inputSize={inputSize}
+        compact={compact}
+      />
+    </div>
+  );
+}
+
+// ---------------- Repeatable section ----------------
+
+function RepeatableSection({
+  sec, fieldById, values, onChange, evaluatedRules, inputSize, compact,
+}: {
+  sec: FormSection;
+  fieldById: Map<string, any>;
+  values: Record<string, any>;
+  onChange: (key: string, v: any) => void;
+  evaluatedRules: { hidden: Set<string>; required: Set<string> };
+  inputSize: string;
+  compact?: boolean;
+}) {
+  const rep: RepeatableConfig = sec.repeatable!;
+  const storageKey = repeaterStorageKey(sec);
+  const rawEntries = Array.isArray(values[storageKey]) ? values[storageKey] : [];
+
+  const ensureMin = (arr: Array<Record<string, any>>) => {
+    const min = Math.max(rep.min ?? 1, 0);
+    const out = [...arr];
+    while (out.length < min) out.push({ __id: uid() });
+    return out;
+  };
+
+  const entries = useMemo(() => {
+    if (rawEntries.length === 0 && (rep.min ?? 1) > 0) return ensureMin([]);
+    return rawEntries.map((e: any) => (e && typeof e === "object" ? e : { __id: uid() }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawEntries, rep.min]);
+
+  const commit = (next: Array<Record<string, any>>) => onChange(storageKey, next);
+
+  const max = rep.max && rep.max > 0 ? rep.max : Infinity;
+  const itemLabel = rep.item_label?.trim() || "Eintrag";
+  const addLabel = rep.add_label?.trim() || `Weiteren ${itemLabel} hinzufügen`;
+
+  const addEntry = () => {
+    if (entries.length >= max) return;
+    commit([...entries, { __id: uid() }]);
+  };
+  const duplicate = (idx: number) => {
+    if (entries.length >= max) return;
+    const copy = { ...entries[idx], __id: uid() };
+    const next = [...entries];
+    next.splice(idx + 1, 0, copy);
+    commit(next);
+  };
+  const remove = (idx: number) => {
+    const min = Math.max(rep.min ?? 1, 0);
+    if (entries.length <= min) return;
+    commit(entries.filter((_, i) => i !== idx));
+  };
+  const move = (idx: number, dir: -1 | 1) => {
+    const j = idx + dir;
+    if (j < 0 || j >= entries.length) return;
+    const next = [...entries];
+    [next[idx], next[j]] = [next[j], next[idx]];
+    commit(next);
+  };
+  const updateEntry = (idx: number, key: string, value: any) => {
+    const next = entries.map((e, i) => i === idx ? { ...e, [key]: value } : e);
+    commit(next);
+  };
+
+  return (
+    <div className="border rounded-md p-3 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div>
           <div className="text-sm font-semibold flex items-center gap-2">
             {sec.title}
-            <Badge variant="outline" className="text-[10px]">Designer</Badge>
+            <Badge variant="outline" className="text-[10px] gap-1">
+              <Repeat className="h-3 w-3" /> Wiederholbar
+            </Badge>
+            <span className="text-[10px] text-muted-foreground">
+              {entries.length}{rep.max ? ` / ${rep.max}` : ""} {itemLabel}
+            </span>
           </div>
           {sec.description && <p className="text-xs text-muted-foreground">{sec.description}</p>}
-          <div className="grid grid-cols-12 gap-3">
-            {sec.fields.map((ref) => {
-              const f = fieldById.get(ref.field_id);
-              if (!f) return null;
-              if (ref.hidden) return null;
-              if (evaluatedRules.hidden.has(f.field_key)) return null;
-              const colCls =
-                ref.width === 6 ? "col-span-12 md:col-span-6"
-                : ref.width === 4 ? "col-span-12 md:col-span-4"
-                : ref.width === 3 ? "col-span-12 md:col-span-3"
-                : ref.width === 8 ? "col-span-12 md:col-span-8"
-                : ref.width === 9 ? "col-span-12 md:col-span-9"
-                : "col-span-12";
-              const isRequired = f.is_required || evaluatedRules.required.has(f.field_key);
-              const val = values[f.field_key];
-              const hasError = isRequired && (val == null || val === "");
-              const readonly = ref.readonly || f.readonly;
-              const label = ref.label_override?.trim() || f.display_name;
-              const help = ref.description_override?.trim() || f.description;
-              return (
-                <div key={ref.id} className={colCls}>
-                  <Label className="text-xs flex items-center gap-1">
-                    {label}
-                    {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
-                    {isRequired && <span className="text-destructive">*</span>}
-                    {hasError && <AlertCircle className="h-3 w-3 text-destructive" />}
-                  </Label>
-                  {help && !compact && (
-                    <p className="text-[10px] text-muted-foreground mb-1">{help}</p>
-                  )}
-                  {renderInput(f, val, (v) => onChange(f.field_key, v), readonly, inputSize, hasError)}
-                </div>
-              );
-            })}
-          </div>
         </div>
-      ))}
+      </div>
+
+      <div className="space-y-3">
+        {entries.map((entry, idx) => (
+          <div key={entry.__id ?? idx} className="border rounded-md p-3 bg-muted/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">
+                {itemLabel} #{idx + 1}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  onClick={() => move(idx, -1)} disabled={idx === 0} title="Nach oben">
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  onClick={() => move(idx, 1)} disabled={idx === entries.length - 1} title="Nach unten">
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  onClick={() => duplicate(idx)} disabled={entries.length >= max} title="Duplizieren">
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive"
+                  onClick={() => remove(idx)} disabled={entries.length <= Math.max(rep.min ?? 1, 0)} title="Löschen">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <SectionFieldGrid
+              sec={sec}
+              fieldById={fieldById}
+              values={entry}
+              onValueChange={(key, v) => updateEntry(idx, key, v)}
+              evaluatedRules={evaluatedRules}
+              inputSize={inputSize}
+              compact={compact}
+            />
+          </div>
+        ))}
+      </div>
+
+      <Button type="button" variant="outline" size="sm" onClick={addEntry} disabled={entries.length >= max}>
+        <Plus className="h-3.5 w-3.5 mr-1" /> {addLabel}
+      </Button>
+    </div>
+  );
+}
+
+// ---------------- Field grid (shared) ----------------
+
+function SectionFieldGrid({
+  sec, fieldById, values, onValueChange, evaluatedRules, inputSize, compact,
+}: {
+  sec: FormSection;
+  fieldById: Map<string, any>;
+  values: Record<string, any>;
+  onValueChange: (key: string, v: any) => void;
+  evaluatedRules: { hidden: Set<string>; required: Set<string> };
+  inputSize: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-12 gap-3">
+      {sec.fields.map((ref) => {
+        const f = fieldById.get(ref.field_id);
+        if (!f) return null;
+        if (ref.hidden) return null;
+        if (evaluatedRules.hidden.has(f.field_key)) return null;
+        const colCls =
+          ref.width === 6 ? "col-span-12 md:col-span-6"
+          : ref.width === 4 ? "col-span-12 md:col-span-4"
+          : ref.width === 3 ? "col-span-12 md:col-span-3"
+          : ref.width === 8 ? "col-span-12 md:col-span-8"
+          : ref.width === 9 ? "col-span-12 md:col-span-9"
+          : "col-span-12";
+        const isRequired = f.is_required || evaluatedRules.required.has(f.field_key);
+        const val = values[f.field_key];
+        const hasError = isRequired && (val == null || val === "");
+        const readonly = ref.readonly || f.readonly;
+        const label = ref.label_override?.trim() || f.display_name;
+        const help = ref.description_override?.trim() || f.description;
+        return (
+          <div key={ref.id} className={colCls}>
+            <Label className="text-xs flex items-center gap-1">
+              {label}
+              {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
+              {isRequired && <span className="text-destructive">*</span>}
+              {hasError && <AlertCircle className="h-3 w-3 text-destructive" />}
+            </Label>
+            {help && !compact && (
+              <p className="text-[10px] text-muted-foreground mb-1">{help}</p>
+            )}
+            {renderInput(f, val, (v) => onValueChange(f.field_key, v), readonly, inputSize, hasError)}
+          </div>
+        );
+      })}
     </div>
   );
 }
