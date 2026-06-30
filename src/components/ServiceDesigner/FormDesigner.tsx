@@ -607,9 +607,12 @@ function LivePreview({
               {visible.map((ref) => {
                 const f = fieldsById.get(ref.field_id);
                 if (!f) return null;
+                const displayField = (ref.label_override?.trim() || ref.description_override?.trim())
+                  ? { ...f, display_name: ref.label_override?.trim() || f.display_name, description: ref.description_override?.trim() || f.description }
+                  : f;
                 return (
                   <div key={ref.id} className={widthCls(ref.width)}>
-                    <PreviewField field={f} readonly={!!ref.readonly} />
+                    <PreviewField field={displayField} readonly={!!ref.readonly} />
                   </div>
                 );
               })}
