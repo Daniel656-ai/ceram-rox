@@ -28,6 +28,7 @@ import {
   useProcessSections,
 } from "@/hooks/useMixtureProcess";
 import { useRawMaterials } from "@/hooks/useMixtures";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const STATUS_LABEL: Record<string, string> = {
   geplant: "Geplant",
@@ -69,6 +70,9 @@ export default function BatchExecutionPage() {
   const recordWeighing = useRecordWeighing(batchId);
   const recordMeasurement = useRecordMeasurement(batchId);
   const recordDeviation = useRecordDeviation(batchId);
+
+  const { hasPermission } = usePermissions();
+  const canProduce = hasPermission("mixtures.produce") || hasPermission("raw_materials.manage");
 
   // Weighing dialog
   const [wOpen, setWOpen] = useState(false);
@@ -179,7 +183,7 @@ export default function BatchExecutionPage() {
   };
 
   const status = batch.execution_status as string;
-  const canEdit = status === "geplant" || status === "laufend";
+  const canEdit = (status === "geplant" || status === "laufend") && canProduce;
 
   return (
     <div className="p-6 space-y-6">
@@ -216,23 +220,24 @@ export default function BatchExecutionPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {status === "geplant" && (
+          {canProduce && status === "geplant" && (
             <Button onClick={() => startBatch.mutate()}>
               <Play className="h-4 w-4 mr-2" /> Charge starten
             </Button>
           )}
-          {status === "laufend" && (
+          {canProduce && status === "laufend" && (
             <Button onClick={() => { setCQty(String(batch.produced_quantity ?? "")); setCOpen(true); }}>
               <CheckCircle2 className="h-4 w-4 mr-2" /> Abschließen
             </Button>
           )}
-          {status === "abgeschlossen" && (
+          {canProduce && status === "abgeschlossen" && (
             <Button onClick={submitRelease}>
               <ShieldCheck className="h-4 w-4 mr-2" /> Freigeben (4-Augen)
             </Button>
           )}
         </div>
       </div>
+
 
       <Tabs defaultValue="weighings">
         <TabsList>

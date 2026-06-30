@@ -4224,7 +4224,18 @@ export type Database = {
         Returns: string
       }
       release_mixture_batch: { Args: { _batch_id: string }; Returns: undefined }
-      start_mixture_batch: { Args: { _batch_id: string }; Returns: undefined }
+      start_mixture_batch:
+        | { Args: { _batch_id: string }; Returns: undefined }
+        | {
+            Args: {
+              _mixture_id: string
+              _planned_quantity: number
+              _recipe_version_id: string
+              _scale_factor?: number
+              _unit?: string
+            }
+            Returns: string
+          }
     }
     Enums: {
       absence_type: "urlaub" | "krankheit" | "weiterbildung" | "sonstiges"

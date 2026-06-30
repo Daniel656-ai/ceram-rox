@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function MixtureDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +81,11 @@ export default function MixtureDetailPage() {
   const addRecipeItem = useAddRecipeItem();
   const deleteRecipeItem = useDeleteRecipeItem();
   const produce = useProduceMixtureBatch();
+
+  const { hasPermission } = usePermissions();
+  const canEdit = hasPermission("mixtures.edit") || hasPermission("raw_materials.manage");
+  const canCreate = hasPermission("mixtures.create") || hasPermission("raw_materials.manage");
+  const canProduce = hasPermission("mixtures.produce") || hasPermission("raw_materials.manage");
 
   const stock = useMemo(() => calculateMixtureStock(movements as any), [movements]);
 
@@ -272,23 +278,30 @@ export default function MixtureDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => { setCopyName(mixture.name + " (Kopie)"); setCopyOpen(true); }}>
-              <CopyIcon className="h-4 w-4 mr-2" /> Duplizieren
-            </Button>
-            <Button variant="outline" size="sm" onClick={openEdit}>
-              {t("mixtures:edit")}
-            </Button>
-            <Button
-              size="sm"
-              onClick={openProduce}
-              disabled={(recipe as any[]).length === 0}
-            >
-              <Play className="h-4 w-4 mr-2" />
-              {t("mixtures:produce_batch")}
-            </Button>
+            {canCreate && (
+              <Button variant="outline" size="sm" onClick={() => { setCopyName(mixture.name + " (Kopie)"); setCopyOpen(true); }}>
+                <CopyIcon className="h-4 w-4 mr-2" /> Duplizieren
+              </Button>
+            )}
+            {canEdit && (
+              <Button variant="outline" size="sm" onClick={openEdit}>
+                {t("mixtures:edit")}
+              </Button>
+            )}
+            {canProduce && (
+              <Button
+                size="sm"
+                onClick={openProduce}
+                disabled={(recipe as any[]).length === 0}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {t("mixtures:produce_batch")}
+              </Button>
+            )}
           </div>
         </div>
       </div>
+
 
 
       <RecipeVersionBar mixtureId={id!} />
@@ -308,7 +321,7 @@ export default function MixtureDetailPage() {
         {/* Recipe */}
         <TabsContent value="recipe">
           <Card className="p-4 space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-end" hidden={!canEdit}>
               <Dialog open={recipeOpen} onOpenChange={setRecipeOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm">
@@ -401,15 +414,17 @@ export default function MixtureDetailPage() {
                         {item.notes || "—"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            deleteRecipeItem.mutate({ id: item.id, mixture_id: id! })
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              deleteRecipeItem.mutate({ id: item.id, mixture_id: id! })
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -590,25 +605,27 @@ export default function MixtureDetailPage() {
             </div>
           </div>
           <DialogFooter className="justify-between">
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!id) return;
-                if (!confirm("Wirklich löschen?")) return;
-                try {
-                  await deleteMixture.mutateAsync(id);
-                  navigate("/mischungen");
-                } catch (e: any) {
-                  toast({
-                    title: "Fehler",
-                    description: e.message,
-                    variant: "destructive",
-                  });
-                }
-              }}
-            >
-              {t("mixtures:delete")}
-            </Button>
+            {(hasPermission("mixtures.delete") || hasPermission("raw_materials.manage")) ? (
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (!id) return;
+                  if (!confirm("Wirklich löschen?")) return;
+                  try {
+                    await deleteMixture.mutateAsync(id);
+                    navigate("/mischungen");
+                  } catch (e: any) {
+                    toast({
+                      title: "Fehler",
+                      description: e.message,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                {t("mixtures:delete")}
+              </Button>
+            ) : <span />}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setEditOpen(false)}>
                 {t("mixtures:cancel")}
