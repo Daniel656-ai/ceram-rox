@@ -71,6 +71,9 @@ export default function BatchExecutionPage() {
   const recordMeasurement = useRecordMeasurement(batchId);
   const recordDeviation = useRecordDeviation(batchId);
 
+  const { hasPermission } = usePermissions();
+  const canProduce = hasPermission("mixtures.produce") || hasPermission("raw_materials.manage");
+
   // Weighing dialog
   const [wOpen, setWOpen] = useState(false);
   const [wMaterial, setWMaterial] = useState("");
