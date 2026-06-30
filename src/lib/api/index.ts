@@ -99,6 +99,8 @@ import {
 } from "./projectGovernance";
 import { projectClosure } from "./projectClosure";
 import { projectServices } from "./projectServices";
+import { serviceDataFields } from "./serviceDesigner";
+
 
 
 
