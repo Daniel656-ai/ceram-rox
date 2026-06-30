@@ -70,8 +70,9 @@ export default function ProjectDetailPage() {
   const isLeaderOrOwner = myProjectRole === "leader" || myProjectRole === "owner";
   const canEditByPermission = hasPermission("projects.edit");
   const canManageTeam = isMaster || isLeaderOrOwner || canEditByPermission;
-  const canManagePlanning = isMaster || myProjectRole === "leader" || canEditByPermission;
-  const canEditTrafficLight = isMaster || myProjectRole === "leader" || canEditByPermission;
+  const canManagePlanning = isMaster || isLeaderOrOwner || canEditByPermission;
+  const canEditTrafficLight = isMaster || isLeaderOrOwner || canEditByPermission;
+
   const isProjectCompleted = (project as any)?.project_status === "completed";
 
   const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
