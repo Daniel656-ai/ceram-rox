@@ -15,12 +15,29 @@ export interface FormFieldRef {
   description_override?: string;
 }
 
+export interface RepeatableConfig {
+  /** When true, the section can be added multiple times by the end user. */
+  enabled: boolean;
+  /** Minimum number of entries that must exist (default 1). */
+  min?: number;
+  /** Maximum number of entries that may be added. 0 / undefined = unlimited. */
+  max?: number;
+  /** Singular label for a single entry, e.g. "Mundstück". */
+  item_label?: string;
+  /** Custom label for the add-button, e.g. "Weiteres Mundstück hinzufügen". */
+  add_label?: string;
+  /** Storage key used in the form value map. Defaults to `repeat:<section_id>`. */
+  storage_key?: string;
+}
+
 export interface FormSection {
   id: string;
   title: string;
   description?: string;
   collapsed?: boolean;
   fields: FormFieldRef[];
+  /** Optional repeater configuration. When enabled the section becomes a 1:n list. */
+  repeatable?: RepeatableConfig;
 }
 
 export interface FormLayoutData {
