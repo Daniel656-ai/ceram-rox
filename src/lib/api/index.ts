@@ -102,6 +102,8 @@ import { projectServices } from "./projectServices";
 import { serviceDataFields } from "./serviceDesigner";
 import { serviceFormLayouts } from "./serviceFormLayouts";
 import { serviceRules } from "./serviceRules";
+import { serviceDocumentTemplates } from "./serviceDocumentTemplates";
+import { serviceBlocks } from "./serviceBlocks";
 
 
 
@@ -193,6 +195,8 @@ export const api = {
   serviceDataFields,
   serviceFormLayouts,
   serviceRules,
+  serviceDocumentTemplates,
+  serviceBlocks,
 
 
 
