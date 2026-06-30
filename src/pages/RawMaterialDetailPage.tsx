@@ -1033,16 +1033,31 @@ export default function RawMaterialDetailPage() {
                       </div>
                       <div>
                         <Label>LOT-Nummer{mType === "verbrauch" ? " *" : ""}</Label>
-                        <Select value={mBatchId || "__none__"} onValueChange={(v) => { setMBatchId(v === "__none__" ? "" : v); setMContainerId(""); }}>
-                          <SelectTrigger><SelectValue placeholder="LOT-Nummer wählen" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Keine</SelectItem>
-                            {batches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        {(() => {
+                          const isAvailableContainer = (c: any) =>
+                            Number(c.current_quantity) > 0 &&
+                            !["leer", "entsorgt", "gesperrt"].includes(c.status);
+                          const selectableBatches = mType === "verbrauch"
+                            ? batches.filter((b: any) =>
+                                (containers || []).some((c: any) => c.batch_id === b.id && isAvailableContainer(c)))
+                            : batches;
+                          return (
+                            <Select value={mBatchId || "__none__"} onValueChange={(v) => { setMBatchId(v === "__none__" ? "" : v); setMContainerId(""); }}>
+                              <SelectTrigger><SelectValue placeholder={mType === "verbrauch" && selectableBatches.length === 0 ? "Keine LOT mit verfügbarem Gebinde" : "LOT-Nummer wählen"} /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">Keine</SelectItem>
+                                {selectableBatches.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.batch_number}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          );
+                        })()}
                       </div>
                       {mType === "verbrauch" && (() => {
-                        const lotContainers = (containers || []).filter((c: any) => mBatchId ? c.batch_id === mBatchId : true);
+                        const isAvailableContainer = (c: any) =>
+                          Number(c.current_quantity) > 0 &&
+                          !["leer", "entsorgt", "gesperrt"].includes(c.status);
+                        const lotContainers = (containers || []).filter((c: any) =>
+                          (mBatchId ? c.batch_id === mBatchId : true) && isAvailableContainer(c));
                         const selectedContainer = lotContainers.find((c: any) => c.id === mContainerId);
                         const current = selectedContainer ? Number(selectedContainer.current_quantity) : 0;
                         const qtyNum = Number(mQty) || 0;
@@ -1054,7 +1069,7 @@ export default function RawMaterialDetailPage() {
                             <div>
                               <Label>Gebinde *</Label>
                               <Select value={mContainerId || "__none__"} onValueChange={(v) => setMContainerId(v === "__none__" ? "" : v)} disabled={lotContainers.length === 0}>
-                                <SelectTrigger><SelectValue placeholder={lotContainers.length === 0 ? "Keine Gebinde verfügbar" : "Gebinde wählen"} /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder={lotContainers.length === 0 ? "Keine verfügbaren Gebinde" : "Gebinde wählen"} /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="__none__">Bitte wählen</SelectItem>
                                   {lotContainers.map((c: any) => (
@@ -1065,6 +1080,7 @@ export default function RawMaterialDetailPage() {
                                 </SelectContent>
                               </Select>
                             </div>
+
                             {selectedContainer && (
                               <Alert variant={overdraw || empty ? "destructive" : "default"}>
                                 <AlertDescription className="text-xs space-y-1">
