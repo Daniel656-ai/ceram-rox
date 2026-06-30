@@ -55,6 +55,17 @@ function BookingFormStatusCell({ serviceId, onPreview }: { serviceId: string; on
   );
 }
 
+function PreviewEmptyHint({ serviceId }: { serviceId: string }) {
+  const { data: hasLayout, isLoading } = useServiceHasFormLayout(serviceId, "customer");
+  if (isLoading || hasLayout) return null;
+  return (
+    <div className="border border-dashed rounded-md p-6 text-center text-sm text-muted-foreground">
+      <AlertTriangle className="h-5 w-5 mx-auto mb-2 text-destructive" />
+      Für diese Dienstleistung wurde noch kein Buchungsformular im Service Designer hinterlegt.<br />
+      Auftraggeber sehen aktuell nur die klassischen Parameter (sofern vorhanden).
+    </div>
+  );
+
 
 function useDurchfuehrerUsers() {
   return useQuery({
