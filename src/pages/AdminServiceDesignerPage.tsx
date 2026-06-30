@@ -409,6 +409,15 @@ function DataModelTab({ serviceId, canManage }: { serviceId: string; canManage: 
         />
       )}
 
+      {importing && (
+        <ImportFieldsDialog
+          serviceId={serviceId}
+          existingKeys={fields.map((f) => f.field_key)}
+          onClose={() => setImporting(false)}
+          onImported={() => qc.invalidateQueries({ queryKey: ["service-data-fields", serviceId] })}
+        />
+      )}
+
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
