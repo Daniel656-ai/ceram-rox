@@ -108,16 +108,18 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
               const val = values[f.field_key];
               const hasError = isRequired && (val == null || val === "");
               const readonly = ref.readonly || f.readonly;
+              const label = ref.label_override?.trim() || f.display_name;
+              const help = ref.description_override?.trim() || f.description;
               return (
                 <div key={ref.id} className={colCls}>
                   <Label className="text-xs flex items-center gap-1">
-                    {f.display_name}
+                    {label}
                     {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
                     {isRequired && <span className="text-destructive">*</span>}
                     {hasError && <AlertCircle className="h-3 w-3 text-destructive" />}
                   </Label>
-                  {f.description && !compact && (
-                    <p className="text-[10px] text-muted-foreground mb-1">{f.description}</p>
+                  {help && !compact && (
+                    <p className="text-[10px] text-muted-foreground mb-1">{help}</p>
                   )}
                   {renderInput(f, val, (v) => onChange(f.field_key, v), readonly, inputSize, hasError)}
                 </div>
