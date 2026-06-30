@@ -281,6 +281,7 @@ function DataModelTab({ serviceId, canManage }: { serviceId: string; canManage: 
 
   const [editing, setEditing] = useState<ServiceDataField | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ServiceDataField | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
