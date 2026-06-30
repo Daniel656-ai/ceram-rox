@@ -66,13 +66,7 @@ export default function ServicePreview({ serviceId }: { serviceId: string }) {
   });
   const { data: workflow } = useQuery({
     queryKey: ["service-workflow", serviceId],
-    // workflow API may not be wired the same way — fall back gracefully
-    queryFn: async () => {
-      try {
-        const w = await (api as any).from("service_workflows").select("*").eq("service_id", serviceId).maybeSingle();
-        return w?.data ?? null;
-      } catch { return null; }
-    },
+    queryFn: () => api.serviceWorkflows.getForService(serviceId),
   });
   const { data: docs = [] } = useQuery({
     queryKey: ["service-doc-templates", serviceId],
