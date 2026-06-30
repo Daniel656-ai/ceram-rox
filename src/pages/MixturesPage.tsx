@@ -35,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { ChargenView } from "@/components/ChargenView";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function MixturesPage() {
   const { t } = useTranslation(["mixtures", "common"]);
