@@ -414,15 +414,17 @@ export default function MixtureDetailPage() {
                         {item.notes || "—"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            deleteRecipeItem.mutate({ id: item.id, mixture_id: id! })
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              deleteRecipeItem.mutate({ id: item.id, mixture_id: id! })
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
