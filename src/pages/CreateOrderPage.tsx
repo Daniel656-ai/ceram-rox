@@ -328,6 +328,25 @@ export default function CreateOrderPage() {
             if (inserts.length > 0) { await api.measurementParameters.bulkInsert(inserts); }
           }
         }
+        // Service Designer Formulardaten persistieren
+        const formVals = measurementFormValues[m.uid];
+        if (formVals && Object.keys(formVals).length > 0) {
+          const fields = await api.serviceDataFields.listForService(m.service_id);
+          const inserts = Object.entries(formVals)
+            .filter(([, v]) => v != null && String(v).trim() !== "")
+            .map(([key, v]) => {
+              const f = fields.find((x: any) => x.field_key === key);
+              return {
+                order_measurement_id: createdMeasurement.id,
+                parameter_name: f?.display_name || key,
+                parameter_value: typeof v === "boolean" ? (v ? "true" : "false") : String(v),
+                unit: f?.unit || null,
+              };
+            });
+          if (inserts.length > 0) {
+            await api.measurementParameters.bulkInsert(inserts);
+          }
+        }
       }
       toast.success(t("orders:created_success"));
       navigate(`/auftraege/${order.id}`);
