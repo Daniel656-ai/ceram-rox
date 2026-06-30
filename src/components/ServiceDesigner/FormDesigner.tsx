@@ -369,7 +369,7 @@ function RoleDesigner({
 
 // ============================ Palette item ============================
 
-function PaletteItem({ field, disabled }: { field: ServiceDataField; disabled?: boolean }) {
+function PaletteItem({ field, disabled, usageCount = 0 }: { field: ServiceDataField; disabled?: boolean; usageCount?: number }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${field.id}`,
     data: { kind: "palette", fieldId: field.id },
@@ -389,6 +389,9 @@ function PaletteItem({ field, disabled }: { field: ServiceDataField; disabled?: 
           {field.field_type}{field.unit ? ` · ${field.unit}` : ""}
         </div>
       </div>
+      {usageCount > 0 && (
+        <Badge variant="secondary" className="text-[9px]" title="So oft im Formular verwendet">{usageCount}×</Badge>
+      )}
       {field.is_required && <Badge variant="outline" className="text-[9px]">Pflicht</Badge>}
     </div>
   );
