@@ -321,7 +321,7 @@ export default function MixtureDetailPage() {
         {/* Recipe */}
         <TabsContent value="recipe">
           <Card className="p-4 space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-end" hidden={!canEdit}>
               <Dialog open={recipeOpen} onOpenChange={setRecipeOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm">
