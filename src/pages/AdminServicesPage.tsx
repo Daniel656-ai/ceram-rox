@@ -9,12 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2, Eye, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import ServiceParameterEditor from "@/components/ServiceParameterEditor";
+import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
+import { Badge } from "@/components/ui/badge";
 import { usePermissions } from "@/hooks/usePermissions";
 
 function DurationCell({ service, onUpdate, t }: { service: any; onUpdate: (id: string, val: number) => void; t: any }) {
