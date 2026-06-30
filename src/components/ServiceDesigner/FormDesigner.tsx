@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/popover";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import type {
-  FormFieldRef, FormLayoutData, FormRoleView, FormSection,
+  FormFieldRef, FormLayoutData, FormRoleView, FormSection, RepeatableConfig,
 } from "@/lib/api/serviceFormLayouts";
 
 const ROLE_TABS: { value: FormRoleView; label: string; hint: string }[] = [
