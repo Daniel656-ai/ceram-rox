@@ -51,8 +51,8 @@ function BookingFormStatusCell({ serviceId, onPreview }: { serviceId: string; on
       </Button>
     </div>
   );
-  return <button className="hover:underline text-left" onClick={() => { setVal(String(service.standard_duration_hours ?? 1)); setEditing(true); }}>{service.standard_duration_hours ?? 1} h</button>;
 }
+
 
 function useDurchfuehrerUsers() {
   return useQuery({
