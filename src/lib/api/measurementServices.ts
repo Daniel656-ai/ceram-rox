@@ -38,6 +38,11 @@ export const measurementServices = {
     hourly_rate: number;
     responsible_user_id?: string | null;
     workstation_id?: string | null;
+    description?: string | null;
+    icon?: string | null;
+    color?: string | null;
+    department?: string | null;
+    price?: number | null;
   }) =>
     unwrap(
       dbClient.from("measurement_services").insert(service as any).select().single()
@@ -52,11 +57,20 @@ export const measurementServices = {
       responsible_user_id?: string | null;
       workstation_id?: string | null;
       standard_duration_hours?: number;
+      description?: string | null;
+      icon?: string | null;
+      color?: string | null;
+      department?: string | null;
+      price?: number | null;
     }
   ) =>
     run(
       dbClient.from("measurement_services").update(updates as any).eq("id", id)
     ),
+
+  getById: (id: string) =>
+    unwrap(dbClient.from("measurement_services").select("*").eq("id", id).single()),
+
 };
 
 export const measurementUsers = {
