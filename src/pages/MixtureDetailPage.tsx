@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function MixtureDetailPage() {
   const { id } = useParams<{ id: string }>();
