@@ -85,6 +85,9 @@ export default function AdminServicesPage() {
   const [newDuration, setNewDuration] = useState("1");
   const [paramEditorServiceId, setParamEditorServiceId] = useState<string | null>(null);
   const [paramEditorServiceName, setParamEditorServiceName] = useState("");
+  const [previewServiceId, setPreviewServiceId] = useState<string | null>(null);
+  const [previewServiceName, setPreviewServiceName] = useState("");
+  const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
 
   const handleToggle = async (id: string, active: boolean) => {
     try {
