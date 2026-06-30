@@ -1,37 +1,34 @@
 name: Build & Release
-
 on:
   push:
     branches:
       - main
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     permissions:
       contents: write
     runs-on: windows-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
-
       - name: Install frontend dependencies
         run: npm install --force
-
       - name: Create .env.production
         run: |
           echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" > .env.production
           echo "VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}" >> .env.production
-
       - name: Auto-increment version
         shell: bash
         run: |
@@ -44,15 +41,14 @@ jobs:
           sed -i "s/\"version\": \"[0-9.]*\"/\"version\": \"$new\"/" tauri.conf.json
           echo "NEW_VERSION=$new" >> $GITHUB_ENV
           cd ..
-
       - name: Commit version bump
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add src-tauri/tauri.conf.json
           git commit -m "chore: bump version to v${{ env.NEW_VERSION }}"
+          git pull --rebase origin main
           git push
-
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
