@@ -9,12 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2, Eye, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import ServiceParameterEditor from "@/components/ServiceParameterEditor";
+import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
+import { Badge } from "@/components/ui/badge";
 import { usePermissions } from "@/hooks/usePermissions";
 
 function DurationCell({ service, onUpdate, t }: { service: any; onUpdate: (id: string, val: number) => void; t: any }) {
@@ -31,6 +33,42 @@ function DurationCell({ service, onUpdate, t }: { service: any; onUpdate: (id: s
   }
   return <button className="hover:underline text-left" onClick={() => { setVal(String(service.standard_duration_hours ?? 1)); setEditing(true); }}>{service.standard_duration_hours ?? 1} h</button>;
 }
+
+function BookingFormStatusCell({ serviceId, onPreview }: { serviceId: string; onPreview: () => void }) {
+  const { data: hasLayout, isLoading } = useServiceHasFormLayout(serviceId, "customer");
+  if (isLoading) return <span className="text-xs text-muted-foreground">…</span>;
+  return (
+    <div className="flex items-center gap-2">
+      {hasLayout ? (
+        <Badge variant="secondary" className="text-[10px] gap-1">
+          <CheckCircle2 className="h-3 w-3" /> Aktiv
+        </Badge>
+      ) : (
+        <Badge variant="destructive" className="text-[10px] gap-1" title="Kein Buchungsformular im Designer hinterlegt – Auftraggeber sehen Fallback / Parameter">
+          <AlertTriangle className="h-3 w-3" /> Fehlt
+        </Badge>
+      )}
+      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={onPreview}>
+        <Eye className="h-3 w-3" /> Vorschau
+      </Button>
+    </div>
+  );
+}
+
+function PreviewEmptyHint({ serviceId }: { serviceId: string }) {
+  const { data: hasLayout, isLoading } = useServiceHasFormLayout(serviceId, "customer");
+  if (isLoading || hasLayout) return null;
+  return (
+    <div className="border border-dashed rounded-md p-6 text-center text-sm text-muted-foreground">
+      <AlertTriangle className="h-5 w-5 mx-auto mb-2 text-destructive" />
+      Für diese Dienstleistung wurde noch kein Buchungsformular im Service Designer hinterlegt.<br />
+      Auftraggeber sehen aktuell nur die klassischen Parameter (sofern vorhanden).
+    </div>
+  );
+}
+
+
+
 
 function useDurchfuehrerUsers() {
   return useQuery({
@@ -61,6 +99,9 @@ export default function AdminServicesPage() {
   const [newDuration, setNewDuration] = useState("1");
   const [paramEditorServiceId, setParamEditorServiceId] = useState<string | null>(null);
   const [paramEditorServiceName, setParamEditorServiceName] = useState("");
+  const [previewServiceId, setPreviewServiceId] = useState<string | null>(null);
+  const [previewServiceName, setPreviewServiceName] = useState("");
+  const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
 
   const handleToggle = async (id: string, active: boolean) => {
     try {
@@ -140,6 +181,7 @@ export default function AdminServicesPage() {
               <TableHead>{t("admin:service_duration")}</TableHead>
               {canViewRates && <TableHead>{t("admin:service_rate")}</TableHead>}
               <TableHead>{t("admin:service_parameters")}</TableHead>
+              <TableHead>Buchungsformular</TableHead>
               <TableHead>{t("admin:service_status")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -230,6 +272,18 @@ export default function AdminServicesPage() {
                 </TableCell>
 
                 <TableCell>
+                  <BookingFormStatusCell
+                    serviceId={s.id}
+                    onPreview={() => {
+                      setPreviewServiceId(s.id);
+                      setPreviewServiceName(s.service_name);
+                      setPreviewValues({});
+                    }}
+                  />
+                </TableCell>
+
+
+                <TableCell>
                   <div className="flex items-center gap-2">
                     <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} />
                     <span className="text-sm">{s.active ? t("admin:active") : t("admin:inactive")}</span>
@@ -306,6 +360,31 @@ export default function AdminServicesPage() {
               serviceId={paramEditorServiceId}
               serviceName={paramEditorServiceName}
             />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewServiceId} onOpenChange={(open) => { if (!open) setPreviewServiceId(null); }}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Vorschau als Auftraggeber · {previewServiceName}
+            </DialogTitle>
+          </DialogHeader>
+          {previewServiceId && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Diese Ansicht zeigt das im Service Designer hinterlegte Buchungsformular für die Rolle „Auftraggeber". Eingaben werden nicht gespeichert.
+              </p>
+              <ServiceBookingForm
+                serviceId={previewServiceId}
+                roleView="customer"
+                values={previewValues}
+                onChange={(key, value) => setPreviewValues((p) => ({ ...p, [key]: value }))}
+              />
+              <PreviewEmptyHint serviceId={previewServiceId} />
+            </div>
           )}
         </DialogContent>
       </Dialog>

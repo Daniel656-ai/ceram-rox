@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
+import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
+import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
 
 interface SelectedMeasurement {
   uid: string;
@@ -113,12 +115,55 @@ function ServiceRequiredParams({ serviceId, paramValues, onParamChange, t }: {
   );
 }
 
+/**
+ * Switches between the new Service-Designer form (if a layout exists for
+ * the role) and the legacy parameter system as a fallback.
+ */
+function ServiceBookingOrLegacyParams({
+  serviceId, roleView, formValues, onFormChange,
+  paramValues, onParamChange, t,
+}: {
+  serviceId: string;
+  roleView: FormRoleView;
+  formValues: Record<string, any>;
+  onFormChange: (key: string, value: any) => void;
+  paramValues: Record<string, string>;
+  onParamChange: (paramId: string, value: string) => void;
+  t: any;
+}) {
+  const { data: hasLayout, isLoading } = useServiceHasFormLayout(serviceId, roleView);
+  if (isLoading) return null;
+  if (hasLayout) {
+    return (
+      <div className="mt-2 pl-2 border-l-2 border-primary/30">
+        <ServiceBookingForm
+          serviceId={serviceId}
+          roleView={roleView}
+          values={formValues}
+          onChange={onFormChange}
+          compact
+        />
+      </div>
+    );
+  }
+  return (
+    <ServiceRequiredParams
+      serviceId={serviceId}
+      paramValues={paramValues}
+      onParamChange={onParamChange}
+      t={t}
+    />
+  );
+}
+
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const canViewRates = hasPermission("costs.view_hourly_rates");
+  // Service-Designer role view mapping
+  const roleView: FormRoleView = role === "auftraggeber" ? "customer" : "employee";
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
   const { data: workstations = [] } = useWorkstations();
@@ -139,6 +184,7 @@ export default function CreateOrderPage() {
   const [selectedSampleId, setSelectedSampleId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
+  const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
 
   // Batch state
   const [batchTemplateId, setBatchTemplateId] = useState("");
@@ -215,6 +261,7 @@ export default function CreateOrderPage() {
   const removeMeasurement = (uid: string) => {
     setMeasurements((prev) => prev.filter((m) => m.uid !== uid));
     setMeasurementParams((prev) => { const next = { ...prev }; delete next[uid]; return next; });
+    setMeasurementFormValues((prev) => { const next = { ...prev }; delete next[uid]; return next; });
   };
 
   const duplicateMeasurement = (uid: string) => {
@@ -232,6 +279,11 @@ export default function CreateOrderPage() {
       if (!srcParams) return prev;
       return { ...prev, [newUidValue]: { ...srcParams } };
     });
+    setMeasurementFormValues((prev) => {
+      const srcVals = prev[uid];
+      if (!srcVals) return prev;
+      return { ...prev, [newUidValue]: { ...srcVals } };
+    });
   };
 
   const updateMeasurement = (uid: string, field: string, value: any) => {
@@ -240,6 +292,10 @@ export default function CreateOrderPage() {
 
   const updateParam = (uid: string, paramId: string, value: string) => {
     setMeasurementParams((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [paramId]: value } }));
+  };
+
+  const updateFormValue = (uid: string, key: string, value: any) => {
+    setMeasurementFormValues((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [key]: value } }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -270,6 +326,25 @@ export default function CreateOrderPage() {
           if (defs && defs.length > 0) {
             const inserts = defs.filter((d: any) => (params[d.id] || "").trim()).map((d: any) => ({ order_measurement_id: createdMeasurement.id, parameter_name: d.parameter_name, parameter_value: params[d.id], unit: d.unit || null }));
             if (inserts.length > 0) { await api.measurementParameters.bulkInsert(inserts); }
+          }
+        }
+        // Service Designer Formulardaten persistieren
+        const formVals = measurementFormValues[m.uid];
+        if (formVals && Object.keys(formVals).length > 0) {
+          const fields = await api.serviceDataFields.listForService(m.service_id);
+          const inserts = Object.entries(formVals)
+            .filter(([, v]) => v != null && String(v).trim() !== "")
+            .map(([key, v]) => {
+              const f = fields.find((x: any) => x.field_key === key);
+              return {
+                order_measurement_id: createdMeasurement.id,
+                parameter_name: f?.display_name || key,
+                parameter_value: typeof v === "boolean" ? (v ? "true" : "false") : String(v),
+                unit: f?.unit || null,
+              };
+            });
+          if (inserts.length > 0) {
+            await api.measurementParameters.bulkInsert(inserts);
           }
         }
       }
@@ -435,7 +510,15 @@ export default function CreateOrderPage() {
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateMeasurement(m.uid)} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(m.uid)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <ServiceRequiredParams serviceId={m.service_id} paramValues={measurementParams[m.uid] || {}} onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)} t={t} />
+                    <ServiceBookingOrLegacyParams
+                      serviceId={m.service_id}
+                      roleView={roleView}
+                      formValues={measurementFormValues[m.uid] || {}}
+                      onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
+                      paramValues={measurementParams[m.uid] || {}}
+                      onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)}
+                      t={t}
+                    />
                   </div>
                 ))}
               </div>
