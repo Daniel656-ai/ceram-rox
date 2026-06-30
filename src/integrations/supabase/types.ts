@@ -3906,6 +3906,54 @@ export type Database = {
           },
         ]
       }
+      service_versions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          created_by: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["service_version_entity"]
+          id: string
+          label: string | null
+          published_at: string | null
+          published_by: string | null
+          service_id: string | null
+          snapshot: Json
+          status: Database["public"]["Enums"]["service_version_status"]
+          version_no: number
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["service_version_entity"]
+          id?: string
+          label?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          service_id?: string | null
+          snapshot: Json
+          status?: Database["public"]["Enums"]["service_version_status"]
+          version_no: number
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["service_version_entity"]
+          id?: string
+          label?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          service_id?: string | null
+          snapshot?: Json
+          status?: Database["public"]["Enums"]["service_version_status"]
+          version_no?: number
+        }
+        Relationships: []
+      }
       service_workflows: {
         Row: {
           created_at: string
@@ -4671,6 +4719,8 @@ export type Database = {
         | "ref_batch"
         | "ref_serial"
         | "repeater"
+      service_version_entity: "form_layout" | "document_template" | "block"
+      service_version_status: "draft" | "published" | "archived"
       stakeholder_channel: "email" | "phone" | "meeting" | "portal" | "other"
       stakeholder_frequency:
         | "daily"
@@ -4932,6 +4982,8 @@ export const Constants = {
         "ref_serial",
         "repeater",
       ],
+      service_version_entity: ["form_layout", "document_template", "block"],
+      service_version_status: ["draft", "published", "archived"],
       stakeholder_channel: ["email", "phone", "meeting", "portal", "other"],
       stakeholder_frequency: [
         "daily",
