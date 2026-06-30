@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
+import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
+import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
 
 interface SelectedMeasurement {
   uid: string;
