@@ -261,6 +261,7 @@ export default function CreateOrderPage() {
   const removeMeasurement = (uid: string) => {
     setMeasurements((prev) => prev.filter((m) => m.uid !== uid));
     setMeasurementParams((prev) => { const next = { ...prev }; delete next[uid]; return next; });
+    setMeasurementFormValues((prev) => { const next = { ...prev }; delete next[uid]; return next; });
   };
 
   const duplicateMeasurement = (uid: string) => {
@@ -278,6 +279,11 @@ export default function CreateOrderPage() {
       if (!srcParams) return prev;
       return { ...prev, [newUidValue]: { ...srcParams } };
     });
+    setMeasurementFormValues((prev) => {
+      const srcVals = prev[uid];
+      if (!srcVals) return prev;
+      return { ...prev, [newUidValue]: { ...srcVals } };
+    });
   };
 
   const updateMeasurement = (uid: string, field: string, value: any) => {
@@ -286,6 +292,10 @@ export default function CreateOrderPage() {
 
   const updateParam = (uid: string, paramId: string, value: string) => {
     setMeasurementParams((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [paramId]: value } }));
+  };
+
+  const updateFormValue = (uid: string, key: string, value: any) => {
+    setMeasurementFormValues((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [key]: value } }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
