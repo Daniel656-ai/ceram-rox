@@ -33,6 +33,7 @@ import RulesDesigner from "@/components/ServiceDesigner/RulesDesigner";
 import DocumentsDesigner from "@/components/ServiceDesigner/DocumentsDesigner";
 import ServicePreview from "@/components/ServiceDesigner/ServicePreview";
 import BlockLibrary from "@/components/ServiceDesigner/BlockLibrary";
+import VersionsDesigner from "@/components/ServiceDesigner/VersionsDesigner";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; label: string }[] }[] = [
   {
@@ -143,7 +144,7 @@ export default function AdminServiceDesignerPage() {
           <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
           <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
           <TabsTrigger value="blocks"><Layers className="h-4 w-4 mr-1" />Bausteine</TabsTrigger>
-          <TabsTrigger value="versions" disabled><History className="h-4 w-4 mr-1" />Versionen</TabsTrigger>
+          <TabsTrigger value="versions"><History className="h-4 w-4 mr-1" />Versionen</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -172,6 +173,10 @@ export default function AdminServiceDesignerPage() {
 
         <TabsContent value="blocks">
           <BlockLibrary canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="versions">
+          <VersionsDesigner serviceId={serviceId} canManage={canManage} />
         </TabsContent>
       </Tabs>
     </div>
