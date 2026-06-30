@@ -30,7 +30,27 @@ function DurationCell({ service, onUpdate, t }: { service: any; onUpdate: (id: s
         <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>✕</Button>
       </div>
     );
-  }
+}
+
+function BookingFormStatusCell({ serviceId, onPreview }: { serviceId: string; onPreview: () => void }) {
+  const { data: hasLayout, isLoading } = useServiceHasFormLayout(serviceId, "customer");
+  if (isLoading) return <span className="text-xs text-muted-foreground">…</span>;
+  return (
+    <div className="flex items-center gap-2">
+      {hasLayout ? (
+        <Badge variant="secondary" className="text-[10px] gap-1">
+          <CheckCircle2 className="h-3 w-3" /> Aktiv
+        </Badge>
+      ) : (
+        <Badge variant="destructive" className="text-[10px] gap-1" title="Kein Buchungsformular im Designer hinterlegt – Auftraggeber sehen Fallback / Parameter">
+          <AlertTriangle className="h-3 w-3" /> Fehlt
+        </Badge>
+      )}
+      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={onPreview}>
+        <Eye className="h-3 w-3" /> Vorschau
+      </Button>
+    </div>
+  );
   return <button className="hover:underline text-left" onClick={() => { setVal(String(service.standard_duration_hours ?? 1)); setEditing(true); }}>{service.standard_duration_hours ?? 1} h</button>;
 }
 
