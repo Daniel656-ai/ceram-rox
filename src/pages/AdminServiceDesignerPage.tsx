@@ -25,7 +25,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Database, FormInput, Workflow, Zap,
-  FileText, Eye, History, Settings, GripVertical, Layers,
+  FileText, Eye, History, Settings, GripVertical, Layers, Upload,
 } from "lucide-react";
 import type { ServiceDataField, ServiceFieldType } from "@/lib/api/serviceDesigner";
 import FormDesignerTab from "@/components/ServiceDesigner/FormDesigner";
@@ -34,6 +34,7 @@ import DocumentsDesigner from "@/components/ServiceDesigner/DocumentsDesigner";
 import ServicePreview from "@/components/ServiceDesigner/ServicePreview";
 import BlockLibrary from "@/components/ServiceDesigner/BlockLibrary";
 import VersionsDesigner from "@/components/ServiceDesigner/VersionsDesigner";
+import ImportFieldsDialog from "@/components/ServiceDesigner/ImportFieldsDialog";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; label: string }[] }[] = [
   {
