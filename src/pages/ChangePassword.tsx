@@ -46,14 +46,19 @@ export default function ChangePassword() {
       setLoading(false);
       return toast.error(t("common:error"), { description: error.message });
     }
-    await api.users.clearMustChangePassword(user.id);
-    await api.users.logPasswordEvent({
+
+    // Fire-and-forget: audit log shouldn't block the UI
+    void api.users.logPasswordEvent({
       targetUserId: user.id,
       performedBy: user.id,
       action: mustChangePassword ? "initial_set" : "self_change",
-    });
+    }).catch(() => {});
 
-    await refreshProfile();
+    // Must-clear flag synchronously so ProtectedRoute releases the user,
+    // then refresh profile in the background.
+    await api.users.clearMustChangePassword(user.id);
+    void refreshProfile();
+
     setLoading(false);
     toast.success(t("auth:password_changed"));
     if (mustChangePassword) navigate("/dashboard", { replace: true });
