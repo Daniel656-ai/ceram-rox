@@ -521,12 +521,30 @@ function FieldBlock({
             <GripVertical className="h-4 w-4" />
           </button>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium truncate">{field.display_name}</div>
+            <div className="text-xs font-medium truncate">
+              {refItem.label_override?.trim() || field.display_name}
+            </div>
             <div className="text-[10px] text-muted-foreground truncate">
               <code>{field.field_key}</code> · {field.field_type}
             </div>
           </div>
           {field.is_required && <Badge variant="outline" className="text-[9px]">Pflicht</Badge>}
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+          <Input
+            value={refItem.label_override ?? ""}
+            disabled={!canManage}
+            onChange={(e) => onChange({ label_override: e.target.value })}
+            placeholder={`Label (Standard: ${field.display_name})`}
+            className="h-7 text-xs"
+          />
+          <Input
+            value={refItem.description_override ?? ""}
+            disabled={!canManage}
+            onChange={(e) => onChange({ description_override: e.target.value })}
+            placeholder="Hilfetext (optional)"
+            className="h-7 text-xs"
+          />
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           <Select
