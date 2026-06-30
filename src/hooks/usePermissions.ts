@@ -184,6 +184,7 @@ export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string;
   { key: "projects", labelDe: "Projekte", labelEn: "Projects", permissions: ["projects.create", "projects.view", "projects.edit", "projects.assign"] },
   { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel", "costs.view_hourly_rates", "costs.edit_hourly_rates"] },
   { key: "general", labelDe: "Allgemein", labelEn: "General", permissions: ["priorities.edit", "locations.edit", "reports.create", "sds.manage", "raw_materials.manage", "consumables.manage"] },
+  { key: "mixtures", labelDe: "Knetungen & Lösungen", labelEn: "Kneadings & Solutions", permissions: ["mixtures.view", "mixtures.create", "mixtures.edit", "mixtures.delete", "mixtures.produce"] },
   { key: "admin", labelDe: "Administration", labelEn: "Administration", permissions: ["workstations.manage", "users.manage", "services.manage", "absences.manage_all", "admin.system", "admin.database", "hazard_notifications.manage"] },
   { key: "calendar", labelDe: "Kalender & Urlaub", labelEn: "Calendar & Vacation", permissions: ["calendar.view_others_vacation"] },
   { key: "notifications", labelDe: "Benachrichtigungen & Audit", labelEn: "Notifications & Audit", permissions: ["notifications.measurement_completed", "notifications.priority_violation", "activity_log.view_all"] },
