@@ -3764,6 +3764,41 @@ export type Database = {
           },
         ]
       }
+      service_workflows: {
+        Row: {
+          created_at: string
+          definition: Json
+          id: string
+          service_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          definition?: Json
+          id?: string
+          service_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          definition?: Json
+          id?: string
+          service_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_workflows_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: true
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       storage_locations: {
         Row: {
           created_at: string
