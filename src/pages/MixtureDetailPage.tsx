@@ -605,25 +605,27 @@ export default function MixtureDetailPage() {
             </div>
           </div>
           <DialogFooter className="justify-between">
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!id) return;
-                if (!confirm("Wirklich löschen?")) return;
-                try {
-                  await deleteMixture.mutateAsync(id);
-                  navigate("/mischungen");
-                } catch (e: any) {
-                  toast({
-                    title: "Fehler",
-                    description: e.message,
-                    variant: "destructive",
-                  });
-                }
-              }}
-            >
-              {t("mixtures:delete")}
-            </Button>
+            {(hasPermission("mixtures.delete") || hasPermission("raw_materials.manage")) ? (
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (!id) return;
+                  if (!confirm("Wirklich löschen?")) return;
+                  try {
+                    await deleteMixture.mutateAsync(id);
+                    navigate("/mischungen");
+                  } catch (e: any) {
+                    toast({
+                      title: "Fehler",
+                      description: e.message,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                {t("mixtures:delete")}
+              </Button>
+            ) : <span />}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setEditOpen(false)}>
                 {t("mixtures:cancel")}
