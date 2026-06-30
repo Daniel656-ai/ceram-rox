@@ -443,7 +443,7 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="services">
-          <ProjectServicesTab projectId={id!} canEdit={canManagePlanning} />
+          <ProjectServicesTab projectId={id!} canEdit={isMaster || !!myProjectRole || canEditByPermission} />
         </TabsContent>
 
         <TabsContent value="closure">
