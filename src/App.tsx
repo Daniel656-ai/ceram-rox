@@ -17,6 +17,8 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import WorkPlanPage from "./pages/WorkPlanPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminServicesPage from "./pages/AdminServicesPage";
+import AdminServiceDesignerPage from "./pages/AdminServiceDesignerPage";
+
 import AdminStatsPage from "./pages/AdminStatsPage";
 import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
 import AdminPermissionsPage from "./pages/AdminPermissionsPage";
@@ -88,6 +90,8 @@ const App = () => (
               <Route path="/arbeitsplanung" element={<WorkPlanPage />} />
               <Route path="/admin/benutzer" element={<AdminUsersPage />} />
               <Route path="/admin/messdienstleistungen" element={<AdminServicesPage />} />
+              <Route path="/admin/messdienstleistungen/:serviceId/designer" element={<AdminServiceDesignerPage />} />
+
               <Route path="/admin/statistiken" element={<AdminStatsPage />} />
               <Route path="/admin/arbeitsplaetze" element={<AdminWorkstationsPage />} />
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />

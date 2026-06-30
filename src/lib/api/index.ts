@@ -99,6 +99,8 @@ import {
 } from "./projectGovernance";
 import { projectClosure } from "./projectClosure";
 import { projectServices } from "./projectServices";
+import { serviceDataFields } from "./serviceDesigner";
+
 
 
 
@@ -186,6 +188,8 @@ export const api = {
   projectLessonsLearned,
   projectClosure,
   projectServices,
+  serviceDataFields,
+
 
 
 

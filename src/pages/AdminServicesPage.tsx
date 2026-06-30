@@ -207,18 +207,28 @@ export default function AdminServicesPage() {
                 </TableCell>
                 )}
                 <TableCell>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => {
-                      setParamEditorServiceId(s.id);
-                      setParamEditorServiceName(s.service_name);
-                    }}
-                  >
-                    <Settings2 className="h-3 w-3" /> {t("admin:service_parameters")}
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => {
+                        setParamEditorServiceId(s.id);
+                        setParamEditorServiceName(s.service_name);
+                      }}
+                    >
+                      <Settings2 className="h-3 w-3" /> {t("admin:service_parameters")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => window.location.assign(`/admin/messdienstleistungen/${s.id}/designer`)}
+                    >
+                      <Settings2 className="h-3 w-3" /> Designer
+                    </Button>
+                  </div>
                 </TableCell>
+
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} />
