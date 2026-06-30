@@ -167,6 +167,7 @@ export default function AdminServicesPage() {
               <TableHead>{t("admin:service_duration")}</TableHead>
               {canViewRates && <TableHead>{t("admin:service_rate")}</TableHead>}
               <TableHead>{t("admin:service_parameters")}</TableHead>
+              <TableHead>Buchungsformular</TableHead>
               <TableHead>{t("admin:service_status")}</TableHead>
             </TableRow>
           </TableHeader>
