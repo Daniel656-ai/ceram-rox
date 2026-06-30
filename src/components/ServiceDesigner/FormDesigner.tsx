@@ -444,9 +444,20 @@ function SectionBlock({
           </div>
         </div>
         {canManage && (
-          <Button size="icon" variant="ghost" onClick={onRemoveSection} className="h-7 w-7">
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <RepeatableConfigPopover
+              section={section}
+              onChange={(rep) => onChangeSection({ repeatable: rep })}
+            />
+            <Button size="icon" variant="ghost" onClick={onRemoveSection} className="h-7 w-7">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        )}
+        {!canManage && section.repeatable?.enabled && (
+          <Badge variant="outline" className="text-[10px] gap-1">
+            <Repeat className="h-3 w-3" /> Wiederholbar
+          </Badge>
         )}
       </CardHeader>
       {!collapsed && (
