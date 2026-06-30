@@ -28,6 +28,7 @@ import {
   FileText, Eye, History, Settings, GripVertical,
 } from "lucide-react";
 import type { ServiceDataField, ServiceFieldType } from "@/lib/api/serviceDesigner";
+import FormDesignerTab from "@/components/ServiceDesigner/FormDesigner";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; label: string }[] }[] = [
   {
