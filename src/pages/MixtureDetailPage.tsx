@@ -82,6 +82,11 @@ export default function MixtureDetailPage() {
   const deleteRecipeItem = useDeleteRecipeItem();
   const produce = useProduceMixtureBatch();
 
+  const { hasPermission } = usePermissions();
+  const canEdit = hasPermission("mixtures.edit") || hasPermission("raw_materials.manage");
+  const canCreate = hasPermission("mixtures.create") || hasPermission("raw_materials.manage");
+  const canProduce = hasPermission("mixtures.produce") || hasPermission("raw_materials.manage");
+
   const stock = useMemo(() => calculateMixtureStock(movements as any), [movements]);
 
   // Edit master data
