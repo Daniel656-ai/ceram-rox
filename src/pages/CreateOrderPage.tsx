@@ -159,9 +159,11 @@ function ServiceBookingOrLegacyParams({
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const canViewRates = hasPermission("costs.view_hourly_rates");
+  // Service-Designer role view mapping
+  const roleView: FormRoleView = role === "auftraggeber" ? "customer" : "employee";
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
   const { data: workstations = [] } = useWorkstations();
