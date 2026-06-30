@@ -278,23 +278,30 @@ export default function MixtureDetailPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => { setCopyName(mixture.name + " (Kopie)"); setCopyOpen(true); }}>
-              <CopyIcon className="h-4 w-4 mr-2" /> Duplizieren
-            </Button>
-            <Button variant="outline" size="sm" onClick={openEdit}>
-              {t("mixtures:edit")}
-            </Button>
-            <Button
-              size="sm"
-              onClick={openProduce}
-              disabled={(recipe as any[]).length === 0}
-            >
-              <Play className="h-4 w-4 mr-2" />
-              {t("mixtures:produce_batch")}
-            </Button>
+            {canCreate && (
+              <Button variant="outline" size="sm" onClick={() => { setCopyName(mixture.name + " (Kopie)"); setCopyOpen(true); }}>
+                <CopyIcon className="h-4 w-4 mr-2" /> Duplizieren
+              </Button>
+            )}
+            {canEdit && (
+              <Button variant="outline" size="sm" onClick={openEdit}>
+                {t("mixtures:edit")}
+              </Button>
+            )}
+            {canProduce && (
+              <Button
+                size="sm"
+                onClick={openProduce}
+                disabled={(recipe as any[]).length === 0}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {t("mixtures:produce_batch")}
+              </Button>
+            )}
           </div>
         </div>
       </div>
+
 
 
       <RecipeVersionBar mixtureId={id!} />
