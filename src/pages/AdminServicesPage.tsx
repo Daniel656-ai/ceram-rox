@@ -349,6 +349,31 @@ export default function AdminServicesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!previewServiceId} onOpenChange={(open) => { if (!open) setPreviewServiceId(null); }}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Vorschau als Auftraggeber · {previewServiceName}
+            </DialogTitle>
+          </DialogHeader>
+          {previewServiceId && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Diese Ansicht zeigt das im Service Designer hinterlegte Buchungsformular für die Rolle „Auftraggeber". Eingaben werden nicht gespeichert.
+              </p>
+              <ServiceBookingForm
+                serviceId={previewServiceId}
+                roleView="customer"
+                values={previewValues}
+                onChange={(key, value) => setPreviewValues((p) => ({ ...p, [key]: value }))}
+              />
+              <PreviewEmptyHint serviceId={previewServiceId} />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
