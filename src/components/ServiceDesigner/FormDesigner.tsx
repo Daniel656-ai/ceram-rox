@@ -25,8 +25,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   GripVertical, Plus, Trash2, ChevronDown, ChevronRight, Eye, Settings2,
-  Save, RotateCcw, LayoutGrid,
+  Save, RotateCcw, LayoutGrid, Repeat,
 } from "lucide-react";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import type {
   FormFieldRef, FormLayoutData, FormRoleView, FormSection,
