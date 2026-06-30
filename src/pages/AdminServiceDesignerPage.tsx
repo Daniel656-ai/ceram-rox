@@ -325,7 +325,10 @@ function DataModelTab({ serviceId, canManage }: { serviceId: string; canManage: 
               Archivierte zeigen
             </label>
             {canManage && (
-              <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" />Neues Feld</Button>
+              <>
+                <Button variant="outline" onClick={() => setImporting(true)}><Upload className="h-4 w-4 mr-1" />Excel/CSV-Import</Button>
+                <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" />Neues Feld</Button>
+              </>
             )}
           </div>
         </CardHeader>
