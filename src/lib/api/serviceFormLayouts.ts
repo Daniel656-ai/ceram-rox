@@ -1,0 +1,65 @@
+import { dbClient } from "./client";
+import { unwrap, run } from "./_helpers";
+
+export type FormRoleView = "customer" | "employee" | "public";
+
+export interface FormFieldRef {
+  id: string; // local row id
+  field_id: string; // service_data_fields.id
+  width: 12 | 9 | 8 | 6 | 4 | 3;
+  readonly?: boolean;
+  hidden?: boolean;
+}
+
+export interface FormSection {
+  id: string;
+  title: string;
+  description?: string;
+  collapsed?: boolean;
+  fields: FormFieldRef[];
+}
+
+export interface FormLayoutData {
+  sections: FormSection[];
+}
+
+export interface ServiceFormLayout {
+  id: string;
+  service_id: string;
+  role_view: FormRoleView;
+  layout: FormLayoutData;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const EMPTY: FormLayoutData = { sections: [] };
+
+export const serviceFormLayouts = {
+  get: async (serviceId: string, roleView: FormRoleView): Promise<ServiceFormLayout | null> => {
+    const rows = (await unwrap(
+      dbClient
+        .from("service_form_layouts" as any)
+        .select("*")
+        .eq("service_id", serviceId)
+        .eq("role_view", roleView)
+        .limit(1)
+    )) as unknown as ServiceFormLayout[];
+    return rows?.[0] ?? null;
+  },
+
+  upsert: (serviceId: string, roleView: FormRoleView, layout: FormLayoutData) =>
+    run(
+      dbClient.from("service_form_layouts" as any).upsert(
+        {
+          service_id: serviceId,
+          role_view: roleView,
+          layout: layout as any,
+          updated_at: new Date().toISOString(),
+        } as any,
+        { onConflict: "service_id,role_view" }
+      )
+    ),
+
+  empty: (): FormLayoutData => ({ ...EMPTY, sections: [] }),
+};
