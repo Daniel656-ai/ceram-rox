@@ -115,6 +115,47 @@ function ServiceRequiredParams({ serviceId, paramValues, onParamChange, t }: {
   );
 }
 
+/**
+ * Switches between the new Service-Designer form (if a layout exists for
+ * the role) and the legacy parameter system as a fallback.
+ */
+function ServiceBookingOrLegacyParams({
+  serviceId, roleView, formValues, onFormChange,
+  paramValues, onParamChange, t,
+}: {
+  serviceId: string;
+  roleView: FormRoleView;
+  formValues: Record<string, any>;
+  onFormChange: (key: string, value: any) => void;
+  paramValues: Record<string, string>;
+  onParamChange: (paramId: string, value: string) => void;
+  t: any;
+}) {
+  const { data: hasLayout, isLoading } = useServiceHasFormLayout(serviceId, roleView);
+  if (isLoading) return null;
+  if (hasLayout) {
+    return (
+      <div className="mt-2 pl-2 border-l-2 border-primary/30">
+        <ServiceBookingForm
+          serviceId={serviceId}
+          roleView={roleView}
+          values={formValues}
+          onChange={onFormChange}
+          compact
+        />
+      </div>
+    );
+  }
+  return (
+    <ServiceRequiredParams
+      serviceId={serviceId}
+      paramValues={paramValues}
+      onParamChange={onParamChange}
+      t={t}
+    />
+  );
+}
+
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
