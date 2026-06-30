@@ -28,6 +28,7 @@ import {
   useProcessSections,
 } from "@/hooks/useMixtureProcess";
 import { useRawMaterials } from "@/hooks/useMixtures";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const STATUS_LABEL: Record<string, string> = {
   geplant: "Geplant",
