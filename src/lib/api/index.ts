@@ -100,6 +100,7 @@ import {
 import { projectClosure } from "./projectClosure";
 import { projectServices } from "./projectServices";
 import { serviceDataFields } from "./serviceDesigner";
+import { serviceFormLayouts } from "./serviceFormLayouts";
 
 
 
