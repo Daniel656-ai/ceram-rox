@@ -101,7 +101,7 @@ import { projectClosure } from "./projectClosure";
 import { projectServices } from "./projectServices";
 import { serviceDataFields } from "./serviceDesigner";
 import { serviceFormLayouts } from "./serviceFormLayouts";
-import { serviceWorkflows } from "./serviceWorkflows";
+import { serviceRules } from "./serviceRules";
 
 
 
@@ -192,7 +192,7 @@ export const api = {
   projectServices,
   serviceDataFields,
   serviceFormLayouts,
-  serviceWorkflows,
+  serviceRules,
 
 
 
