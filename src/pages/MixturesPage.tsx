@@ -40,6 +40,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 export default function MixturesPage() {
   const { t } = useTranslation(["mixtures", "common"]);
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission("mixtures.create") || hasPermission("raw_materials.manage");
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") === "chargen" ? "chargen" : "rezepturen";
   const [tab, setTab] = useState<string>(initialTab);
