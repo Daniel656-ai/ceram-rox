@@ -3561,6 +3561,48 @@ export type Database = {
           },
         ]
       }
+      service_blocks: {
+        Row: {
+          category: string
+          content: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_system: boolean
+          kind: string
+          name: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          kind: string
+          name: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          kind?: string
+          name?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       service_data_fields: {
         Row: {
           archived: boolean
@@ -3650,6 +3692,71 @@ export type Database = {
           },
           {
             foreignKeyName: "service_data_fields_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_document_templates: {
+        Row: {
+          content: string
+          created_at: string
+          description: string | null
+          enabled: boolean
+          footer_html: string | null
+          format: string
+          header_html: string | null
+          id: string
+          kind: string
+          name: string
+          orientation: string
+          paper: string
+          service_id: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          footer_html?: string | null
+          format?: string
+          header_html?: string | null
+          id?: string
+          kind?: string
+          name: string
+          orientation?: string
+          paper?: string
+          service_id: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          footer_html?: string | null
+          format?: string
+          header_html?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          orientation?: string
+          paper?: string
+          service_id?: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_document_templates_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "measurement_services"

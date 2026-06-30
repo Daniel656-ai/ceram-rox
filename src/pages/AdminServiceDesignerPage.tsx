@@ -25,11 +25,14 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Database, FormInput, Workflow, Zap,
-  FileText, Eye, History, Settings, GripVertical,
+  FileText, Eye, History, Settings, GripVertical, Layers,
 } from "lucide-react";
 import type { ServiceDataField, ServiceFieldType } from "@/lib/api/serviceDesigner";
 import FormDesignerTab from "@/components/ServiceDesigner/FormDesigner";
 import RulesDesigner from "@/components/ServiceDesigner/RulesDesigner";
+import DocumentsDesigner from "@/components/ServiceDesigner/DocumentsDesigner";
+import ServicePreview from "@/components/ServiceDesigner/ServicePreview";
+import BlockLibrary from "@/components/ServiceDesigner/BlockLibrary";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; label: string }[] }[] = [
   {
@@ -137,8 +140,9 @@ export default function AdminServiceDesignerPage() {
           <TabsTrigger value="form"><FormInput className="h-4 w-4 mr-1" />Formular</TabsTrigger>
           <TabsTrigger value="workflow" disabled><Workflow className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
           <TabsTrigger value="rules"><Zap className="h-4 w-4 mr-1" />Regeln</TabsTrigger>
-          <TabsTrigger value="docs" disabled><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
-          <TabsTrigger value="preview" disabled><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
+          <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
+          <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
+          <TabsTrigger value="blocks"><Layers className="h-4 w-4 mr-1" />Bausteine</TabsTrigger>
           <TabsTrigger value="versions" disabled><History className="h-4 w-4 mr-1" />Versionen</TabsTrigger>
         </TabsList>
 
@@ -156,6 +160,18 @@ export default function AdminServiceDesignerPage() {
 
         <TabsContent value="rules">
           <RulesDesigner serviceId={serviceId} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="docs">
+          <DocumentsDesigner serviceId={serviceId} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="preview">
+          <ServicePreview serviceId={serviceId} />
+        </TabsContent>
+
+        <TabsContent value="blocks">
+          <BlockLibrary canManage={canManage} />
         </TabsContent>
       </Tabs>
     </div>
