@@ -94,9 +94,11 @@ function slugify(s: string) {
 export default function AdminServiceDesignerPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
   const navigate = useNavigate();
-  const { hasPermission, isMaster } = usePermissions();
-  const canManage = isMaster || hasPermission("services.manage");
+  const { hasPermission } = usePermissions();
+  const { role } = useAuth();
+  const canManage = role === "master" || hasPermission("admin.system" as any);
   const qc = useQueryClient();
+
 
   const { data: service, isLoading } = useQuery({
     queryKey: ["service-designer", serviceId],
