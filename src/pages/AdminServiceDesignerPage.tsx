@@ -133,7 +133,7 @@ export default function AdminServiceDesignerPage() {
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="general"><Settings className="h-4 w-4 mr-1" />Allgemein</TabsTrigger>
           <TabsTrigger value="data"><Database className="h-4 w-4 mr-1" />Datenmodell</TabsTrigger>
-          <TabsTrigger value="form" disabled><FormInput className="h-4 w-4 mr-1" />Formular</TabsTrigger>
+          <TabsTrigger value="form"><FormInput className="h-4 w-4 mr-1" />Formular</TabsTrigger>
           <TabsTrigger value="workflow" disabled><Workflow className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
           <TabsTrigger value="rules" disabled><Zap className="h-4 w-4 mr-1" />Regeln</TabsTrigger>
           <TabsTrigger value="docs" disabled><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
@@ -147,6 +147,10 @@ export default function AdminServiceDesignerPage() {
 
         <TabsContent value="data">
           <DataModelTab serviceId={serviceId} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="form">
+          <FormDesignerTab serviceId={serviceId} canManage={canManage} />
         </TabsContent>
       </Tabs>
     </div>
