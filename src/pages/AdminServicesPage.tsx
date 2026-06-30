@@ -258,6 +258,18 @@ export default function AdminServicesPage() {
                 </TableCell>
 
                 <TableCell>
+                  <BookingFormStatusCell
+                    serviceId={s.id}
+                    onPreview={() => {
+                      setPreviewServiceId(s.id);
+                      setPreviewServiceName(s.service_name);
+                      setPreviewValues({});
+                    }}
+                  />
+                </TableCell>
+
+
+                <TableCell>
                   <div className="flex items-center gap-2">
                     <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} />
                     <span className="text-sm">{s.active ? t("admin:active") : t("admin:inactive")}</span>
