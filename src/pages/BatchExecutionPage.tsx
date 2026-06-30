@@ -220,23 +220,24 @@ export default function BatchExecutionPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {status === "geplant" && (
+          {canProduce && status === "geplant" && (
             <Button onClick={() => startBatch.mutate()}>
               <Play className="h-4 w-4 mr-2" /> Charge starten
             </Button>
           )}
-          {status === "laufend" && (
+          {canProduce && status === "laufend" && (
             <Button onClick={() => { setCQty(String(batch.produced_quantity ?? "")); setCOpen(true); }}>
               <CheckCircle2 className="h-4 w-4 mr-2" /> Abschließen
             </Button>
           )}
-          {status === "abgeschlossen" && (
+          {canProduce && status === "abgeschlossen" && (
             <Button onClick={submitRelease}>
               <ShieldCheck className="h-4 w-4 mr-2" /> Freigeben (4-Augen)
             </Button>
           )}
         </div>
       </div>
+
 
       <Tabs defaultValue="weighings">
         <TabsList>
