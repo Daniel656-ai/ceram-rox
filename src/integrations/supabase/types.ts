@@ -896,9 +896,14 @@ export type Database = {
         Row: {
           active: boolean
           category: Database["public"]["Enums"]["service_category"]
+          color: string | null
           created_at: string
+          department: string | null
+          description: string | null
           hourly_rate: number
+          icon: string | null
           id: string
+          price: number | null
           responsible_user_id: string | null
           service_name: string
           standard_duration_hours: number
@@ -908,9 +913,14 @@ export type Database = {
         Insert: {
           active?: boolean
           category: Database["public"]["Enums"]["service_category"]
+          color?: string | null
           created_at?: string
+          department?: string | null
+          description?: string | null
           hourly_rate?: number
+          icon?: string | null
           id?: string
+          price?: number | null
           responsible_user_id?: string | null
           service_name: string
           standard_duration_hours?: number
@@ -920,9 +930,14 @@ export type Database = {
         Update: {
           active?: boolean
           category?: Database["public"]["Enums"]["service_category"]
+          color?: string | null
           created_at?: string
+          department?: string | null
+          description?: string | null
           hourly_rate?: number
+          icon?: string | null
           id?: string
+          price?: number | null
           responsible_user_id?: string | null
           service_name?: string
           standard_duration_hours?: number
@@ -3546,6 +3561,102 @@ export type Database = {
           },
         ]
       }
+      service_data_fields: {
+        Row: {
+          archived: boolean
+          category: string | null
+          created_at: string
+          created_by: string | null
+          decimal_places: number | null
+          default_value: string | null
+          description: string | null
+          display_name: string
+          field_key: string
+          field_type: Database["public"]["Enums"]["service_field_type"]
+          id: string
+          is_required: boolean
+          legacy_parameter_id: string | null
+          max_value: number | null
+          min_value: number | null
+          parent_field_id: string | null
+          readonly: boolean
+          ref_target: string | null
+          select_options: Json
+          service_id: string
+          sort_order: number
+          unit: string | null
+          updated_at: string
+          validation: Json
+        }
+        Insert: {
+          archived?: boolean
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          decimal_places?: number | null
+          default_value?: string | null
+          description?: string | null
+          display_name: string
+          field_key: string
+          field_type?: Database["public"]["Enums"]["service_field_type"]
+          id?: string
+          is_required?: boolean
+          legacy_parameter_id?: string | null
+          max_value?: number | null
+          min_value?: number | null
+          parent_field_id?: string | null
+          readonly?: boolean
+          ref_target?: string | null
+          select_options?: Json
+          service_id: string
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+          validation?: Json
+        }
+        Update: {
+          archived?: boolean
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          decimal_places?: number | null
+          default_value?: string | null
+          description?: string | null
+          display_name?: string
+          field_key?: string
+          field_type?: Database["public"]["Enums"]["service_field_type"]
+          id?: string
+          is_required?: boolean
+          legacy_parameter_id?: string | null
+          max_value?: number | null
+          min_value?: number | null
+          parent_field_id?: string | null
+          readonly?: boolean
+          ref_target?: string | null
+          select_options?: Json
+          service_id?: string
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+          validation?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_data_fields_parent_field_id_fkey"
+            columns: ["parent_field_id"]
+            isOneToOne: false
+            referencedRelation: "service_data_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_data_fields_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_parameter_definitions: {
         Row: {
           conditional_on: string | null
@@ -4320,6 +4431,31 @@ export type Database = {
         | "entsorgt"
         | "zurueckgesendet"
       service_category: "labor" | "pilot_plant"
+      service_field_type:
+        | "text"
+        | "longtext"
+        | "number"
+        | "decimal"
+        | "percent"
+        | "date"
+        | "time"
+        | "datetime"
+        | "boolean"
+        | "select"
+        | "multiselect"
+        | "file"
+        | "image"
+        | "barcode"
+        | "qrcode"
+        | "ref_customer"
+        | "ref_material"
+        | "ref_product"
+        | "ref_machine"
+        | "ref_employee"
+        | "ref_location"
+        | "ref_batch"
+        | "ref_serial"
+        | "repeater"
       stakeholder_channel: "email" | "phone" | "meeting" | "portal" | "other"
       stakeholder_frequency:
         | "daily"
@@ -4555,6 +4691,32 @@ export const Constants = {
         "zurueckgesendet",
       ],
       service_category: ["labor", "pilot_plant"],
+      service_field_type: [
+        "text",
+        "longtext",
+        "number",
+        "decimal",
+        "percent",
+        "date",
+        "time",
+        "datetime",
+        "boolean",
+        "select",
+        "multiselect",
+        "file",
+        "image",
+        "barcode",
+        "qrcode",
+        "ref_customer",
+        "ref_material",
+        "ref_product",
+        "ref_machine",
+        "ref_employee",
+        "ref_location",
+        "ref_batch",
+        "ref_serial",
+        "repeater",
+      ],
       stakeholder_channel: ["email", "phone", "meeting", "portal", "other"],
       stakeholder_frequency: [
         "daily",
