@@ -298,12 +298,19 @@ function RoleDesigner({
       <div className={`grid gap-4 ${showPreview ? "lg:grid-cols-[260px_1fr_380px]" : "lg:grid-cols-[260px_1fr]"}`}>
         {/* Palette */}
         <Card className="h-fit sticky top-4">
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Datenfelder</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Datenfelder</CardTitle>
+            <p className="text-[11px] text-muted-foreground">
+              Per Drag &amp; Drop einfügen. Felder können mehrfach platziert werden – alle Instanzen teilen denselben Wert.
+            </p>
+          </CardHeader>
           <CardContent className="space-y-1.5 max-h-[70vh] overflow-y-auto">
             {palette.length === 0 && (
-              <p className="text-xs text-muted-foreground">Alle Felder werden bereits verwendet.</p>
+              <p className="text-xs text-muted-foreground">Noch keine Datenfelder im Datenmodell.</p>
             )}
-            {palette.map((f) => <PaletteItem key={f.id} field={f} disabled={!canManage} />)}
+            {palette.map((f) => (
+              <PaletteItem key={f.id} field={f} disabled={!canManage} usageCount={usageCount.get(f.id) ?? 0} />
+            ))}
           </CardContent>
         </Card>
 
