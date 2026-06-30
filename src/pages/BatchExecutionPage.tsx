@@ -183,7 +183,7 @@ export default function BatchExecutionPage() {
   };
 
   const status = batch.execution_status as string;
-  const canEdit = status === "geplant" || status === "laufend";
+  const canEdit = (status === "geplant" || status === "laufend") && canProduce;
 
   return (
     <div className="p-6 space-y-6">
