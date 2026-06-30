@@ -25,7 +25,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Database, FormInput, Workflow, Zap,
-  FileText, Eye, History, Settings, GripVertical, Layers,
+  FileText, Eye, History, Settings, GripVertical, Layers, Upload,
 } from "lucide-react";
 import type { ServiceDataField, ServiceFieldType } from "@/lib/api/serviceDesigner";
 import FormDesignerTab from "@/components/ServiceDesigner/FormDesigner";
@@ -34,6 +34,7 @@ import DocumentsDesigner from "@/components/ServiceDesigner/DocumentsDesigner";
 import ServicePreview from "@/components/ServiceDesigner/ServicePreview";
 import BlockLibrary from "@/components/ServiceDesigner/BlockLibrary";
 import VersionsDesigner from "@/components/ServiceDesigner/VersionsDesigner";
+import ImportFieldsDialog from "@/components/ServiceDesigner/ImportFieldsDialog";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; label: string }[] }[] = [
   {
@@ -280,6 +281,7 @@ function DataModelTab({ serviceId, canManage }: { serviceId: string; canManage: 
 
   const [editing, setEditing] = useState<ServiceDataField | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ServiceDataField | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -323,7 +325,10 @@ function DataModelTab({ serviceId, canManage }: { serviceId: string; canManage: 
               Archivierte zeigen
             </label>
             {canManage && (
-              <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" />Neues Feld</Button>
+              <>
+                <Button variant="outline" onClick={() => setImporting(true)}><Upload className="h-4 w-4 mr-1" />Excel/CSV-Import</Button>
+                <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" />Neues Feld</Button>
+              </>
             )}
           </div>
         </CardHeader>
@@ -401,6 +406,15 @@ function DataModelTab({ serviceId, canManage }: { serviceId: string; canManage: 
             qc.invalidateQueries({ queryKey: ["service-data-fields", serviceId] });
             setEditing(null); setCreating(false);
           }}
+        />
+      )}
+
+      {importing && (
+        <ImportFieldsDialog
+          serviceId={serviceId}
+          existingKeys={fields.map((f) => f.field_key)}
+          onClose={() => setImporting(false)}
+          onImported={() => qc.invalidateQueries({ queryKey: ["service-data-fields", serviceId] })}
         />
       )}
 
