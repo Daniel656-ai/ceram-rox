@@ -29,6 +29,11 @@ export const ALL_PERMISSIONS = [
   // Raw materials / consumables / mixtures
   "raw_materials.manage",
   "consumables.manage",
+  "mixtures.view",
+  "mixtures.create",
+  "mixtures.edit",
+  "mixtures.delete",
+  "mixtures.produce",
   // Admin
   "workstations.manage",
   "users.manage",
