@@ -25,11 +25,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   GripVertical, Plus, Trash2, ChevronDown, ChevronRight, Eye, Settings2,
-  Save, RotateCcw, LayoutGrid,
+  Save, RotateCcw, LayoutGrid, Repeat,
 } from "lucide-react";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import type {
-  FormFieldRef, FormLayoutData, FormRoleView, FormSection,
+  FormFieldRef, FormLayoutData, FormRoleView, FormSection, RepeatableConfig,
 } from "@/lib/api/serviceFormLayouts";
 
 const ROLE_TABS: { value: FormRoleView; label: string; hint: string }[] = [
@@ -441,9 +444,20 @@ function SectionBlock({
           </div>
         </div>
         {canManage && (
-          <Button size="icon" variant="ghost" onClick={onRemoveSection} className="h-7 w-7">
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <RepeatableConfigPopover
+              section={section}
+              onChange={(rep) => onChangeSection({ repeatable: rep })}
+            />
+            <Button size="icon" variant="ghost" onClick={onRemoveSection} className="h-7 w-7">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        )}
+        {!canManage && section.repeatable?.enabled && (
+          <Badge variant="outline" className="text-[10px] gap-1">
+            <Repeat className="h-3 w-3" /> Wiederholbar
+          </Badge>
         )}
       </CardHeader>
       {!collapsed && (
@@ -697,5 +711,82 @@ function PreviewField({ field, readonly }: { field: ServiceDataField; readonly: 
       {lbl}
       {control}
     </div>
+  );
+}
+
+// ============================ Repeatable config ============================
+
+function RepeatableConfigPopover({
+  section, onChange,
+}: { section: FormSection; onChange: (rep: RepeatableConfig | undefined) => void }) {
+  const rep = section.repeatable;
+  const enabled = !!rep?.enabled;
+  const patch = (p: Partial<RepeatableConfig>) =>
+    onChange({ enabled: true, min: 1, ...(rep ?? {}), ...p });
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button size="icon" variant="ghost" className={`h-7 w-7 ${enabled ? "text-primary" : ""}`} title="Wiederholbarer Bereich">
+          <Repeat className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 space-y-3" align="end">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Wiederholbarer Bereich</p>
+            <p className="text-[11px] text-muted-foreground">
+              Auftraggeber kann beliebig viele Einträge hinzufügen.
+            </p>
+          </div>
+          <Switch
+            checked={enabled}
+            onCheckedChange={(c) => onChange(c ? { enabled: true, min: 1, ...(rep ?? {}) } : undefined)}
+          />
+        </div>
+        {enabled && (
+          <div className="space-y-2">
+            <div>
+              <Label className="text-xs">Bezeichnung pro Eintrag</Label>
+              <Input
+                value={rep?.item_label ?? ""}
+                placeholder="z. B. Mundstück"
+                onChange={(e) => patch({ item_label: e.target.value })}
+                className="h-8"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Beschriftung Hinzufügen-Button</Label>
+              <Input
+                value={rep?.add_label ?? ""}
+                placeholder="z. B. Weiteres Mundstück hinzufügen"
+                onChange={(e) => patch({ add_label: e.target.value })}
+                className="h-8"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Min. Einträge</Label>
+                <Input
+                  type="number" min={0}
+                  value={rep?.min ?? 1}
+                  onChange={(e) => patch({ min: Math.max(0, Number(e.target.value) || 0) })}
+                  className="h-8"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Max. Einträge</Label>
+                <Input
+                  type="number" min={0}
+                  value={rep?.max ?? 0}
+                  onChange={(e) => patch({ max: Math.max(0, Number(e.target.value) || 0) })}
+                  placeholder="0 = unbegrenzt"
+                  className="h-8"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -333,8 +333,19 @@ export default function CreateOrderPage() {
         if (formVals && Object.keys(formVals).length > 0) {
           const fields = await api.serviceDataFields.listForService(m.service_id);
           const inserts = Object.entries(formVals)
-            .filter(([, v]) => v != null && String(v).trim() !== "")
+            .filter(([, v]) => v != null && !(typeof v === "string" && v.trim() === ""))
             .map(([key, v]) => {
+              // Repeatable sections store an array under "repeat:<sectionId>".
+              // Persist as a single JSON parameter so workflows/exports keep the full 1:n list.
+              if (key.startsWith("repeat:") && Array.isArray(v)) {
+                if (v.length === 0) return null;
+                return {
+                  order_measurement_id: createdMeasurement.id,
+                  parameter_name: key,
+                  parameter_value: JSON.stringify(v),
+                  unit: null as string | null,
+                };
+              }
               const f = fields.find((x: any) => x.field_key === key);
               return {
                 order_measurement_id: createdMeasurement.id,
@@ -342,7 +353,8 @@ export default function CreateOrderPage() {
                 parameter_value: typeof v === "boolean" ? (v ? "true" : "false") : String(v),
                 unit: f?.unit || null,
               };
-            });
+            })
+            .filter(Boolean) as Array<{ order_measurement_id: string; parameter_name: string; parameter_value: string; unit: string | null }>;
           if (inserts.length > 0) {
             await api.measurementParameters.bulkInsert(inserts);
           }
