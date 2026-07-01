@@ -60,6 +60,7 @@ import { downtimes } from "./downtimes";
 import { workSchedules } from "./workSchedules";
 import { syncSettings } from "./syncSettings";
 import { workPackages } from "./workPackages";
+import { workPackageDependencies } from "./workPackageDependencies";
 import {
   activityLog,
   notifications,
