@@ -229,14 +229,12 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
       {dateField}
       <div className="space-y-2">
         <Label>{t("time_person")} *</Label>
-        <Select value={form.person_id} onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}>
-          <SelectTrigger><SelectValue placeholder={t("time_select_person")} /></SelectTrigger>
-          <SelectContent>
-            {activeUsers.map((u: any) => (
-              <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <PersonSelect
+          value={form.person_id}
+          onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}
+          users={activeUsers as any[]}
+          placeholder={t("time_select_person")}
+        />
       </div>
       {durationField}
       {noteField}
