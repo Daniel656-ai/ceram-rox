@@ -36,7 +36,7 @@ function formatLocation(loc: any) {
 }
 
 type SubCategory = "all" | "eingang" | "in_bearbeitung" | "wartend" | "eingelagert" | "kritisch" | "gefahrstoff";
-type SortOption = "created_desc" | "created_asc" | "eta" | "priority" | "location" | "name";
+type SortOption = "created_desc" | "created_asc" | "eta" | "priority" | "location" | "name" | "tags_count_desc" | "tags_alpha";
 
 function getDaysUntilExpiry(expiryDate: string | null): number | null {
   if (!expiryDate) return null;
