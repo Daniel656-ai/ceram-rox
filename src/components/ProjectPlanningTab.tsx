@@ -447,6 +447,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                             projectId={projectId}
                             allWps={workPackages as any}
                             wpMilestones={wpMs as any}
+                            allProjectMilestones={allMilestones as any}
                             dependencies={dependencies as any}
                             canManage={canManage}
                             locale={locale}
