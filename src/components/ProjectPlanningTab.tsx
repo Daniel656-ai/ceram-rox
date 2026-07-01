@@ -352,26 +352,36 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8"></TableHead>
                 <TableHead>{t("wp_title")}</TableHead>
                 <TableHead>{t("wp_start_date")}</TableHead>
                 <TableHead>{t("wp_end_date")}</TableHead>
                 <TableHead>{t("wp_assignees")}</TableHead>
-                <TableHead>{t("wp_link_milestone")}</TableHead>
+                <TableHead>{t("wp_details")}</TableHead>
                 <TableHead>{t("milestone_status")}</TableHead>
                 {canManage && <TableHead className="w-24"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {wpLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8">{t("loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8">{t("loading")}</TableCell></TableRow>
               ) : workPackages.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("wp_none")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("wp_none")}</TableCell></TableRow>
               ) : (
                 workPackages.map((wp: any) => {
                   const Icon = STATUS_ICONS[wp.status] || Flag;
-                  const linkedMs = getMilestoneTitle(wp.milestone_id);
+                  const wpMs = (allMilestones as any[]).filter((m) => m.work_package_id === wp.id);
+                  const wpDeps = (dependencies as any[]).filter((d) => d.successor_id === wp.id);
+                  const isOpen = expandedWp === wp.id;
                   return (
+                    <>
                     <TableRow key={wp.id}>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={() => setExpandedWp(isOpen ? null : wp.id)}>
+                          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </Button>
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div>{wp.title}</div>
                         {wp.description && <div className="text-xs text-muted-foreground truncate max-w-xs">{wp.description}</div>}
@@ -390,7 +400,10 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                         )}
                       </TableCell>
                       <TableCell>
-                        {linkedMs ? <Badge variant="outline" className="gap-1"><Flag className="h-3 w-3" />{linkedMs}</Badge> : "–"}
+                        <div className="flex gap-1 flex-wrap">
+                          <Badge variant="outline" className="text-xs gap-1"><Flag className="h-3 w-3" />{wpMs.length}</Badge>
+                          <Badge variant="outline" className="text-xs gap-1"><Link2 className="h-3 w-3" />{wpDeps.length}</Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={STATUS_COLORS[wp.status] || ""}>
@@ -426,6 +439,22 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                         </TableCell>
                       )}
                     </TableRow>
+                    {isOpen && (
+                      <TableRow>
+                        <TableCell colSpan={canManage ? 8 : 7} className="p-0">
+                          <WorkPackageDetails
+                            wp={wp}
+                            projectId={projectId}
+                            allWps={workPackages as any}
+                            wpMilestones={wpMs as any}
+                            dependencies={dependencies as any}
+                            canManage={canManage}
+                            locale={locale}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </>
                   );
                 })
               )}
