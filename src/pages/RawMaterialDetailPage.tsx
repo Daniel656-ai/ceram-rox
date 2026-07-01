@@ -585,7 +585,7 @@ export default function RawMaterialDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base">LOT-Nummern ({batches.length})</CardTitle>
-              {canManage && (
+              {canManageBatches && (
                 <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
                   <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />LOT-Nummer</Button></DialogTrigger>
                   <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
