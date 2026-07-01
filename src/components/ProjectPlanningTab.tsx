@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { ProjectGanttChart } from "@/components/ProjectGanttChart";
 import { WorkPackageDetails } from "@/components/WorkPackageDetails";
 import { useWorkPackageDependencies } from "@/hooks/useWorkPackageDependencies";
+import { PersonSelect } from "@/components/PersonSelect";
 
 const STATUS_COLORS: Record<string, string> = {
   planned: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
@@ -327,19 +328,15 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                         </Badge>
                       ))}
                     </div>
-                    <Select value="" onValueChange={(v) => v && toggleAssignee(v)}>
-                      <SelectTrigger><SelectValue placeholder={t("wp_add_assignee")} /></SelectTrigger>
-                      <SelectContent>
-                        {activeUsers
-                          .filter((u: any) => !wpForm.assignee_ids.includes(u.user_id))
-                          .map((u: any) => (
-                            <SelectItem key={u.user_id} value={u.user_id}>
-                              {u.first_name} {u.last_name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <PersonSelect
+                      value=""
+                      onValueChange={(v) => v && toggleAssignee(v)}
+                      users={activeUsers as any[]}
+                      excludeIds={wpForm.assignee_ids}
+                      placeholder={t("wp_add_assignee")}
+                    />
                   </div>
+
                   <Button className="w-full" onClick={handleSaveWp} disabled={createWp.isPending || updateWp.isPending}>
                     {t("time_save")}
                   </Button>

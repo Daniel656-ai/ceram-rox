@@ -19,6 +19,7 @@ import {
   useProjectLessonsLearned, useLessonsLearnedMutations,
 } from "@/hooks/useProjectGovernance";
 import { toast } from "sonner";
+import { PersonSelect } from "@/components/PersonSelect";
 
 interface Props {
   projectId: string;
@@ -240,15 +241,13 @@ function DecisionsSection({ projectId, canEdit }: { projectId: string; canEdit: 
                   <div><Label>Datum</Label><Input type="date" value={form.decision_date} onChange={(e) => setForm({ ...form, decision_date: e.target.value })} /></div>
                   <div>
                     <Label>Entscheider</Label>
-                    <Select value={form.decided_by} onValueChange={(v) => setForm({ ...form, decided_by: v })}>
-                      <SelectTrigger><SelectValue placeholder="–" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">–</SelectItem>
-                        {(users as any[]).map((u: any) => (
-                          <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <PersonSelect
+                      value={form.decided_by}
+                      onValueChange={(v) => setForm({ ...form, decided_by: v || "__none__" })}
+                      users={users as any[]}
+                      allowClear
+                      clearLabel="–"
+                    />
                   </div>
                 </div>
                 <div><Label>Begründung</Label><Textarea value={form.rationale} onChange={(e) => setForm({ ...form, rationale: e.target.value })} /></div>
@@ -385,13 +384,13 @@ function StakeholdersSection({ projectId, canEdit }: { projectId: string; canEdi
                 </div>
                 <div>
                   <Label>Verantwortlich (intern)</Label>
-                  <Select value={form.responsible_user_id} onValueChange={(v) => setForm({ ...form, responsible_user_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="–" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">–</SelectItem>
-                      {(users as any[]).map((u: any) => <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <PersonSelect
+                    value={form.responsible_user_id}
+                    onValueChange={(v) => setForm({ ...form, responsible_user_id: v || "__none__" })}
+                    users={users as any[]}
+                    allowClear
+                    clearLabel="–"
+                  />
                 </div>
                 <div><Label>Notizen</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
               </div>

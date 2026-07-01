@@ -44,6 +44,7 @@ import { useAbsences, useCreateAbsence, useUpdateAbsence, useDeleteAbsence, type
 import { useDowntimes, useCreateDowntime, useUpdateDowntime, useDeleteDowntime, type WorkstationDowntime } from "@/hooks/useDowntimes";
 import { useWorkstations } from "@/hooks/useWorkstations";
 import { useUsers } from "@/hooks/useUsers";
+import { PersonSelect } from "@/components/PersonSelect";
 
 type ViewMode = "month" | "week" | "day";
 type EventFilter = "all" | "absences" | "downtimes";
@@ -628,16 +629,11 @@ export default function CalendarPage() {
             {isMaster && (
               <div>
                 <Label>{t("calendar:technician")}</Label>
-                <Select value={absForm.user_id || user?.id} onValueChange={(v) => setAbsForm((p) => ({ ...p, user_id: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {durchfuehrerUsers.map((u: any) => (
-                      <SelectItem key={u.user_id} value={u.user_id}>
-                        {u.first_name} {u.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <PersonSelect
+                  value={absForm.user_id || user?.id || ""}
+                  onValueChange={(v) => setAbsForm((p) => ({ ...p, user_id: v }))}
+                  users={durchfuehrerUsers as any[]}
+                />
               </div>
             )}
             <div>

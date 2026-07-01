@@ -28,6 +28,7 @@ import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, F
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PersonSelect } from "@/components/PersonSelect";
 import { SampleTraceability } from "@/components/SampleTraceability";
 import { Search } from "lucide-react";
 
@@ -241,14 +242,13 @@ export default function SampleDetailPage() {
               <DialogContent>
                 <DialogHeader><DialogTitle>{t("handover_to")}</DialogTitle></DialogHeader>
                 <div className="space-y-4">
-                  <Select value={handoverTo} onValueChange={setHandoverTo}>
-                    <SelectTrigger><SelectValue placeholder={t("select_user")} /></SelectTrigger>
-                    <SelectContent>
-                      {users.filter((u: any) => u.user_id !== user?.id && u.is_active).map((u: any) => (
-                        <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <PersonSelect
+                    value={handoverTo}
+                    onValueChange={setHandoverTo}
+                    users={users as any[]}
+                    excludeIds={user?.id ? [user.id] : []}
+                    placeholder={t("select_user")}
+                  />
                   <Textarea value={actionComment} onChange={e => setActionComment(e.target.value)} placeholder={t("comment_placeholder")} rows={2} />
                   <Button onClick={handleHandover} disabled={!handoverTo} className="w-full">{t("save")}</Button>
                 </div>

@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
+import { PersonSelect } from "@/components/PersonSelect";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
@@ -228,14 +229,12 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
       {dateField}
       <div className="space-y-2">
         <Label>{t("time_person")} *</Label>
-        <Select value={form.person_id} onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}>
-          <SelectTrigger><SelectValue placeholder={t("time_select_person")} /></SelectTrigger>
-          <SelectContent>
-            {activeUsers.map((u: any) => (
-              <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <PersonSelect
+          value={form.person_id}
+          onValueChange={(v) => setForm((f) => ({ ...f, person_id: v }))}
+          users={activeUsers as any[]}
+          placeholder={t("time_select_person")}
+        />
       </div>
       {durationField}
       {noteField}

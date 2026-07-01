@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import {
   CheckCircle2, ClipboardCheck, FileDown, Plus, Printer, Save, Sparkles, Trash2, Wand2,
 } from "lucide-react";
+import { PersonSelect } from "@/components/PersonSelect";
 
 interface Props {
   projectId: string;
@@ -679,19 +680,15 @@ export function ProjectClosureTab({ projectId, canEdit }: Props) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <Label>Projektleiter</Label>
-                <Select value={form.project_leader_id ?? "__none__"}
-                  onValueChange={(v) => set("project_leader_id", v === "__none__" ? null : v)}
-                  disabled={!canEdit || isApproved}>
-                  <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">– nicht zugewiesen –</SelectItem>
-                    {(users as any[]).map((u) => (
-                      <SelectItem key={u.user_id} value={u.user_id}>
-                        {`${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.user_id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <PersonSelect
+                  value={form.project_leader_id ?? ""}
+                  onValueChange={(v) => set("project_leader_id", v || null)}
+                  users={users as any[]}
+                  disabled={!canEdit || isApproved}
+                  allowClear
+                  clearLabel="– nicht zugewiesen –"
+                  placeholder="Auswählen"
+                />
                 <div className="text-xs text-muted-foreground mt-1">
                   Freigabe: {form.project_leader_signed_at ? new Date(form.project_leader_signed_at).toLocaleString("de-DE") : "noch nicht freigegeben"}
                 </div>

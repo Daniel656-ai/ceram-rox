@@ -25,6 +25,7 @@ import { PsaSymbolList } from "@/components/PsaSymbolList";
 import type { HazardClassKey } from "@/lib/hazardClasses";
 import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
+import { PersonSelect } from "@/components/PersonSelect";
 
 
 
@@ -212,17 +213,14 @@ export default function RawMaterialsPage() {
                     </div>
                     <div>
                       <Label>Verantwortlicher</Label>
-                      <Select value={responsibleUserId || "__none__"} onValueChange={(v) => setResponsibleUserId(v === "__none__" ? "" : v)}>
-                        <SelectTrigger><SelectValue placeholder="Verantwortlichen wählen" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
-                          {users?.filter((u: any) => u.is_active !== false).map((u: any) => (
-                            <SelectItem key={u.user_id} value={u.user_id}>
-                              {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || u.user_id}{u.short_code ? ` (${u.short_code})` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <PersonSelect
+                        value={responsibleUserId || ""}
+                        onValueChange={(v) => setResponsibleUserId(v)}
+                        users={users as any[]}
+                        allowClear
+                        clearLabel="Kein Verantwortlicher"
+                        placeholder="Verantwortlichen wählen"
+                      />
                     </div>
                     <div><Label>Bemerkung</Label><Textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={2} /></div>
 
