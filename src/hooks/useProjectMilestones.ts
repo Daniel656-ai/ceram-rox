@@ -21,6 +21,7 @@ export function useCreateMilestone() {
       milestone_date?: string;
       status?: string;
       created_by: string;
+      work_package_id?: string | null;
     }) => api.projectMilestones.create(milestone),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["project-milestones", vars.project_id] });
