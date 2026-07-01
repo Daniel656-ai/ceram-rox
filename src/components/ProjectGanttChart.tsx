@@ -127,6 +127,19 @@ export function ProjectGanttChart({ workPackages, milestones, dependencies = [],
   const MILESTONE_ROW_HEIGHT = 40;
   const totalHeight = HEADER_HEIGHT + sortedWps.length * ROW_HEIGHT + (milestonesWithDate.length > 0 ? MILESTONE_ROW_HEIGHT : 0);
 
+  const wpIndex = new Map(sortedWps.map((w, i) => [w.id, i]));
+  const wpPos = (id: string): { left: number; right: number; centerY: number } | null => {
+    const idx = wpIndex.get(id);
+    if (idx === undefined) return null;
+    const wp = sortedWps[idx];
+    if (!wp.start_date || !wp.end_date) return null;
+    const start = new Date(wp.start_date);
+    const end = new Date(wp.end_date);
+    const left = (dayDiff(start, rangeStart) / totalDays) * 100;
+    const width = Math.max(((dayDiff(end, start) + 1) / totalDays) * 100, 0.8);
+    return { left, right: left + width, centerY: HEADER_HEIGHT + idx * ROW_HEIGHT + ROW_HEIGHT / 2 };
+  };
+
   return (
     <Card>
       <CardHeader>
