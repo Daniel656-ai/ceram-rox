@@ -107,18 +107,34 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
       <CardContent className="space-y-4">
         {canManage && (
           <div className="flex items-end gap-3 p-4 rounded-lg border bg-muted/30">
-            <div className="flex-1 space-y-1">
+            <div className="flex-1 space-y-2">
               <label className="text-sm font-medium">{t("team_add_person")}</label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder={t("team_search_person")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger>
                   <SelectValue placeholder={t("team_select_person")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableUsers.map((u: any) => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {u.first_name} {u.last_name}
-                    </SelectItem>
-                  ))}
+                  {sortedFilteredUsers.length === 0 ? (
+                    <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                      {searchQuery ? t("team_no_search_results", { defaultValue: "Keine Personen gefunden" }) : t("team_select_person")}
+                    </div>
+                  ) : (
+                    sortedFilteredUsers.map((u: any) => (
+                      <SelectItem key={u.user_id} value={u.user_id}>
+                        {u.last_name}, {u.first_name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
