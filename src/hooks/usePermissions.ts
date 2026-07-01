@@ -119,6 +119,7 @@ export const NAV_TREE: NavTreeNode[] = [
   { key: "nav.samples" },
   { key: "nav.results_database" },
   { key: "nav.raw_materials" },
+  { key: "nav.mixtures" },
   { key: "nav.consumables" },
   { key: "nav.work_planning" },
   { key: "nav.lab_planning" },
