@@ -155,6 +155,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "orders.edit": { de: "Aufträge bearbeiten", en: "Edit orders" },
   "orders.delete": { de: "Aufträge löschen", en: "Delete orders" },
   "raw_materials.manage": { de: "Rohstoffe verwalten", en: "Manage raw materials" },
+  "raw_materials.batches.manage": { de: "LOT-Nummern & Gebinde anlegen/bearbeiten", en: "Create/edit LOTs & containers" },
   "consumables.manage": { de: "Verbrauchsmaterialien verwalten", en: "Manage consumables" },
   "mixtures.view": { de: "Knetungen & Lösungen anzeigen", en: "View kneadings & solutions" },
   "mixtures.create": { de: "Knetungen & Lösungen anlegen", en: "Create kneadings & solutions" },
