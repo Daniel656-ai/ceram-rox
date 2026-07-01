@@ -71,7 +71,7 @@ export default function AdminUsersPage() {
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
 
-  const openReset = (u: any) => { setResetUser(u); setResetPasswordValue(generateStrongPassword()); setResetDoneValue(null); };
+  const openReset = (u: any) => { setResetUser(u); setResetPasswordValue(""); setResetDoneValue(null); };
   const handleReset = async () => {
     if (!resetUser) return;
     if (!validatePassword(resetPasswordValue).valid) { toast.error(t("auth:policy_invalid")); return; }
