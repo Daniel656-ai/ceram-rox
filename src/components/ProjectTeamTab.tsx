@@ -125,9 +125,9 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   {sortedFilteredUsers.length === 0 ? (
-                    <div className="px-2 py-3 text-sm text-muted-foreground text-center">
+                    <SelectItem value="__none__" disabled>
                       {searchQuery ? t("team_no_search_results", { defaultValue: "Keine Personen gefunden" }) : t("team_select_person")}
-                    </div>
+                    </SelectItem>
                   ) : (
                     sortedFilteredUsers.map((u: any) => (
                       <SelectItem key={u.user_id} value={u.user_id}>
