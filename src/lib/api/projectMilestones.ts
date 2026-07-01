@@ -11,6 +11,15 @@ export const projectMilestones = {
         .order("milestone_date", { ascending: true, nullsFirst: false })
     ),
 
+  listByWorkPackage: (workPackageId: string) =>
+    unwrap(
+      dbClient
+        .from("project_milestones")
+        .select("*")
+        .eq("work_package_id", workPackageId)
+        .order("milestone_date", { ascending: true, nullsFirst: false })
+    ),
+
   create: (milestone: {
     project_id: string;
     title: string;
@@ -18,6 +27,7 @@ export const projectMilestones = {
     milestone_date?: string;
     status?: string;
     created_by: string;
+    work_package_id?: string | null;
   }) =>
     unwrap(
       dbClient
@@ -34,6 +44,7 @@ export const projectMilestones = {
       description?: string;
       milestone_date?: string | null;
       status?: string;
+      work_package_id?: string | null;
     }
   ) =>
     run(
