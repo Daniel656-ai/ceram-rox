@@ -64,9 +64,13 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
   const { user } = useAuth();
   const locale = i18n.language === "en" ? "en-GB" : "de-DE";
 
-  const { data: milestones = [], isLoading: msLoading } = useProjectMilestones(projectId);
+  const { data: allMilestones = [], isLoading: msLoading } = useProjectMilestones(projectId);
   const { data: workPackages = [], isLoading: wpLoading } = useWorkPackages(projectId);
+  const { data: dependencies = [] } = useWorkPackageDependencies(projectId);
   const { data: users = [] } = useUsers();
+
+  // Only project-level milestones (not attached to a work package) shown in the standalone card
+  const milestones = (allMilestones as any[]).filter((m) => !m.work_package_id);
 
   const createMilestone = useCreateMilestone();
   const updateMilestone = useUpdateMilestone();
