@@ -251,10 +251,19 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
 
   const activeUsers = (users as any[]).filter((u: any) => u.is_active);
 
+  const [expandedWp, setExpandedWp] = useState<string | null>(null);
+
   return (
     <div className="space-y-4">
       {/* Gantt chart */}
       <ProjectGanttChart
+        workPackages={workPackages}
+        milestones={allMilestones as any}
+        dependencies={dependencies as any}
+        projectStart={projectStart}
+        projectEnd={projectEnd}
+        users={users}
+      />
         workPackages={workPackages}
         milestones={milestones as any}
         projectStart={projectStart}
