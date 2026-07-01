@@ -41,27 +41,8 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
 
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedRole, setSelectedRole] = useState("member");
-  const [searchQuery, setSearchQuery] = useState("");
 
-  const memberUserIds = new Set((members as any[]).map((m: any) => m.user_id));
-  const availableUsers = (users as any[]).filter((u: any) => u.is_active && !memberUserIds.has(u.user_id));
-
-  const sortedFilteredUsers = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    let list = availableUsers.slice();
-    if (q) {
-      list = list.filter((u: any) =>
-        (u.first_name || "").toLowerCase().includes(q) ||
-        (u.last_name || "").toLowerCase().includes(q)
-      );
-    }
-    list.sort((a: any, b: any) => {
-      const ln = (a.last_name || "").localeCompare(b.last_name || "", "de");
-      if (ln !== 0) return ln;
-      return (a.first_name || "").localeCompare(b.first_name || "", "de");
-    });
-    return list;
-  }, [availableUsers, searchQuery]);
+  const memberUserIds = (members as any[]).map((m: any) => m.user_id);
 
   const getUserName = (userId: string) => {
     const u = (users as any[]).find((u: any) => u.user_id === userId);
@@ -75,7 +56,6 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
       toast.success(t("team_member_added"));
       setSelectedUserId("");
       setSelectedRole("member");
-      setSearchQuery("");
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -109,35 +89,14 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
           <div className="flex items-end gap-3 p-4 rounded-lg border bg-muted/30">
             <div className="flex-1 space-y-2">
               <label className="text-sm font-medium">{t("team_add_person")}</label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  type="text"
-                  placeholder={t("team_search_person")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("team_select_person")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortedFilteredUsers.length === 0 ? (
-                    <SelectItem value="__none__" disabled>
-                      {searchQuery ? t("team_no_search_results", { defaultValue: "Keine Personen gefunden" }) : t("team_select_person")}
-                    </SelectItem>
-                  ) : (
-                    sortedFilteredUsers.map((u: any) => (
-                      <SelectItem key={u.user_id} value={u.user_id}>
-                        {u.last_name}, {u.first_name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <PersonSelect
+                value={selectedUserId}
+                onValueChange={setSelectedUserId}
+                users={users as any[]}
+                excludeIds={memberUserIds}
+              />
             </div>
+
             <div className="space-y-1">
               <label className="text-sm font-medium">{t("team_role")}</label>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
