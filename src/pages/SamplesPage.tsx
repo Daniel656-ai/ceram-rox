@@ -872,6 +872,8 @@ export default function SamplesPage() {
                       <SelectItem value="name">{t("sort_name")}</SelectItem>
                       <SelectItem value="eta">{t("sort_eta")}</SelectItem>
                       <SelectItem value="location">{t("sort_location")}</SelectItem>
+                      <SelectItem value="tags_count_desc">{t("sort_tags_count_desc")}</SelectItem>
+                      <SelectItem value="tags_alpha">{t("sort_tags_alpha")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
