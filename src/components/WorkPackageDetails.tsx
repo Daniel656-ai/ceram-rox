@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -23,7 +23,7 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Plus, Trash2, Pencil, Flag, Check, X, Link2, ArrowRight } from "lucide-react";
+import { Plus, Trash2, Pencil, Flag, Check, X, Link2, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface WP {
