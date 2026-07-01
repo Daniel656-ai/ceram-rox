@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AlertTriangle, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { PersonSelect } from "@/components/PersonSelect";
 import { useUsers } from "@/hooks/useUsers";
 import {
   useHazardRecipients,
