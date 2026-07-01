@@ -44,6 +44,7 @@ import { useAbsences, useCreateAbsence, useUpdateAbsence, useDeleteAbsence, type
 import { useDowntimes, useCreateDowntime, useUpdateDowntime, useDeleteDowntime, type WorkstationDowntime } from "@/hooks/useDowntimes";
 import { useWorkstations } from "@/hooks/useWorkstations";
 import { useUsers } from "@/hooks/useUsers";
+import { PersonSelect } from "@/components/PersonSelect";
 
 type ViewMode = "month" | "week" | "day";
 type EventFilter = "all" | "absences" | "downtimes";
