@@ -185,6 +185,7 @@
   "team_person": "Person",
   "team_since": "Seit",
   "team_add": "Hinzufügen",
+  "team_no_search_results": "Keine Personen gefunden",
   "team_no_members": "Noch keine Teammitglieder zugewiesen",
   "team_member_added": "Teammitglied hinzugefügt",
   "team_member_removed": "Teammitglied entfernt",
