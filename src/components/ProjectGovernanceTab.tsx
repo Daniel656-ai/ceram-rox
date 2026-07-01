@@ -241,15 +241,13 @@ function DecisionsSection({ projectId, canEdit }: { projectId: string; canEdit: 
                   <div><Label>Datum</Label><Input type="date" value={form.decision_date} onChange={(e) => setForm({ ...form, decision_date: e.target.value })} /></div>
                   <div>
                     <Label>Entscheider</Label>
-                    <Select value={form.decided_by} onValueChange={(v) => setForm({ ...form, decided_by: v })}>
-                      <SelectTrigger><SelectValue placeholder="–" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">–</SelectItem>
-                        {(users as any[]).map((u: any) => (
-                          <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <PersonSelect
+                      value={form.decided_by}
+                      onValueChange={(v) => setForm({ ...form, decided_by: v || "__none__" })}
+                      users={users as any[]}
+                      allowClear
+                      clearLabel="–"
+                    />
                   </div>
                 </div>
                 <div><Label>Begründung</Label><Textarea value={form.rationale} onChange={(e) => setForm({ ...form, rationale: e.target.value })} /></div>
