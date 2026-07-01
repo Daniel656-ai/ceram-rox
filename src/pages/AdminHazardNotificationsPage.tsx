@@ -119,20 +119,12 @@ export default function AdminHazardNotificationsPage() {
               <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
                 <div>
                   <Label>Benutzer</Label>
-                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Benutzer wählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">— wählen —</SelectItem>
-                      {availableUsers.map((u: any) => (
-                        <SelectItem key={u.user_id} value={u.user_id}>
-                          {u.first_name} {u.last_name}
-                          {u.short_code ? ` (${u.short_code})` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <PersonSelect
+                    value={selectedUserId}
+                    onValueChange={setSelectedUserId}
+                    users={availableUsers as any[]}
+                    placeholder="Benutzer wählen"
+                  />
                 </div>
                 <div>
                   <Label>Rolle</Label>
