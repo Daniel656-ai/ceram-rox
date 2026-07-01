@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import {
   CheckCircle2, ClipboardCheck, FileDown, Plus, Printer, Save, Sparkles, Trash2, Wand2,
 } from "lucide-react";
+import { PersonSelect } from "@/components/PersonSelect";
 
 interface Props {
   projectId: string;
