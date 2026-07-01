@@ -655,7 +655,7 @@ export default function RawMaterialDetailPage() {
                   <TableHead>Feuchte (%)</TableHead>
                   <TableHead>pH-Wert</TableHead>
                   <TableHead>Gebinde</TableHead>
-                  {canManage && <TableHead />}
+                  {canManageBatches && <TableHead />}
                 </TableRow></TableHeader>
                 <TableBody>
                   {batches.length === 0 ? (
@@ -670,7 +670,7 @@ export default function RawMaterialDetailPage() {
                         <TableCell>{b.delivery_quantity != null ? `${b.delivery_quantity} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || "–"}</TableCell>
                         <TableCell>
-                          {canManage ? (
+                          {canManageBatches ? (
                             <Input
                               defaultValue={b.moisture_percent ?? ""}
                               type="number" step="0.1" min="0" max="100"
@@ -681,7 +681,7 @@ export default function RawMaterialDetailPage() {
                           ) : (b.moisture_percent != null ? `${b.moisture_percent} %` : "–")}
                         </TableCell>
                         <TableCell>
-                          {canManage ? (
+                          {canManageBatches ? (
                             <Input
                               defaultValue={b.ph_value ?? ""}
                               type="number" step="0.1" min="0" max="14"
@@ -692,7 +692,7 @@ export default function RawMaterialDetailPage() {
                           ) : (b.ph_value != null ? b.ph_value : "–")}
                         </TableCell>
                         <TableCell><Badge variant="secondary" className="text-xs">{batchContainers.length}</Badge></TableCell>
-                        {canManage && (
+                        {canManageBatches && (
                           <TableCell className="flex gap-1">
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteBatch.mutate({ id: b.id, raw_material_id: id! })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                           </TableCell>
