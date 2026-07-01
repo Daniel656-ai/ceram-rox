@@ -186,6 +186,8 @@
   "sort_priority": "Priorität",
   "sort_location": "Lagerort",
   "sort_name": "Name (A-Z)",
+  "sort_tags_count_desc": "Schlagwörter (meiste zuerst)",
+  "sort_tags_alpha": "Schlagwörter (A-Z)",
   "filter_tags": "Schlagworte",
   "filter_tags_placeholder": "Schlagwort eingeben...",
   "filter_active": "Filter aktiv",
