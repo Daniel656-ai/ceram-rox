@@ -39,6 +39,7 @@ export function useUpdateMilestone() {
       description?: string;
       milestone_date?: string | null;
       status?: string;
+      work_package_id?: string | null;
     }) => api.projectMilestones.update(id, updates),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["project-milestones", vars.projectId] });
