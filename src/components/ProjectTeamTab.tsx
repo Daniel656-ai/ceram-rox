@@ -5,11 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { UserPlus, Trash2, Crown, ShieldCheck, User } from "lucide-react";
-import { useState } from "react";
+import { UserPlus, Trash2, Crown, ShieldCheck, User, Search } from "lucide-react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 
 const ROLE_ICONS: Record<string, any> = {
