@@ -28,6 +28,7 @@ export const ALL_PERMISSIONS = [
   "orders.delete",
   // Raw materials / consumables / mixtures
   "raw_materials.manage",
+  "raw_materials.batches.manage",
   "consumables.manage",
   "mixtures.view",
   "mixtures.create",
