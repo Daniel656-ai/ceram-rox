@@ -57,7 +57,7 @@ function dayDiff(a: Date, b: Date) {
   return Math.round((a.getTime() - b.getTime()) / 86_400_000);
 }
 
-export function ProjectGanttChart({ workPackages, milestones, projectStart, projectEnd, users }: Props) {
+export function ProjectGanttChart({ workPackages, milestones, dependencies = [], projectStart, projectEnd, users }: Props) {
   const { t, i18n } = useTranslation("projects");
   const locale = i18n.language === "en" ? "en-GB" : "de-DE";
 
