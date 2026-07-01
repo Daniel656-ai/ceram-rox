@@ -84,18 +84,64 @@ export function WorkPackageDetails({
     return a.milestone_date.localeCompare(b.milestone_date);
   });
 
-  const addMs = async () => {
-    if (!msDraft.title.trim()) { toast.error(t("milestone_title_required")); return; }
+  // Suggestions: milestones from this project not already attached to this WP
+  const attachedIds = new Set(wpMilestones.map((m) => m.id));
+  const suggestions = useMemo(() => {
+    const q = msDraft.title.trim().toLowerCase();
+    return (allProjectMilestones || [])
+      .filter((m) => !attachedIds.has(m.id))
+      .filter((m) => (q ? m.title.toLowerCase().includes(q) : true))
+      .sort((a, b) => a.title.localeCompare(b.title, locale));
+  }, [allProjectMilestones, msDraft.title, wpMilestones, locale]);
+
+  const exactMatch = useMemo(() => {
+    const q = msDraft.title.trim().toLowerCase();
+    if (!q) return null;
+    return (allProjectMilestones || []).find((m) => m.title.trim().toLowerCase() === q) || null;
+  }, [allProjectMilestones, msDraft.title]);
+
+  const [showSuggest, setShowSuggest] = useState(false);
+  const suggestRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) setShowSuggest(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const attachExisting = async (m: MS) => {
     try {
-      await createMs.mutateAsync({
-        project_id: projectId,
-        title: msDraft.title.trim(),
-        milestone_date: msDraft.date || undefined,
-        work_package_id: wp.id,
-        created_by: user!.id,
-      });
+      await updateMs.mutateAsync({ id: m.id, projectId, work_package_id: wp.id });
       setMsDraft({ title: "", date: "" });
-      toast.success(t("milestone_created"));
+      setShowSuggest(false);
+      toast.success(t("milestone_updated"));
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const addMs = async () => {
+    const title = msDraft.title.trim();
+    if (!title) { toast.error(t("milestone_title_required")); return; }
+    try {
+      if (exactMatch) {
+        if (exactMatch.work_package_id === wp.id) {
+          toast.info(t("milestone_updated"));
+        } else {
+          await updateMs.mutateAsync({ id: exactMatch.id, projectId, work_package_id: wp.id });
+          toast.success(t("milestone_updated"));
+        }
+      } else {
+        await createMs.mutateAsync({
+          project_id: projectId,
+          title,
+          milestone_date: msDraft.date || undefined,
+          work_package_id: wp.id,
+          created_by: user!.id,
+        });
+        toast.success(t("milestone_created"));
+      }
+      setMsDraft({ title: "", date: "" });
+      setShowSuggest(false);
     } catch (e: any) { toast.error(e.message); }
   };
 
