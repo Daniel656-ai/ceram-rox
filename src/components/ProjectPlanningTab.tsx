@@ -328,19 +328,15 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                         </Badge>
                       ))}
                     </div>
-                    <Select value="" onValueChange={(v) => v && toggleAssignee(v)}>
-                      <SelectTrigger><SelectValue placeholder={t("wp_add_assignee")} /></SelectTrigger>
-                      <SelectContent>
-                        {activeUsers
-                          .filter((u: any) => !wpForm.assignee_ids.includes(u.user_id))
-                          .map((u: any) => (
-                            <SelectItem key={u.user_id} value={u.user_id}>
-                              {u.first_name} {u.last_name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <PersonSelect
+                      value=""
+                      onValueChange={(v) => v && toggleAssignee(v)}
+                      users={activeUsers as any[]}
+                      excludeIds={wpForm.assignee_ids}
+                      placeholder={t("wp_add_assignee")}
+                    />
                   </div>
+
                   <Button className="w-full" onClick={handleSaveWp} disabled={createWp.isPending || updateWp.isPending}>
                     {t("time_save")}
                   </Button>
