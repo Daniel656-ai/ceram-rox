@@ -186,6 +186,8 @@
   "sort_priority": "Priority",
   "sort_location": "Location",
   "sort_name": "Name (A-Z)",
+  "sort_tags_count_desc": "Tags (most first)",
+  "sort_tags_alpha": "Tags (A-Z)",
   "filter_tags": "Tags",
   "filter_tags_placeholder": "Enter tag...",
   "filter_active": "Filters active",
