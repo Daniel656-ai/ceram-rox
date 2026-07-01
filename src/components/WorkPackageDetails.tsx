@@ -48,6 +48,7 @@ export function WorkPackageDetails({
   projectId,
   allWps,
   wpMilestones,
+  allProjectMilestones = [],
   dependencies,
   canManage,
   locale,
@@ -56,6 +57,7 @@ export function WorkPackageDetails({
   projectId: string;
   allWps: WP[];
   wpMilestones: MS[];
+  allProjectMilestones?: MS[];
   dependencies: WorkPackageDependency[];
   canManage: boolean;
   locale: string;
