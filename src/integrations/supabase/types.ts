@@ -2571,6 +2571,7 @@ export type Database = {
           status: Database["public"]["Enums"]["milestone_status"]
           title: string
           updated_at: string
+          work_package_id: string | null
         }
         Insert: {
           created_at?: string
@@ -2582,6 +2583,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["milestone_status"]
           title: string
           updated_at?: string
+          work_package_id?: string | null
         }
         Update: {
           created_at?: string
@@ -2593,6 +2595,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["milestone_status"]
           title?: string
           updated_at?: string
+          work_package_id?: string | null
         }
         Relationships: [
           {
@@ -2600,6 +2603,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_milestones_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -2857,6 +2867,61 @@ export type Database = {
           {
             foreignKeyName: "project_work_package_assignees_work_package_id_fkey"
             columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "project_work_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_work_package_dependencies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dependency_type: Database["public"]["Enums"]["wp_dependency_type"]
+          id: string
+          lag_days: number
+          predecessor_id: string
+          project_id: string
+          successor_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dependency_type?: Database["public"]["Enums"]["wp_dependency_type"]
+          id?: string
+          lag_days?: number
+          predecessor_id: string
+          project_id: string
+          successor_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dependency_type?: Database["public"]["Enums"]["wp_dependency_type"]
+          id?: string
+          lag_days?: number
+          predecessor_id?: string
+          project_id?: string
+          successor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_work_package_dependencies_predecessor_id_fkey"
+            columns: ["predecessor_id"]
+            isOneToOne: false
+            referencedRelation: "project_work_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_work_package_dependencies_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_work_package_dependencies_successor_id_fkey"
+            columns: ["successor_id"]
             isOneToOne: false
             referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
@@ -4738,6 +4803,7 @@ export type Database = {
       step_time_mode: "relative" | "absolute" | "condition"
       task_status: "open" | "in_progress" | "completed"
       traffic_light_status: "green" | "yellow" | "red"
+      wp_dependency_type: "FS" | "FF" | "SS" | "SF"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5003,6 +5069,7 @@ export const Constants = {
       step_time_mode: ["relative", "absolute", "condition"],
       task_status: ["open", "in_progress", "completed"],
       traffic_light_status: ["green", "yellow", "red"],
+      wp_dependency_type: ["FS", "FF", "SS", "SF"],
     },
   },
 } as const
