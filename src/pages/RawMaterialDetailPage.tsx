@@ -744,13 +744,12 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="text-right font-mono text-sm">{Number(c.current_quantity).toFixed(2)} / {Number(c.initial_quantity).toFixed(2)} {c.unit}</TableCell>
                         <TableCell className="text-xs">{formatLocation(c.storage_locations)}{c.location_note ? ` (${c.location_note})` : ""}</TableCell>
                         <TableCell><Badge variant={statusVariant as any} className="text-xs">{statusLabel[c.status] || c.status}</Badge></TableCell>
-                        {canManage && (
+                        {(canManage || canManageBatches) && (
                           <TableCell className="flex gap-1">
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Bewegungen & Historie" onClick={() => setActionsContainer(c)}><HistoryIcon className="h-3.5 w-3.5" /></Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Etikett drucken" onClick={() => setLabelContainer(c)}><Tag className="h-3.5 w-3.5" /></Button>
-
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openContainerDialog(c)}><Pencil className="h-3.5 w-3.5" /></Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Gebinde ${c.container_code} löschen?`)) deleteContainer.mutate({ id: c.id, raw_material_id: id! }); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                            {canManage && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Bewegungen & Historie" onClick={() => setActionsContainer(c)}><HistoryIcon className="h-3.5 w-3.5" /></Button>}
+                            {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Etikett drucken" onClick={() => setLabelContainer(c)}><Tag className="h-3.5 w-3.5" /></Button>}
+                            {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openContainerDialog(c)}><Pencil className="h-3.5 w-3.5" /></Button>}
+                            {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Gebinde ${c.container_code} löschen?`)) deleteContainer.mutate({ id: c.id, raw_material_id: id! }); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
                           </TableCell>
                         )}
                       </TableRow>
