@@ -71,6 +71,7 @@ export default function RawMaterialDetailPage() {
 
   const { hasPermission } = usePermissions();
   const canManage = role === "master" || hasPermission("raw_materials.manage");
+  const canManageBatches = role === "master" || hasPermission("raw_materials.batches.manage");
   const stock = movements ? calculateStock(movements) : 0;
 
   // Edit material form
@@ -584,7 +585,7 @@ export default function RawMaterialDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base">LOT-Nummern ({batches.length})</CardTitle>
-              {canManage && (
+              {canManageBatches && (
                 <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
                   <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" />LOT-Nummer</Button></DialogTrigger>
                   <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -654,7 +655,7 @@ export default function RawMaterialDetailPage() {
                   <TableHead>Feuchte (%)</TableHead>
                   <TableHead>pH-Wert</TableHead>
                   <TableHead>Gebinde</TableHead>
-                  {canManage && <TableHead />}
+                  {canManageBatches && <TableHead />}
                 </TableRow></TableHeader>
                 <TableBody>
                   {batches.length === 0 ? (
@@ -669,7 +670,7 @@ export default function RawMaterialDetailPage() {
                         <TableCell>{b.delivery_quantity != null ? `${b.delivery_quantity} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || "–"}</TableCell>
                         <TableCell>
-                          {canManage ? (
+                          {canManageBatches ? (
                             <Input
                               defaultValue={b.moisture_percent ?? ""}
                               type="number" step="0.1" min="0" max="100"
@@ -680,7 +681,7 @@ export default function RawMaterialDetailPage() {
                           ) : (b.moisture_percent != null ? `${b.moisture_percent} %` : "–")}
                         </TableCell>
                         <TableCell>
-                          {canManage ? (
+                          {canManageBatches ? (
                             <Input
                               defaultValue={b.ph_value ?? ""}
                               type="number" step="0.1" min="0" max="14"
@@ -691,7 +692,7 @@ export default function RawMaterialDetailPage() {
                           ) : (b.ph_value != null ? b.ph_value : "–")}
                         </TableCell>
                         <TableCell><Badge variant="secondary" className="text-xs">{batchContainers.length}</Badge></TableCell>
-                        {canManage && (
+                        {canManageBatches && (
                           <TableCell className="flex gap-1">
                             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteBatch.mutate({ id: b.id, raw_material_id: id! })}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                           </TableCell>
@@ -711,7 +712,7 @@ export default function RawMaterialDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base">Gebinde ({containers?.length || 0})</CardTitle>
-              {canManage && (
+              {canManageBatches && (
                 <Button size="sm" onClick={() => openContainerDialog()}><Plus className="h-4 w-4 mr-1" />Gebinde</Button>
               )}
             </CardHeader>
@@ -725,7 +726,7 @@ export default function RawMaterialDetailPage() {
                   <TableHead className="text-right">Bestand</TableHead>
                   <TableHead>Lagerort</TableHead>
                   <TableHead>Status</TableHead>
-                  {canManage && <TableHead />}
+                  {(canManage || canManageBatches) && <TableHead />}
                 </TableRow></TableHeader>
                 <TableBody>
                   {!containers || containers.length === 0 ? (
@@ -743,13 +744,12 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="text-right font-mono text-sm">{Number(c.current_quantity).toFixed(2)} / {Number(c.initial_quantity).toFixed(2)} {c.unit}</TableCell>
                         <TableCell className="text-xs">{formatLocation(c.storage_locations)}{c.location_note ? ` (${c.location_note})` : ""}</TableCell>
                         <TableCell><Badge variant={statusVariant as any} className="text-xs">{statusLabel[c.status] || c.status}</Badge></TableCell>
-                        {canManage && (
+                        {(canManage || canManageBatches) && (
                           <TableCell className="flex gap-1">
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Bewegungen & Historie" onClick={() => setActionsContainer(c)}><HistoryIcon className="h-3.5 w-3.5" /></Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Etikett drucken" onClick={() => setLabelContainer(c)}><Tag className="h-3.5 w-3.5" /></Button>
-
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openContainerDialog(c)}><Pencil className="h-3.5 w-3.5" /></Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Gebinde ${c.container_code} löschen?`)) deleteContainer.mutate({ id: c.id, raw_material_id: id! }); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                            {canManage && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Bewegungen & Historie" onClick={() => setActionsContainer(c)}><HistoryIcon className="h-3.5 w-3.5" /></Button>}
+                            {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Etikett drucken" onClick={() => setLabelContainer(c)}><Tag className="h-3.5 w-3.5" /></Button>}
+                            {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openContainerDialog(c)}><Pencil className="h-3.5 w-3.5" /></Button>}
+                            {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Gebinde ${c.container_code} löschen?`)) deleteContainer.mutate({ id: c.id, raw_material_id: id! }); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
                           </TableCell>
                         )}
                       </TableRow>
