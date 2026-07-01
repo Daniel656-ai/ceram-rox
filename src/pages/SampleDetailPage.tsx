@@ -28,6 +28,7 @@ import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, F
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PersonSelect } from "@/components/PersonSelect";
 import { SampleTraceability } from "@/components/SampleTraceability";
 import { Search } from "lucide-react";
 
