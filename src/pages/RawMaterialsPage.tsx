@@ -25,6 +25,7 @@ import { PsaSymbolList } from "@/components/PsaSymbolList";
 import type { HazardClassKey } from "@/lib/hazardClasses";
 import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
+import { PersonSelect } from "@/components/PersonSelect";
 
 
 
