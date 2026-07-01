@@ -31,6 +31,7 @@ import { DerivedSamples } from "@/components/DerivedSamples";
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import { PrintLabelDialog } from "@/components/labels/PrintLabelDialog";
 import { History as HistoryIcon, Tag } from "lucide-react";
+import { PersonSelect } from "@/components/PersonSelect";
 
 
 
