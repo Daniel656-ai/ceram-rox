@@ -309,6 +309,34 @@ export function ProjectGanttChart({ workPackages, milestones, dependencies = [],
                     })}
                   </div>
                 )}
+
+                {/* Dependency arrows */}
+                {dependencies.length > 0 && (
+                  <svg
+                    className="absolute inset-0 w-full pointer-events-none z-10"
+                    style={{ height: totalHeight }}
+                    preserveAspectRatio="none"
+                  >
+                    <defs>
+                      <marker id="wp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" className="fill-primary/70" />
+                      </marker>
+                    </defs>
+                    {dependencies.map((d) => {
+                      const p = wpPos(d.predecessor_id);
+                      const s = wpPos(d.successor_id);
+                      if (!p || !s) return null;
+                      // Anchor points based on type
+                      const fromX = d.dependency_type === "SS" || d.dependency_type === "SF" ? p.left : p.right;
+                      const toX = d.dependency_type === "FF" || d.dependency_type === "SF" ? s.right : s.left;
+                      const midY = (p.centerY + s.centerY) / 2;
+                      const path = `M ${fromX}% ${p.centerY} L ${fromX}% ${midY} L ${toX}% ${midY} L ${toX}% ${s.centerY}`;
+                      return (
+                        <path key={d.id} d={path} className="stroke-primary/60" strokeWidth="1.5" fill="none" markerEnd="url(#wp-arrow)" />
+                      );
+                    })}
+                  </svg>
+                )}
               </div>
             </div>
           </div>
