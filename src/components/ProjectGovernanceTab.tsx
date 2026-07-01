@@ -19,6 +19,7 @@ import {
   useProjectLessonsLearned, useLessonsLearnedMutations,
 } from "@/hooks/useProjectGovernance";
 import { toast } from "sonner";
+import { PersonSelect } from "@/components/PersonSelect";
 
 interface Props {
   projectId: string;
