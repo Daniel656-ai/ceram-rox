@@ -41,9 +41,27 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
 
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedRole, setSelectedRole] = useState("member");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const memberUserIds = new Set((members as any[]).map((m: any) => m.user_id));
   const availableUsers = (users as any[]).filter((u: any) => u.is_active && !memberUserIds.has(u.user_id));
+
+  const sortedFilteredUsers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    let list = availableUsers.slice();
+    if (q) {
+      list = list.filter((u: any) =>
+        (u.first_name || "").toLowerCase().includes(q) ||
+        (u.last_name || "").toLowerCase().includes(q)
+      );
+    }
+    list.sort((a: any, b: any) => {
+      const ln = (a.last_name || "").localeCompare(b.last_name || "", "de");
+      if (ln !== 0) return ln;
+      return (a.first_name || "").localeCompare(b.first_name || "", "de");
+    });
+    return list;
+  }, [availableUsers, searchQuery]);
 
   const getUserName = (userId: string) => {
     const u = (users as any[]).find((u: any) => u.user_id === userId);
