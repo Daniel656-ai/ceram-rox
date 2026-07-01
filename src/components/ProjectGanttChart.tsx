@@ -13,9 +13,18 @@ interface Milestone {
   status: "planned" | "in_progress" | "completed";
 }
 
+interface Dependency {
+  id: string;
+  predecessor_id: string;
+  successor_id: string;
+  dependency_type: "FS" | "FF" | "SS" | "SF";
+  lag_days: number;
+}
+
 interface Props {
   workPackages: WorkPackage[];
   milestones: Milestone[];
+  dependencies?: Dependency[];
   projectStart?: string | null;
   projectEnd?: string | null;
   users: any[];
