@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -23,7 +23,7 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Plus, Trash2, Pencil, Flag, Check, X, Link2, ArrowRight } from "lucide-react";
+import { Plus, Trash2, Pencil, Flag, Check, X, Link2, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface WP {
@@ -48,6 +48,7 @@ export function WorkPackageDetails({
   projectId,
   allWps,
   wpMilestones,
+  allProjectMilestones = [],
   dependencies,
   canManage,
   locale,
@@ -56,6 +57,7 @@ export function WorkPackageDetails({
   projectId: string;
   allWps: WP[];
   wpMilestones: MS[];
+  allProjectMilestones?: MS[];
   dependencies: WorkPackageDependency[];
   canManage: boolean;
   locale: string;
@@ -82,18 +84,64 @@ export function WorkPackageDetails({
     return a.milestone_date.localeCompare(b.milestone_date);
   });
 
-  const addMs = async () => {
-    if (!msDraft.title.trim()) { toast.error(t("milestone_title_required")); return; }
+  // Suggestions: milestones from this project not already attached to this WP
+  const attachedIds = new Set(wpMilestones.map((m) => m.id));
+  const suggestions = useMemo(() => {
+    const q = msDraft.title.trim().toLowerCase();
+    return (allProjectMilestones || [])
+      .filter((m) => !attachedIds.has(m.id))
+      .filter((m) => (q ? m.title.toLowerCase().includes(q) : true))
+      .sort((a, b) => a.title.localeCompare(b.title, locale));
+  }, [allProjectMilestones, msDraft.title, wpMilestones, locale]);
+
+  const exactMatch = useMemo(() => {
+    const q = msDraft.title.trim().toLowerCase();
+    if (!q) return null;
+    return (allProjectMilestones || []).find((m) => m.title.trim().toLowerCase() === q) || null;
+  }, [allProjectMilestones, msDraft.title]);
+
+  const [showSuggest, setShowSuggest] = useState(false);
+  const suggestRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) setShowSuggest(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const attachExisting = async (m: MS) => {
     try {
-      await createMs.mutateAsync({
-        project_id: projectId,
-        title: msDraft.title.trim(),
-        milestone_date: msDraft.date || undefined,
-        work_package_id: wp.id,
-        created_by: user!.id,
-      });
+      await updateMs.mutateAsync({ id: m.id, projectId, work_package_id: wp.id });
       setMsDraft({ title: "", date: "" });
-      toast.success(t("milestone_created"));
+      setShowSuggest(false);
+      toast.success(t("milestone_updated"));
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const addMs = async () => {
+    const title = msDraft.title.trim();
+    if (!title) { toast.error(t("milestone_title_required")); return; }
+    try {
+      if (exactMatch) {
+        if (exactMatch.work_package_id === wp.id) {
+          toast.info(t("milestone_updated"));
+        } else {
+          await updateMs.mutateAsync({ id: exactMatch.id, projectId, work_package_id: wp.id });
+          toast.success(t("milestone_updated"));
+        }
+      } else {
+        await createMs.mutateAsync({
+          project_id: projectId,
+          title,
+          milestone_date: msDraft.date || undefined,
+          work_package_id: wp.id,
+          created_by: user!.id,
+        });
+        toast.success(t("milestone_created"));
+      }
+      setMsDraft({ title: "", date: "" });
+      setShowSuggest(false);
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -194,10 +242,49 @@ export function WorkPackageDetails({
           ))}
         </ul>
         {canManage && (
-          <div className="flex items-center gap-2 pt-1">
-            <Input className="h-8 flex-1" placeholder={t("milestone_title")} value={msDraft.title} onChange={(e) => setMsDraft((d) => ({ ...d, title: e.target.value }))} />
+          <div className="flex items-center gap-2 pt-1" ref={suggestRef}>
+            <div className="relative flex-1">
+              <Input
+                className="h-8"
+                placeholder={t("milestone_title")}
+                value={msDraft.title}
+                onChange={(e) => { setMsDraft((d) => ({ ...d, title: e.target.value })); setShowSuggest(true); }}
+                onFocus={() => setShowSuggest(true)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMs(); } }}
+              />
+              {showSuggest && (suggestions.length > 0 || (msDraft.title.trim() && !exactMatch)) && (
+                <div className="absolute z-50 mt-1 left-0 right-0 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md">
+                  {suggestions.map((m) => (
+                    <button
+                      type="button"
+                      key={m.id}
+                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent"
+                      onClick={() => attachExisting(m)}
+                    >
+                      <Flag className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="flex-1 truncate">{m.title}</span>
+                      {m.milestone_date && (
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(m.milestone_date).toLocaleDateString(locale)}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  {msDraft.title.trim() && !exactMatch && (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent border-t"
+                      onClick={addMs}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="truncate">{t("wp_milestone_create_new", { title: msDraft.title.trim(), defaultValue: `„{{title}}" neu anlegen` })}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             <Input className="h-8 w-36" type="date" value={msDraft.date} onChange={(e) => setMsDraft((d) => ({ ...d, date: e.target.value }))} />
-            <Button size="sm" variant="secondary" onClick={addMs} disabled={createMs.isPending}>
+            <Button size="sm" variant="secondary" onClick={addMs} disabled={createMs.isPending || updateMs.isPending || !msDraft.title.trim()}>
               <Plus className="h-3.5 w-3.5 mr-1" />{t("wp_milestone_add")}
             </Button>
           </div>
