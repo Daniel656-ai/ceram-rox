@@ -726,7 +726,7 @@ export default function RawMaterialDetailPage() {
                   <TableHead className="text-right">Bestand</TableHead>
                   <TableHead>Lagerort</TableHead>
                   <TableHead>Status</TableHead>
-                  {canManage && <TableHead />}
+                  {(canManage || canManageBatches) && <TableHead />}
                 </TableRow></TableHeader>
                 <TableBody>
                   {!containers || containers.length === 0 ? (
