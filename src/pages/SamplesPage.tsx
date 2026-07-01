@@ -227,6 +227,24 @@ export default function SamplesPage() {
           const etaB = etaMap.get(b.id)?.getTime() || Infinity;
           return etaA - etaB;
         }
+        case "tags_count_desc": {
+          const ta: string[] = Array.isArray(a.tags) ? a.tags : [];
+          const tb: string[] = Array.isArray(b.tags) ? b.tags : [];
+          if (tb.length !== ta.length) return tb.length - ta.length;
+          const fa = [...ta].sort()[0] || "";
+          const fb = [...tb].sort()[0] || "";
+          return fa.localeCompare(fb);
+        }
+        case "tags_alpha": {
+          const ta: string[] = Array.isArray(a.tags) ? a.tags : [];
+          const tb: string[] = Array.isArray(b.tags) ? b.tags : [];
+          const fa = [...ta].sort()[0] || "";
+          const fb = [...tb].sort()[0] || "";
+          if (!fa && !fb) return 0;
+          if (!fa) return 1;
+          if (!fb) return -1;
+          return fa.localeCompare(fb);
+        }
         default: return 0;
       }
     });
