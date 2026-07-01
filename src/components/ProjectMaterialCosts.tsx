@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, Package, Gem } from "lucide-react";
 import { toast } from "sonner";
+import { formatQuantity } from "@/lib/formatQuantity";
 
 interface Props {
   projectId: string;
@@ -131,7 +132,7 @@ export function ProjectMaterialCosts({ projectId, knetungMeasurements = [] }: Pr
                 </div>
                 <div>
                   <Label>{t("quantity")}{selectedConsumable ? ` (${selectedConsumable.unit})` : ""}</Label>
-                  <Input type="number" step="0.01" min="0" value={conForm.quantity} onChange={e => setConForm(f => ({ ...f, quantity: e.target.value }))} />
+                  <Input type="number" step="0.001" min="0" value={conForm.quantity} onChange={e => setConForm(f => ({ ...f, quantity: e.target.value }))} />
                   {selectedConsumable && conForm.quantity && (
                     <p className="text-sm text-muted-foreground mt-1">
                       = {(Number(conForm.quantity) * Number(selectedConsumable.price_per_unit)).toFixed(2)} €
@@ -166,7 +167,7 @@ export function ProjectMaterialCosts({ projectId, knetungMeasurements = [] }: Pr
                 (projectConsumables as any[]).map((pc: any) => (
                   <TableRow key={pc.id}>
                     <TableCell className="font-medium">{pc.consumables?.name || "–"}</TableCell>
-                    <TableCell className="text-right">{Number(pc.quantity).toFixed(2)} {pc.consumables?.unit || ""}</TableCell>
+                    <TableCell className="text-right">{formatQuantity(pc.quantity)} {pc.consumables?.unit || ""}</TableCell>
                     <TableCell className="text-right">{Number(pc.unit_price).toFixed(2)} €</TableCell>
                     <TableCell className="text-right font-medium">{Number(pc.total_cost).toFixed(2)} €</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{pc.comment || "–"}</TableCell>
@@ -225,7 +226,7 @@ export function ProjectMaterialCosts({ projectId, knetungMeasurements = [] }: Pr
                 )}
                 <div>
                   <Label>{t("quantity_kg")}</Label>
-                  <Input type="number" step="0.01" min="0" value={knForm.quantity_kg} onChange={e => setKnForm(f => ({ ...f, quantity_kg: e.target.value }))} />
+                  <Input type="number" step="0.001" min="0" value={knForm.quantity_kg} onChange={e => setKnForm(f => ({ ...f, quantity_kg: e.target.value }))} />
                   {selectedRawMaterial && knForm.quantity_kg && (
                     <p className="text-sm text-muted-foreground mt-1">
                       = {(Number(knForm.quantity_kg) * Number((selectedRawMaterial as any).price_per_kg || 0)).toFixed(2)} €
@@ -260,7 +261,7 @@ export function ProjectMaterialCosts({ projectId, knetungMeasurements = [] }: Pr
                 (projectKnetung as any[]).map((pk: any) => (
                   <TableRow key={pk.id}>
                     <TableCell className="font-medium">{pk.raw_materials?.material_name || "–"}</TableCell>
-                    <TableCell className="text-right">{Number(pk.quantity_kg).toFixed(2)} kg</TableCell>
+                    <TableCell className="text-right">{formatQuantity(pk.quantity_kg)} kg</TableCell>
                     <TableCell className="text-right">{Number(pk.price_per_kg).toFixed(2)} €</TableCell>
                     <TableCell className="text-right font-medium">{Number(pk.total_cost).toFixed(2)} €</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{pk.comment || "–"}</TableCell>
