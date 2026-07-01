@@ -712,7 +712,7 @@ export default function RawMaterialDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base">Gebinde ({containers?.length || 0})</CardTitle>
-              {canManage && (
+              {canManageBatches && (
                 <Button size="sm" onClick={() => openContainerDialog()}><Plus className="h-4 w-4 mr-1" />Gebinde</Button>
               )}
             </CardHeader>
