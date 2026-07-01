@@ -32,9 +32,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Pencil, Flag, Target, CheckCircle2, Package2, X } from "lucide-react";
+import { Plus, Trash2, Pencil, Flag, Target, CheckCircle2, Package2, X, ChevronDown, ChevronRight, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { ProjectGanttChart } from "@/components/ProjectGanttChart";
+import { WorkPackageDetails } from "@/components/WorkPackageDetails";
+import { useWorkPackageDependencies } from "@/hooks/useWorkPackageDependencies";
 
 const STATUS_COLORS: Record<string, string> = {
   planned: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
