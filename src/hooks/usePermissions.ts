@@ -66,6 +66,7 @@ export const NAV_PERMISSIONS = [
   "nav.samples",
   "nav.results_database",
   "nav.raw_materials",
+  "nav.mixtures",
   "nav.consumables",
   "nav.work_planning",
   "nav.lab_planning",
