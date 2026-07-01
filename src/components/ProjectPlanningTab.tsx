@@ -374,8 +374,8 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                   const wpDeps = (dependencies as any[]).filter((d) => d.successor_id === wp.id);
                   const isOpen = expandedWp === wp.id;
                   return (
-                    <>
-                    <TableRow key={wp.id}>
+                    <Fragment key={wp.id}>
+                    <TableRow>
                       <TableCell>
                         <Button variant="ghost" size="icon" className="h-7 w-7"
                           onClick={() => setExpandedWp(isOpen ? null : wp.id)}>
