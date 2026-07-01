@@ -264,12 +264,6 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
         projectEnd={projectEnd}
         users={users}
       />
-        workPackages={workPackages}
-        milestones={milestones as any}
-        projectStart={projectStart}
-        projectEnd={projectEnd}
-        users={users}
-      />
 
       {/* Work packages */}
       <Card>
