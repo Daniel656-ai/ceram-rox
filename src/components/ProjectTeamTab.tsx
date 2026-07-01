@@ -75,6 +75,7 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
       toast.success(t("team_member_added"));
       setSelectedUserId("");
       setSelectedRole("member");
+      setSearchQuery("");
     } catch (e: any) {
       toast.error(e.message);
     }
