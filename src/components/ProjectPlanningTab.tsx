@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { ProjectGanttChart } from "@/components/ProjectGanttChart";
 import { WorkPackageDetails } from "@/components/WorkPackageDetails";
 import { useWorkPackageDependencies } from "@/hooks/useWorkPackageDependencies";
+import { PersonSelect } from "@/components/PersonSelect";
 
 const STATUS_COLORS: Record<string, string> = {
   planned: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
