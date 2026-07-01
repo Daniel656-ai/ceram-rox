@@ -33,6 +33,7 @@ import { CreateSampleFromBatchDialog } from "@/components/CreateSampleFromBatchD
 import { LinkSampleToBatchDialog } from "@/components/LinkSampleToBatchDialog";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { formatQuantity } from "@/lib/formatQuantity";
 
 type FilterKey = "all" | "raw" | "mixture";
 
@@ -156,7 +157,7 @@ export function ChargenView() {
                       : "–"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {b.quantity != null ? `${Number(b.quantity).toLocaleString("de-DE")} ${b.unit ?? ""}` : "–"}
+                    {b.quantity != null ? `${formatQuantity(b.quantity)} ${b.unit ?? ""}` : "–"}
                   </TableCell>
                   <TableCell>
                     {b.expiry_date

@@ -26,6 +26,7 @@ import type { HazardClassKey } from "@/lib/hazardClasses";
 import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
 import { PersonSelect } from "@/components/PersonSelect";
+import { formatQuantity } from "@/lib/formatQuantity";
 
 
 
@@ -326,7 +327,7 @@ export default function RawMaterialsPage() {
                           {psa.length > 0 && <PsaSymbolList psaSymbols={psa} size="sm" max={5} />}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{stock.toFixed(2)}</Badge></TableCell>
+                      <TableCell className="text-right font-mono"><Badge variant={stock <= 0 ? "destructive" : "secondary"}>{formatQuantity(stock)}</Badge></TableCell>
                       <TableCell className="text-right text-muted-foreground">{m.unit}</TableCell>
                       {canManage && (
                         <TableCell className="text-right">

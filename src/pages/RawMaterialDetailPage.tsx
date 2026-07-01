@@ -28,6 +28,7 @@ import { PsaSymbolSelector } from "@/components/PsaSymbolSelector";
 import { PsaSymbolList } from "@/components/PsaSymbolList";
 import { normalizeHazardClasses, type HazardClassKey } from "@/lib/hazardClasses";
 import { DerivedSamples } from "@/components/DerivedSamples";
+import { formatQuantity } from "@/lib/formatQuantity";
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import { PrintLabelDialog } from "@/components/labels/PrintLabelDialog";
 import { History as HistoryIcon, Tag } from "lucide-react";
@@ -478,7 +479,7 @@ export default function RawMaterialDetailPage() {
             </AlertDialog>
           </>
         )}
-        <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{stock.toFixed(2)} {mat.unit}</Badge>
+        <Badge variant={stock <= 0 ? "destructive" : "secondary"} className="text-lg px-3 py-1">{formatQuantity(stock)} {mat.unit}</Badge>
       </div>
 
       {/* Hazard warning banner */}
@@ -739,7 +740,7 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="font-mono text-xs text-muted-foreground">{c.barcode || "–"}</TableCell>
                         <TableCell className="text-xs">{c.raw_material_batches?.batch_number || "–"}</TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{kindLabel[c.kind] || c.kind}</Badge></TableCell>
-                        <TableCell className="text-right font-mono text-sm">{Number(c.current_quantity).toFixed(2)} / {Number(c.initial_quantity).toFixed(2)} {c.unit}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">{formatQuantity(c.current_quantity)} / {formatQuantity(c.initial_quantity)} {c.unit}</TableCell>
                         <TableCell className="text-xs">{formatLocation(c.storage_locations)}{c.location_note ? ` (${c.location_note})` : ""}</TableCell>
                         <TableCell><Badge variant={statusVariant as any} className="text-xs">{statusLabel[c.status] || c.status}</Badge></TableCell>
                         {(canManage || canManageBatches) && (

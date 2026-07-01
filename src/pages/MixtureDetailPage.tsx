@@ -28,6 +28,7 @@ import {
   useRawMaterials,
 } from "@/hooks/useMixtures";
 import { calculateMixtureStock } from "@/lib/api/mixtures";
+import { formatQuantity } from "@/lib/formatQuantity";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -274,7 +275,7 @@ export default function MixtureDetailPage() {
           <div className="text-right">
             <div className="text-xs text-muted-foreground">{t("mixtures:stock")}</div>
             <div className="text-2xl font-bold">
-              {stock.toFixed(2)} {mixture.unit}
+              {formatQuantity(stock)} {mixture.unit}
             </div>
           </div>
           <div className="flex gap-2">
@@ -408,7 +409,7 @@ export default function MixtureDetailPage() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{Number(item.quantity)}</TableCell>
+                      <TableCell>{formatQuantity(item.quantity)}</TableCell>
                       <TableCell>{item.unit}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {item.notes || "—"}
@@ -467,13 +468,13 @@ export default function MixtureDetailPage() {
                           : "—"}
                       </TableCell>
                       <TableCell>
-                        {Number(b.produced_quantity)} {b.unit}
+                        {formatQuantity(b.produced_quantity)} {b.unit}
                       </TableCell>
                       <TableCell>{b.concentration || "—"}</TableCell>
                       <TableCell className="text-xs">
                         {(b.mixture_batch_consumptions || []).map((c: any) => (
                           <div key={c.id}>
-                            {c.raw_materials?.material_name}: {Number(c.quantity)} {c.unit}
+                            {c.raw_materials?.material_name}: {formatQuantity(c.quantity)} {c.unit}
                             {c.raw_material_batches?.batch_number && (
                               <span className="text-muted-foreground">
                                 {" "}
@@ -519,7 +520,7 @@ export default function MixtureDetailPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {Number(m.quantity)} {m.unit}
+                        {formatQuantity(m.quantity)} {m.unit}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {m.mixture_batches?.batch_number || "—"}
