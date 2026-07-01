@@ -242,10 +242,49 @@ export function WorkPackageDetails({
           ))}
         </ul>
         {canManage && (
-          <div className="flex items-center gap-2 pt-1">
-            <Input className="h-8 flex-1" placeholder={t("milestone_title")} value={msDraft.title} onChange={(e) => setMsDraft((d) => ({ ...d, title: e.target.value }))} />
+          <div className="flex items-center gap-2 pt-1" ref={suggestRef}>
+            <div className="relative flex-1">
+              <Input
+                className="h-8"
+                placeholder={t("milestone_title")}
+                value={msDraft.title}
+                onChange={(e) => { setMsDraft((d) => ({ ...d, title: e.target.value })); setShowSuggest(true); }}
+                onFocus={() => setShowSuggest(true)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMs(); } }}
+              />
+              {showSuggest && (suggestions.length > 0 || (msDraft.title.trim() && !exactMatch)) && (
+                <div className="absolute z-50 mt-1 left-0 right-0 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md">
+                  {suggestions.map((m) => (
+                    <button
+                      type="button"
+                      key={m.id}
+                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent"
+                      onClick={() => attachExisting(m)}
+                    >
+                      <Flag className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="flex-1 truncate">{m.title}</span>
+                      {m.milestone_date && (
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(m.milestone_date).toLocaleDateString(locale)}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  {msDraft.title.trim() && !exactMatch && (
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent border-t"
+                      onClick={addMs}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+                      <span className="truncate">{t("wp_milestone_create_new", { title: msDraft.title.trim(), defaultValue: `„{{title}}" neu anlegen` })}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
             <Input className="h-8 w-36" type="date" value={msDraft.date} onChange={(e) => setMsDraft((d) => ({ ...d, date: e.target.value }))} />
-            <Button size="sm" variant="secondary" onClick={addMs} disabled={createMs.isPending}>
+            <Button size="sm" variant="secondary" onClick={addMs} disabled={createMs.isPending || updateMs.isPending || !msDraft.title.trim()}>
               <Plus className="h-3.5 w-3.5 mr-1" />{t("wp_milestone_add")}
             </Button>
           </div>
