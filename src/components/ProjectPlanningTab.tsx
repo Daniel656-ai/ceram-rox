@@ -454,7 +454,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                         </TableCell>
                       </TableRow>
                     )}
-                    </>
+                    </Fragment>
                   );
                 })
               )}
