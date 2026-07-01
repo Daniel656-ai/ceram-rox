@@ -179,6 +179,7 @@
   "role_leader": "Project Leader",
   "role_member": "Project Member",
   "team_add_person": "Add Person",
+  "team_search_person": "Search person...",
   "team_select_person": "Select person...",
   "team_role": "Role",
   "team_person": "Person",
