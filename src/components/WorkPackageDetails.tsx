@@ -253,27 +253,27 @@ export function WorkPackageDetails({
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addMs(); } }}
               />
               {showSuggest && (suggestions.length > 0 || (msDraft.title.trim() && !exactMatch)) && (
-                <div className="absolute z-50 mt-1 left-0 right-0 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-md">
+                <div className="absolute z-50 mt-1 left-0 right-0 max-h-72 overflow-y-auto rounded-md border bg-popover shadow-md">
                   {suggestions.map((m) => (
                     <button
                       type="button"
                       key={m.id}
-                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent"
+                      className="flex w-full items-start gap-2 px-2 py-2 text-left hover:bg-accent"
                       onClick={() => attachExisting(m)}
                     >
-                      <Flag className="h-3.5 w-3.5 shrink-0 text-primary" />
-                      <span className="flex-1 truncate">{m.title}</span>
-                      {m.milestone_date && (
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(m.milestone_date).toLocaleDateString(locale)}
-                        </span>
-                      )}
+                      <Flag className="h-3.5 w-3.5 shrink-0 text-primary mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{m.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {t("milestone_date")}: {m.milestone_date ? new Date(m.milestone_date).toLocaleDateString(locale) : "–"}
+                        </div>
+                      </div>
                     </button>
                   ))}
                   {msDraft.title.trim() && !exactMatch && (
                     <button
                       type="button"
-                      className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent border-t"
+                      className="flex w-full items-center gap-2 px-2 py-2 text-left text-sm hover:bg-accent border-t"
                       onClick={addMs}
                     >
                       <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
