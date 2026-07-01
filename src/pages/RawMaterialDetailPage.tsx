@@ -541,17 +541,14 @@ export default function RawMaterialDetailPage() {
             <div><Label>Bemerkung</Label><Textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={2} /></div>
             <div>
               <Label>Verantwortlicher</Label>
-              <Select value={editResponsibleUserId || "__none__"} onValueChange={(v) => setEditResponsibleUserId(v === "__none__" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Verantwortlichen wählen" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Kein Verantwortlicher</SelectItem>
-                  {allUsers?.filter((u: any) => u.is_active !== false).map((u: any) => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {[u.first_name, u.last_name].filter(Boolean).join(" ") || u.email || u.user_id}{u.short_code ? ` (${u.short_code})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <PersonSelect
+                value={editResponsibleUserId || ""}
+                onValueChange={(v) => setEditResponsibleUserId(v)}
+                users={allUsers as any[]}
+                allowClear
+                clearLabel="Kein Verantwortlicher"
+                placeholder="Verantwortlichen wählen"
+              />
             </div>
             <HazardClassSelector
               value={editHazardCats}
