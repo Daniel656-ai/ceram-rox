@@ -311,23 +311,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>{t("wp_link_milestone")}</Label>
-                    <Select
-                      value={wpForm.milestone_id || NONE}
-                      onValueChange={(v) => setWpForm((f) => ({ ...f, milestone_id: v === NONE ? "" : v }))}
-                    >
-                      <SelectTrigger><SelectValue placeholder={t("wp_no_milestone")} /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>{t("wp_no_milestone")}</SelectItem>
-                        {(milestones as any[]).map((m: any) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.title}{m.milestone_date ? ` (${new Date(m.milestone_date).toLocaleDateString(locale)})` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Milestones und Abhängigkeiten werden pro Arbeitspaket in der Detailansicht verwaltet */}
                   <div className="space-y-2">
                     <Label>{t("wp_assignees")}</Label>
                     <div className="flex flex-wrap gap-2 min-h-9 p-2 border rounded-md">
