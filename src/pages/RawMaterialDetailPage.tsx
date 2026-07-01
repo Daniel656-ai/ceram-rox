@@ -71,6 +71,7 @@ export default function RawMaterialDetailPage() {
 
   const { hasPermission } = usePermissions();
   const canManage = role === "master" || hasPermission("raw_materials.manage");
+  const canManageBatches = role === "master" || hasPermission("raw_materials.batches.manage");
   const stock = movements ? calculateStock(movements) : 0;
 
   // Edit material form
