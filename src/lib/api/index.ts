@@ -156,6 +156,7 @@ export const api = {
   workSchedules,
   syncSettings,
   workPackages,
+  workPackageDependencies,
   activityLog,
   notifications,
   realtime,
