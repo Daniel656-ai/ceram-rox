@@ -181,7 +181,6 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "notifications.priority_violation": { de: "Benachrichtigung: Prioritätsverletzung", en: "Notification: Priority violation" },
   "activity_log.view_all": { de: "Gesamtes Aktivitätsprotokoll sehen", en: "View full activity log" },
   "hazard_notifications.manage": { de: "Gefahrstoff-Verteiler verwalten", en: "Manage hazard distribution list" },
-  "hazard_notifications.manage": { de: "Gefahrstoff-Verteiler verwalten", en: "Manage hazard distribution list" },
   "weekly_reviews.manage_all": { de: "Weekly Reviews aller Projekte verwalten", en: "Manage weekly reviews across all projects" },
 };
 
