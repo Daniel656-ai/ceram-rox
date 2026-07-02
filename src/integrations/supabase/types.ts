@@ -4506,32 +4506,19 @@ export type Database = {
         }
         Returns: string
       }
-      book_container_consumption:
-        | {
-            Args: {
-              _comment?: string
-              _container_id: string
-              _movement_date?: string
-              _order_measurement_id?: string
-              _project_id?: string
-              _project_reference?: string
-              _quantity: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _allocations?: Json
-              _comment?: string
-              _container_id: string
-              _movement_date?: string
-              _order_measurement_id?: string
-              _project_id?: string
-              _project_reference?: string
-              _quantity: number
-            }
-            Returns: string
-          }
+      book_container_consumption: {
+        Args: {
+          _allocations?: Json
+          _comment?: string
+          _container_id: string
+          _movement_date?: string
+          _order_measurement_id?: string
+          _project_id?: string
+          _project_reference?: string
+          _quantity: number
+        }
+        Returns: string
+      }
       can_edit_project_governance: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
