@@ -9,6 +9,7 @@ import { useWeeklyReviews } from "@/hooks/useWeeklyReviews";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { WeeklyReviewDialog } from "./WeeklyReviewDialog";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Dot } from "recharts";
 import { cn } from "@/lib/utils";
@@ -46,7 +47,8 @@ interface Props {
 
 export function WeeklyReviewsTab({ projectId }: Props) {
   const { user, customRoleName } = useAuth();
-  const isPMO = (customRoleName ?? "").trim().toLowerCase() === "pmo";
+  const { hasPermission } = usePermissions();
+  const isPMO = (customRoleName ?? "").trim().toLowerCase() === "pmo" || hasPermission("weekly_reviews.manage_all");
   const { data: reviews = [], isLoading } = useWeeklyReviews(projectId);
   const { data: users = [] } = useUsers();
   const { data: members = [] } = useProjectMembers(projectId);

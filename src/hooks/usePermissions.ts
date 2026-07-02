@@ -54,6 +54,7 @@ export const ALL_PERMISSIONS = [
   "notifications.priority_violation",
   "activity_log.view_all",
   "hazard_notifications.manage",
+  "weekly_reviews.manage_all",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
@@ -180,13 +181,14 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "notifications.priority_violation": { de: "Benachrichtigung: Prioritätsverletzung", en: "Notification: Priority violation" },
   "activity_log.view_all": { de: "Gesamtes Aktivitätsprotokoll sehen", en: "View full activity log" },
   "hazard_notifications.manage": { de: "Gefahrstoff-Verteiler verwalten", en: "Manage hazard distribution list" },
+  "weekly_reviews.manage_all": { de: "Weekly Reviews aller Projekte verwalten", en: "Manage weekly reviews across all projects" },
 };
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
   { key: "samples", labelDe: "Proben", labelEn: "Samples", permissions: ["samples.create", "samples.view", "samples.edit"] },
   { key: "measurements", labelDe: "Aufgaben", labelEn: "Tasks", permissions: ["measurements.enter", "measurements.view"] },
   { key: "orders", labelDe: "Aufträge", labelEn: "Orders", permissions: ["orders.create", "orders.view", "orders.edit", "orders.delete"] },
-  { key: "projects", labelDe: "Projekte", labelEn: "Projects", permissions: ["projects.create", "projects.view", "projects.edit", "projects.assign"] },
+  { key: "projects", labelDe: "Projekte", labelEn: "Projects", permissions: ["projects.create", "projects.view", "projects.edit", "projects.assign", "weekly_reviews.manage_all"] },
   { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel", "costs.view_hourly_rates", "costs.edit_hourly_rates"] },
   { key: "general", labelDe: "Allgemein", labelEn: "General", permissions: ["priorities.edit", "locations.edit", "reports.create", "sds.manage", "raw_materials.manage", "raw_materials.batches.manage", "consumables.manage"] },
   { key: "mixtures", labelDe: "Knetungen & Lösungen", labelEn: "Kneadings & Solutions", permissions: ["mixtures.view", "mixtures.create", "mixtures.edit", "mixtures.delete", "mixtures.produce"] },
