@@ -308,7 +308,7 @@ export default function RawMaterialDetailPage() {
     if (moisture != null && (isNaN(moisture) || moisture < 0 || moisture > 100)) { toast.error("Feuchte muss zwischen 0 und 100 % liegen"); return; }
     if (ph != null && (isNaN(ph) || ph < 0 || ph > 14)) { toast.error("pH-Wert muss zwischen 0 und 14 liegen"); return; }
     try {
-      // 1) Charge anlegen
+      // 1) LOT (Charge) anlegen
       const newBatch: any = await addBatch.mutateAsync({
         raw_material_id: id!,
         batch_number: bNum,
@@ -322,36 +322,48 @@ export default function RawMaterialDetailPage() {
         ph_value: ph,
       });
 
-      // 2) Gebinde automatisch anlegen
-      await addContainer.mutateAsync({
-        raw_material_id: id!,
-        batch_id: newBatch?.id || null,
-        container_code: bContainerCode.trim() || null,
-        kind: bContainerKind,
-        initial_quantity: qty,
-        current_quantity: qty,
-        unit: mat.unit,
-        status: "verfuegbar",
-        location_id: mat.default_location_id || null,
-      });
+      if (bMergeIntoExisting && bTargetContainerId) {
+        // 2a) In vorhandenes Gebinde einfüllen (Position anlegen + Wareneingang)
+        await addBatchToContainer.mutateAsync({
+          raw_material_id: id!,
+          container_id: bTargetContainerId,
+          batch_id: newBatch.id,
+          quantity: qty,
+          movement_date: bGoodsReceiptDate || bDate || undefined,
+          comment: `Wareneingang LOT ${bNum} in vorhandenes Gebinde`,
+        });
+        toast.success("LOT angelegt und in vorhandenes Gebinde eingefüllt");
+      } else {
+        // 2b) Neues Gebinde anlegen …
+        const newContainer: any = await addContainer.mutateAsync({
+          raw_material_id: id!,
+          batch_id: newBatch?.id || null,
+          container_code: bContainerCode.trim() || null,
+          kind: bContainerKind,
+          initial_quantity: qty,
+          current_quantity: 0, // wird durch Position-Sync gesetzt
+          unit: mat.unit,
+          status: "verfuegbar",
+          location_id: mat.default_location_id || null,
+        });
+        // … und LOT als erste Position im neuen Gebinde einbuchen (setzt Bestand via Trigger)
+        await addBatchToContainer.mutateAsync({
+          raw_material_id: id!,
+          container_id: newContainer.id,
+          batch_id: newBatch.id,
+          quantity: qty,
+          movement_date: bGoodsReceiptDate || bDate || undefined,
+          comment: `Automatischer Wareneingang LOT ${bNum}`,
+        });
+        toast.success("LOT & Gebinde angelegt, Wareneingang verbucht");
+      }
 
-      // 3) Wareneingang automatisch buchen
-      await addMovement.mutateAsync({
-        raw_material_id: id!,
-        batch_id: newBatch?.id || undefined,
-        movement_type: "eingang",
-        quantity: qty,
-        movement_date: bGoodsReceiptDate || bDate || undefined,
-        supplier: bSupplier || undefined,
-        comment: `Automatischer Wareneingang Charge ${bNum}`,
-      });
-
-      toast.success("Charge & Gebinde angelegt, Wareneingang verbucht");
       setBatchOpen(false);
       setBNum(""); setBDate(""); setBQty(""); setBSupplier(""); setBNotes("");
       setBManufacturerBatch(""); setBGoodsReceiptDate("");
       setBMoisture(""); setBPh("");
       setBContainerKind("big_bag"); setBContainerCode("");
+      setBMergeIntoExisting(false); setBTargetContainerId("");
     } catch (e: any) { toast.error(e.message); }
   };
 
