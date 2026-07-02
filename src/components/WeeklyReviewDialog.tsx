@@ -115,6 +115,10 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
 
   const handleSubmit = async () => {
     if (!user) return;
+    if (isPMO && !effectiveProjectId) {
+      toast.error("Bitte ein Projekt auswählen");
+      return;
+    }
     if (!rating) {
       toast.error("Bitte eine Gesamtbewertung auswählen");
       return;
@@ -125,7 +129,7 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
     }
     try {
       await createMut.mutateAsync({
-        project_id: projectId,
+        project_id: effectiveProjectId,
         author_user_id: user.id,
         author_role_snapshot: myRole,
         iso_year: isoYear,
