@@ -161,6 +161,24 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
       toast.error("Bitte ein Projekt auswählen");
       return;
     }
+    if (isPMO && !pmoPersonId) {
+      toast.error("Bitte eine Person auswählen");
+      return;
+    }
+    if (isPMO && !pmoRole) {
+      toast.error("Bitte eine Projektrolle auswählen");
+      return;
+    }
+    // Validate PMO selection is a real project membership
+    if (isPMO) {
+      const valid = (members as any[]).some(
+        (m: any) => m.user_id === pmoPersonId && m.role === pmoRole
+      );
+      if (!valid) {
+        toast.error("Ungültige Person/Rollen-Kombination für dieses Projekt");
+        return;
+      }
+    }
     if (!rating) {
       toast.error("Bitte eine Gesamtbewertung auswählen");
       return;
@@ -172,8 +190,8 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
     try {
       await createMut.mutateAsync({
         project_id: effectiveProjectId,
-        author_user_id: user.id,
-        author_role_snapshot: myRole,
+        author_user_id: isPMO ? pmoPersonId : user.id,
+        author_role_snapshot: isPMO ? pmoRole : myRole,
         iso_year: isoYear,
         iso_week: isoWeek,
         review_date: today.toISOString().slice(0, 10),
