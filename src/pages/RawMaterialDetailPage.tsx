@@ -784,7 +784,7 @@ export default function RawMaterialDetailPage() {
                       <TableRow key={c.id}>
                         <TableCell className="font-mono text-xs">{c.container_code}</TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">{c.barcode || "–"}</TableCell>
-                        <TableCell className="text-xs">{c.raw_material_batches?.batch_number || "–"}</TableCell>
+                        <TableCell className="text-xs"><ContainerPositions containerId={c.id} unit={c.unit} fallbackBatchNumber={c.raw_material_batches?.batch_number} /></TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{kindLabel[c.kind] || c.kind}</Badge></TableCell>
                         <TableCell className="text-right font-mono text-sm">{formatQuantity(c.current_quantity)} / {formatQuantity(c.initial_quantity)} {c.unit}</TableCell>
                         <TableCell className="text-xs">{formatLocation(c.storage_locations)}{c.location_note ? ` (${c.location_note})` : ""}</TableCell>
