@@ -177,6 +177,10 @@ export default function RawMaterialDetailPage() {
   // Gebinde-Felder
   const [bContainerKind, setBContainerKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige">("big_bag");
   const [bContainerCode, setBContainerCode] = useState("");
+  // Mehrere LOTs pro Gebinde: optional in vorhandenes Gebinde einfüllen
+  const [bMergeIntoExisting, setBMergeIntoExisting] = useState(false);
+  const [bTargetContainerId, setBTargetContainerId] = useState("");
+  const addBatchToContainer = useAddBatchToContainer();
 
 
   // Container (Gebinde) form
