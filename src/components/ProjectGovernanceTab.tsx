@@ -136,7 +136,7 @@ function ChangeRequestsSection({ projectId, canEdit, canApprove }: { projectId: 
                 </div>
                 {cr.description && <p className="text-sm">{cr.description}</p>}
                 <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  {cr.impact_budget != null && <span>💰 Budget: {Number(cr.impact_budget).toFixed(2)} €</span>}
+                  {cr.impact_budget != null && <span>💰 Budget: {formatCurrency(cr.impact_budget)} €</span>}
                   {cr.impact_schedule_days != null && <span>📅 Zeitplan: {cr.impact_schedule_days} Tage</span>}
                 </div>
                 {cr.impact_description && <p className="text-sm italic text-muted-foreground">{cr.impact_description}</p>}

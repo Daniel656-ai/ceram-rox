@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, DollarSign } from "lucide-react";
 import { useState, useEffect } from "react";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 interface Props {
   budgetTotal: number | null | undefined;
@@ -69,21 +70,21 @@ export function ProjectBudgetCard({ budgetTotal, budgetWarningThreshold, currenc
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-xs text-muted-foreground">Budget</div>
-            <div className="text-lg font-semibold">{total != null ? total.toFixed(2) : "–"} {curr}</div>
+            <div className="text-lg font-semibold">{formatCurrency(total)} {curr}</div>
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Ist-Kosten</div>
-            <div className="text-lg font-semibold">{actualCosts.toFixed(2)} {curr}</div>
+            <div className="text-lg font-semibold">{formatCurrency(actualCosts)} {curr}</div>
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Restbudget</div>
             <div className={`text-lg font-semibold ${remaining != null && remaining < 0 ? "text-destructive" : ""}`}>
-              {remaining != null ? remaining.toFixed(2) : "–"} {curr}
+              {formatCurrency(remaining)} {curr}
             </div>
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Burn-Rate (€/Woche)</div>
-            <div className="text-lg font-semibold">{burnRate != null ? burnRate.toFixed(2) : "–"}</div>
+            <div className="text-lg font-semibold">{formatCurrency(burnRate)}</div>
           </div>
         </div>
         {total != null && (
