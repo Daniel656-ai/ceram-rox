@@ -1,11 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Flag } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown, Flag, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
+import { useProjects } from "@/hooks/useProjects";
 import { useUsers } from "@/hooks/useUsers";
 import { useCreateWeeklyReview } from "@/hooks/useWeeklyReviews";
 import { toast } from "sonner";
@@ -35,16 +38,48 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
-  const { user, profile } = useAuth();
-  const { data: members = [] } = useProjectMembers(projectId);
+  const { user, profile, customRoleName } = useAuth();
+  const isPMO = (customRoleName ?? "").trim().toLowerCase() === "pmo";
+
+  // PMO users may pick any project; others are locked to the current project.
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId);
+  useEffect(() => { setSelectedProjectId(projectId); }, [projectId, open]);
+
+  const effectiveProjectId = isPMO ? selectedProjectId : projectId;
+
+  const { data: allProjects = [] } = useProjects();
+  const { data: members = [] } = useProjectMembers(effectiveProjectId);
   const { data: users = [] } = useUsers();
   const createMut = useCreateWeeklyReview();
+
+  // Project combobox state (PMO only)
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
+  const [projectQuery, setProjectQuery] = useState("");
+
+  const sortedProjects = useMemo(() => {
+    const label = (p: any) =>
+      `${p.project_name || p.project_number || ""}`.trim();
+    return [...(allProjects as any[])].sort((a, b) =>
+      label(a).localeCompare(label(b), "de", { sensitivity: "base" })
+    );
+  }, [allProjects]);
+
+  const filteredProjects = useMemo(() => {
+    const q = projectQuery.trim().toLowerCase();
+    if (!q) return sortedProjects;
+    return sortedProjects.filter((p: any) => {
+      const hay = `${p.project_name ?? ""} ${p.project_number ?? ""} ${p.description ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [sortedProjects, projectQuery]);
+
+  const selectedProject = (allProjects as any[]).find((p) => p.id === effectiveProjectId);
 
   const myMember = useMemo(
     () => (members as any[]).find((m: any) => m.user_id === user?.id),
     [members, user]
   );
-  const myRole = (myMember?.role as string | undefined) || "member";
+  const myRole = (myMember?.role as string | undefined) || (isPMO ? "member" : "member");
 
   const myName = useMemo(() => {
     if (profile) return `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user?.email || "–";
@@ -80,6 +115,10 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
 
   const handleSubmit = async () => {
     if (!user) return;
+    if (isPMO && !effectiveProjectId) {
+      toast.error("Bitte ein Projekt auswählen");
+      return;
+    }
     if (!rating) {
       toast.error("Bitte eine Gesamtbewertung auswählen");
       return;
@@ -90,7 +129,7 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
     }
     try {
       await createMut.mutateAsync({
-        project_id: projectId,
+        project_id: effectiveProjectId,
         author_user_id: user.id,
         author_role_snapshot: myRole,
         iso_year: isoYear,
@@ -143,6 +182,88 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {isPMO && (
+            <div className="space-y-1.5">
+              <Label>Projekt</Label>
+              <Popover
+                open={projectPickerOpen}
+                onOpenChange={(o) => { setProjectPickerOpen(o); if (!o) setProjectQuery(""); }}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={projectPickerOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className={cn("truncate", !selectedProject && "text-muted-foreground")}>
+                      {selectedProject
+                        ? `${selectedProject.project_name || selectedProject.project_number}${selectedProject.project_name && selectedProject.project_number ? ` (${selectedProject.project_number})` : ""}`
+                        : "Projekt auswählen…"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[--radix-popover-trigger-width] p-0"
+                  align="start"
+                  onOpenAutoFocus={(e) => {
+                    e.preventDefault();
+                    const el = (e.currentTarget as HTMLElement).querySelector<HTMLInputElement>("input");
+                    el?.focus();
+                  }}
+                >
+                  <div className="p-2 border-b">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        autoFocus
+                        value={projectQuery}
+                        onChange={(e) => setProjectQuery(e.target.value)}
+                        placeholder="Projekt suchen…"
+                        className="pl-9 h-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto py-1">
+                    {filteredProjects.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                        Keine Projekte gefunden
+                      </div>
+                    ) : (
+                      filteredProjects.map((p: any) => {
+                        const isSel = p.id === effectiveProjectId;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground",
+                              isSel && "bg-accent/50",
+                            )}
+                            onClick={() => {
+                              setSelectedProjectId(p.id);
+                              setProjectPickerOpen(false);
+                            }}
+                          >
+                            <Check className={cn("h-4 w-4", isSel ? "opacity-100" : "opacity-0")} />
+                            <span className="truncate">
+                              {p.project_name || p.project_number}
+                            </span>
+                            {p.project_number && p.project_name ? (
+                              <span className="ml-auto text-xs text-muted-foreground">{p.project_number}</span>
+                            ) : null}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
           {/* Read-only auto fields */}
           <div className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
             <div>

@@ -45,7 +45,8 @@ interface Props {
 }
 
 export function WeeklyReviewsTab({ projectId }: Props) {
-  const { user } = useAuth();
+  const { user, customRoleName } = useAuth();
+  const isPMO = (customRoleName ?? "").trim().toLowerCase() === "pmo";
   const { data: reviews = [], isLoading } = useWeeklyReviews(projectId);
   const { data: users = [] } = useUsers();
   const { data: members = [] } = useProjectMembers(projectId);
@@ -116,7 +117,7 @@ export function WeeklyReviewsTab({ projectId }: Props) {
               </div>
             )}
           </div>
-          {isMember && (
+          {(isMember || isPMO) && (
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Weekly Review erstellen
