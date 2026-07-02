@@ -98,4 +98,26 @@ export const rawMaterialContainers = {
 
   delete: (id: string) =>
     run(db.from("raw_material_containers").delete().eq("id", id)),
+
+  /** List the LOT positions (batches) currently held inside a container. */
+  positions: (containerId: string) =>
+    unwrap<any[]>(db.rpc("get_container_positions", { _container_id: containerId })),
+
+  /** Add a further LOT (batch) into an existing container. Same raw material only. */
+  addBatch: (args: {
+    container_id: string;
+    batch_id: string;
+    quantity: number;
+    movement_date?: string;
+    comment?: string;
+  }) =>
+    unwrap<string>(
+      db.rpc("add_batch_to_container", {
+        _container_id: args.container_id,
+        _batch_id: args.batch_id,
+        _quantity: args.quantity,
+        _movement_date: args.movement_date ?? null,
+        _comment: args.comment ?? null,
+      })
+    ),
 };
