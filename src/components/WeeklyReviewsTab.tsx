@@ -47,7 +47,8 @@ interface Props {
 
 export function WeeklyReviewsTab({ projectId }: Props) {
   const { user, customRoleName } = useAuth();
-  const isPMO = (customRoleName ?? "").trim().toLowerCase() === "pmo";
+  const { hasPermission } = usePermissions();
+  const isPMO = (customRoleName ?? "").trim().toLowerCase() === "pmo" || hasPermission("weekly_reviews.manage_all");
   const { data: reviews = [], isLoading } = useWeeklyReviews(projectId);
   const { data: users = [] } = useUsers();
   const { data: members = [] } = useProjectMembers(projectId);
