@@ -38,16 +38,48 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
-  const { user, profile } = useAuth();
-  const { data: members = [] } = useProjectMembers(projectId);
+  const { user, profile, customRoleName } = useAuth();
+  const isPMO = (customRoleName ?? "").trim().toLowerCase() === "pmo";
+
+  // PMO users may pick any project; others are locked to the current project.
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId);
+  useEffect(() => { setSelectedProjectId(projectId); }, [projectId, open]);
+
+  const effectiveProjectId = isPMO ? selectedProjectId : projectId;
+
+  const { data: allProjects = [] } = useProjects();
+  const { data: members = [] } = useProjectMembers(effectiveProjectId);
   const { data: users = [] } = useUsers();
   const createMut = useCreateWeeklyReview();
+
+  // Project combobox state (PMO only)
+  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
+  const [projectQuery, setProjectQuery] = useState("");
+
+  const sortedProjects = useMemo(() => {
+    const label = (p: any) =>
+      `${p.project_name || p.project_number || ""}`.trim();
+    return [...(allProjects as any[])].sort((a, b) =>
+      label(a).localeCompare(label(b), "de", { sensitivity: "base" })
+    );
+  }, [allProjects]);
+
+  const filteredProjects = useMemo(() => {
+    const q = projectQuery.trim().toLowerCase();
+    if (!q) return sortedProjects;
+    return sortedProjects.filter((p: any) => {
+      const hay = `${p.project_name ?? ""} ${p.project_number ?? ""} ${p.description ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [sortedProjects, projectQuery]);
+
+  const selectedProject = (allProjects as any[]).find((p) => p.id === effectiveProjectId);
 
   const myMember = useMemo(
     () => (members as any[]).find((m: any) => m.user_id === user?.id),
     [members, user]
   );
-  const myRole = (myMember?.role as string | undefined) || "member";
+  const myRole = (myMember?.role as string | undefined) || (isPMO ? "member" : "member");
 
   const myName = useMemo(() => {
     if (profile) return `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user?.email || "–";
