@@ -28,6 +28,7 @@ import { ProjectServicesTab } from "@/components/ProjectServicesTab";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -407,12 +408,12 @@ export default function ProjectDetailPage() {
             <DollarSign className="h-8 w-8 text-primary" />
             <div>
               <p className="text-2xl font-bold">
-                {canViewPersonnelCosts ? totalCosts.toFixed(2) : totalMaterialCosts.toFixed(2)}{t("currency")}
+                {formatCurrency(canViewPersonnelCosts ? totalCosts : totalMaterialCosts)} {t("currency")}
               </p>
               <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
               {canViewPersonnelCosts && totalMaterialCosts > 0 && (
                 <p className="text-[10px] text-muted-foreground">
-                  {t("personnel_short")}: {costData.totalPersonnel.toFixed(0)}{t("currency")} + {t("materials:material_short")}: {totalMaterialCosts.toFixed(0)}{t("currency")}
+                  {t("personnel_short")}: {formatCurrency(costData.totalPersonnel)} {t("currency")} + {t("materials:material_short")}: {formatCurrency(totalMaterialCosts)} {t("currency")}
                 </p>
               )}
             </div>
@@ -600,7 +601,7 @@ export default function ProjectDetailPage() {
                           <TableCell>{data.name}</TableCell>
                           <TableCell>{data.hours.toFixed(1)}{t("hours_unit")}</TableCell>
                           <TableCell>–</TableCell>
-                          <TableCell>{data.cost.toFixed(2)}{t("currency")}</TableCell>
+                          <TableCell>{formatCurrency(data.cost)} {t("currency")}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -608,7 +609,7 @@ export default function ProjectDetailPage() {
                 </Table>
                 {costData.perMeasurement.length > 0 && (
                   <div className="border-t p-4 flex justify-end">
-                    <span className="font-semibold">{t("total")}: {costData.totalPersonnel.toFixed(2)}{t("currency")}</span>
+                    <span className="font-semibold">{t("total")}: {formatCurrency(costData.totalPersonnel)} {t("currency")}</span>
                   </div>
                 )}
               </CardContent>
@@ -678,7 +679,7 @@ export default function ProjectDetailPage() {
                     <p className="text-xs text-muted-foreground">{t("total_hours")}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold">{costData.totalPersonnel.toFixed(2)}{t("currency")}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(costData.totalPersonnel)} {t("currency")}</p>
                     <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
                   </div>
                 </div>
@@ -805,14 +806,14 @@ export default function ProjectDetailPage() {
                               <TableCell>{c.consumables?.name || "–"}</TableCell>
                               <TableCell>{c.quantity}</TableCell>
                               <TableCell>{c.consumables?.unit || "–"}</TableCell>
-                              <TableCell>{Number(c.unit_price).toFixed(2)}{t("currency")}</TableCell>
-                              <TableCell>{Number(c.total_cost || 0).toFixed(2)}{t("currency")}</TableCell>
+                              <TableCell>{formatCurrency(c.unit_price)} {t("currency")}</TableCell>
+                              <TableCell>{formatCurrency(c.total_cost || 0)} {t("currency")}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                       <div className="mt-2 text-right font-semibold">
-                        {t("materials:total_consumables")}: {(projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0).toFixed(2)}{t("currency")}
+                        {t("materials:total_consumables")}: {formatCurrency((projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0))} {t("currency")}
                       </div>
                     </>
                   )}
@@ -839,14 +840,14 @@ export default function ProjectDetailPage() {
                             <TableRow key={k.id}>
                               <TableCell>{k.raw_materials?.material_name || "–"}</TableCell>
                               <TableCell>{k.quantity_kg}</TableCell>
-                              <TableCell>{Number(k.price_per_kg).toFixed(2)}{t("currency")}</TableCell>
-                              <TableCell>{Number(k.total_cost || 0).toFixed(2)}{t("currency")}</TableCell>
+                              <TableCell>{formatCurrency(k.price_per_kg)} {t("currency")}</TableCell>
+                              <TableCell>{formatCurrency(k.total_cost || 0)} {t("currency")}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                       <div className="mt-2 text-right font-semibold">
-                        {t("materials:total_knetung")}: {(projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0).toFixed(2)}{t("currency")}
+                        {t("materials:total_knetung")}: {formatCurrency((projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0))} {t("currency")}
                       </div>
                     </>
                   )}
@@ -857,10 +858,10 @@ export default function ProjectDetailPage() {
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
                   <div className="rounded-lg border p-4 space-y-2 text-sm">
                     <div className="flex justify-between"><span>{t("csv_total_time")}:</span><span className="font-medium">{totalHours.toFixed(1)}{t("hours_unit")}</span></div>
-                    {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{costData.totalPersonnel.toFixed(2)}{t("currency")}</span></div>}
-                    <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{(projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0).toFixed(2)}{t("currency")}</span></div>
-                    <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{(projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0).toFixed(2)}{t("currency")}</span></div>
-                    <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{(canViewPersonnelCosts ? totalCosts : totalMaterialCosts).toFixed(2)}{t("currency")}</span></div>
+                    {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{formatCurrency(costData.totalPersonnel)} {t("currency")}</span></div>}
+                    <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{formatCurrency((projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0))} {t("currency")}</span></div>
+                    <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{formatCurrency((projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0))} {t("currency")}</span></div>
+                    <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{formatCurrency(canViewPersonnelCosts ? totalCosts : totalMaterialCosts)} {t("currency")}</span></div>
                   </div>
                 </div>
 

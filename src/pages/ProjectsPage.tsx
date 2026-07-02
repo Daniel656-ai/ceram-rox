@@ -18,6 +18,7 @@ import { Search, Plus, Trash2, ArrowUpDown, Package, FlaskConical, Clock, Dollar
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { useAllWeeklyReviews } from "@/hooks/useWeeklyReviews";
@@ -217,7 +218,7 @@ const { user, role } = useAuth();
         {p.stats.totalHours > 0 ? `${p.stats.totalHours.toFixed(1)}h` : "–"}
       </TableCell>
       <TableCell className="text-center">
-        {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${(p.stats.totalCost + p.stats.materialCost).toFixed(0)}€` : "–"}
+        {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${formatCurrency(p.stats.totalCost + p.stats.materialCost)} €` : "–"}
       </TableCell>
       <TableCell>{formatDate((p as any).start_date)}</TableCell>
       <TableCell>{formatDate((p as any).end_date)}</TableCell>
