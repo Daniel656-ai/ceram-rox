@@ -18,6 +18,7 @@ import {
   useProjectStakeholders, useStakeholderMutations,
   useProjectLessonsLearned, useLessonsLearnedMutations,
 } from "@/hooks/useProjectGovernance";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { PersonSelect } from "@/components/PersonSelect";
 
