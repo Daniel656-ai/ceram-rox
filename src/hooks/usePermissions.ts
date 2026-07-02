@@ -54,6 +54,7 @@ export const ALL_PERMISSIONS = [
   "notifications.priority_violation",
   "activity_log.view_all",
   "hazard_notifications.manage",
+  "weekly_reviews.manage_all",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
