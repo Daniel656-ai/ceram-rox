@@ -9,6 +9,7 @@ import { useWeeklyReviews } from "@/hooks/useWeeklyReviews";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { WeeklyReviewDialog } from "./WeeklyReviewDialog";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Dot } from "recharts";
 import { cn } from "@/lib/utils";
