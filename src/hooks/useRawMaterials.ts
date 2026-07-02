@@ -160,7 +160,29 @@ export function useDeleteContainer() {
   });
 }
 
-// ---- Container Movements / History / Audit ----
+// ---- Container Positions (mehrere LOTs pro Gebinde) ----
+export function useContainerPositions(containerId?: string) {
+  return useQuery({
+    queryKey: ["container_positions", containerId],
+    queryFn: () => api.rawMaterialContainers.positions(containerId!),
+    enabled: !!containerId,
+  });
+}
+
+export function useAddBatchToContainer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: Parameters<typeof api.rawMaterialContainers.addBatch>[0] & { raw_material_id: string }) => {
+      const { raw_material_id, ...rest } = args;
+      return api.rawMaterialContainers.addBatch(rest);
+    },
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["container_positions", v.container_id] });
+    },
+  });
+}
 export function useContainerMovements(containerId?: string) {
   return useQuery({
     queryKey: ["container_movements", containerId],

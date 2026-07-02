@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useBookContainerConsumption, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer } from "@/hooks/useRawMaterials";
+import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useBookContainerConsumption, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer, useAddBatchToContainer } from "@/hooks/useRawMaterials";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjects } from "@/hooks/useProjects";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,6 +33,7 @@ import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import { PrintLabelDialog } from "@/components/labels/PrintLabelDialog";
 import { History as HistoryIcon, Tag } from "lucide-react";
 import { PersonSelect } from "@/components/PersonSelect";
+import { ContainerPositions } from "@/components/ContainerPositions";
 
 
 
@@ -177,6 +178,10 @@ export default function RawMaterialDetailPage() {
   // Gebinde-Felder
   const [bContainerKind, setBContainerKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige">("big_bag");
   const [bContainerCode, setBContainerCode] = useState("");
+  // Mehrere LOTs pro Gebinde: optional in vorhandenes Gebinde einfüllen
+  const [bMergeIntoExisting, setBMergeIntoExisting] = useState(false);
+  const [bTargetContainerId, setBTargetContainerId] = useState("");
+  const addBatchToContainer = useAddBatchToContainer();
 
 
   // Container (Gebinde) form
@@ -304,7 +309,7 @@ export default function RawMaterialDetailPage() {
     if (moisture != null && (isNaN(moisture) || moisture < 0 || moisture > 100)) { toast.error("Feuchte muss zwischen 0 und 100 % liegen"); return; }
     if (ph != null && (isNaN(ph) || ph < 0 || ph > 14)) { toast.error("pH-Wert muss zwischen 0 und 14 liegen"); return; }
     try {
-      // 1) Charge anlegen
+      // 1) LOT (Charge) anlegen
       const newBatch: any = await addBatch.mutateAsync({
         raw_material_id: id!,
         batch_number: bNum,
@@ -318,36 +323,48 @@ export default function RawMaterialDetailPage() {
         ph_value: ph,
       });
 
-      // 2) Gebinde automatisch anlegen
-      await addContainer.mutateAsync({
-        raw_material_id: id!,
-        batch_id: newBatch?.id || null,
-        container_code: bContainerCode.trim() || null,
-        kind: bContainerKind,
-        initial_quantity: qty,
-        current_quantity: qty,
-        unit: mat.unit,
-        status: "verfuegbar",
-        location_id: mat.default_location_id || null,
-      });
+      if (bMergeIntoExisting && bTargetContainerId) {
+        // 2a) In vorhandenes Gebinde einfüllen (Position anlegen + Wareneingang)
+        await addBatchToContainer.mutateAsync({
+          raw_material_id: id!,
+          container_id: bTargetContainerId,
+          batch_id: newBatch.id,
+          quantity: qty,
+          movement_date: bGoodsReceiptDate || bDate || undefined,
+          comment: `Wareneingang LOT ${bNum} in vorhandenes Gebinde`,
+        });
+        toast.success("LOT angelegt und in vorhandenes Gebinde eingefüllt");
+      } else {
+        // 2b) Neues Gebinde anlegen …
+        const newContainer: any = await addContainer.mutateAsync({
+          raw_material_id: id!,
+          batch_id: newBatch?.id || null,
+          container_code: bContainerCode.trim() || null,
+          kind: bContainerKind,
+          initial_quantity: qty,
+          current_quantity: 0, // wird durch Position-Sync gesetzt
+          unit: mat.unit,
+          status: "verfuegbar",
+          location_id: mat.default_location_id || null,
+        });
+        // … und LOT als erste Position im neuen Gebinde einbuchen (setzt Bestand via Trigger)
+        await addBatchToContainer.mutateAsync({
+          raw_material_id: id!,
+          container_id: newContainer.id,
+          batch_id: newBatch.id,
+          quantity: qty,
+          movement_date: bGoodsReceiptDate || bDate || undefined,
+          comment: `Automatischer Wareneingang LOT ${bNum}`,
+        });
+        toast.success("LOT & Gebinde angelegt, Wareneingang verbucht");
+      }
 
-      // 3) Wareneingang automatisch buchen
-      await addMovement.mutateAsync({
-        raw_material_id: id!,
-        batch_id: newBatch?.id || undefined,
-        movement_type: "eingang",
-        quantity: qty,
-        movement_date: bGoodsReceiptDate || bDate || undefined,
-        supplier: bSupplier || undefined,
-        comment: `Automatischer Wareneingang Charge ${bNum}`,
-      });
-
-      toast.success("Charge & Gebinde angelegt, Wareneingang verbucht");
       setBatchOpen(false);
       setBNum(""); setBDate(""); setBQty(""); setBSupplier(""); setBNotes("");
       setBManufacturerBatch(""); setBGoodsReceiptDate("");
       setBMoisture(""); setBPh("");
       setBContainerKind("big_bag"); setBContainerCode("");
+      setBMergeIntoExisting(false); setBTargetContainerId("");
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -602,29 +619,58 @@ export default function RawMaterialDetailPage() {
                         <div><Label>Liefermenge ({mat.unit}) *</Label><Input type="number" step="0.001" value={bQty} onChange={(e) => setBQty(e.target.value)} /></div>
                         <div><Label>Lieferant</Label><Input value={bSupplier} onChange={(e) => setBSupplier(e.target.value)} /></div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Gebinde-Art *</Label>
-                          <Select value={bContainerKind} onValueChange={(v: any) => setBContainerKind(v)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="fass">Fass</SelectItem>
-                              <SelectItem value="kanister">Kanister</SelectItem>
-                              <SelectItem value="sack">Sack</SelectItem>
-                              <SelectItem value="big_bag">Big Bag</SelectItem>
-                              <SelectItem value="ibc">IBC</SelectItem>
-                              <SelectItem value="tank">Tank</SelectItem>
-                              <SelectItem value="flasche">Flasche</SelectItem>
-                              <SelectItem value="kiste">Kiste</SelectItem>
-                              <SelectItem value="sonstige">Sonstige</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      {/* Optional: In vorhandenes Gebinde einfüllen */}
+                      {(containers && containers.filter((c: any) => c.status !== "entsorgt" && c.status !== "gesperrt").length > 0) && (
+                        <div className="rounded-md border p-3 space-y-2 bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <Checkbox id="merge-container" checked={bMergeIntoExisting} onCheckedChange={(v) => { setBMergeIntoExisting(!!v); if (!v) setBTargetContainerId(""); }} />
+                            <Label htmlFor="merge-container" className="cursor-pointer text-sm font-medium">
+                              In vorhandenes Gebinde einfüllen (mehrere LOTs)
+                            </Label>
+                          </div>
+                          {bMergeIntoExisting && (
+                            <div>
+                              <Select value={bTargetContainerId} onValueChange={setBTargetContainerId}>
+                                <SelectTrigger><SelectValue placeholder="Ziel-Gebinde wählen" /></SelectTrigger>
+                                <SelectContent>
+                                  {containers!.filter((c: any) => c.status !== "entsorgt" && c.status !== "gesperrt").map((c: any) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                      {c.container_code} · {formatQuantity(c.current_quantity)} {c.unit}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">Der Rohstoff muss identisch sein. Das LOT wird zusätzlich in das Gebinde eingebucht.</p>
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <Label>Gebinde-ID</Label>
-                          <Input value={bContainerCode} onChange={(e) => setBContainerCode(e.target.value)} placeholder="Auto, falls leer" />
+                      )}
+
+                      {!bMergeIntoExisting && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label>Gebinde-Art *</Label>
+                            <Select value={bContainerKind} onValueChange={(v: any) => setBContainerKind(v)}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="fass">Fass</SelectItem>
+                                <SelectItem value="kanister">Kanister</SelectItem>
+                                <SelectItem value="sack">Sack</SelectItem>
+                                <SelectItem value="big_bag">Big Bag</SelectItem>
+                                <SelectItem value="ibc">IBC</SelectItem>
+                                <SelectItem value="tank">Tank</SelectItem>
+                                <SelectItem value="flasche">Flasche</SelectItem>
+                                <SelectItem value="kiste">Kiste</SelectItem>
+                                <SelectItem value="sonstige">Sonstige</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Gebinde-ID</Label>
+                            <Input value={bContainerCode} onChange={(e) => setBContainerCode(e.target.value)} placeholder="Auto, falls leer" />
+                          </div>
                         </div>
-                      </div>
+                      )}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <Label>Feuchte (%)</Label>
@@ -738,7 +784,7 @@ export default function RawMaterialDetailPage() {
                       <TableRow key={c.id}>
                         <TableCell className="font-mono text-xs">{c.container_code}</TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">{c.barcode || "–"}</TableCell>
-                        <TableCell className="text-xs">{c.raw_material_batches?.batch_number || "–"}</TableCell>
+                        <TableCell className="text-xs"><ContainerPositions containerId={c.id} unit={c.unit} fallbackBatchNumber={c.raw_material_batches?.batch_number} /></TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{kindLabel[c.kind] || c.kind}</Badge></TableCell>
                         <TableCell className="text-right font-mono text-sm">{formatQuantity(c.current_quantity)} / {formatQuantity(c.initial_quantity)} {c.unit}</TableCell>
                         <TableCell className="text-xs">{formatLocation(c.storage_locations)}{c.location_note ? ` (${c.location_note})` : ""}</TableCell>
