@@ -117,7 +117,7 @@ export function WeeklyReviewsTab({ projectId }: Props) {
               </div>
             )}
           </div>
-          {isMember && (
+          {(isMember || isPMO) && (
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Weekly Review erstellen
