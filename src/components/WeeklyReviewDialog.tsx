@@ -40,7 +40,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
   const { user, profile, customRoleName } = useAuth();
-  const { hasPermission } = require("@/hooks/usePermissions").usePermissions();
+  const { hasPermission } = usePermissions();
   const isPMO = (customRoleName ?? "").trim().toLowerCase() === "pmo" || hasPermission("weekly_reviews.manage_all");
 
   // PMO users may pick any project; others are locked to the current project.
