@@ -85,6 +85,44 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
   );
   const myRole = (myMember?.role as string | undefined) || (isPMO ? "member" : "member");
 
+  // PMO: choose person (stellvertretend) + role from that person's project memberships
+  const [pmoPersonId, setPmoPersonId] = useState<string>("");
+  const [pmoRole, setPmoRole] = useState<string>("");
+
+  // Reset PMO selection when project changes
+  useEffect(() => {
+    if (isPMO) {
+      setPmoPersonId("");
+      setPmoRole("");
+    }
+  }, [effectiveProjectId, isPMO, open]);
+
+  // Users list restricted to the selected project's members
+  const memberUsers = useMemo(() => {
+    const memberIds = new Set((members as any[]).map((m: any) => m.user_id));
+    return (users as any[]).filter((u: any) => memberIds.has(u.user_id));
+  }, [members, users]);
+
+  // Roles the selected PMO-target person actually has in this project
+  const availableRolesForPerson = useMemo(() => {
+    if (!pmoPersonId) return [] as string[];
+    const roles = (members as any[])
+      .filter((m: any) => m.user_id === pmoPersonId)
+      .map((m: any) => m.role as string);
+    return Array.from(new Set(roles)).sort((a, b) =>
+      (ROLE_LABELS[a] ?? a).localeCompare(ROLE_LABELS[b] ?? b, "de")
+    );
+  }, [members, pmoPersonId]);
+
+  // Auto-select role if there is only one
+  useEffect(() => {
+    if (isPMO && availableRolesForPerson.length === 1) {
+      setPmoRole(availableRolesForPerson[0]);
+    } else if (isPMO && !availableRolesForPerson.includes(pmoRole)) {
+      setPmoRole("");
+    }
+  }, [availableRolesForPerson, isPMO]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const myName = useMemo(() => {
     if (profile) return `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user?.email || "–";
     const u = (users as any[]).find((u: any) => u.user_id === user?.id);
