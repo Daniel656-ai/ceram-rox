@@ -47,7 +47,7 @@ function getUserName(users: any[], userId: string) {
 
 export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const { t, i18n } = useTranslation("projects");
-  const { role } = useAuth();
+  const { user } = useAuth();
   const { data: entries = [] } = useProjectTimeEntries(projectId, orderId);
   const { data: users = [] } = useUsers();
   const addEntry = useAddProjectTimeEntry();
