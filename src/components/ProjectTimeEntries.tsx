@@ -82,7 +82,7 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
 
   const resetForm = () => {
     setForm({
-      person_id: "",
+      person_id: user?.id || "",
       entry_date: new Date().toISOString().slice(0, 10),
       duration_minutes: "60",
       note: "",
