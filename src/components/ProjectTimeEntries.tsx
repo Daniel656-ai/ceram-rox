@@ -284,7 +284,7 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
           </CardContent>
         </Card>
 
-        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (!o) { resetForm(); setMeetingPersonIds([]); setAddMode("individual"); } }}>
+        <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (o) { resetForm(); } else { resetForm(); setMeetingPersonIds([]); setAddMode("individual"); } }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
