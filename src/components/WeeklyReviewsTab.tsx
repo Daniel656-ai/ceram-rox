@@ -183,6 +183,16 @@ export function WeeklyReviewsTab({ projectId }: Props) {
                       <span className="text-xs text-muted-foreground">KW {r.iso_week}/{r.iso_year}</span>
                       <span className="text-sm">{userName(r.author_user_id)}</span>
                       <Badge variant="secondary" className="text-xs">{ROLE_LABELS[r.author_role_snapshot] ?? r.author_role_snapshot}</Badge>
+                      {r.created_by_actual && r.created_by_actual !== r.author_user_id && (
+                        <Badge variant="outline" className="text-xs" title={`Erfasst durch ${userName(r.created_by_actual)}`}>
+                          Erfasst durch {userName(r.created_by_actual)}
+                        </Badge>
+                      )}
+                      {r.edited_by && r.edited_by !== r.created_by_actual && r.edited_by !== r.author_user_id && (
+                        <Badge variant="outline" className="text-xs">
+                          Bearbeitet durch {userName(r.edited_by)}
+                        </Badge>
+                      )}
                     </div>
                     <FlagBadge rating={r.overall_rating} />
                   </button>

@@ -2788,7 +2788,10 @@ export type Database = {
           author_user_id: string
           completed_this_week: string
           created_at: string
+          created_by_actual: string | null
           currently_working_on: string
+          edited_at: string | null
+          edited_by: string | null
           help_needed: string
           id: string
           iso_week: number
@@ -2805,7 +2808,10 @@ export type Database = {
           author_user_id: string
           completed_this_week?: string
           created_at?: string
+          created_by_actual?: string | null
           currently_working_on?: string
+          edited_at?: string | null
+          edited_by?: string | null
           help_needed?: string
           id?: string
           iso_week: number
@@ -2822,7 +2828,10 @@ export type Database = {
           author_user_id?: string
           completed_this_week?: string
           created_at?: string
+          created_by_actual?: string | null
           currently_working_on?: string
+          edited_at?: string | null
+          edited_by?: string | null
           help_needed?: string
           id?: string
           iso_week?: number
