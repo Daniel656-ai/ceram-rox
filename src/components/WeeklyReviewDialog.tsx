@@ -182,6 +182,88 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {isPMO && (
+            <div className="space-y-1.5">
+              <Label>Projekt</Label>
+              <Popover
+                open={projectPickerOpen}
+                onOpenChange={(o) => { setProjectPickerOpen(o); if (!o) setProjectQuery(""); }}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={projectPickerOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className={cn("truncate", !selectedProject && "text-muted-foreground")}>
+                      {selectedProject
+                        ? `${selectedProject.project_name || selectedProject.project_number}${selectedProject.project_name && selectedProject.project_number ? ` (${selectedProject.project_number})` : ""}`
+                        : "Projekt auswählen…"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[--radix-popover-trigger-width] p-0"
+                  align="start"
+                  onOpenAutoFocus={(e) => {
+                    e.preventDefault();
+                    const el = (e.currentTarget as HTMLElement).querySelector<HTMLInputElement>("input");
+                    el?.focus();
+                  }}
+                >
+                  <div className="p-2 border-b">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        autoFocus
+                        value={projectQuery}
+                        onChange={(e) => setProjectQuery(e.target.value)}
+                        placeholder="Projekt suchen…"
+                        className="pl-9 h-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto py-1">
+                    {filteredProjects.length === 0 ? (
+                      <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                        Keine Projekte gefunden
+                      </div>
+                    ) : (
+                      filteredProjects.map((p: any) => {
+                        const isSel = p.id === effectiveProjectId;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground",
+                              isSel && "bg-accent/50",
+                            )}
+                            onClick={() => {
+                              setSelectedProjectId(p.id);
+                              setProjectPickerOpen(false);
+                            }}
+                          >
+                            <Check className={cn("h-4 w-4", isSel ? "opacity-100" : "opacity-0")} />
+                            <span className="truncate">
+                              {p.project_name || p.project_number}
+                            </span>
+                            {p.project_number && p.project_name ? (
+                              <span className="ml-auto text-xs text-muted-foreground">{p.project_number}</span>
+                            ) : null}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
           {/* Read-only auto fields */}
           <div className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
             <div>
