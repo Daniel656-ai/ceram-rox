@@ -324,6 +324,41 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
             </div>
           )}
 
+          {/* PMO: choose person + role on behalf of whom the review is created */}
+          {isPMO && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Person</Label>
+                <PersonSelect
+                  value={pmoPersonId}
+                  onValueChange={(id) => setPmoPersonId(id)}
+                  users={memberUsers}
+                  placeholder={effectiveProjectId ? "Person auswählen…" : "Zuerst Projekt wählen"}
+                  searchPlaceholder="Person suchen…"
+                  disabled={!effectiveProjectId || memberUsers.length === 0}
+                  activeOnly={false}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Projektrolle</Label>
+                <Select
+                  value={pmoRole}
+                  onValueChange={setPmoRole}
+                  disabled={!pmoPersonId || availableRolesForPerson.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={pmoPersonId ? "Rolle wählen…" : "Zuerst Person wählen"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRolesForPerson.map((r) => (
+                      <SelectItem key={r} value={r}>{ROLE_LABELS[r] ?? r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
           {/* Read-only auto fields */}
           <div className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
             <div>
@@ -332,13 +367,23 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Mitarbeiter</div>
-              <div className="font-medium truncate" title={myName}>{myName}</div>
+              <div className="font-medium truncate" title={isPMO ? undefined : myName}>
+                {isPMO
+                  ? (() => {
+                      const p = (users as any[]).find((u: any) => u.user_id === pmoPersonId);
+                      return p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.email : "–";
+                    })()
+                  : myName}
+              </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Projektrolle</div>
-              <div className="font-medium">{ROLE_LABELS[myRole] ?? myRole}</div>
+              <div className="font-medium">
+                {isPMO ? (pmoRole ? (ROLE_LABELS[pmoRole] ?? pmoRole) : "–") : (ROLE_LABELS[myRole] ?? myRole)}
+              </div>
             </div>
           </div>
+
 
           {/* Questions */}
           {[
