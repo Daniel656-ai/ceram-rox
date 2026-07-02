@@ -618,29 +618,58 @@ export default function RawMaterialDetailPage() {
                         <div><Label>Liefermenge ({mat.unit}) *</Label><Input type="number" step="0.001" value={bQty} onChange={(e) => setBQty(e.target.value)} /></div>
                         <div><Label>Lieferant</Label><Input value={bSupplier} onChange={(e) => setBSupplier(e.target.value)} /></div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Gebinde-Art *</Label>
-                          <Select value={bContainerKind} onValueChange={(v: any) => setBContainerKind(v)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="fass">Fass</SelectItem>
-                              <SelectItem value="kanister">Kanister</SelectItem>
-                              <SelectItem value="sack">Sack</SelectItem>
-                              <SelectItem value="big_bag">Big Bag</SelectItem>
-                              <SelectItem value="ibc">IBC</SelectItem>
-                              <SelectItem value="tank">Tank</SelectItem>
-                              <SelectItem value="flasche">Flasche</SelectItem>
-                              <SelectItem value="kiste">Kiste</SelectItem>
-                              <SelectItem value="sonstige">Sonstige</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      {/* Optional: In vorhandenes Gebinde einfüllen */}
+                      {(containers && containers.filter((c: any) => c.status !== "entsorgt" && c.status !== "gesperrt").length > 0) && (
+                        <div className="rounded-md border p-3 space-y-2 bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <Checkbox id="merge-container" checked={bMergeIntoExisting} onCheckedChange={(v) => { setBMergeIntoExisting(!!v); if (!v) setBTargetContainerId(""); }} />
+                            <Label htmlFor="merge-container" className="cursor-pointer text-sm font-medium">
+                              In vorhandenes Gebinde einfüllen (mehrere LOTs)
+                            </Label>
+                          </div>
+                          {bMergeIntoExisting && (
+                            <div>
+                              <Select value={bTargetContainerId} onValueChange={setBTargetContainerId}>
+                                <SelectTrigger><SelectValue placeholder="Ziel-Gebinde wählen" /></SelectTrigger>
+                                <SelectContent>
+                                  {containers!.filter((c: any) => c.status !== "entsorgt" && c.status !== "gesperrt").map((c: any) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                      {c.container_code} · {formatQuantity(c.current_quantity)} {c.unit}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">Der Rohstoff muss identisch sein. Das LOT wird zusätzlich in das Gebinde eingebucht.</p>
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <Label>Gebinde-ID</Label>
-                          <Input value={bContainerCode} onChange={(e) => setBContainerCode(e.target.value)} placeholder="Auto, falls leer" />
+                      )}
+
+                      {!bMergeIntoExisting && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label>Gebinde-Art *</Label>
+                            <Select value={bContainerKind} onValueChange={(v: any) => setBContainerKind(v)}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="fass">Fass</SelectItem>
+                                <SelectItem value="kanister">Kanister</SelectItem>
+                                <SelectItem value="sack">Sack</SelectItem>
+                                <SelectItem value="big_bag">Big Bag</SelectItem>
+                                <SelectItem value="ibc">IBC</SelectItem>
+                                <SelectItem value="tank">Tank</SelectItem>
+                                <SelectItem value="flasche">Flasche</SelectItem>
+                                <SelectItem value="kiste">Kiste</SelectItem>
+                                <SelectItem value="sonstige">Sonstige</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Gebinde-ID</Label>
+                            <Input value={bContainerCode} onChange={(e) => setBContainerCode(e.target.value)} placeholder="Auto, falls leer" />
+                          </div>
                         </div>
-                      </div>
+                      )}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <Label>Feuchte (%)</Label>
