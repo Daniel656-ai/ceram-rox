@@ -179,6 +179,48 @@ export type Database = {
           },
         ]
       }
+      container_batch_positions: {
+        Row: {
+          batch_id: string
+          container_id: string
+          created_at: string
+          id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          container_id: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          container_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "container_batch_positions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "container_batch_positions_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_containers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       container_location_history: {
         Row: {
           changed_at: string
@@ -4441,6 +4483,16 @@ export type Database = {
         Args: { _version_id: string }
         Returns: undefined
       }
+      add_batch_to_container: {
+        Args: {
+          _batch_id: string
+          _comment?: string
+          _container_id: string
+          _movement_date?: string
+          _quantity: number
+        }
+        Returns: string
+      }
       add_project_document: {
         Args: {
           _bump_major?: boolean
@@ -4454,18 +4506,32 @@ export type Database = {
         }
         Returns: string
       }
-      book_container_consumption: {
-        Args: {
-          _comment?: string
-          _container_id: string
-          _movement_date?: string
-          _order_measurement_id?: string
-          _project_id?: string
-          _project_reference?: string
-          _quantity: number
-        }
-        Returns: string
-      }
+      book_container_consumption:
+        | {
+            Args: {
+              _comment?: string
+              _container_id: string
+              _movement_date?: string
+              _order_measurement_id?: string
+              _project_id?: string
+              _project_reference?: string
+              _quantity: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _allocations?: Json
+              _comment?: string
+              _container_id: string
+              _movement_date?: string
+              _order_measurement_id?: string
+              _project_id?: string
+              _project_reference?: string
+              _quantity: number
+            }
+            Returns: string
+          }
       can_edit_project_governance: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -4530,6 +4596,18 @@ export type Database = {
       finalize_project_closure: {
         Args: { _closure_id: string }
         Returns: undefined
+      }
+      get_container_positions: {
+        Args: { _container_id: string }
+        Returns: {
+          batch_id: string
+          batch_number: string
+          created_at: string
+          delivery_date: string
+          manufacturer_batch: string
+          position_id: string
+          quantity: number
+        }[]
       }
       get_raw_material_derived_samples: {
         Args: { _raw_material_batch_id?: string; _raw_material_id: string }
