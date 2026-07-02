@@ -12,6 +12,8 @@ import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useProjects } from "@/hooks/useProjects";
 import { useUsers } from "@/hooks/useUsers";
 import { useCreateWeeklyReview } from "@/hooks/useWeeklyReviews";
+import { PersonSelect } from "@/components/PersonSelect";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
