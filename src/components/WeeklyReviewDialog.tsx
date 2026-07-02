@@ -12,6 +12,8 @@ import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useProjects } from "@/hooks/useProjects";
 import { useUsers } from "@/hooks/useUsers";
 import { useCreateWeeklyReview } from "@/hooks/useWeeklyReviews";
+import { PersonSelect } from "@/components/PersonSelect";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +85,44 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
   );
   const myRole = (myMember?.role as string | undefined) || (isPMO ? "member" : "member");
 
+  // PMO: choose person (stellvertretend) + role from that person's project memberships
+  const [pmoPersonId, setPmoPersonId] = useState<string>("");
+  const [pmoRole, setPmoRole] = useState<string>("");
+
+  // Reset PMO selection when project changes
+  useEffect(() => {
+    if (isPMO) {
+      setPmoPersonId("");
+      setPmoRole("");
+    }
+  }, [effectiveProjectId, isPMO, open]);
+
+  // Users list restricted to the selected project's members
+  const memberUsers = useMemo(() => {
+    const memberIds = new Set((members as any[]).map((m: any) => m.user_id));
+    return (users as any[]).filter((u: any) => memberIds.has(u.user_id));
+  }, [members, users]);
+
+  // Roles the selected PMO-target person actually has in this project
+  const availableRolesForPerson = useMemo(() => {
+    if (!pmoPersonId) return [] as string[];
+    const roles = (members as any[])
+      .filter((m: any) => m.user_id === pmoPersonId)
+      .map((m: any) => m.role as string);
+    return Array.from(new Set(roles)).sort((a, b) =>
+      (ROLE_LABELS[a] ?? a).localeCompare(ROLE_LABELS[b] ?? b, "de")
+    );
+  }, [members, pmoPersonId]);
+
+  // Auto-select role if there is only one
+  useEffect(() => {
+    if (isPMO && availableRolesForPerson.length === 1) {
+      setPmoRole(availableRolesForPerson[0]);
+    } else if (isPMO && !availableRolesForPerson.includes(pmoRole)) {
+      setPmoRole("");
+    }
+  }, [availableRolesForPerson, isPMO]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const myName = useMemo(() => {
     if (profile) return `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || user?.email || "–";
     const u = (users as any[]).find((u: any) => u.user_id === user?.id);
@@ -121,6 +161,24 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
       toast.error("Bitte ein Projekt auswählen");
       return;
     }
+    if (isPMO && !pmoPersonId) {
+      toast.error("Bitte eine Person auswählen");
+      return;
+    }
+    if (isPMO && !pmoRole) {
+      toast.error("Bitte eine Projektrolle auswählen");
+      return;
+    }
+    // Validate PMO selection is a real project membership
+    if (isPMO) {
+      const valid = (members as any[]).some(
+        (m: any) => m.user_id === pmoPersonId && m.role === pmoRole
+      );
+      if (!valid) {
+        toast.error("Ungültige Person/Rollen-Kombination für dieses Projekt");
+        return;
+      }
+    }
     if (!rating) {
       toast.error("Bitte eine Gesamtbewertung auswählen");
       return;
@@ -132,8 +190,8 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
     try {
       await createMut.mutateAsync({
         project_id: effectiveProjectId,
-        author_user_id: user.id,
-        author_role_snapshot: myRole,
+        author_user_id: isPMO ? pmoPersonId : user.id,
+        author_role_snapshot: isPMO ? pmoRole : myRole,
         iso_year: isoYear,
         iso_week: isoWeek,
         review_date: today.toISOString().slice(0, 10),
@@ -266,6 +324,41 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
             </div>
           )}
 
+          {/* PMO: choose person + role on behalf of whom the review is created */}
+          {isPMO && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Person</Label>
+                <PersonSelect
+                  value={pmoPersonId}
+                  onValueChange={(id) => setPmoPersonId(id)}
+                  users={memberUsers}
+                  placeholder={effectiveProjectId ? "Person auswählen…" : "Zuerst Projekt wählen"}
+                  searchPlaceholder="Person suchen…"
+                  disabled={!effectiveProjectId || memberUsers.length === 0}
+                  activeOnly={false}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Projektrolle</Label>
+                <Select
+                  value={pmoRole}
+                  onValueChange={setPmoRole}
+                  disabled={!pmoPersonId || availableRolesForPerson.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={pmoPersonId ? "Rolle wählen…" : "Zuerst Person wählen"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRolesForPerson.map((r) => (
+                      <SelectItem key={r} value={r}>{ROLE_LABELS[r] ?? r}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
           {/* Read-only auto fields */}
           <div className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
             <div>
@@ -274,13 +367,23 @@ export function WeeklyReviewDialog({ projectId, open, onOpenChange }: Props) {
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Mitarbeiter</div>
-              <div className="font-medium truncate" title={myName}>{myName}</div>
+              <div className="font-medium truncate" title={isPMO ? undefined : myName}>
+                {isPMO
+                  ? (() => {
+                      const p = (users as any[]).find((u: any) => u.user_id === pmoPersonId);
+                      return p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || p.email : "–";
+                    })()
+                  : myName}
+              </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Projektrolle</div>
-              <div className="font-medium">{ROLE_LABELS[myRole] ?? myRole}</div>
+              <div className="font-medium">
+                {isPMO ? (pmoRole ? (ROLE_LABELS[pmoRole] ?? pmoRole) : "–") : (ROLE_LABELS[myRole] ?? myRole)}
+              </div>
             </div>
           </div>
+
 
           {/* Questions */}
           {[
