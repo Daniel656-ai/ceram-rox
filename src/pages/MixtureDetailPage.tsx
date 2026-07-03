@@ -737,6 +737,16 @@ export default function MixtureDetailPage() {
               </div>
             </div>
 
+            <BarcodeScannerRow
+              recipe={recipe as any[]}
+              onFound={(item, containerId) =>
+                setProdLines((p) => ({
+                  ...p,
+                  [item.id]: { ...(p[item.id] || { quantity: "", container_id: "", confirmed: false, notes: "" }), container_id: containerId },
+                }))
+              }
+            />
+
             <div>
               <Label className="mb-2 block">Verwiegung pro Rohstoff</Label>
               <div className="space-y-3 border rounded-md p-3">
