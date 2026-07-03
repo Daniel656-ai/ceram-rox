@@ -832,8 +832,18 @@ export default function RawMaterialDetailPage() {
                     <Input value={cCode} onChange={(e) => setCCode(e.target.value)} placeholder="Auto: GEB-<Charge>-NNN" />
                   </div>
                   <div>
+                    <Label>Gebindebezeichnung</Label>
+                    <Input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="z.B. Fass 60L blau" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <Label>Barcode / QR</Label>
                     <Input value={cBarcode} onChange={(e) => setCBarcode(e.target.value)} placeholder="Optional" />
+                  </div>
+                  <div>
+                    <Label>Verfallsdatum</Label>
+                    <Input type="date" value={cExpiry} onChange={(e) => setCExpiry(e.target.value)} />
                   </div>
                 </div>
                 <div>
