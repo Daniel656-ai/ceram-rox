@@ -1239,15 +1239,25 @@ export type Database = {
         Row: {
           actual_quantity: number
           batch_id: string
+          confirmed: boolean
+          confirmed_at: string | null
+          confirmed_by: string | null
+          container_code_snapshot: string | null
+          container_id: string | null
+          container_name_snapshot: string | null
           created_at: string
           deviation_abs: number | null
           deviation_pct: number | null
+          gross_weight: number | null
           id: string
           inventory_movement_id: string | null
+          location_snapshot: string | null
+          lot_number_snapshot: string | null
           notes: string | null
           raw_material_batch_id: string | null
           raw_material_id: string
           step_id: string | null
+          tare_weight_snapshot: number | null
           target_quantity: number | null
           unit: string
           weighed_at: string
@@ -1256,15 +1266,25 @@ export type Database = {
         Insert: {
           actual_quantity: number
           batch_id: string
+          confirmed?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          container_code_snapshot?: string | null
+          container_id?: string | null
+          container_name_snapshot?: string | null
           created_at?: string
           deviation_abs?: number | null
           deviation_pct?: number | null
+          gross_weight?: number | null
           id?: string
           inventory_movement_id?: string | null
+          location_snapshot?: string | null
+          lot_number_snapshot?: string | null
           notes?: string | null
           raw_material_batch_id?: string | null
           raw_material_id: string
           step_id?: string | null
+          tare_weight_snapshot?: number | null
           target_quantity?: number | null
           unit?: string
           weighed_at?: string
@@ -1273,15 +1293,25 @@ export type Database = {
         Update: {
           actual_quantity?: number
           batch_id?: string
+          confirmed?: boolean
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          container_code_snapshot?: string | null
+          container_id?: string | null
+          container_name_snapshot?: string | null
           created_at?: string
           deviation_abs?: number | null
           deviation_pct?: number | null
+          gross_weight?: number | null
           id?: string
           inventory_movement_id?: string | null
+          location_snapshot?: string | null
+          lot_number_snapshot?: string | null
           notes?: string | null
           raw_material_batch_id?: string | null
           raw_material_id?: string
           step_id?: string | null
+          tare_weight_snapshot?: number | null
           target_quantity?: number | null
           unit?: string
           weighed_at?: string
@@ -1293,6 +1323,13 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "mixture_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_weighings_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "raw_material_containers"
             referencedColumns: ["id"]
           },
           {
@@ -3220,11 +3257,14 @@ export type Database = {
           barcode: string | null
           batch_id: string | null
           container_code: string
+          container_name: string | null
           created_at: string
           created_by: string
           current_quantity: number
+          expiry_date: string | null
           id: string
           initial_quantity: number
+          is_default_container: boolean
           kind: Database["public"]["Enums"]["container_kind"]
           location_id: string | null
           location_note: string | null
@@ -3232,6 +3272,8 @@ export type Database = {
           raw_material_id: string
           reserved_quantity: number
           status: Database["public"]["Enums"]["container_status"]
+          tare_unit: string | null
+          tare_weight: number | null
           unit: string
           updated_at: string
         }
@@ -3239,11 +3281,14 @@ export type Database = {
           barcode?: string | null
           batch_id?: string | null
           container_code: string
+          container_name?: string | null
           created_at?: string
           created_by: string
           current_quantity?: number
+          expiry_date?: string | null
           id?: string
           initial_quantity?: number
+          is_default_container?: boolean
           kind?: Database["public"]["Enums"]["container_kind"]
           location_id?: string | null
           location_note?: string | null
@@ -3251,6 +3296,8 @@ export type Database = {
           raw_material_id: string
           reserved_quantity?: number
           status?: Database["public"]["Enums"]["container_status"]
+          tare_unit?: string | null
+          tare_weight?: number | null
           unit?: string
           updated_at?: string
         }
@@ -3258,11 +3305,14 @@ export type Database = {
           barcode?: string | null
           batch_id?: string | null
           container_code?: string
+          container_name?: string | null
           created_at?: string
           created_by?: string
           current_quantity?: number
+          expiry_date?: string | null
           id?: string
           initial_quantity?: number
+          is_default_container?: boolean
           kind?: Database["public"]["Enums"]["container_kind"]
           location_id?: string | null
           location_note?: string | null
@@ -3270,6 +3320,8 @@ export type Database = {
           raw_material_id?: string
           reserved_quantity?: number
           status?: Database["public"]["Enums"]["container_status"]
+          tare_unit?: string | null
+          tare_weight?: number | null
           unit?: string
           updated_at?: string
         }
@@ -4580,6 +4632,10 @@ export type Database = {
         Args: { _version_a: string; _version_b: string }
         Returns: Json
       }
+      finalize_mixture_batch: {
+        Args: { _batch_id: string; _produced_quantity: number }
+        Returns: undefined
+      }
       finalize_project_closure: {
         Args: { _closure_id: string }
         Returns: undefined
@@ -4749,6 +4805,17 @@ export type Database = {
             }
             Returns: string
           }
+      weigh_mixture_batch: {
+        Args: {
+          _concentration?: string
+          _mixture_id: string
+          _notes?: string
+          _planned_quantity?: number
+          _unit?: string
+          _weighings?: Json
+        }
+        Returns: string
+      }
     }
     Enums: {
       absence_type: "urlaub" | "krankheit" | "weiterbildung" | "sonstiges"

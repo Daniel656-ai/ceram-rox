@@ -24,9 +24,12 @@ import {
   useDeleteRecipeItem,
   useMixtureBatches,
   useProduceMixtureBatch,
+  useWeighMixtureBatch,
+  useFinalizeMixtureBatch,
   useMixtureInventory,
   useRawMaterials,
 } from "@/hooks/useMixtures";
+import { useContainers } from "@/hooks/useRawMaterials";
 import { calculateMixtureStock } from "@/lib/api/mixtures";
 import { formatQuantity } from "@/lib/formatQuantity";
 import { Button } from "@/components/ui/button";
@@ -178,14 +181,16 @@ export default function MixtureDetailPage() {
     setRecipeOpen(false);
   };
 
-  // Produce batch
+  // Verwiegen (Phase 1): only documents, no inventory movement
+  const weighBatch = useWeighMixtureBatch();
+  const finalizeBatch = useFinalizeMixtureBatch(id);
   const [prodOpen, setProdOpen] = useState(false);
   const [prodQuantity, setProdQuantity] = useState("");
   const [prodConc, setProdConc] = useState("");
   const [prodNotes, setProdNotes] = useState("");
-  // For each recipe item the user can override batch + quantity
+  // Per recipe item: chosen container + actual weighed quantity + confirm flag
   const [prodLines, setProdLines] = useState<
-    Record<string, { quantity: string; raw_material_batch_id: string }>
+    Record<string, { quantity: string; container_id: string; confirmed: boolean; notes: string }>
   >({});
 
   const openProduce = () => {
@@ -193,42 +198,43 @@ export default function MixtureDetailPage() {
     setProdQuantity("");
     setProdConc(mixture.target_concentration || "");
     setProdNotes("");
-    // scale = 1 by default — quantities equal recipe
     const init: typeof prodLines = {};
     for (const item of recipe as any[]) {
-      init[item.id] = { quantity: String(item.quantity), raw_material_batch_id: "" };
+      init[item.id] = { quantity: String(item.quantity), container_id: "", confirmed: false, notes: "" };
     }
     setProdLines(init);
     setProdOpen(true);
   };
 
   const handleProduce = async () => {
-    if (!id || !prodQuantity || (recipe as any[]).length === 0) return;
-    const consumptions = (recipe as any[])
+    if (!id || (recipe as any[]).length === 0) return;
+    const weighings = (recipe as any[])
       .map((item) => {
         const line = prodLines[item.id];
         if (!line) return null;
         const qty = Number(line.quantity);
-        if (!qty || qty <= 0) return null;
         return {
           raw_material_id: item.raw_material_id,
-          raw_material_batch_id: line.raw_material_batch_id || null,
-          quantity: qty,
+          container_id: line.container_id || null,
+          target_quantity: Number(item.quantity),
+          actual_quantity: qty || 0,
           unit: item.unit,
+          notes: line.notes || null,
+          confirmed: !!line.confirmed,
         };
       })
       .filter(Boolean) as any[];
 
     try {
-      await produce.mutateAsync({
+      await weighBatch.mutateAsync({
         mixture_id: id,
-        produced_quantity: Number(prodQuantity),
         unit: mixture!.unit,
         concentration: prodConc.trim() || null,
         notes: prodNotes.trim() || null,
-        consumptions,
+        planned_quantity: prodQuantity ? Number(prodQuantity) : null,
+        weighings,
       });
-      toast({ title: t("mixtures:production_success") });
+      toast({ title: t("mixtures:weighing_saved") });
       setProdOpen(false);
     } catch (e: any) {
       toast({
@@ -236,6 +242,28 @@ export default function MixtureDetailPage() {
         description: e.message,
         variant: "destructive",
       });
+    }
+  };
+
+  // Finalize (Chargenabschluss)
+  const [finOpen, setFinOpen] = useState(false);
+  const [finBatchId, setFinBatchId] = useState<string | null>(null);
+  const [finQty, setFinQty] = useState("");
+
+  const openFinalize = (batch: any) => {
+    setFinBatchId(batch.id);
+    setFinQty(String(batch.produced_quantity ?? ""));
+    setFinOpen(true);
+  };
+
+  const handleFinalize = async () => {
+    if (!finBatchId || !finQty) return;
+    try {
+      await finalizeBatch.mutateAsync({ batch_id: finBatchId, produced_quantity: Number(finQty) });
+      toast({ title: t("mixtures:batch_finalized") });
+      setFinOpen(false);
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
     }
   };
 
@@ -452,7 +480,9 @@ export default function MixtureDetailPage() {
                     <TableHead>{t("mixtures:produced_quantity")}</TableHead>
                     <TableHead>{t("mixtures:concentration")}</TableHead>
                     <TableHead>{t("mixtures:consumptions")}</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="w-40">Proben</TableHead>
+                    <TableHead className="w-32">Aktion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -485,7 +515,23 @@ export default function MixtureDetailPage() {
                         ))}
                       </TableCell>
                       <TableCell>
+                        {b.status === "abgeschlossen" ? (
+                          <Badge variant="secondary">{t("mixtures:status_completed")}</Badge>
+                        ) : b.status === "laufend" ? (
+                          <Badge variant="outline">{t("mixtures:status_running")}</Badge>
+                        ) : (
+                          <Badge>{t("mixtures:status_weighed")}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <BatchSamplesCell batchId={b.id} batchNumber={b.batch_number} mixtureName={mixture.name} />
+                      </TableCell>
+                      <TableCell>
+                        {b.status !== "abgeschlossen" && canProduce && (
+                          <Button size="sm" variant="outline" onClick={() => openFinalize(b)}>
+                            Abschließen
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -637,23 +683,24 @@ export default function MixtureDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Produce batch dialog */}
+      {/* Verwiegemaske */}
       <Dialog open={prodOpen} onOpenChange={setProdOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("mixtures:produce_batch")}</DialogTitle>
+            <DialogTitle>{t("mixtures:weighing_dialog_title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>
-                  {t("mixtures:produced_quantity")} ({mixture.unit}) *
+                  Geplante Menge ({mixture.unit})
                 </Label>
                 <Input
                   type="number"
                   step="0.001"
                   value={prodQuantity}
                   onChange={(e) => setProdQuantity(e.target.value)}
+                  placeholder="Optional – Zielmenge der Charge"
                 />
               </div>
               <div>
@@ -663,54 +710,28 @@ export default function MixtureDetailPage() {
             </div>
 
             <div>
-              <Label className="mb-2 block">{t("mixtures:consumptions")}</Label>
-              <div className="space-y-2 border rounded-md p-3">
+              <Label className="mb-2 block">Verwiegung pro Rohstoff</Label>
+              <div className="space-y-3 border rounded-md p-3">
                 {(recipe as any[]).map((item) => (
-                  <div
+                  <WeighingLine
                     key={item.id}
-                    className="grid grid-cols-12 gap-2 items-center text-sm"
-                  >
-                    <div className="col-span-5">
-                      {item.raw_materials?.material_name}
-                    </div>
-                    <div className="col-span-3">
-                      <Input
-                        type="number"
-                        step="0.001"
-                        value={prodLines[item.id]?.quantity || ""}
-                        onChange={(e) =>
-                          setProdLines((p) => ({
-                            ...p,
-                            [item.id]: {
-                              ...p[item.id],
-                              quantity: e.target.value,
-                              raw_material_batch_id:
-                                p[item.id]?.raw_material_batch_id || "",
-                            },
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="col-span-1 text-muted-foreground">{item.unit}</div>
-                    <div className="col-span-3">
-                      <Input
-                        placeholder={t("mixtures:select_batch")}
-                        value={prodLines[item.id]?.raw_material_batch_id || ""}
-                        onChange={(e) =>
-                          setProdLines((p) => ({
-                            ...p,
-                            [item.id]: {
-                              ...p[item.id],
-                              raw_material_batch_id: e.target.value,
-                              quantity: p[item.id]?.quantity || "",
-                            },
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
+                    item={item}
+                    line={prodLines[item.id] || { quantity: "", container_id: "", confirmed: false, notes: "" }}
+                    onChange={(patch) =>
+                      setProdLines((p) => ({
+                        ...p,
+                        [item.id]: { ...(p[item.id] || { quantity: "", container_id: "", confirmed: false, notes: "" }), ...patch },
+                      }))
+                    }
+                  />
                 ))}
+                {(recipe as any[]).length === 0 && (
+                  <div className="text-sm text-muted-foreground">Keine Rohstoffe in der Rezeptur.</div>
+                )}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Hinweis: Die Verwiegung dokumentiert nur. Der Lagerbestand wird erst beim Chargenabschluss gebucht.
+              </p>
             </div>
 
             <div>
@@ -728,13 +749,38 @@ export default function MixtureDetailPage() {
             </Button>
             <Button
               onClick={handleProduce}
-              disabled={!prodQuantity || produce.isPending}
+              disabled={weighBatch.isPending || (recipe as any[]).length === 0}
             >
-              {t("mixtures:produce_batch")}
+              Verwiegung speichern
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Chargenabschluss */}
+      <Dialog open={finOpen} onOpenChange={setFinOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("mixtures:finalize_batch")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Beim Abschluss werden die tatsächlichen Verbrauchsmengen (FIFO je Gebinde) aus dem Lager gebucht und die hergestellte Menge dem Bestand gutgeschrieben.
+            </p>
+            <div>
+              <Label>Hergestellte Menge ({mixture.unit}) *</Label>
+              <Input type="number" step="0.001" value={finQty} onChange={(e) => setFinQty(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFinOpen(false)}>{t("mixtures:cancel")}</Button>
+            <Button onClick={handleFinalize} disabled={!finQty || finalizeBatch.isPending}>
+              {t("mixtures:finalize_batch")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Copy mixture dialog */}
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
@@ -1003,5 +1049,145 @@ function RawMaterialCombobox({
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function WeighingLine({
+  item,
+  line,
+  onChange,
+}: {
+  item: any;
+  line: { quantity: string; container_id: string; confirmed: boolean; notes: string };
+  onChange: (patch: Partial<{ quantity: string; container_id: string; confirmed: boolean; notes: string }>) => void;
+}) {
+  const { data: containers = [] } = useContainers(item.raw_material_id);
+  const available = (containers as any[]).filter(
+    (c: any) => Number(c.current_quantity ?? 0) > 0 && c.status !== "gesperrt" && c.status !== "entsorgt"
+  );
+  const selected = available.find((c: any) => c.id === line.container_id);
+
+  const tare = selected?.tare_weight ? Number(selected.tare_weight) : null;
+  const [gross, setGross] = useState("");
+
+  const applyGross = (g: string) => {
+    setGross(g);
+    if (g && tare != null) {
+      const net = Math.max(0, Number(g) - tare);
+      onChange({ quantity: net.toFixed(3) });
+    }
+  };
+
+  return (
+    <div className="border rounded-md p-3 space-y-2 bg-muted/20">
+      <div className="grid grid-cols-12 gap-2 items-center">
+        <div className="col-span-4">
+          <div className="font-medium text-sm">{item.raw_materials?.material_name}</div>
+          <div className="text-xs text-muted-foreground">
+            Soll: {formatQuantity(item.quantity)} {item.unit}
+          </div>
+        </div>
+        <div className="col-span-5">
+          <Label className="text-xs">Gebinde</Label>
+          <Select
+            value={line.container_id || "__none__"}
+            onValueChange={(v) => onChange({ container_id: v === "__none__" ? "" : v })}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Gebinde wählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— kein Gebinde —</SelectItem>
+              {available.length === 0 && (
+                <div className="px-2 py-1 text-xs text-muted-foreground">
+                  Kein Gebinde verfügbar
+                </div>
+              )}
+              {available.map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.container_code}
+                  {c.container_name ? ` – ${c.container_name}` : ""}
+                  {" · "}
+                  {formatQuantity(c.current_quantity)} {c.unit}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="col-span-3">
+          <Label className="text-xs">Istmenge ({item.unit})</Label>
+          <Input
+            type="number"
+            step="0.001"
+            value={line.quantity}
+            onChange={(e) => onChange({ quantity: e.target.value })}
+          />
+        </div>
+      </div>
+
+      {selected && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground bg-background rounded p-2 border">
+          <div>
+            <span className="font-medium">Gebinde-ID:</span> {selected.container_code}
+          </div>
+          <div>
+            <span className="font-medium">LOT:</span>{" "}
+            {selected.raw_material_batches?.batch_number || "—"}
+          </div>
+          <div>
+            <span className="font-medium">Bestand:</span>{" "}
+            {formatQuantity(selected.current_quantity)} {selected.unit}
+          </div>
+          <div>
+            <span className="font-medium">Tara:</span>{" "}
+            {tare != null ? `${formatQuantity(tare)} ${selected.tare_unit || "kg"}` : "—"}
+          </div>
+          <div>
+            <span className="font-medium">Lagerort:</span>{" "}
+            {selected.storage_locations?.name || selected.location_note || "—"}
+          </div>
+          <div>
+            <span className="font-medium">Verfall:</span>{" "}
+            {selected.expiry_date ? format(new Date(selected.expiry_date), "dd.MM.yyyy") : "—"}
+          </div>
+        </div>
+      )}
+
+      {tare != null && (
+        <div className="grid grid-cols-3 gap-2 items-end">
+          <div>
+            <Label className="text-xs">Bruttogewicht</Label>
+            <Input
+              type="number"
+              step="0.001"
+              value={gross}
+              onChange={(e) => applyGross(e.target.value)}
+              placeholder="→ Netto = Brutto − Tara"
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Netto = Brutto − Tara ({formatQuantity(tare)} {selected?.tare_unit || "kg"})
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-12 gap-2 items-center">
+        <div className="col-span-9">
+          <Input
+            placeholder="Bemerkung (optional)"
+            value={line.notes}
+            onChange={(e) => onChange({ notes: e.target.value })}
+          />
+        </div>
+        <label className="col-span-3 flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={line.confirmed}
+            onChange={(e) => onChange({ confirmed: e.target.checked })}
+          />
+          Verwiegung bestätigt
+        </label>
+      </div>
+    </div>
   );
 }

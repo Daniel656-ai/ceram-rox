@@ -192,9 +192,10 @@ export default function RawMaterialDetailPage() {
   const [contOpen, setContOpen] = useState(false);
   const [cEditId, setCEditId] = useState<string | null>(null);
   const [cCode, setCCode] = useState("");
+  const [cName, setCName] = useState("");
   const [cBarcode, setCBarcode] = useState("");
   const [cBatchId, setCBatchId] = useState("");
-  const [cKind, setCKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige">("fass");
+  const [cKind, setCKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "kiste" | "sonstige">("fass");
   const [cInitial, setCInitial] = useState("");
   const [cCurrent, setCCurrent] = useState("");
   const [cUnit, setCUnit] = useState("kg");
@@ -202,6 +203,10 @@ export default function RawMaterialDetailPage() {
   const [cLocationId, setCLocationId] = useState("");
   const [cLocationNote, setCLocationNote] = useState("");
   const [cNotes, setCNotes] = useState("");
+  const [cTareWeight, setCTareWeight] = useState("");
+  const [cTareUnit, setCTareUnit] = useState("kg");
+  const [cIsDefault, setCIsDefault] = useState(false);
+  const [cExpiry, setCExpiry] = useState("");
 
   // Container actions dialog (movements/history/audit)
   const [actionsContainer, setActionsContainer] = useState<any | null>(null);
@@ -212,6 +217,7 @@ export default function RawMaterialDetailPage() {
     if (existing && existing.id) {
       setCEditId(existing.id);
       setCCode(existing.container_code || "");
+      setCName(existing.container_name || "");
       setCBarcode(existing.barcode || "");
       setCBatchId(existing.batch_id || "");
       setCKind(existing.kind);
@@ -222,11 +228,14 @@ export default function RawMaterialDetailPage() {
       setCLocationId(existing.location_id || "");
       setCLocationNote(existing.location_note || "");
       setCNotes(existing.notes || "");
+      setCTareWeight(existing.tare_weight != null ? String(existing.tare_weight) : "");
+      setCTareUnit(existing.tare_unit || "kg");
+      setCIsDefault(!!existing.is_default_container);
+      setCExpiry(existing.expiry_date || "");
     } else {
-      // New container — optionally prefill from a partial (e.g. batch_id)
       const pre = existing || {};
       setCEditId(null);
-      setCCode(""); setCBarcode("");
+      setCCode(""); setCName(""); setCBarcode("");
       setCBatchId(pre.batch_id || "");
       setCKind(pre.kind || "fass");
       setCInitial(""); setCCurrent("");
@@ -234,6 +243,8 @@ export default function RawMaterialDetailPage() {
       setCStatus(pre.status || "verfuegbar");
       setCLocationId(pre.location_id || mat?.default_location_id || "");
       setCLocationNote(""); setCNotes("");
+      setCTareWeight(""); setCTareUnit("kg");
+      setCIsDefault(false); setCExpiry("");
     }
     setContOpen(true);
   };
@@ -246,6 +257,7 @@ export default function RawMaterialDetailPage() {
       raw_material_id: id,
       batch_id: cBatchId || null,
       container_code: cCode.trim() || null,
+      container_name: cName.trim() || null,
       barcode: cBarcode.trim() || null,
       kind: cKind,
       initial_quantity: Number(cInitial),
@@ -255,6 +267,10 @@ export default function RawMaterialDetailPage() {
       location_id: cLocationId || null,
       location_note: cLocationNote || null,
       notes: cNotes || null,
+      tare_weight: cTareWeight ? Number(cTareWeight) : null,
+      tare_unit: cTareWeight ? cTareUnit : null,
+      is_default_container: cIsDefault,
+      expiry_date: cExpiry || null,
     };
     try {
       if (cEditId) {
@@ -816,8 +832,18 @@ export default function RawMaterialDetailPage() {
                     <Input value={cCode} onChange={(e) => setCCode(e.target.value)} placeholder="Auto: GEB-<Charge>-NNN" />
                   </div>
                   <div>
+                    <Label>Gebindebezeichnung</Label>
+                    <Input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="z.B. Fass 60L blau" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <Label>Barcode / QR</Label>
                     <Input value={cBarcode} onChange={(e) => setCBarcode(e.target.value)} placeholder="Optional" />
+                  </div>
+                  <div>
+                    <Label>Verfallsdatum</Label>
+                    <Input type="date" value={cExpiry} onChange={(e) => setCExpiry(e.target.value)} />
                   </div>
                 </div>
                 <div>
@@ -880,6 +906,27 @@ export default function RawMaterialDetailPage() {
                         {["kg", "g", "t", "Liter", "ml", "Stück"].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>Leergewicht (Tara)</Label>
+                    <Input type="number" step="0.001" value={cTareWeight} onChange={(e) => setCTareWeight(e.target.value)} placeholder="0.000" />
+                  </div>
+                  <div>
+                    <Label>Tara-Einheit</Label>
+                    <Select value={cTareUnit} onValueChange={setCTareUnit}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["kg", "g", "t"].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={cIsDefault} onChange={(e) => setCIsDefault(e.target.checked)} />
+                      Standardgebinde
+                    </label>
                   </div>
                 </div>
                 <div>
