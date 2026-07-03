@@ -217,6 +217,7 @@ export default function RawMaterialDetailPage() {
     if (existing && existing.id) {
       setCEditId(existing.id);
       setCCode(existing.container_code || "");
+      setCName(existing.container_name || "");
       setCBarcode(existing.barcode || "");
       setCBatchId(existing.batch_id || "");
       setCKind(existing.kind);
@@ -227,11 +228,14 @@ export default function RawMaterialDetailPage() {
       setCLocationId(existing.location_id || "");
       setCLocationNote(existing.location_note || "");
       setCNotes(existing.notes || "");
+      setCTareWeight(existing.tare_weight != null ? String(existing.tare_weight) : "");
+      setCTareUnit(existing.tare_unit || "kg");
+      setCIsDefault(!!existing.is_default_container);
+      setCExpiry(existing.expiry_date || "");
     } else {
-      // New container — optionally prefill from a partial (e.g. batch_id)
       const pre = existing || {};
       setCEditId(null);
-      setCCode(""); setCBarcode("");
+      setCCode(""); setCName(""); setCBarcode("");
       setCBatchId(pre.batch_id || "");
       setCKind(pre.kind || "fass");
       setCInitial(""); setCCurrent("");
@@ -239,6 +243,8 @@ export default function RawMaterialDetailPage() {
       setCStatus(pre.status || "verfuegbar");
       setCLocationId(pre.location_id || mat?.default_location_id || "");
       setCLocationNote(""); setCNotes("");
+      setCTareWeight(""); setCTareUnit("kg");
+      setCIsDefault(false); setCExpiry("");
     }
     setContOpen(true);
   };
@@ -251,6 +257,7 @@ export default function RawMaterialDetailPage() {
       raw_material_id: id,
       batch_id: cBatchId || null,
       container_code: cCode.trim() || null,
+      container_name: cName.trim() || null,
       barcode: cBarcode.trim() || null,
       kind: cKind,
       initial_quantity: Number(cInitial),
@@ -260,6 +267,10 @@ export default function RawMaterialDetailPage() {
       location_id: cLocationId || null,
       location_note: cLocationNote || null,
       notes: cNotes || null,
+      tare_weight: cTareWeight ? Number(cTareWeight) : null,
+      tare_unit: cTareWeight ? cTareUnit : null,
+      is_default_container: cIsDefault,
+      expiry_date: cExpiry || null,
     };
     try {
       if (cEditId) {
