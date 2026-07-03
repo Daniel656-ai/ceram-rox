@@ -1,11 +1,12 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Plus, Trash2, Play, FlaskConical, GitBranch, Settings2, ExternalLink, Copy as CopyIcon, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Play, FlaskConical, GitBranch, Settings2, ExternalLink, Copy as CopyIcon, ArrowRightLeft, History, ScanLine, Camera, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { CreateSampleFromBatchDialog } from "@/components/CreateSampleFromBatchDialog";
 import { EditBatchDialog } from "@/components/EditBatchDialog";
+import { BatchAuditTimeline } from "@/components/BatchAuditTimeline";
 import { ProcessEditor } from "@/components/ProcessEditor";
 import { RecipeAvailability } from "@/components/RecipeAvailability";
 import { VersionDiffDialog } from "@/components/VersionDiffDialog";
@@ -274,6 +275,14 @@ export default function MixtureDetailPage() {
   const openEditBatch = (batch: any) => {
     setEditBatch(batch);
     setEditBatchOpen(true);
+  };
+
+  // Audit-Trail dialog
+  const [auditBatch, setAuditBatch] = useState<any | null>(null);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const openAudit = (batch: any) => {
+    setAuditBatch(batch);
+    setAuditOpen(true);
   };
 
   if (!mixture) {
@@ -547,6 +556,9 @@ export default function MixtureDetailPage() {
                               Bearbeiten
                             </Button>
                           )}
+                          <Button size="sm" variant="ghost" onClick={() => openAudit(b)}>
+                            <History className="h-3 w-3 mr-1" /> Historie
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -725,6 +737,16 @@ export default function MixtureDetailPage() {
               </div>
             </div>
 
+            <BarcodeScannerRow
+              recipe={recipe as any[]}
+              onFound={(item, containerId) =>
+                setProdLines((p) => ({
+                  ...p,
+                  [item.id]: { ...(p[item.id] || { quantity: "", container_id: "", confirmed: false, notes: "" }), container_id: containerId },
+                }))
+              }
+            />
+
             <div>
               <Label className="mb-2 block">Verwiegung pro Rohstoff</Label>
               <div className="space-y-3 border rounded-md p-3">
@@ -804,6 +826,14 @@ export default function MixtureDetailPage() {
           onOpenChange={(v) => { setEditBatchOpen(v); if (!v) setEditBatch(null); }}
           batch={editBatch}
           mixtureId={id}
+        />
+      )}
+
+      {auditBatch && (
+        <BatchAuditTimeline
+          open={auditOpen}
+          onOpenChange={(v) => { setAuditOpen(v); if (!v) setAuditBatch(null); }}
+          batch={auditBatch}
         />
       )}
 
@@ -1195,6 +1225,7 @@ function WeighingLine({
           <div className="text-xs text-muted-foreground">
             Netto = Brutto − Tara ({formatQuantity(tare)} {selected?.tare_unit || "kg"})
           </div>
+          <ScaleOcrButton onValue={(v) => (tare != null ? applyGross(String(v)) : onChange({ quantity: String(v) }))} />
         </div>
       )}
 
@@ -1218,3 +1249,113 @@ function WeighingLine({
     </div>
   );
 }
+
+function BarcodeScannerRow({
+  recipe,
+  onFound,
+}: {
+  recipe: any[];
+  onFound: (item: any, containerId: string) => void;
+}) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const scan = async () => {
+    const v = code.trim();
+    if (!v) return;
+    setBusy(true);
+    try {
+      const c: any = await api.rawMaterialContainers.getByBarcode(v);
+      if (!c) {
+        toast({ title: "Nicht gefunden", description: `Gebinde ${v} nicht gefunden.`, variant: "destructive" });
+        return;
+      }
+      const item = recipe.find((r) => r.raw_material_id === c.raw_material_id);
+      if (!item) {
+        toast({
+          title: "Passt nicht zur Rezeptur",
+          description: `Gebinde ${c.container_code} enthält "${c.raw_materials?.material_name}", was nicht in dieser Rezeptur ist.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      onFound(item, c.id);
+      toast({ title: "Gebinde übernommen", description: `${c.container_code} → ${item.raw_materials?.material_name}` });
+      setCode("");
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-end gap-2 border rounded-md p-2 bg-muted/10">
+      <ScanLine className="h-5 w-5 text-muted-foreground mb-2" />
+      <div className="flex-1">
+        <Label className="text-xs">Barcode / Gebinde-Code scannen</Label>
+        <Input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); scan(); } }}
+          placeholder="Barcode scannen oder Code eingeben und Enter"
+          autoFocus
+        />
+      </div>
+      <Button onClick={scan} disabled={!code.trim() || busy} size="sm">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Übernehmen"}
+      </Button>
+    </div>
+  );
+}
+
+function ScaleOcrButton({ onValue }: { onValue: (v: number) => void }) {
+  const [busy, setBusy] = useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    setBusy(true);
+    try {
+      const dataUrl: string = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result as string);
+        r.onerror = () => rej(r.error);
+        r.readAsDataURL(file);
+      });
+      const result = await api.weighingOcr.read(dataUrl);
+      if (result?.value == null || Number.isNaN(Number(result.value))) {
+        toast({ title: "Kein Wert erkannt", description: "Bitte Foto wiederholen oder manuell eingeben.", variant: "destructive" });
+        return;
+      }
+      const val = Number(result.value);
+      onValue(val);
+      toast({
+        title: "Waagenwert übernommen",
+        description: `${val} ${result.unit ?? ""}${result.confidence ? ` (Konfidenz ${Math.round(result.confidence * 100)}%)` : ""}`,
+      });
+    } catch (e: any) {
+      toast({ title: "OCR-Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+      />
+      <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()} disabled={busy}>
+        {busy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Camera className="h-4 w-4 mr-1" />}
+        Waage per Foto
+      </Button>
+    </div>
+  );
+}
+

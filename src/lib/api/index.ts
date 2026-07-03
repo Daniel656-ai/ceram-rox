@@ -53,6 +53,7 @@ import {
 } from "./rawMaterials";
 import { rawMaterialContainers } from "./rawMaterialContainers";
 import { containerMovements } from "./containerMovements";
+import { weighingOcr } from "./weighingOcr";
 import { users, profiles } from "./users";
 import { customRoles } from "./customRoles";
 import { absences } from "./absences";
@@ -119,6 +120,7 @@ import { projectExpenseCategories, projectExpenses } from "./projectExpenses";
 
 export const api = {
   // ---- domain modules (preferred) ----
+  weighingOcr,
   projects,
   projectMembers,
   projectSampleHistory,
