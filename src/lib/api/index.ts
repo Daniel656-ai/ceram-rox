@@ -120,6 +120,7 @@ import { projectExpenseCategories, projectExpenses } from "./projectExpenses";
 
 export const api = {
   // ---- domain modules (preferred) ----
+  weighingOcr,
   projects,
   projectMembers,
   projectSampleHistory,
