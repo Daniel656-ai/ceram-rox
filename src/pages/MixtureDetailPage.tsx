@@ -797,6 +797,17 @@ export default function MixtureDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit/Correction dialog */}
+      {editBatch && (
+        <EditBatchDialog
+          open={editBatchOpen}
+          onOpenChange={(v) => { setEditBatchOpen(v); if (!v) setEditBatch(null); }}
+          batch={editBatch}
+          mixtureId={id}
+        />
+      )}
+
+
 
       {/* Copy mixture dialog */}
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
