@@ -2540,6 +2540,124 @@ export type Database = {
           },
         ]
       }
+      project_expense_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          key: string
+          name_de: string
+          name_en: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          key: string
+          name_de: string
+          name_en: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          key?: string
+          name_de?: string
+          name_en?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_expenses: {
+        Row: {
+          category_id: string | null
+          cost_center: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expense_date: string
+          id: string
+          name: string
+          notes: string | null
+          project_id: string
+          project_leader_id: string | null
+          quantity: number | null
+          supplier: string | null
+          total_price: number | null
+          unit: string | null
+          unit_price: number | null
+          updated_at: string
+          work_package_id: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          cost_center?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_date?: string
+          id?: string
+          name: string
+          notes?: string | null
+          project_id: string
+          project_leader_id?: string | null
+          quantity?: number | null
+          supplier?: string | null
+          total_price?: number | null
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          work_package_id?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          cost_center?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          project_id?: string
+          project_leader_id?: string | null
+          quantity?: number | null
+          supplier?: string | null
+          total_price?: number | null
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          work_package_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "project_expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_expenses_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "project_work_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_knetung_materials: {
         Row: {
           comment: string | null
