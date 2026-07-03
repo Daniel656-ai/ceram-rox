@@ -133,6 +133,55 @@ export const mixtureBatches = {
       })
     ),
 
+  /** Phase 1 Verwiegen: create batch in status 'geplant' with weighing snapshots (no inventory). */
+  weigh: (args: {
+    mixture_id: string;
+    unit: string;
+    concentration?: string | null;
+    notes?: string | null;
+    planned_quantity?: number | null;
+    weighings: Array<{
+      raw_material_id: string;
+      raw_material_batch_id?: string | null;
+      container_id?: string | null;
+      target_quantity?: number | null;
+      actual_quantity?: number | null;
+      gross_weight?: number | null;
+      unit?: string;
+      notes?: string | null;
+      confirmed?: boolean;
+    }>;
+  }) =>
+    unwrap<string>(
+      db.rpc("weigh_mixture_batch", {
+        _mixture_id: args.mixture_id,
+        _unit: args.unit,
+        _concentration: args.concentration ?? null,
+        _notes: args.notes ?? null,
+        _planned_quantity: args.planned_quantity ?? null,
+        _weighings: args.weighings,
+      })
+    ),
+
+  /** Finalize a weighed batch: books all inventory (FIFO per container) and eingang of the mixture. */
+  finalize: (args: { batch_id: string; produced_quantity: number }) =>
+    unwrap<any>(
+      db.rpc("finalize_mixture_batch", {
+        _batch_id: args.batch_id,
+        _produced_quantity: args.produced_quantity,
+      })
+    ),
+
+  /** Weighings recorded for a batch (with container/lot snapshots). */
+  weighings: (batchId: string) =>
+    unwrap<any[]>(
+      db
+        .from("mixture_batch_weighings")
+        .select("*, raw_materials(material_name, material_number, unit)")
+        .eq("batch_id", batchId)
+        .order("created_at")
+    ),
+
   /** Samples derived from a single mixture batch. */
   listSamples: (mixtureBatchId: string) =>
     unwrap<any>(
