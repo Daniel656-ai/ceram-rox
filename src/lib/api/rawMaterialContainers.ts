@@ -11,6 +11,7 @@ export interface RawMaterialContainer {
   raw_material_id: string;
   batch_id: string | null;
   container_code: string;
+  container_name: string | null;
   barcode: string | null;
   kind: ContainerKind;
   initial_quantity: number;
@@ -21,6 +22,10 @@ export interface RawMaterialContainer {
   location_id: string | null;
   location_note: string | null;
   notes: string | null;
+  tare_weight: number | null;
+  tare_unit: string | null;
+  is_default_container: boolean;
+  expiry_date: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -59,6 +64,7 @@ export const rawMaterialContainers = {
       raw_material_id: string;
       batch_id?: string | null;
       container_code?: string | null;
+      container_name?: string | null;
       barcode?: string | null;
       kind?: ContainerKind;
       initial_quantity?: number;
@@ -68,6 +74,10 @@ export const rawMaterialContainers = {
       location_id?: string | null;
       location_note?: string | null;
       notes?: string | null;
+      tare_weight?: number | null;
+      tare_unit?: string | null;
+      is_default_container?: boolean;
+      expiry_date?: string | null;
     },
     createdBy: string
   ) =>
@@ -83,6 +93,7 @@ export const rawMaterialContainers = {
     id: string,
     updates: Partial<{
       container_code: string;
+      container_name: string | null;
       barcode: string | null;
       kind: ContainerKind;
       initial_quantity: number;
@@ -93,6 +104,10 @@ export const rawMaterialContainers = {
       location_id: string | null;
       location_note: string | null;
       notes: string | null;
+      tare_weight: number | null;
+      tare_unit: string | null;
+      is_default_container: boolean;
+      expiry_date: string | null;
     }>
   ) => run(db.from("raw_material_containers").update(updates).eq("id", id)),
 
