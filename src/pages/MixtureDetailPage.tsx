@@ -268,6 +268,14 @@ export default function MixtureDetailPage() {
     }
   };
 
+  // Edit/Correction dialog
+  const [editBatchOpen, setEditBatchOpen] = useState(false);
+  const [editBatch, setEditBatch] = useState<any | null>(null);
+  const openEditBatch = (batch: any) => {
+    setEditBatch(batch);
+    setEditBatchOpen(true);
+  };
+
   if (!mixture) {
     return <div className="p-6 text-muted-foreground">…</div>;
   }
