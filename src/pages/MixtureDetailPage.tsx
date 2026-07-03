@@ -491,7 +491,7 @@ export default function MixtureDetailPage() {
                     <TableHead>{t("mixtures:consumptions")}</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-40">Proben</TableHead>
-                    <TableHead className="w-32">Aktion</TableHead>
+                    <TableHead className="w-56">Aktion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
