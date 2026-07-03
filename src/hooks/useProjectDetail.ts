@@ -44,12 +44,13 @@ export function useProjectsWithStats() {
   return useQuery({
     queryKey: ["projects-with-stats"],
     queryFn: async () => {
-      const [projects, samples, orders, projCon, projKn, timeEntries] = await Promise.all([
+      const [projects, samples, orders, projCon, projKn, projExp, timeEntries] = await Promise.all([
         api.projects.list(),
         api.projects.listSampleIndex(),
         api.projects.listOrderIndex(),
         api.projects.listConsumableCostIndex(),
         api.projects.listKnetungCostIndex(),
+        api.projects.listExpenseCostIndex(),
         api.projects.listTimeEntryIndex(),
       ]);
 
@@ -95,6 +96,10 @@ export function useProjectsWithStats() {
       for (const k of projKn || []) {
         const st = statsMap.get(k.project_id);
         if (st) st.materialCost += Number(k.total_cost || 0);
+      }
+      for (const e of projExp || []) {
+        const st = statsMap.get(e.project_id);
+        if (st) st.materialCost += Number(e.total_price || 0);
       }
 
       for (const te of timeEntries || []) {
