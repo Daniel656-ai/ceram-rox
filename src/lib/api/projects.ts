@@ -77,6 +77,8 @@ export const projects = {
     unwrap(dbClient.from("project_consumables").select("project_id, total_cost")),
   listKnetungCostIndex: () =>
     unwrap(dbClient.from("project_knetung_materials").select("project_id, total_cost")),
+  listExpenseCostIndex: () =>
+    unwrap(dbClient.from("project_expenses").select("project_id, total_price")),
   listTimeEntryIndex: () =>
     unwrap(dbClient.from("project_time_entries").select("project_id, duration_minutes")),
   update: (id: string, updates: Record<string, any>) =>
