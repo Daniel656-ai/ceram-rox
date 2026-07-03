@@ -33,6 +33,8 @@ export function useCreateProjectExpense() {
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["project_expenses", v.project_id] });
       if (v.work_package_id) qc.invalidateQueries({ queryKey: ["project_expenses", "wp", v.work_package_id] });
+      qc.invalidateQueries({ queryKey: ["projects-with-stats"] });
+      qc.invalidateQueries({ queryKey: ["project-detail", v.project_id] });
     },
   });
 }
@@ -42,7 +44,12 @@ export function useUpdateProjectExpense(projectId: string) {
   return useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Partial<ProjectExpenseInput> }) =>
       api.projectExpenses.update(id, patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["project_expenses", projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project_expenses", projectId] });
+      qc.invalidateQueries({ queryKey: ["project_expenses", "wp"] });
+      qc.invalidateQueries({ queryKey: ["projects-with-stats"] });
+      qc.invalidateQueries({ queryKey: ["project-detail", projectId] });
+    },
   });
 }
 
@@ -50,6 +57,11 @@ export function useDeleteProjectExpense(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.projectExpenses.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["project_expenses", projectId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project_expenses", projectId] });
+      qc.invalidateQueries({ queryKey: ["project_expenses", "wp"] });
+      qc.invalidateQueries({ queryKey: ["projects-with-stats"] });
+      qc.invalidateQueries({ queryKey: ["project-detail", projectId] });
+    },
   });
 }
