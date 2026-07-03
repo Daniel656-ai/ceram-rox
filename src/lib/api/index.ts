@@ -204,6 +204,8 @@ export const api = {
   serviceBlocks,
   serviceWorkflows,
   serviceVersions,
+  projectExpenseCategories,
+  projectExpenses,
 
 
 
