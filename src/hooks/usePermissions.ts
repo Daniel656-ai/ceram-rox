@@ -93,7 +93,7 @@ export const NAV_PERMISSION_LABELS: Record<NavPermissionKey, { de: string; en: s
   "nav.results_database": { de: "Ergebnisdatenbank", en: "Results Database" },
   "nav.raw_materials": { de: "Rohstoffe", en: "Raw Materials" },
   "nav.mixtures": { de: "Knetungen & Lösungen", en: "Kneadings & Solutions" },
-  "nav.consumables": { de: "Verbrauchsmaterialien", en: "Consumables" },
+  "nav.consumables": { de: "Projektaufwendungen", en: "Project Expenses" },
   "nav.work_planning": { de: "Arbeitsplanung", en: "Work Planning" },
   "nav.lab_planning": { de: "Laborplanung", en: "Lab Planning" },
   "nav.calendar": { de: "Kalender", en: "Calendar" },
