@@ -1225,6 +1225,7 @@ function WeighingLine({
           <div className="text-xs text-muted-foreground">
             Netto = Brutto − Tara ({formatQuantity(tare)} {selected?.tare_unit || "kg"})
           </div>
+          <ScaleOcrButton onValue={(v) => (tare != null ? applyGross(String(v)) : onChange({ quantity: String(v) }))} />
         </div>
       )}
 
