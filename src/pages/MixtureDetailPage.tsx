@@ -515,7 +515,23 @@ export default function MixtureDetailPage() {
                         ))}
                       </TableCell>
                       <TableCell>
+                        {b.status === "abgeschlossen" ? (
+                          <Badge variant="secondary">{t("mixtures:status_completed")}</Badge>
+                        ) : b.status === "laufend" ? (
+                          <Badge variant="outline">{t("mixtures:status_running")}</Badge>
+                        ) : (
+                          <Badge>{t("mixtures:status_weighed")}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <BatchSamplesCell batchId={b.id} batchNumber={b.batch_number} mixtureName={mixture.name} />
+                      </TableCell>
+                      <TableCell>
+                        {b.status !== "abgeschlossen" && canProduce && (
+                          <Button size="sm" variant="outline" onClick={() => openFinalize(b)}>
+                            Abschließen
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
