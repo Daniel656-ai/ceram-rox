@@ -556,6 +556,9 @@ export default function MixtureDetailPage() {
                               Bearbeiten
                             </Button>
                           )}
+                          <Button size="sm" variant="ghost" onClick={() => openAudit(b)}>
+                            <History className="h-3 w-3 mr-1" /> Historie
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
