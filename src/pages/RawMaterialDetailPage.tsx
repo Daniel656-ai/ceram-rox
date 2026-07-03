@@ -908,6 +908,27 @@ export default function RawMaterialDetailPage() {
                     </Select>
                   </div>
                 </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>Leergewicht (Tara)</Label>
+                    <Input type="number" step="0.001" value={cTareWeight} onChange={(e) => setCTareWeight(e.target.value)} placeholder="0.000" />
+                  </div>
+                  <div>
+                    <Label>Tara-Einheit</Label>
+                    <Select value={cTareUnit} onValueChange={setCTareUnit}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {["kg", "g", "t"].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={cIsDefault} onChange={(e) => setCIsDefault(e.target.checked)} />
+                      Standardgebinde
+                    </label>
+                  </div>
+                </div>
                 <div>
                   <Label>Lagerort</Label>
                   <Select value={cLocationId || "__none__"} onValueChange={(v) => setCLocationId(v === "__none__" ? "" : v)}>
