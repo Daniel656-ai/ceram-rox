@@ -1051,3 +1051,143 @@ function RawMaterialCombobox({
     </Popover>
   );
 }
+
+function WeighingLine({
+  item,
+  line,
+  onChange,
+}: {
+  item: any;
+  line: { quantity: string; container_id: string; confirmed: boolean; notes: string };
+  onChange: (patch: Partial<{ quantity: string; container_id: string; confirmed: boolean; notes: string }>) => void;
+}) {
+  const { data: containers = [] } = useContainers(item.raw_material_id);
+  const available = (containers as any[]).filter(
+    (c: any) => Number(c.current_quantity ?? 0) > 0 && c.status !== "gesperrt" && c.status !== "entsorgt"
+  );
+  const selected = available.find((c: any) => c.id === line.container_id);
+
+  const tare = selected?.tare_weight ? Number(selected.tare_weight) : null;
+  const [gross, setGross] = useState("");
+
+  const applyGross = (g: string) => {
+    setGross(g);
+    if (g && tare != null) {
+      const net = Math.max(0, Number(g) - tare);
+      onChange({ quantity: net.toFixed(3) });
+    }
+  };
+
+  return (
+    <div className="border rounded-md p-3 space-y-2 bg-muted/20">
+      <div className="grid grid-cols-12 gap-2 items-center">
+        <div className="col-span-4">
+          <div className="font-medium text-sm">{item.raw_materials?.material_name}</div>
+          <div className="text-xs text-muted-foreground">
+            Soll: {formatQuantity(item.quantity)} {item.unit}
+          </div>
+        </div>
+        <div className="col-span-5">
+          <Label className="text-xs">Gebinde</Label>
+          <Select
+            value={line.container_id || "__none__"}
+            onValueChange={(v) => onChange({ container_id: v === "__none__" ? "" : v })}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Gebinde wählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— kein Gebinde —</SelectItem>
+              {available.length === 0 && (
+                <div className="px-2 py-1 text-xs text-muted-foreground">
+                  Kein Gebinde verfügbar
+                </div>
+              )}
+              {available.map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.container_code}
+                  {c.container_name ? ` – ${c.container_name}` : ""}
+                  {" · "}
+                  {formatQuantity(c.current_quantity)} {c.unit}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="col-span-3">
+          <Label className="text-xs">Istmenge ({item.unit})</Label>
+          <Input
+            type="number"
+            step="0.001"
+            value={line.quantity}
+            onChange={(e) => onChange({ quantity: e.target.value })}
+          />
+        </div>
+      </div>
+
+      {selected && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground bg-background rounded p-2 border">
+          <div>
+            <span className="font-medium">Gebinde-ID:</span> {selected.container_code}
+          </div>
+          <div>
+            <span className="font-medium">LOT:</span>{" "}
+            {selected.raw_material_batches?.batch_number || "—"}
+          </div>
+          <div>
+            <span className="font-medium">Bestand:</span>{" "}
+            {formatQuantity(selected.current_quantity)} {selected.unit}
+          </div>
+          <div>
+            <span className="font-medium">Tara:</span>{" "}
+            {tare != null ? `${formatQuantity(tare)} ${selected.tare_unit || "kg"}` : "—"}
+          </div>
+          <div>
+            <span className="font-medium">Lagerort:</span>{" "}
+            {selected.storage_locations?.name || selected.location_note || "—"}
+          </div>
+          <div>
+            <span className="font-medium">Verfall:</span>{" "}
+            {selected.expiry_date ? format(new Date(selected.expiry_date), "dd.MM.yyyy") : "—"}
+          </div>
+        </div>
+      )}
+
+      {tare != null && (
+        <div className="grid grid-cols-3 gap-2 items-end">
+          <div>
+            <Label className="text-xs">Bruttogewicht</Label>
+            <Input
+              type="number"
+              step="0.001"
+              value={gross}
+              onChange={(e) => applyGross(e.target.value)}
+              placeholder="→ Netto = Brutto − Tara"
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Netto = Brutto − Tara ({formatQuantity(tare)} {selected?.tare_unit || "kg"})
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-12 gap-2 items-center">
+        <div className="col-span-9">
+          <Input
+            placeholder="Bemerkung (optional)"
+            value={line.notes}
+            onChange={(e) => onChange({ notes: e.target.value })}
+          />
+        </div>
+        <label className="col-span-3 flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={line.confirmed}
+            onChange={(e) => onChange({ confirmed: e.target.checked })}
+          />
+          Verwiegung bestätigt
+        </label>
+      </div>
+    </div>
+  );
+}
