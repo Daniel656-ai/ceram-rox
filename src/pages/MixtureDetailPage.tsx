@@ -819,6 +819,14 @@ export default function MixtureDetailPage() {
         />
       )}
 
+      {auditBatch && (
+        <BatchAuditTimeline
+          open={auditOpen}
+          onOpenChange={(v) => { setAuditOpen(v); if (!v) setAuditBatch(null); }}
+          batch={auditBatch}
+        />
+      )}
+
 
 
       {/* Copy mixture dialog */}
