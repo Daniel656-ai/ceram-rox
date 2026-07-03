@@ -56,6 +56,7 @@ export default function ProjectDetailPage() {
   const { data: users = [] } = useUsers();
   const { data: projectConsumables = [] } = useProjectConsumables(id);
   const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
+  const { data: projectExpenses = [] } = useProjectExpenses(id!);
   const { data: timeEntries = [] } = useProjectTimeEntries(id);
   const { data: members = [] } = useProjectMembers(id);
   const etaMap = useEstimatedCompletion();
