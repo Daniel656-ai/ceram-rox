@@ -226,12 +226,34 @@ export default function ProjectDetailPage() {
     lines.push([t("total"), "", "", String(knTotal.toFixed(2))].join(sep));
     lines.push("");
 
+    // Project expenses
+    const expTotal = (projectExpenses as any[]).reduce((s, e) => s + Number(e.total_price || 0), 0);
+    lines.push(["Projektaufwendungen"].join(sep));
+    lines.push(["Datum", "Kategorie", "Bezeichnung", "Lieferant", "Menge", "Einheit", "Einzelpreis", "Gesamtpreis", "Kostenstelle", "Bemerkungen"].join(sep));
+    for (const e of projectExpenses as any[]) {
+      lines.push([
+        esc(e.expense_date ? new Date(e.expense_date).toLocaleDateString("de-DE") : ""),
+        esc(e.project_expense_categories?.name_de || ""),
+        esc(e.name || ""),
+        esc(e.supplier || ""),
+        e.quantity != null ? String(e.quantity) : "",
+        esc(e.unit || ""),
+        e.unit_price != null ? String(e.unit_price) : "",
+        String(e.total_price || 0),
+        esc(e.cost_center || ""),
+        esc(e.notes || ""),
+      ].join(sep));
+    }
+    lines.push([t("total"), "", "", "", "", "", "", String(expTotal.toFixed(2)), "", ""].join(sep));
+    lines.push("");
+
     // Cost summary
     lines.push([t("csv_cost_summary")].join(sep));
     lines.push([t("csv_total_time"), `${(totalTimeMin / 60).toFixed(1)}h`].join(sep));
     lines.push([t("csv_total_personnel"), `${costData.totalPersonnel.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_consumables"), `${conTotal.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_knetung"), `${knTotal.toFixed(2)}€`].join(sep));
+    lines.push(["Projektaufwendungen gesamt", `${expTotal.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_material_costs"), `${totalMaterialCosts.toFixed(2)}€`].join(sep));
     lines.push([t("total_costs"), `${totalCosts.toFixed(2)}€`].join(sep));
 
@@ -245,7 +267,7 @@ export default function ProjectDetailPage() {
     a.download = `projektbericht_${safeName}_${dateStr}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [project, timeEntries, projectConsumables, projectKnetung, costData, totalMaterialCosts, totalCosts, users, t]);
+  }, [project, timeEntries, projectConsumables, projectKnetung, projectExpenses, costData, totalMaterialCosts, totalCosts, users, t]);
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
