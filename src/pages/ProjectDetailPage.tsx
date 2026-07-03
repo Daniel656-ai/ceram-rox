@@ -886,6 +886,50 @@ export default function ProjectDetailPage() {
                   )}
                 </div>
 
+                {/* Project Expenses */}
+                <div>
+                  <h3 className="font-semibold mb-2">Projektaufwendungen</h3>
+                  {(projectExpenses as any[]).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Keine Aufwendungen erfasst</p>
+                  ) : (
+                    <>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Datum</TableHead>
+                            <TableHead>Kategorie</TableHead>
+                            <TableHead>Bezeichnung</TableHead>
+                            <TableHead>Lieferant</TableHead>
+                            <TableHead className="text-right">Menge</TableHead>
+                            <TableHead className="text-right">Einzelpreis</TableHead>
+                            <TableHead className="text-right">Gesamtpreis</TableHead>
+                            <TableHead>Kostenstelle</TableHead>
+                            <TableHead>Bemerkungen</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(projectExpenses as any[]).map((e: any) => (
+                            <TableRow key={e.id}>
+                              <TableCell>{e.expense_date ? new Date(e.expense_date).toLocaleDateString("de-DE") : "–"}</TableCell>
+                              <TableCell>{e.project_expense_categories?.name_de || "–"}</TableCell>
+                              <TableCell className="font-medium">{e.name}</TableCell>
+                              <TableCell>{e.supplier || "–"}</TableCell>
+                              <TableCell className="text-right">{e.quantity != null ? `${e.quantity} ${e.unit || ""}` : "–"}</TableCell>
+                              <TableCell className="text-right">{e.unit_price != null ? `${formatCurrency(e.unit_price)} ${t("currency")}` : "–"}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(e.total_price || 0)} {t("currency")}</TableCell>
+                              <TableCell>{e.cost_center || "–"}</TableCell>
+                              <TableCell className="max-w-xs truncate">{e.notes || "–"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <div className="mt-2 text-right font-semibold">
+                        Projektaufwendungen gesamt: {formatCurrency(totalExpensesCosts)} {t("currency")}
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 {/* Cost Summary */}
                 <div>
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
@@ -894,6 +938,7 @@ export default function ProjectDetailPage() {
                     {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{formatCurrency(costData.totalPersonnel)} {t("currency")}</span></div>}
                     <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{formatCurrency((projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0))} {t("currency")}</span></div>
                     <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{formatCurrency((projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0))} {t("currency")}</span></div>
+                    <div className="flex justify-between"><span>Projektaufwendungen:</span><span className="font-medium">{formatCurrency(totalExpensesCosts)} {t("currency")}</span></div>
                     <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{formatCurrency(canViewPersonnelCosts ? totalCosts : totalMaterialCosts)} {t("currency")}</span></div>
                   </div>
                 </div>
