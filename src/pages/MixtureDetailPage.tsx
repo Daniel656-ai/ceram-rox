@@ -181,14 +181,16 @@ export default function MixtureDetailPage() {
     setRecipeOpen(false);
   };
 
-  // Produce batch
+  // Verwiegen (Phase 1): only documents, no inventory movement
+  const weighBatch = useWeighMixtureBatch();
+  const finalizeBatch = useFinalizeMixtureBatch(id);
   const [prodOpen, setProdOpen] = useState(false);
   const [prodQuantity, setProdQuantity] = useState("");
   const [prodConc, setProdConc] = useState("");
   const [prodNotes, setProdNotes] = useState("");
-  // For each recipe item the user can override batch + quantity
+  // Per recipe item: chosen container + actual weighed quantity + confirm flag
   const [prodLines, setProdLines] = useState<
-    Record<string, { quantity: string; raw_material_batch_id: string }>
+    Record<string, { quantity: string; container_id: string; confirmed: boolean; notes: string }>
   >({});
 
   const openProduce = () => {
@@ -196,42 +198,43 @@ export default function MixtureDetailPage() {
     setProdQuantity("");
     setProdConc(mixture.target_concentration || "");
     setProdNotes("");
-    // scale = 1 by default — quantities equal recipe
     const init: typeof prodLines = {};
     for (const item of recipe as any[]) {
-      init[item.id] = { quantity: String(item.quantity), raw_material_batch_id: "" };
+      init[item.id] = { quantity: String(item.quantity), container_id: "", confirmed: false, notes: "" };
     }
     setProdLines(init);
     setProdOpen(true);
   };
 
   const handleProduce = async () => {
-    if (!id || !prodQuantity || (recipe as any[]).length === 0) return;
-    const consumptions = (recipe as any[])
+    if (!id || (recipe as any[]).length === 0) return;
+    const weighings = (recipe as any[])
       .map((item) => {
         const line = prodLines[item.id];
         if (!line) return null;
         const qty = Number(line.quantity);
-        if (!qty || qty <= 0) return null;
         return {
           raw_material_id: item.raw_material_id,
-          raw_material_batch_id: line.raw_material_batch_id || null,
-          quantity: qty,
+          container_id: line.container_id || null,
+          target_quantity: Number(item.quantity),
+          actual_quantity: qty || 0,
           unit: item.unit,
+          notes: line.notes || null,
+          confirmed: !!line.confirmed,
         };
       })
       .filter(Boolean) as any[];
 
     try {
-      await produce.mutateAsync({
+      await weighBatch.mutateAsync({
         mixture_id: id,
-        produced_quantity: Number(prodQuantity),
         unit: mixture!.unit,
         concentration: prodConc.trim() || null,
         notes: prodNotes.trim() || null,
-        consumptions,
+        planned_quantity: prodQuantity ? Number(prodQuantity) : null,
+        weighings,
       });
-      toast({ title: t("mixtures:production_success") });
+      toast({ title: t("mixtures:weighing_saved") });
       setProdOpen(false);
     } catch (e: any) {
       toast({
@@ -239,6 +242,28 @@ export default function MixtureDetailPage() {
         description: e.message,
         variant: "destructive",
       });
+    }
+  };
+
+  // Finalize (Chargenabschluss)
+  const [finOpen, setFinOpen] = useState(false);
+  const [finBatchId, setFinBatchId] = useState<string | null>(null);
+  const [finQty, setFinQty] = useState("");
+
+  const openFinalize = (batch: any) => {
+    setFinBatchId(batch.id);
+    setFinQty(String(batch.produced_quantity ?? ""));
+    setFinOpen(true);
+  };
+
+  const handleFinalize = async () => {
+    if (!finBatchId || !finQty) return;
+    try {
+      await finalizeBatch.mutateAsync({ batch_id: finBatchId, produced_quantity: Number(finQty) });
+      toast({ title: t("mixtures:batch_finalized") });
+      setFinOpen(false);
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
     }
   };
 
