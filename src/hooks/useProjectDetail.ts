@@ -44,8 +44,11 @@ export function useProjectsWithStats() {
   return useQuery({
     queryKey: ["projects-with-stats"],
     queryFn: async () => {
-      const [projects, samples, orders, projCon, projKn, projExp, timeEntries] = await Promise.all([
-        api.projects.list(),
+      // Nur projects.list() darf hart fehlschlagen. Alle Stats-Quellen sind
+      // optional – wenn eine davon (z. B. wegen fehlender Migration oder RLS)
+      // scheitert, soll die Projektübersicht trotzdem funktionieren.
+      const projects = await api.projects.list();
+      const settled = await Promise.allSettled([
         api.projects.listSampleIndex(),
         api.projects.listOrderIndex(),
         api.projects.listConsumableCostIndex(),
@@ -53,6 +56,19 @@ export function useProjectsWithStats() {
         api.projects.listExpenseCostIndex(),
         api.projects.listTimeEntryIndex(),
       ]);
+      const pick = <T,>(i: number): T[] => {
+        const r = settled[i];
+        if (r.status === "fulfilled") return (r.value as T[]) ?? [];
+        console.warn("[useProjectsWithStats] Sub-Query fehlgeschlagen (Index " + i + "):", r.reason);
+        return [];
+      };
+      const samples = pick<any>(0);
+      const orders = pick<any>(1);
+      const projCon = pick<any>(2);
+      const projKn = pick<any>(3);
+      const projExp = pick<any>(4);
+      const timeEntries = pick<any>(5);
+
 
       const statsMap = new Map<string, {
         sampleCount: number;
