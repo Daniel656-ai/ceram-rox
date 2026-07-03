@@ -127,7 +127,7 @@ export default function ConsumablesPage() {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">{c.description || "–"}</TableCell>
-                    <TableCell className="text-right font-bold">{Number(c.price_per_unit).toFixed(2)} €</TableCell>
+                    <TableCell className="text-right">{Number(c.price_per_unit).toFixed(2)} €</TableCell>
                     <TableCell>{c.unit}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">

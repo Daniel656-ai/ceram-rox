@@ -712,7 +712,7 @@ export default function ProjectDetailPage() {
                     <p className="text-xs text-muted-foreground">{t("total_hours")}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold">{formatCurrency(canViewPersonnelCosts ? totalCosts : totalMaterialCosts)} {t("currency")}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(costData.totalPersonnel)} {t("currency")}</p>
                     <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
                   </div>
                 </div>
