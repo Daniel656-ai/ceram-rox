@@ -1249,3 +1249,113 @@ function WeighingLine({
     </div>
   );
 }
+
+function BarcodeScannerRow({
+  recipe,
+  onFound,
+}: {
+  recipe: any[];
+  onFound: (item: any, containerId: string) => void;
+}) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const scan = async () => {
+    const v = code.trim();
+    if (!v) return;
+    setBusy(true);
+    try {
+      const c: any = await api.rawMaterialContainers.getByBarcode(v);
+      if (!c) {
+        toast({ title: "Nicht gefunden", description: `Gebinde ${v} nicht gefunden.`, variant: "destructive" });
+        return;
+      }
+      const item = recipe.find((r) => r.raw_material_id === c.raw_material_id);
+      if (!item) {
+        toast({
+          title: "Passt nicht zur Rezeptur",
+          description: `Gebinde ${c.container_code} enthält "${c.raw_materials?.material_name}", was nicht in dieser Rezeptur ist.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      onFound(item, c.id);
+      toast({ title: "Gebinde übernommen", description: `${c.container_code} → ${item.raw_materials?.material_name}` });
+      setCode("");
+    } catch (e: any) {
+      toast({ title: "Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-end gap-2 border rounded-md p-2 bg-muted/10">
+      <ScanLine className="h-5 w-5 text-muted-foreground mb-2" />
+      <div className="flex-1">
+        <Label className="text-xs">Barcode / Gebinde-Code scannen</Label>
+        <Input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); scan(); } }}
+          placeholder="Barcode scannen oder Code eingeben und Enter"
+          autoFocus
+        />
+      </div>
+      <Button onClick={scan} disabled={!code.trim() || busy} size="sm">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Übernehmen"}
+      </Button>
+    </div>
+  );
+}
+
+function ScaleOcrButton({ onValue }: { onValue: (v: number) => void }) {
+  const [busy, setBusy] = useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    setBusy(true);
+    try {
+      const dataUrl: string = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result as string);
+        r.onerror = () => rej(r.error);
+        r.readAsDataURL(file);
+      });
+      const result = await api.weighingOcr.read(dataUrl);
+      if (result?.value == null || Number.isNaN(Number(result.value))) {
+        toast({ title: "Kein Wert erkannt", description: "Bitte Foto wiederholen oder manuell eingeben.", variant: "destructive" });
+        return;
+      }
+      const val = Number(result.value);
+      onValue(val);
+      toast({
+        title: "Waagenwert übernommen",
+        description: `${val} ${result.unit ?? ""}${result.confidence ? ` (Konfidenz ${Math.round(result.confidence * 100)}%)` : ""}`,
+      });
+    } catch (e: any) {
+      toast({ title: "OCR-Fehler", description: e.message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+      />
+      <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()} disabled={busy}>
+        {busy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Camera className="h-4 w-4 mr-1" />}
+        Waage per Foto
+      </Button>
+    </div>
+  );
+}
+
