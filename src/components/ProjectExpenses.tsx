@@ -396,9 +396,11 @@ export function ProjectExpenses({ projectId, defaultLeaderId }: Props) {
               <Label>{t("project_leader")}</Label>
               <PersonSelect
                 value={form.project_leader_id === NONE ? "" : form.project_leader_id}
-                onChange={(v) => setForm((f) => ({ ...f, project_leader_id: v || NONE }))}
+                onValueChange={(v) => setForm((f) => ({ ...f, project_leader_id: v || NONE }))}
                 placeholder={t("project_leader")}
+                allowClear
               />
+
             </div>
             <div>
               <Label>{t("expense_date")}</Label>
