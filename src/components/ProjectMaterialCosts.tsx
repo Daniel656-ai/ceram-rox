@@ -93,88 +93,8 @@ export function ProjectMaterialCosts({ projectId, defaultLeaderId, knetungMeasur
       {/* Project Expenses Section (categorized) */}
       <ProjectExpenses projectId={projectId} defaultLeaderId={defaultLeaderId} />
 
-      </div>
 
-      {/* Consumables Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base">{t("consumables_section")}</CardTitle>
-          <Dialog open={conDialog} onOpenChange={setConDialog}>
-            <DialogTrigger asChild>
-              <Button size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" />{t("add_consumable_booking")}</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{t("add_consumable_booking")}</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>{t("select_consumable")}</Label>
-                  <Select value={conForm.consumable_id} onValueChange={v => setConForm(f => ({ ...f, consumable_id: v }))}>
-                    <SelectTrigger><SelectValue placeholder={t("select_consumable")} /></SelectTrigger>
-                    <SelectContent>
-                      {consumables.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name} ({c.price_per_unit} €/{c.unit})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t("quantity")}{selectedConsumable ? ` (${selectedConsumable.unit})` : ""}</Label>
-                  <Input type="number" step="0.001" min="0" value={conForm.quantity} onChange={e => setConForm(f => ({ ...f, quantity: e.target.value }))} />
-                  {selectedConsumable && conForm.quantity && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      = {formatCurrency(Number(conForm.quantity) * Number(selectedConsumable.price_per_unit))} €
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label>{t("comment")}</Label>
-                  <Input value={conForm.comment} onChange={e => setConForm(f => ({ ...f, comment: e.target.value }))} />
-                </div>
-                <Button className="w-full" onClick={handleAddConsumable}>{t("add_consumable_booking")}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("name")}</TableHead>
-                <TableHead className="text-right">{t("quantity")}</TableHead>
-                <TableHead className="text-right">{t("price")}</TableHead>
-                <TableHead className="text-right">{t("total")}</TableHead>
-                <TableHead>{t("comment")}</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(projectConsumables as any[]).length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">{t("no_consumable_bookings")}</TableCell></TableRow>
-              ) : (
-                (projectConsumables as any[]).map((pc: any) => (
-                  <TableRow key={pc.id}>
-                    <TableCell className="font-medium">{pc.consumables?.name || "–"}</TableCell>
-                    <TableCell className="text-right">{formatQuantity(pc.quantity)} {pc.consumables?.unit || ""}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(pc.unit_price)} €</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(pc.total_cost)} €</TableCell>
-                    <TableCell className="text-muted-foreground max-w-xs truncate">{pc.comment || "–"}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => { deleteConsumable.mutateAsync({ id: pc.id, project_id: projectId }); toast.success(t("booking_deleted")); }}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          {(projectConsumables as any[]).length > 0 && (
-            <div className="border-t p-4 flex justify-end">
-              <span className="font-semibold">{t("total_consumables")}: {formatCurrency(totalConsumables)} €</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
 
       {/* Knetung Section */}
       <Card>
