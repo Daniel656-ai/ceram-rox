@@ -4,6 +4,7 @@ import { useProjectDetail, useProjectSamples, useProjectOrders, useProjectSample
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectConsumables, useProjectKnetungMaterials } from "@/hooks/useProjectMaterials";
+import { useProjectExpenses } from "@/hooks/useProjectExpenses";
 import { useProjectTimeEntries } from "@/hooks/useProjectTimeEntries";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
