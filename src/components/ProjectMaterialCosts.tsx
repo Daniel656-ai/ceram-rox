@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useConsumables } from "@/hooks/useConsumables";
 import { useRawMaterials } from "@/hooks/useRawMaterials";
 import {
-  useProjectConsumables, useAddProjectConsumable, useDeleteProjectConsumable,
   useProjectKnetungMaterials, useAddProjectKnetungMaterial, useDeleteProjectKnetungMaterial,
 } from "@/hooks/useProjectMaterials";
+import { useProjectExpenses } from "@/hooks/useProjectExpenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -17,35 +16,32 @@ import { Plus, Trash2, Package, Gem } from "lucide-react";
 import { toast } from "sonner";
 import { formatQuantity } from "@/lib/formatQuantity";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { ProjectExpenses } from "@/components/ProjectExpenses";
 
 interface Props {
   projectId: string;
+  defaultLeaderId?: string | null;
   knetungMeasurements?: Array<{ id: string; measurement_number: string }>;
 }
 
-export function ProjectMaterialCosts({ projectId, knetungMeasurements = [] }: Props) {
+export function ProjectMaterialCosts({ projectId, defaultLeaderId, knetungMeasurements = [] }: Props) {
   const { t } = useTranslation("materials");
-  const { data: consumables = [] } = useConsumables();
   const { data: rawMaterials = [] } = useRawMaterials();
-  const { data: projectConsumables = [] } = useProjectConsumables(projectId);
   const { data: projectKnetung = [] } = useProjectKnetungMaterials(projectId);
-  const addConsumable = useAddProjectConsumable();
-  const deleteConsumable = useDeleteProjectConsumable();
+  const { data: projectExpenses = [] } = useProjectExpenses(projectId);
   const addKnetung = useAddProjectKnetungMaterial();
   const deleteKnetung = useDeleteProjectKnetungMaterial();
 
-  const [conDialog, setConDialog] = useState(false);
   const [knDialog, setKnDialog] = useState(false);
-  const [conForm, setConForm] = useState({ consumable_id: "", quantity: "", comment: "" });
   const [knForm, setKnForm] = useState({ raw_material_id: "", quantity_kg: "", order_measurement_id: "", comment: "" });
 
-  const selectedConsumable = consumables.find((c: any) => c.id === conForm.consumable_id);
   const selectedRawMaterial = rawMaterials.find((r: any) => r.id === knForm.raw_material_id);
 
-  const totalConsumables = useMemo(() =>
-    (projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0), [projectConsumables]);
+  const totalExpenses = useMemo(() =>
+    (projectExpenses as any[]).reduce((s, e) => s + Number(e.total_price || 0), 0), [projectExpenses]);
   const totalKnetung = useMemo(() =>
     (projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0), [projectKnetung]);
+
 
   const handleAddConsumable = async () => {
     if (!conForm.consumable_id || !Number(conForm.quantity)) return;
