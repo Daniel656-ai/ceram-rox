@@ -107,6 +107,7 @@ import { serviceDocumentTemplates } from "./serviceDocumentTemplates";
 import { serviceBlocks } from "./serviceBlocks";
 import { serviceWorkflows } from "./serviceWorkflows";
 import { serviceVersions } from "./serviceVersions";
+import { projectExpenseCategories, projectExpenses } from "./projectExpenses";
 
 
 
