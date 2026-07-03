@@ -4,6 +4,7 @@ import { useProjectDetail, useProjectSamples, useProjectOrders, useProjectSample
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectConsumables, useProjectKnetungMaterials } from "@/hooks/useProjectMaterials";
+import { useProjectExpenses } from "@/hooks/useProjectExpenses";
 import { useProjectTimeEntries } from "@/hooks/useProjectTimeEntries";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +56,7 @@ export default function ProjectDetailPage() {
   const { data: users = [] } = useUsers();
   const { data: projectConsumables = [] } = useProjectConsumables(id);
   const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
+  const { data: projectExpenses = [] } = useProjectExpenses(id!);
   const { data: timeEntries = [] } = useProjectTimeEntries(id);
   const { data: members = [] } = useProjectMembers(id);
   const etaMap = useEstimatedCompletion();
@@ -136,12 +138,16 @@ export default function ProjectDetailPage() {
     return { totalPersonnel, perMeasurement: Array.from(perMeasurement.entries()) };
   }, [allMeasurements]);
 
-  // Material costs from consumables + knetung raw materials
+  // Material costs from consumables + knetung raw materials + project expenses
+  const totalExpensesCosts = useMemo(
+    () => (projectExpenses as any[]).reduce((s, e) => s + Number(e.total_price || 0), 0),
+    [projectExpenses]
+  );
   const totalMaterialCosts = useMemo(() => {
     const conTotal = (projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0);
     const knTotal = (projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0);
-    return conTotal + knTotal;
-  }, [projectConsumables, projectKnetung]);
+    return conTotal + knTotal + totalExpensesCosts;
+  }, [projectConsumables, projectKnetung, totalExpensesCosts]);
 
   const totalCosts = costData.totalPersonnel + totalMaterialCosts;
 
@@ -220,12 +226,34 @@ export default function ProjectDetailPage() {
     lines.push([t("total"), "", "", String(knTotal.toFixed(2))].join(sep));
     lines.push("");
 
+    // Project expenses
+    const expTotal = (projectExpenses as any[]).reduce((s, e) => s + Number(e.total_price || 0), 0);
+    lines.push(["Projektaufwendungen"].join(sep));
+    lines.push(["Datum", "Kategorie", "Bezeichnung", "Lieferant", "Menge", "Einheit", "Einzelpreis", "Gesamtpreis", "Kostenstelle", "Bemerkungen"].join(sep));
+    for (const e of projectExpenses as any[]) {
+      lines.push([
+        esc(e.expense_date ? new Date(e.expense_date).toLocaleDateString("de-DE") : ""),
+        esc(e.project_expense_categories?.name_de || ""),
+        esc(e.name || ""),
+        esc(e.supplier || ""),
+        e.quantity != null ? String(e.quantity) : "",
+        esc(e.unit || ""),
+        e.unit_price != null ? String(e.unit_price) : "",
+        String(e.total_price || 0),
+        esc(e.cost_center || ""),
+        esc(e.notes || ""),
+      ].join(sep));
+    }
+    lines.push([t("total"), "", "", "", "", "", "", String(expTotal.toFixed(2)), "", ""].join(sep));
+    lines.push("");
+
     // Cost summary
     lines.push([t("csv_cost_summary")].join(sep));
     lines.push([t("csv_total_time"), `${(totalTimeMin / 60).toFixed(1)}h`].join(sep));
     lines.push([t("csv_total_personnel"), `${costData.totalPersonnel.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_consumables"), `${conTotal.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_knetung"), `${knTotal.toFixed(2)}€`].join(sep));
+    lines.push(["Projektaufwendungen gesamt", `${expTotal.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_material_costs"), `${totalMaterialCosts.toFixed(2)}€`].join(sep));
     lines.push([t("total_costs"), `${totalCosts.toFixed(2)}€`].join(sep));
 
@@ -239,7 +267,7 @@ export default function ProjectDetailPage() {
     a.download = `projektbericht_${safeName}_${dateStr}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [project, timeEntries, projectConsumables, projectKnetung, costData, totalMaterialCosts, totalCosts, users, t]);
+  }, [project, timeEntries, projectConsumables, projectKnetung, projectExpenses, costData, totalMaterialCosts, totalCosts, users, t]);
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -858,6 +886,50 @@ export default function ProjectDetailPage() {
                   )}
                 </div>
 
+                {/* Project Expenses */}
+                <div>
+                  <h3 className="font-semibold mb-2">Projektaufwendungen</h3>
+                  {(projectExpenses as any[]).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Keine Aufwendungen erfasst</p>
+                  ) : (
+                    <>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Datum</TableHead>
+                            <TableHead>Kategorie</TableHead>
+                            <TableHead>Bezeichnung</TableHead>
+                            <TableHead>Lieferant</TableHead>
+                            <TableHead className="text-right">Menge</TableHead>
+                            <TableHead className="text-right">Einzelpreis</TableHead>
+                            <TableHead className="text-right">Gesamtpreis</TableHead>
+                            <TableHead>Kostenstelle</TableHead>
+                            <TableHead>Bemerkungen</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(projectExpenses as any[]).map((e: any) => (
+                            <TableRow key={e.id}>
+                              <TableCell>{e.expense_date ? new Date(e.expense_date).toLocaleDateString("de-DE") : "–"}</TableCell>
+                              <TableCell>{e.project_expense_categories?.name_de || "–"}</TableCell>
+                              <TableCell className="font-medium">{e.name}</TableCell>
+                              <TableCell>{e.supplier || "–"}</TableCell>
+                              <TableCell className="text-right">{e.quantity != null ? `${e.quantity} ${e.unit || ""}` : "–"}</TableCell>
+                              <TableCell className="text-right">{e.unit_price != null ? `${formatCurrency(e.unit_price)} ${t("currency")}` : "–"}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(e.total_price || 0)} {t("currency")}</TableCell>
+                              <TableCell>{e.cost_center || "–"}</TableCell>
+                              <TableCell className="max-w-xs truncate">{e.notes || "–"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                      <div className="mt-2 text-right font-semibold">
+                        Projektaufwendungen gesamt: {formatCurrency(totalExpensesCosts)} {t("currency")}
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 {/* Cost Summary */}
                 <div>
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
@@ -866,6 +938,7 @@ export default function ProjectDetailPage() {
                     {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{formatCurrency(costData.totalPersonnel)} {t("currency")}</span></div>}
                     <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{formatCurrency((projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0))} {t("currency")}</span></div>
                     <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{formatCurrency((projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0))} {t("currency")}</span></div>
+                    <div className="flex justify-between"><span>Projektaufwendungen:</span><span className="font-medium">{formatCurrency(totalExpensesCosts)} {t("currency")}</span></div>
                     <div className="flex justify-between border-t pt-2 font-bold"><span>{t("total_costs")}:</span><span>{formatCurrency(canViewPersonnelCosts ? totalCosts : totalMaterialCosts)} {t("currency")}</span></div>
                   </div>
                 </div>
