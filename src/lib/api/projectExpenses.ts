@@ -34,7 +34,7 @@ export const projectExpenses = {
       dbClient
         .from("project_expenses")
         .select(
-          "*, project_expense_categories(id, name_de, name_en), project_work_packages(id, title), project_leader:profiles!project_expenses_project_leader_id_fkey(id, first_name, last_name)"
+          "*, project_expense_categories(id, name_de, name_en), project_work_packages(id, title)"
         )
         .eq("project_id", projectId)
         .order("expense_date", { ascending: false, nullsFirst: false })
