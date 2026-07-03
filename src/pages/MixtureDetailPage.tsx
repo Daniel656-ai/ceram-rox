@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Plus, Trash2, Play, FlaskConical, GitBranch, Settings2, ExternalLink, Copy as CopyIcon, ArrowRightLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { CreateSampleFromBatchDialog } from "@/components/CreateSampleFromBatchDialog";
+import { EditBatchDialog } from "@/components/EditBatchDialog";
 import { ProcessEditor } from "@/components/ProcessEditor";
 import { RecipeAvailability } from "@/components/RecipeAvailability";
 import { VersionDiffDialog } from "@/components/VersionDiffDialog";
