@@ -665,23 +665,24 @@ export default function MixtureDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Produce batch dialog */}
+      {/* Verwiegemaske */}
       <Dialog open={prodOpen} onOpenChange={setProdOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t("mixtures:produce_batch")}</DialogTitle>
+            <DialogTitle>{t("mixtures:weighing_dialog_title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>
-                  {t("mixtures:produced_quantity")} ({mixture.unit}) *
+                  Geplante Menge ({mixture.unit})
                 </Label>
                 <Input
                   type="number"
                   step="0.001"
                   value={prodQuantity}
                   onChange={(e) => setProdQuantity(e.target.value)}
+                  placeholder="Optional – Zielmenge der Charge"
                 />
               </div>
               <div>
@@ -691,54 +692,28 @@ export default function MixtureDetailPage() {
             </div>
 
             <div>
-              <Label className="mb-2 block">{t("mixtures:consumptions")}</Label>
-              <div className="space-y-2 border rounded-md p-3">
+              <Label className="mb-2 block">Verwiegung pro Rohstoff</Label>
+              <div className="space-y-3 border rounded-md p-3">
                 {(recipe as any[]).map((item) => (
-                  <div
+                  <WeighingLine
                     key={item.id}
-                    className="grid grid-cols-12 gap-2 items-center text-sm"
-                  >
-                    <div className="col-span-5">
-                      {item.raw_materials?.material_name}
-                    </div>
-                    <div className="col-span-3">
-                      <Input
-                        type="number"
-                        step="0.001"
-                        value={prodLines[item.id]?.quantity || ""}
-                        onChange={(e) =>
-                          setProdLines((p) => ({
-                            ...p,
-                            [item.id]: {
-                              ...p[item.id],
-                              quantity: e.target.value,
-                              raw_material_batch_id:
-                                p[item.id]?.raw_material_batch_id || "",
-                            },
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="col-span-1 text-muted-foreground">{item.unit}</div>
-                    <div className="col-span-3">
-                      <Input
-                        placeholder={t("mixtures:select_batch")}
-                        value={prodLines[item.id]?.raw_material_batch_id || ""}
-                        onChange={(e) =>
-                          setProdLines((p) => ({
-                            ...p,
-                            [item.id]: {
-                              ...p[item.id],
-                              raw_material_batch_id: e.target.value,
-                              quantity: p[item.id]?.quantity || "",
-                            },
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
+                    item={item}
+                    line={prodLines[item.id] || { quantity: "", container_id: "", confirmed: false, notes: "" }}
+                    onChange={(patch) =>
+                      setProdLines((p) => ({
+                        ...p,
+                        [item.id]: { ...(p[item.id] || { quantity: "", container_id: "", confirmed: false, notes: "" }), ...patch },
+                      }))
+                    }
+                  />
                 ))}
+                {(recipe as any[]).length === 0 && (
+                  <div className="text-sm text-muted-foreground">Keine Rohstoffe in der Rezeptur.</div>
+                )}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Hinweis: Die Verwiegung dokumentiert nur. Der Lagerbestand wird erst beim Chargenabschluss gebucht.
+              </p>
             </div>
 
             <div>
@@ -756,13 +731,38 @@ export default function MixtureDetailPage() {
             </Button>
             <Button
               onClick={handleProduce}
-              disabled={!prodQuantity || produce.isPending}
+              disabled={weighBatch.isPending || (recipe as any[]).length === 0}
             >
-              {t("mixtures:produce_batch")}
+              Verwiegung speichern
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Chargenabschluss */}
+      <Dialog open={finOpen} onOpenChange={setFinOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("mixtures:finalize_batch")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Beim Abschluss werden die tatsächlichen Verbrauchsmengen (FIFO je Gebinde) aus dem Lager gebucht und die hergestellte Menge dem Bestand gutgeschrieben.
+            </p>
+            <div>
+              <Label>Hergestellte Menge ({mixture.unit}) *</Label>
+              <Input type="number" step="0.001" value={finQty} onChange={(e) => setFinQty(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFinOpen(false)}>{t("mixtures:cancel")}</Button>
+            <Button onClick={handleFinalize} disabled={!finQty || finalizeBatch.isPending}>
+              {t("mixtures:finalize_batch")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Copy mixture dialog */}
       <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
