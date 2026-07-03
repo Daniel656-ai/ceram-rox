@@ -191,6 +191,44 @@ export const mixtureBatches = {
         .eq("mixture_batch_id", mixtureBatchId)
         .order("created_at", { ascending: false })
     ),
+
+  /** Phase 2: correct a single weighing (delta re-books inventory if batch already finalized). */
+  correctWeighing: (args: {
+    weighing_id: string;
+    new_actual_quantity: number;
+    new_container_id?: string | null;
+    new_notes?: string | null;
+    reason: string;
+  }) =>
+    unwrap<any>(
+      db.rpc("correct_mixture_weighing", {
+        _weighing_id: args.weighing_id,
+        _new_actual_quantity: args.new_actual_quantity,
+        _new_container_id: args.new_container_id ?? null,
+        _new_notes: args.new_notes ?? null,
+        _reason: args.reason,
+      })
+    ),
+
+  /** Phase 2: correct produced quantity of a batch (delta book on mixture inventory). */
+  correctProducedQuantity: (args: { batch_id: string; new_produced_quantity: number; reason: string }) =>
+    unwrap<any>(
+      db.rpc("correct_mixture_batch_quantity", {
+        _batch_id: args.batch_id,
+        _new_produced_quantity: args.new_produced_quantity,
+        _reason: args.reason,
+      })
+    ),
+
+  /** Phase 2: full correction history for a batch. */
+  corrections: (batchId: string) =>
+    unwrap<any[]>(
+      db
+        .from("mixture_batch_corrections")
+        .select("*, profiles!mixture_batch_corrections_created_by_fkey(first_name, last_name)")
+        .eq("batch_id", batchId)
+        .order("created_at", { ascending: false })
+    ),
 };
 
 export const mixtureTraceability = {
