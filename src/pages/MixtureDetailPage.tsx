@@ -276,6 +276,14 @@ export default function MixtureDetailPage() {
     setEditBatchOpen(true);
   };
 
+  // Audit-Trail dialog
+  const [auditBatch, setAuditBatch] = useState<any | null>(null);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const openAudit = (batch: any) => {
+    setAuditBatch(batch);
+    setAuditOpen(true);
+  };
+
   if (!mixture) {
     return <div className="p-6 text-muted-foreground">…</div>;
   }
