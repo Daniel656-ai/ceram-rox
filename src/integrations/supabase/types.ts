@@ -1117,6 +1117,60 @@ export type Database = {
           },
         ]
       }
+      mixture_batch_corrections: {
+        Row: {
+          batch_id: string
+          created_at: string
+          created_by: string | null
+          delta: number | null
+          field: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          reason: string
+          weighing_id: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          created_by?: string | null
+          delta?: number | null
+          field: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          reason: string
+          weighing_id?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          created_by?: string | null
+          delta?: number | null
+          field?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          reason?: string
+          weighing_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mixture_batch_corrections_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mixture_batch_corrections_weighing_id_fkey"
+            columns: ["weighing_id"]
+            isOneToOne: false
+            referencedRelation: "mixture_batch_weighings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mixture_batch_deviations: {
         Row: {
           batch_id: string
@@ -4611,6 +4665,24 @@ export type Database = {
           _source_id: string
         }
         Returns: string
+      }
+      correct_mixture_batch_quantity: {
+        Args: {
+          _batch_id: string
+          _new_produced_quantity: number
+          _reason: string
+        }
+        Returns: undefined
+      }
+      correct_mixture_weighing: {
+        Args: {
+          _new_actual_quantity: number
+          _new_container_id: string
+          _new_notes: string
+          _reason: string
+          _weighing_id: string
+        }
+        Returns: undefined
       }
       create_mixture_recipe_version:
         | {
