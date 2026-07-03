@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Plus, Trash2, Play, FlaskConical, GitBranch, Settings2, ExternalLink, Copy as CopyIcon, ArrowRightLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { CreateSampleFromBatchDialog } from "@/components/CreateSampleFromBatchDialog";
+import { EditBatchDialog } from "@/components/EditBatchDialog";
 import { ProcessEditor } from "@/components/ProcessEditor";
 import { RecipeAvailability } from "@/components/RecipeAvailability";
 import { VersionDiffDialog } from "@/components/VersionDiffDialog";
@@ -267,6 +268,14 @@ export default function MixtureDetailPage() {
     }
   };
 
+  // Edit/Correction dialog
+  const [editBatchOpen, setEditBatchOpen] = useState(false);
+  const [editBatch, setEditBatch] = useState<any | null>(null);
+  const openEditBatch = (batch: any) => {
+    setEditBatch(batch);
+    setEditBatchOpen(true);
+  };
+
   if (!mixture) {
     return <div className="p-6 text-muted-foreground">…</div>;
   }
@@ -482,7 +491,7 @@ export default function MixtureDetailPage() {
                     <TableHead>{t("mixtures:consumptions")}</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-40">Proben</TableHead>
-                    <TableHead className="w-32">Aktion</TableHead>
+                    <TableHead className="w-56">Aktion</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -527,11 +536,18 @@ export default function MixtureDetailPage() {
                         <BatchSamplesCell batchId={b.id} batchNumber={b.batch_number} mixtureName={mixture.name} />
                       </TableCell>
                       <TableCell>
-                        {b.status !== "abgeschlossen" && canProduce && (
-                          <Button size="sm" variant="outline" onClick={() => openFinalize(b)}>
-                            Abschließen
-                          </Button>
-                        )}
+                        <div className="flex gap-1 flex-wrap">
+                          {b.status !== "abgeschlossen" && canProduce && (
+                            <Button size="sm" variant="outline" onClick={() => openFinalize(b)}>
+                              Abschließen
+                            </Button>
+                          )}
+                          {canProduce && (
+                            <Button size="sm" variant="ghost" onClick={() => openEditBatch(b)}>
+                              Bearbeiten
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -780,6 +796,17 @@ export default function MixtureDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit/Correction dialog */}
+      {editBatch && (
+        <EditBatchDialog
+          open={editBatchOpen}
+          onOpenChange={(v) => { setEditBatchOpen(v); if (!v) setEditBatch(null); }}
+          batch={editBatch}
+          mixtureId={id}
+        />
+      )}
+
 
 
       {/* Copy mixture dialog */}

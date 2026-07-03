@@ -182,6 +182,44 @@ export function useBatchWeighings(batchId: string | undefined) {
   });
 }
 
+export function useBatchCorrections(batchId: string | undefined) {
+  return useQuery({
+    queryKey: ["mixture_batch_corrections", batchId],
+    queryFn: () => mixtureBatches.corrections(batchId!),
+    enabled: !!batchId,
+  });
+}
+
+export function useCorrectWeighing(mixtureId?: string, batchId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: Parameters<typeof mixtureBatches.correctWeighing>[0]) =>
+      mixtureBatches.correctWeighing(args),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mixture_batch_weighings", batchId] });
+      qc.invalidateQueries({ queryKey: ["mixture_batch_corrections", batchId] });
+      qc.invalidateQueries({ queryKey: ["mixture_batches", mixtureId] });
+      qc.invalidateQueries({ queryKey: ["mixture_inventory", mixtureId] });
+      qc.invalidateQueries({ queryKey: ["raw_materials"] });
+      qc.invalidateQueries({ queryKey: ["inventory_movements"] });
+      qc.invalidateQueries({ queryKey: ["raw_material_containers"] });
+    },
+  });
+}
+
+export function useCorrectProducedQuantity(mixtureId?: string, batchId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: Parameters<typeof mixtureBatches.correctProducedQuantity>[0]) =>
+      mixtureBatches.correctProducedQuantity(args),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mixture_batch_corrections", batchId] });
+      qc.invalidateQueries({ queryKey: ["mixture_batches", mixtureId] });
+      qc.invalidateQueries({ queryKey: ["mixture_inventory", mixtureId] });
+    },
+  });
+}
+
 // ---- Inventory ----
 export function useMixtureInventory(mixtureId: string | undefined) {
   return useQuery({
