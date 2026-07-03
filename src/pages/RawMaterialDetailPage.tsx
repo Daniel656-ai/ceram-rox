@@ -192,9 +192,10 @@ export default function RawMaterialDetailPage() {
   const [contOpen, setContOpen] = useState(false);
   const [cEditId, setCEditId] = useState<string | null>(null);
   const [cCode, setCCode] = useState("");
+  const [cName, setCName] = useState("");
   const [cBarcode, setCBarcode] = useState("");
   const [cBatchId, setCBatchId] = useState("");
-  const [cKind, setCKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "sonstige">("fass");
+  const [cKind, setCKind] = useState<"fass" | "kanister" | "sack" | "big_bag" | "ibc" | "tank" | "flasche" | "kiste" | "sonstige">("fass");
   const [cInitial, setCInitial] = useState("");
   const [cCurrent, setCCurrent] = useState("");
   const [cUnit, setCUnit] = useState("kg");
@@ -202,6 +203,10 @@ export default function RawMaterialDetailPage() {
   const [cLocationId, setCLocationId] = useState("");
   const [cLocationNote, setCLocationNote] = useState("");
   const [cNotes, setCNotes] = useState("");
+  const [cTareWeight, setCTareWeight] = useState("");
+  const [cTareUnit, setCTareUnit] = useState("kg");
+  const [cIsDefault, setCIsDefault] = useState(false);
+  const [cExpiry, setCExpiry] = useState("");
 
   // Container actions dialog (movements/history/audit)
   const [actionsContainer, setActionsContainer] = useState<any | null>(null);
