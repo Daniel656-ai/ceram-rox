@@ -536,11 +536,18 @@ export default function MixtureDetailPage() {
                         <BatchSamplesCell batchId={b.id} batchNumber={b.batch_number} mixtureName={mixture.name} />
                       </TableCell>
                       <TableCell>
-                        {b.status !== "abgeschlossen" && canProduce && (
-                          <Button size="sm" variant="outline" onClick={() => openFinalize(b)}>
-                            Abschließen
-                          </Button>
-                        )}
+                        <div className="flex gap-1 flex-wrap">
+                          {b.status !== "abgeschlossen" && canProduce && (
+                            <Button size="sm" variant="outline" onClick={() => openFinalize(b)}>
+                              Abschließen
+                            </Button>
+                          )}
+                          {canProduce && (
+                            <Button size="sm" variant="ghost" onClick={() => openEditBatch(b)}>
+                              Bearbeiten
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
