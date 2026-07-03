@@ -63,7 +63,7 @@ export function ProjectServicesTab({ projectId, canEdit }: Props) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Briefcase className="h-5 w-5" />
-          Gebuchte Dienstleistungen
+          Geplante Dienstleistungen
         </CardTitle>
         {canEdit && (
           <Dialog open={open} onOpenChange={setOpen}>
