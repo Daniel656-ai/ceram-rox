@@ -621,10 +621,15 @@ export default function ProjectDetailPage() {
         <TabsContent value="material_costs">
           <ProjectMaterialCosts
             projectId={id!}
+            defaultLeaderId={(() => {
+              const lm = (members as any[]).find((m: any) => m.role === "leader") || (members as any[]).find((m: any) => m.role === "owner");
+              return lm?.user_id || null;
+            })()}
             knetungMeasurements={allMeasurements
               .filter((m: any) => m.measurement_services?.service_name?.toLowerCase().includes("knetung"))
               .map((m: any) => ({ id: m.id, measurement_number: m.measurement_number }))}
           />
+
         </TabsContent>
 
         {/* TIME ENTRIES TAB */}
