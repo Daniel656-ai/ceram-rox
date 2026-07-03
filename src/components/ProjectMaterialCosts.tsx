@@ -42,21 +42,6 @@ export function ProjectMaterialCosts({ projectId, defaultLeaderId, knetungMeasur
   const totalKnetung = useMemo(() =>
     (projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0), [projectKnetung]);
 
-
-  const handleAddConsumable = async () => {
-    if (!conForm.consumable_id || !Number(conForm.quantity)) return;
-    await addConsumable.mutateAsync({
-      project_id: projectId,
-      consumable_id: conForm.consumable_id,
-      quantity: Number(conForm.quantity),
-      unit_price: selectedConsumable?.price_per_unit || 0,
-      comment: conForm.comment || undefined,
-    });
-    toast.success(t("booking_created"));
-    setConDialog(false);
-    setConForm({ consumable_id: "", quantity: "", comment: "" });
-  };
-
   const handleAddKnetung = async () => {
     if (!knForm.raw_material_id || !Number(knForm.quantity_kg)) return;
     await addKnetung.mutateAsync({
@@ -80,8 +65,8 @@ export function ProjectMaterialCosts({ projectId, defaultLeaderId, knetungMeasur
           <CardContent className="p-4 flex items-center gap-3">
             <Package className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-2xl font-bold">{formatCurrency(totalConsumables)} {t("currency")}</p>
-              <p className="text-xs text-muted-foreground">{t("total_consumables")}</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalExpenses)} {t("currency")}</p>
+              <p className="text-xs text-muted-foreground">{t("total_expenses")}</p>
             </div>
           </CardContent>
         </Card>
@@ -98,11 +83,16 @@ export function ProjectMaterialCosts({ projectId, defaultLeaderId, knetungMeasur
           <CardContent className="p-4 flex items-center gap-3">
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">Σ</div>
             <div>
-              <p className="text-2xl font-bold">{formatCurrency(totalConsumables + totalKnetung)} {t("currency")}</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalExpenses + totalKnetung)} {t("currency")}</p>
               <p className="text-xs text-muted-foreground">{t("total_material_costs")}</p>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Project Expenses Section (categorized) */}
+      <ProjectExpenses projectId={projectId} defaultLeaderId={defaultLeaderId} />
+
       </div>
 
       {/* Consumables Section */}
