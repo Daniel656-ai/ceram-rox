@@ -549,14 +549,17 @@ function DurchfuehrerTasksView({
 
       {/* 2) Verfügbare Aufträge (gemäß Kompetenzmatrix) */}
       <Card>
-        <CardHeader className="py-3 flex flex-row items-center justify-between">
+        <CardHeader className="py-3 flex flex-row items-center justify-between gap-3 flex-wrap">
           <CardTitle className="text-base flex items-center gap-2">
             <Inbox className="h-4 w-4" /> Verfügbare Aufträge
             <span className="text-xs font-normal text-muted-foreground">
               — freie Aufträge deiner Qualifikationen
             </span>
           </CardTitle>
-          <Badge variant="outline">{free.length}</Badge>
+          <div className="flex items-center gap-3">
+            <SortControls value={sortFree} onChange={setSortFree} includeStatus={false} />
+            <Badge variant="outline">{free.length}</Badge>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
