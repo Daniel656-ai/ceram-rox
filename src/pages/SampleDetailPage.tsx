@@ -24,7 +24,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, FileText, GitBranch, CalendarClock } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, FileText, GitBranch, CalendarClock, Eye, Download } from "lucide-react";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { StatusBadge } from "@/components/StatusBadge";
