@@ -560,18 +560,30 @@ export default function SampleDetailPage() {
                       <TableHead>Datei</TableHead>
                       <TableHead>Typ</TableHead>
                       <TableHead>Datum</TableHead>
-                      <TableHead className="w-12"></TableHead>
+                      <TableHead className="w-24"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {documents.map((doc: any) => (
                       <TableRow key={doc.id}>
-                        <TableCell className="font-medium">{doc.file_name}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            type="button"
+                            onClick={() => setDocPreview(doc)}
+                            className="text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+                            title="Vorschau öffnen"
+                          >
+                            {doc.file_name}
+                          </button>
+                        </TableCell>
                         <TableCell>{doc.document_type}</TableCell>
                         <TableCell>{new Date(doc.uploaded_at).toLocaleDateString("de-DE")}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => handleDocDownload(doc)}>
-                            <FileText className="h-4 w-4" />
+                        <TableCell className="whitespace-nowrap">
+                          <Button variant="ghost" size="icon" onClick={() => setDocPreview(doc)} aria-label="Vorschau" title="Vorschau">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDocDownload(doc)} aria-label="Herunterladen" title="Herunterladen">
+                            <Download className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
