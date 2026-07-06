@@ -204,6 +204,7 @@ function GeneralTab({
         price: form.price != null && form.price !== "" ? Number(form.price) : null,
         standard_duration_hours: form.standard_duration_hours != null ? Number(form.standard_duration_hours) : undefined,
         active: !!form.active,
+        work_instructions: form.work_instructions ?? null,
       }),
     onSuccess: () => { toast.success("Gespeichert"); onSaved(); },
     onError: (e: any) => toast.error("Fehler", { description: e.message }),
@@ -247,6 +248,23 @@ function GeneralTab({
         <Field label="Beschreibung">
           <Textarea rows={4} value={form.description ?? ""} disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value }))} />
         </Field>
+        <div className="border rounded-md p-4 bg-muted/30 space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-semibold">Arbeitsauftrag für den Messdienstleister</Label>
+            <Badge variant="outline" className="text-[10px]">Wird 1:1 in der Aufgabenansicht angezeigt</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Alle Vorgaben, Hinweise und Anweisungen, die der Messdienstleister bei der Abarbeitung sehen soll.
+            Diese Angaben sind vom Ergebnisformular, den Service-Parametern und den Messergebnissen getrennt.
+          </p>
+          <Textarea
+            rows={8}
+            placeholder="z.B. Probe vor der Messung 24h temperieren, Prüfmittel XY verwenden, besondere Sicherheitshinweise …"
+            value={form.work_instructions ?? ""}
+            disabled={!canManage}
+            onChange={(e) => setForm((f: any) => ({ ...f, work_instructions: e.target.value }))}
+          />
+        </div>
         <div className="flex items-center gap-3">
           <Switch checked={!!form.active} disabled={!canManage} onCheckedChange={(c) => setForm((f: any) => ({ ...f, active: c }))} />
           <span className="text-sm">{form.active ? "Aktiv" : "Inaktiv"}</span>
