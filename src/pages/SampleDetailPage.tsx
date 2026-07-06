@@ -151,9 +151,30 @@ export default function SampleDetailPage() {
     }
   };
 
+  const [docPreview, setDocPreview] = useState<any | null>(null);
+
+  const loadSampleDocBlob = async (storagePath: string): Promise<Blob> => {
+    const url = await api.sampleStorage.signedUrl(storagePath, 300);
+    if (!url) throw new Error("Signed URL konnte nicht erzeugt werden");
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`Dokument konnte nicht geladen werden (${resp.status})`);
+    return await resp.blob();
+  };
+
   const handleDocDownload = async (doc: any) => {
-    const url = await api.sampleStorage.signedUrl(doc.storage_path, 300);
-    if (url) window.open(url, "_blank");
+    try {
+      const blob = await loadSampleDocBlob(doc.storage_path);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Download fehlgeschlagen");
+    }
   };
 
   const getUserName = (userId: string) => {
