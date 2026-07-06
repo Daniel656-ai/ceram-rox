@@ -398,45 +398,52 @@ export default function AdminServicesPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("admin:services_title")}</h1>
           <p className="text-muted-foreground">{t("admin:services_subtitle")}</p>
         </div>
-        <Dialog open={newOpen} onOpenChange={setNewOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />{t("admin:new_service")}</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{t("admin:new_service_title")}</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-              <div><Label>{t("admin:service_name")}</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder={t("admin:service_name_placeholder")} /></div>
-              <div>
-                <Label>{t("admin:service_category")}</Label>
-                <Select value={newCategory} onValueChange={setNewCategory}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="labor">{t("common:category_labor")}</SelectItem>
-                    <SelectItem value="pilot_plant">{t("common:category_pilot_plant")}</SelectItem>
-                  </SelectContent>
-                </Select>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={showArchived} onCheckedChange={v => setShowArchived(!!v)} />
+            Archivierte anzeigen
+          </label>
+          <Dialog open={newOpen} onOpenChange={setNewOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />{t("admin:new_service")}</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{t("admin:new_service_title")}</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div><Label>{t("admin:service_name")}</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder={t("admin:service_name_placeholder")} /></div>
+                <div>
+                  <Label>{t("admin:service_category")}</Label>
+                  <Select value={newCategory} onValueChange={setNewCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="labor">{t("common:category_labor")}</SelectItem>
+                      <SelectItem value="pilot_plant">{t("common:category_pilot_plant")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>{t("admin:service_responsible")}</Label>
+                  <Select value={newResponsible || "none"} onValueChange={v => setNewResponsible(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder={t("common:not_assigned")} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
+                      {users.map((u: any) => (
+                        <SelectItem key={u.user_id} value={u.user_id}>
+                          {u.first_name} {u.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
+                {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
+                <Button onClick={handleCreate}>{t("common:create")}</Button>
               </div>
-              <div>
-                <Label>{t("admin:service_responsible")}</Label>
-                <Select value={newResponsible || "none"} onValueChange={v => setNewResponsible(v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder={t("common:not_assigned")} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-                    {users.map((u: any) => (
-                      <SelectItem key={u.user_id} value={u.user_id}>
-                        {u.first_name} {u.last_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
-              {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
-              <Button onClick={handleCreate}>{t("common:create")}</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
 
       {isLoading ? (
         <div className="flex items-center justify-center h-32"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
