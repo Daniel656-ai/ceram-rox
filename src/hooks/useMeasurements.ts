@@ -119,12 +119,53 @@ export function useAddWorkLog() {
 export function useUpdateService() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...updates }: { id: string; hourly_rate?: number; active?: boolean; service_name?: string; responsible_user_id?: string | null; workstation_id?: string | null; standard_duration_hours?: number }) =>
+    mutationFn: ({ id, ...updates }: { id: string; [k: string]: any }) =>
       api.measurementServices.update(id, updates),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
       qc.invalidateQueries({ queryKey: ["all-services"] });
     },
+  });
+}
+
+export function useArchiveService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.measurementServices.archive(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      qc.invalidateQueries({ queryKey: ["all-services"] });
+    },
+  });
+}
+
+export function useUnarchiveService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.measurementServices.unarchive(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      qc.invalidateQueries({ queryKey: ["all-services"] });
+    },
+  });
+}
+
+export function useDeleteService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.measurementServices.deleteSafe(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["services"] });
+      qc.invalidateQueries({ queryKey: ["all-services"] });
+    },
+  });
+}
+
+export function useServiceReferences(id: string | null) {
+  return useQuery({
+    queryKey: ["service-references", id],
+    queryFn: () => api.measurementServices.countReferences(id!),
+    enabled: !!id,
   });
 }
 
