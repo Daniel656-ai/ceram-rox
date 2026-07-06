@@ -15,7 +15,7 @@ import {
   Gem,
   RefreshCw,
   KeyRound,
-  Package,
+  
   Layers,
   Zap,
   CopyPlus,
