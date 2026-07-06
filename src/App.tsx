@@ -96,6 +96,7 @@ const App = () => (
               <Route path="/admin/benutzer" element={<AdminUsersPage />} />
               <Route path="/admin/messdienstleistungen" element={<AdminServicesPage />} />
               <Route path="/admin/messdienstleistungen/:serviceId/designer" element={<AdminServiceDesignerPage />} />
+              <Route path="/admin/servicepakete" element={<AdminServicePackagesPage />} />
 
               <Route path="/admin/statistiken" element={<AdminStatsPage />} />
               <Route path="/admin/arbeitsplaetze" element={<AdminWorkstationsPage />} />
