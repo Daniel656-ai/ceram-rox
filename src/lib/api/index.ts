@@ -109,6 +109,8 @@ import { serviceBlocks } from "./serviceBlocks";
 import { serviceWorkflows } from "./serviceWorkflows";
 import { serviceVersions } from "./serviceVersions";
 import { projectExpenseCategories, projectExpenses } from "./projectExpenses";
+import { serviceFieldTemplates } from "./serviceFieldTemplates";
+import { orderUploads } from "./orderUploads";
 
 
 
@@ -208,6 +210,8 @@ export const api = {
   serviceVersions,
   projectExpenseCategories,
   projectExpenses,
+  serviceFieldTemplates,
+  orderUploads,
 
 
 

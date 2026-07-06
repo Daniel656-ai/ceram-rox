@@ -2097,6 +2097,63 @@ export type Database = {
           },
         ]
       }
+      order_upload_files: {
+        Row: {
+          created_at: string
+          entry_index: number | null
+          field_key: string
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string | null
+          id: string
+          measurement_id: string
+          storage_path: string
+          template_id: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          entry_index?: number | null
+          field_key: string
+          file_name: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          id?: string
+          measurement_id: string
+          storage_path: string
+          template_id?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          entry_index?: number | null
+          field_key?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          id?: string
+          measurement_id?: string
+          storage_path?: string
+          template_id?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_upload_files_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_upload_files_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "service_field_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_reset_log: {
         Row: {
           action: string
@@ -4100,6 +4157,62 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_field_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string | null
+          id: string
+          is_active: boolean
+          name: string
+          service_data_field_id: string
+          sort_order: number
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          service_data_field_id: string
+          sort_order?: number
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          service_data_field_id?: string
+          sort_order?: number
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_field_templates_service_data_field_id_fkey"
+            columns: ["service_data_field_id"]
+            isOneToOne: false
+            referencedRelation: "service_data_fields"
             referencedColumns: ["id"]
           },
         ]

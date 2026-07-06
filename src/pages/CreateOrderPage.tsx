@@ -332,31 +332,104 @@ export default function CreateOrderPage() {
         const formVals = measurementFormValues[m.uid];
         if (formVals && Object.keys(formVals).length > 0) {
           const fields = await api.serviceDataFields.listForService(m.service_id);
-          const inserts = Object.entries(formVals)
-            .filter(([, v]) => v != null && !(typeof v === "string" && v.trim() === ""))
-            .map(([key, v]) => {
-              // Repeatable sections store an array under "repeat:<sectionId>".
-              // Persist as a single JSON parameter so workflows/exports keep the full 1:n list.
-              if (key.startsWith("repeat:") && Array.isArray(v)) {
-                if (v.length === 0) return null;
-                return {
-                  order_measurement_id: createdMeasurement.id,
-                  parameter_name: key,
-                  parameter_value: JSON.stringify(v),
-                  unit: null as string | null,
-                };
+          const uploadKeys = new Set(
+            fields.filter((f: any) => f.field_type === "file" || f.field_type === "image").map((f: any) => f.field_key)
+          );
+
+          // Helper: is this value an upload-field value? (array of UploadValueEntry)
+          const isUploadValue = (v: any) =>
+            Array.isArray(v) && v.length > 0 && v.every((x) => x && typeof x === "object" && "__id" in x && ("pendingFile" in x || "templateId" in x || "storagePath" in x));
+
+          // Process a single upload entry
+          const persistUpload = async (fieldKey: string, entryIndex: number | null, entry: any) => {
+            try {
+              if (entry.pendingFile instanceof File) {
+                await api.orderUploads.uploadFile({
+                  measurementId: createdMeasurement.id,
+                  fieldKey,
+                  entryIndex,
+                  file: entry.pendingFile,
+                  uploadedBy: user!.id,
+                });
+              } else if (entry.templateId) {
+                const templates = await api.serviceFieldTemplates.listForField(
+                  (fields.find((f: any) => f.field_key === fieldKey) as any)?.id
+                );
+                const tpl = templates.find((t: any) => t.id === entry.templateId);
+                if (tpl) {
+                  await api.orderUploads.attachTemplate({
+                    measurementId: createdMeasurement.id,
+                    fieldKey,
+                    entryIndex,
+                    template: tpl,
+                    uploadedBy: user!.id,
+                  });
+                }
               }
-              const f = fields.find((x: any) => x.field_key === key);
-              return {
+            } catch (err: any) {
+              toast.error(`Upload „${entry.name}" fehlgeschlagen`, { description: err.message });
+            }
+          };
+
+          // Split values: uploads vs. parameters, including inside repeatable arrays
+          const paramInserts: Array<{ order_measurement_id: string; parameter_name: string; parameter_value: string; unit: string | null }> = [];
+          for (const [key, v] of Object.entries(formVals)) {
+            if (v == null) continue;
+
+            // Top-level upload field
+            if (uploadKeys.has(key) && isUploadValue(v)) {
+              for (const entry of v as any[]) await persistUpload(key, null, entry);
+              continue;
+            }
+
+            // Repeatable section: array of entries
+            if (key.startsWith("repeat:") && Array.isArray(v)) {
+              if (v.length === 0) continue;
+              // Extract upload entries from each repeatable entry and remove them from the JSON
+              const cleaned = v.map((entry: any, idx: number) => {
+                if (!entry || typeof entry !== "object") return entry;
+                const out: Record<string, any> = {};
+                for (const [ek, ev] of Object.entries(entry)) {
+                  if (uploadKeys.has(ek) && isUploadValue(ev)) {
+                    // fire-and-forget within the loop; sequenced via for..of below
+                    // We push a task list instead so ordering is deterministic.
+                    (persistUpload as any)._pending = (persistUpload as any)._pending || [];
+                    for (const uploadEntry of ev as any[]) {
+                      (persistUpload as any)._pending.push([ek, idx, uploadEntry]);
+                    }
+                  } else {
+                    out[ek] = ev;
+                  }
+                }
+                return out;
+              });
+              paramInserts.push({
                 order_measurement_id: createdMeasurement.id,
-                parameter_name: f?.display_name || key,
-                parameter_value: typeof v === "boolean" ? (v ? "true" : "false") : String(v),
-                unit: f?.unit || null,
-              };
-            })
-            .filter(Boolean) as Array<{ order_measurement_id: string; parameter_name: string; parameter_value: string; unit: string | null }>;
-          if (inserts.length > 0) {
-            await api.measurementParameters.bulkInsert(inserts);
+                parameter_name: key,
+                parameter_value: JSON.stringify(cleaned),
+                unit: null,
+              });
+              continue;
+            }
+
+            if (typeof v === "string" && v.trim() === "") continue;
+
+            const f = fields.find((x: any) => x.field_key === key);
+            paramInserts.push({
+              order_measurement_id: createdMeasurement.id,
+              parameter_name: (f as any)?.display_name || key,
+              parameter_value: typeof v === "boolean" ? (v ? "true" : "false") : String(v),
+              unit: (f as any)?.unit || null,
+            });
+          }
+
+          // Drain queued repeatable uploads
+          const pending: Array<[string, number, any]> = (persistUpload as any)._pending || [];
+          for (const [fk, idx, entry] of pending) await persistUpload(fk, idx, entry);
+          (persistUpload as any)._pending = [];
+
+          if (paramInserts.length > 0) {
+            await api.measurementParameters.bulkInsert(paramInserts);
           }
         }
       }
