@@ -385,3 +385,124 @@ export default function TaskExecutionPage() {
     </div>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Arbeitsauftrag des Auftraggebers                                          */
+/* -------------------------------------------------------------------------- */
+
+function tryParseJSON(s: string): any {
+  try {
+    const p = JSON.parse(s);
+    return p;
+  } catch {
+    return s;
+  }
+}
+
+function formatScalar(v: any): string {
+  if (v == null || v === "") return "–";
+  if (typeof v === "boolean") return v ? "Ja" : "Nein";
+  return String(v);
+}
+
+function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
+  const params: any[] = measurement.measurement_parameters ?? [];
+  const orderNotes: string | null = measurement.measurement_orders?.notes ?? null;
+
+  // Split scalar vs. repeatable parameters (repeatable are stored with parameter_name starting "repeat:")
+  const scalars = params.filter((p) => !String(p.parameter_name).startsWith("repeat:"));
+  const repeats = params.filter((p) => String(p.parameter_name).startsWith("repeat:"));
+
+  const hasContent =
+    scalars.length > 0 ||
+    repeats.length > 0 ||
+    (orderNotes && orderNotes.trim().length > 0) ||
+    !!measurement.id;
+
+  if (!hasContent) return null;
+
+  return (
+    <Card className="border-amber-500/40 bg-amber-500/5">
+      <CardHeader className="py-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <ClipboardList className="h-4 w-4" />
+          Arbeitsauftrag des Auftraggebers
+          <Badge variant="outline" className="text-[10px]">
+            Angaben des Auftraggebers · schreibgeschützt
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {orderNotes?.trim() ? (
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Anmerkung zum Auftrag</p>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">{orderNotes}</p>
+          </div>
+        ) : null}
+
+        {scalars.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+            {scalars.map((p) => (
+              <div key={p.id} className="text-sm border-b border-border/50 py-1">
+                <span className="text-muted-foreground">{p.parameter_name}: </span>
+                <span className="font-medium">
+                  {formatScalar(p.parameter_value)}
+                  {p.unit ? ` ${p.unit}` : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {repeats.map((p) => {
+          const parsed = tryParseJSON(p.parameter_value);
+          const rows: any[] = Array.isArray(parsed) ? parsed : [];
+          const label = String(p.parameter_name).replace(/^repeat:/, "");
+          return (
+            <div key={p.id}>
+              <p className="text-xs text-muted-foreground mb-1">{label}</p>
+              <div className="space-y-2">
+                {rows.map((row, i) => (
+                  <div
+                    key={i}
+                    className="rounded border border-border/60 bg-background/60 px-3 py-2 text-sm"
+                  >
+                    <p className="text-xs text-muted-foreground mb-1">#{i + 1}</p>
+                    {row && typeof row === "object" ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+                        {Object.entries(row).map(([k, v]) => (
+                          <div key={k}>
+                            <span className="text-muted-foreground">{k}: </span>
+                            <span className="font-medium">{formatScalar(v)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span>{formatScalar(row)}</span>
+                    )}
+                  </div>
+                ))}
+                {rows.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">Keine Einträge</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {scalars.length === 0 && repeats.length === 0 && !orderNotes?.trim() && (
+          <p className="text-sm text-muted-foreground italic">
+            Der Auftraggeber hat keine zusätzlichen Angaben erfasst.
+          </p>
+        )}
+
+        {/* Vom Auftraggeber hochgeladene Dateien (schreibgeschützt für Techniker) */}
+        <div className="pt-2">
+          <p className="text-xs text-muted-foreground mb-2">Vom Auftraggeber bereitgestellte Dateien</p>
+          <OrderUploadedFiles measurementId={measurement.id} canDelete={false} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
