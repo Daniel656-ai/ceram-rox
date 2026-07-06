@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat } from "lucide-react";
+import UploadField from "@/components/upload/UploadField";
 import type { FormRoleView, FormSection, RepeatableConfig } from "@/lib/api/serviceFormLayouts";
 
 interface Props {
@@ -320,16 +321,32 @@ function SectionFieldGrid({
         const help = ref.description_override?.trim() || f.description;
         return (
           <div key={ref.id} className={colCls}>
-            <Label className="text-xs flex items-center gap-1">
-              {label}
-              {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
-              {isRequired && <span className="text-destructive">*</span>}
-              {hasError && <AlertCircle className="h-3 w-3 text-destructive" />}
-            </Label>
-            {help && !compact && (
-              <p className="text-[10px] text-muted-foreground mb-1">{help}</p>
+            {f.field_type === "file" || f.field_type === "image" ? (
+              <UploadField
+                fieldId={f.id}
+                fieldKey={f.field_key}
+                label={label}
+                helpText={help}
+                required={isRequired}
+                config={(f.validation as any)?.upload ?? {}}
+                value={Array.isArray(val) ? val : []}
+                onChange={(v) => onValueChange(f.field_key, v)}
+                compact={compact}
+              />
+            ) : (
+              <>
+                <Label className="text-xs flex items-center gap-1">
+                  {label}
+                  {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
+                  {isRequired && <span className="text-destructive">*</span>}
+                  {hasError && <AlertCircle className="h-3 w-3 text-destructive" />}
+                </Label>
+                {help && !compact && (
+                  <p className="text-[10px] text-muted-foreground mb-1">{help}</p>
+                )}
+                {renderInput(f, val, (v) => onValueChange(f.field_key, v), readonly, inputSize, hasError)}
+              </>
             )}
-            {renderInput(f, val, (v) => onValueChange(f.field_key, v), readonly, inputSize, hasError)}
           </div>
         );
       })}
