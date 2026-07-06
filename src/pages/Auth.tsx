@@ -45,7 +45,7 @@ export default function Auth() {
     if (error) {
       toast.error(t("auth:login_failed"), { description: error.message });
     } else {
-      navigate("/dashboard");
+      goNext("/dashboard");
     }
   };
 
