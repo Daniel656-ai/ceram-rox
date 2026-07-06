@@ -508,6 +508,7 @@ function FieldDialog({
           ? optionsText.split("\n").map((s) => s.trim()).filter(Boolean)
           : [],
         sort_order: form.sort_order ?? 0,
+        validation: form.validation ?? {},
       };
       if (isEdit) {
         await api.serviceDataFields.update(field!.id, payload);
