@@ -4925,6 +4925,7 @@ export type Database = {
           status: Database["public"]["Enums"]["downtime_status"]
         }[]
       }
+      claim_measurement: { Args: { _measurement_id: string }; Returns: string }
       complete_mixture_batch: {
         Args: { _batch_id: string; _produced_quantity?: number }
         Returns: undefined

@@ -158,3 +158,30 @@ export function useCreateService() {
     },
   });
 }
+
+export function useUnassignedQualifiedMeasurements() {
+  const { user, role } = useAuth();
+  return useQuery({
+    queryKey: ["unassigned-qualified", user?.id, role],
+    queryFn: async () => {
+      if (!user) return [];
+      const rows = role === "master"
+        ? await api.measurements.listUnassignedAll()
+        : await api.measurements.listUnassignedQualified(user.id);
+      return rows || [];
+    },
+    enabled: !!user,
+  });
+}
+
+export function useClaimMeasurement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.measurements.claim(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["unassigned-qualified"] });
+      qc.invalidateQueries({ queryKey: ["my-measurements"] });
+      qc.invalidateQueries({ queryKey: ["order"] });
+    },
+  });
+}
