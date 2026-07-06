@@ -999,6 +999,16 @@ export default function ProjectDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {id && (
+        <EditProjectIdentityDialog
+          open={editIdentityOpen}
+          onOpenChange={setEditIdentityOpen}
+          projectId={id}
+          initialNumber={project.project_number}
+          initialName={project.project_name ?? null}
+        />
+      )}
     </div>
   );
 }
