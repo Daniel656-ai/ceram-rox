@@ -489,6 +489,252 @@ export default function AdminServicesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <EditServiceDialog
+        service={editService}
+        onClose={() => setEditService(null)}
+        users={users}
+        workstations={workstations}
+        canEditRates={canViewRates && canEditRates}
+        onSave={async (id, updates) => {
+          try {
+            await updateService.mutateAsync({ id, ...updates } as any);
+            toast.success("Änderungen gespeichert");
+            setEditService(null);
+          } catch (err: any) {
+            toast.error(t("common:error"), { description: err.message });
+          }
+        }}
+      />
+
+      <DeleteServiceDialog
+        service={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onArchive={async (id) => {
+          try { await archiveService.mutateAsync(id); toast.success("Dienstleistung archiviert"); setDeleteTarget(null); }
+          catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+        }}
+        onDelete={async (id) => {
+          try {
+            await deleteService.mutateAsync(id);
+            toast.success("Dienstleistung gelöscht");
+            setDeleteTarget(null);
+          } catch (err: any) {
+            toast.error("Löschen nicht möglich", { description: err.message });
+          }
+        }}
+      />
     </div>
   );
 }
+
+// ============================================================
+// Edit dialog
+// ============================================================
+function EditServiceDialog({
+  service, onClose, onSave, users, workstations, canEditRates,
+}: {
+  service: any | null;
+  onClose: () => void;
+  onSave: (id: string, updates: Record<string, any>) => Promise<void>;
+  users: any[];
+  workstations: any[];
+  canEditRates: boolean;
+}) {
+  const [form, setForm] = useState<any>({});
+
+  useEffect(() => {
+    if (service) {
+      setForm({
+        service_name: service.service_name ?? "",
+        category: service.category ?? "labor",
+        description: service.description ?? "",
+        department: service.department ?? "",
+        standard_duration_hours: service.standard_duration_hours ?? 1,
+        hourly_rate: service.hourly_rate ?? 0,
+        workstation_id: service.workstation_id ?? "",
+        responsible_user_id: service.responsible_user_id ?? "",
+        work_instructions: service.work_instructions ?? "",
+        active: !!service.active,
+      });
+    }
+  }, [service]);
+
+  if (!service) return null;
+
+  return (
+    <Dialog open={!!service} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="h-4 w-4" /> Dienstleistung bearbeiten
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <p className="text-xs text-muted-foreground">
+            Änderungen gelten ausschließlich für zukünftige Aufträge. Bereits abgeschlossene Aufträge und Messergebnisse bleiben unverändert.
+          </p>
+          <div>
+            <Label>Name</Label>
+            <Input value={form.service_name} onChange={e => setForm((f: any) => ({ ...f, service_name: e.target.value }))} />
+          </div>
+          <div>
+            <Label>Beschreibung</Label>
+            <Textarea value={form.description ?? ""} onChange={e => setForm((f: any) => ({ ...f, description: e.target.value }))} rows={3} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Kategorie</Label>
+              <Select value={form.category} onValueChange={v => setForm((f: any) => ({ ...f, category: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="labor">Labor</SelectItem>
+                  <SelectItem value="pilot_plant">Technikum</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Abteilung</Label>
+              <Input value={form.department ?? ""} onChange={e => setForm((f: any) => ({ ...f, department: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Standarddauer (h)</Label>
+              <Input type="number" min={0.25} step={0.25} value={form.standard_duration_hours} onChange={e => setForm((f: any) => ({ ...f, standard_duration_hours: parseFloat(e.target.value) }))} />
+            </div>
+            {canEditRates && (
+              <div>
+                <Label>Stundensatz (€/h)</Label>
+                <Input type="number" value={form.hourly_rate} onChange={e => setForm((f: any) => ({ ...f, hourly_rate: parseFloat(e.target.value) }))} />
+              </div>
+            )}
+            <div>
+              <Label>Arbeitsplatz</Label>
+              <Select value={form.workstation_id || "none"} onValueChange={v => setForm((f: any) => ({ ...f, workstation_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Nicht zugewiesen" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nicht zugewiesen</SelectItem>
+                  {workstations.filter(w => w.status === "active").map(w => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Verantwortlich</Label>
+              <Select value={form.responsible_user_id || "none"} onValueChange={v => setForm((f: any) => ({ ...f, responsible_user_id: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Nicht zugewiesen" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nicht zugewiesen</SelectItem>
+                  {users.map((u: any) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Arbeitsanweisung</Label>
+            <Textarea value={form.work_instructions ?? ""} onChange={e => setForm((f: any) => ({ ...f, work_instructions: e.target.value }))} rows={3} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
+          <Button onClick={() => onSave(service.id, {
+            service_name: form.service_name,
+            category: form.category,
+            description: form.description || null,
+            department: form.department || null,
+            standard_duration_hours: form.standard_duration_hours,
+            ...(canEditRates ? { hourly_rate: form.hourly_rate } : {}),
+            workstation_id: form.workstation_id || null,
+            responsible_user_id: form.responsible_user_id || null,
+            work_instructions: form.work_instructions || null,
+          })}>Speichern</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============================================================
+// Delete dialog with reference check
+// ============================================================
+function DeleteServiceDialog({
+  service, onClose, onDelete, onArchive,
+}: {
+  service: any | null;
+  onClose: () => void;
+  onDelete: (id: string) => Promise<void>;
+  onArchive: (id: string) => Promise<void>;
+}) {
+  const { data: refs, isLoading } = useServiceReferences(service?.id ?? null);
+  if (!service) return null;
+
+  const total = refs
+    ? refs.order_measurements + refs.project_services + refs.template_items + refs.measurement_results
+    : 0;
+  const hasRefs = !isLoading && total > 0;
+
+  return (
+    <AlertDialog open={!!service} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Trash2 className="h-4 w-4 text-destructive" /> Dienstleistung löschen
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <div>
+                Möchten Sie die Dienstleistung <span className="font-medium">{service.service_name}</span> wirklich endgültig löschen?
+              </div>
+
+              {isLoading && <div className="text-xs text-muted-foreground">Referenzen werden geprüft…</div>}
+
+              {!isLoading && !hasRefs && (
+                <div className="flex items-start gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                  <CheckCircle2 className="h-4 w-4 mt-0.5" />
+                  <div>Keine Referenzen gefunden – die Dienstleistung kann endgültig gelöscht werden.</div>
+                </div>
+              )}
+
+              {hasRefs && refs && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5" />
+                    <div>
+                      Diese Dienstleistung wird bereits verwendet und kann daher nicht gelöscht werden.
+                      Bitte archivieren oder deaktivieren Sie sie stattdessen.
+                    </div>
+                  </div>
+                  <ul className="text-xs list-disc list-inside pl-1">
+                    {refs.order_measurements > 0 && <li>{refs.order_measurements} Auftragsmessungen</li>}
+                    {refs.project_services > 0 && <li>{refs.project_services} Projektzuordnungen</li>}
+                    {refs.template_items > 0 && <li>{refs.template_items} Vorlagen-Einträge</li>}
+                    {refs.measurement_results > 0 && <li>{refs.measurement_results} Messergebnisse</li>}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          {hasRefs ? (
+            <AlertDialogAction onClick={() => onArchive(service.id)}>
+              <Archive className="h-4 w-4 mr-2" /> Stattdessen archivieren
+            </AlertDialogAction>
+          ) : (
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => onDelete(service.id)}
+              disabled={isLoading}
+            >
+              <Trash2 className="h-4 w-4 mr-2" /> Endgültig löschen
+            </AlertDialogAction>
+          )}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
