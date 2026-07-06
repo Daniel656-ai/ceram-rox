@@ -621,3 +621,166 @@ function FieldDialog({
     </Dialog>
   );
 }
+
+// ----------------------- Upload field config panel -----------------------
+
+const ACCEPTED_PRESETS: { value: string; label: string }[] = [
+  { value: "image/*", label: "Bilder (JPG, PNG, GIF, WEBP)" },
+  { value: "application/pdf", label: "PDF" },
+  { value: ".xlsx", label: "Excel (.xlsx)" },
+  { value: ".xls", label: "Excel (.xls)" },
+  { value: ".docx", label: "Word (.docx)" },
+  { value: ".csv", label: "CSV" },
+  { value: ".txt", label: "Textdatei (.txt)" },
+];
+
+function UploadFieldConfigPanel({
+  config, onChange,
+}: {
+  config: any;
+  onChange: (v: any) => void;
+}) {
+  const cfg = { multiple: false, max_files: 1, max_size_mb: 20, accepted_types: [] as string[], templates_enabled: false, ...(config || {}) };
+  const patch = (p: Partial<typeof cfg>) => onChange({ ...cfg, ...p });
+  const toggleAccepted = (val: string, on: boolean) => {
+    const set = new Set(cfg.accepted_types);
+    if (on) set.add(val); else set.delete(val);
+    patch({ accepted_types: Array.from(set) });
+  };
+  return (
+    <div className="border rounded-md p-3 space-y-3 bg-muted/20">
+      <div className="flex items-center gap-2">
+        <Upload className="h-4 w-4 text-primary" />
+        <p className="text-sm font-medium">Upload-Einstellungen</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <label className="flex items-center gap-2 text-xs">
+          <Switch checked={!!cfg.multiple} onCheckedChange={(c) => patch({ multiple: c, max_files: c ? Math.max(cfg.max_files || 1, 2) : 1 })} />
+          Mehrfach-Upload
+        </label>
+        <div>
+          <Label className="text-xs">Max. Dateien</Label>
+          <Input type="number" min={1} className="h-8"
+            value={cfg.max_files ?? 1}
+            disabled={!cfg.multiple}
+            onChange={(e) => patch({ max_files: Math.max(1, Number(e.target.value) || 1) })} />
+        </div>
+        <div>
+          <Label className="text-xs">Max. Größe (MB)</Label>
+          <Input type="number" min={1} className="h-8"
+            value={cfg.max_size_mb ?? 20}
+            onChange={(e) => patch({ max_size_mb: Math.max(1, Number(e.target.value) || 20) })} />
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs">Zulässige Dateitypen</Label>
+        <p className="text-[10px] text-muted-foreground mb-1">Keine Auswahl = alle Typen erlaubt.</p>
+        <div className="flex flex-wrap gap-3">
+          {ACCEPTED_PRESETS.map((p) => (
+            <label key={p.value} className="flex items-center gap-1.5 text-xs">
+              <Switch
+                checked={cfg.accepted_types.includes(p.value)}
+                onCheckedChange={(c) => toggleAccepted(p.value, !!c)}
+              />
+              {p.label}
+            </label>
+          ))}
+        </div>
+      </div>
+      <label className="flex items-center gap-2 text-xs">
+        <Switch checked={!!cfg.templates_enabled} onCheckedChange={(c) => patch({ templates_enabled: c })} />
+        Vorlagen-Bibliothek für dieses Feld aktivieren
+      </label>
+    </div>
+  );
+}
+
+// ----------------------- Templates manager -----------------------
+
+function FieldTemplatesManager({ fieldId }: { fieldId: string }) {
+  const qc = useQueryClient();
+  const { data: templates = [] } = useQuery({
+    queryKey: ["service-field-templates", fieldId],
+    queryFn: () => api.serviceFieldTemplates.listForField(fieldId),
+  });
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ["service-field-templates", fieldId] });
+
+  const upload = async () => {
+    if (!file) { toast.error("Datei wählen"); return; }
+    if (!name.trim()) { toast.error("Name eingeben"); return; }
+    setBusy(true);
+    try {
+      await api.serviceFieldTemplates.upload(fieldId, file, name.trim(), description.trim() || undefined);
+      toast.success("Vorlage angelegt");
+      setName(""); setDescription(""); setFile(null);
+      refresh();
+    } catch (e: any) {
+      toast.error("Fehler", { description: e.message });
+    } finally { setBusy(false); }
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await api.serviceFieldTemplates.remove(id);
+      toast.success("Vorlage gelöscht");
+      refresh();
+    } catch (e: any) {
+      toast.error("Fehler", { description: e.message });
+    }
+  };
+
+  const toggleActive = async (id: string, active: boolean) => {
+    await api.serviceFieldTemplates.update(id, { is_active: active });
+    refresh();
+  };
+
+  return (
+    <div className="border rounded-md p-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <FileText className="h-4 w-4 text-primary" />
+        <p className="text-sm font-medium">Vorlagen-Bibliothek</p>
+        <Badge variant="outline" className="text-[10px]">{templates.length}</Badge>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <Input placeholder="Name der Vorlage" value={name} onChange={(e) => setName(e.target.value)} className="h-8" />
+        <Input placeholder="Beschreibung (optional)" value={description} onChange={(e) => setDescription(e.target.value)} className="h-8" />
+      </div>
+      <div className="flex items-center gap-2">
+        <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="h-8" />
+        <Button size="sm" onClick={upload} disabled={busy || !file || !name.trim()}>
+          <Upload className="h-3.5 w-3.5 mr-1" /> Hochladen
+        </Button>
+      </div>
+
+      {templates.length > 0 && (
+        <ul className="space-y-1.5">
+          {templates.map((t: any) => (
+            <li key={t.id} className="flex items-center gap-2 border rounded-md p-2 bg-muted/20">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium truncate">{t.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {t.file_name}{t.description ? ` · ${t.description}` : ""}
+                </p>
+              </div>
+              <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Switch checked={t.is_active} onCheckedChange={(c) => toggleActive(t.id, !!c)} />
+                Aktiv
+              </label>
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(t.id)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
