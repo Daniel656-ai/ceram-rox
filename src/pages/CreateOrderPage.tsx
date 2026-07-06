@@ -254,6 +254,38 @@ export default function CreateOrderPage() {
     ]);
   };
 
+  const applyServicePackage = (packageId: string) => {
+    const pkg = servicePackages.find((p: any) => p.id === packageId);
+    if (!pkg) return;
+    setMeasurements((prev) => {
+      const existingKeys = new Set(prev.map((m) => `${m.service_id}::${m.source_package_id ?? ""}`));
+      const additions: SelectedMeasurement[] = [];
+      for (const it of pkg.items) {
+        const svc = it.measurement_services;
+        if (!svc) continue;
+        const key = `${svc.id}::${pkg.id}`;
+        if (existingKeys.has(key)) continue;
+        additions.push({
+          uid: newUid(),
+          service_id: svc.id,
+          service_name: svc.service_name,
+          planned_hours: svc.standard_duration_hours || 1,
+          workstation_id: svc.workstation_id || "",
+          source_package_id: pkg.id,
+          source_package_name: pkg.name,
+        });
+      }
+      if (additions.length === 0) {
+        toast.info(`Alle Dienstleistungen aus "${pkg.name}" sind bereits enthalten.`);
+        return prev;
+      }
+      toast.success(`${additions.length} Dienstleistung(en) aus "${pkg.name}" hinzugefügt`);
+      return [...prev, ...additions];
+    });
+  };
+
+
+
   const handleApplyTemplate = (serviceIds: string[]) => {
     const newMeasurements: SelectedMeasurement[] = [];
     for (const sid of serviceIds) {
