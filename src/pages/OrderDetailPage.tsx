@@ -19,6 +19,7 @@ import { PriorityBadge } from "@/components/PriorityBadge";
 import MeasurementDocuments from "@/components/MeasurementDocuments";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import MeasurementDataEntry from "@/components/MeasurementDataEntry";
+import OrderUploadedFiles from "@/components/OrderUploadedFiles";
 import { toast } from "sonner";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -413,6 +414,9 @@ export default function OrderDetailPage() {
                         sampleInfo={(order as any).samples}
                         projectInfo={(order as any).projects}
                       />
+                      <div className="px-4 pb-3">
+                        <OrderUploadedFiles measurementId={m.id} canDelete={role === "master" || m.assigned_to === user?.id} />
+                      </div>
                     </TableCell>
                   </TableRow>
                   </>
