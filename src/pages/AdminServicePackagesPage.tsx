@@ -42,7 +42,7 @@ export default function AdminServicePackagesPage() {
 
   const { data: services = [] } = useQuery({
     queryKey: ["measurement-services", "all-active-for-packages"],
-    queryFn: () => api.measurementServices.list(),
+    queryFn: () => api.measurementServices.listActive(),
   });
 
   const activeServices = useMemo(
