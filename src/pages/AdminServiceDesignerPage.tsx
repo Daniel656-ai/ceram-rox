@@ -599,6 +599,17 @@ function FieldDialog({
               Archiviert
             </label>
           </div>
+
+          {(form.field_type === "file" || form.field_type === "image") && (
+            <UploadFieldConfigPanel
+              config={(form.validation as any)?.upload ?? {}}
+              onChange={(upload) => setForm((f) => ({ ...f, validation: { ...(f.validation ?? {}), upload } as any }))}
+            />
+          )}
+
+          {isEdit && (form.field_type === "file" || form.field_type === "image") && (form.validation as any)?.upload?.templates_enabled && (
+            <FieldTemplatesManager fieldId={field!.id} />
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
