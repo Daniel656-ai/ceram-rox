@@ -16,6 +16,17 @@ type AuthMode = "login" | "register" | "forgot";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextParam = searchParams.get("next");
+  const safeNext =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
+  const goNext = (fallback: string) => {
+    if (safeNext) {
+      window.location.href = safeNext;
+    } else {
+      navigate(fallback);
+    }
+  };
   const { t } = useTranslation(["auth", "common"]);
   const [mode, setMode] = useState<AuthMode>("login");
   const [loading, setLoading] = useState(false);
