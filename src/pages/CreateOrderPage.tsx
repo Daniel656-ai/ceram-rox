@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy } from "lucide-react";
+import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy, Layers, Package as PackageIcon } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
@@ -33,7 +34,10 @@ interface SelectedMeasurement {
   service_name: string;
   planned_hours: number;
   workstation_id: string;
+  source_package_id?: string | null;
+  source_package_name?: string | null;
 }
+
 
 const newUid = () =>
   (typeof crypto !== "undefined" && "randomUUID" in crypto)
@@ -166,6 +170,10 @@ export default function CreateOrderPage() {
   const roleView: FormRoleView = role === "auftraggeber" ? "customer" : "employee";
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
+  const { data: servicePackages = [] } = useQuery({
+    queryKey: ["service-packages", "active-only"],
+    queryFn: () => api.servicePackages.listWithItems({ includeInactive: false }),
+  });
   const { data: workstations = [] } = useWorkstations();
   const { data: templates = [] } = useTemplates();
   const { data: allSamples = [] } = useSamples();
@@ -246,6 +254,38 @@ export default function CreateOrderPage() {
     ]);
   };
 
+  const applyServicePackage = (packageId: string) => {
+    const pkg = servicePackages.find((p: any) => p.id === packageId);
+    if (!pkg) return;
+    setMeasurements((prev) => {
+      const existingKeys = new Set(prev.map((m) => `${m.service_id}::${m.source_package_id ?? ""}`));
+      const additions: SelectedMeasurement[] = [];
+      for (const it of pkg.items) {
+        const svc = it.measurement_services;
+        if (!svc) continue;
+        const key = `${svc.id}::${pkg.id}`;
+        if (existingKeys.has(key)) continue;
+        additions.push({
+          uid: newUid(),
+          service_id: svc.id,
+          service_name: svc.service_name,
+          planned_hours: svc.standard_duration_hours || 1,
+          workstation_id: svc.workstation_id || "",
+          source_package_id: pkg.id,
+          source_package_name: pkg.name,
+        });
+      }
+      if (additions.length === 0) {
+        toast.info(`Alle Dienstleistungen aus "${pkg.name}" sind bereits enthalten.`);
+        return prev;
+      }
+      toast.success(`${additions.length} Dienstleistung(en) aus "${pkg.name}" hinzugefügt`);
+      return [...prev, ...additions];
+    });
+  };
+
+
+
   const handleApplyTemplate = (serviceIds: string[]) => {
     const newMeasurements: SelectedMeasurement[] = [];
     for (const sid of serviceIds) {
@@ -319,6 +359,8 @@ export default function CreateOrderPage() {
         const createdMeasurement = await addMeasurement.mutateAsync({
           order_id: order.id, service_id: m.service_id, planned_hours: m.planned_hours,
           due_date: dueDate || undefined, workstation_id: m.workstation_id || undefined,
+          source_package_id: m.source_package_id ?? null,
+          source_package_name_snapshot: m.source_package_name ?? null,
         });
         const params = measurementParams[m.uid];
         if (params && Object.keys(params).length > 0) {
@@ -541,6 +583,37 @@ export default function CreateOrderPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {servicePackages.length > 0 && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-primary" />
+                  <Label className="font-medium">Servicepaket wählen (Prüfprogramm)</Label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {servicePackages.map((p: any) => (
+                    <Button
+                      key={p.id}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => applyServicePackage(p.id)}
+                      title={p.description || undefined}
+                      className="h-auto py-1.5"
+                    >
+                      <PackageIcon className="h-3.5 w-3.5 mr-1.5" />
+                      <span className="text-left">
+                        <span className="font-medium">{p.name}</span>
+                        <span className="text-muted-foreground ml-1">({p.items.length})</span>
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Enthaltene Dienstleistungen werden automatisch übernommen. Bereits enthaltene Positionen werden übersprungen.
+                </p>
+              </div>
+            )}
+
             <div>
               <Label>{t("orders:add_measurement")}</Label>
               <Select onValueChange={addService}>
@@ -573,9 +646,16 @@ export default function CreateOrderPage() {
                   <div key={m.uid} className="p-3 border rounded-md space-y-2">
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex-1 min-w-[120px]">
-                        <p className="font-medium text-sm">
-                          <span className="text-muted-foreground mr-1">#{idx + 1}</span>
-                          {m.service_name}
+                        <p className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                          <span className="text-muted-foreground">#{idx + 1}</span>
+                          <span>{m.service_name}</span>
+                          {m.source_package_name ? (
+                            <Badge variant="secondary" className="font-normal">
+                              <Layers className="h-3 w-3 mr-1" /> {m.source_package_name}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="font-normal">manuell</Badge>
+                          )}
                         </p>
                       </div>
                       <div className="w-36">

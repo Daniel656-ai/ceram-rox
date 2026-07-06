@@ -81,6 +81,7 @@ export function AppSidebar() {
     { title: t("navigation:users"), url: "/admin/benutzer", icon: Users, show: isAdmin, nav: "nav.admin.users" },
     { title: t("navigation:roles"), url: "/admin/rollen", icon: KeyRound, show: isAdmin, nav: "nav.admin.roles" },
     { title: t("navigation:measurement_services"), url: "/admin/messdienstleistungen", icon: Beaker, show: hasPerm("services.manage"), nav: "nav.admin.services" },
+    { title: "Servicepakete", url: "/admin/servicepakete", icon: Layers, show: hasPerm("services.manage"), nav: null as string | null },
     { title: t("navigation:workstations"), url: "/admin/arbeitsplaetze", icon: Building2, show: hasPerm("workstations.manage"), nav: "nav.admin.workstations" },
     { title: t("navigation:statistics"), url: "/admin/statistiken", icon: BarChart3, show: isAdmin, nav: "nav.admin.statistics" },
     { title: t("navigation:permissions"), url: "/admin/berechtigungen", icon: ShieldCheck, show: isAdmin, nav: "nav.admin.permissions" },

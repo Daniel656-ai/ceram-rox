@@ -103,6 +103,8 @@ export const measurements = {
     planned_hours?: number;
     due_date?: string;
     workstation_id?: string;
+    source_package_id?: string | null;
+    source_package_name_snapshot?: string | null;
   }) =>
     unwrap(
       dbClient
@@ -111,6 +113,7 @@ export const measurements = {
         .select()
         .single()
     ),
+
 
   /** Full detail for a single measurement (used by task execution view). */
   get: (id: string) =>
