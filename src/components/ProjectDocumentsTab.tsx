@@ -377,14 +377,22 @@ export function ProjectDocumentsTab({ projectId, canEdit }: Props) {
           {currentApp ? (
             <div className="flex flex-wrap items-center gap-3">
               <Badge>v{currentApp.version_label}</Badge>
-              <div className="flex-1 min-w-[200px]">
+              <button
+                type="button"
+                onClick={() => setPreview(currentApp)}
+                className="flex-1 min-w-[200px] text-left rounded hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                title="Vorschau öffnen"
+              >
                 <div className="font-medium">{currentApp.file_name}</div>
                 <div className="text-xs text-muted-foreground">
                   {fmtDate(currentApp.created_at)} · {getName(currentApp.uploaded_by)} · {fmtBytes(currentApp.file_size)}
                 </div>
-              </div>
+              </button>
+              <Button size="sm" variant="outline" onClick={() => setPreview(currentApp)}>
+                <Eye className="h-4 w-4 mr-2" />Vorschau
+              </Button>
               <Button size="sm" variant="outline" onClick={() => download(currentApp)}>
-                <Download className="h-4 w-4 mr-2" />Download
+                <Download className="h-4 w-4 mr-2" />Herunterladen
               </Button>
               <Button size="sm" variant="outline" onClick={() => setAppHistoryOpen(true)}>
                 <History className="h-4 w-4 mr-2" />Historie ({application.length})
