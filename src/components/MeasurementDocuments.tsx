@@ -27,6 +27,8 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
 
+  const [preview, setPreview] = useState<Document | null>(null);
+
   const canUpload = role === "durchfuehrer" || role === "master";
 
   const handleUpload = async (file: File) => {
@@ -43,20 +45,6 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
     }
   };
 
-  const handleDownload = async (doc: Document) => {
-    try {
-      const data = await api.documents.download(doc.storage_path);
-      const url = URL.createObjectURL(data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = doc.file_name;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      toast.error("Download fehlgeschlagen", { description: err.message });
-    }
-  };
-
   return (
     <div className="space-y-2">
       {documents.length > 0 && (
@@ -64,12 +52,26 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
           {documents.map((doc) => (
             <div key={doc.id} className="flex items-center gap-2 text-sm p-1.5 rounded border bg-muted/30">
               <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="truncate flex-1 min-w-0" title={doc.file_name}>{doc.file_name}</span>
+              <button
+                type="button"
+                onClick={() => setPreview(doc)}
+                className="truncate flex-1 min-w-0 text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+                title={`${doc.file_name} – Vorschau öffnen`}
+              >
+                {doc.file_name}
+              </button>
               <span className="text-xs text-muted-foreground shrink-0">
                 {new Date(doc.uploaded_at).toLocaleDateString("de-DE")}
               </span>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDownload(doc)}>
-                <Download className="h-3 w-3" />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                onClick={() => setPreview(doc)}
+                aria-label="Vorschau öffnen"
+                title="Vorschau öffnen"
+              >
+                <Eye className="h-3 w-3" />
               </Button>
             </div>
           ))}
