@@ -1,17 +1,45 @@
 import { useTranslation } from "react-i18next";
-import { useAllServices, useUpdateService, useCreateService } from "@/hooks/useMeasurements";
+import {
+  useAllServices,
+  useUpdateService,
+  useCreateService,
+  useArchiveService,
+  useUnarchiveService,
+  useDeleteService,
+  useServiceReferences,
+} from "@/hooks/useMeasurements";
 import { useWorkstations } from "@/hooks/useWorkstations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Settings2, Eye, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Plus, Settings2, Eye, AlertTriangle, CheckCircle2, MoreVertical, Pencil, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import ServiceParameterEditor from "@/components/ServiceParameterEditor";
