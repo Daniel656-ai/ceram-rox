@@ -937,6 +937,7 @@ export type Database = {
       measurement_services: {
         Row: {
           active: boolean
+          archived_at: string | null
           category: Database["public"]["Enums"]["service_category"]
           color: string | null
           created_at: string
@@ -955,6 +956,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          archived_at?: string | null
           category: Database["public"]["Enums"]["service_category"]
           color?: string | null
           created_at?: string
@@ -973,6 +975,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          archived_at?: string | null
           category?: Database["public"]["Enums"]["service_category"]
           color?: string | null
           created_at?: string
@@ -4957,6 +4960,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      count_service_references: { Args: { _service_id: string }; Returns: Json }
       create_mixture_recipe_version:
         | {
             Args: { _copy_from?: string; _mixture_id: string; _notes?: string }
@@ -4973,6 +4977,7 @@ export type Database = {
             }
             Returns: string
           }
+      delete_service_safe: { Args: { _service_id: string }; Returns: undefined }
       diff_recipe_versions: {
         Args: { _version_a: string; _version_b: string }
         Returns: Json
