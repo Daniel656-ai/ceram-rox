@@ -213,6 +213,7 @@ export const api = {
   projectExpenses,
   serviceFieldTemplates,
   orderUploads,
+  servicePackages,
 
 
 
