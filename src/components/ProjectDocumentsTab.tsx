@@ -441,17 +441,28 @@ export function ProjectDocumentsTab({ projectId, canEdit }: Props) {
                         {d.is_current && <span className="text-xs text-primary">Aktuell</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-[220px] truncate" title={d.file_name}>{d.file_name}</TableCell>
+                    <TableCell className="max-w-[220px] truncate" title={d.file_name}>
+                      <button
+                        type="button"
+                        onClick={() => setPreview(d)}
+                        className="text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded truncate w-full"
+                      >
+                        {d.file_name}
+                      </button>
+                    </TableCell>
                     <TableCell className="text-xs uppercase">{d.file_name.split(".").pop()}</TableCell>
                     <TableCell className="text-xs">{fmtDate(d.created_at)}</TableCell>
                     <TableCell className="text-xs">{getName(d.uploaded_by)}</TableCell>
                     <TableCell className="text-xs">{d.change_comment || "–"}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button size="sm" variant="ghost" onClick={() => download(d)}>
+                      <Button size="sm" variant="ghost" onClick={() => setPreview(d)} aria-label="Vorschau" title="Vorschau">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => download(d)} aria-label="Herunterladen" title="Herunterladen">
                         <Download className="h-4 w-4" />
                       </Button>
                       {canEdit && (
-                        <Button size="sm" variant="ghost" onClick={() => setToDelete(d)}>
+                        <Button size="sm" variant="ghost" onClick={() => setToDelete(d)} aria-label="Löschen" title="Löschen">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
