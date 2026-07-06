@@ -950,6 +950,7 @@ export type Database = {
           service_name: string
           standard_duration_hours: number
           updated_at: string
+          work_instructions: string | null
           workstation_id: string | null
         }
         Insert: {
@@ -967,6 +968,7 @@ export type Database = {
           service_name: string
           standard_duration_hours?: number
           updated_at?: string
+          work_instructions?: string | null
           workstation_id?: string | null
         }
         Update: {
@@ -984,6 +986,7 @@ export type Database = {
           service_name?: string
           standard_duration_hours?: number
           updated_at?: string
+          work_instructions?: string | null
           workstation_id?: string | null
         }
         Relationships: [
