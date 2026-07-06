@@ -646,9 +646,16 @@ export default function CreateOrderPage() {
                   <div key={m.uid} className="p-3 border rounded-md space-y-2">
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex-1 min-w-[120px]">
-                        <p className="font-medium text-sm">
-                          <span className="text-muted-foreground mr-1">#{idx + 1}</span>
-                          {m.service_name}
+                        <p className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                          <span className="text-muted-foreground">#{idx + 1}</span>
+                          <span>{m.service_name}</span>
+                          {m.source_package_name ? (
+                            <Badge variant="secondary" className="font-normal">
+                              <Layers className="h-3 w-3 mr-1" /> {m.source_package_name}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="font-normal">manuell</Badge>
+                          )}
                         </p>
                       </div>
                       <div className="w-36">
