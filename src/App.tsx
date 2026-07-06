@@ -35,7 +35,7 @@ import ResultsDatabasePage from "./pages/ResultsDatabasePage";
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import ContainerScanPage from "./pages/ContainerScanPage";
-import ConsumablesPage from "./pages/ConsumablesPage";
+
 import LabPlanningPage from "./pages/LabPlanningPage";
 import MixturesPage from "./pages/MixturesPage";
 import MixtureDetailPage from "./pages/MixtureDetailPage";
