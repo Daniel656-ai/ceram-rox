@@ -167,14 +167,27 @@ export default function OrdersPage() {
 
   const visibleOrders = orders;
 
-  const filtered = visibleOrders.filter((o: any) => {
-    const matchesSearch = !search ||
-      o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-      o.projects?.project_number?.toLowerCase().includes(search.toLowerCase()) ||
-      o.projects?.project_name?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filtered = useMemo(() => {
+    const result = visibleOrders.filter((o: any) => {
+      const matchesSearch = !search ||
+        o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
+        o.projects?.project_number?.toLowerCase().includes(search.toLowerCase()) ||
+        o.projects?.project_name?.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+    if (!sort) return result;
+    const { key, dir } = sort;
+    const mult = dir === "asc" ? 1 : -1;
+    return [...result].sort((a: any, b: any) => {
+      const av = getSortValue(a, key);
+      const bv = getSortValue(b, key);
+      if (av == null && bv == null) return 0;
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * mult;
+      return String(av).localeCompare(String(bv), i18n.language, { numeric: true, sensitivity: "base" }) * mult;
+    });
+  }, [visibleOrders, search, statusFilter, sort, i18n.language]);
+
 
   const canCreateOrder = role === "master" || role === "auftraggeber" || isAnyProjectLead;
   const canShowActions = role === "master" || role === "auftraggeber" || isAnyProjectLead;
