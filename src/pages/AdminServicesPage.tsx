@@ -113,6 +113,9 @@ export default function AdminServicesPage() {
   const { data: workstations = [] } = useWorkstations();
   const updateService = useUpdateService();
   const createService = useCreateService();
+  const archiveService = useArchiveService();
+  const unarchiveService = useUnarchiveService();
+  const deleteService = useDeleteService();
   const { hasPermission } = usePermissions();
   const canViewRates = hasPermission("costs.view_hourly_rates");
   const canEditRates = hasPermission("costs.edit_hourly_rates");
@@ -130,6 +133,10 @@ export default function AdminServicesPage() {
   const [previewServiceId, setPreviewServiceId] = useState<string | null>(null);
   const [previewServiceName, setPreviewServiceName] = useState("");
   const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
+  const [showArchived, setShowArchived] = useState(false);
+  const [editService, setEditService] = useState<any | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+
 
   const handleToggle = async (id: string, active: boolean) => {
     try {
