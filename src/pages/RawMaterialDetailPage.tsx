@@ -1273,6 +1273,15 @@ export default function RawMaterialDetailPage() {
           {id && <DerivedSamples rawMaterialId={id} />}
         </TabsContent>
       </Tabs>
+      {docPreview && (
+        <DocumentPreviewDialog
+          open={!!docPreview}
+          onOpenChange={(o) => !o && setDocPreview(null)}
+          fileName={docPreview.file_name}
+          fileType={docPreview.file_type}
+          loadBlob={() => api.rawMaterialStorage.download(docPreview.storage_path)}
+        />
+      )}
     </div>
   );
 }
