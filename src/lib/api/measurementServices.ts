@@ -2,13 +2,14 @@ import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 
 export const measurementServices = {
-  /** Active services only (catalog). */
+  /** Active services only (catalog) – excludes archived. */
   listActive: () =>
     unwrap(
       dbClient
         .from("measurement_services")
         .select("*")
         .eq("active", true)
+        .is("archived_at", null)
         .order("category")
         .order("service_name")
     ),
