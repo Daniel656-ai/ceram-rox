@@ -339,6 +339,7 @@ export function ProjectDocumentsTab({ projectId, canEdit }: Props) {
   const [appHistoryOpen, setAppHistoryOpen] = useState(false);
   const [reportHistoryOpen, setReportHistoryOpen] = useState(false);
   const [toDelete, setToDelete] = useState<ProjectDocument | null>(null);
+  const [preview, setPreview] = useState<ProjectDocument | null>(null);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["project-documents", projectId] });
 
