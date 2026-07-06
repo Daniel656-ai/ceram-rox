@@ -1,16 +1,20 @@
 import { useOrders, useDeleteOrder, useUpdateOrderRanking } from "@/hooks/useOrders";
-import { useMyMeasurements } from "@/hooks/useMeasurements";
+import {
+  useMyMeasurements,
+  useUnassignedQualifiedMeasurements,
+  useClaimMeasurement,
+} from "@/hooks/useMeasurements";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Trash2, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox } from "lucide-react";
 import { useState, useMemo } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
