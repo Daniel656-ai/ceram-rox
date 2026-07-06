@@ -141,7 +141,7 @@ export default function AdminServiceDesignerPage() {
           <TabsTrigger value="general"><Settings className="h-4 w-4 mr-1" />Allgemein</TabsTrigger>
           <TabsTrigger value="data"><Database className="h-4 w-4 mr-1" />Datenmodell</TabsTrigger>
           <TabsTrigger value="form"><FormInput className="h-4 w-4 mr-1" />Formular</TabsTrigger>
-          <TabsTrigger value="workflow" disabled><Workflow className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
+          <TabsTrigger value="workflow"><Workflow className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
           <TabsTrigger value="rules"><Zap className="h-4 w-4 mr-1" />Regeln</TabsTrigger>
           <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
           <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
