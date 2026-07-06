@@ -81,93 +81,9 @@ export default function OrdersPage() {
 
 
   if (role === "durchfuehrer") {
-    const filteredTasks = (myMeasurements as any[]).filter((m: any) => {
-      const matchesSearch = !search ||
-        m.measurement_number?.toLowerCase().includes(search.toLowerCase()) ||
-        m.measurement_services?.service_name?.toLowerCase().includes(search.toLowerCase()) ||
-        m.measurement_orders?.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-        m.measurement_orders?.projects?.project_number?.toLowerCase().includes(search.toLowerCase()) ||
-        m.measurement_orders?.projects?.project_name?.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" || m.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("orders:my_title")}</h1>
-          <p className="text-muted-foreground">{t("measurements:no_measurements", "Meine Aufgaben")}</p>
-        </div>
-        <div className="flex gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder={t("orders:search_placeholder")} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("common:status")} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("orders:all_status")}</SelectItem>
-              <SelectItem value="open">{t("common:status_open")}</SelectItem>
-              <SelectItem value="in_progress">{t("common:status_in_progress")}</SelectItem>
-              <SelectItem value="completed">{t("common:status_completed")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Aufgaben-Nr.</TableHead>
-                  <TableHead>Dienstleistung</TableHead>
-                  <TableHead>Arbeitsplatz</TableHead>
-                  <TableHead>{t("orders:order_number")}</TableHead>
-                  <TableHead>Ersteller</TableHead>
-                  <TableHead>{t("orders:project_number")}</TableHead>
-                  <TableHead>{t("common:status")}</TableHead>
-                  <TableHead>{t("orders:priority")}</TableHead>
-                  <TableHead>{t("orders:due_date")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingMine ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
-                ) : filteredTasks.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
-                ) : filteredTasks.map((m: any) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="font-mono font-medium">
-                      <Link to={`/aufgaben/${m.id}`} className="text-primary hover:underline">
-                        {m.measurement_number}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
-                    <TableCell>{m.workstations?.name || "–"}</TableCell>
-                    <TableCell className="font-mono">
-                      {m.measurement_orders?.order_number || "–"}
-                    </TableCell>
-                    <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
-                    <TableCell>
-                      {m.measurement_orders?.projects?.project_number ? (
-                        <Link
-                          to={`/projekte/${m.measurement_orders.project_id}`}
-                          className="text-destructive underline underline-offset-2 hover:opacity-80"
-                        >
-                          {m.measurement_orders.projects.project_number}
-                        </Link>
-                      ) : "–"}
-                    </TableCell>
-                    <TableCell><StatusBadge status={m.status} /></TableCell>
-                    <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
-                    <TableCell>{m.due_date ? new Date(m.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />;
   }
+
 
   const visibleOrders = orders;
 
