@@ -287,6 +287,12 @@ export default function TaskExecutionPage() {
         </Card>
       ) : null}
 
+      {/* Arbeitsauftrag des Auftraggebers – schreibgeschützte Anzeige aller vom
+          Auftraggeber im Bestellformular eingegebenen Werte und hochgeladenen Dateien. */}
+      <CustomerOrderBriefingCard measurement={m} />
+
+
+
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
