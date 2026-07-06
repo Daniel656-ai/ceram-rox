@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,17 @@ type AuthMode = "login" | "register" | "forgot";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextParam = searchParams.get("next");
+  const safeNext =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : null;
+  const goNext = (fallback: string) => {
+    if (safeNext) {
+      window.location.href = safeNext;
+    } else {
+      navigate(fallback);
+    }
+  };
   const { t } = useTranslation(["auth", "common"]);
   const [mode, setMode] = useState<AuthMode>("login");
   const [loading, setLoading] = useState(false);
@@ -34,7 +45,7 @@ export default function Auth() {
     if (error) {
       toast.error(t("auth:login_failed"), { description: error.message });
     } else {
-      navigate("/dashboard");
+      goNext("/dashboard");
     }
   };
 
