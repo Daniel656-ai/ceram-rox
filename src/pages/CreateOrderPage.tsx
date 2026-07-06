@@ -583,6 +583,37 @@ export default function CreateOrderPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {servicePackages.length > 0 && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-primary" />
+                  <Label className="font-medium">Servicepaket wählen (Prüfprogramm)</Label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {servicePackages.map((p: any) => (
+                    <Button
+                      key={p.id}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => applyServicePackage(p.id)}
+                      title={p.description || undefined}
+                      className="h-auto py-1.5"
+                    >
+                      <PackageIcon className="h-3.5 w-3.5 mr-1.5" />
+                      <span className="text-left">
+                        <span className="font-medium">{p.name}</span>
+                        <span className="text-muted-foreground ml-1">({p.items.length})</span>
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Enthaltene Dienstleistungen werden automatisch übernommen. Bereits enthaltene Positionen werden übersprungen.
+                </p>
+              </div>
+            )}
+
             <div>
               <Label>{t("orders:add_measurement")}</Label>
               <Select onValueChange={addService}>
