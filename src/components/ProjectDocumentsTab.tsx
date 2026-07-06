@@ -20,9 +20,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Download, Upload, History, Trash2, FileText, Replace } from "lucide-react";
+import { Download, Upload, History, Trash2, FileText, Replace, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useUsers } from "@/hooks/useUsers";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 
 const MAX_FILE_MB = 200;
 const APPLICATION_ACCEPT = ".pdf,application/pdf";
@@ -238,6 +239,7 @@ interface HistoryDialogProps {
 function HistoryDialog({ open, onOpenChange, docs, title, canDelete, onDelete }: HistoryDialogProps) {
   const download = useDownload();
   const getName = useUserName();
+  const [preview, setPreview] = useState<ProjectDocument | null>(null);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -262,16 +264,27 @@ function HistoryDialog({ open, onOpenChange, docs, title, canDelete, onDelete }:
                 <TableCell>
                   <Badge variant={d.is_current ? "default" : "outline"}>{d.version_label}</Badge>
                 </TableCell>
-                <TableCell className="max-w-[200px] truncate" title={d.file_name}>{d.file_name}</TableCell>
+                <TableCell className="max-w-[200px] truncate" title={d.file_name}>
+                  <button
+                    type="button"
+                    onClick={() => setPreview(d)}
+                    className="text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded truncate w-full"
+                  >
+                    {d.file_name}
+                  </button>
+                </TableCell>
                 <TableCell className="text-xs">{fmtDate(d.created_at)}</TableCell>
                 <TableCell className="text-xs">{getName(d.uploaded_by)}</TableCell>
                 <TableCell className="text-xs">{d.change_comment || "–"}</TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" variant="ghost" onClick={() => download(d)}>
+                  <Button size="sm" variant="ghost" onClick={() => setPreview(d)} aria-label="Vorschau" title="Vorschau">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => download(d)} aria-label="Herunterladen" title="Herunterladen">
                     <Download className="h-4 w-4" />
                   </Button>
                   {canDelete && (
-                    <Button size="sm" variant="ghost" onClick={() => onDelete(d)}>
+                    <Button size="sm" variant="ghost" onClick={() => onDelete(d)} aria-label="Löschen" title="Löschen">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}
@@ -280,6 +293,15 @@ function HistoryDialog({ open, onOpenChange, docs, title, canDelete, onDelete }:
             ))}
           </TableBody>
         </Table>
+        {preview && (
+          <DocumentPreviewDialog
+            open={!!preview}
+            onOpenChange={(o) => !o && setPreview(null)}
+            fileName={preview.file_name}
+            fileType={preview.file_type}
+            loadBlob={() => api.projectDocuments.download(preview.storage_path)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -317,6 +339,7 @@ export function ProjectDocumentsTab({ projectId, canEdit }: Props) {
   const [appHistoryOpen, setAppHistoryOpen] = useState(false);
   const [reportHistoryOpen, setReportHistoryOpen] = useState(false);
   const [toDelete, setToDelete] = useState<ProjectDocument | null>(null);
+  const [preview, setPreview] = useState<ProjectDocument | null>(null);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["project-documents", projectId] });
 
@@ -354,14 +377,22 @@ export function ProjectDocumentsTab({ projectId, canEdit }: Props) {
           {currentApp ? (
             <div className="flex flex-wrap items-center gap-3">
               <Badge>v{currentApp.version_label}</Badge>
-              <div className="flex-1 min-w-[200px]">
+              <button
+                type="button"
+                onClick={() => setPreview(currentApp)}
+                className="flex-1 min-w-[200px] text-left rounded hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                title="Vorschau öffnen"
+              >
                 <div className="font-medium">{currentApp.file_name}</div>
                 <div className="text-xs text-muted-foreground">
                   {fmtDate(currentApp.created_at)} · {getName(currentApp.uploaded_by)} · {fmtBytes(currentApp.file_size)}
                 </div>
-              </div>
+              </button>
+              <Button size="sm" variant="outline" onClick={() => setPreview(currentApp)}>
+                <Eye className="h-4 w-4 mr-2" />Vorschau
+              </Button>
               <Button size="sm" variant="outline" onClick={() => download(currentApp)}>
-                <Download className="h-4 w-4 mr-2" />Download
+                <Download className="h-4 w-4 mr-2" />Herunterladen
               </Button>
               <Button size="sm" variant="outline" onClick={() => setAppHistoryOpen(true)}>
                 <History className="h-4 w-4 mr-2" />Historie ({application.length})
@@ -410,17 +441,28 @@ export function ProjectDocumentsTab({ projectId, canEdit }: Props) {
                         {d.is_current && <span className="text-xs text-primary">Aktuell</span>}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-[220px] truncate" title={d.file_name}>{d.file_name}</TableCell>
+                    <TableCell className="max-w-[220px] truncate" title={d.file_name}>
+                      <button
+                        type="button"
+                        onClick={() => setPreview(d)}
+                        className="text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded truncate w-full"
+                      >
+                        {d.file_name}
+                      </button>
+                    </TableCell>
                     <TableCell className="text-xs uppercase">{d.file_name.split(".").pop()}</TableCell>
                     <TableCell className="text-xs">{fmtDate(d.created_at)}</TableCell>
                     <TableCell className="text-xs">{getName(d.uploaded_by)}</TableCell>
                     <TableCell className="text-xs">{d.change_comment || "–"}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button size="sm" variant="ghost" onClick={() => download(d)}>
+                      <Button size="sm" variant="ghost" onClick={() => setPreview(d)} aria-label="Vorschau" title="Vorschau">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => download(d)} aria-label="Herunterladen" title="Herunterladen">
                         <Download className="h-4 w-4" />
                       </Button>
                       {canEdit && (
-                        <Button size="sm" variant="ghost" onClick={() => setToDelete(d)}>
+                        <Button size="sm" variant="ghost" onClick={() => setToDelete(d)} aria-label="Löschen" title="Löschen">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
@@ -482,6 +524,16 @@ export function ProjectDocumentsTab({ projectId, canEdit }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {preview && (
+        <DocumentPreviewDialog
+          open={!!preview}
+          onOpenChange={(o) => !o && setPreview(null)}
+          fileName={preview.file_name}
+          fileType={preview.file_type}
+          loadBlob={() => api.projectDocuments.download(preview.storage_path)}
+        />
+      )}
     </div>
   );
 }

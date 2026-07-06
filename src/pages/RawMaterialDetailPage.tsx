@@ -20,7 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil, AlertTriangle, GitBranch, Container as ContainerIcon } from "lucide-react";
+import { ArrowLeft, Plus, Upload, Download, Trash2, FileText, Package, FlaskConical, BarChart3, Pencil, AlertTriangle, GitBranch, Container as ContainerIcon, Eye } from "lucide-react";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { useTranslation } from "react-i18next";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
@@ -306,6 +307,7 @@ export default function RawMaterialDetailPage() {
 
   // Document upload
   const [uploading, setUploading] = useState(false);
+  const [docPreview, setDocPreview] = useState<any | null>(null);
   const [docType, setDocType] = useState("zertifikat");
   const [docBatchId, setDocBatchId] = useState("");
 
@@ -1084,11 +1086,24 @@ export default function RawMaterialDetailPage() {
                     const batchLabel = batches.find((b: any) => b.id === d.batch_id)?.batch_number;
                     return (
                       <TableRow key={d.id}>
-                        <TableCell className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /><span className="truncate max-w-[200px]">{d.file_name}</span></TableCell>
+                        <TableCell className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <button
+                            type="button"
+                            onClick={() => setDocPreview(d)}
+                            className="truncate max-w-[200px] text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+                            title="Vorschau öffnen"
+                          >
+                            {d.file_name}
+                          </button>
+                        </TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{d.document_type}</Badge></TableCell>
                         <TableCell className="text-xs">{batchLabel || "–"}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{new Date(d.uploaded_at).toLocaleDateString("de-DE")}</TableCell>
-                        <TableCell><Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleDownload(d)}><Download className="h-3.5 w-3.5" /></Button></TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setDocPreview(d)} aria-label="Vorschau" title="Vorschau"><Eye className="h-3.5 w-3.5" /></Button>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleDownload(d)} aria-label="Herunterladen" title="Herunterladen"><Download className="h-3.5 w-3.5" /></Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -1258,6 +1273,15 @@ export default function RawMaterialDetailPage() {
           {id && <DerivedSamples rawMaterialId={id} />}
         </TabsContent>
       </Tabs>
+      {docPreview && (
+        <DocumentPreviewDialog
+          open={!!docPreview}
+          onOpenChange={(o) => !o && setDocPreview(null)}
+          fileName={docPreview.file_name}
+          fileType={docPreview.file_type}
+          loadBlob={() => api.rawMaterialStorage.download(docPreview.storage_path)}
+        />
+      )}
     </div>
   );
 }

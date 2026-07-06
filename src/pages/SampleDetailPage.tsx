@@ -24,7 +24,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, FileText, GitBranch, CalendarClock } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, FileText, GitBranch, CalendarClock, Eye, Download } from "lucide-react";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -150,9 +151,30 @@ export default function SampleDetailPage() {
     }
   };
 
+  const [docPreview, setDocPreview] = useState<any | null>(null);
+
+  const loadSampleDocBlob = async (storagePath: string): Promise<Blob> => {
+    const url = await api.sampleStorage.signedUrl(storagePath, 300);
+    if (!url) throw new Error("Signed URL konnte nicht erzeugt werden");
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`Dokument konnte nicht geladen werden (${resp.status})`);
+    return await resp.blob();
+  };
+
   const handleDocDownload = async (doc: any) => {
-    const url = await api.sampleStorage.signedUrl(doc.storage_path, 300);
-    if (url) window.open(url, "_blank");
+    try {
+      const blob = await loadSampleDocBlob(doc.storage_path);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Download fehlgeschlagen");
+    }
   };
 
   const getUserName = (userId: string) => {
@@ -538,18 +560,30 @@ export default function SampleDetailPage() {
                       <TableHead>Datei</TableHead>
                       <TableHead>Typ</TableHead>
                       <TableHead>Datum</TableHead>
-                      <TableHead className="w-12"></TableHead>
+                      <TableHead className="w-24"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {documents.map((doc: any) => (
                       <TableRow key={doc.id}>
-                        <TableCell className="font-medium">{doc.file_name}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            type="button"
+                            onClick={() => setDocPreview(doc)}
+                            className="text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+                            title="Vorschau öffnen"
+                          >
+                            {doc.file_name}
+                          </button>
+                        </TableCell>
                         <TableCell>{doc.document_type}</TableCell>
                         <TableCell>{new Date(doc.uploaded_at).toLocaleDateString("de-DE")}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => handleDocDownload(doc)}>
-                            <FileText className="h-4 w-4" />
+                        <TableCell className="whitespace-nowrap">
+                          <Button variant="ghost" size="icon" onClick={() => setDocPreview(doc)} aria-label="Vorschau" title="Vorschau">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDocDownload(doc)} aria-label="Herunterladen" title="Herunterladen">
+                            <Download className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -597,6 +631,15 @@ export default function SampleDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      {docPreview && (
+        <DocumentPreviewDialog
+          open={!!docPreview}
+          onOpenChange={(o) => !o && setDocPreview(null)}
+          fileName={docPreview.file_name}
+          fileType={docPreview.file_type}
+          loadBlob={() => loadSampleDocBlob(docPreview.storage_path)}
+        />
+      )}
     </div>
   );
 }
