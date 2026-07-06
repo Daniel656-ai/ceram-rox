@@ -359,6 +359,8 @@ export default function CreateOrderPage() {
         const createdMeasurement = await addMeasurement.mutateAsync({
           order_id: order.id, service_id: m.service_id, planned_hours: m.planned_hours,
           due_date: dueDate || undefined, workstation_id: m.workstation_id || undefined,
+          source_package_id: m.source_package_id ?? null,
+          source_package_name_snapshot: m.source_package_name ?? null,
         });
         const params = measurementParams[m.uid];
         if (params && Object.keys(params).length > 0) {
