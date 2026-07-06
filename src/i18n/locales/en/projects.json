@@ -248,5 +248,12 @@
   "no_completed_projects": "No completed projects",
   "show_completed": "Show completed",
   "hide_completed": "Hide completed",
-  "completed_at": "Completed on"
+  "completed_at": "Completed on",
+  "edit_identity_title": "Edit Project",
+  "edit_identity_desc": "Project number and name can be changed anytime. All links remain intact.",
+  "identity_updated": "Project updated",
+  "duplicate_project_number": "Project number already in use",
+  "change_history": "Change history",
+  "cancel": "Cancel",
+  "save": "Save"
 }
