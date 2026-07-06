@@ -62,6 +62,7 @@ export const measurementServices = {
       color?: string | null;
       department?: string | null;
       price?: number | null;
+      work_instructions?: string | null;
     }
   ) =>
     run(
