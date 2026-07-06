@@ -48,7 +48,7 @@ export default function AdminServicePackagesPage() {
   });
 
   const activeServices = useMemo(
-    () => services.filter((s: any) => !s.archived_at && s.is_active !== false),
+    () => services.filter((s: any) => !s.archived_at && s.active !== false),
     [services]
   );
 

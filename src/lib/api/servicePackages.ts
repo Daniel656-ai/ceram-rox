@@ -30,7 +30,7 @@ export interface ServicePackageWithItems extends ServicePackage {
       hourly_rate: number | null;
       standard_duration_hours: number | null;
       workstation_id: string | null;
-      is_active: boolean;
+      active: boolean;
       archived_at: string | null;
     } | null;
   })[];
@@ -52,7 +52,7 @@ export const servicePackages = {
     const { data, error } = await dbClient
       .from("service_packages" as any)
       .select(
-        `*, items:service_package_items(*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, workstation_id, is_active, archived_at))`
+        `*, items:service_package_items(*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, workstation_id, active, archived_at))`
       )
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
@@ -69,7 +69,7 @@ export const servicePackages = {
     const { data, error } = await dbClient
       .from("service_packages" as any)
       .select(
-        `*, items:service_package_items(*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, workstation_id, is_active, archived_at))`
+        `*, items:service_package_items(*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, workstation_id, active, archived_at))`
       )
       .eq("id", id)
       .maybeSingle();
