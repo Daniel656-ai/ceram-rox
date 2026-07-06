@@ -83,6 +83,33 @@ export const projects = {
     unwrap(dbClient.from("project_time_entries").select("project_id, duration_minutes")),
   update: (id: string, updates: Record<string, any>) =>
     run(dbClient.from("projects").update(updates as any).eq("id", id)),
+
+  /** Change project_number and/or project_name with uniqueness check. */
+  async updateIdentity(id: string, updates: { project_number?: string; project_name?: string | null }) {
+    if (updates.project_number !== undefined) {
+      const existing = await unwrap(
+        dbClient
+          .from("projects")
+          .select("id")
+          .eq("project_number", updates.project_number)
+          .neq("id", id)
+          .limit(1)
+      );
+      if (existing && existing.length > 0) {
+        throw new Error("DUPLICATE_PROJECT_NUMBER");
+      }
+    }
+    return run(dbClient.from("projects").update(updates as any).eq("id", id));
+  },
+
+  /** History of project_number / project_name changes. */
+  listChangeLog: (projectId: string) =>
+    unwrap(
+      (dbClient.from as any)("project_change_log")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+    ),
 };
 
 // ============================================================
