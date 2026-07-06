@@ -285,3 +285,205 @@ export default function OrdersPage() {
     </div>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Messdienstleister-Ansicht: „Meine Aufgaben" mit zwei Bereichen            */
+/*  1) zugewiesene Aufgaben  2) verfügbare (freie) Aufträge laut Kompetenz    */
+/* -------------------------------------------------------------------------- */
+function DurchfuehrerTasksView({
+  search, setSearch, statusFilter, setStatusFilter,
+}: {
+  search: string;
+  setSearch: (v: string) => void;
+  statusFilter: string;
+  setStatusFilter: (v: string) => void;
+}) {
+  const { t, i18n } = useTranslation(["orders", "common", "measurements"]);
+  const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
+  const { data: freeTasks = [], isLoading: isLoadingFree } = useUnassignedQualifiedMeasurements();
+  const claim = useClaimMeasurement();
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+
+  const matches = (m: any) => {
+    const q = search.toLowerCase();
+    const matchesSearch = !q ||
+      m.measurement_number?.toLowerCase().includes(q) ||
+      m.measurement_services?.service_name?.toLowerCase().includes(q) ||
+      m.measurement_orders?.order_number?.toLowerCase().includes(q) ||
+      m.measurement_orders?.projects?.project_number?.toLowerCase().includes(q) ||
+      m.measurement_orders?.projects?.project_name?.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === "all" || m.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  };
+
+  const assigned = (myMeasurements as any[]).filter(matches);
+  const free = (freeTasks as any[]).filter(matches);
+
+  const handleClaim = async (id: string, label: string) => {
+    setClaimingId(id);
+    try {
+      await claim.mutateAsync(id);
+      toast.success(`Auftrag „${label}" übernommen`);
+    } catch (err: any) {
+      const msg = String(err?.message || "");
+      if (msg.includes("already assigned")) {
+        toast.error("Bereits vergeben", { description: "Dieser Auftrag wurde soeben von einem anderen Mitarbeiter übernommen." });
+      } else if (msg.includes("not qualified")) {
+        toast.error("Nicht berechtigt", { description: "Für diese Dienstleistung fehlt die Qualifikation." });
+      } else {
+        toast.error("Übernahme fehlgeschlagen", { description: msg });
+      }
+    } finally {
+      setClaimingId(null);
+    }
+  };
+
+  const fmtDate = (d?: string | null) =>
+    d ? new Date(d).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{t("orders:my_title")}</h1>
+        <p className="text-muted-foreground">
+          Bearbeite deine zugewiesenen Aufgaben oder übernehme einen freien Auftrag aus deinem Qualifikationsbereich.
+        </p>
+      </div>
+
+      {/* Gemeinsame Filter für beide Bereiche */}
+      <div className="flex gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder={t("orders:search_placeholder")} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("common:status")} /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("orders:all_status")}</SelectItem>
+            <SelectItem value="open">{t("common:status_open")}</SelectItem>
+            <SelectItem value="in_progress">{t("common:status_in_progress")}</SelectItem>
+            <SelectItem value="completed">{t("common:status_completed")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* 1) Meine zugewiesenen Aufgaben */}
+      <Card>
+        <CardHeader className="py-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Meine zugewiesenen Aufgaben</CardTitle>
+          <Badge variant="outline">{assigned.length}</Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Aufgaben-Nr.</TableHead>
+                <TableHead>Dienstleistung</TableHead>
+                <TableHead>Arbeitsplatz</TableHead>
+                <TableHead>{t("orders:order_number")}</TableHead>
+                <TableHead>Ersteller</TableHead>
+                <TableHead>{t("orders:project_number")}</TableHead>
+                <TableHead>{t("common:status")}</TableHead>
+                <TableHead>{t("orders:priority")}</TableHead>
+                <TableHead>{t("orders:due_date")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoadingMine ? (
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+              ) : assigned.length === 0 ? (
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
+              ) : assigned.map((m: any) => (
+                <TableRow key={m.id}>
+                  <TableCell className="font-mono font-medium">
+                    <Link to={`/aufgaben/${m.id}`} className="text-primary hover:underline">{m.measurement_number}</Link>
+                  </TableCell>
+                  <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
+                  <TableCell>{m.workstations?.name || "–"}</TableCell>
+                  <TableCell className="font-mono">{m.measurement_orders?.order_number || "–"}</TableCell>
+                  <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
+                  <TableCell>
+                    {m.measurement_orders?.projects?.project_number ? (
+                      <Link to={`/projekte/${m.measurement_orders.project_id}`} className="text-destructive underline underline-offset-2 hover:opacity-80">
+                        {m.measurement_orders.projects.project_number}
+                      </Link>
+                    ) : "–"}
+                  </TableCell>
+                  <TableCell><StatusBadge status={m.status} /></TableCell>
+                  <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
+                  <TableCell>{fmtDate(m.due_date)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* 2) Verfügbare Aufträge (gemäß Kompetenzmatrix) */}
+      <Card>
+        <CardHeader className="py-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Inbox className="h-4 w-4" /> Verfügbare Aufträge
+            <span className="text-xs font-normal text-muted-foreground">
+              — freie Aufträge deiner Qualifikationen
+            </span>
+          </CardTitle>
+          <Badge variant="outline">{free.length}</Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Aufgaben-Nr.</TableHead>
+                <TableHead>Dienstleistung</TableHead>
+                <TableHead>Arbeitsplatz</TableHead>
+                <TableHead>{t("orders:order_number")}</TableHead>
+                <TableHead>{t("orders:project_number")}</TableHead>
+                <TableHead>{t("orders:priority")}</TableHead>
+                <TableHead>{t("orders:due_date")}</TableHead>
+                <TableHead className="w-[180px] text-right">Aktion</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoadingFree ? (
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+              ) : free.length === 0 ? (
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Aktuell keine freien Aufträge für deine Qualifikationen.</TableCell></TableRow>
+              ) : free.map((m: any) => (
+                <TableRow key={m.id}>
+                  <TableCell className="font-mono font-medium">{m.measurement_number}</TableCell>
+                  <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
+                  <TableCell>{m.workstations?.name || "–"}</TableCell>
+                  <TableCell className="font-mono">
+                    <Link to={`/auftraege/${m.order_id}`} className="text-primary hover:underline">
+                      {m.measurement_orders?.order_number || "–"}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    {m.measurement_orders?.projects?.project_number ? (
+                      <Link to={`/projekte/${m.measurement_orders.project_id}`} className="text-destructive underline underline-offset-2 hover:opacity-80">
+                        {m.measurement_orders.projects.project_number}
+                      </Link>
+                    ) : "–"}
+                  </TableCell>
+                  <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
+                  <TableCell>{fmtDate(m.due_date)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      disabled={claimingId === m.id}
+                      onClick={() => handleClaim(m.id, m.measurement_services?.service_name || m.measurement_number)}
+                    >
+                      <HandshakeIcon className="h-4 w-4 mr-2" />
+                      {claimingId === m.id ? "Übernehme..." : "Auftrag übernehmen"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
