@@ -268,16 +268,17 @@ export default function OrdersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("orders:order_number")}</TableHead>
-                <TableHead>{t("orders:project_number")}</TableHead>
-                <TableHead>{t("orders:project_name")}</TableHead>
-                <TableHead>{t("orders:order_type")}</TableHead>
-                <TableHead>{t("orders:priority")}</TableHead>
-                <TableHead>{t("common:status")}</TableHead>
-                <TableHead>{t("orders:due_date")}</TableHead>
-                <TableHead>{t("common:created")}</TableHead>
+                <SortableHead sortKey="order_number">{t("orders:order_number")}</SortableHead>
+                <SortableHead sortKey="project_number">{t("orders:project_number")}</SortableHead>
+                <SortableHead sortKey="project_name">{t("orders:project_name")}</SortableHead>
+                <SortableHead sortKey="order_type">{t("orders:order_type")}</SortableHead>
+                <SortableHead sortKey="ranking">{t("orders:priority")}</SortableHead>
+                <SortableHead sortKey="status">{t("common:status")}</SortableHead>
+                <SortableHead sortKey="due_date">{t("orders:due_date")}</SortableHead>
+                <SortableHead sortKey="created_at">{t("common:created")}</SortableHead>
                 {canShowActions && <TableHead className="w-[60px]">{t("common:actions")}</TableHead>}
               </TableRow>
+
             </TableHeader>
             <TableBody>
               {isLoading ? (
