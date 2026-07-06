@@ -77,6 +77,20 @@ export const measurements = {
         .single()
     ),
 
+  /** Full detail for a single measurement (used by task execution view). */
+  get: (id: string) =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(
+          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours), workstations(id, name), measurement_results(*), measurement_orders(id, order_number, order_type, notes, created_by, project_id, sample_id, projects(id, project_number, project_name), samples(id, sample_number, sample_name))"
+        )
+        .eq("id", id)
+        .single()
+    ),
+
+
+
   updateStatus: (id: string, status: string) =>
     run(
       dbClient
