@@ -270,6 +270,23 @@ export default function TaskExecutionPage() {
         </CardContent>
       </Card>
 
+      {m.measurement_services?.work_instructions?.trim() ? (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardHeader className="py-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              Arbeitsauftrag
+              <Badge variant="outline" className="text-[10px]">Vorgaben des Technikers · schreibgeschützt</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">
+              {m.measurement_services.work_instructions}
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
           <CardTitle className="text-base flex items-center gap-2">
