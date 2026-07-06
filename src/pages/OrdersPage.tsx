@@ -494,9 +494,12 @@ function DurchfuehrerTasksView({
 
       {/* 1) Meine zugewiesenen Aufgaben */}
       <Card>
-        <CardHeader className="py-3 flex flex-row items-center justify-between">
+        <CardHeader className="py-3 flex flex-row items-center justify-between gap-3 flex-wrap">
           <CardTitle className="text-base">Meine zugewiesenen Aufgaben</CardTitle>
-          <Badge variant="outline">{assigned.length}</Badge>
+          <div className="flex items-center gap-3">
+            <SortControls value={sortAssigned} onChange={setSortAssigned} />
+            <Badge variant="outline">{assigned.length}</Badge>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
