@@ -204,6 +204,7 @@ function GeneralTab({
         price: form.price != null && form.price !== "" ? Number(form.price) : null,
         standard_duration_hours: form.standard_duration_hours != null ? Number(form.standard_duration_hours) : undefined,
         active: !!form.active,
+        work_instructions: form.work_instructions ?? null,
       }),
     onSuccess: () => { toast.success("Gespeichert"); onSaved(); },
     onError: (e: any) => toast.error("Fehler", { description: e.message }),
