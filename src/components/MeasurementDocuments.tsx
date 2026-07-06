@@ -96,6 +96,15 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
       {documents.length === 0 && !canUpload && (
         <span className="text-xs text-muted-foreground">Keine Dateien</span>
       )}
+      {preview && (
+        <DocumentPreviewDialog
+          open={!!preview}
+          onOpenChange={(o) => !o && setPreview(null)}
+          fileName={preview.file_name}
+          fileType={preview.file_type}
+          loadBlob={() => api.documents.download(preview.storage_path)}
+        />
+      )}
     </div>
   );
 }
