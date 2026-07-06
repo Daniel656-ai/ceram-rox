@@ -2033,6 +2033,8 @@ export type Database = {
           processing_time_hours: number
           ranking: number | null
           service_id: string
+          source_package_id: string | null
+          source_package_name_snapshot: string | null
           status: Database["public"]["Enums"]["measurement_status"]
           updated_at: string
           workstation_id: string | null
@@ -2054,6 +2056,8 @@ export type Database = {
           processing_time_hours?: number
           ranking?: number | null
           service_id: string
+          source_package_id?: string | null
+          source_package_name_snapshot?: string | null
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
           workstation_id?: string | null
@@ -2075,6 +2079,8 @@ export type Database = {
           processing_time_hours?: number
           ranking?: number | null
           service_id?: string
+          source_package_id?: string | null
+          source_package_name_snapshot?: string | null
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
           workstation_id?: string | null
@@ -2092,6 +2098,13 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_measurements_source_package_id_fkey"
+            columns: ["source_package_id"]
+            isOneToOne: false
+            referencedRelation: "service_packages"
             referencedColumns: ["id"]
           },
           {
@@ -4298,6 +4311,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      service_package_items: {
+        Row: {
+          created_at: string
+          id: string
+          package_id: string
+          service_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          package_id: string
+          service_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          package_id?: string
+          service_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "service_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_package_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_packages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       service_parameter_definitions: {
         Row: {
