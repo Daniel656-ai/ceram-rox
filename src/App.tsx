@@ -44,6 +44,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 import AdminLabelTemplatesPage from "./pages/AdminLabelTemplatesPage";
 import AdminSymbolsPage from "./pages/AdminSymbolsPage";
+import OAuthConsent from "./pages/OAuthConsent";
 
 
 import { UpdateChecker } from "@/components/UpdateChecker";
