@@ -239,6 +239,7 @@ interface HistoryDialogProps {
 function HistoryDialog({ open, onOpenChange, docs, title, canDelete, onDelete }: HistoryDialogProps) {
   const download = useDownload();
   const getName = useUserName();
+  const [preview, setPreview] = useState<ProjectDocument | null>(null);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -263,16 +264,27 @@ function HistoryDialog({ open, onOpenChange, docs, title, canDelete, onDelete }:
                 <TableCell>
                   <Badge variant={d.is_current ? "default" : "outline"}>{d.version_label}</Badge>
                 </TableCell>
-                <TableCell className="max-w-[200px] truncate" title={d.file_name}>{d.file_name}</TableCell>
+                <TableCell className="max-w-[200px] truncate" title={d.file_name}>
+                  <button
+                    type="button"
+                    onClick={() => setPreview(d)}
+                    className="text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded truncate w-full"
+                  >
+                    {d.file_name}
+                  </button>
+                </TableCell>
                 <TableCell className="text-xs">{fmtDate(d.created_at)}</TableCell>
                 <TableCell className="text-xs">{getName(d.uploaded_by)}</TableCell>
                 <TableCell className="text-xs">{d.change_comment || "–"}</TableCell>
                 <TableCell className="text-right">
-                  <Button size="sm" variant="ghost" onClick={() => download(d)}>
+                  <Button size="sm" variant="ghost" onClick={() => setPreview(d)} aria-label="Vorschau" title="Vorschau">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => download(d)} aria-label="Herunterladen" title="Herunterladen">
                     <Download className="h-4 w-4" />
                   </Button>
                   {canDelete && (
-                    <Button size="sm" variant="ghost" onClick={() => onDelete(d)}>
+                    <Button size="sm" variant="ghost" onClick={() => onDelete(d)} aria-label="Löschen" title="Löschen">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}
@@ -281,6 +293,15 @@ function HistoryDialog({ open, onOpenChange, docs, title, canDelete, onDelete }:
             ))}
           </TableBody>
         </Table>
+        {preview && (
+          <DocumentPreviewDialog
+            open={!!preview}
+            onOpenChange={(o) => !o && setPreview(null)}
+            fileName={preview.file_name}
+            fileType={preview.file_type}
+            loadBlob={() => api.projectDocuments.download(preview.storage_path)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
