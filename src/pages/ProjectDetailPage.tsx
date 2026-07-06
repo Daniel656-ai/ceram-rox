@@ -78,6 +78,8 @@ export default function ProjectDetailPage() {
   const canEditTrafficLight = isMaster || isLeaderOrOwner || canEditByPermission;
 
   const isProjectCompleted = (project as any)?.project_status === "completed";
+  const canEditIdentity = isMaster || isLeaderOrOwner || canEditByPermission;
+  const [editIdentityOpen, setEditIdentityOpen] = useState(false);
 
   const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
     if (!id) return;
