@@ -170,6 +170,10 @@ export default function CreateOrderPage() {
   const roleView: FormRoleView = role === "auftraggeber" ? "customer" : "employee";
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
+  const { data: servicePackages = [] } = useQuery({
+    queryKey: ["service-packages", "active-only"],
+    queryFn: () => api.servicePackages.listWithItems({ includeInactive: false }),
+  });
   const { data: workstations = [] } = useWorkstations();
   const { data: templates = [] } = useTemplates();
   const { data: allSamples = [] } = useSamples();
