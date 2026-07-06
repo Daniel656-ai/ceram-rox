@@ -524,6 +524,16 @@ export function ProjectDocumentsTab({ projectId, canEdit }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {preview && (
+        <DocumentPreviewDialog
+          open={!!preview}
+          onOpenChange={(o) => !o && setPreview(null)}
+          fileName={preview.file_name}
+          fileType={preview.file_type}
+          loadBlob={() => api.projectDocuments.download(preview.storage_path)}
+        />
+      )}
     </div>
   );
 }
