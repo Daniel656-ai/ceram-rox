@@ -314,6 +314,17 @@ export default function ProjectDetailPage() {
             <h1 className="text-2xl font-bold tracking-tight">
               {project.project_number}{project.project_name ? ` – ${project.project_name}` : ""}
             </h1>
+            {canEditIdentity && !isProjectCompleted && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="print:hidden"
+                onClick={() => setEditIdentityOpen(true)}
+                title={t("edit_identity_title", { defaultValue: "Projekt bearbeiten" })}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
             {isProjectCompleted && (
               <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                 {t("project_status_completed")}
