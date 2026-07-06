@@ -304,6 +304,75 @@ function DurchfuehrerTasksView({
   const claim = useClaimMeasurement();
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
+  // -------- Sortierung --------
+  type SortKey =
+    | "priority"
+    | "service"
+    | "project"
+    | "workstation"
+    | "order_number"
+    | "due_date"
+    | "created_at"
+    | "status";
+  type SortDir = "asc" | "desc";
+  type SortSpec = { key: SortKey; dir: SortDir };
+
+  const loadSort = (storageKey: string, fallback: SortSpec): SortSpec => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) return JSON.parse(raw);
+    } catch { /* noop */ }
+    return fallback;
+  };
+
+  const [sortAssigned, setSortAssignedState] = useState<SortSpec>(() =>
+    loadSort("myTasks.sort.assigned", { key: "due_date", dir: "asc" })
+  );
+  const [sortFree, setSortFreeState] = useState<SortSpec>(() =>
+    loadSort("myTasks.sort.free", { key: "priority", dir: "asc" })
+  );
+  const setSortAssigned = (s: SortSpec) => {
+    setSortAssignedState(s);
+    try { localStorage.setItem("myTasks.sort.assigned", JSON.stringify(s)); } catch { /* noop */ }
+  };
+  const setSortFree = (s: SortSpec) => {
+    setSortFreeState(s);
+    try { localStorage.setItem("myTasks.sort.free", JSON.stringify(s)); } catch { /* noop */ }
+  };
+
+  // Extract sortable value per key
+  const getSortValue = (m: any, key: SortKey): string | number => {
+    switch (key) {
+      case "priority": return m.ranking ?? m.measurement_orders?.ranking ?? 999;
+      case "service": return (m.measurement_services?.service_name || "").toLowerCase();
+      case "project": return (m.measurement_orders?.projects?.project_name || m.measurement_orders?.projects?.project_number || "").toLowerCase();
+      case "workstation": return (m.workstations?.name || "").toLowerCase();
+      case "order_number": return (m.measurement_orders?.order_number || "").toLowerCase();
+      case "due_date": return m.due_date ? new Date(m.due_date).getTime() : Number.POSITIVE_INFINITY;
+      case "created_at": return m.created_at ? new Date(m.created_at).getTime() : 0;
+      case "status": return (m.status || "").toLowerCase();
+    }
+  };
+
+  const compareBy = (a: any, b: any, key: SortKey): number => {
+    const av = getSortValue(a, key);
+    const bv = getSortValue(b, key);
+    if (typeof av === "number" && typeof bv === "number") return av - bv;
+    return String(av).localeCompare(String(bv), i18n.language, { numeric: true, sensitivity: "base" });
+  };
+
+  const buildComparator = (primary: SortSpec, tiebreak: SortKey[] = []) =>
+    (a: any, b: any) => {
+      const mult = primary.dir === "asc" ? 1 : -1;
+      const primaryCmp = compareBy(a, b, primary.key) * mult;
+      if (primaryCmp !== 0) return primaryCmp;
+      for (const k of tiebreak) {
+        const c = compareBy(a, b, k);
+        if (c !== 0) return c;
+      }
+      return 0;
+    };
+
   const matches = (m: any) => {
     const q = search.toLowerCase();
     const matchesSearch = !q ||
@@ -316,8 +385,22 @@ function DurchfuehrerTasksView({
     return matchesSearch && matchesStatus;
   };
 
-  const assigned = (myMeasurements as any[]).filter(matches);
-  const free = (freeTasks as any[]).filter(matches);
+  const assigned = useMemo(
+    () => (myMeasurements as any[]).filter(matches).sort(
+      buildComparator(sortAssigned, ["priority", "due_date"])
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [myMeasurements, search, statusFilter, sortAssigned, i18n.language]
+  );
+
+  // Default for free: priority → service → due_date → created_at
+  const free = useMemo(
+    () => (freeTasks as any[]).filter(matches).sort(
+      buildComparator(sortFree, ["service", "due_date", "created_at"])
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [freeTasks, search, statusFilter, sortFree, i18n.language]
+  );
 
   const handleClaim = async (id: string, label: string) => {
     setClaimingId(id);
@@ -340,6 +423,48 @@ function DurchfuehrerTasksView({
 
   const fmtDate = (d?: string | null) =>
     d ? new Date(d).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–";
+
+  const sortLabels: Record<SortKey, string> = {
+    priority: "Priorität",
+    service: "Dienstleistung",
+    project: "Kunde / Projekt",
+    workstation: "Objekt / Standort",
+    order_number: "Auftragsnummer",
+    due_date: "Fälligkeitsdatum",
+    created_at: "Erstellungsdatum",
+    status: "Status",
+  };
+
+  const SortControls = ({
+    value, onChange, includeStatus = true,
+  }: { value: SortSpec; onChange: (s: SortSpec) => void; includeStatus?: boolean }) => {
+    const keys: SortKey[] = ["priority", "service", "project", "workstation", "order_number", "due_date", "created_at"];
+    if (includeStatus) keys.push("status");
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">Sortieren nach</span>
+        <Select value={value.key} onValueChange={(k) => onChange({ ...value, key: k as SortKey })}>
+          <SelectTrigger className="w-[190px] h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {keys.map((k) => (
+              <SelectItem key={k} value={k}>{sortLabels[k]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 px-2"
+          onClick={() => onChange({ ...value, dir: value.dir === "asc" ? "desc" : "asc" })}
+          title={value.dir === "asc" ? "Aufsteigend" : "Absteigend"}
+        >
+          {value.dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
+          <span className="ml-1 text-xs">{value.dir === "asc" ? "A→Z" : "Z→A"}</span>
+        </Button>
+      </div>
+    );
+  };
+
 
   return (
     <div className="space-y-6">
