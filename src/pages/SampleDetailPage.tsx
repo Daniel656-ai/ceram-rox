@@ -631,6 +631,15 @@ export default function SampleDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      {docPreview && (
+        <DocumentPreviewDialog
+          open={!!docPreview}
+          onOpenChange={(o) => !o && setDocPreview(null)}
+          fileName={docPreview.file_name}
+          fileType={docPreview.file_type}
+          loadBlob={() => loadSampleDocBlob(docPreview.storage_path)}
+        />
+      )}
     </div>
   );
 }
