@@ -33,7 +33,10 @@ interface SelectedMeasurement {
   service_name: string;
   planned_hours: number;
   workstation_id: string;
+  source_package_id?: string | null;
+  source_package_name?: string | null;
 }
+
 
 const newUid = () =>
   (typeof crypto !== "undefined" && "randomUUID" in crypto)
