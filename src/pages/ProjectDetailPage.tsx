@@ -13,8 +13,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield, ClipboardCheck, Briefcase } from "lucide-react";
-import { useMemo, useRef, useCallback } from "react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield, ClipboardCheck, Briefcase, Pencil } from "lucide-react";
+import { useMemo, useRef, useCallback, useState } from "react";
+import { EditProjectIdentityDialog } from "@/components/EditProjectIdentityDialog";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import { ProjectTeamTab } from "@/components/ProjectTeamTab";
@@ -77,6 +78,8 @@ export default function ProjectDetailPage() {
   const canEditTrafficLight = isMaster || isLeaderOrOwner || canEditByPermission;
 
   const isProjectCompleted = (project as any)?.project_status === "completed";
+  const canEditIdentity = isMaster || isLeaderOrOwner || canEditByPermission;
+  const [editIdentityOpen, setEditIdentityOpen] = useState(false);
 
   const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
     if (!id) return;
@@ -311,6 +314,17 @@ export default function ProjectDetailPage() {
             <h1 className="text-2xl font-bold tracking-tight">
               {project.project_number}{project.project_name ? ` – ${project.project_name}` : ""}
             </h1>
+            {canEditIdentity && !isProjectCompleted && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="print:hidden"
+                onClick={() => setEditIdentityOpen(true)}
+                title={t("edit_identity_title", { defaultValue: "Projekt bearbeiten" })}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
             {isProjectCompleted && (
               <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                 {t("project_status_completed")}
@@ -985,6 +999,16 @@ export default function ProjectDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {id && (
+        <EditProjectIdentityDialog
+          open={editIdentityOpen}
+          onOpenChange={setEditIdentityOpen}
+          projectId={id}
+          initialNumber={project.project_number}
+          initialName={project.project_name ?? null}
+        />
+      )}
     </div>
   );
 }

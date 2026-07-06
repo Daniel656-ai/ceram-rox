@@ -2217,6 +2217,44 @@ export type Database = {
         }
         Relationships: []
       }
+      project_change_log: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          project_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          project_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_change_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_change_requests: {
         Row: {
           approval_date: string | null

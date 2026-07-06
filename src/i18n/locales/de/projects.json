@@ -248,5 +248,12 @@
   "no_completed_projects": "Keine abgeschlossenen Projekte",
   "show_completed": "Abgeschlossene anzeigen",
   "hide_completed": "Abgeschlossene ausblenden",
-  "completed_at": "Abgeschlossen am"
+  "completed_at": "Abgeschlossen am",
+  "edit_identity_title": "Projekt bearbeiten",
+  "edit_identity_desc": "Projektnummer und Projektname können jederzeit geändert werden. Alle Verknüpfungen bleiben erhalten.",
+  "identity_updated": "Projekt aktualisiert",
+  "duplicate_project_number": "Projektnummer bereits vergeben",
+  "change_history": "Änderungshistorie",
+  "cancel": "Abbrechen",
+  "save": "Speichern"
 }
