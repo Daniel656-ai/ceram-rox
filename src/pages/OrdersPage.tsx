@@ -132,7 +132,7 @@ export default function OrdersPage() {
                 ) : filteredTasks.map((m: any) => (
                   <TableRow key={m.id}>
                     <TableCell className="font-mono font-medium">
-                      <Link to={`/auftraege/${m.measurement_orders?.id}?measurement=${m.id}`} className="text-primary hover:underline">
+                      <Link to={`/aufgaben/${m.id}`} className="text-primary hover:underline">
                         {m.measurement_number}
                       </Link>
                     </TableCell>

@@ -12,6 +12,7 @@ import OrdersPage from "./pages/OrdersPage";
 import CreateOrderPage from "./pages/CreateOrderPage";
 import ImportOrderPage from "./pages/ImportOrderPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
+import TaskExecutionPage from "./pages/TaskExecutionPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import WorkPlanPage from "./pages/WorkPlanPage";
@@ -85,6 +86,7 @@ const App = () => (
               <Route path="/auftraege/neu" element={<CreateOrderPage />} />
               <Route path="/auftraege/import" element={<ImportOrderPage />} />
               <Route path="/auftraege/:id" element={<OrderDetailPage />} />
+              <Route path="/aufgaben/:measurementId" element={<TaskExecutionPage />} />
               <Route path="/projekte" element={<ProjectsPage />} />
               <Route path="/projekte/:id" element={<ProjectDetailPage />} />
               <Route path="/proben" element={<SamplesPage />} />
