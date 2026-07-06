@@ -38,6 +38,41 @@ export const measurements = {
     );
   },
 
+  /**
+   * Unassigned, still-open measurements the user is qualified for
+   * (per mdl_service_permissions competence matrix). RLS already scopes to
+   * qualified rows, so we simply fetch unassigned & not-completed here.
+   */
+  async listUnassignedQualified(userId: string) {
+    // Master sees all unassigned; others need explicit permissions.
+    const perms = await unwrap(
+      dbClient.from("mdl_service_permissions").select("service_id").eq("user_id", userId)
+    );
+    const serviceIds = (perms || []).map((p: any) => p.service_id);
+    let q = dbClient
+      .from("order_measurements")
+      .select(MY_MEASUREMENT_SELECT)
+      .is("assigned_to", null)
+      .neq("status", "completed");
+    if (serviceIds.length > 0) q = q.in("service_id", serviceIds);
+    else return []; // no competence → nothing to claim (masters use their own view)
+    return unwrap(q);
+  },
+
+  /** Master variant: every unassigned open measurement. */
+  listUnassignedAll: () =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(MY_MEASUREMENT_SELECT)
+        .is("assigned_to", null)
+        .neq("status", "completed")
+    ),
+
+  /** Transactional claim via SECURITY DEFINER RPC. */
+  claim: (id: string) =>
+    unwrap(dbClient.rpc("claim_measurement", { _measurement_id: id }) as any),
+
   /** Lookup profiles by user_id for "creator" display. */
   fetchProfiles: (userIds: string[]) =>
     userIds.length === 0
