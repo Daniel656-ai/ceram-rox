@@ -20,9 +20,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Download, Upload, History, Trash2, FileText, Replace } from "lucide-react";
+import { Download, Upload, History, Trash2, FileText, Replace, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { useUsers } from "@/hooks/useUsers";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 
 const MAX_FILE_MB = 200;
 const APPLICATION_ACCEPT = ".pdf,application/pdf";
