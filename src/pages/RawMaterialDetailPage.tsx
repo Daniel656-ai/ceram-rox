@@ -307,6 +307,7 @@ export default function RawMaterialDetailPage() {
 
   // Document upload
   const [uploading, setUploading] = useState(false);
+  const [docPreview, setDocPreview] = useState<any | null>(null);
   const [docType, setDocType] = useState("zertifikat");
   const [docBatchId, setDocBatchId] = useState("");
 
