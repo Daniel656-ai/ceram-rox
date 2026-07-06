@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Upload, Download, FileText, Trash2 } from "lucide-react";
+import { Upload, Eye, FileText } from "lucide-react";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 
 interface Document {
   id: string;
