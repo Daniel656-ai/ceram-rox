@@ -10,8 +10,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, FileSpreadsheet } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Trash2, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { useState, useMemo } from "react";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAnyProjectLead } from "@/hooks/useProjectMembers";
 import { toast } from "sonner";
