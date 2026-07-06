@@ -36,13 +36,15 @@ export default function AdminServicePackagesPage() {
   const [draft, setDraft] = useState<{ name: string; description: string }>({ name: "", description: "" });
 
   const { data: packages = [], isLoading } = useQuery({
-    queryKey: ["service-packages", showInactive],
+    queryKey: ["service-packages", showInactive, user?.id ?? "anon"],
     queryFn: () => api.servicePackages.listWithItems({ includeInactive: showInactive }),
+    enabled: !!user,
   });
 
   const { data: services = [] } = useQuery({
-    queryKey: ["measurement-services", "all-active-for-packages"],
+    queryKey: ["measurement-services", "all-active-for-packages", user?.id ?? "anon"],
     queryFn: () => api.measurementServices.listActive(),
+    enabled: !!user,
   });
 
   const activeServices = useMemo(
