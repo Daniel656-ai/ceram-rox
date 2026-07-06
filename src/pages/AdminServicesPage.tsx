@@ -198,8 +198,9 @@ export default function AdminServicesPage() {
     }
   };
 
-  const laborServices = services.filter(s => s.category === "labor");
-  const pilotServices = services.filter(s => s.category === "pilot_plant");
+  const visibleServices = showArchived ? services : services.filter((s: any) => !s.archived_at);
+  const laborServices = visibleServices.filter(s => s.category === "labor");
+  const pilotServices = visibleServices.filter(s => s.category === "pilot_plant");
 
   const renderServiceTable = (title: string, items: typeof services) => (
     <Card>
@@ -218,16 +219,29 @@ export default function AdminServicesPage() {
               <TableHead>{t("admin:service_parameters")}</TableHead>
               <TableHead>Buchungsformular</TableHead>
               <TableHead>{t("admin:service_status")}</TableHead>
+              <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map(s => (
-              <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.service_name}</TableCell>
+            {items.map(s => {
+              const archived = !!(s as any).archived_at;
+              return (
+              <TableRow key={s.id} className={archived ? "opacity-60" : ""}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {s.service_name}
+                    {archived && (
+                      <Badge variant="outline" className="text-[10px] gap-1">
+                        <Archive className="h-3 w-3" /> Archiviert
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Select
                     value={(s as any).workstation_id || "none"}
                     onValueChange={v => handleWorkstationChange(s.id, v === "none" ? "" : v)}
+                    disabled={archived}
                   >
                     <SelectTrigger className="w-44 h-8">
                       <SelectValue placeholder={t("common:not_assigned")} />
@@ -244,6 +258,7 @@ export default function AdminServicesPage() {
                   <Select
                     value={(s as any).responsible_user_id || "none"}
                     onValueChange={v => handleResponsibleChange(s.id, v === "none" ? "" : v)}
+                    disabled={archived}
                   >
                     <SelectTrigger className="w-44 h-8">
                       <SelectValue placeholder={t("common:not_assigned")} />
@@ -320,17 +335,61 @@ export default function AdminServicesPage() {
 
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} />
+                    <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} disabled={archived} />
                     <span className="text-sm">{s.active ? t("admin:active") : t("admin:inactive")}</span>
                   </div>
                 </TableCell>
+
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditService(s)}>
+                        <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleToggle(s.id, !s.active)} disabled={archived}>
+                        {s.active ? (
+                          <><Settings2 className="h-4 w-4 mr-2" /> Deaktivieren</>
+                        ) : (
+                          <><Settings2 className="h-4 w-4 mr-2" /> Aktivieren</>
+                        )}
+                      </DropdownMenuItem>
+                      {archived ? (
+                        <DropdownMenuItem onClick={async () => {
+                          try { await unarchiveService.mutateAsync(s.id); toast.success("Dienstleistung wiederhergestellt"); }
+                          catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+                        }}>
+                          <ArchiveRestore className="h-4 w-4 mr-2" /> Wiederherstellen
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={async () => {
+                          try { await archiveService.mutateAsync(s.id); toast.success("Dienstleistung archiviert"); }
+                          catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+                        }}>
+                          <Archive className="h-4 w-4 mr-2" /> Archivieren
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget(s)}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Löschen
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
     </Card>
   );
+
+
 
   return (
     <div className="space-y-6">
