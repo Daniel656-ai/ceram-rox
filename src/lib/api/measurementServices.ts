@@ -55,6 +55,7 @@ export const measurementServices = {
       hourly_rate?: number;
       active?: boolean;
       service_name?: string;
+      category?: string;
       responsible_user_id?: string | null;
       workstation_id?: string | null;
       standard_duration_hours?: number;
@@ -64,6 +65,7 @@ export const measurementServices = {
       department?: string | null;
       price?: number | null;
       work_instructions?: string | null;
+      archived_at?: string | null;
     }
   ) =>
     run(
@@ -73,6 +75,42 @@ export const measurementServices = {
   getById: (id: string) =>
     unwrap(dbClient.from("measurement_services").select("*").eq("id", id).single()),
 
+  archive: (id: string) =>
+    run(
+      dbClient
+        .from("measurement_services")
+        .update({ archived_at: new Date().toISOString(), active: false } as any)
+        .eq("id", id)
+    ),
+
+  unarchive: (id: string) =>
+    run(
+      dbClient
+        .from("measurement_services")
+        .update({ archived_at: null } as any)
+        .eq("id", id)
+    ),
+
+  countReferences: async (id: string) => {
+    const { data, error } = await dbClient.rpc("count_service_references" as any, { _service_id: id });
+    if (error) throw error;
+    return (data ?? {
+      order_measurements: 0,
+      project_services: 0,
+      template_items: 0,
+      measurement_results: 0,
+    }) as {
+      order_measurements: number;
+      project_services: number;
+      template_items: number;
+      measurement_results: number;
+    };
+  },
+
+  deleteSafe: async (id: string) => {
+    const { error } = await dbClient.rpc("delete_service_safe" as any, { _service_id: id });
+    if (error) throw error;
+  },
 };
 
 export const measurementUsers = {
