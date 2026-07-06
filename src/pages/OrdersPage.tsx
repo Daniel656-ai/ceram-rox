@@ -10,8 +10,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, FileSpreadsheet } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Trash2, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { useState, useMemo } from "react";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAnyProjectLead } from "@/hooks/useProjectMembers";
 import { toast } from "sonner";
@@ -27,6 +28,53 @@ export default function OrdersPage() {
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  type SortKey = "order_number" | "project_number" | "project_name" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
+  type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
+  const [sort, setSort] = useState<SortState>(() => {
+    try {
+      const raw = sessionStorage.getItem("ordersPage.sort");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const applySort = (key: SortKey) => {
+    setSort(prev => {
+      let next: SortState;
+      if (!prev || prev.key !== key) next = { key, dir: "asc" };
+      else if (prev.dir === "asc") next = { key, dir: "desc" };
+      else next = null;
+      try { sessionStorage.setItem("ordersPage.sort", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const getSortValue = (o: any, key: SortKey): any => {
+    switch (key) {
+      case "order_number": return o.order_number ?? "";
+      case "project_number": return o.projects?.project_number ?? "";
+      case "project_name": return o.projects?.project_name ?? "";
+      case "order_type": return o.order_type ?? "";
+      case "ranking": return o.ranking ?? 999;
+      case "status": return o.status ?? "";
+      case "due_date": return o.due_date ? new Date(o.due_date).getTime() : Number.POSITIVE_INFINITY;
+      case "created_at": return o.created_at ? new Date(o.created_at).getTime() : 0;
+    }
+  };
+  const SortableHead = ({ sortKey, children }: { sortKey: SortKey; children: React.ReactNode }) => {
+    const active = sort?.key === sortKey;
+    const Icon = active ? (sort!.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+    return (
+      <TableHead>
+        <button
+          type="button"
+          onClick={() => applySort(sortKey)}
+          className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          {children}
+          <Icon className={`h-3.5 w-3.5 ${active ? "text-foreground" : "text-muted-foreground/60"}`} />
+        </button>
+      </TableHead>
+    );
+  };
+
 
   if (role === "durchfuehrer") {
     const filteredTasks = (myMeasurements as any[]).filter((m: any) => {
@@ -119,14 +167,27 @@ export default function OrdersPage() {
 
   const visibleOrders = orders;
 
-  const filtered = visibleOrders.filter((o: any) => {
-    const matchesSearch = !search ||
-      o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-      o.projects?.project_number?.toLowerCase().includes(search.toLowerCase()) ||
-      o.projects?.project_name?.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filtered = useMemo(() => {
+    const result = visibleOrders.filter((o: any) => {
+      const matchesSearch = !search ||
+        o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
+        o.projects?.project_number?.toLowerCase().includes(search.toLowerCase()) ||
+        o.projects?.project_name?.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+    if (!sort) return result;
+    const { key, dir } = sort;
+    const mult = dir === "asc" ? 1 : -1;
+    return [...result].sort((a: any, b: any) => {
+      const av = getSortValue(a, key);
+      const bv = getSortValue(b, key);
+      if (av == null && bv == null) return 0;
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * mult;
+      return String(av).localeCompare(String(bv), i18n.language, { numeric: true, sensitivity: "base" }) * mult;
+    });
+  }, [visibleOrders, search, statusFilter, sort, i18n.language]);
+
 
   const canCreateOrder = role === "master" || role === "auftraggeber" || isAnyProjectLead;
   const canShowActions = role === "master" || role === "auftraggeber" || isAnyProjectLead;
@@ -207,16 +268,17 @@ export default function OrdersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("orders:order_number")}</TableHead>
-                <TableHead>{t("orders:project_number")}</TableHead>
-                <TableHead>{t("orders:project_name")}</TableHead>
-                <TableHead>{t("orders:order_type")}</TableHead>
-                <TableHead>{t("orders:priority")}</TableHead>
-                <TableHead>{t("common:status")}</TableHead>
-                <TableHead>{t("orders:due_date")}</TableHead>
-                <TableHead>{t("common:created")}</TableHead>
+                <SortableHead sortKey="order_number">{t("orders:order_number")}</SortableHead>
+                <SortableHead sortKey="project_number">{t("orders:project_number")}</SortableHead>
+                <SortableHead sortKey="project_name">{t("orders:project_name")}</SortableHead>
+                <SortableHead sortKey="order_type">{t("orders:order_type")}</SortableHead>
+                <SortableHead sortKey="ranking">{t("orders:priority")}</SortableHead>
+                <SortableHead sortKey="status">{t("common:status")}</SortableHead>
+                <SortableHead sortKey="due_date">{t("orders:due_date")}</SortableHead>
+                <SortableHead sortKey="created_at">{t("common:created")}</SortableHead>
                 {canShowActions && <TableHead className="w-[60px]">{t("common:actions")}</TableHead>}
               </TableRow>
+
             </TableHeader>
             <TableBody>
               {isLoading ? (
