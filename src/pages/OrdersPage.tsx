@@ -28,6 +28,53 @@ export default function OrdersPage() {
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  type SortKey = "order_number" | "project_number" | "project_name" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
+  type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
+  const [sort, setSort] = useState<SortState>(() => {
+    try {
+      const raw = sessionStorage.getItem("ordersPage.sort");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+  const applySort = (key: SortKey) => {
+    setSort(prev => {
+      let next: SortState;
+      if (!prev || prev.key !== key) next = { key, dir: "asc" };
+      else if (prev.dir === "asc") next = { key, dir: "desc" };
+      else next = null;
+      try { sessionStorage.setItem("ordersPage.sort", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  const getSortValue = (o: any, key: SortKey): any => {
+    switch (key) {
+      case "order_number": return o.order_number ?? "";
+      case "project_number": return o.projects?.project_number ?? "";
+      case "project_name": return o.projects?.project_name ?? "";
+      case "order_type": return o.order_type ?? "";
+      case "ranking": return o.ranking ?? 999;
+      case "status": return o.status ?? "";
+      case "due_date": return o.due_date ? new Date(o.due_date).getTime() : Number.POSITIVE_INFINITY;
+      case "created_at": return o.created_at ? new Date(o.created_at).getTime() : 0;
+    }
+  };
+  const SortableHead = ({ sortKey, children }: { sortKey: SortKey; children: React.ReactNode }) => {
+    const active = sort?.key === sortKey;
+    const Icon = active ? (sort!.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+    return (
+      <TableHead>
+        <button
+          type="button"
+          onClick={() => applySort(sortKey)}
+          className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          {children}
+          <Icon className={`h-3.5 w-3.5 ${active ? "text-foreground" : "text-muted-foreground/60"}`} />
+        </button>
+      </TableHead>
+    );
+  };
+
 
   if (role === "durchfuehrer") {
     const filteredTasks = (myMeasurements as any[]).filter((m: any) => {
