@@ -243,21 +243,65 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
     </div>
   );
 
+  const filteredMeetingUsers = useMemo(
+    () => sortAndFilterPersons(activeUsers as any[], meetingQuery, { activeOnly: true }),
+    [activeUsers, meetingQuery],
+  );
+  const selectedMeetingUsers = useMemo(
+    () => (activeUsers as any[]).filter((u: any) => meetingPersonIds.includes(u.user_id)),
+    [activeUsers, meetingPersonIds],
+  );
+
   const meetingFields = (
     <div className="space-y-4">
       {dateField}
       <div className="space-y-2">
         <Label>{t("time_meeting_participants")} * ({meetingPersonIds.length})</Label>
+        {selectedMeetingUsers.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {selectedMeetingUsers.map((u: any) => (
+              <Badge key={u.user_id} variant="secondary" className="gap-1 pr-1">
+                {getPersonDisplayName(u)}
+                <button
+                  type="button"
+                  onClick={() => togglePerson(u.user_id)}
+                  className="hover:bg-muted-foreground/20 rounded p-0.5"
+                  aria-label="remove"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            value={meetingQuery}
+            onChange={(e) => setMeetingQuery(e.target.value)}
+            placeholder={t("team_search_person", { defaultValue: "Person suchen…" })}
+            className="pl-9 h-9"
+          />
+        </div>
         <div className="border rounded-md max-h-56 overflow-y-auto divide-y">
-          {activeUsers.map((u: any) => (
-            <label key={u.user_id} className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50">
-              <Checkbox
-                checked={meetingPersonIds.includes(u.user_id)}
-                onCheckedChange={() => togglePerson(u.user_id)}
-              />
-              <span className="text-sm">{u.first_name} {u.last_name}</span>
-            </label>
-          ))}
+          {filteredMeetingUsers.length === 0 ? (
+            <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+              {t("team_no_search_results", { defaultValue: "Keine Personen gefunden" })}
+            </div>
+          ) : (
+            filteredMeetingUsers.map((u: any) => (
+              <label key={u.user_id} className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/50">
+                <Checkbox
+                  checked={meetingPersonIds.includes(u.user_id)}
+                  onCheckedChange={() => togglePerson(u.user_id)}
+                />
+                <span className="text-sm">{getPersonDisplayName(u)}</span>
+                {u.short_code ? (
+                  <span className="ml-auto text-xs text-muted-foreground">{u.short_code}</span>
+                ) : null}
+              </label>
+            ))
+          )}
         </div>
         <p className="text-xs text-muted-foreground">{t("time_meeting_hint")}</p>
       </div>
