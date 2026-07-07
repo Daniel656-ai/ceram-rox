@@ -60,6 +60,7 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<"individual" | "meeting">("individual");
   const [meetingPersonIds, setMeetingPersonIds] = useState<string[]>([]);
+  const [meetingQuery, setMeetingQuery] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
