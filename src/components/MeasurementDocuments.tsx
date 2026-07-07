@@ -82,7 +82,7 @@ export default function MeasurementDocuments({ measurementId, documents, orderId
           <input
             type="file"
             className="hidden"
-            accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg"
+            accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.txt,.md,.html,.htm,.png,.jpg,.jpeg,.gif,.webp,.svg"
             onChange={(e) => {
               if (e.target.files?.[0]) handleUpload(e.target.files[0]);
               e.target.value = "";
