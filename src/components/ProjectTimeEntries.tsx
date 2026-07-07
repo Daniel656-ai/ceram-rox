@@ -22,10 +22,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Clock, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, Users, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { PersonSelect } from "@/components/PersonSelect";
 import { useAuth } from "@/contexts/AuthContext";
+import { sortAndFilterPersons, getPersonDisplayName } from "@/lib/personSearch";
 
 interface Props {
   projectId: string;
