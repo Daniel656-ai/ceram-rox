@@ -91,7 +91,9 @@ export default function MixtureDetailPage() {
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission("mixtures.edit") || hasPermission("raw_materials.manage");
   const canCreate = hasPermission("mixtures.create") || hasPermission("raw_materials.manage");
-  const canProduce = hasPermission("mixtures.produce") || hasPermission("raw_materials.manage");
+  // Verwiegen/Produktion darf ausschließlich mit dem Recht 'mixtures.produce' erfolgen.
+  // 'raw_materials.manage' bezieht sich auf Rohstoff-Stammdaten, nicht auf Verwiegungen.
+  const canProduce = hasPermission("mixtures.produce");
 
   const stock = useMemo(() => calculateMixtureStock(movements as any), [movements]);
 
