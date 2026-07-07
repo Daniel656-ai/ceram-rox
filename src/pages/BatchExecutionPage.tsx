@@ -72,7 +72,9 @@ export default function BatchExecutionPage() {
   const recordDeviation = useRecordDeviation(batchId);
 
   const { hasPermission } = usePermissions();
-  const canProduce = hasPermission("mixtures.produce") || hasPermission("raw_materials.manage");
+  // Verwiegen/Produktion darf ausschließlich mit dem Recht 'mixtures.produce' erfolgen.
+  // 'raw_materials.manage' bezieht sich auf Rohstoff-Stammdaten, nicht auf Verwiegungen.
+  const canProduce = hasPermission("mixtures.produce");
 
   // Weighing dialog
   const [wOpen, setWOpen] = useState(false);
