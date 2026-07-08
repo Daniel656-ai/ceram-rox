@@ -790,14 +790,24 @@ export type Database = {
           due_date: string | null
           id: string
           notes: string | null
+          order_kind: Database["public"]["Enums"]["order_kind"]
           order_number: string | null
           order_type: Database["public"]["Enums"]["order_type"]
+          pp_experiment_date: string | null
+          pp_experiment_kind: string | null
+          pp_experiment_number: string | null
+          pp_issuer_user_id: string | null
+          pp_masse_type: Database["public"]["Enums"]["masse_type"] | null
+          pp_previous_experiments: string | null
+          pp_remarks: string | null
+          pp_v2o5_percent: number | null
           priority: Database["public"]["Enums"]["order_priority"]
           project_id: string
           ranking: number | null
           sample_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
+          workflow_status: Database["public"]["Enums"]["workflow_status"] | null
         }
         Insert: {
           created_at?: string
@@ -805,14 +815,26 @@ export type Database = {
           due_date?: string | null
           id?: string
           notes?: string | null
+          order_kind?: Database["public"]["Enums"]["order_kind"]
           order_number?: string | null
           order_type: Database["public"]["Enums"]["order_type"]
+          pp_experiment_date?: string | null
+          pp_experiment_kind?: string | null
+          pp_experiment_number?: string | null
+          pp_issuer_user_id?: string | null
+          pp_masse_type?: Database["public"]["Enums"]["masse_type"] | null
+          pp_previous_experiments?: string | null
+          pp_remarks?: string | null
+          pp_v2o5_percent?: number | null
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id: string
           ranking?: number | null
           sample_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
+          workflow_status?:
+            | Database["public"]["Enums"]["workflow_status"]
+            | null
         }
         Update: {
           created_at?: string
@@ -820,14 +842,26 @@ export type Database = {
           due_date?: string | null
           id?: string
           notes?: string | null
+          order_kind?: Database["public"]["Enums"]["order_kind"]
           order_number?: string | null
           order_type?: Database["public"]["Enums"]["order_type"]
+          pp_experiment_date?: string | null
+          pp_experiment_kind?: string | null
+          pp_experiment_number?: string | null
+          pp_issuer_user_id?: string | null
+          pp_masse_type?: Database["public"]["Enums"]["masse_type"] | null
+          pp_previous_experiments?: string | null
+          pp_remarks?: string | null
+          pp_v2o5_percent?: number | null
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id?: string
           ranking?: number | null
           sample_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
+          workflow_status?:
+            | Database["public"]["Enums"]["workflow_status"]
+            | null
         }
         Relationships: [
           {
@@ -1977,6 +2011,54 @@ export type Database = {
           },
         ]
       }
+      order_analysis_requests: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          quantity: number
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          quantity?: number
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          quantity?: number
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_analysis_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_analysis_requests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_audit_log: {
         Row: {
           changed_at: string
@@ -2018,6 +2100,7 @@ export type Database = {
       order_measurements: {
         Row: {
           actual_duration_hours: number | null
+          analysis_request_id: string | null
           assigned_to: string | null
           created_at: string
           due_date: string | null
@@ -2041,6 +2124,7 @@ export type Database = {
         }
         Insert: {
           actual_duration_hours?: number | null
+          analysis_request_id?: string | null
           assigned_to?: string | null
           created_at?: string
           due_date?: string | null
@@ -2064,6 +2148,7 @@ export type Database = {
         }
         Update: {
           actual_duration_hours?: number | null
+          analysis_request_id?: string | null
           assigned_to?: string | null
           created_at?: string
           due_date?: string | null
@@ -2086,6 +2171,13 @@ export type Database = {
           workstation_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "order_measurements_analysis_request_id_fkey"
+            columns: ["analysis_request_id"]
+            isOneToOne: false
+            referencedRelation: "order_analysis_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_measurements_order_id_fkey"
             columns: ["order_id"]
@@ -3904,6 +3996,7 @@ export type Database = {
           is_hazardous: boolean
           location_id: string | null
           mixture_batch_id: string | null
+          order_id: string | null
           parent_sample_id: string | null
           post_measurement_action:
             | Database["public"]["Enums"]["post_measurement_action"]
@@ -3935,6 +4028,7 @@ export type Database = {
           is_hazardous?: boolean
           location_id?: string | null
           mixture_batch_id?: string | null
+          order_id?: string | null
           parent_sample_id?: string | null
           post_measurement_action?:
             | Database["public"]["Enums"]["post_measurement_action"]
@@ -3966,6 +4060,7 @@ export type Database = {
           is_hazardous?: boolean
           location_id?: string | null
           mixture_batch_id?: string | null
+          order_id?: string | null
           parent_sample_id?: string | null
           post_measurement_action?:
             | Database["public"]["Enums"]["post_measurement_action"]
@@ -3997,6 +4092,13 @@ export type Database = {
             columns: ["mixture_batch_id"]
             isOneToOne: false
             referencedRelation: "mixture_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samples_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
             referencedColumns: ["id"]
           },
           {
@@ -4975,6 +5077,10 @@ export type Database = {
         }
         Returns: string
       }
+      assign_analysis_request_to_sample: {
+        Args: { _request_id: string; _sample_id: string }
+        Returns: string
+      }
       book_container_consumption: {
         Args: {
           _allocations?: Json
@@ -5204,6 +5310,10 @@ export type Database = {
         }
         Returns: string
       }
+      recompute_order_workflow_status: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       record_container_movement: {
         Args: {
           _comment?: string
@@ -5289,6 +5399,7 @@ export type Database = {
       decision_status: "active" | "superseded" | "rejected"
       downtime_status: "geplant" | "aktiv" | "abgeschlossen"
       downtime_type: "wartung" | "reparatur" | "sonstiges"
+      masse_type: "DK" | "GK" | "KK" | "MK" | "PK"
       measurement_status: "open" | "in_progress" | "completed"
       milestone_status: "planned" | "in_progress" | "completed"
       mixture_batch_status: "produced" | "discarded"
@@ -5307,6 +5418,7 @@ export type Database = {
         | "development"
         | "pilot"
         | "production"
+      order_kind: "pilot_plant" | "labor" | "combined" | "legacy"
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
@@ -5382,6 +5494,16 @@ export type Database = {
       step_time_mode: "relative" | "absolute" | "condition"
       task_status: "open" | "in_progress" | "completed"
       traffic_light_status: "green" | "yellow" | "red"
+      workflow_status:
+        | "entwurf"
+        | "geplant"
+        | "pp_in_progress"
+        | "pp_completed"
+        | "samples_created"
+        | "waiting_analysis"
+        | "analysis_in_progress"
+        | "results_complete"
+        | "abgeschlossen"
       wp_dependency_type: "FS" | "FF" | "SS" | "SF"
     }
     CompositeTypes: {
@@ -5546,6 +5668,7 @@ export const Constants = {
       decision_status: ["active", "superseded", "rejected"],
       downtime_status: ["geplant", "aktiv", "abgeschlossen"],
       downtime_type: ["wartung", "reparatur", "sonstiges"],
+      masse_type: ["DK", "GK", "KK", "MK", "PK"],
       measurement_status: ["open", "in_progress", "completed"],
       milestone_status: ["planned", "in_progress", "completed"],
       mixture_batch_status: ["produced", "discarded"],
@@ -5566,6 +5689,7 @@ export const Constants = {
         "pilot",
         "production",
       ],
+      order_kind: ["pilot_plant", "labor", "combined", "legacy"],
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
@@ -5648,6 +5772,17 @@ export const Constants = {
       step_time_mode: ["relative", "absolute", "condition"],
       task_status: ["open", "in_progress", "completed"],
       traffic_light_status: ["green", "yellow", "red"],
+      workflow_status: [
+        "entwurf",
+        "geplant",
+        "pp_in_progress",
+        "pp_completed",
+        "samples_created",
+        "waiting_analysis",
+        "analysis_in_progress",
+        "results_complete",
+        "abgeschlossen",
+      ],
       wp_dependency_type: ["FS", "FF", "SS", "SF"],
     },
   },
