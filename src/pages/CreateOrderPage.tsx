@@ -590,11 +590,98 @@ export default function CreateOrderPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">{t("orders:sample")} *</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("orders:kind_label")} *</CardTitle></CardHeader>
           <CardContent>
-            <SampleSelector value={selectedSampleId} onSelect={setSelectedSampleId} projectId={selectedProjectId || undefined} />
+            <Select value={orderKind} onValueChange={(v) => setOrderKind(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="labor">{t("orders:kind.labor")}</SelectItem>
+                <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
+                <SelectItem value="combined">{t("orders:kind.combined")}</SelectItem>
+              </SelectContent>
+            </Select>
           </CardContent>
         </Card>
+
+        {orderKind !== "pilot_plant" && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("orders:sample")} *</CardTitle></CardHeader>
+            <CardContent>
+              <SampleSelector value={selectedSampleId} onSelect={setSelectedSampleId} projectId={selectedProjectId || undefined} />
+            </CardContent>
+          </Card>
+        )}
+
+        {(orderKind === "pilot_plant" || orderKind === "combined") && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("orders:tabs.pilot_plant")}</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              <div><Label>{t("orders:pp.experiment_number")}</Label>
+                <Input value={pp.experiment_number} onChange={e => setPp({ ...pp, experiment_number: e.target.value })} />
+              </div>
+              <div><Label>{t("orders:pp.v2o5_percent")}</Label>
+                <Input type="number" step="0.01" value={pp.v2o5_percent} onChange={e => setPp({ ...pp, v2o5_percent: e.target.value })} />
+              </div>
+              <div><Label>{t("orders:pp.experiment_date")}</Label>
+                <Input type="date" value={pp.experiment_date} onChange={e => setPp({ ...pp, experiment_date: e.target.value })} />
+              </div>
+              <div><Label>{t("orders:pp.masse_type")}</Label>
+                <Select value={pp.masse_type} onValueChange={(v) => setPp({ ...pp, masse_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">–</SelectItem>
+                    {["DK","GK","KK","MK","PK"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>{t("orders:pp.experiment_kind")}</Label>
+                <Input value={pp.experiment_kind} onChange={e => setPp({ ...pp, experiment_kind: e.target.value })} />
+              </div>
+              <div><Label>{t("orders:pp.previous_experiments")}</Label>
+                <Input value={pp.previous_experiments} onChange={e => setPp({ ...pp, previous_experiments: e.target.value })} />
+              </div>
+              <div className="md:col-span-2"><Label>{t("orders:pp.remarks")}</Label>
+                <Textarea rows={2} value={pp.remarks} onChange={e => setPp({ ...pp, remarks: e.target.value })} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(orderKind === "pilot_plant" || orderKind === "combined") && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("orders:analysis_requests.title")}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">{t("orders:analysis_requests.hint")}</p>
+              <Select onValueChange={(sid) => {
+                const svc = services.find(s => s.id === sid);
+                if (!svc) return;
+                setAnalysisRequests(prev => [...prev, { uid: newUid(), service_id: sid, service_name: svc.service_name, quantity: 1 }]);
+              }}>
+                <SelectTrigger><SelectValue placeholder={t("orders:analysis_requests.add")} /></SelectTrigger>
+                <SelectContent>
+                  {services.map((s: any) => (<SelectItem key={s.id} value={s.id}>{s.service_name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              {analysisRequests.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("orders:analysis_requests.empty")}</p>
+              ) : (
+                <div className="space-y-1">
+                  {analysisRequests.map(ar => (
+                    <div key={ar.uid} className="flex items-center gap-2 p-2 border rounded-md">
+                      <span className="flex-1 text-sm">{ar.service_name}</span>
+                      <Input type="number" min={1} value={ar.quantity} onChange={(e) =>
+                        setAnalysisRequests(prev => prev.map(x => x.uid === ar.uid ? { ...x, quantity: parseInt(e.target.value) || 1 } : x))
+                      } className="w-20 h-8" />
+                      <Button type="button" variant="ghost" size="icon" onClick={() =>
+                        setAnalysisRequests(prev => prev.filter(x => x.uid !== ar.uid))
+                      }><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
