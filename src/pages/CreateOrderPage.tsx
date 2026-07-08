@@ -354,7 +354,13 @@ export default function CreateOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !orderType || measurements.length === 0 || !selectedSampleId) {
+    const isPurePP = orderKind === "pilot_plant";
+    // Labor requires sample + measurements. Pilot Plant / Combined may start without a sample; measurements optional for pure PP.
+    if (!user || !orderType) {
+      toast.error(t("orders:fill_required"));
+      return;
+    }
+    if (!isPurePP && (measurements.length === 0 || !selectedSampleId)) {
       toast.error(t("orders:fill_required"));
       return;
     }
@@ -365,8 +371,29 @@ export default function CreateOrderPage() {
 
       const order = await createOrder.mutateAsync({
         project_id: projectId, order_type: orderType as any, created_by: user.id,
-        due_date: dueDate || undefined, notes: notes || undefined, sample_id: selectedSampleId,
+        due_date: dueDate || undefined, notes: notes || undefined,
+        sample_id: selectedSampleId || undefined,
+        order_kind: orderKind,
+        pp_experiment_number: pp.experiment_number || null,
+        pp_v2o5_percent: pp.v2o5_percent === "" ? null : Number(pp.v2o5_percent),
+        pp_experiment_date: pp.experiment_date || null,
+        pp_issuer_user_id: (orderKind === "pilot_plant" || orderKind === "combined") ? user.id : null,
+        pp_previous_experiments: pp.previous_experiments || null,
+        pp_experiment_kind: pp.experiment_kind || null,
+        pp_masse_type: (pp.masse_type === "__none__" ? null : pp.masse_type) as any,
+        pp_remarks: pp.remarks || null,
       });
+
+      // Analysis requests pool (only for PP / combined)
+      for (const ar of analysisRequests) {
+        try {
+          await api.orderAnalysisRequests.create({
+            order_id: order.id, service_id: ar.service_id, quantity: ar.quantity, created_by: user.id,
+          });
+        } catch (err: any) {
+          toast.error(`Analyseanforderung ${ar.service_name}: ${err.message}`);
+        }
+      }
 
       for (let idx = 0; idx < measurements.length; idx++) {
         const m = measurements[idx];
