@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Clock, Pencil, Trash2 } from "lucide-react";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
+import { OrderWorkflowTabs } from "@/components/OrderWorkflowTabs";
 import MeasurementDocuments from "@/components/MeasurementDocuments";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import MeasurementDataEntry from "@/components/MeasurementDataEntry";
@@ -26,6 +28,7 @@ import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useServicePermissions } from "@/hooks/useServicePermissions";
+import { useTranslation } from "react-i18next";
 
 
 export default function OrderDetailPage() {
@@ -196,6 +199,12 @@ export default function OrderDetailPage() {
             {(order as any).order_number ? `Projekt: ${(order as any).projects?.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]} · Erstellt am {new Date(order.created_at).toLocaleDateString("de-DE")}
           </p>
         </div>
+        {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
+          <Badge variant="secondary" className="font-normal">
+            {(order as any).order_kind === "pilot_plant" ? "Pilot Plant" : (order as any).order_kind === "labor" ? "Labor" : "Kombiniert"}
+          </Badge>
+        )}
+        {(order as any).workflow_status && <WorkflowStatusBadge status={(order as any).workflow_status} />}
         <StatusBadge status={order.status} />
         {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
@@ -254,6 +263,10 @@ export default function OrderDetailPage() {
           <CardHeader><CardTitle className="text-base">Anmerkungen</CardTitle></CardHeader>
           <CardContent><p className="text-sm">{order.notes}</p></CardContent>
         </Card>
+      )}
+
+      {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
+        <OrderWorkflowTabs order={order} />
       )}
 
       {/* Measurements Table */}
