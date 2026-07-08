@@ -34,17 +34,39 @@ export const orders = {
     notes?: string;
     priority?: OrderPriority;
     sample_id?: string;
+    order_kind?: "pilot_plant" | "labor" | "combined" | "legacy";
+    pp_experiment_number?: string | null;
+    pp_v2o5_percent?: number | null;
+    pp_experiment_date?: string | null;
+    pp_issuer_user_id?: string | null;
+    pp_previous_experiments?: string | null;
+    pp_experiment_kind?: string | null;
+    pp_masse_type?: "DK" | "GK" | "KK" | "MK" | "PK" | null;
+    pp_remarks?: string | null;
   }) =>
-    unwrap(dbClient.from("measurement_orders").insert(order).select().single()),
+    unwrap(dbClient.from("measurement_orders").insert(order as any).select().single()),
 
   update: (
     id: string,
-    fields: {
-      order_type?: OrderType;
-      due_date?: string | null;
-      notes?: string | null;
-      priority?: OrderPriority;
-    }
+    fields: Partial<{
+      order_type: OrderType;
+      due_date: string | null;
+      notes: string | null;
+      priority: OrderPriority;
+      order_kind: "pilot_plant" | "labor" | "combined" | "legacy";
+      pp_experiment_number: string | null;
+      pp_v2o5_percent: number | null;
+      pp_experiment_date: string | null;
+      pp_issuer_user_id: string | null;
+      pp_previous_experiments: string | null;
+      pp_experiment_kind: string | null;
+      pp_masse_type: "DK" | "GK" | "KK" | "MK" | "PK" | null;
+      pp_remarks: string | null;
+      workflow_status:
+        | "entwurf" | "geplant" | "pp_in_progress" | "pp_completed"
+        | "samples_created" | "waiting_analysis" | "analysis_in_progress"
+        | "results_complete" | "abgeschlossen";
+    }>
   ) =>
     run(
       dbClient

@@ -1,4 +1,61 @@
 {
+  "kind_label": "Order kind",
+  "kind": {
+    "pilot_plant": "Pilot Plant",
+    "labor": "Lab",
+    "combined": "Combined order",
+    "legacy": "Classic"
+  },
+  "workflow": {
+    "entwurf": "Draft",
+    "geplant": "Planned",
+    "pp_in_progress": "Pilot Plant in progress",
+    "pp_completed": "Pilot Plant completed",
+    "samples_created": "Samples created",
+    "waiting_analysis": "Waiting for analysis",
+    "analysis_in_progress": "Analyses in progress",
+    "results_complete": "Results complete",
+    "abgeschlossen": "Closed"
+  },
+  "tabs": {
+    "general": "General",
+    "pilot_plant": "Pilot Plant",
+    "samples": "Samples",
+    "analyses": "Lab analyses",
+    "results": "Results",
+    "closure": "Closure"
+  },
+  "pp": {
+    "experiment_number": "Experiment number",
+    "v2o5_percent": "% V₂O₅",
+    "experiment_date": "Date",
+    "issuer": "Issuer",
+    "previous_experiments": "Previous experiments",
+    "experiment_kind": "Experiment kind",
+    "masse_type": "Mass type",
+    "remarks": "Remarks",
+    "save": "Save pilot-plant data"
+  },
+  "analysis_requests": {
+    "title": "Analysis requests (pool)",
+    "hint": "These analyses will be assigned to samples once they are created.",
+    "add": "Add analysis",
+    "empty": "No requests defined yet.",
+    "assign_to_sample": "Assign to sample",
+    "choose_sample": "Choose sample…",
+    "assigned": "Assigned",
+    "delete": "Remove"
+  },
+  "samples_tab": {
+    "add": "Add sample",
+    "empty": "No samples for this order yet.",
+    "name_placeholder": "Sample name (e.g. PP-001)"
+  },
+  "closure_tab": {
+    "current_status": "Current workflow status",
+    "set_status": "Set status manually",
+    "mark_completed": "Close order"
+  },
   "title": "Orders",
   "all_title": "All Orders",
   "my_title": "My Tasks",

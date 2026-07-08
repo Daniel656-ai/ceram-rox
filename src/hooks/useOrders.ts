@@ -23,7 +23,7 @@ export function useOrderDetail(orderId: string | undefined) {
 export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (order: { project_id: string; order_type: OrderType; created_by: string; due_date?: string; notes?: string; priority?: OrderPriority; sample_id?: string }) =>
+    mutationFn: (order: Parameters<typeof api.orders.create>[0]) =>
       api.orders.create(order),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
   });
@@ -43,7 +43,7 @@ export function useUpdateOrderStatus() {
 export function useUpdateOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...fields }: { id: string; order_type?: OrderType; due_date?: string | null; notes?: string | null; priority?: OrderPriority }) =>
+    mutationFn: ({ id, ...fields }: { id: string } & Parameters<typeof api.orders.update>[1]) =>
       api.orders.update(id, fields),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });

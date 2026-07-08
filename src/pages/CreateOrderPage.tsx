@@ -186,6 +186,7 @@ export default function CreateOrderPage() {
   // Single order state
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [orderType, setOrderType] = useState<string>("");
+  const [orderKind, setOrderKind] = useState<"labor" | "pilot_plant" | "combined">("labor");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
@@ -193,6 +194,19 @@ export default function CreateOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
   const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
+
+  // Pilot Plant fields
+  const [pp, setPp] = useState({
+    experiment_number: "",
+    v2o5_percent: "",
+    experiment_date: "",
+    previous_experiments: "",
+    experiment_kind: "",
+    masse_type: "__none__" as string,
+    remarks: "",
+  });
+  // Analysis requests pool (Pilot Plant / Combined orders): pre-planned analyses without a sample yet
+  const [analysisRequests, setAnalysisRequests] = useState<Array<{ uid: string; service_id: string; service_name: string; quantity: number }>>([]);
 
   // Batch state
   const [batchTemplateId, setBatchTemplateId] = useState("");
@@ -340,7 +354,13 @@ export default function CreateOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !orderType || measurements.length === 0 || !selectedSampleId) {
+    const isPurePP = orderKind === "pilot_plant";
+    // Labor requires sample + measurements. Pilot Plant / Combined may start without a sample; measurements optional for pure PP.
+    if (!user || !orderType) {
+      toast.error(t("orders:fill_required"));
+      return;
+    }
+    if (!isPurePP && (measurements.length === 0 || !selectedSampleId)) {
       toast.error(t("orders:fill_required"));
       return;
     }
@@ -351,8 +371,29 @@ export default function CreateOrderPage() {
 
       const order = await createOrder.mutateAsync({
         project_id: projectId, order_type: orderType as any, created_by: user.id,
-        due_date: dueDate || undefined, notes: notes || undefined, sample_id: selectedSampleId,
+        due_date: dueDate || undefined, notes: notes || undefined,
+        sample_id: selectedSampleId || undefined,
+        order_kind: orderKind,
+        pp_experiment_number: pp.experiment_number || null,
+        pp_v2o5_percent: pp.v2o5_percent === "" ? null : Number(pp.v2o5_percent),
+        pp_experiment_date: pp.experiment_date || null,
+        pp_issuer_user_id: (orderKind === "pilot_plant" || orderKind === "combined") ? user.id : null,
+        pp_previous_experiments: pp.previous_experiments || null,
+        pp_experiment_kind: pp.experiment_kind || null,
+        pp_masse_type: (pp.masse_type === "__none__" ? null : pp.masse_type) as any,
+        pp_remarks: pp.remarks || null,
       });
+
+      // Analysis requests pool (only for PP / combined)
+      for (const ar of analysisRequests) {
+        try {
+          await api.orderAnalysisRequests.create({
+            order_id: order.id, service_id: ar.service_id, quantity: ar.quantity, created_by: user.id,
+          });
+        } catch (err: any) {
+          toast.error(`Analyseanforderung ${ar.service_name}: ${err.message}`);
+        }
+      }
 
       for (let idx = 0; idx < measurements.length; idx++) {
         const m = measurements[idx];
@@ -549,11 +590,98 @@ export default function CreateOrderPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">{t("orders:sample")} *</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("orders:kind_label")} *</CardTitle></CardHeader>
           <CardContent>
-            <SampleSelector value={selectedSampleId} onSelect={setSelectedSampleId} projectId={selectedProjectId || undefined} />
+            <Select value={orderKind} onValueChange={(v) => setOrderKind(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="labor">{t("orders:kind.labor")}</SelectItem>
+                <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
+                <SelectItem value="combined">{t("orders:kind.combined")}</SelectItem>
+              </SelectContent>
+            </Select>
           </CardContent>
         </Card>
+
+        {orderKind !== "pilot_plant" && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("orders:sample")} *</CardTitle></CardHeader>
+            <CardContent>
+              <SampleSelector value={selectedSampleId} onSelect={setSelectedSampleId} projectId={selectedProjectId || undefined} />
+            </CardContent>
+          </Card>
+        )}
+
+        {(orderKind === "pilot_plant" || orderKind === "combined") && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("orders:tabs.pilot_plant")}</CardTitle></CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              <div><Label>{t("orders:pp.experiment_number")}</Label>
+                <Input value={pp.experiment_number} onChange={e => setPp({ ...pp, experiment_number: e.target.value })} />
+              </div>
+              <div><Label>{t("orders:pp.v2o5_percent")}</Label>
+                <Input type="number" step="0.01" value={pp.v2o5_percent} onChange={e => setPp({ ...pp, v2o5_percent: e.target.value })} />
+              </div>
+              <div><Label>{t("orders:pp.experiment_date")}</Label>
+                <Input type="date" value={pp.experiment_date} onChange={e => setPp({ ...pp, experiment_date: e.target.value })} />
+              </div>
+              <div><Label>{t("orders:pp.masse_type")}</Label>
+                <Select value={pp.masse_type} onValueChange={(v) => setPp({ ...pp, masse_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">–</SelectItem>
+                    {["DK","GK","KK","MK","PK"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>{t("orders:pp.experiment_kind")}</Label>
+                <Input value={pp.experiment_kind} onChange={e => setPp({ ...pp, experiment_kind: e.target.value })} />
+              </div>
+              <div><Label>{t("orders:pp.previous_experiments")}</Label>
+                <Input value={pp.previous_experiments} onChange={e => setPp({ ...pp, previous_experiments: e.target.value })} />
+              </div>
+              <div className="md:col-span-2"><Label>{t("orders:pp.remarks")}</Label>
+                <Textarea rows={2} value={pp.remarks} onChange={e => setPp({ ...pp, remarks: e.target.value })} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(orderKind === "pilot_plant" || orderKind === "combined") && (
+          <Card>
+            <CardHeader><CardTitle className="text-base">{t("orders:analysis_requests.title")}</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">{t("orders:analysis_requests.hint")}</p>
+              <Select onValueChange={(sid) => {
+                const svc = services.find(s => s.id === sid);
+                if (!svc) return;
+                setAnalysisRequests(prev => [...prev, { uid: newUid(), service_id: sid, service_name: svc.service_name, quantity: 1 }]);
+              }}>
+                <SelectTrigger><SelectValue placeholder={t("orders:analysis_requests.add")} /></SelectTrigger>
+                <SelectContent>
+                  {services.map((s: any) => (<SelectItem key={s.id} value={s.id}>{s.service_name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+              {analysisRequests.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("orders:analysis_requests.empty")}</p>
+              ) : (
+                <div className="space-y-1">
+                  {analysisRequests.map(ar => (
+                    <div key={ar.uid} className="flex items-center gap-2 p-2 border rounded-md">
+                      <span className="flex-1 text-sm">{ar.service_name}</span>
+                      <Input type="number" min={1} value={ar.quantity} onChange={(e) =>
+                        setAnalysisRequests(prev => prev.map(x => x.uid === ar.uid ? { ...x, quantity: parseInt(e.target.value) || 1 } : x))
+                      } className="w-20 h-8" />
+                      <Button type="button" variant="ghost" size="icon" onClick={() =>
+                        setAnalysisRequests(prev => prev.filter(x => x.uid !== ar.uid))
+                      }><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
