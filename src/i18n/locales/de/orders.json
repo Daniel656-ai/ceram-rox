@@ -1,4 +1,61 @@
 {
+  "kind_label": "Auftragsart",
+  "kind": {
+    "pilot_plant": "Pilot Plant",
+    "labor": "Labor",
+    "combined": "Kombinierter Auftrag",
+    "legacy": "Klassisch"
+  },
+  "workflow": {
+    "entwurf": "Entwurf",
+    "geplant": "Geplant",
+    "pp_in_progress": "Pilot Plant in Bearbeitung",
+    "pp_completed": "Pilot Plant abgeschlossen",
+    "samples_created": "Proben erzeugt",
+    "waiting_analysis": "Wartet auf Analyse",
+    "analysis_in_progress": "Analysen in Bearbeitung",
+    "results_complete": "Ergebnisse vollständig",
+    "abgeschlossen": "Abgeschlossen"
+  },
+  "tabs": {
+    "general": "Allgemein",
+    "pilot_plant": "Pilot Plant",
+    "samples": "Proben",
+    "analyses": "Laboranalysen",
+    "results": "Ergebnisse",
+    "closure": "Abschluss"
+  },
+  "pp": {
+    "experiment_number": "Versuchsnummer",
+    "v2o5_percent": "% V₂O₅",
+    "experiment_date": "Datum",
+    "issuer": "Aussteller",
+    "previous_experiments": "Frühere Versuche",
+    "experiment_kind": "Art des Versuches",
+    "masse_type": "Massetyp",
+    "remarks": "Bemerkungen",
+    "save": "Pilot-Plant-Daten speichern"
+  },
+  "analysis_requests": {
+    "title": "Analyseanforderungen (Pool)",
+    "hint": "Diese Analysen werden nach Probenerzeugung einzelnen Proben zugewiesen.",
+    "add": "Analyse hinzufügen",
+    "empty": "Noch keine Anforderungen definiert.",
+    "assign_to_sample": "Probe zuweisen",
+    "choose_sample": "Probe wählen…",
+    "assigned": "Zugewiesen",
+    "delete": "Entfernen"
+  },
+  "samples_tab": {
+    "add": "Probe hinzufügen",
+    "empty": "Noch keine Proben zu diesem Auftrag.",
+    "name_placeholder": "Probenname (z. B. PP-001)"
+  },
+  "closure_tab": {
+    "current_status": "Aktueller Workflow-Status",
+    "set_status": "Status manuell setzen",
+    "mark_completed": "Auftrag abschließen"
+  },
   "title": "Aufträge",
   "all_title": "Alle Aufträge",
   "my_title": "Meine Aufgaben",
