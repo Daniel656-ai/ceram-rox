@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useServices } from "@/hooks/useMeasurements";
 import { useUpdateOrder } from "@/hooks/useOrders";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,6 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
   const { t } = useTranslation(["orders", "common"]);
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
-  const qc = useQueryClient();
   const canEdit = role === "master" || hasPermission("orders.edit") || (order?.created_by === user?.id);
   const kind: string = order?.order_kind || "labor";
   const showPP = kind === "pilot_plant" || kind === "combined";
