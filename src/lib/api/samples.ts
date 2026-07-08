@@ -72,6 +72,16 @@ export const samples = {
     return data;
   },
 
+  /** List all samples belonging to a given order (via samples.order_id). */
+  listForOrder: (orderId: string) =>
+    unwrap(
+      dbClient
+        .from("samples")
+        .select(SAMPLE_SELECT)
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: true })
+    ),
+
   delete: (id: string) => run(dbClient.from("samples").delete().eq("id", id)),
 
   async updateStatus(args: {
