@@ -112,6 +112,7 @@ import { projectExpenseCategories, projectExpenses } from "./projectExpenses";
 import { serviceFieldTemplates } from "./serviceFieldTemplates";
 import { orderUploads } from "./orderUploads";
 import { servicePackages } from "./servicePackages";
+import { orderAnalysisRequests } from "./orderAnalysisRequests";
 
 
 
@@ -214,6 +215,7 @@ export const api = {
   serviceFieldTemplates,
   orderUploads,
   servicePackages,
+  orderAnalysisRequests,
 
 
 
