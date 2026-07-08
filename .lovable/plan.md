@@ -1,128 +1,96 @@
-## Ziel
 
-Ein wiederverwendbarer Upload-Feldtyp für den Service Designer. Konfigurierbar pro Feld (Label, Hilfetext, Pflicht, Mehrfach, Dateitypen, Größe, Anzahl). Rendering im Auftragsformular mit Drag&Drop, Vorschau, Löschen/Ersetzen. Generische Vorlagen-Bibliothek pro Upload-Feld (z. B. Brennkurven, Prüfprotokolle). Speicherung mit dem Auftrag.
+# Gemeinsamer Workflow: Pilot Plant + Labor in einem Auftrag
 
-## Umfang
+Ziel: Ein Auftrag deckt den kompletten Lebenszyklus ab – von der Pilot-Plant-Planung über Probenerzeugung bis zur Laboranalyse und Freigabe. Kein zweites Auftragssystem, keine Datenkopien.
 
-### 1. Backend (Migration + Bucket)
+## 1. Datenmodell (Erweiterung, keine Migration von Altdaten)
 
-**Storage-Bucket** `order-uploads` (privat) via `storage_create_bucket`.
+Neue Enums:
+- `order_kind`: `pilot_plant | labor | combined | legacy` (bestehende Aufträge = `legacy`, Default für neue = `labor`)
+- `masse_type`: `DK | GK | KK | MK | PK`
+- `workflow_status`: `entwurf | geplant | pp_in_progress | pp_completed | samples_created | waiting_analysis | analysis_in_progress | results_complete | abgeschlossen`
+  (existierender `status` bleibt für Rückwärtskompatibilität bestehen; `workflow_status` läuft parallel und ist die neue Führungsgröße.)
 
-**Tabellen (public):**
+`measurement_orders` – neue Spalten:
+- `order_kind order_kind NOT NULL DEFAULT 'legacy'`
+- `workflow_status workflow_status` (nullable → nur für neue Aufträge)
+- Pilot-Plant-Felder: `pp_experiment_number text`, `pp_v2o5_percent numeric`, `pp_experiment_date date`, `pp_issuer_user_id uuid`, `pp_previous_experiments text`, `pp_experiment_kind text`, `pp_masse_type masse_type`, `pp_remarks text`
 
-- `service_field_templates` — Vorlagen-Bibliothek pro Upload-Feld
-  - `service_data_field_id` (FK service_data_fields, ON DELETE CASCADE)
-  - `name`, `description`
-  - `storage_path` (Bucket `order-uploads`, Präfix `templates/<field_id>/…`)
-  - `file_name`, `file_type`, `file_size_bytes`
-  - `sort_order`, `is_active`
-  - Standard-Timestamps
+Neue Tabelle `order_analysis_requests` (Analyseanforderungen-Pool auf Auftragsebene, vor Probenerzeugung):
+- `id`, `order_id → measurement_orders`, `service_id → measurement_services`, `quantity int DEFAULT 1`, `notes text`, `created_at`, `created_by`
+- Zuordnung zu Proben erfolgt später über einen neuen Nullable-FK auf `order_measurements.analysis_request_id`. Damit bleiben bestehende `order_measurements` unberührt; neue Analysen können frei oder aus einer Anforderung heraus entstehen.
 
-- `order_upload_files` — hochgeladene Auftragsdateien
-  - `measurement_id` (FK order_measurements, ON DELETE CASCADE)
-  - `field_key` (Feldschlüssel aus service_data_fields)
-  - `entry_index` (nullable, für Repeater-Sections)
-  - `template_id` (FK service_field_templates, nullable — falls Vorlage gewählt)
-  - `storage_path` (Bucket `order-uploads`, Präfix `orders/<measurement_id>/…`)
-  - `file_name`, `file_type`, `file_size_bytes`
-  - `uploaded_by`, `created_at`
+`samples` bleibt unverändert. Verknüpfung zum Auftrag existiert bereits über `measurement_orders.sample_id` — zusätzlich wird ein optionaler Rückweg genutzt: neue Proben, die im Auftrag erzeugt werden, tragen `samples.order_id` (neue Nullable-Spalte) und behalten ihre reguläre `PYY####`-Nummer. Bestehende Sample-Logik bleibt unverändert.
 
-- RLS + GRANTs nach Projekt-Konvention (authenticated: CRUD; service_role: ALL). Templates: Lesen für authenticated, Schreiben nur Master (analog anderer Admin-Tabellen via `has_role`).
+Statusautomat (Trigger auf `order_measurements` + `samples` + `order_analysis_requests`):
+- Erste PP-Felder gesetzt → `pp_in_progress`
+- `pp_experiment_date` gesetzt → `pp_completed`
+- ≥1 Sample mit `order_id` → `samples_created`
+- ≥1 offene, an Sample zugeordnete Analyse → `waiting_analysis`
+- ≥1 `order_measurements.status='in_progress'` → `analysis_in_progress`
+- Alle zugeordneten Analysen `completed` → `results_complete`
+- Manuell abschließbar → `abgeschlossen`
+- Manuelles Setzen bleibt jederzeit möglich (Master + berechtigte Rollen)
 
-**Storage-Policies auf `storage.objects` für Bucket `order-uploads`:**
-- Lesen: authenticated
-- Schreiben/Löschen im Ordner `orders/…`: authenticated (auf eigene Aufträge via measurement-Join oder simpel authenticated + auf Applikationslogik)
-- Schreiben/Löschen im Ordner `templates/…`: nur Master
+Alle neuen Tabellen erhalten GRANTs + RLS analog zu bestehenden Auftragstabellen.
 
-### 2. Feldkonfiguration erweitern
+## 2. Backend / API
 
-`service_data_fields` besitzt bereits `field_type = 'file' | 'image'` und `validation jsonb`. Wir nutzen `validation` als Container für Upload-Config:
+Neue Domain-Module in `src/lib/api/`:
+- `orderAnalysisRequests.ts` – list/create/update/delete + `assignToSample(requestId, sampleId)` (legt daraus `order_measurements` an)
+- Erweiterung `orders.ts`: Pilot-Plant-Felder in `create`/`update`, `updateWorkflowStatus`
+- Erweiterung `samples.ts`: `createForOrder(orderId, …)` – reuse bestehender Logik, setzt `order_id`
 
-```json
-{
-  "upload": {
-    "multiple": false,
-    "max_files": 1,
-    "max_size_mb": 20,
-    "accepted_types": ["image/*", "application/pdf"],
-    "templates_enabled": false
-  }
-}
-```
+RPC/SECURITY DEFINER:
+- `assign_analysis_request_to_sample(_request_id, _sample_id)` – erzeugt `order_measurements` mit `service_id` aus Anforderung und `analysis_request_id`
+- `recompute_order_workflow_status(_order_id)` – wird von Triggern und manuell aufgerufen
 
-Keine Schema-Änderung nötig, nur TypeScript-Typen in `serviceDesigner.ts`.
+## 3. Frontend
 
-### 3. Frontend — Service Designer
+`CreateOrderPage.tsx`: neues Pflichtfeld **Auftragsart**. Je nach Auswahl werden zusätzliche Abschnitte eingeblendet:
+- Pilot Plant → PP-Felder + optionale Standardanalysen (Pool)
+- Labor → aktuelle Maske (unverändert)
+- Kombiniert → beides
 
-**FormDesigner / Feld-Konfigurationspanel** (in `FormDesigner.tsx` bzw. dem Field-Editor, der `service_data_fields` bearbeitet):
-- Bei `field_type` ∈ {`file`, `image`} zusätzliches Panel „Upload-Einstellungen": Mehrfach, max. Anzahl, max. Größe (MB), zulässige Dateitypen (Multiselect: JPG, PNG, PDF, XLSX, DOCX, …), Vorlagen-Bibliothek aktivieren.
-- Bei aktivierten Vorlagen: Unter-Sektion „Vorlagen verwalten" (Liste + Upload-Button + Löschen + Reihenfolge + aktiv-Toggle). CRUD über neue API `serviceFieldTemplates`.
+`OrderDetailPage.tsx` bekommt Tabs (nur wenn `order_kind != 'legacy'`):
+1. **Allgemein** – bestehende Kopfdaten
+2. **Pilot Plant** – PP-Felder editieren, Historie
+3. **Proben** – Liste aller `samples` mit `order_id`, Anlegen weiterer Proben (`PP-###` als Anzeigename; Systemnummer bleibt `PYY####`)
+4. **Analysen** – zwei Bereiche:
+   - Anforderungen-Pool (noch nicht zugewiesen) mit „Probe zuweisen"-Aktion
+   - Zugewiesene Analysen (bestehende `order_measurements`-Tabelle)
+5. **Ergebnisse** – vorhandene Ergebnisanzeige aller Measurements des Auftrags
+6. **Abschluss** – Workflow-Status-Steuerung, Freigabe, Abschluss
 
-### 4. Frontend — Auftragsformular
+Legacy-Aufträge (`order_kind='legacy'`) zeigen weiterhin die bisherige Detailansicht ohne Tabs.
 
-Neue Komponente `src/components/upload/UploadField.tsx`:
-- Drag&Drop-Zone + Datei-Picker
-- Client-seitige Validierung gegen `upload`-Config
-- Vorschau: Bilder als Thumbnail, PDF/andere als Icon + Dateiname + Größe
-- Datei entfernen / ersetzen
-- Optional Vorlagen-Auswahl (Select) wenn `templates_enabled`
+Neuer `WorkflowStatusBadge` mit i18n-Labels (DE/EN) analog `StatusBadge`.
 
-Integration in `ServiceBookingForm.tsx` — neuer Case in `renderInput` für `file`/`image`. Werte werden im Form-State als Liste von Uploads (mit `storage_path`, `file_name`, `template_id?`) gehalten. Bei Absenden des Auftrags werden Dateien in `order-uploads` unter `orders/<measurement_id>/<field_key>/…` verschoben (temporär → final) und `order_upload_files`-Rows angelegt.
+## 4. Berechtigungen
 
-Alternative Vereinfachung (empfohlen für MVP): Upload passiert erst nach Auftragserstellung, sobald `measurementId` bekannt ist. Bei Neuanlage: Dateien im Browser-Memory halten, nach `createOrder` sequenziell hochladen.
+- Auftragsart wählen, PP-Felder editieren, Anforderungen anlegen → `orders.create` / `orders.edit`
+- Anforderung einer Probe zuweisen → `orders.edit` oder Zuweisung an eigene Probe
+- Workflow-Status manuell setzen → Master oder `orders.edit`
+- Keine Änderung an bestehenden Regeln für `order_measurements` / `samples`
 
-### 5. Auftragsansicht (Bearbeiter)
+## 5. i18n
 
-- Neue Sektion „Hochgeladene Dateien" in `OrderDetailPage.tsx` (oder in bestehender Dokumenten-Liste anzeigen): Liste aller `order_upload_files`, gruppiert nach Feld. Vorschau via bestehendem `DocumentPreviewDialog` (unterstützt bereits PDF/Bilder). Download.
+Neue Keys in `orders.json` (DE/EN): Auftragsart, alle Statuswerte, Tab-Titel, PP-Feldlabels, Analysepool-Texte.
 
-### 6. API-Layer
+## 6. Technische Details
 
-Neue Dateien in `src/lib/api/`:
-- `serviceFieldTemplates.ts` — list/create/update/delete + signedUrl
-- `orderUploads.ts` — upload/list/delete + signedUrl (Bucket `order-uploads`)
+- Migration erstellt Enums, Spalten, Tabelle, GRANTs, RLS, Trigger, RPCs in **einer** Datei.
+- `src/integrations/supabase/types.ts` wird nach Migration automatisch neu generiert; Code-Änderungen folgen danach.
+- Alle Datenzugriffe ausschließlich über `src/lib/api/*` (bestehende Regel).
+- Radix-Select-Werte verwenden `__none__` statt leerer Strings.
+- Keine Änderung an `sample_id` auf `measurement_orders`; das Feld bleibt für Legacy-Aufträge relevant.
 
-Export in `src/lib/api/index.ts`.
+## 7. Umsetzungsreihenfolge
 
-### 7. i18n
-
-DE/EN-Strings für Designer-Panel, Upload-Zone, Vorlagen, Fehlermeldungen (in `orders.json` und neuem Namespace `upload.json` oder in `common.json`).
-
-## Nicht enthalten
-
-- Bildannotation (Markieren von Bereichen auf Bildern) — als Folge-Feature.
-- Migration bestehender „Brennkurven"-Uploads (falls vorhanden) — separat.
-
-## Technische Details
-
-**Reihenfolge der Migrations:**
-1. `storage_create_bucket("order-uploads", public=false)`
-2. Migration: Tabellen + GRANTs + RLS + Policies + Storage-Policies.
-
-**Storage-Pfade:**
-- Vorlagen: `templates/<service_data_field_id>/<timestamp>_<name>`
-- Auftrag: `orders/<measurement_id>/<field_key>/<timestamp>_<name>`
-
-**Validierung** (client + server-lite):
-- Client: react-dropzone-artig eigenes Handling mit `<input type=file>` + drag events (keine neue Dep nötig).
-- Server: RLS + Storage-Policies verhindern fremden Zugriff; Größenlimit via Bucket-Config (falls unterstützt) oder Client-only.
-
-**Typerweiterung** `ServiceDataField.validation`:
-```ts
-export interface UploadValidation {
-  multiple?: boolean;
-  max_files?: number;
-  max_size_mb?: number;
-  accepted_types?: string[];
-  templates_enabled?: boolean;
-}
-```
-
-## Reihenfolge der Umsetzung
-
-1. Bucket erstellen.
-2. Migration (Tabellen, RLS, GRANTs, Storage-Policies).
-3. API-Layer (`serviceFieldTemplates`, `orderUploads`).
-4. `UploadField`-Komponente + Integration in `ServiceBookingForm`.
-5. Designer-Erweiterung (Upload-Config-Panel + Vorlagen-Verwaltung).
-6. Anzeige in `OrderDetailPage` (Preview + Download).
-7. i18n-Strings.
+1. Migration (Enums, Spalten, `order_analysis_requests`, `samples.order_id`, `order_measurements.analysis_request_id`, RLS, Trigger, RPCs)
+2. API-Layer (`orderAnalysisRequests`, Erweiterungen `orders`/`samples`)
+3. i18n-Keys
+4. `CreateOrderPage` – Auftragsart + PP-Sektion + Anforderungen-Pool
+5. `OrderDetailPage` – Tabs-Grundgerüst + einzelne Tabs
+6. `WorkflowStatusBadge` + Abschluss-Tab
+7. Verifikation: Legacy-Auftrag unverändert, neuer Combined-Auftrag durchläuft alle Status.
