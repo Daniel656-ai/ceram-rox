@@ -186,6 +186,7 @@ export default function CreateOrderPage() {
   // Single order state
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [orderType, setOrderType] = useState<string>("");
+  const [orderKind, setOrderKind] = useState<"labor" | "pilot_plant" | "combined">("labor");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
@@ -193,6 +194,19 @@ export default function CreateOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
   const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
+
+  // Pilot Plant fields
+  const [pp, setPp] = useState({
+    experiment_number: "",
+    v2o5_percent: "",
+    experiment_date: "",
+    previous_experiments: "",
+    experiment_kind: "",
+    masse_type: "__none__" as string,
+    remarks: "",
+  });
+  // Analysis requests pool (Pilot Plant / Combined orders): pre-planned analyses without a sample yet
+  const [analysisRequests, setAnalysisRequests] = useState<Array<{ uid: string; service_id: string; service_name: string; quantity: number }>>([]);
 
   // Batch state
   const [batchTemplateId, setBatchTemplateId] = useState("");
