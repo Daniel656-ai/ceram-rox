@@ -89,6 +89,10 @@ export const portfolioMilestones = {
 
 const PORTFOLIO_DOCS_BUCKET = "portfolio-documents";
 
+const rpc = (name: string, args: Record<string, any>) =>
+  unwrap((dbClient as any).rpc(name, args));
+
+
 export const portfolioDocuments = {
   list: (portfolioId: string) =>
     unwrap(f("project_portfolio_documents").select("*").eq("portfolio_id", portfolioId).order("created_at", { ascending: false })),
