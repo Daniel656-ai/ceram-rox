@@ -392,9 +392,7 @@ export default function PortfolioDetailPage() {
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">
-          <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Der versionierte Dokumentenbereich (Anträge, Verträge, Berichte, Publikationen) wird in einer der nächsten Ausbaustufen aktiviert.
-          </CardContent></Card>
+          <PortfolioDocumentsTab portfolioId={portfolioId} canEdit={canEdit} />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-4">
@@ -402,9 +400,7 @@ export default function PortfolioDetailPage() {
         </TabsContent>
 
         <TabsContent value="dashboard" className="mt-4">
-          <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Das Portfolio-Dashboard mit KPIs und Ampelstatus folgt in Phase 3.
-          </CardContent></Card>
+          <PortfolioDashboardTab portfolioId={portfolioId} portfolio={portfolio} canEdit={canEdit} />
         </TabsContent>
       </Tabs>
 
