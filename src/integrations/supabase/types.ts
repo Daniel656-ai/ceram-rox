@@ -3071,6 +3071,280 @@ export type Database = {
           },
         ]
       }
+      project_portfolio_documents: {
+        Row: {
+          category: Database["public"]["Enums"]["portfolio_document_category"]
+          created_at: string
+          description: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          portfolio_id: string
+          supersedes_id: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["portfolio_document_category"]
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          portfolio_id: string
+          supersedes_id?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["portfolio_document_category"]
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          portfolio_id?: string
+          supersedes_id?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_portfolio_documents_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "project_portfolios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_portfolio_documents_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "project_portfolio_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_portfolio_members: {
+        Row: {
+          added_by: string | null
+          contribution_goal: string | null
+          contribution_summary: string | null
+          created_at: string
+          current_status: string | null
+          id: string
+          key_results: string | null
+          portfolio_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          contribution_goal?: string | null
+          contribution_summary?: string | null
+          created_at?: string
+          current_status?: string | null
+          id?: string
+          key_results?: string | null
+          portfolio_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          contribution_goal?: string | null
+          contribution_summary?: string | null
+          created_at?: string
+          current_status?: string | null
+          id?: string
+          key_results?: string | null
+          portfolio_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_portfolio_members_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "project_portfolios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_portfolio_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_portfolio_milestones: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          milestone_type: Database["public"]["Enums"]["portfolio_milestone_type"]
+          portfolio_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["portfolio_milestone_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          milestone_type?: Database["public"]["Enums"]["portfolio_milestone_type"]
+          portfolio_id: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["portfolio_milestone_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          milestone_type?: Database["public"]["Enums"]["portfolio_milestone_type"]
+          portfolio_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["portfolio_milestone_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_portfolio_milestones_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "project_portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_portfolio_periods: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          name: string
+          notes: string | null
+          portfolio_id: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          name: string
+          notes?: string | null
+          portfolio_id: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          portfolio_id?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_portfolio_periods_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "project_portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_portfolios: {
+        Row: {
+          approved_budget: number | null
+          category: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          funding_body: string | null
+          funding_program: string | null
+          id: string
+          name: string
+          notes: string | null
+          planned_budget: number | null
+          responsible_user_id: string | null
+          short_code: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["portfolio_status"]
+          updated_at: string
+        }
+        Insert: {
+          approved_budget?: number | null
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          funding_body?: string | null
+          funding_program?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          planned_budget?: number | null
+          responsible_user_id?: string | null
+          short_code?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["portfolio_status"]
+          updated_at?: string
+        }
+        Update: {
+          approved_budget?: number | null
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          funding_body?: string | null
+          funding_program?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          planned_budget?: number | null
+          responsible_user_id?: string | null
+          short_code?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["portfolio_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       project_services: {
         Row: {
           booked_at: string
@@ -5422,6 +5696,30 @@ export type Database = {
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
+      portfolio_document_category:
+        | "foerderantrag"
+        | "foerdervertrag"
+        | "zwischenbericht"
+        | "endbericht"
+        | "praesentation"
+        | "publikation"
+        | "patent"
+        | "nachweis"
+        | "sonstiges"
+      portfolio_milestone_status: "offen" | "erledigt" | "ueberfaellig"
+      portfolio_milestone_type:
+        | "antrag"
+        | "genehmigung"
+        | "zwischenbericht"
+        | "review"
+        | "abschluss"
+        | "sonstiges"
+      portfolio_status:
+        | "planung"
+        | "aktiv"
+        | "pausiert"
+        | "abgeschlossen"
+        | "abgebrochen"
       post_measurement_action:
         | "aufbewahren"
         | "entsorgen"
@@ -5693,6 +5991,33 @@ export const Constants = {
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
+      portfolio_document_category: [
+        "foerderantrag",
+        "foerdervertrag",
+        "zwischenbericht",
+        "endbericht",
+        "praesentation",
+        "publikation",
+        "patent",
+        "nachweis",
+        "sonstiges",
+      ],
+      portfolio_milestone_status: ["offen", "erledigt", "ueberfaellig"],
+      portfolio_milestone_type: [
+        "antrag",
+        "genehmigung",
+        "zwischenbericht",
+        "review",
+        "abschluss",
+        "sonstiges",
+      ],
+      portfolio_status: [
+        "planung",
+        "aktiv",
+        "pausiert",
+        "abgeschlossen",
+        "abgebrochen",
+      ],
       post_measurement_action: [
         "aufbewahren",
         "entsorgen",
