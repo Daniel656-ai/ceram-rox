@@ -23,6 +23,8 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2, Pencil, Save, X, FolderPlus, Briefcase } from "lucide-react";
 import PortfolioAnalyticsTab from "@/components/PortfolioAnalyticsTab";
+import PortfolioDocumentsTab from "@/components/PortfolioDocumentsTab";
+import PortfolioDashboardTab from "@/components/PortfolioDashboardTab";
 
 const STATUS_LABEL: Record<string, string> = {
   planung: "In Planung", aktiv: "Aktiv", pausiert: "Pausiert",
@@ -203,6 +205,14 @@ export default function PortfolioDetailPage() {
               <h1 className="text-2xl font-bold">{portfolio.name}</h1>
               {portfolio.short_code && <Badge variant="outline">{portfolio.short_code}</Badge>}
               <Badge>{STATUS_LABEL[portfolio.status]}</Badge>
+              <span
+                title={`Ampelstatus: ${portfolio.traffic_light ?? "green"}`}
+                className={`inline-block h-3 w-3 rounded-full ${
+                  portfolio.traffic_light === "red" ? "bg-red-500"
+                    : portfolio.traffic_light === "yellow" ? "bg-amber-500"
+                    : "bg-emerald-500"
+                }`}
+              />
             </div>
             {portfolio.description && (
               <p className="text-sm text-muted-foreground mt-1 max-w-3xl">{portfolio.description}</p>
@@ -286,7 +296,7 @@ export default function PortfolioDetailPage() {
                         </TableCell>
                         <TableCell>{m.projects?.project_name ?? "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{m.contribution_goal ?? "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{m.projects?.status ?? "—"}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{m.projects?.project_status ?? "—"}</Badge></TableCell>
                         {canRemove && (
                           <TableCell>
                             <Button size="icon" variant="ghost" onClick={() => {
@@ -390,9 +400,7 @@ export default function PortfolioDetailPage() {
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">
-          <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Der versionierte Dokumentenbereich (Anträge, Verträge, Berichte, Publikationen) wird in einer der nächsten Ausbaustufen aktiviert.
-          </CardContent></Card>
+          <PortfolioDocumentsTab portfolioId={portfolioId} canEdit={canEdit} />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-4">
@@ -400,9 +408,7 @@ export default function PortfolioDetailPage() {
         </TabsContent>
 
         <TabsContent value="dashboard" className="mt-4">
-          <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Das Portfolio-Dashboard mit KPIs und Ampelstatus folgt in Phase 3.
-          </CardContent></Card>
+          <PortfolioDashboardTab portfolioId={portfolioId} portfolio={portfolio} canEdit={canEdit} />
         </TabsContent>
       </Tabs>
 
