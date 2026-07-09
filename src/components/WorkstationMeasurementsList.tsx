@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { useWorkstationMeasurements } from "@/hooks/useWorkstations";
+import { orderDetailPath } from "@/lib/orderNavigation";
 
 interface Props {
   workstationId: string;
@@ -71,7 +72,7 @@ export function WorkstationMeasurementsList({ workstationId, userMap }: Props) {
                 <TableRow
                   key={m.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => navigate(`/orders/${order?.id}`)}
+                  onClick={() => order?.id && navigate(orderDetailPath(order.id))}
                 >
                   <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
                   <TableCell className="font-medium text-primary">

@@ -28,6 +28,8 @@ import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useServicePermissions } from "@/hooks/useServicePermissions";
+import { useUsers } from "@/hooks/useUsers";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 
 
@@ -71,8 +73,26 @@ export default function OrderDetailPage() {
   const [editDueDate, setEditDueDate] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
+  const { data: allUsers = [] } = useUsers();
+  const creator = (allUsers as any[]).find((u) => u.user_id === (order as any)?.created_by);
+  const creatorName = creator ? `${creator.first_name || ""} ${creator.last_name || ""}`.trim() : "";
+
+  // Rollenbasierte Ansicht: Auftraggeber sehen nur die Auftraggeber-Sicht,
+  // Messdienstleister nur die MDL-Sicht, Master/Admin können umschalten.
+  const defaultView: "requester" | "provider" = role === "auftraggeber" ? "requester" : "provider";
+  const [viewMode, setViewMode] = useState<"requester" | "provider">(defaultView);
+  const canSwitchViews = role === "master";
+  const showRequesterView = canSwitchViews ? viewMode === "requester" : role === "auftraggeber";
+  const showProviderView = canSwitchViews ? viewMode === "provider" : role !== "auftraggeber";
+
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
-  if (!order) return <p className="text-muted-foreground">Auftrag nicht gefunden.</p>;
+  if (!order) return (
+    <div className="flex flex-col items-center justify-center h-64 space-y-3">
+      <p className="text-lg font-medium">Auftrag nicht gefunden.</p>
+      <p className="text-sm text-muted-foreground">Der Auftrag existiert nicht oder Sie haben keine Berechtigung, ihn zu sehen.</p>
+      <Button variant="outline" onClick={() => navigate("/auftraege")}>Zur Auftragsübersicht</Button>
+    </div>
+  );
 
   const canEditDelete = role === "master" || (role === "auftraggeber" && (order as any).created_by === user?.id && order.status === "open");
   const canEditPriority = role === "master" || (order as any).created_by === user?.id;
@@ -196,7 +216,9 @@ export default function OrderDetailPage() {
             Auftrag: {(order as any).order_number || (order as any).projects?.project_number}
           </h1>
           <p className="text-muted-foreground">
-            {(order as any).order_number ? `Projekt: ${(order as any).projects?.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]} · Erstellt am {new Date(order.created_at).toLocaleDateString("de-DE")}
+            {(order as any).order_number ? `Projekt: ${(order as any).projects?.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]}
+            {creatorName ? ` · Auftraggeber: ${creatorName}` : ""}
+            {` · Erstellt am ${new Date(order.created_at).toLocaleDateString("de-DE")}`}
           </p>
         </div>
         {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
@@ -236,6 +258,78 @@ export default function OrderDetailPage() {
         )}
       </div>
 
+      {canSwitchViews && (
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "requester" | "provider")}>
+          <TabsList>
+            <TabsTrigger value="requester">Auftraggeber</TabsTrigger>
+            <TabsTrigger value="provider">Messdienstleister</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
+      {showRequesterView && (
+        <div className="space-y-6">
+          {order.notes && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Bemerkungen</CardTitle></CardHeader>
+              <CardContent><p className="text-sm whitespace-pre-wrap">{order.notes}</p></CardContent>
+            </Card>
+          )}
+          {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
+            <OrderWorkflowTabs order={order} />
+          )}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Gewünschte Dienstleistungen ({measurements.length})</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Aufg.-Nr.</TableHead>
+                    <TableHead>Dienstleistung</TableHead>
+                    <TableHead>Kategorie</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {measurements.map((m: any) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
+                      <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</Badge>
+                      </TableCell>
+                      <TableCell><StatusBadge status={m.status} /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          {(order as any).samples && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Probe</CardTitle></CardHeader>
+              <CardContent>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  <div>
+                    <dt className="text-muted-foreground">Probennummer</dt>
+                    <dd className="font-mono">{(order as any).samples.sample_number}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Name</dt>
+                    <dd className="font-medium">{(order as any).samples.sample_name}</dd>
+                  </div>
+                  <div className="md:col-span-2">
+                    <dt className="text-muted-foreground">Beschreibung</dt>
+                    <dd>{(order as any).samples.description || "–"}</dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {showProviderView && (<>
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
         <Card>
@@ -574,6 +668,7 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
       )}
+      </>)}
 
       {/* Edit Order Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
