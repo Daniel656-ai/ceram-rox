@@ -205,6 +205,14 @@ export default function PortfolioDetailPage() {
               <h1 className="text-2xl font-bold">{portfolio.name}</h1>
               {portfolio.short_code && <Badge variant="outline">{portfolio.short_code}</Badge>}
               <Badge>{STATUS_LABEL[portfolio.status]}</Badge>
+              <span
+                title={`Ampelstatus: ${portfolio.traffic_light ?? "green"}`}
+                className={`inline-block h-3 w-3 rounded-full ${
+                  portfolio.traffic_light === "red" ? "bg-red-500"
+                    : portfolio.traffic_light === "yellow" ? "bg-amber-500"
+                    : "bg-emerald-500"
+                }`}
+              />
             </div>
             {portfolio.description && (
               <p className="text-sm text-muted-foreground mt-1 max-w-3xl">{portfolio.description}</p>
