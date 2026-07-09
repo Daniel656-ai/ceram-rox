@@ -164,8 +164,7 @@ export const portfolioDashboard = {
 };
 
 // ---- Phase 2: Analytics RPCs ----
-const rpc = (name: string, args: Record<string, any>) =>
-  unwrap((dbClient as any).rpc(name, args));
+
 
 export interface PortfolioSummary {
   project_count: number; active_count: number; closed_count: number; people_count: number;
