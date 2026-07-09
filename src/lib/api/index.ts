@@ -113,6 +113,13 @@ import { serviceFieldTemplates } from "./serviceFieldTemplates";
 import { orderUploads } from "./orderUploads";
 import { servicePackages } from "./servicePackages";
 import { orderAnalysisRequests } from "./orderAnalysisRequests";
+import {
+  projectPortfolios,
+  portfolioMembers,
+  portfolioPeriods,
+  portfolioMilestones,
+  portfolioDocuments,
+} from "./projectPortfolios";
 
 
 
