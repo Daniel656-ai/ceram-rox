@@ -25,6 +25,8 @@ import { ArrowLeft, Plus, Trash2, Pencil, Save, X, FolderPlus, Briefcase, Calend
 import PortfolioAnalyticsTab from "@/components/PortfolioAnalyticsTab";
 import PortfolioDocumentsTab from "@/components/PortfolioDocumentsTab";
 import PortfolioDashboardTab from "@/components/PortfolioDashboardTab";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 const STATUS_LABEL: Record<string, string> = {
   planung: "In Planung", aktiv: "Aktiv", pausiert: "Pausiert",
@@ -302,8 +304,8 @@ export default function PortfolioDetailPage() {
               <Field label="Fördergeber" value={portfolio.funding_body} />
               <Field label="Start" value={portfolio.start_date} />
               <Field label="Ende" value={portfolio.end_date} />
-              <Field label="Geplantes Budget" value={portfolio.planned_budget != null ? `${portfolio.planned_budget} €` : null} />
-              <Field label="Bewilligtes Budget" value={portfolio.approved_budget != null ? `${portfolio.approved_budget} €` : null} />
+              <Field label="Geplantes Budget" value={portfolio.planned_budget != null ? `${formatCurrency(portfolio.planned_budget)} €` : null} />
+              <Field label="Bewilligtes Budget" value={portfolio.approved_budget != null ? `${formatCurrency(portfolio.approved_budget)} €` : null} />
               <div className="col-span-2">
                 <Field label="Notizen" value={portfolio.notes} />
               </div>
@@ -531,11 +533,11 @@ export default function PortfolioDetailPage() {
             </div>
             <div>
               <Label>Geplantes Budget (€)</Label>
-              <Input type="number" value={editDraft.planned_budget ?? ""} onChange={(e) => setEditDraft({ ...editDraft, planned_budget: e.target.value })} />
+              <CurrencyInput value={editDraft.planned_budget ?? ""} onChange={(raw) => setEditDraft({ ...editDraft, planned_budget: raw })} />
             </div>
             <div>
               <Label>Bewilligtes Budget (€)</Label>
-              <Input type="number" value={editDraft.approved_budget ?? ""} onChange={(e) => setEditDraft({ ...editDraft, approved_budget: e.target.value })} />
+              <CurrencyInput value={editDraft.approved_budget ?? ""} onChange={(raw) => setEditDraft({ ...editDraft, approved_budget: raw })} />
             </div>
             <div className="col-span-2">
               <Label>Beschreibung</Label>
