@@ -119,6 +119,7 @@ import {
   portfolioPeriods,
   portfolioMilestones,
   portfolioDocuments,
+  portfolioAnalytics,
 } from "./projectPortfolios";
 
 
