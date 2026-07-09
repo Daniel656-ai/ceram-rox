@@ -3295,6 +3295,9 @@ export type Database = {
           end_date: string | null
           funding_body: string | null
           funding_program: string | null
+          health_note: string | null
+          health_updated_at: string | null
+          health_updated_by: string | null
           id: string
           name: string
           notes: string | null
@@ -3303,6 +3306,7 @@ export type Database = {
           short_code: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["portfolio_status"]
+          traffic_light: string
           updated_at: string
         }
         Insert: {
@@ -3314,6 +3318,9 @@ export type Database = {
           end_date?: string | null
           funding_body?: string | null
           funding_program?: string | null
+          health_note?: string | null
+          health_updated_at?: string | null
+          health_updated_by?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -3322,6 +3329,7 @@ export type Database = {
           short_code?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["portfolio_status"]
+          traffic_light?: string
           updated_at?: string
         }
         Update: {
@@ -3333,6 +3341,9 @@ export type Database = {
           end_date?: string | null
           funding_body?: string | null
           funding_program?: string | null
+          health_note?: string | null
+          health_updated_at?: string | null
+          health_updated_by?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -3341,6 +3352,7 @@ export type Database = {
           short_code?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["portfolio_status"]
+          traffic_light?: string
           updated_at?: string
         }
         Relationships: []
@@ -5509,6 +5521,10 @@ export type Database = {
           project_name: string
           project_number: string
         }[]
+      }
+      get_portfolio_dashboard: {
+        Args: { _portfolio_id: string }
+        Returns: Json
       }
       get_portfolio_hours_by_month: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
