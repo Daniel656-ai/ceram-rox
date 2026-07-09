@@ -55,6 +55,16 @@ export const ALL_PERMISSIONS = [
   "activity_log.view_all",
   "hazard_notifications.manage",
   "weekly_reviews.manage_all",
+  // Portfolios
+  "portfolios.view",
+  "portfolios.create",
+  "portfolios.edit",
+  "portfolios.delete",
+  "portfolios.assign_projects",
+  "portfolios.remove_projects",
+  "portfolios.export",
+  "portfolios.documents.manage",
+  "portfolios.dashboard.view",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
@@ -81,6 +91,7 @@ export const NAV_PERMISSIONS = [
   "nav.admin.permissions",
   "nav.admin.sync",
   "nav.admin.database",
+  "nav.portfolios",
 ] as const;
 
 export type NavPermissionKey = (typeof NAV_PERMISSIONS)[number];
@@ -106,6 +117,7 @@ export const NAV_PERMISSION_LABELS: Record<NavPermissionKey, { de: string; en: s
   "nav.admin.permissions": { de: "Kompetenzmatrix", en: "Competency Matrix" },
   "nav.admin.sync": { de: "Synchronisation", en: "Synchronization" },
   "nav.admin.database": { de: "Datenbank", en: "Database" },
+  "nav.portfolios": { de: "Projektportfolio", en: "Project Portfolio" },
 };
 
 export interface NavTreeNode {
@@ -125,6 +137,7 @@ export const NAV_TREE: NavTreeNode[] = [
   { key: "nav.work_planning" },
   { key: "nav.lab_planning" },
   { key: "nav.calendar" },
+  { key: "nav.portfolios" },
   {
     key: "nav.admin",
     children: [
@@ -182,6 +195,15 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "activity_log.view_all": { de: "Gesamtes Aktivitätsprotokoll sehen", en: "View full activity log" },
   "hazard_notifications.manage": { de: "Gefahrstoff-Verteiler verwalten", en: "Manage hazard distribution list" },
   "weekly_reviews.manage_all": { de: "Weekly Reviews aller Projekte verwalten", en: "Manage weekly reviews across all projects" },
+  "portfolios.view": { de: "Projektportfolio ansehen", en: "View project portfolios" },
+  "portfolios.create": { de: "Projektportfolio anlegen", en: "Create project portfolios" },
+  "portfolios.edit": { de: "Projektportfolio bearbeiten", en: "Edit project portfolios" },
+  "portfolios.delete": { de: "Projektportfolio löschen", en: "Delete project portfolios" },
+  "portfolios.assign_projects": { de: "Projekte einem Portfolio zuordnen", en: "Assign projects to portfolios" },
+  "portfolios.remove_projects": { de: "Projekte aus Portfolio entfernen", en: "Remove projects from portfolios" },
+  "portfolios.export": { de: "Portfolio-Berichte exportieren", en: "Export portfolio reports" },
+  "portfolios.documents.manage": { de: "Portfolio-Dokumente verwalten", en: "Manage portfolio documents" },
+  "portfolios.dashboard.view": { de: "Portfolio-Dashboard ansehen", en: "View portfolio dashboard" },
 };
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
@@ -195,6 +217,7 @@ export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string;
   { key: "admin", labelDe: "Administration", labelEn: "Administration", permissions: ["workstations.manage", "users.manage", "services.manage", "absences.manage_all", "admin.system", "admin.database", "hazard_notifications.manage"] },
   { key: "calendar", labelDe: "Kalender & Urlaub", labelEn: "Calendar & Vacation", permissions: ["calendar.view_others_vacation"] },
   { key: "notifications", labelDe: "Benachrichtigungen & Audit", labelEn: "Notifications & Audit", permissions: ["notifications.measurement_completed", "notifications.priority_violation", "activity_log.view_all"] },
+  { key: "portfolios", labelDe: "Projektportfolio", labelEn: "Project Portfolio", permissions: ["portfolios.view", "portfolios.create", "portfolios.edit", "portfolios.delete", "portfolios.assign_projects", "portfolios.remove_projects", "portfolios.export", "portfolios.documents.manage", "portfolios.dashboard.view"] },
 ];
 
 export function usePermissions() {

@@ -223,6 +223,11 @@ export const api = {
   orderUploads,
   servicePackages,
   orderAnalysisRequests,
+  projectPortfolios,
+  portfolioMembers,
+  portfolioPeriods,
+  portfolioMilestones,
+  portfolioDocuments,
 
 
 
