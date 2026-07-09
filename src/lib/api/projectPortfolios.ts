@@ -50,7 +50,7 @@ export const portfolioMembers = {
   listForPortfolio: (portfolioId: string) =>
     unwrap(
       f("project_portfolio_members")
-        .select("*, projects(id, project_number, project_name, status, start_date, end_date)")
+        .select("*, projects(id, project_number, project_name, project_status, start_date, end_date)")
         .eq("portfolio_id", portfolioId)
         .order("created_at", { ascending: true })
     ),
