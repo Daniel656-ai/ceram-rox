@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { useWorkstationMeasurements } from "@/hooks/useWorkstations";
+import { orderDetailPath } from "@/lib/orderNavigation";
 
 interface Props {
   workstationId: string;
