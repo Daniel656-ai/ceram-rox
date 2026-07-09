@@ -258,6 +258,78 @@ export default function OrderDetailPage() {
         )}
       </div>
 
+      {canSwitchViews && (
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "requester" | "provider")}>
+          <TabsList>
+            <TabsTrigger value="requester">Auftraggeber</TabsTrigger>
+            <TabsTrigger value="provider">Messdienstleister</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
+      {showRequesterView && (
+        <div className="space-y-6">
+          {order.notes && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Bemerkungen</CardTitle></CardHeader>
+              <CardContent><p className="text-sm whitespace-pre-wrap">{order.notes}</p></CardContent>
+            </Card>
+          )}
+          {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
+            <OrderWorkflowTabs order={order} />
+          )}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Gewünschte Dienstleistungen ({measurements.length})</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Aufg.-Nr.</TableHead>
+                    <TableHead>Dienstleistung</TableHead>
+                    <TableHead>Kategorie</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {measurements.map((m: any) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-mono text-xs">{m.measurement_number}</TableCell>
+                      <TableCell className="font-medium">{m.measurement_services?.service_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</Badge>
+                      </TableCell>
+                      <TableCell><StatusBadge status={m.status} /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          {(order as any).samples && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Probe</CardTitle></CardHeader>
+              <CardContent>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  <div>
+                    <dt className="text-muted-foreground">Probennummer</dt>
+                    <dd className="font-mono">{(order as any).samples.sample_number}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Name</dt>
+                    <dd className="font-medium">{(order as any).samples.sample_name}</dd>
+                  </div>
+                  <div className="md:col-span-2">
+                    <dt className="text-muted-foreground">Beschreibung</dt>
+                    <dd>{(order as any).samples.description || "–"}</dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {showProviderView && (<>
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-4">
         <Card>
