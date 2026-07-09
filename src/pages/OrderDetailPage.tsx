@@ -28,6 +28,8 @@ import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useServicePermissions } from "@/hooks/useServicePermissions";
+import { useUsers } from "@/hooks/useUsers";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTranslation } from "react-i18next";
 
 
