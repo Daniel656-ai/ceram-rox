@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Briefcase, Search, ArrowRight } from "lucide-react";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 const STATUS_LABEL: Record<string, string> = {
   planung: "In Planung",
@@ -271,11 +272,11 @@ export default function PortfoliosPage() {
             </div>
             <div>
               <Label>Geplantes Budget (€)</Label>
-              <Input type="number" value={draft.planned_budget} onChange={(e) => setDraft({ ...draft, planned_budget: e.target.value })} />
+              <CurrencyInput value={draft.planned_budget} onChange={(raw) => setDraft({ ...draft, planned_budget: raw })} />
             </div>
             <div>
               <Label>Bewilligtes Budget (€)</Label>
-              <Input type="number" value={draft.approved_budget} onChange={(e) => setDraft({ ...draft, approved_budget: e.target.value })} />
+              <CurrencyInput value={draft.approved_budget} onChange={(raw) => setDraft({ ...draft, approved_budget: raw })} />
             </div>
             <div className="col-span-2">
               <Label>Beschreibung</Label>
