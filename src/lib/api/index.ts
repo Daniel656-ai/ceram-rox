@@ -229,6 +229,7 @@ export const api = {
   portfolioPeriods,
   portfolioMilestones,
   portfolioDocuments,
+  portfolioAnalytics,
 
 
 
