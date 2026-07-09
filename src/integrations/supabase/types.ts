@@ -2208,6 +2208,94 @@ export type Database = {
           },
         ]
       }
+      order_report_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          change_reason: string | null
+          created_at: string
+          data_snapshot: Json
+          generated_by: string | null
+          id: string
+          layout_snapshot: Json
+          pdf_storage_path: string | null
+          report_id: string
+          updated_at: string
+          version_no: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          change_reason?: string | null
+          created_at?: string
+          data_snapshot?: Json
+          generated_by?: string | null
+          id?: string
+          layout_snapshot?: Json
+          pdf_storage_path?: string | null
+          report_id: string
+          updated_at?: string
+          version_no: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          change_reason?: string | null
+          created_at?: string
+          data_snapshot?: Json
+          generated_by?: string | null
+          id?: string
+          layout_snapshot?: Json
+          pdf_storage_path?: string | null
+          report_id?: string
+          updated_at?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_report_versions_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "order_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_reports: {
+        Row: {
+          auto_generated: boolean
+          created_at: string
+          current_version_no: number
+          id: string
+          order_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_generated?: boolean
+          created_at?: string
+          current_version_no?: number
+          id?: string
+          order_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_generated?: boolean
+          created_at?: string
+          current_version_no?: number
+          id?: string
+          order_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_reports_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_upload_files: {
         Row: {
           created_at: string
