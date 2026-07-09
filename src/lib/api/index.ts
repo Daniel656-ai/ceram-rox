@@ -113,6 +113,7 @@ import { serviceFieldTemplates } from "./serviceFieldTemplates";
 import { orderUploads } from "./orderUploads";
 import { servicePackages } from "./servicePackages";
 import { orderAnalysisRequests } from "./orderAnalysisRequests";
+import { orderReports } from "./orderReports";
 import {
   projectPortfolios,
   portfolioMembers,
@@ -225,6 +226,7 @@ export const api = {
   orderUploads,
   servicePackages,
   orderAnalysisRequests,
+  orderReports,
   projectPortfolios,
   portfolioMembers,
   portfolioPeriods,
