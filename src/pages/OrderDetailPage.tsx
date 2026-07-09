@@ -668,6 +668,7 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
       )}
+      </>)}
 
       {/* Edit Order Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
