@@ -395,9 +395,7 @@ export default function PortfolioDetailPage() {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-4">
-          <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Aggregierte Auswertungen (Stunden, Personal- und Materialkosten, Budget, zeitliche Entwicklung) folgen in Phase 2.
-          </CardContent></Card>
+          <PortfolioAnalyticsTab portfolioId={portfolioId} />
         </TabsContent>
 
         <TabsContent value="dashboard" className="mt-4">
