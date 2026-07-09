@@ -231,6 +231,7 @@ export const api = {
   portfolioMilestones,
   portfolioDocuments,
   portfolioAnalytics,
+  portfolioDashboard,
 
 
 
