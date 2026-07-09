@@ -23,6 +23,8 @@ import {
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2, Pencil, Save, X, FolderPlus, Briefcase } from "lucide-react";
 import PortfolioAnalyticsTab from "@/components/PortfolioAnalyticsTab";
+import PortfolioDocumentsTab from "@/components/PortfolioDocumentsTab";
+import PortfolioDashboardTab from "@/components/PortfolioDashboardTab";
 
 const STATUS_LABEL: Record<string, string> = {
   planung: "In Planung", aktiv: "Aktiv", pausiert: "Pausiert",
