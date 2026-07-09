@@ -120,6 +120,7 @@ import {
   portfolioMilestones,
   portfolioDocuments,
   portfolioAnalytics,
+  portfolioDashboard,
 } from "./projectPortfolios";
 
 
