@@ -87,6 +87,8 @@ export const portfolioMilestones = {
   remove: (id: string) => run(f("project_portfolio_milestones").delete().eq("id", id)),
 };
 
+const PORTFOLIO_DOCS_BUCKET = "portfolio-documents";
+
 export const portfolioDocuments = {
   list: (portfolioId: string) =>
     unwrap(f("project_portfolio_documents").select("*").eq("portfolio_id", portfolioId).order("created_at", { ascending: false })),
@@ -94,7 +96,67 @@ export const portfolioDocuments = {
     unwrap(f("project_portfolio_documents").insert(input).select().single()),
   update: (id: string, updates: Record<string, any>) =>
     run(f("project_portfolio_documents").update(updates).eq("id", id)),
-  remove: (id: string) => run(f("project_portfolio_documents").delete().eq("id", id)),
+  remove: async (id: string, storagePath?: string | null) => {
+    if (storagePath) {
+      await (dbClient as any).storage.from(PORTFOLIO_DOCS_BUCKET).remove([storagePath]);
+    }
+    await run(f("project_portfolio_documents").delete().eq("id", id));
+  },
+
+  async upload(args: {
+    portfolioId: string;
+    file: File;
+    category?: string;
+    title?: string;
+    description?: string;
+  }) {
+    const safeName = args.file.name.replace(/[^\w.\-]+/g, "_");
+    const path = `${args.portfolioId}/${Date.now()}_${safeName}`;
+    const { error: upErr } = await (dbClient as any).storage
+      .from(PORTFOLIO_DOCS_BUCKET)
+      .upload(path, args.file, { contentType: args.file.type || undefined, upsert: false });
+    if (upErr) throw upErr;
+    try {
+      return await unwrap(
+        f("project_portfolio_documents").insert({
+          portfolio_id: args.portfolioId,
+          category: args.category ?? "sonstiges",
+          title: args.title || args.file.name,
+          description: args.description || null,
+          file_path: path,
+          file_name: args.file.name,
+          file_size: args.file.size,
+          mime_type: args.file.type || null,
+        }).select().single()
+      );
+    } catch (e) {
+      await (dbClient as any).storage.from(PORTFOLIO_DOCS_BUCKET).remove([path]);
+      throw e;
+    }
+  },
+
+  async signedUrl(storagePath: string, expiresIn = 300): Promise<string | null> {
+    const { data } = await (dbClient as any).storage
+      .from(PORTFOLIO_DOCS_BUCKET).createSignedUrl(storagePath, expiresIn);
+    return data?.signedUrl ?? null;
+  },
+
+  async download(storagePath: string): Promise<Blob> {
+    const { data, error } = await (dbClient as any).storage
+      .from(PORTFOLIO_DOCS_BUCKET).download(storagePath);
+    if (error) throw error;
+    return data;
+  },
+};
+
+export const portfolioDashboard = {
+  get: (portfolioId: string) =>
+    rpc("get_portfolio_dashboard", { _portfolio_id: portfolioId }) as Promise<any>,
+  updateHealth: (portfolioId: string, updates: { traffic_light?: string; health_note?: string | null }) =>
+    unwrap(f("project_portfolios").update({
+      ...updates,
+      health_updated_at: new Date().toISOString(),
+    }).eq("id", portfolioId).select().single()),
 };
 
 // ---- Phase 2: Analytics RPCs ----
