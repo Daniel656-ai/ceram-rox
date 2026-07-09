@@ -286,7 +286,7 @@ export default function PortfolioDetailPage() {
                         </TableCell>
                         <TableCell>{m.projects?.project_name ?? "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{m.contribution_goal ?? "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{m.projects?.status ?? "—"}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{m.projects?.project_status ?? "—"}</Badge></TableCell>
                         {canRemove && (
                           <TableCell>
                             <Button size="icon" variant="ghost" onClick={() => {
