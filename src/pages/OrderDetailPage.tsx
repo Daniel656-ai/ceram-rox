@@ -216,7 +216,9 @@ export default function OrderDetailPage() {
             Auftrag: {(order as any).order_number || (order as any).projects?.project_number}
           </h1>
           <p className="text-muted-foreground">
-            {(order as any).order_number ? `Projekt: ${(order as any).projects?.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]} · Erstellt am {new Date(order.created_at).toLocaleDateString("de-DE")}
+            {(order as any).order_number ? `Projekt: ${(order as any).projects?.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]}
+            {creatorName ? ` · Auftraggeber: ${creatorName}` : ""}
+            {` · Erstellt am ${new Date(order.created_at).toLocaleDateString("de-DE")}`}
           </p>
         </div>
         {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
