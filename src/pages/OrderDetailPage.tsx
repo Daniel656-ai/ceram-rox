@@ -30,6 +30,7 @@ import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useServicePermissions } from "@/hooks/useServicePermissions";
 import { useUsers } from "@/hooks/useUsers";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import OrderReportTab from "@/components/OrderReportTab";
 import { useTranslation } from "react-i18next";
 
 
@@ -669,6 +670,9 @@ export default function OrderDetailPage() {
         </Card>
       )}
       </>)}
+
+      <OrderReportTab orderId={order.id} />
+
 
       {/* Edit Order Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
