@@ -38,6 +38,7 @@ import type {
 const ROLE_TABS: { value: FormRoleView; label: string; hint: string }[] = [
   { value: "customer", label: "Auftraggeber", hint: "Was der Kunde beim Anlegen sieht" },
   { value: "employee", label: "Mitarbeiter", hint: "Interne Bearbeitungsansicht" },
+  { value: "report", label: "Ergebnisbericht", hint: "Layout des generierten Prüfberichts" },
   { value: "public", label: "Öffentlich", hint: "Anonyme / Self-Service Ansicht" },
 ];
 

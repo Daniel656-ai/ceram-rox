@@ -1,7 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 
-export type FormRoleView = "customer" | "employee" | "public";
+export type FormRoleView = "customer" | "employee" | "public" | "report";
 
 export interface FormFieldRef {
   id: string; // local row id
