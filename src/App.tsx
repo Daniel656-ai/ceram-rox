@@ -20,6 +20,8 @@ import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminServicesPage from "./pages/AdminServicesPage";
 import AdminServiceDesignerPage from "./pages/AdminServiceDesignerPage";
 import AdminServicePackagesPage from "./pages/AdminServicePackagesPage";
+import PortfoliosPage from "./pages/PortfoliosPage";
+import PortfolioDetailPage from "./pages/PortfolioDetailPage";
 
 import AdminStatsPage from "./pages/AdminStatsPage";
 import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
@@ -91,6 +93,8 @@ const App = () => (
               <Route path="/aufgaben/:measurementId" element={<TaskExecutionPage />} />
               <Route path="/projekte" element={<ProjectsPage />} />
               <Route path="/projekte/:id" element={<ProjectDetailPage />} />
+              <Route path="/portfolios" element={<PortfoliosPage />} />
+              <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
               <Route path="/proben" element={<SamplesPage />} />
               <Route path="/proben/:id" element={<SampleDetailPage />} />
               <Route path="/arbeitsplanung" element={<WorkPlanPage />} />

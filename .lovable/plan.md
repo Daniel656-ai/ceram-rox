@@ -1,96 +1,71 @@
 
-# Gemeinsamer Workflow: Pilot Plant + Labor in einem Auftrag
+# Modul „Projektportfolio"
 
-Ziel: Ein Auftrag deckt den kompletten Lebenszyklus ab – von der Pilot-Plant-Planung über Probenerzeugung bis zur Laboranalyse und Freigabe. Kein zweites Auftragssystem, keine Datenkopien.
+Umfangreiches neues Hauptmodul. Ich schlage eine **inkrementelle Umsetzung in 4 Phasen** vor — jede Phase ist eigenständig lauffähig. So bleibt der Aufwand pro Schritt beherrschbar und Sie können nach jeder Phase testen und priorisieren.
 
-## 1. Datenmodell (Erweiterung, keine Migration von Altdaten)
+---
 
-Neue Enums:
-- `order_kind`: `pilot_plant | labor | combined | legacy` (bestehende Aufträge = `legacy`, Default für neue = `labor`)
-- `masse_type`: `DK | GK | KK | MK | PK`
-- `workflow_status`: `entwurf | geplant | pp_in_progress | pp_completed | samples_created | waiting_analysis | analysis_in_progress | results_complete | abgeschlossen`
-  (existierender `status` bleibt für Rückwärtskompatibilität bestehen; `workflow_status` läuft parallel und ist die neue Führungsgröße.)
+## Phase 1 – Fundament (Datenmodell, Rechte, CRUD, Zuordnung)
 
-`measurement_orders` – neue Spalten:
-- `order_kind order_kind NOT NULL DEFAULT 'legacy'`
-- `workflow_status workflow_status` (nullable → nur für neue Aufträge)
-- Pilot-Plant-Felder: `pp_experiment_number text`, `pp_v2o5_percent numeric`, `pp_experiment_date date`, `pp_issuer_user_id uuid`, `pp_previous_experiments text`, `pp_experiment_kind text`, `pp_masse_type masse_type`, `pp_remarks text`
+**Datenmodell (Migration)**
+- `project_portfolios` — name, short_code, description, category, funding_program, funding_body, start_date, end_date, status, responsible_user_id, planned_budget, approved_budget, notes
+- `project_portfolio_members` (M:N Projekt ↔ Portfolio) — portfolio_id, project_id, contribution_goal, contribution_summary, current_status, key_results
+- `project_portfolio_periods` (Förderperioden) — portfolio_id, name, start_date, end_date
+- `project_portfolio_milestones` — portfolio_id, title, type (Antrag/Genehmigung/Zwischenbericht/Review/Abschluss), due_date, completed_at, status
+- `project_portfolio_documents` — portfolio_id, category (Antrag/Vertrag/Bericht/…), file_path, version, uploaded_by
+- Volle GRANTs + RLS über neue Security-Definer-Funktion `can_access_portfolio(uid, portfolio_id, action)` gestützt auf `has_permission`.
 
-Neue Tabelle `order_analysis_requests` (Analyseanforderungen-Pool auf Auftragsebene, vor Probenerzeugung):
-- `id`, `order_id → measurement_orders`, `service_id → measurement_services`, `quantity int DEFAULT 1`, `notes text`, `created_at`, `created_by`
-- Zuordnung zu Proben erfolgt später über einen neuen Nullable-FK auf `order_measurements.analysis_request_id`. Damit bleiben bestehende `order_measurements` unberührt; neue Analysen können frei oder aus einer Anforderung heraus entstehen.
+**Berechtigungen** (in `role_permissions` einpflegbar, kein Hardcode)
+- `nav.portfolios` (Navigations-Sichtbarkeit)
+- `portfolios.view`, `portfolios.create`, `portfolios.edit`, `portfolios.delete`
+- `portfolios.assign_projects`, `portfolios.remove_projects`
+- `portfolios.export`, `portfolios.documents.manage`, `portfolios.dashboard.view`
+- Seed: Rolle **Administrator** und neue Rolle **PMO** erhalten alle Rechte per Default.
 
-`samples` bleibt unverändert. Verknüpfung zum Auftrag existiert bereits über `measurement_orders.sample_id` — zusätzlich wird ein optionaler Rückweg genutzt: neue Proben, die im Auftrag erzeugt werden, tragen `samples.order_id` (neue Nullable-Spalte) und behalten ihre reguläre `PYY####`-Nummer. Bestehende Sample-Logik bleibt unverändert.
+**API-Layer** — `src/lib/api/projectPortfolios.ts` (list/get/create/update/delete, members, periods, milestones, documents). Kein direkter Supabase-Zugriff außerhalb.
 
-Statusautomat (Trigger auf `order_measurements` + `samples` + `order_analysis_requests`):
-- Erste PP-Felder gesetzt → `pp_in_progress`
-- `pp_experiment_date` gesetzt → `pp_completed`
-- ≥1 Sample mit `order_id` → `samples_created`
-- ≥1 offene, an Sample zugeordnete Analyse → `waiting_analysis`
-- ≥1 `order_measurements.status='in_progress'` → `analysis_in_progress`
-- Alle zugeordneten Analysen `completed` → `results_complete`
-- Manuell abschließbar → `abgeschlossen`
-- Manuelles Setzen bleibt jederzeit möglich (Master + berechtigte Rollen)
+**UI**
+- Sidebar-Eintrag „Projektportfolio" (nur bei `nav.portfolios`)
+- Route `/portfolios` — Liste, Suche, Filter (Kategorie, Förderprogramm, Status, Periode)
+- Route `/portfolios/:id` — Detail mit Tabs (Stammdaten, Projekte, Meilensteine, Dokumente, Auswertungen, Dashboard)
+- Tab **Projekte**: Zuordnen/Entfernen (M:N), Anzeige Anzahl / aktiv / abgeschlossen + Projektliste (Leiter, Status, Laufzeit)
 
-Alle neuen Tabellen erhalten GRANTs + RLS analog zu bestehenden Auftragstabellen.
+## Phase 2 – Auswertungen (Aggregation über verknüpfte Projekte)
 
-## 2. Backend / API
+Server-seitige RPCs (`security definer`) aggregieren über Portfolio-Mitgliedschaften — nutzt vorhandene `project_time_entries`, `project_expenses`, `project_consumables`, `project_knetung_materials`, Personalkosten (Stunden × Rate).
 
-Neue Domain-Module in `src/lib/api/`:
-- `orderAnalysisRequests.ts` – list/create/update/delete + `assignToSample(requestId, sampleId)` (legt daraus `order_measurements` an)
-- Erweiterung `orders.ts`: Pilot-Plant-Felder in `create`/`update`, `updateWorkflowStatus`
-- Erweiterung `samples.ts`: `createForOrder(orderId, …)` – reuse bestehender Logik, setzt `order_id`
+- Stundenübersicht: gesamt / pro Projekt / pro Mitarbeiter / pro Monat / pro Arbeitspaket
+- Personenauswertung mit Filter Zeitraum/Mitarbeiter/Projekt/Portfolio
+- Kostenübersicht: Personal + Rohstoff + Material + Dienstleistung + sonstige → Gesamt, plus Budget / Verbrauch / Rest
+- Ressourcenübersicht (Mitarbeiter × Stunden × Kosten × Projektzahl)
+- Zeitliche Entwicklung: Stunden/Kosten/Budgetverbrauch pro Monat (Recharts)
+- Filter „Förderperiode" auf allen Auswertungen
+- **Personenjournal** + **Kostenjournal** (chronologisch, filterbar) für Audit/FFG
 
-RPC/SECURITY DEFINER:
-- `assign_analysis_request_to_sample(_request_id, _sample_id)` – erzeugt `order_measurements` mit `service_id` aus Anforderung und `analysis_request_id`
-- `recompute_order_workflow_status(_order_id)` – wird von Triggern und manuell aufgerufen
+## Phase 3 – Dokumente, Meilensteine, Dashboard, Ampel
 
-## 3. Frontend
+- Versionierter Dokumentenbereich (Kategorien: Antrag/Vertrag/Zwischenbericht/Endbericht/Präsentation/Publikation/Patent/Sonstige), Upload via bestehende Storage-Infrastruktur
+- Meilensteinliste mit Status (offen/erledigt/überfällig)
+- Portfolio-Dashboard mit KPIs (Projekte, Mitarbeiter, Stunden, Kosten, Budgetverbrauch, offene/abgeschlossene Meilensteine)
+- **Ampelstatus** (🟢/🟡/🔴) automatisch berechnet für Budget, Stunden, Fortschritt, Meilensteine anhand konfigurierbarer Schwellwerte (default 80%/100%)
 
-`CreateOrderPage.tsx`: neues Pflichtfeld **Auftragsart**. Je nach Auswahl werden zusätzliche Abschnitte eingeblendet:
-- Pilot Plant → PP-Felder + optionale Standardanalysen (Pool)
-- Labor → aktuelle Maske (unverändert)
-- Kombiniert → beides
+## Phase 4 – Exporte
 
-`OrderDetailPage.tsx` bekommt Tabs (nur wenn `order_kind != 'legacy'`):
-1. **Allgemein** – bestehende Kopfdaten
-2. **Pilot Plant** – PP-Felder editieren, Historie
-3. **Proben** – Liste aller `samples` mit `order_id`, Anlegen weiterer Proben (`PP-###` als Anzeigename; Systemnummer bleibt `PYY####`)
-4. **Analysen** – zwei Bereiche:
-   - Anforderungen-Pool (noch nicht zugewiesen) mit „Probe zuweisen"-Aktion
-   - Zugewiesene Analysen (bestehende `order_measurements`-Tabelle)
-5. **Ergebnisse** – vorhandene Ergebnisanzeige aller Measurements des Auftrags
-6. **Abschluss** – Workflow-Status-Steuerung, Freigabe, Abschluss
+- Excel (SheetJS): Übersicht, Personen, Stunden, Kosten, Budget, Meilensteine, Dokumentenliste, Personen-/Kostenjournal
+- PDF (bestehende Print-Infrastruktur): identische Sektionen, druckoptimiert
 
-Legacy-Aufträge (`order_kind='legacy'`) zeigen weiterhin die bisherige Detailansicht ohne Tabs.
+---
 
-Neuer `WorkflowStatusBadge` mit i18n-Labels (DE/EN) analog `StatusBadge`.
+## Technische Hinweise
 
-## 4. Berechtigungen
+- Rein additiv — bestehende Projekte, Zeiterfassung, Kosten bleiben unverändert.
+- Alle Zugriffe über `src/lib/api/*` (verbindliche Architekturregel).
+- i18n DE/EN, Datentyp-Locales konsistent.
+- Neue Rolle **PMO** wird als `custom_role` angelegt; keine Änderung der Basisrollen (`master`/`auftraggeber`/`durchfuehrer`).
+- ESLint-Regel „no direct supabase" wird eingehalten.
 
-- Auftragsart wählen, PP-Felder editieren, Anforderungen anlegen → `orders.create` / `orders.edit`
-- Anforderung einer Probe zuweisen → `orders.edit` oder Zuweisung an eigene Probe
-- Workflow-Status manuell setzen → Master oder `orders.edit`
-- Keine Änderung an bestehenden Regeln für `order_measurements` / `samples`
+---
 
-## 5. i18n
+## Frage vor Umsetzung
 
-Neue Keys in `orders.json` (DE/EN): Auftragsart, alle Statuswerte, Tab-Titel, PP-Feldlabels, Analysepool-Texte.
-
-## 6. Technische Details
-
-- Migration erstellt Enums, Spalten, Tabelle, GRANTs, RLS, Trigger, RPCs in **einer** Datei.
-- `src/integrations/supabase/types.ts` wird nach Migration automatisch neu generiert; Code-Änderungen folgen danach.
-- Alle Datenzugriffe ausschließlich über `src/lib/api/*` (bestehende Regel).
-- Radix-Select-Werte verwenden `__none__` statt leerer Strings.
-- Keine Änderung an `sample_id` auf `measurement_orders`; das Feld bleibt für Legacy-Aufträge relevant.
-
-## 7. Umsetzungsreihenfolge
-
-1. Migration (Enums, Spalten, `order_analysis_requests`, `samples.order_id`, `order_measurements.analysis_request_id`, RLS, Trigger, RPCs)
-2. API-Layer (`orderAnalysisRequests`, Erweiterungen `orders`/`samples`)
-3. i18n-Keys
-4. `CreateOrderPage` – Auftragsart + PP-Sektion + Anforderungen-Pool
-5. `OrderDetailPage` – Tabs-Grundgerüst + einzelne Tabs
-6. `WorkflowStatusBadge` + Abschluss-Tab
-7. Verifikation: Legacy-Auftrag unverändert, neuer Combined-Auftrag durchläuft alle Status.
+Soll ich mit **Phase 1** starten (Datenmodell + Rechte + CRUD + Projektzuordnung + Sidebar/Navigation) und die Auswertungen/Dokumente/Exports in den Folgephasen nachziehen? Oder möchten Sie eine andere Reihenfolge / eine engere Reduktion des ersten Wurfs (z. B. ohne Förderperioden oder ohne PMO-Rollenseed)?
