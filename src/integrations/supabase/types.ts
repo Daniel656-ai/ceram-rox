@@ -5555,6 +5555,24 @@ export type Database = {
           project_number: string
         }[]
       }
+      get_portfolio_milestone_timeline: {
+        Args: { _portfolio_id: string }
+        Returns: {
+          completed_at: string
+          description: string
+          id: string
+          milestone_date: string
+          milestone_type: string
+          portfolio_id: string
+          project_id: string
+          project_name: string
+          project_number: string
+          sort_date: string
+          source: string
+          status: string
+          title: string
+        }[]
+      }
       get_portfolio_person_journal: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
         Returns: {

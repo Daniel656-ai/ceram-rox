@@ -21,7 +21,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Pencil, Save, X, FolderPlus, Briefcase } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Save, X, FolderPlus, Briefcase, CalendarDays } from "lucide-react";
 import PortfolioAnalyticsTab from "@/components/PortfolioAnalyticsTab";
 import PortfolioDocumentsTab from "@/components/PortfolioDocumentsTab";
 import PortfolioDashboardTab from "@/components/PortfolioDashboardTab";
@@ -30,6 +30,26 @@ const STATUS_LABEL: Record<string, string> = {
   planung: "In Planung", aktiv: "Aktiv", pausiert: "Pausiert",
   abgeschlossen: "Abgeschlossen", abgebrochen: "Abgebrochen",
 };
+
+const MILESTONE_STATUS_LABEL: Record<string, string> = {
+  offen: "Offen",
+  erledigt: "Erledigt",
+  ueberfaellig: "Überfällig",
+};
+
+const MILESTONE_TYPE_LABEL: Record<string, string> = {
+  antrag: "Antrag",
+  genehmigung: "Genehmigung",
+  zwischenbericht: "Zwischenbericht",
+  review: "Review",
+  abschluss: "Abschluss",
+  sonstiges: "Sonstiges",
+  projekt: "Projekt-Meilenstein",
+};
+
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleDateString("de-DE") : "—";
+}
 
 export default function PortfolioDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -61,9 +81,9 @@ export default function PortfolioDetailPage() {
     enabled: !!user,
   });
 
-  const { data: milestones = [] } = useQuery<any[]>({
-    queryKey: ["portfolio-milestones", portfolioId, user?.id ?? "anon"],
-    queryFn: () => api.portfolioMilestones.list(portfolioId) as any,
+  const { data: milestoneTimeline = [] } = useQuery<any[]>({
+    queryKey: ["portfolio-milestone-timeline", portfolioId, user?.id ?? "anon"],
+    queryFn: () => api.portfolioMilestones.timeline(portfolioId) as any,
     enabled: !!user && !!portfolioId,
   });
 
@@ -133,6 +153,9 @@ export default function PortfolioDetailPage() {
       setContributionGoal("");
       qc.invalidateQueries({ queryKey: ["portfolio-members", portfolioId] });
       qc.invalidateQueries({ queryKey: ["portfolio-members-all"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-milestone-timeline", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-dashboard", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-analytics", portfolioId] });
     },
     onError: (e: any) => toast.error(e?.message || "Fehler"),
   });
@@ -143,6 +166,9 @@ export default function PortfolioDetailPage() {
       toast.success("Projekt entfernt");
       qc.invalidateQueries({ queryKey: ["portfolio-members", portfolioId] });
       qc.invalidateQueries({ queryKey: ["portfolio-members-all"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-milestone-timeline", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-dashboard", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-analytics", portfolioId] });
     },
     onError: (e: any) => toast.error(e?.message || "Fehler"),
   });
@@ -167,6 +193,9 @@ export default function PortfolioDetailPage() {
       toast.success("Meilenstein hinzugefügt");
       setMilestoneDraft({ title: "", milestone_type: "sonstiges", due_date: "" });
       qc.invalidateQueries({ queryKey: ["portfolio-milestones", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-milestone-timeline", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-dashboard", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-analytics", portfolioId] });
     },
     onError: (e: any) => toast.error(e?.message || "Fehler"),
   });
@@ -177,13 +206,32 @@ export default function PortfolioDetailPage() {
         status,
         completed_at: status === "erledigt" ? new Date().toISOString() : null,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio-milestones", portfolioId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["portfolio-milestones", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-milestone-timeline", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-dashboard", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-analytics", portfolioId] });
+    },
   });
 
   const removeMilestoneMut = useMutation({
     mutationFn: (id: string) => api.portfolioMilestones.remove(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio-milestones", portfolioId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["portfolio-milestones", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-milestone-timeline", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-dashboard", portfolioId] });
+      qc.invalidateQueries({ queryKey: ["portfolio-analytics", portfolioId] });
+    },
   });
+
+  const sortedTimeline = useMemo(
+    () => [...milestoneTimeline].sort((a: any, b: any) => {
+      const aDate = a.sort_date || a.milestone_date || "9999-12-31";
+      const bDate = b.sort_date || b.milestone_date || "9999-12-31";
+      return aDate.localeCompare(bDate) || String(a.title ?? "").localeCompare(String(b.title ?? ""));
+    }),
+    [milestoneTimeline]
+  );
 
   if (isLoading || !portfolio) {
     return <div className="p-6 text-sm text-muted-foreground">Lade …</div>;
@@ -239,7 +287,7 @@ export default function PortfolioDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Stammdaten</TabsTrigger>
           <TabsTrigger value="projects">Projekte ({members.length})</TabsTrigger>
-          <TabsTrigger value="milestones">Meilensteine ({milestones.length})</TabsTrigger>
+          <TabsTrigger value="milestones">Meilensteine ({milestoneTimeline.length})</TabsTrigger>
           <TabsTrigger value="documents">Dokumente</TabsTrigger>
           <TabsTrigger value="analytics">Auswertungen</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -318,7 +366,7 @@ export default function PortfolioDetailPage() {
         <TabsContent value="milestones" className="mt-4 space-y-4">
           {canEdit && (
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-base">Neuer Meilenstein</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-base">Neuer Portfolio-Meilenstein</CardTitle></CardHeader>
               <CardContent className="grid grid-cols-4 gap-3">
                 <div className="col-span-2">
                   <Label>Titel</Label>
@@ -351,38 +399,63 @@ export default function PortfolioDetailPage() {
             </Card>
           )}
           <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarDays className="h-4 w-4" /> Gemeinsame Timeline
+              </CardTitle>
+            </CardHeader>
             <CardContent className="pt-6">
-              {milestones.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">Noch keine Meilensteine erfasst.</p>
+              {sortedTimeline.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">Noch keine Meilensteine in Portfolio oder zugeordneten Projekten vorhanden.</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Termin</TableHead>
+                      <TableHead>Ebene</TableHead>
                       <TableHead>Titel</TableHead>
+                      <TableHead>Projekt</TableHead>
                       <TableHead>Typ</TableHead>
-                      <TableHead>Fällig</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-32"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {milestones.map((m: any) => (
-                      <TableRow key={m.id}>
-                        <TableCell>{m.title}</TableCell>
-                        <TableCell><Badge variant="outline">{m.milestone_type}</Badge></TableCell>
-                        <TableCell>{m.due_date ?? "—"}</TableCell>
+                    {sortedTimeline.map((m: any) => (
+                      <TableRow key={`${m.source}-${m.id}`}>
+                        <TableCell>{formatDate(m.milestone_date)}</TableCell>
                         <TableCell>
-                          <Select value={m.status} disabled={!canEdit} onValueChange={(v) => setMilestoneStatusMut.mutate({ id: m.id, status: v })}>
-                            <SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="offen">Offen</SelectItem>
-                              <SelectItem value="erledigt">Erledigt</SelectItem>
-                              <SelectItem value="ueberfaellig">Überfällig</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Badge variant={m.source === "portfolio" ? "default" : "outline"}>
+                            {m.source === "portfolio" ? "Portfolio" : "Projekt"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{m.title}</TableCell>
+                        <TableCell>
+                          {m.project_id ? (
+                            <Link to={`/projekte/${m.project_id}`} className="text-primary hover:underline">
+                              <span className="font-mono">{m.project_number}</span> {m.project_name}
+                            </Link>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell><Badge variant="outline">{MILESTONE_TYPE_LABEL[m.milestone_type] ?? m.milestone_type}</Badge></TableCell>
+                        <TableCell>
+                          {m.source === "portfolio" ? (
+                            <Select value={m.status} disabled={!canEdit} onValueChange={(v) => setMilestoneStatusMut.mutate({ id: m.id, status: v })}>
+                              <SelectTrigger className="h-8 w-36"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="offen">Offen</SelectItem>
+                                <SelectItem value="erledigt">Erledigt</SelectItem>
+                                <SelectItem value="ueberfaellig">Überfällig</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant="outline">{MILESTONE_STATUS_LABEL[m.status] ?? m.status}</Badge>
+                          )}
                         </TableCell>
                         <TableCell>
-                          {canEdit && (
+                          {canEdit && m.source === "portfolio" && (
                             <Button size="icon" variant="ghost" onClick={() => {
                               if (confirm("Meilenstein löschen?")) removeMilestoneMut.mutate(m.id);
                             }}>

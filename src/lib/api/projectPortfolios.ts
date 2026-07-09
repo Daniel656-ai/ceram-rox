@@ -10,6 +10,22 @@ export type PortfolioDocumentCategory =
   | "foerderantrag" | "foerdervertrag" | "zwischenbericht" | "endbericht"
   | "praesentation" | "publikation" | "patent" | "nachweis" | "sonstiges";
 
+export interface PortfolioMilestoneTimelineItem {
+  source: "portfolio" | "project";
+  id: string;
+  portfolio_id: string;
+  project_id: string | null;
+  project_number: string | null;
+  project_name: string | null;
+  title: string;
+  description: string | null;
+  milestone_type: string;
+  milestone_date: string | null;
+  status: PortfolioMilestoneStatus;
+  completed_at: string | null;
+  sort_date: string | null;
+}
+
 export interface Portfolio {
   id: string;
   name: string;
@@ -84,6 +100,8 @@ export const portfolioPeriods = {
 export const portfolioMilestones = {
   list: (portfolioId: string) =>
     unwrap(f("project_portfolio_milestones").select("*").eq("portfolio_id", portfolioId).order("due_date", { ascending: true, nullsFirst: false })),
+  timeline: (portfolioId: string) =>
+    rpc("get_portfolio_milestone_timeline", { _portfolio_id: portfolioId }) as Promise<PortfolioMilestoneTimelineItem[]>,
   create: (input: Record<string, any>) =>
     unwrap(f("project_portfolio_milestones").insert(input).select().single()),
   update: (id: string, updates: Record<string, any>) =>

@@ -134,9 +134,15 @@ export default function PortfolioDashboardTab({ portfolioId, portfolio, canEdit 
                 <div className="font-medium">{data.next_milestone.title}</div>
                 <div className="text-xs text-muted-foreground mt-0.5">
                   Fällig: {data.next_milestone.due_date ? new Date(data.next_milestone.due_date).toLocaleDateString("de-DE") : "—"}
+                  {data.next_milestone.source === "project" && data.next_milestone.project_number && (
+                    <> · Projekt: {data.next_milestone.project_number} {data.next_milestone.project_name ?? ""}</>
+                  )}
                 </div>
               </div>
-              <Badge variant="outline">{data.next_milestone.status}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{data.next_milestone.source === "project" ? "Projekt" : "Portfolio"}</Badge>
+                <Badge variant="outline">{data.next_milestone.status}</Badge>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Keine offenen Meilensteine.</p>
