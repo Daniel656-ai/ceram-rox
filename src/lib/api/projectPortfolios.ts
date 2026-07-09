@@ -25,6 +25,10 @@ export interface Portfolio {
   planned_budget: number | null;
   approved_budget: number | null;
   notes: string | null;
+  traffic_light: "green" | "yellow" | "red" | null;
+  health_note: string | null;
+  health_updated_at: string | null;
+  health_updated_by: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
