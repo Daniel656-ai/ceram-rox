@@ -73,8 +73,26 @@ export default function OrderDetailPage() {
   const [editDueDate, setEditDueDate] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
+  const { data: allUsers = [] } = useUsers();
+  const creator = (allUsers as any[]).find((u) => u.user_id === (order as any)?.created_by);
+  const creatorName = creator ? `${creator.first_name || ""} ${creator.last_name || ""}`.trim() : "";
+
+  // Rollenbasierte Ansicht: Auftraggeber sehen nur die Auftraggeber-Sicht,
+  // Messdienstleister nur die MDL-Sicht, Master/Admin können umschalten.
+  const defaultView: "requester" | "provider" = role === "auftraggeber" ? "requester" : "provider";
+  const [viewMode, setViewMode] = useState<"requester" | "provider">(defaultView);
+  const canSwitchViews = role === "master";
+  const showRequesterView = canSwitchViews ? viewMode === "requester" : role === "auftraggeber";
+  const showProviderView = canSwitchViews ? viewMode === "provider" : role !== "auftraggeber";
+
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
-  if (!order) return <p className="text-muted-foreground">Auftrag nicht gefunden.</p>;
+  if (!order) return (
+    <div className="flex flex-col items-center justify-center h-64 space-y-3">
+      <p className="text-lg font-medium">Auftrag nicht gefunden.</p>
+      <p className="text-sm text-muted-foreground">Der Auftrag existiert nicht oder Sie haben keine Berechtigung, ihn zu sehen.</p>
+      <Button variant="outline" onClick={() => navigate("/auftraege")}>Zur Auftragsübersicht</Button>
+    </div>
+  );
 
   const canEditDelete = role === "master" || (role === "auftraggeber" && (order as any).created_by === user?.id && order.status === "open");
   const canEditPriority = role === "master" || (order as any).created_by === user?.id;
