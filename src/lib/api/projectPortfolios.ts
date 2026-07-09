@@ -96,3 +96,34 @@ export const portfolioDocuments = {
     run(f("project_portfolio_documents").update(updates).eq("id", id)),
   remove: (id: string) => run(f("project_portfolio_documents").delete().eq("id", id)),
 };
+
+// ---- Phase 2: Analytics RPCs ----
+const rpc = (name: string, args: Record<string, any>) =>
+  unwrap((dbClient as any).rpc(name, args));
+
+export interface PortfolioSummary {
+  project_count: number; active_count: number; closed_count: number; people_count: number;
+  hours_total: number; personnel_cost: number; consumables_cost: number; knetung_cost: number;
+  expenses_cost: number; material_cost: number; cost_total: number;
+  budget_total: number; budget_remaining: number;
+  milestones_open: number; milestones_done: number; milestones_overdue: number;
+}
+
+export const portfolioAnalytics = {
+  summary: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_summary", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<PortfolioSummary>,
+  hoursByProject: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_hours_by_project", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
+  hoursByPerson: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_hours_by_person", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
+  hoursByMonth: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_hours_by_month", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
+  costsByProject: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_costs_by_project", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
+  costsByMonth: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_costs_by_month", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
+  personJournal: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_person_journal", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
+  costJournal: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_cost_journal", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
+};

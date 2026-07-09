@@ -5373,6 +5373,10 @@ export type Database = {
         Returns: boolean
       }
       can_view_others_vacation: { Args: { _user_id: string }; Returns: boolean }
+      can_view_portfolio: {
+        Args: { _portfolio_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_view_project_governance: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -5469,6 +5473,93 @@ export type Database = {
           position_id: string
           quantity: number
         }[]
+      }
+      get_portfolio_cost_journal: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          amount: number
+          category: string
+          description: string
+          item_date: string
+          project_id: string
+          project_name: string
+          project_number: string
+        }[]
+      }
+      get_portfolio_costs_by_month: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          cost_total: number
+          expenses_cost: number
+          material_cost: number
+          month: string
+          personnel_cost: number
+        }[]
+      }
+      get_portfolio_costs_by_project: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          budget_total: number
+          consumables_cost: number
+          cost_total: number
+          expenses_cost: number
+          knetung_cost: number
+          personnel_cost: number
+          project_id: string
+          project_name: string
+          project_number: string
+        }[]
+      }
+      get_portfolio_hours_by_month: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          hours: number
+          month: string
+        }[]
+      }
+      get_portfolio_hours_by_person: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          entries_count: number
+          first_name: string
+          hours: number
+          last_name: string
+          person_id: string
+          project_count: number
+          short_code: string
+        }[]
+      }
+      get_portfolio_hours_by_project: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          entries_count: number
+          hours: number
+          project_id: string
+          project_name: string
+          project_number: string
+        }[]
+      }
+      get_portfolio_person_journal: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          duration_minutes: number
+          entry_date: string
+          entry_id: string
+          entry_type: string
+          first_name: string
+          hours: number
+          last_name: string
+          note: string
+          person_id: string
+          project_id: string
+          project_name: string
+          project_number: string
+          short_code: string
+        }[]
+      }
+      get_portfolio_summary: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: Json
       }
       get_raw_material_derived_samples: {
         Args: { _raw_material_batch_id?: string; _raw_material_id: string }

@@ -119,6 +119,7 @@ import {
   portfolioPeriods,
   portfolioMilestones,
   portfolioDocuments,
+  portfolioAnalytics,
 } from "./projectPortfolios";
 
 
@@ -228,6 +229,7 @@ export const api = {
   portfolioPeriods,
   portfolioMilestones,
   portfolioDocuments,
+  portfolioAnalytics,
 
 
 

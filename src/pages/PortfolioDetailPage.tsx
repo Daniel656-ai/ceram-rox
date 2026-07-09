@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2, Pencil, Save, X, FolderPlus, Briefcase } from "lucide-react";
+import PortfolioAnalyticsTab from "@/components/PortfolioAnalyticsTab";
 
 const STATUS_LABEL: Record<string, string> = {
   planung: "In Planung", aktiv: "Aktiv", pausiert: "Pausiert",
@@ -395,9 +396,7 @@ export default function PortfolioDetailPage() {
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-4">
-          <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Aggregierte Auswertungen (Stunden, Personal- und Materialkosten, Budget, zeitliche Entwicklung) folgen in Phase 2.
-          </CardContent></Card>
+          <PortfolioAnalyticsTab portfolioId={portfolioId} />
         </TabsContent>
 
         <TabsContent value="dashboard" className="mt-4">
