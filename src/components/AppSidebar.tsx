@@ -25,6 +25,7 @@ import {
   Image as ImageIcon,
   Tag,
   Sparkles,
+  Briefcase,
 
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
