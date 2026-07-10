@@ -32,8 +32,9 @@ import {
 } from "@/components/ui/popover";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import type {
-  FormFieldRef, FormLayoutData, FormRoleView, FormSection, RepeatableConfig,
+  FormFieldRef, FormLayoutData, FormRoleView, FormSection, RepeatableConfig, FieldBinding,
 } from "@/lib/api/serviceFormLayouts";
+import FieldBindingPopover from "./FieldBindingPopover";
 
 const ROLE_TABS: { value: FormRoleView; label: string; hint: string }[] = [
   { value: "customer", label: "Auftraggeber", hint: "Was der Kunde beim Anlegen sieht" },
@@ -588,6 +589,11 @@ function FieldBlock({
             />
             Ausgeblendet
           </label>
+          <FieldBindingPopover
+            binding={refItem.binding}
+            disabled={!canManage}
+            onChange={(b) => onChange({ binding: b })}
+          />
           {canManage && (
             <Button size="icon" variant="ghost" className="h-6 w-6 ml-auto" onClick={onRemove}>
               <Trash2 className="h-3.5 w-3.5 text-destructive" />

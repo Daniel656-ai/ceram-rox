@@ -3,6 +3,32 @@ import { unwrap, run } from "./_helpers";
 
 export type FormRoleView = "customer" | "employee" | "public" | "report";
 
+/**
+ * Datenquellen für Ergebnisbericht-Bindings.
+ * `free` = Bearbeiter füllt manuell aus (Freitext, Interpretation, etc.)
+ * `computed` = Wert wird aus anderen Feldern berechnet (Formel in path)
+ */
+export type BindingSource =
+  | "order"
+  | "project"
+  | "sample"
+  | "customer_form"
+  | "employee_form"
+  | "measurement_parameter"
+  | "measurement_result"
+  | "computed"
+  | "free";
+
+export interface FieldBinding {
+  source: BindingSource;
+  /** Pfad/Feldschlüssel/Formel innerhalb der Datenquelle (z.B. "order_number", "V2O5", "sum(results.value)"). */
+  path?: string;
+  /** Wenn true, darf der automatisch übernommene Wert im Bericht überschrieben werden. Standard: false (schreibgeschützt). */
+  editable?: boolean;
+  /** Optional: menschenlesbare Beschreibung der Quelle (nur für Designer-UI). */
+  hint?: string;
+}
+
 export interface FormFieldRef {
   id: string; // local row id
   field_id: string; // service_data_fields.id
@@ -13,20 +39,16 @@ export interface FormFieldRef {
   label_override?: string;
   /** Optional override for the field's help text at this placement only. */
   description_override?: string;
+  /** Datenquellen-Bindung (primär für Ergebnisbericht). Ohne Binding = Freieingabe. */
+  binding?: FieldBinding;
 }
 
 export interface RepeatableConfig {
-  /** When true, the section can be added multiple times by the end user. */
   enabled: boolean;
-  /** Minimum number of entries that must exist (default 1). */
   min?: number;
-  /** Maximum number of entries that may be added. 0 / undefined = unlimited. */
   max?: number;
-  /** Singular label for a single entry, e.g. "Mundstück". */
   item_label?: string;
-  /** Custom label for the add-button, e.g. "Weiteres Mundstück hinzufügen". */
   add_label?: string;
-  /** Storage key used in the form value map. Defaults to `repeat:<section_id>`. */
   storage_key?: string;
 }
 
@@ -36,7 +58,6 @@ export interface FormSection {
   description?: string;
   collapsed?: boolean;
   fields: FormFieldRef[];
-  /** Optional repeater configuration. When enabled the section becomes a 1:n list. */
   repeatable?: RepeatableConfig;
 }
 
@@ -55,6 +76,80 @@ export interface ServiceFormLayout {
 }
 
 const EMPTY: FormLayoutData = { sections: [] };
+
+/**
+ * Statische Presets pro Datenquelle. Diese sind bewusst nicht erschöpfend —
+ * beliebige Pfade können frei eingegeben werden, damit zukünftige Formulare
+ * ohne Codeänderung eingebunden werden können.
+ */
+export const BINDING_PRESETS: Record<BindingSource, { label: string; presets: { path: string; label: string }[] }> = {
+  order: {
+    label: "Auftrag",
+    presets: [
+      { path: "order_number", label: "Auftragsnummer" },
+      { path: "order_type", label: "Auftragstyp" },
+      { path: "status", label: "Status" },
+      { path: "priority", label: "Priorität" },
+      { path: "due_date", label: "Fälligkeitsdatum" },
+      { path: "created_at", label: "Erstellt am" },
+      { path: "notes", label: "Anmerkungen" },
+    ],
+  },
+  project: {
+    label: "Projekt",
+    presets: [
+      { path: "project_number", label: "Projektnummer" },
+      { path: "project_name", label: "Projektname" },
+      { path: "project_manager", label: "Projektleiter" },
+      { path: "customer", label: "Auftraggeber" },
+      { path: "start_date", label: "Projektstart" },
+    ],
+  },
+  sample: {
+    label: "Probe",
+    presets: [
+      { path: "sample_number", label: "Probennummer" },
+      { path: "sample_name", label: "Probenname / Versuchsnummer" },
+      { path: "description", label: "Beschreibung" },
+      { path: "material_type", label: "Massetyp" },
+    ],
+  },
+  customer_form: {
+    label: "Auftraggeberformular",
+    presets: [
+      { path: "V2O5", label: "%V₂O₅" },
+      { path: "art_des_versuches", label: "Art des Versuches" },
+      { path: "massetyp", label: "Massetyp" },
+      { path: "frühere_versuche", label: "Frühere Versuche" },
+    ],
+  },
+  employee_form: {
+    label: "Messdienstleisterformular",
+    presets: [],
+  },
+  measurement_parameter: {
+    label: "Prozessparameter (Messung)",
+    presets: [],
+  },
+  measurement_result: {
+    label: "Messergebnis",
+    presets: [
+      { path: "*", label: "Alle Ergebnisse (Tabelle)" },
+    ],
+  },
+  computed: {
+    label: "Berechnet",
+    presets: [
+      { path: "sum(measurement_result.value)", label: "Summe aller Ergebnisse" },
+      { path: "avg(measurement_result.value)", label: "Mittelwert" },
+      { path: "count(order_measurements)", label: "Anzahl Messungen" },
+    ],
+  },
+  free: {
+    label: "Freieingabe (Bearbeiter)",
+    presets: [],
+  },
+};
 
 export const serviceFormLayouts = {
   get: async (serviceId: string, roleView: FormRoleView): Promise<ServiceFormLayout | null> => {
