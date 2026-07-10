@@ -55,7 +55,7 @@ export default function LiveReportRenderer({ orderId, serviceId, canEdit }: Prop
   // Field-Katalog (für Feldtypen)
   const fieldsQuery = useQuery({
     queryKey: ["service-data-fields", serviceId],
-    queryFn: () => serviceId ? api.serviceDesigner.listFields(serviceId) : Promise.resolve([]),
+    queryFn: () => serviceId ? api.serviceDataFields.listForService(serviceId) : Promise.resolve([]),
     enabled: !!serviceId,
   });
 
