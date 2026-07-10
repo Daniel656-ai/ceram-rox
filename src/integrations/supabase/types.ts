@@ -2266,6 +2266,7 @@ export type Database = {
           auto_generated: boolean
           created_at: string
           current_version_no: number
+          draft_overrides: Json
           id: string
           order_id: string
           updated_at: string
@@ -2274,6 +2275,7 @@ export type Database = {
           auto_generated?: boolean
           created_at?: string
           current_version_no?: number
+          draft_overrides?: Json
           id?: string
           order_id: string
           updated_at?: string
@@ -2282,6 +2284,7 @@ export type Database = {
           auto_generated?: boolean
           created_at?: string
           current_version_no?: number
+          draft_overrides?: Json
           id?: string
           order_id?: string
           updated_at?: string
