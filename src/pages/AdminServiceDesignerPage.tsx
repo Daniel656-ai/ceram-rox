@@ -171,6 +171,14 @@ export default function AdminServiceDesignerPage() {
           <WorkflowDesigner serviceId={serviceId} canManage={canManage} />
         </TabsContent>
 
+        <TabsContent value="process">
+          <WorkflowStepsDesigner serviceId={serviceId} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="forms">
+          <FormsLibrary serviceId={serviceId} canManage={canManage} />
+        </TabsContent>
+
 
 
         <TabsContent value="rules">
