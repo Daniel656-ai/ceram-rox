@@ -241,6 +241,12 @@ export const api = {
   portfolioAnalytics,
   portfolioDashboard,
 
+  // ---- workflow & form designer (Phase 1) ----
+  serviceForms,
+  workflowDefinitions,
+  workflowSteps,
+  workflowTasks,
+
 
 
 
