@@ -32,8 +32,9 @@ import {
 } from "@/components/ui/popover";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import type {
-  FormFieldRef, FormLayoutData, FormRoleView, FormSection, RepeatableConfig,
+  FormFieldRef, FormLayoutData, FormRoleView, FormSection, RepeatableConfig, FieldBinding,
 } from "@/lib/api/serviceFormLayouts";
+import FieldBindingPopover from "./FieldBindingPopover";
 
 const ROLE_TABS: { value: FormRoleView; label: string; hint: string }[] = [
   { value: "customer", label: "Auftraggeber", hint: "Was der Kunde beim Anlegen sieht" },
