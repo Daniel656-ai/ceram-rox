@@ -36,6 +36,8 @@ import BlockLibrary from "@/components/ServiceDesigner/BlockLibrary";
 import VersionsDesigner from "@/components/ServiceDesigner/VersionsDesigner";
 import ImportFieldsDialog from "@/components/ServiceDesigner/ImportFieldsDialog";
 import WorkflowDesigner from "@/components/ServiceDesigner/WorkflowDesigner";
+import WorkflowStepsDesigner from "@/components/ServiceDesigner/WorkflowStepsDesigner";
+import FormsLibrary from "@/components/ServiceDesigner/FormsLibrary";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; label: string }[] }[] = [
   {
@@ -144,6 +146,8 @@ export default function AdminServiceDesignerPage() {
           <TabsTrigger value="data"><Database className="h-4 w-4 mr-1" />Datenmodell</TabsTrigger>
           <TabsTrigger value="form"><FormInput className="h-4 w-4 mr-1" />Formular</TabsTrigger>
           <TabsTrigger value="workflow"><Workflow className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
+          <TabsTrigger value="process"><Workflow className="h-4 w-4 mr-1" />Prozess-Schritte</TabsTrigger>
+          <TabsTrigger value="forms"><FormInput className="h-4 w-4 mr-1" />Formulare</TabsTrigger>
           <TabsTrigger value="rules"><Zap className="h-4 w-4 mr-1" />Regeln</TabsTrigger>
           <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
           <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
@@ -165,6 +169,14 @@ export default function AdminServiceDesignerPage() {
 
         <TabsContent value="workflow">
           <WorkflowDesigner serviceId={serviceId} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="process">
+          <WorkflowStepsDesigner serviceId={serviceId} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="forms">
+          <FormsLibrary serviceId={serviceId} canManage={canManage} />
         </TabsContent>
 
 

@@ -1,0 +1,231 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { WorkflowStep, WorkflowDefinition } from "@/lib/api/workflowDesigner";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Workflow } from "lucide-react";
+
+const STEP_TYPES = [
+  { value: "form", label: "Formular-Schritt" },
+  { value: "approval", label: "Freigabe" },
+  { value: "condition", label: "Bedingung" },
+  { value: "action", label: "Automatische Aktion" },
+  { value: "end", label: "Abschluss" },
+];
+
+const ROLES = [
+  { value: "auftraggeber", label: "Auftraggeber" },
+  { value: "durchfuehrer", label: "Messdienstleister" },
+  { value: "master", label: "Administrator" },
+];
+
+interface Props {
+  serviceId: string;
+  canManage: boolean;
+}
+
+export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<Partial<WorkflowStep> | null>(null);
+
+  const { data: workflow, isLoading } = useQuery({
+    queryKey: ["workflow-active", serviceId],
+    queryFn: () => api.workflowDefinitions.getActive(serviceId),
+  });
+
+  const { data: forms = [] } = useQuery({
+    queryKey: ["service-forms", serviceId],
+    queryFn: () => api.serviceForms.list(serviceId),
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["workflow-active", serviceId] });
+
+  const createWorkflow = useMutation({
+    mutationFn: () =>
+      api.workflowDefinitions.create({
+        service_id: serviceId,
+        name: "Standard-Workflow",
+        version: 1,
+        is_active: true,
+      }),
+    onSuccess: () => { invalidate(); toast.success("Workflow erstellt"); },
+  });
+
+  const saveStep = useMutation({
+    mutationFn: async (step: Partial<WorkflowStep>) => {
+      if (step.id) return api.workflowSteps.update(step.id, step);
+      return api.workflowSteps.create({
+        ...step,
+        workflow_id: workflow!.id,
+        step_key: step.step_key || `step_${Date.now()}`,
+        name: step.name!,
+        step_type: step.step_type || "form",
+      } as any);
+    },
+    onSuccess: () => { invalidate(); setEditing(null); toast.success("Gespeichert"); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const removeStep = useMutation({
+    mutationFn: (id: string) => api.workflowSteps.remove(id),
+    onSuccess: () => { invalidate(); toast.success("Schritt gelöscht"); },
+  });
+
+  const moveStep = useMutation({
+    mutationFn: async ({ step, dir }: { step: WorkflowStep; dir: -1 | 1 }) => {
+      const steps = workflow?.steps ?? [];
+      const idx = steps.findIndex((s) => s.id === step.id);
+      const target = idx + dir;
+      if (target < 0 || target >= steps.length) return;
+      const swap = steps[target];
+      await api.workflowSteps.reorder([
+        { id: step.id, order_index: swap.order_index },
+        { id: swap.id, order_index: step.order_index },
+      ]);
+    },
+    onSuccess: () => invalidate(),
+  });
+
+  if (isLoading) return <div className="p-6 text-muted-foreground">Lädt…</div>;
+
+  if (!workflow) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Workflow className="h-5 w-5" />Kein Workflow definiert</CardTitle>
+          <CardDescription>Für diese Dienstleistung wurde noch kein Workflow angelegt.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button disabled={!canManage} onClick={() => createWorkflow.mutate()}>
+            <Plus className="h-4 w-4 mr-1" /> Standard-Workflow anlegen
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const steps = workflow.steps ?? [];
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>{workflow.name} <Badge variant="outline" className="ml-2">v{workflow.version}</Badge></CardTitle>
+            <CardDescription>Prozessschritte für diese Dienstleistung. Reihenfolge = Ausführungsreihenfolge.</CardDescription>
+          </div>
+          {canManage && (
+            <Button size="sm" onClick={() => setEditing({ step_type: "form", is_mandatory: true, order_index: (steps.at(-1)?.order_index ?? 0) + 10 })}>
+              <Plus className="h-4 w-4 mr-1" /> Neuer Schritt
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {steps.length === 0 && <p className="text-muted-foreground text-sm">Keine Schritte definiert.</p>}
+          {steps.map((step, i) => (
+            <div key={step.id} className="flex items-center gap-3 border rounded-md p-3 bg-card">
+              <div className="flex flex-col gap-1">
+                <Button size="icon" variant="ghost" disabled={!canManage || i === 0} onClick={() => moveStep.mutate({ step, dir: -1 })}><ArrowUp className="h-3 w-3" /></Button>
+                <Button size="icon" variant="ghost" disabled={!canManage || i === steps.length - 1} onClick={() => moveStep.mutate({ step, dir: 1 })}><ArrowDown className="h-3 w-3" /></Button>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{step.name}</span>
+                  <Badge variant="secondary">{STEP_TYPES.find((t) => t.value === step.step_type)?.label ?? step.step_type}</Badge>
+                  {step.role_required && <Badge variant="outline">{ROLES.find((r) => r.value === step.role_required)?.label ?? step.role_required}</Badge>}
+                  {step.is_mandatory && <Badge variant="destructive" className="text-[10px]">Pflicht</Badge>}
+                  {step.due_hours && <Badge variant="outline">Frist: {step.due_hours}h</Badge>}
+                </div>
+                {step.description && <p className="text-xs text-muted-foreground mt-1">{step.description}</p>}
+                {step.form_id && (
+                  <p className="text-xs text-muted-foreground">
+                    Formular: {forms.find((f) => f.id === step.form_id)?.name ?? "—"}
+                  </p>
+                )}
+              </div>
+              {canManage && (
+                <div className="flex gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => setEditing(step)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Schritt "${step.name}" löschen?`)) removeStep.mutate(step.id); }}><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing?.id ? "Schritt bearbeiten" : "Neuer Schritt"}</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <div className="space-y-3">
+              <div><Label>Name</Label><Input value={editing.name ?? ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
+              <div><Label>Beschreibung</Label><Textarea rows={2} value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Typ</Label>
+                  <Select value={editing.step_type ?? "form"} onValueChange={(v) => setEditing({ ...editing, step_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{STEP_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Rolle</Label>
+                  <Select value={editing.role_required ?? "__none__"} onValueChange={(v) => setEditing({ ...editing, role_required: v === "__none__" ? null : v })}>
+                    <SelectTrigger><SelectValue placeholder="Rolle" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— keine —</SelectItem>
+                      {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Formular</Label>
+                <Select value={editing.form_id ?? "__none__"} onValueChange={(v) => setEditing({ ...editing, form_id: v === "__none__" ? null : v })}>
+                  <SelectTrigger><SelectValue placeholder="Formular wählen" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— kein Formular —</SelectItem>
+                    {forms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Frist (Stunden)</Label><Input type="number" value={editing.due_hours ?? ""} onChange={(e) => setEditing({ ...editing, due_hours: e.target.value ? Number(e.target.value) : null })} /></div>
+                <div>
+                  <Label>Eskalations-Rolle</Label>
+                  <Select value={editing.escalation_role ?? "__none__"} onValueChange={(v) => setEditing({ ...editing, escalation_role: v === "__none__" ? null : v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— keine —</SelectItem>
+                      {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={editing.is_mandatory ?? true} onCheckedChange={(v) => setEditing({ ...editing, is_mandatory: v })} />
+                <Label>Pflichtschritt</Label>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>Abbrechen</Button>
+            <Button onClick={() => editing && saveStep.mutate(editing)} disabled={!editing?.name}>Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

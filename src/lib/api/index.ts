@@ -123,6 +123,12 @@ import {
   portfolioAnalytics,
   portfolioDashboard,
 } from "./projectPortfolios";
+import {
+  serviceForms,
+  workflowDefinitions,
+  workflowSteps,
+  workflowTasks,
+} from "./workflowDesigner";
 
 
 
@@ -234,6 +240,12 @@ export const api = {
   portfolioDocuments,
   portfolioAnalytics,
   portfolioDashboard,
+
+  // ---- workflow & form designer (Phase 1) ----
+  serviceForms,
+  workflowDefinitions,
+  workflowSteps,
+  workflowTasks,
 
 
 

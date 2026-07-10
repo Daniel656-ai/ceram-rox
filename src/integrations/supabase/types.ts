@@ -2356,6 +2356,153 @@ export type Database = {
           },
         ]
       }
+      order_workflow_instances: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step_id: string | null
+          id: string
+          order_id: string
+          started_at: string
+          status: string
+          updated_at: string
+          workflow_id: string
+          workflow_version: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_id?: string | null
+          id?: string
+          order_id: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          workflow_id: string
+          workflow_version: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_id?: string | null
+          id?: string
+          order_id?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          workflow_id?: string
+          workflow_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_workflow_instances_current_step_id_fkey"
+            columns: ["current_step_id"]
+            isOneToOne: false
+            referencedRelation: "service_workflow_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_workflow_instances_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_workflow_instances_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "service_workflow_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_workflow_tasks: {
+        Row: {
+          assigned_role: string | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          due_at: string | null
+          form_id: string | null
+          form_response: Json
+          id: string
+          instance_id: string
+          notes: string | null
+          opened_at: string | null
+          order_id: string
+          priority: string | null
+          status: string
+          step_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          form_id?: string | null
+          form_response?: Json
+          id?: string
+          instance_id: string
+          notes?: string | null
+          opened_at?: string | null
+          order_id: string
+          priority?: string | null
+          status?: string
+          step_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          form_id?: string | null
+          form_response?: Json
+          id?: string
+          instance_id?: string
+          notes?: string | null
+          opened_at?: string | null
+          order_id?: string
+          priority?: string | null
+          status?: string
+          step_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_workflow_tasks_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "service_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_workflow_tasks_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "order_workflow_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_workflow_tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_workflow_tasks_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "service_workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       password_reset_log: {
         Row: {
           action: string
@@ -4791,6 +4938,62 @@ export type Database = {
           },
         ]
       }
+      service_forms: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          form_type: string
+          id: string
+          is_global: boolean
+          layout: Json
+          name: string
+          schema: Json
+          service_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          form_type?: string
+          id?: string
+          is_global?: boolean
+          layout?: Json
+          name: string
+          schema?: Json
+          service_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          form_type?: string
+          id?: string
+          is_global?: boolean
+          layout?: Json
+          name?: string
+          schema?: Json
+          service_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_forms_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_package_items: {
         Row: {
           created_at: string
@@ -5017,6 +5220,131 @@ export type Database = {
           version_no?: number
         }
         Relationships: []
+      }
+      service_workflow_definitions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          graph: Json
+          id: string
+          is_active: boolean
+          name: string
+          service_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          graph?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          service_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          graph?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          service_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_workflow_definitions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_workflow_steps: {
+        Row: {
+          assignee_user_id: string | null
+          auto_actions: Json
+          condition_expr: Json
+          created_at: string
+          description: string | null
+          due_hours: number | null
+          escalation_role: string | null
+          form_id: string | null
+          id: string
+          is_mandatory: boolean
+          name: string
+          notify_config: Json
+          order_index: number
+          role_required: string | null
+          step_key: string
+          step_type: string
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          assignee_user_id?: string | null
+          auto_actions?: Json
+          condition_expr?: Json
+          created_at?: string
+          description?: string | null
+          due_hours?: number | null
+          escalation_role?: string | null
+          form_id?: string | null
+          id?: string
+          is_mandatory?: boolean
+          name: string
+          notify_config?: Json
+          order_index?: number
+          role_required?: string | null
+          step_key: string
+          step_type?: string
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          assignee_user_id?: string | null
+          auto_actions?: Json
+          condition_expr?: Json
+          created_at?: string
+          description?: string | null
+          due_hours?: number | null
+          escalation_role?: string | null
+          form_id?: string | null
+          id?: string
+          is_mandatory?: boolean
+          name?: string
+          notify_config?: Json
+          order_index?: number
+          role_required?: string | null
+          step_key?: string
+          step_type?: string
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_workflow_steps_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "service_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_workflow_steps_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "service_workflow_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_workflows: {
         Row: {
