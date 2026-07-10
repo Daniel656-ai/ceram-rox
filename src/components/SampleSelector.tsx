@@ -143,6 +143,23 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
           <Command>
             <CommandInput placeholder={t("scan_placeholder")} />
             <CommandList>
+              {canCreate && (
+                <CommandGroup forceMount>
+                  <CommandItem
+                    value="__create_new_sample__"
+                    forceMount
+                    onSelect={() => {
+                      setOpen(false);
+                      setForm((f) => ({ ...f, project_id: projectId || "" }));
+                      setDialogOpen(true);
+                    }}
+                    className="text-primary data-[selected=true]:bg-primary/10"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    <span className="font-medium">+ {t("new_sample")}</span>
+                  </CommandItem>
+                </CommandGroup>
+              )}
               <CommandEmpty>{t("no_samples")}</CommandEmpty>
               <CommandGroup>
                 {filteredSamples.map((s) => {
@@ -166,21 +183,8 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
                   );
                 })}
               </CommandGroup>
-              {canCreate && (
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => {
-                      setOpen(false);
-                      setForm((f) => ({ ...f, project_id: projectId || "" }));
-                      setDialogOpen(true);
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    <span className="font-medium">+ {t("new_sample")}</span>
-                  </CommandItem>
-                </CommandGroup>
-              )}
             </CommandList>
+
           </Command>
         </PopoverContent>
       </Popover>
