@@ -503,24 +503,21 @@ function DurchfuehrerTasksView({
       <Card>
         <CardHeader className="py-3 flex flex-row items-center justify-between gap-3 flex-wrap">
           <CardTitle className="text-base">Meine zugewiesenen Aufgaben</CardTitle>
-          <div className="flex items-center gap-3">
-            <SortControls value={sortAssigned} onChange={setSortAssigned} />
-            <Badge variant="outline">{assigned.length}</Badge>
-          </div>
+          <Badge variant="outline">{assigned.length}</Badge>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Aufgaben-Nr.</TableHead>
-                <TableHead>Dienstleistung</TableHead>
-                <TableHead>Arbeitsplatz</TableHead>
-                <TableHead>{t("orders:order_number")}</TableHead>
-                <TableHead>Ersteller</TableHead>
-                <TableHead>{t("orders:project_number")}</TableHead>
-                <TableHead>{t("common:status")}</TableHead>
-                <TableHead>{t("orders:priority")}</TableHead>
-                <TableHead>{t("orders:due_date")}</TableHead>
+                <SortableHead label="Aufgaben-Nr." sortKey="measurement_number" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <SortableHead label="Dienstleistung" sortKey="service" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <SortableHead label="Arbeitsplatz" sortKey="workstation" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <SortableHead label={t("orders:order_number")} sortKey="order_number" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <SortableHead label="Ersteller" sortKey="creator" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <SortableHead label={t("common:status")} sortKey="status" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <SortableHead label={t("orders:due_date")} sortKey="due_date" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
               </TableRow>
             </TableHeader>
             <TableBody>
