@@ -121,7 +121,7 @@ export const measurements = {
       dbClient
         .from("order_measurements")
         .select(
-          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, work_instructions), workstations(id, name), measurement_results(*), measurement_parameters(*), measurement_orders(id, order_number, order_type, notes, created_by, project_id, sample_id, projects(id, project_number, project_name), samples(id, sample_number, sample_name))"
+          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, work_instructions), workstations(id, name), measurement_results(*), measurement_parameters(*), measurement_orders(id, order_number, order_type, notes, created_by, project_id, sample_id, priority, due_date, status, projects(id, project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name))"
         )
         .eq("id", id)
         .single()
