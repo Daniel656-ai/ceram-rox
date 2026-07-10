@@ -304,50 +304,66 @@ function DurchfuehrerTasksView({
   const claim = useClaimMeasurement();
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
-  // -------- Sortierung --------
+  // -------- Sortierung (einheitlich mit Rohstoffverwaltung / OrdersPage) --------
   type SortKey =
+    | "measurement_number"
     | "priority"
     | "service"
     | "project"
     | "workstation"
     | "order_number"
+    | "creator"
     | "due_date"
     | "created_at"
     | "status";
   type SortDir = "asc" | "desc";
-  type SortSpec = { key: SortKey; dir: SortDir };
+  type SortSpec = { key: SortKey; dir: SortDir } | null;
 
-  const loadSort = (storageKey: string, fallback: SortSpec): SortSpec => {
+  const loadSort = (storageKey: string): SortSpec => {
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) return JSON.parse(raw);
     } catch { /* noop */ }
-    return fallback;
+    return null;
   };
 
-  const [sortAssigned, setSortAssignedState] = useState<SortSpec>(() =>
-    loadSort("myTasks.sort.assigned", { key: "due_date", dir: "asc" })
-  );
-  const [sortFree, setSortFreeState] = useState<SortSpec>(() =>
-    loadSort("myTasks.sort.free", { key: "priority", dir: "asc" })
-  );
-  const setSortAssigned = (s: SortSpec) => {
-    setSortAssignedState(s);
-    try { localStorage.setItem("myTasks.sort.assigned", JSON.stringify(s)); } catch { /* noop */ }
+  const [sortAssigned, setSortAssignedState] = useState<SortSpec>(() => loadSort("myTasks.sort.assigned"));
+  const [sortFree, setSortFreeState] = useState<SortSpec>(() => loadSort("myTasks.sort.free"));
+
+  const persistSort = (storageKey: string, s: SortSpec) => {
+    try {
+      if (s) localStorage.setItem(storageKey, JSON.stringify(s));
+      else localStorage.removeItem(storageKey);
+    } catch { /* noop */ }
   };
-  const setSortFree = (s: SortSpec) => {
-    setSortFreeState(s);
-    try { localStorage.setItem("myTasks.sort.free", JSON.stringify(s)); } catch { /* noop */ }
+
+  const toggleSort = (
+    current: SortSpec,
+    setter: (s: SortSpec) => void,
+    storageKey: string,
+    key: SortKey,
+  ) => {
+    let next: SortSpec;
+    if (!current || current.key !== key) next = { key, dir: "asc" };
+    else if (current.dir === "asc") next = { key, dir: "desc" };
+    else next = null; // dritter Klick → Standard
+    setter(next);
+    persistSort(storageKey, next);
   };
+
+  const setSortAssigned = (s: SortSpec) => { setSortAssignedState(s); persistSort("myTasks.sort.assigned", s); };
+  const setSortFree = (s: SortSpec) => { setSortFreeState(s); persistSort("myTasks.sort.free", s); };
 
   // Extract sortable value per key
   const getSortValue = (m: any, key: SortKey): string | number => {
     switch (key) {
+      case "measurement_number": return (m.measurement_number || "").toLowerCase();
       case "priority": return m.ranking ?? m.measurement_orders?.ranking ?? 999;
       case "service": return (m.measurement_services?.service_name || "").toLowerCase();
-      case "project": return (m.measurement_orders?.projects?.project_name || m.measurement_orders?.projects?.project_number || "").toLowerCase();
+      case "project": return (m.measurement_orders?.projects?.project_number || m.measurement_orders?.projects?.project_name || "").toLowerCase();
       case "workstation": return (m.workstations?.name || "").toLowerCase();
       case "order_number": return (m.measurement_orders?.order_number || "").toLowerCase();
+      case "creator": return m.creator_profile ? `${m.creator_profile.last_name || ""} ${m.creator_profile.first_name || ""}`.trim().toLowerCase() : "";
       case "due_date": return m.due_date ? new Date(m.due_date).getTime() : Number.POSITIVE_INFINITY;
       case "created_at": return m.created_at ? new Date(m.created_at).getTime() : 0;
       case "status": return (m.status || "").toLowerCase();
@@ -361,17 +377,25 @@ function DurchfuehrerTasksView({
     return String(av).localeCompare(String(bv), i18n.language, { numeric: true, sensitivity: "base" });
   };
 
-  const buildComparator = (primary: SortSpec, tiebreak: SortKey[] = []) =>
-    (a: any, b: any) => {
-      const mult = primary.dir === "asc" ? 1 : -1;
-      const primaryCmp = compareBy(a, b, primary.key) * mult;
-      if (primaryCmp !== 0) return primaryCmp;
-      for (const k of tiebreak) {
-        const c = compareBy(a, b, k);
-        if (c !== 0) return c;
-      }
-      return 0;
+  // Standard-Sortierung: höchste Priorität → frühestes Fälligkeitsdatum → neueste Zuweisung
+  const defaultComparator = (a: any, b: any): number => {
+    let c = compareBy(a, b, "priority");
+    if (c !== 0) return c;
+    c = compareBy(a, b, "due_date");
+    if (c !== 0) return c;
+    // neueste Zuweisung zuerst → created_at desc
+    return -compareBy(a, b, "created_at");
+  };
+
+  const buildComparator = (spec: SortSpec) => {
+    if (!spec) return defaultComparator;
+    return (a: any, b: any) => {
+      const mult = spec.dir === "asc" ? 1 : -1;
+      const primary = compareBy(a, b, spec.key) * mult;
+      if (primary !== 0) return primary;
+      return defaultComparator(a, b);
     };
+  };
 
   const matches = (m: any) => {
     const q = search.toLowerCase();
@@ -386,18 +410,13 @@ function DurchfuehrerTasksView({
   };
 
   const assigned = useMemo(
-    () => (myMeasurements as any[]).filter(matches).sort(
-      buildComparator(sortAssigned, ["priority", "due_date"])
-    ),
+    () => (myMeasurements as any[]).filter(matches).sort(buildComparator(sortAssigned)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [myMeasurements, search, statusFilter, sortAssigned, i18n.language]
   );
 
-  // Default for free: priority → service → due_date → created_at
   const free = useMemo(
-    () => (freeTasks as any[]).filter(matches).sort(
-      buildComparator(sortFree, ["service", "due_date", "created_at"])
-    ),
+    () => (freeTasks as any[]).filter(matches).sort(buildComparator(sortFree)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [freeTasks, search, statusFilter, sortFree, i18n.language]
   );
@@ -424,44 +443,32 @@ function DurchfuehrerTasksView({
   const fmtDate = (d?: string | null) =>
     d ? new Date(d).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–";
 
-  const sortLabels: Record<SortKey, string> = {
-    priority: "Priorität",
-    service: "Dienstleistung",
-    project: "Kunde / Projekt",
-    workstation: "Objekt / Standort",
-    order_number: "Auftragsnummer",
-    due_date: "Fälligkeitsdatum",
-    created_at: "Erstellungsdatum",
-    status: "Status",
-  };
+  const SortIcon = ({ active, dir }: { active: boolean; dir?: SortDir }) =>
+    !active ? <ArrowUpDown className="h-3 w-3 inline ml-1 opacity-50" />
+    : dir === "asc" ? <ArrowUp className="h-3 w-3 inline ml-1" />
+    : <ArrowDown className="h-3 w-3 inline ml-1" />;
 
-  const SortControls = ({
-    value, onChange, includeStatus = true,
-  }: { value: SortSpec; onChange: (s: SortSpec) => void; includeStatus?: boolean }) => {
-    const keys: SortKey[] = ["priority", "service", "project", "workstation", "order_number", "due_date", "created_at"];
-    if (includeStatus) keys.push("status");
+  const SortableHead = ({
+    label, sortKey, spec, setter, storageKey, className,
+  }: {
+    label: string;
+    sortKey: SortKey;
+    spec: SortSpec;
+    setter: (s: SortSpec) => void;
+    storageKey: string;
+    className?: string;
+  }) => {
+    const active = spec?.key === sortKey;
     return (
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Sortieren nach</span>
-        <Select value={value.key} onValueChange={(k) => onChange({ ...value, key: k as SortKey })}>
-          <SelectTrigger className="w-[190px] h-8 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {keys.map((k) => (
-              <SelectItem key={k} value={k}>{sortLabels[k]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 px-2"
-          onClick={() => onChange({ ...value, dir: value.dir === "asc" ? "desc" : "asc" })}
-          title={value.dir === "asc" ? "Aufsteigend" : "Absteigend"}
+      <TableHead className={className}>
+        <button
+          type="button"
+          onClick={() => toggleSort(spec, setter, storageKey, sortKey)}
+          className={`inline-flex items-center hover:text-foreground ${active ? "text-foreground font-semibold" : ""}`}
         >
-          {value.dir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
-          <span className="ml-1 text-xs">{value.dir === "asc" ? "A→Z" : "Z→A"}</span>
-        </Button>
-      </div>
+          {label}<SortIcon active={active} dir={spec?.dir} />
+        </button>
+      </TableHead>
     );
   };
 
