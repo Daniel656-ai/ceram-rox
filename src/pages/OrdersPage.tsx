@@ -560,22 +560,19 @@ function DurchfuehrerTasksView({
               — freie Aufträge deiner Qualifikationen
             </span>
           </CardTitle>
-          <div className="flex items-center gap-3">
-            <SortControls value={sortFree} onChange={setSortFree} includeStatus={false} />
-            <Badge variant="outline">{free.length}</Badge>
-          </div>
+          <Badge variant="outline">{free.length}</Badge>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Aufgaben-Nr.</TableHead>
-                <TableHead>Dienstleistung</TableHead>
-                <TableHead>Arbeitsplatz</TableHead>
-                <TableHead>{t("orders:order_number")}</TableHead>
-                <TableHead>{t("orders:project_number")}</TableHead>
-                <TableHead>{t("orders:priority")}</TableHead>
-                <TableHead>{t("orders:due_date")}</TableHead>
+                <SortableHead label="Aufgaben-Nr." sortKey="measurement_number" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <SortableHead label="Dienstleistung" sortKey="service" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <SortableHead label="Arbeitsplatz" sortKey="workstation" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <SortableHead label={t("orders:order_number")} sortKey="order_number" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <SortableHead label={t("orders:due_date")} sortKey="due_date" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <TableHead className="w-[180px] text-right">Aktion</TableHead>
               </TableRow>
             </TableHeader>
