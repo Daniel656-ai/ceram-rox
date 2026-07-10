@@ -36,6 +36,8 @@ import BlockLibrary from "@/components/ServiceDesigner/BlockLibrary";
 import VersionsDesigner from "@/components/ServiceDesigner/VersionsDesigner";
 import ImportFieldsDialog from "@/components/ServiceDesigner/ImportFieldsDialog";
 import WorkflowDesigner from "@/components/ServiceDesigner/WorkflowDesigner";
+import WorkflowStepsDesigner from "@/components/ServiceDesigner/WorkflowStepsDesigner";
+import FormsLibrary from "@/components/ServiceDesigner/FormsLibrary";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; label: string }[] }[] = [
   {
