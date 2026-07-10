@@ -71,8 +71,10 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; labe
       { value: "image", label: "Bild" },
       { value: "barcode", label: "Barcode" },
       { value: "qrcode", label: "QR-Code" },
+      { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
     ],
   },
+
   {
     label: "Beziehungen",
     types: [
