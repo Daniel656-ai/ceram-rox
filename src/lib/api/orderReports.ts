@@ -8,6 +8,7 @@ export interface OrderReport {
   order_id: string;
   current_version_no: number;
   auto_generated: boolean;
+  draft_overrides?: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
@@ -28,7 +29,6 @@ export interface OrderReportVersion {
 }
 
 export const orderReports = {
-  /** Get (or create if missing) the report row for an order. */
   async getOrCreateForOrder(orderId: string): Promise<OrderReport | null> {
     const existing = (await unwrap(
       dbClient.from("order_reports" as any).select("*").eq("order_id", orderId).maybeSingle()
@@ -39,12 +39,19 @@ export const orderReports = {
         dbClient.from("order_reports" as any).insert({ order_id: orderId }).select().single()
       )) as unknown as OrderReport;
     } catch {
-      // race condition: another writer inserted; fetch again
       return (await unwrap(
         dbClient.from("order_reports" as any).select("*").eq("order_id", orderId).maybeSingle()
       )) as unknown as OrderReport | null;
     }
   },
+
+  saveDraftOverrides: (reportId: string, overrides: Record<string, any>) =>
+    run(
+      dbClient
+        .from("order_reports" as any)
+        .update({ draft_overrides: overrides as any, updated_at: new Date().toISOString() } as any)
+        .eq("id", reportId)
+    ),
 
   listVersions: (reportId: string) =>
     unwrap(
@@ -55,11 +62,6 @@ export const orderReports = {
         .order("version_no", { ascending: false })
     ) as unknown as Promise<OrderReportVersion[]>,
 
-  /**
-   * Trigger server-side generation of a new report version.
-   * Calls the `generate-order-report` edge function which gathers data,
-   * renders a PDF and stores it in the `order-reports` bucket.
-   */
   async generate(orderId: string, changeReason?: string): Promise<{ version_no: number; pdf_storage_path: string }> {
     const { data, error } = await dbClient.functions.invoke("generate-order-report", {
       body: { order_id: orderId, change_reason: changeReason ?? null },
