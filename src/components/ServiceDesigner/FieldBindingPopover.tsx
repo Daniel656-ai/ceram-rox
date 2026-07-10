@@ -32,8 +32,6 @@ export default function FieldBindingPopover({ binding, onChange, disabled }: Pro
   const presets = src ? BINDING_PRESETS[src].presets : [];
 
   const setSource = (s: BindingSource) => {
-    onChange({ source: s, path: "", editable: false, ...binding });
-    // reset path when source changes
     onChange({ source: s, path: "", editable: binding?.editable ?? false });
   };
 
