@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -15,6 +16,8 @@ import { FileText, Plus, Download, Eye, Printer, History, CheckCircle2, Trash2 }
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import type { OrderReportVersion } from "@/lib/api/orderReports";
+import LiveReportRenderer from "@/components/LiveReportRenderer";
+import { dbClient } from "@/lib/api/client";
 
 export default function OrderReportTab({ orderId }: { orderId: string }) {
   const qc = useQueryClient();
@@ -23,6 +26,7 @@ export default function OrderReportTab({ orderId }: { orderId: string }) {
   const canGenerate = role === "master" || hasPermission("reports.generate");
   const canApprove = role === "master" || hasPermission("reports.approve");
   const canDelete = role === "master" || hasPermission("reports.delete");
+  const canEditDraft = canGenerate;
 
   const { data: report, isLoading } = useQuery({
     queryKey: ["order-report", orderId],
@@ -34,6 +38,20 @@ export default function OrderReportTab({ orderId }: { orderId: string }) {
     queryKey: ["order-report-versions", report?.id],
     queryFn: () => api.orderReports.listVersions(report!.id),
     enabled: !!report?.id,
+  });
+
+  // Erste Messung des Auftrags → Service ableiten für das Layout.
+  const { data: firstServiceId } = useQuery({
+    queryKey: ["order-first-service", orderId],
+    queryFn: async () => {
+      const { data } = await (dbClient as any)
+        .from("order_measurements")
+        .select("service_id")
+        .eq("order_id", orderId)
+        .limit(1);
+      return (data?.[0]?.service_id as string | undefined) ?? null;
+    },
+    enabled: !!orderId,
   });
 
   const currentVersion = useMemo(
@@ -110,7 +128,7 @@ export default function OrderReportTab({ orderId }: { orderId: string }) {
               <FileText className="h-4 w-4" /> Ergebnisbericht
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Automatisch aus Auftrags-, Proben- und Ergebnisdaten generiert. Layout je Dienstleistung im Service Designer konfigurierbar.
+              Live-Ansicht mit automatisch übernommenen Daten. Bearbeiten, PDF erzeugen und freigeben.
             </p>
           </div>
           <div className="flex gap-2">
@@ -122,25 +140,17 @@ export default function OrderReportTab({ orderId }: { orderId: string }) {
                 <Button variant="outline" size="sm" onClick={() => downloadPdf(currentVersion)}>
                   <Download className="h-4 w-4 mr-1" /> PDF
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => currentVersion && openPreview(currentVersion).then(() => window.print())}>
-                  <Printer className="h-4 w-4 mr-1" /> Drucken
-                </Button>
               </>
             )}
             {canGenerate && (
               <Button size="sm" onClick={() => setGenOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Neue Version
+                <Plus className="h-4 w-4 mr-1" /> PDF generieren
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
-          {!currentVersion ? (
-            <div className="text-sm text-muted-foreground py-8 text-center border border-dashed rounded-md">
-              Noch keine Berichtsversion vorhanden.
-              {canGenerate && " Klicke auf „Neue Version“, um den ersten Bericht zu erzeugen."}
-            </div>
-          ) : (
+          {currentVersion ? (
             <div className="grid md:grid-cols-3 gap-3 text-sm">
               <MetaCell label="Aktuelle Version" value={<Badge variant="secondary">v{currentVersion.version_no}</Badge>} />
               <MetaCell label="Erstellt" value={new Date(currentVersion.created_at).toLocaleString("de-AT")} />
@@ -151,80 +161,91 @@ export default function OrderReportTab({ orderId }: { orderId: string }) {
                   : <Badge variant="outline">Ausstehend</Badge>}
               />
             </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Noch keine PDF-Version. Bearbeite unten den Bericht und klicke „PDF generieren".
+            </p>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <History className="h-4 w-4" /> Versionshistorie ({versions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {versions.length === 0 ? (
-            <p className="text-sm text-muted-foreground p-6">Keine Versionen vorhanden.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Erstellt am</TableHead>
-                  <TableHead>Grund</TableHead>
-                  <TableHead>Freigabe</TableHead>
-                  <TableHead className="text-right">Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {versions.map((v) => (
-                  <TableRow key={v.id}>
-                    <TableCell><Badge variant="secondary">v{v.version_no}</Badge></TableCell>
-                    <TableCell>{new Date(v.created_at).toLocaleString("de-AT")}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
-                      {v.change_reason ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      {v.approved_at
-                        ? <Badge className="bg-emerald-600">Freigegeben</Badge>
-                        : <Badge variant="outline">Offen</Badge>}
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="sm" onClick={() => openPreview(v)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => downloadPdf(v)}>
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      {canApprove && !v.approved_at && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => approve.mutate(v.id)}
-                          disabled={approve.isPending}
-                          title="Freigeben"
-                        >
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeVersion.mutate(v.id)}
-                          disabled={removeVersion.isPending}
-                          title="Löschen"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="live" className="w-full">
+        <TabsList>
+          <TabsTrigger value="live">Live-Ansicht</TabsTrigger>
+          <TabsTrigger value="history">Versionshistorie ({versions.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="live" className="mt-3">
+          <LiveReportRenderer
+            orderId={orderId}
+            serviceId={firstServiceId ?? null}
+            canEdit={canEditDraft}
+          />
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <History className="h-4 w-4" /> Versionshistorie
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {versions.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-6">Keine Versionen vorhanden.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Erstellt am</TableHead>
+                      <TableHead>Grund</TableHead>
+                      <TableHead>Freigabe</TableHead>
+                      <TableHead className="text-right">Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {versions.map((v) => (
+                      <TableRow key={v.id}>
+                        <TableCell><Badge variant="secondary">v{v.version_no}</Badge></TableCell>
+                        <TableCell>{new Date(v.created_at).toLocaleString("de-AT")}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">
+                          {v.change_reason ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          {v.approved_at
+                            ? <Badge className="bg-emerald-600">Freigegeben</Badge>
+                            : <Badge variant="outline">Offen</Badge>}
+                        </TableCell>
+                        <TableCell className="text-right space-x-1">
+                          <Button variant="ghost" size="sm" onClick={() => openPreview(v)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => downloadPdf(v)}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          {canApprove && !v.approved_at && (
+                            <Button variant="ghost" size="sm" onClick={() => approve.mutate(v.id)}
+                              disabled={approve.isPending} title="Freigeben">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button variant="ghost" size="sm" onClick={() => removeVersion.mutate(v.id)}
+                              disabled={removeVersion.isPending} title="Löschen">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={genOpen} onOpenChange={setGenOpen}>
         <DialogContent>
@@ -241,7 +262,7 @@ export default function OrderReportTab({ orderId }: { orderId: string }) {
               placeholder="z.B. Nachtrag Messwerte XY, Freigabe-Korrektur, …"
             />
             <p className="text-xs text-muted-foreground">
-              Der Bericht wird serverseitig aus den aktuellen Auftrags-, Proben- und Ergebnisdaten neu generiert und als PDF gespeichert.
+              Alle aktuellen Werte (inkl. Handschrift und Overrides aus der Live-Ansicht) werden übernommen und als PDF gespeichert.
             </p>
           </div>
           <DialogFooter>
