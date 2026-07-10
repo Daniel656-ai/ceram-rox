@@ -123,6 +123,12 @@ import {
   portfolioAnalytics,
   portfolioDashboard,
 } from "./projectPortfolios";
+import {
+  serviceForms,
+  workflowDefinitions,
+  workflowSteps,
+  workflowTasks,
+} from "./workflowDesigner";
 
 
 
