@@ -128,6 +128,7 @@ import {
   workflowDefinitions,
   workflowSteps,
   workflowTasks,
+  workflowStepServices,
 } from "./workflowDesigner";
 import {
   workObjects,
@@ -253,6 +254,7 @@ export const api = {
   workflowDefinitions,
   workflowSteps,
   workflowTasks,
+  workflowStepServices,
 
   // ---- work objects & workflow runtime (Big Bang UI) ----
   workObjects,

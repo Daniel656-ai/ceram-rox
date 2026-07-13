@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { WorkflowStep, WorkflowDefinition } from "@/lib/api/workflowDesigner";
@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Workflow } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Workflow, Link2 } from "lucide-react";
 
 const STEP_TYPES = [
   { value: "form", label: "Formular-Schritt" },
@@ -36,6 +38,8 @@ interface Props {
 export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Partial<WorkflowStep> | null>(null);
+  const [linkedServiceIds, setLinkedServiceIds] = useState<string[]>([]);
+  const [serviceSearch, setServiceSearch] = useState("");
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow-active", serviceId],
@@ -46,6 +50,23 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
     queryKey: ["service-forms", serviceId],
     queryFn: () => api.serviceForms.list(serviceId),
   });
+
+  const { data: allServices = [] } = useQuery({
+    queryKey: ["measurement-services-active"],
+    queryFn: () => api.measurementServices.listActive(),
+  });
+
+  const stepIds = (workflow?.steps ?? []).map((s) => s.id);
+  const { data: allLinks = [] } = useQuery({
+    queryKey: ["workflow-step-services", workflow?.id, stepIds.join(",")],
+    enabled: stepIds.length > 0,
+    queryFn: () => api.workflowStepServices.listForSteps(stepIds),
+  });
+
+  const linksByStep = allLinks.reduce<Record<string, string[]>>((acc, l) => {
+    (acc[l.step_id] ||= []).push(l.service_id);
+    return acc;
+  }, {});
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["workflow-active", serviceId] });
 
@@ -60,18 +81,27 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
     onSuccess: () => { invalidate(); toast.success("Workflow erstellt"); },
   });
 
+  const invalidateLinks = () => qc.invalidateQueries({ queryKey: ["workflow-step-services"] });
+
   const saveStep = useMutation({
     mutationFn: async (step: Partial<WorkflowStep>) => {
-      if (step.id) return api.workflowSteps.update(step.id, step);
-      return api.workflowSteps.create({
-        ...step,
-        workflow_id: workflow!.id,
-        step_key: step.step_key || `step_${Date.now()}`,
-        name: step.name!,
-        step_type: step.step_type || "form",
-      } as any);
+      let saved: WorkflowStep;
+      if (step.id) {
+        await api.workflowSteps.update(step.id, step);
+        saved = { ...(step as WorkflowStep) };
+      } else {
+        saved = await api.workflowSteps.create({
+          ...step,
+          workflow_id: workflow!.id,
+          step_key: step.step_key || `step_${Date.now()}`,
+          name: step.name!,
+          step_type: step.step_type || "form",
+        } as any);
+      }
+      await api.workflowStepServices.setForStep(saved.id, linkedServiceIds);
+      return saved;
     },
-    onSuccess: () => { invalidate(); setEditing(null); toast.success("Gespeichert"); },
+    onSuccess: () => { invalidate(); invalidateLinks(); setEditing(null); setLinkedServiceIds([]); toast.success("Gespeichert"); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -124,7 +154,7 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
             <CardDescription>Prozessschritte für diese Dienstleistung. Reihenfolge = Ausführungsreihenfolge.</CardDescription>
           </div>
           {canManage && (
-            <Button size="sm" onClick={() => setEditing({ step_type: "form", is_mandatory: true, order_index: (steps.at(-1)?.order_index ?? 0) + 10 })}>
+            <Button size="sm" onClick={() => { setLinkedServiceIds([]); setServiceSearch(""); setEditing({ step_type: "form", is_mandatory: true, order_index: (steps.at(-1)?.order_index ?? 0) + 10 }); }}>
               <Plus className="h-4 w-4 mr-1" /> Neuer Schritt
             </Button>
           )}
@@ -144,6 +174,9 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
                   {step.role_required && <Badge variant="outline">{ROLES.find((r) => r.value === step.role_required)?.label ?? step.role_required}</Badge>}
                   {step.is_mandatory && <Badge variant="destructive" className="text-[10px]">Pflicht</Badge>}
                   {step.due_hours && <Badge variant="outline">Frist: {step.due_hours}h</Badge>}
+                  {(linksByStep[step.id]?.length ?? 0) > 0 && (
+                    <Badge variant="outline" className="gap-1"><Link2 className="h-3 w-3" />{linksByStep[step.id].length} Dienstleistungen</Badge>
+                  )}
                 </div>
                 {step.description && <p className="text-xs text-muted-foreground mt-1">{step.description}</p>}
                 {step.form_id && (
@@ -154,7 +187,7 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
               </div>
               {canManage && (
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => setEditing(step)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => { setLinkedServiceIds(linksByStep[step.id] ?? []); setServiceSearch(""); setEditing(step); }}><Pencil className="h-4 w-4" /></Button>
                   <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Schritt "${step.name}" löschen?`)) removeStep.mutate(step.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               )}
@@ -163,8 +196,8 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
         </CardContent>
       </Card>
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setLinkedServiceIds([]); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Schritt bearbeiten" : "Neuer Schritt"}</DialogTitle>
           </DialogHeader>
@@ -218,10 +251,56 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
                 <Switch checked={editing.is_mandatory ?? true} onCheckedChange={(v) => setEditing({ ...editing, is_mandatory: v })} />
                 <Label>Pflichtschritt</Label>
               </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="flex items-center gap-2"><Link2 className="h-4 w-4" /> Verknüpfte Dienstleistungen</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Beim Abschluss dieses Schritts werden alle gewählten Dienstleistungen im Auftrag automatisch auf „Erledigt" gesetzt.
+                    </p>
+                  </div>
+                  <Badge variant="secondary">{linkedServiceIds.length} ausgewählt</Badge>
+                </div>
+                <Input
+                  placeholder="Dienstleistung suchen…"
+                  value={serviceSearch}
+                  onChange={(e) => setServiceSearch(e.target.value)}
+                />
+                <ScrollArea className="h-56 border rounded-md p-2">
+                  <div className="space-y-1">
+                    {allServices
+                      .filter((s: any) =>
+                        !serviceSearch ||
+                        (s.service_name ?? "").toLowerCase().includes(serviceSearch.toLowerCase())
+                      )
+                      .map((s: any) => {
+                        const checked = linkedServiceIds.includes(s.id);
+                        return (
+                          <label key={s.id} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted cursor-pointer">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                setLinkedServiceIds((prev) =>
+                                  v ? [...prev, s.id] : prev.filter((id) => id !== s.id)
+                                );
+                              }}
+                            />
+                            <span className="text-sm flex-1">{s.service_name}</span>
+                            {s.category && <Badge variant="outline" className="text-[10px]">{s.category}</Badge>}
+                          </label>
+                        );
+                      })}
+                    {allServices.length === 0 && (
+                      <p className="text-xs text-muted-foreground p-2">Keine Dienstleistungen verfügbar.</p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Abbrechen</Button>
+            <Button variant="outline" onClick={() => { setEditing(null); setLinkedServiceIds([]); }}>Abbrechen</Button>
             <Button onClick={() => editing && saveStep.mutate(editing)} disabled={!editing?.name}>Speichern</Button>
           </DialogFooter>
         </DialogContent>
