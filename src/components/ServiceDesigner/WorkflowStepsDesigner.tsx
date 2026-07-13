@@ -53,7 +53,7 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
 
   const { data: allServices = [] } = useQuery({
     queryKey: ["measurement-services-active"],
-    queryFn: () => api.measurementServices.list(),
+    queryFn: () => api.measurementServices.listActive(),
   });
 
   const stepIds = (workflow?.steps ?? []).map((s) => s.id);
