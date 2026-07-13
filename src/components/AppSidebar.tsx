@@ -17,7 +17,7 @@ import {
   KeyRound,
   
   Layers,
-  Zap,
+  
   CopyPlus,
   Kanban,
   AlertTriangle,
@@ -66,7 +66,7 @@ export function AppSidebar() {
   // Build navigation items based on permissions AND nav visibility
   const navItems = [
     { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard, show: true, nav: "nav.dashboard" },
-    { title: "Meine Arbeit", url: "/arbeit", icon: Zap, show: true, nav: null as string | null },
+    
     { title: role === "master" ? t("navigation:all_orders") : role === "durchfuehrer" ? t("navigation:my_orders") : t("navigation:orders"), url: "/auftraege", icon: ClipboardList, show: hasPerm("orders.view") || hasPerm("orders.create"), nav: "nav.orders" },
     { title: t("navigation:projects"), url: "/projekte", icon: FolderOpen, show: hasPerm("projects.view") || hasPerm("projects.create"), nav: "nav.projects" },
     { title: "Projektportfolio", url: "/portfolios", icon: Briefcase, show: hasPerm("portfolios.view") || role === "master", nav: "nav.portfolios" },
