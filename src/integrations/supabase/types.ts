@@ -787,12 +787,14 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          customer_name: string | null
           due_date: string | null
           id: string
           notes: string | null
           order_kind: Database["public"]["Enums"]["order_kind"]
           order_number: string | null
           order_type: Database["public"]["Enums"]["order_type"]
+          origin: string | null
           pp_experiment_date: string | null
           pp_experiment_kind: string | null
           pp_experiment_number: string | null
@@ -804,6 +806,8 @@ export type Database = {
           priority: Database["public"]["Enums"]["order_priority"]
           project_id: string
           ranking: number | null
+          reference_number: string | null
+          reference_type: Database["public"]["Enums"]["reference_type"] | null
           sample_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
@@ -812,12 +816,14 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          customer_name?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
           order_kind?: Database["public"]["Enums"]["order_kind"]
           order_number?: string | null
           order_type: Database["public"]["Enums"]["order_type"]
+          origin?: string | null
           pp_experiment_date?: string | null
           pp_experiment_kind?: string | null
           pp_experiment_number?: string | null
@@ -829,6 +835,8 @@ export type Database = {
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id: string
           ranking?: number | null
+          reference_number?: string | null
+          reference_type?: Database["public"]["Enums"]["reference_type"] | null
           sample_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
@@ -839,12 +847,14 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          customer_name?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
           order_kind?: Database["public"]["Enums"]["order_kind"]
           order_number?: string | null
           order_type?: Database["public"]["Enums"]["order_type"]
+          origin?: string | null
           pp_experiment_date?: string | null
           pp_experiment_kind?: string | null
           pp_experiment_number?: string | null
@@ -856,6 +866,8 @@ export type Database = {
           priority?: Database["public"]["Enums"]["order_priority"]
           project_id?: string
           ranking?: number | null
+          reference_number?: string | null
+          reference_type?: Database["public"]["Enums"]["reference_type"] | null
           sample_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
@@ -4398,6 +4410,39 @@ export type Database = {
           },
         ]
       }
+      reference_number_sequences: {
+        Row: {
+          created_at: string
+          id: string
+          next_seq: number
+          origin: string
+          pattern: string
+          reference_type: Database["public"]["Enums"]["reference_type"]
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          next_seq?: number
+          origin: string
+          pattern?: string
+          reference_type: Database["public"]["Enums"]["reference_type"]
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          next_seq?: number
+          origin?: string
+          pattern?: string
+          reference_type?: Database["public"]["Enums"]["reference_type"]
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           created_at: string
@@ -5036,6 +5081,54 @@ export type Database = {
           },
         ]
       }
+      service_package_workflow_map: {
+        Row: {
+          append_steps: Json
+          created_at: string
+          id: string
+          package_id: string
+          prepend_steps: Json
+          requires_kneading: boolean
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          append_steps?: Json
+          created_at?: string
+          id?: string
+          package_id: string
+          prepend_steps?: Json
+          requires_kneading?: boolean
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          append_steps?: Json
+          created_at?: string
+          id?: string
+          package_id?: string
+          prepend_steps?: Json
+          requires_kneading?: boolean
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_package_workflow_map_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: true
+            referencedRelation: "service_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_package_workflow_map_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_packages: {
         Row: {
           created_at: string
@@ -5607,6 +5700,140 @@ export type Database = {
           },
         ]
       }
+      work_object_origins: {
+        Row: {
+          created_at: string
+          default_reference_type: Database["public"]["Enums"]["reference_type"]
+          default_workflow_template_id: string | null
+          id: string
+          is_active: boolean
+          key: string
+          label_de: string
+          label_en: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_reference_type?: Database["public"]["Enums"]["reference_type"]
+          default_workflow_template_id?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          label_de: string
+          label_en: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_reference_type?: Database["public"]["Enums"]["reference_type"]
+          default_workflow_template_id?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          label_de?: string
+          label_en?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      workflow_template_steps: {
+        Row: {
+          condition_expr: Json
+          created_at: string
+          description: string | null
+          due_hours: number | null
+          form_id: string | null
+          id: string
+          is_mandatory: boolean
+          name: string
+          order_index: number
+          role_required: string | null
+          step_key: string
+          step_type: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          condition_expr?: Json
+          created_at?: string
+          description?: string | null
+          due_hours?: number | null
+          form_id?: string | null
+          id?: string
+          is_mandatory?: boolean
+          name: string
+          order_index: number
+          role_required?: string | null
+          step_key: string
+          step_type?: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          condition_expr?: Json
+          created_at?: string
+          description?: string | null
+          due_hours?: number | null
+          form_id?: string | null
+          id?: string
+          is_mandatory?: boolean
+          name?: string
+          order_index?: number
+          role_required?: string | null
+          step_key?: string
+          step_type?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_template_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          origin: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          origin?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          origin?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       workstation_downtimes: {
         Row: {
           created_at: string
@@ -5798,6 +6025,10 @@ export type Database = {
           _quantity: number
         }
         Returns: string
+      }
+      bootstrap_order_workflow: {
+        Args: { p_order_id: string }
+        Returns: undefined
       }
       can_edit_project_governance: {
         Args: { _project_id: string; _user_id: string }
@@ -6113,6 +6344,13 @@ export type Database = {
           unit: string
         }[]
       }
+      next_reference_number: {
+        Args: {
+          p_origin: string
+          p_reference_type: Database["public"]["Enums"]["reference_type"]
+        }
+        Returns: string
+      }
       priority_enum_to_int: {
         Args: { p: Database["public"]["Enums"]["order_priority"] }
         Returns: number
@@ -6159,6 +6397,13 @@ export type Database = {
         Returns: string
       }
       release_mixture_batch: { Args: { _batch_id: string }; Returns: undefined }
+      resolve_workflow_template: {
+        Args: { p_order_id: string }
+        Returns: {
+          requires_kneading: boolean
+          template_id: string
+        }[]
+      }
       start_mixture_batch:
         | { Args: { _batch_id: string }; Returns: undefined }
         | {
@@ -6283,6 +6528,13 @@ export type Database = {
         | "in_pruefung"
         | "freigegeben"
         | "abgelehnt"
+      reference_type:
+        | "experiment"
+        | "serial"
+        | "batch"
+        | "complaint"
+        | "customer_ref"
+        | "internal"
       sample_status:
         | "neu"
         | "eingelagert"
@@ -6584,6 +6836,14 @@ export const Constants = {
         "in_pruefung",
         "freigegeben",
         "abgelehnt",
+      ],
+      reference_type: [
+        "experiment",
+        "serial",
+        "batch",
+        "complaint",
+        "customer_ref",
+        "internal",
       ],
       sample_status: [
         "neu",

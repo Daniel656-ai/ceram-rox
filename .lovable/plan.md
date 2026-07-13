@@ -1,102 +1,118 @@
-# Umbau Service Designer → Workflow- & Prozessdesigner
+# Umbau ROX: Workflow-orientierte Arbeitsobjekte
 
-Das ist ein architektureller Großumbau, der ROX vom formularzentrierten zum prozesszentrierten Modell verschiebt. Ich schlage vor, in **vier klar abgetrennten Phasen** vorzugehen, damit bestehende Dienstleistungen, Aufträge und Auswertungen jederzeit lauffähig bleiben. Jede Phase ist eigenständig auslieferbar.
+## Grundentscheidungen (bestätigt)
+- `measurement_orders` bleibt die zentrale Tabelle und wird zum „Arbeitsobjekt". Alte `order_number` bleibt intern für Verrechnung/KPIs, neue `reference_number` wird UI-Hauptkennzeichnung.
+- 7 Startursprünge (Pilot Plant, Produktion, QC, Labor, Reklamation, Entwicklung, Kundenauftrag), später im Admin erweiterbar.
+- Kunde als Freitextfeld.
+- Workflow-Vorlage wird primär über den **Ursprung** bestimmt, Servicepakete können die Vorlage ergänzen.
+- Big-Bang-Umstellung der Benutzeroberfläche für alle Rollen — kein Feature-Flag pro User.
 
-Bitte prüfen und bestätigen — oder mir sagen, welche Phase zuerst umgesetzt werden soll.
+## Phase A: Datenbank-Fundament
 
----
+Neue Spalten in `measurement_orders`:
+- `reference_type` (enum: experiment, serial, batch, complaint, customer_ref, internal)
+- `reference_number` (text, unique je Jahr/Origin)
+- `origin` (text, verweist auf `work_object_origins.key`)
+- `customer_name` (text, Freitext)
 
-## Phase 1 – Fundament: getrennte Workflow- & Formular-Architektur
+Neue Katalog-/Konfig-Tabellen:
+- `work_object_origins` — pflegbarer Ursprungskatalog mit Default-Vorlage
+- `reference_number_sequences` — Nummernkreise `(origin, reference_type, year)` mit `pattern` (z. B. `V{yy}-{seq:03}`)
+- `workflow_templates` — benannte Vorlagen (Bezug zu Origin optional)
+- `workflow_template_steps` — Schritte einer Vorlage (order_index, step_key, name, role_required, form_id, is_mandatory, condition_expr jsonb, due_hours)
+- `service_package_workflow_map` — verknüpft Servicepaket mit Vorlage; Flag `requires_kneading`, `prepend_steps`, `append_steps`
 
-Ziel: Datenmodell und Admin-UI so entkoppeln, dass Prozess und Formular voneinander unabhängig existieren. Keine Änderung am bestehenden Auftragslauf.
+Trigger `trg_bootstrap_workflow` (AFTER INSERT auf `measurement_orders`):
+1. Vorlage bestimmen (explizit → Servicepaket-Map → Origin-Default)
+2. Steps kopieren in `service_workflow_definitions` + `service_workflow_steps` (Auftrags-spezifisch)
+3. Bei `requires_kneading = false` Steps `weighing` und `kneading` entfernen
+4. `reference_number` aus Sequenz + Pattern generieren (falls leer)
+5. `order_workflow_instance` + erste `order_workflow_tasks` anlegen
 
-**Datenbank (neu)**
-- `service_workflow_definitions` — pro Service ein aktueller Workflow (versioniert).
-- `service_workflow_steps` — Schritte mit Feldern: name, description, role_required, assignee_user_id, form_id (nullable), is_mandatory, order_index, condition_expr (jsonb), due_hours, escalation_role, auto_actions (jsonb), notify_config (jsonb).
-- `service_forms` — Formular als eigenständige Entität (heute in `service_data_fields`/`service_form_layouts` verstreut).
-- `order_workflow_instances` — pro Auftrag/Messung eine laufende Workflow-Instanz.
-- `order_workflow_tasks` — konkrete Aufgabe pro Schritt (assigned_to, status, opened_at, completed_at, form_response_id).
+Backfill für bestehende Aufträge:
+- `reference_type = 'experiment'`, `reference_number = pp_experiment_number ?? order_number`
+- `origin` aus `order_kind` ableiten (`pilot_plant` → Pilot Plant, `labor` → Labor, `combined` → Pilot Plant)
 
-Alle Tabellen mit RLS + GRANT nach Standardmuster (auftraggeber/durchfuehrer/master + PMO).
+Seed-Daten:
+- 7 Origins mit deutschen/englischen Labels
+- 2 Start-Vorlagen: „Pilot Plant Standardversuch" (Verwiegen → Kneten → Extrusion → Trocknung → Brennen → Probenerzeugung → Laborprüfungen → Bericht) und „Produktionsunterstützung" (ohne Verwiegen/Kneten)
+- Nummernkreise für alle Origins
 
-**Migration bestehender Services**
-- Skript legt für jeden bestehenden Service einen Default-Workflow an: `Auftraggeberformular → Messdienstleisterformular → Ergebnisbericht`.
-- Bestehende `service_data_fields` werden in `service_forms` gruppiert (Auftraggeber-, Messdienstleister-Formular). Keine Datenlöschung, alte Tabellen bleiben lesbar erhalten.
-- Bestehende offene Aufträge bekommen automatisch eine `order_workflow_instances`-Zeile im passenden Schritt (basierend auf `status`).
+## Phase B: API-Fassade
 
-**Admin-UI**
-- `AdminServiceDesignerPage` wird in zwei Tabs geteilt:
-  - **Workflow** (neuer grafischer Designer, siehe Phase 2)
-  - **Formulare** (bestehender `FormDesigner`, aber pro Formular statt pro Service)
-- Formulare sind service-übergreifend wiederverwendbar (z. B. „Standard-Auftraggeberformular").
+Neues API-Modul `src/lib/api/workObjects.ts`:
+- `list({ origin?, referenceType?, assignedToMe? })`
+- `get(id)` — inkl. Workflow-Progress, Proben, Dokumente, Ergebnisse
+- `myOpenTasks()` — `order_workflow_tasks` des angemeldeten Users, gruppiert nach Origin
+- `openTask(taskId)` — lädt Task + gebundenes Formular
+- `completeTask(taskId, response)` — schließt Task, aktiviert Nachfolger
 
----
+Bestehende `api.orders.*`, `api.measurements.*`, `api.samples.*` bleiben unverändert erhalten.
 
-## Phase 2 – Grafischer Workflow Designer
+Admin-API `src/lib/api/workflowConfig.ts`:
+- CRUD für Origins, Vorlagen, Vorlagen-Schritte, Nummernkreise, Paket-Mapping
 
-Ziel: Admin baut Prozesse per Drag & Drop.
+## Phase C: Neue Benutzeroberfläche (Big Bang)
 
-- Neue Komponente `WorkflowCanvas` auf Basis von **React Flow** (`@xyflow/react`, bereits leichtgewichtig, MIT-Lizenz).
-- Node-Typen: Start, Formular-Schritt, Freigabe, Bedingung (if/else), Automatische Aktion, Ende.
-- Rechte Seitenleiste = Schritt-Eigenschaften (alle Felder aus der Anforderung: Rolle, Benutzer, Formular-Auswahl, Pflicht ja/nein, Frist, Eskalation, Benachrichtigung, Folgeaktion, Bedingung).
-- Verbindungen definieren Reihenfolge; bedingte Kanten aus Bedingungsknoten.
-- Speichern versioniert den Workflow (analog zu `service_versions`); aktive Aufträge laufen auf ihrer eingefrorenen Version weiter.
+Neue Seiten:
+- `/arbeit` — Meine Arbeitsliste. Karten pro offener Task mit großer Referenznummer, Origin-Badge, Step-Name, Frist. Klick öffnet direkt Formular.
+- `/arbeit/:id` — Arbeitsobjekt-Detail. Kopfzeile:
+  ```text
+  ┌──────────────────────────────────────────────────┐
+  │ [Origin]  V25-043                    Status: ▶   │
+  │           Pilot Plant Extrusion                   │
+  │ Projekt · Auftraggeber · Kunde · Fortschritt: 3/8 │
+  └──────────────────────────────────────────────────┘
+  ```
+  Darunter horizontaler Workflow-Stepper (Offen/In Bearbeitung/Erledigt) und Tabs „Proben", „Dokumente", „Ergebnisse", „Historie", „Arbeitsauftrag".
 
----
+Umgestaltete Seiten:
+- `OrdersPage` → wird zu „Arbeitsobjekte" (Filter nach Origin/Referenztyp, Referenznummer als primäre Spalte)
+- `CreateOrderPage` → Auswahl Ursprung + Servicepaket bestimmt Workflow automatisch, keine manuelle Dienstleistungsauswahl mehr
+- `Dashboard` → „Meine offenen Schritte" als Haupt-Widget
+- Sidebar: neuer Menüpunkt „Meine Arbeit" oben; alte Dienstleistungs-Ansichten unter Admin
 
-## Phase 3 – Runtime & „Meine Aufgaben" automatisch
+Neue Komponenten:
+- `WorkObjectHeader` — Kopf mit großer Referenznummer
+- `WorkflowProgress` — Stepper-Darstellung
+- `TaskExecutionDialog` — öffnet Formular direkt
+- `OriginBadge`
 
-Ziel: Aufgabe = reiner Workflow-Schritt, öffnet automatisch das richtige Formular.
+## Phase D: Admin-Bereich
 
-- Neuer Datenbank-Trigger: bei Abschluss einer `order_workflow_tasks` wird der nächste Schritt gestartet (unter Beachtung der Bedingungen), passende `order_workflow_tasks` werden erzeugt, Benachrichtigungen versendet.
-- „Meine Aufgaben" (`OrdersPage` Durchführer-View) zeigt statt Messungen künftig `order_workflow_tasks`.
-- Klick auf Aufgabe → Route `/aufgaben/:taskId` lädt den Task, resolved `form_id` und rendert dynamisch:
-  - `LiveFormRenderer` (aus bestehender `LiveReportRenderer`-Logik weiterentwickelt) — zeigt Auftrag/Projekt/Probendaten schreibgeschützt oben, Eingabefelder darunter.
-- Nach Speichern: Task-Status → `completed`, Runtime-Trigger triggert Folgeschritt.
-- Bestehende Route `/aufgaben/:measurementId` bleibt als Fallback für nicht migrierte Messungen erhalten.
+Neue Admin-Seiten:
+- `/admin/origins` — Ursprünge verwalten, Default-Vorlage zuweisen
+- `/admin/workflow-templates` — Vorlagen und Schritte pflegen (Drag & Drop, Formular-Bindung)
+- `/admin/reference-sequences` — Nummernkreise pflegen
+- Erweiterung `AdminServicePackagesPage` um Reiter „Workflow-Verknüpfung" (Vorlage + Kneten-Flag + Zusatzschritte)
 
-**Auto-Aktionen (v1)**
-- „Nächster Schritt", „Benachrichtigung an Rolle X", „Status setzen", „Ergebnisbericht aktualisieren", „Auftrag abschließen". Weitere Aktionen (PDF, E-Mail, Archivierung) folgen in Phase 4.
+## Was unverändert bleibt
 
----
+- `measurement_services`, `order_measurements`, `measurement_results` — Struktur und Verrechnung
+- `service_packages`, `service_package_items` — nur Erweiterung durch Mapping-Tabelle
+- Bestehende Berichte (`order_reports`), Report-Bindings
+- Rollen/Permissions (`user_roles`, `has_role`)
+- Ergebnisdatenbank, Auswertungen, KPIs
+- Bestehende Auftragsnummern und PP-Felder
 
-## Phase 4 – Ergebnisbericht & Automatisierungen erweitern
+## Umsetzungsreihenfolge
 
-Ziel: Ergebnisbericht wird zum reinen Aggregations-Dokument, keine Doppelerfassung.
+1. **Migration A1** — Schema-Erweiterung `measurement_orders` + neue Katalogtabellen + Seeds + Backfill (kein Trigger aktiv)
+2. **Migration A2** — Trigger + Sequenzfunktionen aktivieren
+3. **API-Fassade** (`workObjects`, `workflowConfig`)
+4. **Neue UI-Komponenten** (Header, Progress, Task-Dialog)
+5. **Neue Seiten** `/arbeit`, `/arbeit/:id`
+6. **Umbau bestehender Seiten** (Orders, CreateOrder, Dashboard, Sidebar)
+7. **Admin-Seiten** für Origins/Vorlagen/Sequenzen
+8. **Cleanup**: Alte „Meine Aufgaben"-Ansicht deaktivieren, i18n-Strings aktualisieren
 
-- `LiveReportRenderer` wird an das neue Formular-/Workflow-Modell angebunden.
-- Bindings verweisen direkt auf: `order`, `project`, `sample`, `form_response(form_id, field_key)` — Single Source of Truth.
-- Benutzer erfasst nur noch Interpretation/Bewertung/Empfehlung.
-- Zusätzliche Auto-Aktionen: E-Mail per Edge Function, PDF-Erzeugung, Dokumentenarchivierung.
-- Eskalations-Cron: überfällige Tasks → Benachrichtigung an Eskalations-Rolle.
+## Risiken & Absicherung
 
----
+- **Backfill bricht Verrechnungsauswertungen** → `order_number` bleibt unverändert; nur Anzeige-Priorität wechselt
+- **Trigger-Fehler blockiert Auftragsanlage** → Trigger als `SECURITY DEFINER` mit Exception-Handling; bei Fehler Fallback auf leere Instanz + Log
+- **Bestehende Aufträge ohne Workflow-Instanz** → Backfill legt für alle offenen Aufträge eine Instanz aus Default-Vorlage an
+- **RLS** → neue Tabellen erhalten `GRANT` + Policies für `authenticated` (lesen) und `master` (schreiben)
 
-## Technischer Rahmen
+## Umfang
 
-- Alles nur über `src/lib/api/*` — kein direkter Supabase-Zugriff aus UI (Projektregel).
-- Rückwärtskompatibilität: alte Tabellen (`measurement_orders`, `order_measurements`, `service_data_fields`, `service_form_layouts`) bleiben lesbar und schreibbar; Runtime bevorzugt neue Tabellen, fällt sonst auf alte zurück.
-- i18n DE/EN von Anfang an.
-- Keine Löschung, keine Zerstörung historischer Auftragsdaten.
-
----
-
-## Umfang & Aufwand (Einschätzung)
-
-| Phase | Umfang | Neue Tabellen | Neue Komponenten |
-|---|---|---|---|
-| 1 – Fundament | Groß | 5 | 2 (Split-Tabs, FormLibrary) |
-| 2 – Canvas Designer | Groß | 0 | 4 (Canvas, Node-Typen, Sidebar) |
-| 3 – Runtime | Mittel | 0 | 2 (LiveFormRenderer, TaskPage-Rewrite) |
-| 4 – Berichte/Automation | Mittel | 0 | 3 (Aktions-Engine, Cron, E-Mail-EF) |
-
-Umsetzung in einem Durchgang ist möglich, aber riskant für laufende Aufträge. Ich empfehle klar **Phase-für-Phase mit Zwischenabnahme**.
-
----
-
-## Rückfragen an dich
-
-1. **Reihenfolge**: Fange ich mit **Phase 1** (Fundament + Migration) an? Oder willst du zuerst den **grafischen Designer** (Phase 2) sehen, auch wenn die Runtime dann noch die alte bleibt?
-2. **Formulare wiederverwendbar**: Sollen Formulare service-übergreifend nutzbar sein (z. B. ein globales „Auftraggeberformular"), oder bleiben sie 1:1 an einen Service gebunden?
-3. **React Flow OK**: Für den grafischen Designer würde ich `@xyflow/react` einsetzen (leichtgewichtig, ~40 KB gz). Einverstanden?
-4. **Alte „Messungen"-Ansicht**: Soll die klassische Messungs-Ansicht während der Übergangszeit parallel bestehen bleiben, oder direkt durch die Workflow-Aufgaben-Ansicht ersetzt werden?
+Diese Umstellung ist groß (geschätzt 15-25 Dateien, 3-4 Migrationen, mehrere Iterationen). Ich starte nach Freigabe mit Phase A und stimme mich nach jeder Phase kurz mit dir ab.

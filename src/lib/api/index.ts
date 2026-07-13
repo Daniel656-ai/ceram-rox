@@ -129,6 +129,13 @@ import {
   workflowSteps,
   workflowTasks,
 } from "./workflowDesigner";
+import {
+  workObjects,
+  workObjectOrigins,
+  workflowTemplates,
+  servicePackageWorkflowMap,
+  workTasks,
+} from "./workObjects";
 
 
 
@@ -246,6 +253,14 @@ export const api = {
   workflowDefinitions,
   workflowSteps,
   workflowTasks,
+
+  // ---- work objects & workflow runtime (Big Bang UI) ----
+  workObjects,
+  workObjectOrigins,
+  workflowTemplates,
+  servicePackageWorkflowMap,
+  workTasks,
+
 
 
 
