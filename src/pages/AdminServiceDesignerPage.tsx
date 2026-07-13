@@ -75,8 +75,14 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; labe
       { value: "qrcode", label: "QR-Code" },
       { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
     ],
-  },
+    },
 
+  {
+    label: "Berechnung",
+    types: [
+      { value: "computed", label: "Berechnetes Feld (Formel)" },
+    ],
+  },
   {
     label: "Beziehungen",
     types: [
