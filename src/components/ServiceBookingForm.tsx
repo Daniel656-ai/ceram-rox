@@ -359,6 +359,17 @@ function SectionFieldGrid({
                 onChange={(v) => onValueChange(f.field_key, v)}
                 compact={compact}
               />
+            ) : f.field_type === "computed" ? (
+              <div className="rounded-md border border-primary/40 bg-primary/5 p-2">
+                <Label className="text-xs flex items-center gap-1">
+                  <Calculator className="h-3 w-3 text-primary" />
+                  {label}
+                  {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
+                  <Badge variant="outline" className="ml-auto text-[9px] uppercase tracking-wide">auto</Badge>
+                </Label>
+                {help && !compact && <p className="text-[10px] text-muted-foreground mb-1">{help}</p>}
+                <Input readOnly value={val ?? ""} className={`${inputSize} font-mono bg-background`} placeholder="wird automatisch berechnet" />
+              </div>
             ) : (
               <>
                 <Label className="text-xs flex items-center gap-1">
