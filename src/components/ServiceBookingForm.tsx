@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat } from "lucide-react";
+import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat, Calculator } from "lucide-react";
 import UploadField from "@/components/upload/UploadField";
+import { evaluateFormula } from "@/lib/formulaEngine";
 import type { FormRoleView, FormSection, RepeatableConfig } from "@/lib/api/serviceFormLayouts";
 
 interface Props {
