@@ -174,6 +174,9 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
                   {step.role_required && <Badge variant="outline">{ROLES.find((r) => r.value === step.role_required)?.label ?? step.role_required}</Badge>}
                   {step.is_mandatory && <Badge variant="destructive" className="text-[10px]">Pflicht</Badge>}
                   {step.due_hours && <Badge variant="outline">Frist: {step.due_hours}h</Badge>}
+                  {(linksByStep[step.id]?.length ?? 0) > 0 && (
+                    <Badge variant="outline" className="gap-1"><Link2 className="h-3 w-3" />{linksByStep[step.id].length} Dienstleistungen</Badge>
+                  )}
                 </div>
                 {step.description && <p className="text-xs text-muted-foreground mt-1">{step.description}</p>}
                 {step.form_id && (
