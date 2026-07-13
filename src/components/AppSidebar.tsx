@@ -17,7 +17,7 @@ import {
   KeyRound,
   
   Layers,
-  Zap,
+  
   CopyPlus,
   Kanban,
   AlertTriangle,
