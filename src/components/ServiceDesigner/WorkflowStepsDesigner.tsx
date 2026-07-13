@@ -196,8 +196,8 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
         </CardContent>
       </Card>
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setLinkedServiceIds([]); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Schritt bearbeiten" : "Neuer Schritt"}</DialogTitle>
           </DialogHeader>
