@@ -547,7 +547,7 @@ function FieldDialog({
         min_value: form.min_value != null && form.min_value !== ("" as any) ? Number(form.min_value) : null,
         max_value: form.max_value != null && form.max_value !== ("" as any) ? Number(form.max_value) : null,
         decimal_places: form.decimal_places != null && form.decimal_places !== ("" as any) ? Number(form.decimal_places) : null,
-        readonly: !!form.readonly,
+        readonly: form.field_type === "computed" ? true : !!form.readonly,
         archived: !!form.archived,
         select_options: needsOptions
           ? optionsText.split("\n").map((s) => s.trim()).filter(Boolean)
