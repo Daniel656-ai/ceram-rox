@@ -864,7 +864,6 @@ function ComputedFieldConfigPanel({
     if (!formula) return null;
     const ctx: Record<string, number> = {};
     for (const f of fields as any[]) ctx[f.field_key] = 1;
-    const { evaluateFormula } = require("@/lib/formulaEngine") as typeof import("@/lib/formulaEngine");
     const r = evaluateFormula(formula, ctx);
     return r;
   })();
