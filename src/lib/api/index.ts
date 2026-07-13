@@ -128,6 +128,7 @@ import {
   workflowDefinitions,
   workflowSteps,
   workflowTasks,
+  workflowStepServices,
 } from "./workflowDesigner";
 import {
   workObjects,
