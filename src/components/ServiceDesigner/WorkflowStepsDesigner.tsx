@@ -38,6 +38,8 @@ interface Props {
 export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Partial<WorkflowStep> | null>(null);
+  const [linkedServiceIds, setLinkedServiceIds] = useState<string[]>([]);
+  const [serviceSearch, setServiceSearch] = useState("");
 
   const { data: workflow, isLoading } = useQuery({
     queryKey: ["workflow-active", serviceId],
@@ -48,6 +50,23 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
     queryKey: ["service-forms", serviceId],
     queryFn: () => api.serviceForms.list(serviceId),
   });
+
+  const { data: allServices = [] } = useQuery({
+    queryKey: ["measurement-services-active"],
+    queryFn: () => api.measurementServices.list(),
+  });
+
+  const stepIds = (workflow?.steps ?? []).map((s) => s.id);
+  const { data: allLinks = [] } = useQuery({
+    queryKey: ["workflow-step-services", workflow?.id, stepIds.join(",")],
+    enabled: stepIds.length > 0,
+    queryFn: () => api.workflowStepServices.listForSteps(stepIds),
+  });
+
+  const linksByStep = allLinks.reduce<Record<string, string[]>>((acc, l) => {
+    (acc[l.step_id] ||= []).push(l.service_id);
+    return acc;
+  }, {});
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["workflow-active", serviceId] });
 
