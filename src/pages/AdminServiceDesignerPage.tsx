@@ -655,6 +655,15 @@ function FieldDialog({
           {isEdit && (form.field_type === "file" || form.field_type === "image") && (form.validation as any)?.upload?.templates_enabled && (
             <FieldTemplatesManager fieldId={field!.id} />
           )}
+
+          {form.field_type === "computed" && (
+            <ComputedFieldConfigPanel
+              serviceId={serviceId}
+              currentKey={form.field_key ?? ""}
+              formula={(form.validation as any)?.formula ?? ""}
+              onChange={(formula) => setForm((f) => ({ ...f, validation: { ...(f.validation ?? {}), formula } as any }))}
+            />
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
