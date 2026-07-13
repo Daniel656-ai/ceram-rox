@@ -5361,6 +5361,42 @@ export type Database = {
           },
         ]
       }
+      service_workflow_step_services: {
+        Row: {
+          created_at: string
+          id: string
+          service_id: string
+          step_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_id: string
+          step_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_id?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_workflow_step_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_workflow_step_services_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "service_workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_workflow_steps: {
         Row: {
           assignee_user_id: string | null
