@@ -166,8 +166,26 @@ export const workflowStepServices = {
         .eq("step_id", stepId)
     ) as unknown as Promise<WorkflowStepService[]>,
 
+  listForSteps: (stepIds: string[]) => {
+    if (stepIds.length === 0) return Promise.resolve([] as WorkflowStepService[]);
+    return unwrap(
+      dbClient
+        .from("service_workflow_step_services" as any)
+        .select("*")
+        .in("step_id", stepIds)
+    ) as unknown as Promise<WorkflowStepService[]>;
+  },
+
   setForStep: async (stepId: string, serviceIds: string[]) => {
     await run(dbClient.from("service_workflow_step_services" as any).delete().eq("step_id", stepId));
+    if (serviceIds.length === 0) return;
+    await run(
+      dbClient
+        .from("service_workflow_step_services" as any)
+        .insert(serviceIds.map((sid) => ({ step_id: stepId, service_id: sid })) as any)
+    );
+  },
+};
     if (serviceIds.length === 0) return;
     await run(
       dbClient
