@@ -28,6 +28,7 @@ import {
   FileText, Eye, History, Settings, GripVertical, Layers, Upload,
 } from "lucide-react";
 import type { ServiceDataField, ServiceFieldType } from "@/lib/api/serviceDesigner";
+import { evaluateFormula } from "@/lib/formulaEngine";
 import FormDesignerTab from "@/components/ServiceDesigner/FormDesigner";
 import RulesDesigner from "@/components/ServiceDesigner/RulesDesigner";
 import DocumentsDesigner from "@/components/ServiceDesigner/DocumentsDesigner";
