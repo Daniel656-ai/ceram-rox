@@ -6606,6 +6606,7 @@ export type Database = {
         | "ref_serial"
         | "repeater"
         | "handwriting"
+        | "computed"
       service_version_entity: "form_layout" | "document_template" | "block"
       service_version_status: "draft" | "published" | "archived"
       stakeholder_channel: "email" | "phone" | "meeting" | "portal" | "other"
@@ -6917,6 +6918,7 @@ export const Constants = {
         "ref_serial",
         "repeater",
         "handwriting",
+        "computed",
       ],
       service_version_entity: ["form_layout", "document_template", "block"],
       service_version_status: ["draft", "published", "archived"],

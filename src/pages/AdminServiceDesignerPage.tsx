@@ -28,6 +28,7 @@ import {
   FileText, Eye, History, Settings, GripVertical, Layers, Upload,
 } from "lucide-react";
 import type { ServiceDataField, ServiceFieldType } from "@/lib/api/serviceDesigner";
+import { evaluateFormula } from "@/lib/formulaEngine";
 import FormDesignerTab from "@/components/ServiceDesigner/FormDesigner";
 import RulesDesigner from "@/components/ServiceDesigner/RulesDesigner";
 import DocumentsDesigner from "@/components/ServiceDesigner/DocumentsDesigner";
@@ -75,8 +76,14 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; labe
       { value: "qrcode", label: "QR-Code" },
       { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
     ],
-  },
+    },
 
+  {
+    label: "Berechnung",
+    types: [
+      { value: "computed", label: "Berechnetes Feld (Formel)" },
+    ],
+  },
   {
     label: "Beziehungen",
     types: [
@@ -541,7 +548,7 @@ function FieldDialog({
         min_value: form.min_value != null && form.min_value !== ("" as any) ? Number(form.min_value) : null,
         max_value: form.max_value != null && form.max_value !== ("" as any) ? Number(form.max_value) : null,
         decimal_places: form.decimal_places != null && form.decimal_places !== ("" as any) ? Number(form.decimal_places) : null,
-        readonly: !!form.readonly,
+        readonly: form.field_type === "computed" ? true : !!form.readonly,
         archived: !!form.archived,
         select_options: needsOptions
           ? optionsText.split("\n").map((s) => s.trim()).filter(Boolean)
@@ -648,6 +655,15 @@ function FieldDialog({
 
           {isEdit && (form.field_type === "file" || form.field_type === "image") && (form.validation as any)?.upload?.templates_enabled && (
             <FieldTemplatesManager fieldId={field!.id} />
+          )}
+
+          {form.field_type === "computed" && (
+            <ComputedFieldConfigPanel
+              serviceId={serviceId}
+              currentKey={form.field_key ?? ""}
+              formula={(form.validation as any)?.formula ?? ""}
+              onChange={(formula) => setForm((f) => ({ ...f, validation: { ...(f.validation ?? {}), formula } as any }))}
+            />
           )}
         </div>
         <DialogFooter>
@@ -819,6 +835,95 @@ function FieldTemplatesManager({ fieldId }: { fieldId: string }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+// ----------------------- Computed field config panel -----------------------
+
+function ComputedFieldConfigPanel({
+  serviceId, currentKey, formula, onChange,
+}: {
+  serviceId: string;
+  currentKey: string;
+  formula: string;
+  onChange: (v: string) => void;
+}) {
+  const { data: fields = [] } = useQuery({
+    queryKey: ["service-fields-for-formula", serviceId],
+    queryFn: () => api.serviceDataFields.listForService(serviceId),
+  });
+  const numericFields = (fields as any[]).filter(
+    (f) => f.field_key !== currentKey && ["number", "decimal", "percent", "computed"].includes(f.field_type)
+  );
+
+  const insert = (token: string) => onChange(((formula || "") + (formula && !formula.endsWith(" ") ? " " : "") + token));
+
+  // Live-Vorschau mit Beispielwert 1 pro Feld
+  const preview = (() => {
+    if (!formula) return null;
+    const ctx: Record<string, number> = {};
+    for (const f of fields as any[]) ctx[f.field_key] = 1;
+    const r = evaluateFormula(formula, ctx);
+    return r;
+  })();
+
+  return (
+    <div className="border rounded-md p-3 space-y-3 bg-muted/20">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">Formel-Editor</span>
+        <Badge variant="secondary" className="text-[10px]">automatisch berechnet · schreibgeschützt</Badge>
+      </div>
+      <Textarea
+        rows={3}
+        placeholder="z.B. ((gewicht_1 + gewicht_2 + gewicht_3) / 3) / volumen"
+        value={formula}
+        onChange={(e) => onChange(e.target.value)}
+        className="font-mono text-xs"
+      />
+      <div className="space-y-2">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Verfügbare Felder</p>
+        <div className="flex flex-wrap gap-1">
+          {numericFields.length === 0 && (
+            <span className="text-xs text-muted-foreground">Keine numerischen Felder in dieser Dienstleistung.</span>
+          )}
+          {numericFields.map((f) => (
+            <Button key={f.id} type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => insert(f.field_key)}>
+              {f.display_name} <span className="ml-1 text-muted-foreground">({f.field_key})</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Funktionen</p>
+        <div className="flex flex-wrap gap-1">
+          {["SUM(a, b)", "AVERAGE(a, b)", "MIN(a, b)", "MAX(a, b)", "ROUND(x, 2)", "ABS(x)"].map((s) => (
+            <Button key={s} type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => insert(s.split("(")[0] + "(")}>
+              {s}
+            </Button>
+          ))}
+          {["+", "-", "*", "/", "%", "(", ")"].map((s) => (
+            <Button key={s} type="button" variant="outline" size="sm" className="h-6 w-7 text-xs" onClick={() => insert(s)}>
+              {s}
+            </Button>
+          ))}
+        </div>
+      </div>
+      {preview && (
+        <div className="text-[11px]">
+          {preview.error ? (
+            <span className="text-destructive">Formelfehler: {preview.error}</span>
+          ) : (
+            <span className="text-muted-foreground">
+              Vorschau (alle Felder = 1): <span className="font-mono">{preview.value ?? "—"}</span>
+            </span>
+          )}
+        </div>
+      )}
+      <p className="text-[10px] text-muted-foreground">
+        Unterstützt: <span className="font-mono">+ − * / %</span> · Klammern · Funktionen SUM, AVERAGE, MIN, MAX, ROUND, ABS.
+        Referenzieren Sie andere Felder über ihren internen Schlüssel.
+      </p>
     </div>
   );
 }

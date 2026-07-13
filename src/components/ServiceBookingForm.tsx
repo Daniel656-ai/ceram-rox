@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat } from "lucide-react";
+import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat, Calculator } from "lucide-react";
 import UploadField from "@/components/upload/UploadField";
+import { evaluateFormula } from "@/lib/formulaEngine";
 import type { FormRoleView, FormSection, RepeatableConfig } from "@/lib/api/serviceFormLayouts";
 
 interface Props {
@@ -91,6 +92,31 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
   }, [rulesRow, values]);
 
   const sections = layout?.layout?.sections ?? [];
+
+  // Auto-compute: recompute all computed fields whenever inputs change.
+  const computedFields = useMemo(
+    () => (fields as any[]).filter((f) => f.field_type === "computed" && !f.archived),
+    [fields]
+  );
+  useEffect(() => {
+    if (computedFields.length === 0) return;
+    for (const f of computedFields) {
+      const formula = (f.validation as any)?.formula ?? "";
+      if (!formula) continue;
+      const { value } = evaluateFormula(formula, values);
+      const decimals = f.decimal_places;
+      const rounded =
+        value != null && typeof decimals === "number" && decimals >= 0
+          ? Number(value.toFixed(decimals))
+          : value;
+      const next = rounded == null ? "" : String(rounded);
+      if (String(values[f.field_key] ?? "") !== next) {
+        onChange(f.field_key, next);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values, computedFields]);
+
   if (sections.length === 0) return null;
 
   const inputSize = compact ? "h-8 text-xs" : "";
@@ -333,6 +359,17 @@ function SectionFieldGrid({
                 onChange={(v) => onValueChange(f.field_key, v)}
                 compact={compact}
               />
+            ) : f.field_type === "computed" ? (
+              <div className="rounded-md border border-primary/40 bg-primary/5 p-2">
+                <Label className="text-xs flex items-center gap-1">
+                  <Calculator className="h-3 w-3 text-primary" />
+                  {label}
+                  {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
+                  <Badge variant="outline" className="ml-auto text-[9px] uppercase tracking-wide">auto</Badge>
+                </Label>
+                {help && !compact && <p className="text-[10px] text-muted-foreground mb-1">{help}</p>}
+                <Input readOnly value={val ?? ""} className={`${inputSize} font-mono bg-background`} placeholder="wird automatisch berechnet" />
+              </div>
             ) : (
               <>
                 <Label className="text-xs flex items-center gap-1">

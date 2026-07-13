@@ -8,7 +8,7 @@ export type ServiceFieldType =
   | "file" | "image" | "barcode" | "qrcode"
   | "ref_customer" | "ref_material" | "ref_product" | "ref_machine"
   | "ref_employee" | "ref_location" | "ref_batch" | "ref_serial"
-  | "repeater" | "handwriting";
+  | "repeater" | "handwriting" | "computed";
 
 export interface ServiceDataField {
   id: string;
