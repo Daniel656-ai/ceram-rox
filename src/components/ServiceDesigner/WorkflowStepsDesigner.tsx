@@ -251,10 +251,56 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
                 <Switch checked={editing.is_mandatory ?? true} onCheckedChange={(v) => setEditing({ ...editing, is_mandatory: v })} />
                 <Label>Pflichtschritt</Label>
               </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="flex items-center gap-2"><Link2 className="h-4 w-4" /> Verknüpfte Dienstleistungen</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Beim Abschluss dieses Schritts werden alle gewählten Dienstleistungen im Auftrag automatisch auf „Erledigt" gesetzt.
+                    </p>
+                  </div>
+                  <Badge variant="secondary">{linkedServiceIds.length} ausgewählt</Badge>
+                </div>
+                <Input
+                  placeholder="Dienstleistung suchen…"
+                  value={serviceSearch}
+                  onChange={(e) => setServiceSearch(e.target.value)}
+                />
+                <ScrollArea className="h-56 border rounded-md p-2">
+                  <div className="space-y-1">
+                    {allServices
+                      .filter((s: any) =>
+                        !serviceSearch ||
+                        (s.service_name ?? "").toLowerCase().includes(serviceSearch.toLowerCase())
+                      )
+                      .map((s: any) => {
+                        const checked = linkedServiceIds.includes(s.id);
+                        return (
+                          <label key={s.id} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted cursor-pointer">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                setLinkedServiceIds((prev) =>
+                                  v ? [...prev, s.id] : prev.filter((id) => id !== s.id)
+                                );
+                              }}
+                            />
+                            <span className="text-sm flex-1">{s.service_name}</span>
+                            {s.category && <Badge variant="outline" className="text-[10px]">{s.category}</Badge>}
+                          </label>
+                        );
+                      })}
+                    {allServices.length === 0 && (
+                      <p className="text-xs text-muted-foreground p-2">Keine Dienstleistungen verfügbar.</p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Abbrechen</Button>
+            <Button variant="outline" onClick={() => { setEditing(null); setLinkedServiceIds([]); }}>Abbrechen</Button>
             <Button onClick={() => editing && saveStep.mutate(editing)} disabled={!editing?.name}>Speichern</Button>
           </DialogFooter>
         </DialogContent>
