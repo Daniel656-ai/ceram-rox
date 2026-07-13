@@ -247,12 +247,20 @@ export const api = {
   portfolioDocuments,
   portfolioAnalytics,
   portfolioDashboard,
+
+  // ---- workflow & form designer (Phase 1) ----
+  serviceForms,
+  workflowDefinitions,
+  workflowSteps,
+  workflowTasks,
+
   // ---- work objects & workflow runtime (Big Bang UI) ----
   workObjects,
   workObjectOrigins,
   workflowTemplates,
   servicePackageWorkflowMap,
   workTasks,
+
 
 
 
