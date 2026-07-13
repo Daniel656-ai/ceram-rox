@@ -81,18 +81,27 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
     onSuccess: () => { invalidate(); toast.success("Workflow erstellt"); },
   });
 
+  const invalidateLinks = () => qc.invalidateQueries({ queryKey: ["workflow-step-services"] });
+
   const saveStep = useMutation({
     mutationFn: async (step: Partial<WorkflowStep>) => {
-      if (step.id) return api.workflowSteps.update(step.id, step);
-      return api.workflowSteps.create({
-        ...step,
-        workflow_id: workflow!.id,
-        step_key: step.step_key || `step_${Date.now()}`,
-        name: step.name!,
-        step_type: step.step_type || "form",
-      } as any);
+      let saved: WorkflowStep;
+      if (step.id) {
+        await api.workflowSteps.update(step.id, step);
+        saved = { ...(step as WorkflowStep) };
+      } else {
+        saved = await api.workflowSteps.create({
+          ...step,
+          workflow_id: workflow!.id,
+          step_key: step.step_key || `step_${Date.now()}`,
+          name: step.name!,
+          step_type: step.step_type || "form",
+        } as any);
+      }
+      await api.workflowStepServices.setForStep(saved.id, linkedServiceIds);
+      return saved;
     },
-    onSuccess: () => { invalidate(); setEditing(null); toast.success("Gespeichert"); },
+    onSuccess: () => { invalidate(); invalidateLinks(); setEditing(null); setLinkedServiceIds([]); toast.success("Gespeichert"); },
     onError: (e: any) => toast.error(e.message),
   });
 
