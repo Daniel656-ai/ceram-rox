@@ -148,6 +148,36 @@ export const workflowSteps = {
 };
 
 // =====================================================================
+// service_workflow_step_services (multi-service link per step)
+// =====================================================================
+export interface WorkflowStepService {
+  id: string;
+  step_id: string;
+  service_id: string;
+  created_at: string;
+}
+
+export const workflowStepServices = {
+  listForStep: (stepId: string) =>
+    unwrap(
+      dbClient
+        .from("service_workflow_step_services" as any)
+        .select("*")
+        .eq("step_id", stepId)
+    ) as unknown as Promise<WorkflowStepService[]>,
+
+  setForStep: async (stepId: string, serviceIds: string[]) => {
+    await run(dbClient.from("service_workflow_step_services" as any).delete().eq("step_id", stepId));
+    if (serviceIds.length === 0) return;
+    await run(
+      dbClient
+        .from("service_workflow_step_services" as any)
+        .insert(serviceIds.map((sid) => ({ step_id: stepId, service_id: sid })) as any)
+    );
+  },
+};
+
+// =====================================================================
 // order_workflow_instances & tasks
 // =====================================================================
 export interface WorkflowTask {
