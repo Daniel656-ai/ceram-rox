@@ -187,7 +187,7 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
               </div>
               {canManage && (
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => setEditing(step)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => { setLinkedServiceIds(linksByStep[step.id] ?? []); setServiceSearch(""); setEditing(step); }}><Pencil className="h-4 w-4" /></Button>
                   <Button size="icon" variant="ghost" onClick={() => { if (confirm(`Schritt "${step.name}" löschen?`)) removeStep.mutate(step.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               )}
