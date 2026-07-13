@@ -1,0 +1,1 @@
+ALTER TYPE public.service_field_type ADD VALUE IF NOT EXISTS 'computed';
