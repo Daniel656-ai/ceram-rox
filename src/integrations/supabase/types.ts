@@ -6026,6 +6026,10 @@ export type Database = {
         }
         Returns: string
       }
+      bootstrap_order_workflow: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       can_edit_project_governance: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -6340,6 +6344,13 @@ export type Database = {
           unit: string
         }[]
       }
+      next_reference_number: {
+        Args: {
+          p_origin: string
+          p_reference_type: Database["public"]["Enums"]["reference_type"]
+        }
+        Returns: string
+      }
       priority_enum_to_int: {
         Args: { p: Database["public"]["Enums"]["order_priority"] }
         Returns: number
@@ -6386,6 +6397,13 @@ export type Database = {
         Returns: string
       }
       release_mixture_batch: { Args: { _batch_id: string }; Returns: undefined }
+      resolve_workflow_template: {
+        Args: { p_order_id: string }
+        Returns: {
+          requires_kneading: boolean
+          template_id: string
+        }[]
+      }
       start_mixture_batch:
         | { Args: { _batch_id: string }; Returns: undefined }
         | {
