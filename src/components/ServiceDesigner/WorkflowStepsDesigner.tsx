@@ -154,7 +154,7 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
             <CardDescription>Prozessschritte für diese Dienstleistung. Reihenfolge = Ausführungsreihenfolge.</CardDescription>
           </div>
           {canManage && (
-            <Button size="sm" onClick={() => setEditing({ step_type: "form", is_mandatory: true, order_index: (steps.at(-1)?.order_index ?? 0) + 10 })}>
+            <Button size="sm" onClick={() => { setLinkedServiceIds([]); setServiceSearch(""); setEditing({ step_type: "form", is_mandatory: true, order_index: (steps.at(-1)?.order_index ?? 0) + 10 }); }}>
               <Plus className="h-4 w-4 mr-1" /> Neuer Schritt
             </Button>
           )}
