@@ -129,6 +129,13 @@ import {
   workflowSteps,
   workflowTasks,
 } from "./workflowDesigner";
+import {
+  workObjects,
+  workObjectOrigins,
+  workflowTemplates,
+  servicePackageWorkflowMap,
+  workTasks,
+} from "./workObjects";
 
 
 
