@@ -92,6 +92,31 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
   }, [rulesRow, values]);
 
   const sections = layout?.layout?.sections ?? [];
+
+  // Auto-compute: recompute all computed fields whenever inputs change.
+  const computedFields = useMemo(
+    () => (fields as any[]).filter((f) => f.field_type === "computed" && !f.archived),
+    [fields]
+  );
+  useEffect(() => {
+    if (computedFields.length === 0) return;
+    for (const f of computedFields) {
+      const formula = (f.validation as any)?.formula ?? "";
+      if (!formula) continue;
+      const { value } = evaluateFormula(formula, values);
+      const decimals = f.decimal_places;
+      const rounded =
+        value != null && typeof decimals === "number" && decimals >= 0
+          ? Number(value.toFixed(decimals))
+          : value;
+      const next = rounded == null ? "" : String(rounded);
+      if (String(values[f.field_key] ?? "") !== next) {
+        onChange(f.field_key, next);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values, computedFields]);
+
   if (sections.length === 0) return null;
 
   const inputSize = compact ? "h-8 text-xs" : "";
