@@ -268,6 +268,10 @@ export const api = {
   servicePackageWorkflowMap,
   workTasks,
 
+  // ---- pilot plant process (9-step workflow) ----
+  pilotPlantBlocks,
+  pilotPlantProducedSamples,
+
 
 
 
