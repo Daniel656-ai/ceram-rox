@@ -485,6 +485,138 @@ export type Database = {
           },
         ]
       }
+      form_definitions: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          layout: Json
+          name: string
+          scope: Database["public"]["Enums"]["form_scope"]
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          layout?: Json
+          name: string
+          scope?: Database["public"]["Enums"]["form_scope"]
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          layout?: Json
+          name?: string
+          scope?: Database["public"]["Enums"]["form_scope"]
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      form_fields: {
+        Row: {
+          category: string | null
+          created_at: string
+          decimal_places: number | null
+          default_value: string | null
+          description: string | null
+          display_name: string
+          field_key: string
+          field_type: string
+          form_id: string
+          formula: string | null
+          id: string
+          is_required: boolean
+          max_value: number | null
+          metadata: Json
+          min_value: number | null
+          parent_field_id: string | null
+          readonly: boolean
+          ref_target: string | null
+          select_options: Json
+          sort_order: number
+          unit: string | null
+          updated_at: string
+          validation: Json
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          decimal_places?: number | null
+          default_value?: string | null
+          description?: string | null
+          display_name: string
+          field_key: string
+          field_type: string
+          form_id: string
+          formula?: string | null
+          id?: string
+          is_required?: boolean
+          max_value?: number | null
+          metadata?: Json
+          min_value?: number | null
+          parent_field_id?: string | null
+          readonly?: boolean
+          ref_target?: string | null
+          select_options?: Json
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+          validation?: Json
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          decimal_places?: number | null
+          default_value?: string | null
+          description?: string | null
+          display_name?: string
+          field_key?: string
+          field_type?: string
+          form_id?: string
+          formula?: string | null
+          id?: string
+          is_required?: boolean
+          max_value?: number | null
+          metadata?: Json
+          min_value?: number | null
+          parent_field_id?: string | null
+          readonly?: boolean
+          ref_target?: string | null
+          select_options?: Json
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+          validation?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_fields_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_fields_parent_field_id_fkey"
+            columns: ["parent_field_id"]
+            isOneToOne: false
+            referencedRelation: "form_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hazard_notification_log: {
         Row: {
           activity_id: string | null
@@ -2115,6 +2247,81 @@ export type Database = {
           },
         ]
       }
+      order_instances: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          legacy_order_id: string | null
+          locked_at: string | null
+          order_number: string | null
+          project_id: string | null
+          sample_ids: string[]
+          shared_data: Json
+          status: Database["public"]["Enums"]["order_instance_status"]
+          template_id: string | null
+          template_snapshot: Json
+          title: string | null
+          updated_at: string
+          workflow_status: Database["public"]["Enums"]["order_workflow_status_new"]
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          legacy_order_id?: string | null
+          locked_at?: string | null
+          order_number?: string | null
+          project_id?: string | null
+          sample_ids?: string[]
+          shared_data?: Json
+          status?: Database["public"]["Enums"]["order_instance_status"]
+          template_id?: string | null
+          template_snapshot?: Json
+          title?: string | null
+          updated_at?: string
+          workflow_status?: Database["public"]["Enums"]["order_workflow_status_new"]
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          legacy_order_id?: string | null
+          locked_at?: string | null
+          order_number?: string | null
+          project_id?: string | null
+          sample_ids?: string[]
+          shared_data?: Json
+          status?: Database["public"]["Enums"]["order_instance_status"]
+          template_id?: string | null
+          template_snapshot?: Json
+          title?: string | null
+          updated_at?: string
+          workflow_status?: Database["public"]["Enums"]["order_workflow_status_new"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_instances_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "process_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_measurements: {
         Row: {
           actual_duration_hours: number | null
@@ -2313,6 +2520,153 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: true
             referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_step_positions: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          label: string | null
+          not_feasible_reason: string | null
+          position_ref: string | null
+          remarks: string | null
+          result_data: Json
+          result_value: string | null
+          sample_id: string | null
+          status: Database["public"]["Enums"]["step_position_status"]
+          step_run_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          not_feasible_reason?: string | null
+          position_ref?: string | null
+          remarks?: string | null
+          result_data?: Json
+          result_value?: string | null
+          sample_id?: string | null
+          status?: Database["public"]["Enums"]["step_position_status"]
+          step_run_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          not_feasible_reason?: string | null
+          position_ref?: string | null
+          remarks?: string | null
+          result_data?: Json
+          result_value?: string | null
+          sample_id?: string | null
+          status?: Database["public"]["Enums"]["step_position_status"]
+          step_run_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_step_positions_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_step_positions_step_run_id_fkey"
+            columns: ["step_run_id"]
+            isOneToOne: false
+            referencedRelation: "order_step_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_step_runs: {
+        Row: {
+          assigned_role: string | null
+          assigned_to: string | null
+          auto_time_minutes: number | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          form_response: Json
+          id: string
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          order_id: string
+          order_index: number
+          status: Database["public"]["Enums"]["step_run_status"]
+          step_id: string | null
+          step_key: string
+          step_snapshot: Json
+          time_entry_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          auto_time_minutes?: number | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          form_response?: Json
+          id?: string
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          order_id: string
+          order_index?: number
+          status?: Database["public"]["Enums"]["step_run_status"]
+          step_id?: string | null
+          step_key: string
+          step_snapshot?: Json
+          time_entry_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          auto_time_minutes?: number | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          form_response?: Json
+          id?: string
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          order_id?: string
+          order_index?: number
+          status?: Database["public"]["Enums"]["step_run_status"]
+          step_id?: string | null
+          step_key?: string
+          step_snapshot?: Json
+          time_entry_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_step_runs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "order_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_step_runs_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "process_steps"
             referencedColumns: ["id"]
           },
         ]
@@ -2753,6 +3107,132 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      process_steps: {
+        Row: {
+          assignee_rule: Json
+          auto_actions: Json
+          condition_expr: Json
+          created_at: string
+          description: string | null
+          due_hours: number | null
+          escalation_role: string | null
+          form_id: string | null
+          id: string
+          is_mandatory: boolean
+          metadata: Json
+          name: string
+          order_index: number
+          position_source: string | null
+          role_required: string | null
+          step_key: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_rule?: Json
+          auto_actions?: Json
+          condition_expr?: Json
+          created_at?: string
+          description?: string | null
+          due_hours?: number | null
+          escalation_role?: string | null
+          form_id?: string | null
+          id?: string
+          is_mandatory?: boolean
+          metadata?: Json
+          name: string
+          order_index?: number
+          position_source?: string | null
+          role_required?: string | null
+          step_key: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_rule?: Json
+          auto_actions?: Json
+          condition_expr?: Json
+          created_at?: string
+          description?: string | null
+          due_hours?: number | null
+          escalation_role?: string | null
+          form_id?: string | null
+          id?: string
+          is_mandatory?: boolean
+          metadata?: Json
+          name?: string
+          order_index?: number
+          position_source?: string | null
+          role_required?: string | null
+          step_key?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_steps_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "process_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      process_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          kind: Database["public"]["Enums"]["process_template_kind"]
+          legacy_service_id: string | null
+          metadata: Json
+          name: string
+          scope: Database["public"]["Enums"]["process_template_scope"]
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind: Database["public"]["Enums"]["process_template_kind"]
+          legacy_service_id?: string | null
+          metadata?: Json
+          name: string
+          scope?: Database["public"]["Enums"]["process_template_scope"]
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["process_template_kind"]
+          legacy_service_id?: string | null
+          metadata?: Json
+          name?: string
+          scope?: Database["public"]["Enums"]["process_template_scope"]
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -6293,6 +6773,7 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      can_manage_designer: { Args: { _uid: string }; Returns: boolean }
       can_view_others_vacation: { Args: { _user_id: string }; Returns: boolean }
       can_view_portfolio: {
         Args: { _portfolio_id: string; _user_id: string }
@@ -6737,6 +7218,7 @@ export type Database = {
       decision_status: "active" | "superseded" | "rejected"
       downtime_status: "geplant" | "aktiv" | "abgeschlossen"
       downtime_type: "wartung" | "reparatur" | "sonstiges"
+      form_scope: "template" | "global"
       masse_type: "DK" | "GK" | "KK" | "MK" | "PK"
       measurement_status: "open" | "in_progress" | "completed"
       milestone_status: "planned" | "in_progress" | "completed"
@@ -6756,10 +7238,24 @@ export type Database = {
         | "development"
         | "pilot"
         | "production"
+      order_instance_status:
+        | "draft"
+        | "planned"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
       order_kind: "pilot_plant" | "labor" | "combined" | "legacy"
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
+      order_workflow_status_new:
+        | "entwurf"
+        | "geplant"
+        | "in_progress"
+        | "waiting"
+        | "review"
+        | "abgeschlossen"
+        | "abgebrochen"
       pilot_plant_block_key:
         | "stammdaten"
         | "rezeptur"
@@ -6804,6 +7300,8 @@ export type Database = {
         | "entsorgen"
         | "zurueck"
         | "andere"
+      process_template_kind: "labor" | "pilot_plant"
+      process_template_scope: "template" | "snippet" | "global"
       project_closure_status: "draft" | "in_approval" | "approved"
       project_document_kind: "application" | "report"
       project_role: "owner" | "leader" | "member"
@@ -6877,6 +7375,17 @@ export type Database = {
         | "previous_step"
         | "manual_release"
         | "custom"
+      step_position_status:
+        | "open"
+        | "in_progress"
+        | "completed"
+        | "not_feasible"
+      step_run_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "skipped"
+        | "cancelled"
       step_time_mode: "relative" | "absolute" | "condition"
       task_status: "open" | "in_progress" | "completed"
       traffic_light_status: "green" | "yellow" | "red"
@@ -7054,6 +7563,7 @@ export const Constants = {
       decision_status: ["active", "superseded", "rejected"],
       downtime_status: ["geplant", "aktiv", "abgeschlossen"],
       downtime_type: ["wartung", "reparatur", "sonstiges"],
+      form_scope: ["template", "global"],
       masse_type: ["DK", "GK", "KK", "MK", "PK"],
       measurement_status: ["open", "in_progress", "completed"],
       milestone_status: ["planned", "in_progress", "completed"],
@@ -7075,10 +7585,26 @@ export const Constants = {
         "pilot",
         "production",
       ],
+      order_instance_status: [
+        "draft",
+        "planned",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
       order_kind: ["pilot_plant", "labor", "combined", "legacy"],
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
+      order_workflow_status_new: [
+        "entwurf",
+        "geplant",
+        "in_progress",
+        "waiting",
+        "review",
+        "abgeschlossen",
+        "abgebrochen",
+      ],
       pilot_plant_block_key: [
         "stammdaten",
         "rezeptur",
@@ -7129,6 +7655,8 @@ export const Constants = {
         "zurueck",
         "andere",
       ],
+      process_template_kind: ["labor", "pilot_plant"],
+      process_template_scope: ["template", "snippet", "global"],
       project_closure_status: ["draft", "in_approval", "approved"],
       project_document_kind: ["application", "report"],
       project_role: ["owner", "leader", "member"],
@@ -7208,6 +7736,19 @@ export const Constants = {
         "previous_step",
         "manual_release",
         "custom",
+      ],
+      step_position_status: [
+        "open",
+        "in_progress",
+        "completed",
+        "not_feasible",
+      ],
+      step_run_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "skipped",
+        "cancelled",
       ],
       step_time_mode: ["relative", "absolute", "condition"],
       task_status: ["open", "in_progress", "completed"],
