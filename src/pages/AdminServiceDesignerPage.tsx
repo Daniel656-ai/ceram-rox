@@ -320,9 +320,13 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
               {template.kind === "labor" ? <Badge variant="secondary"><Beaker className="h-3 w-3 mr-1" />Labor</Badge> : <Badge variant="secondary"><Factory className="h-3 w-3 mr-1" />Pilot Plant</Badge>}
               <Badge variant="outline">v{template.version}</Badge>
               {template.scope === "snippet" && <Badge variant="outline"><Puzzle className="h-3 w-3 mr-1" />Snippet</Badge>}
+              {!template.is_active && <Badge variant="outline">inaktiv</Badge>}
             </div>
           </div>
         </div>
+        <Button variant="outline" size="sm" onClick={() => { if (confirm("Neue Version erstellen? Die aktuelle Version wird archiviert.")) cloneVersionMut.mutate(); }} disabled={cloneVersionMut.isPending}>
+          <Layers className="h-4 w-4 mr-1" />Neue Version
+        </Button>
       </div>
 
       <Tabs defaultValue="steps">
