@@ -1,3 +1,10 @@
+/**
+ * @deprecated Phase 7 — Legacy Service-Workflow-Designer (`service_forms`,
+ * `service_workflow_definitions`, `service_workflow_steps`).
+ * Neuer Weg: `process_templates` + `process_steps` + `form_definitions`
+ * + `form_fields` (siehe `processTemplates.ts`, `processSteps.ts`,
+ * `formDefinitions.ts`, `formFields.ts`).
+ */
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 

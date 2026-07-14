@@ -1,3 +1,10 @@
+/**
+ * @deprecated Phase 7 — Legacy Pilot-Plant Bausteine (`pilot_plant_blocks`).
+ * Neuer Weg: `process_templates` (kind='pilot_plant') + `order_step_runs`
+ * über `src/lib/api/processTemplates.ts`, `orderStepRuns.ts`, `workflowEngine.ts`.
+ * Wird für bestehende Legacy-Aufträge vorgehalten und in einem späteren
+ * Cleanup-Sprint entfernt.
+ */
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 

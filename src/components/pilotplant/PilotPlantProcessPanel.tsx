@@ -1,3 +1,7 @@
+/**
+ * @deprecated Phase 7 — ersetzt durch `ProcessOrderTabs` + `ProcessRuntimePanel`.
+ * Wird nur noch für Aufträge ohne verknüpfte `order_instance` verwendet.
+ */
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
