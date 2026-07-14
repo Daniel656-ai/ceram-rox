@@ -257,6 +257,8 @@ export const api = {
   workflowSteps,
   workflowTasks,
   workflowStepServices,
+  workflowTaskPositions,
+  orderSharedFormData,
 
   // ---- work objects & workflow runtime (Big Bang UI) ----
   workObjects,
