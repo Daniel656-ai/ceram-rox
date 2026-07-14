@@ -19,6 +19,7 @@ export function useCreateWorkPackage() {
     mutationFn: (params: {
       project_id: string;
       title: string;
+      category_id: string;
       description?: string;
       start_date?: string | null;
       end_date?: string | null;
@@ -43,6 +44,7 @@ export function useUpdateWorkPackage() {
       end_date?: string | null;
       milestone_id?: string | null;
       status?: string;
+      category_id?: string;
       assignee_ids?: string[];
     }) => api.workPackages.update(params),
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ["work-packages", vars.projectId] }),
