@@ -412,7 +412,11 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium">
-                        <div>{wp.title}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{wp.title}</span>
+                          {wp.is_mandatory && <Badge variant="secondary" className="text-[10px]">Pflicht-AP</Badge>}
+                          <Badge variant="outline" className="text-[10px]">{categoryName(wp.category_id)}</Badge>
+                        </div>
                         {wp.description && <div className="text-xs text-muted-foreground truncate max-w-xs">{wp.description}</div>}
                       </TableCell>
                       <TableCell>{wp.start_date ? new Date(wp.start_date).toLocaleDateString(locale) : "–"}</TableCell>
@@ -445,6 +449,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                             <Button variant="ghost" size="icon" onClick={() => handleEditWp(wp)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
+                            {!wp.is_mandatory && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
