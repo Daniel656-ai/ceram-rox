@@ -31,7 +31,7 @@ import { useServicePermissions } from "@/hooks/useServicePermissions";
 import { useUsers } from "@/hooks/useUsers";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrderReportTab from "@/components/OrderReportTab";
-import { ProcessRuntimePanel } from "@/components/workflow/ProcessRuntimePanel";
+import { ProcessOrderTabs } from "@/components/workflow/ProcessOrderTabs";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -284,7 +284,7 @@ export default function OrderDetailPage() {
             </Card>
           )}
           {linkedInstance ? (
-            <ProcessRuntimePanel legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
+            <ProcessOrderTabs legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
           ) : (
             (order as any).order_kind && (order as any).order_kind !== "legacy" && (
               <OrderWorkflowTabs order={order} />
@@ -372,7 +372,7 @@ export default function OrderDetailPage() {
       )}
 
       {linkedInstance ? (
-        <ProcessRuntimePanel legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
+        <ProcessOrderTabs legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
       ) : (
         (order as any).order_kind && (order as any).order_kind !== "legacy" && (
           <OrderWorkflowTabs order={order} />
