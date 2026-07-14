@@ -62,6 +62,7 @@ export default function PortfolioDetailPage() {
   const qc = useQueryClient();
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
+  const canManageStructure = useCanManagePortfolio();
   const isMaster = role === "master";
   const canEdit = isMaster || hasPermission("portfolios.edit" as any);
   const canAssign = isMaster || hasPermission("portfolios.assign_projects" as any);
