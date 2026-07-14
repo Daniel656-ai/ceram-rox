@@ -371,8 +371,12 @@ export default function OrderDetailPage() {
         </Card>
       )}
 
-      {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
-        <OrderWorkflowTabs order={order} />
+      {linkedInstance ? (
+        <ProcessRuntimePanel legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
+      ) : (
+        (order as any).order_kind && (order as any).order_kind !== "legacy" && (
+          <OrderWorkflowTabs order={order} />
+        )
       )}
 
       {/* Measurements Table */}
