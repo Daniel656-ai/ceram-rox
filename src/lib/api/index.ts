@@ -144,6 +144,9 @@ import { processTemplates } from "./processTemplates";
 import { processSteps as processTemplateSteps } from "./processSteps";
 import { formDefinitions } from "./formDefinitions";
 import { formFields } from "./formFields";
+import { orderInstances } from "./orderInstances";
+import { orderStepRuns, orderStepPositions } from "./orderStepRuns";
+import { workflowEngine } from "./workflowEngine";
 
 
 
@@ -281,6 +284,13 @@ export const api = {
   processTemplateSteps,
   formDefinitions,
   formFields,
+
+  // ---- Phase 5: order_instances + workflow engine ----
+  orderInstances,
+  orderStepRuns,
+  orderStepPositions,
+  workflowEngine,
+
 
 
 
