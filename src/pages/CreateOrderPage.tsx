@@ -416,6 +416,32 @@ export default function CreateOrderPage() {
         }
       }
 
+      // Phase 5: If a process template was selected, spin up an order_instance
+      // linked to this measurement_order and seed its workflow steps.
+      if (processTemplateId && processTemplateId !== "__none__") {
+        try {
+          const tpl = (processTemplates as any[]).find(t => t.id === processTemplateId);
+          let snapshot: Record<string, unknown> | null = null;
+          try { snapshot = await api.processTemplates.snapshot(processTemplateId); } catch { /* optional */ }
+          const instance = await api.orderInstances.create({
+            template_id: processTemplateId,
+            template_snapshot: snapshot,
+            project_id: projectId,
+            legacy_order_id: order.id,
+            title: tpl?.name ?? null,
+            status: "planned",
+            sample_ids: selectedSampleId ? [selectedSampleId] : null,
+            shared_data: {},
+            created_by: user.id,
+          });
+          await api.workflowEngine.seedFromTemplate(instance.id, processTemplateId);
+        } catch (err: any) {
+          toast.error(`Prozessvorlage: ${err.message}`);
+        }
+      }
+
+
+
 
       // Analysis requests pool (only for PP / combined)
       for (const ar of analysisRequests) {
