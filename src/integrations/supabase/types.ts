@@ -809,6 +809,7 @@ export type Database = {
           reference_number: string | null
           reference_type: Database["public"]["Enums"]["reference_type"] | null
           sample_id: string | null
+          shared_form_data: Json
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
           workflow_status: Database["public"]["Enums"]["workflow_status"] | null
@@ -838,6 +839,7 @@ export type Database = {
           reference_number?: string | null
           reference_type?: Database["public"]["Enums"]["reference_type"] | null
           sample_id?: string | null
+          shared_form_data?: Json
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
           workflow_status?:
@@ -869,6 +871,7 @@ export type Database = {
           reference_number?: string | null
           reference_type?: Database["public"]["Enums"]["reference_type"] | null
           sample_id?: string | null
+          shared_form_data?: Json
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
           workflow_status?:
@@ -2429,10 +2432,71 @@ export type Database = {
           },
         ]
       }
+      order_workflow_task_positions: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          not_feasible_reason: string | null
+          position_label: string | null
+          remarks: string | null
+          result_value: string | null
+          sample_id: string | null
+          status: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          not_feasible_reason?: string | null
+          position_label?: string | null
+          remarks?: string | null
+          result_value?: string | null
+          sample_id?: string | null
+          status?: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          not_feasible_reason?: string | null
+          position_label?: string | null
+          remarks?: string | null
+          result_value?: string | null
+          sample_id?: string | null
+          status?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_workflow_task_positions_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_workflow_task_positions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "order_workflow_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_workflow_tasks: {
         Row: {
           assigned_role: string | null
           assigned_to: string | null
+          auto_time_minutes: number | null
           completed_at: string | null
           created_at: string
           due_at: string | null
@@ -2446,11 +2510,13 @@ export type Database = {
           priority: string | null
           status: string
           step_id: string
+          time_entry_id: string | null
           updated_at: string
         }
         Insert: {
           assigned_role?: string | null
           assigned_to?: string | null
+          auto_time_minutes?: number | null
           completed_at?: string | null
           created_at?: string
           due_at?: string | null
@@ -2464,11 +2530,13 @@ export type Database = {
           priority?: string | null
           status?: string
           step_id: string
+          time_entry_id?: string | null
           updated_at?: string
         }
         Update: {
           assigned_role?: string | null
           assigned_to?: string | null
+          auto_time_minutes?: number | null
           completed_at?: string | null
           created_at?: string
           due_at?: string | null
@@ -2482,6 +2550,7 @@ export type Database = {
           priority?: string | null
           status?: string
           step_id?: string
+          time_entry_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2511,6 +2580,13 @@ export type Database = {
             columns: ["step_id"]
             isOneToOne: false
             referencedRelation: "service_workflow_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_workflow_tasks_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "project_time_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -6463,6 +6539,11 @@ export type Database = {
         }
         Returns: string
       }
+      wf_seed_positions_for_task: {
+        Args: { _task_id: string }
+        Returns: number
+      }
+      wf_start_task: { Args: { _task_id: string }; Returns: undefined }
     }
     Enums: {
       absence_type: "urlaub" | "krankheit" | "weiterbildung" | "sonstiges"
