@@ -31,6 +31,8 @@ import { useServicePermissions } from "@/hooks/useServicePermissions";
 import { useUsers } from "@/hooks/useUsers";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrderReportTab from "@/components/OrderReportTab";
+import { ProcessRuntimePanel } from "@/components/workflow/ProcessRuntimePanel";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 
