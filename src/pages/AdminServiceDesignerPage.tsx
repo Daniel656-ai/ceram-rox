@@ -130,40 +130,53 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
         <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-2" />Neue Vorlage</Button>
       </div>
 
-      <div className="flex gap-2">
-        <Button variant={filterKind === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("all")}>Alle</Button>
-        <Button variant={filterKind === "labor" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("labor")}><Beaker className="h-4 w-4 mr-1" />Labor</Button>
-        <Button variant={filterKind === "pilot_plant" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("pilot_plant")}><Factory className="h-4 w-4 mr-1" />Pilot Plant</Button>
-      </div>
+      <Tabs defaultValue="templates">
+        <TabsList>
+          <TabsTrigger value="templates"><Layers className="h-4 w-4 mr-1" />Vorlagen & Snippets</TabsTrigger>
+          <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Name</TableHead><TableHead>Modus</TableHead><TableHead>Typ</TableHead>
-              <TableHead>Kategorie</TableHead><TableHead>Version</TableHead><TableHead>Status</TableHead>
-              <TableHead className="w-32"></TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Lade…</TableCell></TableRow>}
-              {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Vorlagen vorhanden.</TableCell></TableRow>}
-              {filtered.map(t => (
-                <TableRow key={t.id} className="cursor-pointer hover:bg-muted/40" onClick={() => navigate(`/admin/prozess-designer/${t.id}`)}>
-                  <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell>{t.kind === "labor" ? <Badge variant="secondary"><Beaker className="h-3 w-3 mr-1" />Labor</Badge> : <Badge variant="secondary"><Factory className="h-3 w-3 mr-1" />Pilot Plant</Badge>}</TableCell>
-                  <TableCell>{t.scope === "snippet" ? <Badge variant="outline"><Puzzle className="h-3 w-3 mr-1" />Snippet</Badge> : <Badge variant="outline">Vorlage</Badge>}</TableCell>
-                  <TableCell>{t.category || "—"}</TableCell>
-                  <TableCell>v{t.version}</TableCell>
-                  <TableCell>{t.is_active ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(t)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+        <TabsContent value="templates" className="mt-4 space-y-4">
+          <div className="flex gap-2">
+            <Button variant={filterKind === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("all")}>Alle</Button>
+            <Button variant={filterKind === "labor" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("labor")}><Beaker className="h-4 w-4 mr-1" />Labor</Button>
+            <Button variant={filterKind === "pilot_plant" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("pilot_plant")}><Factory className="h-4 w-4 mr-1" />Pilot Plant</Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Name</TableHead><TableHead>Modus</TableHead><TableHead>Typ</TableHead>
+                  <TableHead>Kategorie</TableHead><TableHead>Version</TableHead><TableHead>Status</TableHead>
+                  <TableHead className="w-32"></TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Lade…</TableCell></TableRow>}
+                  {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Vorlagen vorhanden.</TableCell></TableRow>}
+                  {filtered.map(t => (
+                    <TableRow key={t.id} className="cursor-pointer hover:bg-muted/40" onClick={() => navigate(`/admin/prozess-designer/${t.id}`)}>
+                      <TableCell className="font-medium">{t.name}</TableCell>
+                      <TableCell>{t.kind === "labor" ? <Badge variant="secondary"><Beaker className="h-3 w-3 mr-1" />Labor</Badge> : <Badge variant="secondary"><Factory className="h-3 w-3 mr-1" />Pilot Plant</Badge>}</TableCell>
+                      <TableCell>{t.scope === "snippet" ? <Badge variant="outline"><Puzzle className="h-3 w-3 mr-1" />Snippet</Badge> : <Badge variant="outline">Vorlage</Badge>}</TableCell>
+                      <TableCell>{t.category || "—"}</TableCell>
+                      <TableCell>v{t.version}</TableCell>
+                      <TableCell>{t.is_active ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(t)}><Trash2 className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="library" className="mt-4">
+          <GlobalFormLibrary />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent>
