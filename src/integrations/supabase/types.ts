@@ -6094,6 +6094,7 @@ export type Database = {
       }
     }
     Functions: {
+      _order_lock_bypass: { Args: never; Returns: boolean }
       activate_mixture_recipe_version: {
         Args: { _version_id: string }
         Returns: undefined
@@ -6440,6 +6441,7 @@ export type Database = {
         Args: { _measurement_id: string; _user_id: string }
         Returns: boolean
       }
+      is_order_locked: { Args: { _order_id: string }; Returns: boolean }
       is_project_member: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean

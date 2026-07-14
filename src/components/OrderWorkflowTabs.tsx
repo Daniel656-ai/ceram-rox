@@ -360,16 +360,9 @@ function AssignSampleControl({ samples, onAssign, disabled }: { samples: any[]; 
 }
 
 /* ------------------ Closure Tab ------------------ */
-function ClosureTab({ order, canEdit }: { order: any; canEdit: boolean }) {
+function ClosureTab({ order }: { order: any; canEdit?: boolean }) {
   const { t } = useTranslation(["orders"]);
-  const upd = useUpdateOrder();
-
-  const setStatus = async (s: string) => {
-    try {
-      await upd.mutateAsync({ id: order.id, workflow_status: s as any });
-      toast.success(t("orders:order_updated"));
-    } catch (e: any) { toast.error(e.message); }
-  };
+  const isClosed = order?.workflow_status === "abgeschlossen";
 
   return (
     <div className="space-y-4 pt-4">
@@ -378,22 +371,23 @@ function ClosureTab({ order, canEdit }: { order: any; canEdit: boolean }) {
         <WorkflowStatusBadge status={order.workflow_status} />
       </div>
 
-      {canEdit && (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-[240px]">
-            <Label>{t("orders:closure_tab.set_status")}</Label>
-            <Select value={order.workflow_status || undefined} onValueChange={setStatus}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {WORKFLOW_STATUSES.map(s => (
-                  <SelectItem key={s} value={s}>{t(`orders:workflow.${s}`)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {isClosed ? (
+        <div className="border rounded-md p-4 bg-green-500/5 border-green-500/40 flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-medium">Auftrag automatisch abgeschlossen</p>
+            <p className="text-sm text-muted-foreground">
+              Alle Ergebnisse wurden erfasst und stehen zur Einsicht bereit. Der Auftrag ist
+              schreibgeschützt. Korrekturen erfolgen ausschließlich über einen Korrekturauftrag
+              oder eine Nachmessung.
+            </p>
           </div>
-          <Button size="sm" variant="default" onClick={() => setStatus("abgeschlossen")}>
-            <CheckCircle2 className="h-4 w-4 mr-1" /> {t("orders:closure_tab.mark_completed")}
-          </Button>
+        </div>
+      ) : (
+        <div className="border rounded-md p-4 bg-muted/40 text-sm text-muted-foreground">
+          Der Auftrag wird automatisch abgeschlossen, sobald alle Workflow-Schritte erfolgreich
+          beendet und für jede Position ein Ergebnis oder eine Begründung erfasst wurde. Ein
+          manueller Abschluss ist nicht mehr erforderlich.
         </div>
       )}
     </div>

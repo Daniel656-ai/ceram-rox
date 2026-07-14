@@ -66,8 +66,15 @@ export function WorkflowRuntimePanel({ order }: { order: any }) {
       </p>
     );
 
+  const orderLocked = order?.workflow_status === "abgeschlossen";
+
   return (
     <div className="space-y-4 pt-4">
+      {orderLocked && (
+        <div className="border rounded-md p-3 bg-green-500/5 border-green-500/40 text-sm">
+          Auftrag ist abgeschlossen und schreibgeschützt. Alle Ergebnisse sind gespeichert.
+        </div>
+      )}
       {tasks.map((task, idx) => (
         <TaskCard
           key={task.id}
@@ -77,6 +84,7 @@ export function WorkflowRuntimePanel({ order }: { order: any }) {
           sharedData={shared as Record<string, unknown>}
           isMaster={role === "master"}
           currentUserId={user?.id}
+          orderLocked={orderLocked}
           onChanged={invalidateAll}
         />
       ))}
@@ -93,6 +101,7 @@ function TaskCard({
   sharedData,
   isMaster,
   currentUserId,
+  orderLocked,
   onChanged,
 }: {
   index: number;
@@ -101,13 +110,15 @@ function TaskCard({
   sharedData: Record<string, unknown>;
   isMaster: boolean;
   currentUserId?: string;
+  orderLocked?: boolean;
   onChanged: () => void;
 }) {
   const qc = useQueryClient();
   const canEdit =
+    !orderLocked && (
     isMaster ||
     task.assigned_to === currentUserId ||
-    (task.assigned_to == null && task.status !== "completed");
+    (task.assigned_to == null && task.status !== "completed"));
 
   const isCompleted = task.status === "completed";
   const isStarted = task.status === "in_progress";
