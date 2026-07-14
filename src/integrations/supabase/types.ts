@@ -7178,9 +7178,158 @@ export type Database = {
         }
         Returns: string
       }
+      wf_complete_step: {
+        Args: { _notes?: string; _response?: Json; _run_id: string }
+        Returns: {
+          assigned_role: string | null
+          assigned_to: string | null
+          auto_time_minutes: number | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          form_response: Json
+          id: string
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          order_id: string
+          order_index: number
+          status: Database["public"]["Enums"]["step_run_status"]
+          step_id: string | null
+          step_key: string
+          step_snapshot: Json
+          time_entry_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "order_step_runs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      wf_finalize_order: {
+        Args: { _order_id: string }
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          legacy_order_id: string | null
+          locked_at: string | null
+          order_number: string | null
+          project_id: string | null
+          sample_ids: string[]
+          shared_data: Json
+          status: Database["public"]["Enums"]["order_instance_status"]
+          template_id: string | null
+          template_snapshot: Json
+          title: string | null
+          updated_at: string
+          workflow_status: Database["public"]["Enums"]["order_workflow_status_new"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "order_instances"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      wf_reopen_step: {
+        Args: { _run_id: string }
+        Returns: {
+          assigned_role: string | null
+          assigned_to: string | null
+          auto_time_minutes: number | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          form_response: Json
+          id: string
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          order_id: string
+          order_index: number
+          status: Database["public"]["Enums"]["step_run_status"]
+          step_id: string | null
+          step_key: string
+          step_snapshot: Json
+          time_entry_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "order_step_runs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      wf_round_minutes: { Args: { _minutes: number }; Returns: number }
+      wf_seed_from_template: {
+        Args: { _order_id: string; _template_id?: string }
+        Returns: {
+          assigned_role: string | null
+          assigned_to: string | null
+          auto_time_minutes: number | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          form_response: Json
+          id: string
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          order_id: string
+          order_index: number
+          status: Database["public"]["Enums"]["step_run_status"]
+          step_id: string | null
+          step_key: string
+          step_snapshot: Json
+          time_entry_id: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "order_step_runs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       wf_seed_positions_for_task: {
         Args: { _task_id: string }
         Returns: number
+      }
+      wf_start_step: {
+        Args: { _run_id: string }
+        Returns: {
+          assigned_role: string | null
+          assigned_to: string | null
+          auto_time_minutes: number | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          form_response: Json
+          id: string
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          order_id: string
+          order_index: number
+          status: Database["public"]["Enums"]["step_run_status"]
+          step_id: string | null
+          step_key: string
+          step_snapshot: Json
+          time_entry_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "order_step_runs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       wf_start_task: { Args: { _task_id: string }; Returns: undefined }
     }
