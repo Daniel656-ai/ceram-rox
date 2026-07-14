@@ -10,6 +10,8 @@ export interface WorkPackage {
   start_date: string | null;
   end_date: string | null;
   status: "planned" | "in_progress" | "completed";
+  category_id: string;
+  is_mandatory: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -23,6 +25,7 @@ export const workPackages = {
         .from("project_work_packages")
         .select("*")
         .eq("project_id", projectId)
+        .order("is_mandatory", { ascending: false })
         .order("start_date", { ascending: true, nullsFirst: false })
     );
     const ids = ((wps as any[]) || []).map((w: any) => w.id);
@@ -46,6 +49,7 @@ export const workPackages = {
   async create(params: {
     project_id: string;
     title: string;
+    category_id: string;
     description?: string;
     start_date?: string | null;
     end_date?: string | null;
@@ -76,6 +80,7 @@ export const workPackages = {
     end_date?: string | null;
     milestone_id?: string | null;
     status?: string;
+    category_id?: string;
     assignee_ids?: string[];
   }) {
     const { id, assignee_ids, ...updates } = params;
