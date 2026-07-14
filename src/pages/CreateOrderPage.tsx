@@ -174,6 +174,10 @@ export default function CreateOrderPage() {
     queryKey: ["service-packages", "active-only"],
     queryFn: () => api.servicePackages.listWithItems({ includeInactive: false }),
   });
+  const { data: processTemplates = [] } = useQuery({
+    queryKey: ["process-templates", "active"],
+    queryFn: () => api.processTemplates.list({ scope: "template" }),
+  });
   const { data: workstations = [] } = useWorkstations();
   const { data: templates = [] } = useTemplates();
   const { data: allSamples = [] } = useSamples();
