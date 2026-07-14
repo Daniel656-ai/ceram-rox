@@ -105,7 +105,7 @@ export function PilotPlantProcessPanel({ order }: { order: any }) {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const isLocked = !!order?.locked_at;
+  const isLocked = order?.workflow_status === "abgeschlossen" || !!order?.locked_at;
   const blocks = blocksQ.data ?? [];
 
   if (!blocksQ.isLoading && blocks.length === 0) {
