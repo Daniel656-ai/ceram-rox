@@ -116,6 +116,7 @@ const App = () => (
               <Route path="/admin/firmeneinstellungen" element={<AdminCompanySettingsPage />} />
               <Route path="/admin/etiketten" element={<AdminLabelTemplatesPage />} />
               <Route path="/admin/symbole" element={<AdminSymbolsPage />} />
+              <Route path="/admin/ap-kategorien" element={<AdminWorkPackageCategoriesPage />} />
 
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
