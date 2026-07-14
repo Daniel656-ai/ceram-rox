@@ -263,24 +263,23 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
 
   const insertSnippetMut = useMutation({
     mutationFn: async (snippet: ProcessTemplate) => {
-      const order = (steps.at(-1)?.order_index ?? -1) + 1;
-      // seed a step with a form generated from the snippet (simple copy)
-      const snippetSteps = await api.processTemplateSteps.listForTemplate(snippet.id);
-      const first = snippetSteps[0];
-      const newStep = await api.processTemplateSteps.create({
-        template_id: templateId,
-        step_key: `${slugify(snippet.name)}_${order + 1}`,
-        name: snippet.name,
-        description: snippet.description,
-        order_index: order,
-        role_required: first?.role_required ?? null,
-        is_mandatory: first?.is_mandatory ?? true,
-        auto_actions: first?.auto_actions ?? [],
-        metadata: { from_snippet: snippet.id },
-      });
-      return newStep;
+      const count = await api.processTemplates.insertSnippet(templateId, snippet.id);
+      return { snippet, count };
     },
-    onSuccess: (s) => { invalidateSteps(); setSelectedStepId(s.id); toast.success("Snippet eingefügt"); },
+    onSuccess: ({ snippet, count }) => {
+      invalidateSteps();
+      toast.success(`${count} Schritt(e) aus „${snippet.name}" eingefügt`);
+    },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const cloneVersionMut = useMutation({
+    mutationFn: () => api.processTemplates.cloneAsNewVersion(templateId),
+    onSuccess: (newId) => {
+      toast.success("Neue Version erstellt");
+      qc.invalidateQueries({ queryKey: ["process-templates"] });
+      window.location.href = `/admin/prozess-designer/${newId}`;
+    },
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
