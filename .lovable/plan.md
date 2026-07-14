@@ -1,86 +1,144 @@
+# Architektur-Refactoring: Ceram ROX Prozess- & Service Designer
 
-## Ziel
-Pilot-Plant-Aufträge werden nicht mehr aus einzelnen Dienstleistungsformularen zusammengesetzt, sondern durchlaufen einen fest verdrahteten 9-stufigen Prozess-Workflow. Alle Bausteine schreiben in **einen** Auftrag. Nach der Probenentnahme werden automatisch Laborproben + Labor-Aufträge erzeugt.
+## Zielbild
 
-## 1. Datenmodell (Migration)
+Ein einziger Service/Prozess-Designer, der sowohl **Labor-Dienstleistungen** (geräte-/methodenorientiert) als auch **Pilot-Plant-Prozessschritte** modelliert. Kein zweites Modul, keine parallele Codebasis. Fachliche Unterscheidung erfolgt ausschließlich über einen `process_kind` und wiederverwendbare Vorlagen.
 
-**Enum `pilot_plant_block_key`**
-`stammdaten, rezeptur, knetung, extrusion, trocknung, brennen, probenentnahme, uebergabe, abschluss`
+Da noch keine produktiven Aufträge existieren, werden die parallel gewachsenen Strukturen (`service_workflows`, `service_workflow_definitions`, `pilot_plant_blocks`, `order_workflow_tasks`, `service_data_fields`, `service_forms`) auf **eine kanonische Datenstruktur** konsolidiert. Legacy-Tabellen werden migriert und anschließend entfernt.
 
-**`measurement_orders` erweitern**
-- `is_pilot_plant_process boolean not null default false`
-- (bestehendes `shared_form_data jsonb` wird als gemeinsamer Auftragsdatensatz wiederverwendet)
+## Kanonische Datenstruktur (Phase 1)
 
-**Neue Tabelle `pilot_plant_blocks`**
-Spalten: `id, order_id, block_key, order_index, status (pending|in_progress|completed|skipped), assigned_role, assigned_to, data jsonb, started_at, completed_at, completed_by, notes`.
-Ein Eintrag je Baustein je Auftrag (unique auf `order_id + block_key`).
+Neue, gemeinsame Basistabellen — ersetzen mittelfristig alle Sonderwege:
 
-**Neue Tabelle `pilot_plant_produced_samples`**
-`id, order_id, block_id, label, quantity, marking, notes, created_sample_id (fk samples)`.
-Wird im Probenentnahme-Baustein befüllt und beim Abschluss materialisiert.
+```text
+process_templates          (Vorlage: "Labor-Service" ODER "Pilot-Plant-Prozess")
+ ├─ kind: 'labor' | 'pilot_plant'
+ ├─ category, version, is_active
+ └─ metadata
 
-**Trigger / Funktionen**
-- `trg_pp_block_after_complete`:
-  1. Merge `data` in `measurement_orders.shared_form_data` unter Key `pp.<block_key>`.
-  2. `project_time_entries` aus `started_at → completed_at` (auf 15 Min gerundet) für `completed_by` anlegen.
-  3. Nächsten Block auf `pending` setzen und Benachrichtigung an `assigned_to` bzw. Rolle senden.
-  4. Bei `block_key = probenentnahme`: für jede Zeile in `pilot_plant_produced_samples` einen `samples`-Datensatz erzeugen (Projekt, Versuchsnr., Rezeptur, PP-Daten aus shared_form_data) und **je Probe** eine `measurement_orders` mit den in Stammdaten gewählten Labor-Dienstleistungen anlegen. Verknüpfung über neue Spalte `samples.pilot_plant_order_id`.
-  5. Bei `block_key = abschluss`: Auftrag auf `completed` setzen (nutzt bestehende Auto-Close-Logik).
-- RPC `pp_start_block(_block_id)` / `pp_complete_block(_block_id, _data)` inkl. Berechtigungscheck (assigned_to = auth.uid() ODER Rolle passt).
+process_steps              (Ein Schritt = 1 Formular + 1 Rolle + Regeln)
+ ├─ template_id
+ ├─ order_index, step_key, name
+ ├─ role_required / assignee_rule
+ ├─ form_id (→ form_definitions)
+ ├─ is_mandatory, condition_expr
+ ├─ auto_actions (jsonb: create_samples, create_lab_orders, notify, ...)
+ └─ due_hours, escalation_role
 
-**RLS**
-- Lesen: alle mit Zugriff auf den Auftrag.
-- Schreiben (Block): nur `assigned_to = auth.uid()` oder passende Rolle; Auftraggeber darf Stammdaten und Zuweisungen bearbeiten.
-- `produced_samples`: Schreibrecht nur Bearbeiter des Probenentnahme-Blocks.
+form_definitions           (Ein Formular = wiederverwendbar über Steps hinweg)
+ ├─ name, scope ('global' | 'template')
+ ├─ schema (fields[])
+ └─ layout
 
-## 2. API (`src/lib/api/pilotPlantProcess.ts`)
-- `blocks.listForOrder`, `blocks.get`, `blocks.assign`, `blocks.start`, `blocks.saveDraft`, `blocks.complete`
-- `producedSamples.list/upsert/remove`
-- `orders.createPilotPlantProcess({ project_id, versuchsnummer, versuchsart, previous_experiments, requested_samples, requested_lab_service_ids, date })` — legt Auftrag mit `is_pilot_plant_process=true` an und seedet alle 9 Blocks.
+form_fields                (Normalisiert für Query-Zugriff & Validierung)
+ ├─ form_id, field_key, label, type, unit
+ ├─ is_required, validation, default_value
+ ├─ formula (computed), select_options
+ └─ sort_order, parent_field_id (repeater)
 
-## 3. UI
+order_instances            (Ein Auftrag = 1 Instanz, egal ob Labor/PP/kombiniert)
+ ├─ template_id, order_number
+ ├─ project_id, sample_ids[], created_by
+ ├─ status, workflow_status
+ ├─ shared_data (jsonb — DIE zentrale Datenquelle)
+ └─ locked_at
 
-**`CreateOrderPage.tsx`**
-- Wenn Kategorie „Pilot Plant" gewählt → neuer, deutlich schlankerer Modus. Statt der bisherigen Pilot-Plant-Felder nur noch die Stammdaten:
-  Projekt, Versuchsnummer, Auftraggeber (auto), Datum, Frühere Versuche, Versuchsart, gewünschte Proben (Freitext-Liste), gewünschte Labor-Dienstleistungen (Multi-Select aus Katalog).
-- Optional: pro Baustein Bearbeiter festlegen (aufklappbarer Bereich „Zuweisungen"). Leer = Rolle.
-- Bestehende Mixture-Rezeptur-Auswahl bleibt für den Rezeptur-Baustein zugänglich, aber nicht mehr auf der Order-Erstellung.
+order_step_runs            (Ein Task = konkrete Ausführung eines Steps)
+ ├─ order_id, step_id, order_index
+ ├─ status, assigned_to, opened_at, completed_at
+ ├─ form_response (jsonb — wird in shared_data gemerged)
+ ├─ time_minutes (auto aus opened→completed)
+ └─ notes
 
-**Neue Komponente `src/components/pilotplant/PilotPlantProcessPanel.tsx`**
-- Vertikaler Stepper der 9 Bausteine mit Status-Badges.
-- Jeder Block: Briefing-Karte (aggregierte `shared_form_data` aus Vorgänger-Blocks read-only) + baustein-spezifisches Formular (fest verdrahtete Felder laut Spezifikation).
-- Bedienelemente: „Bearbeitung starten" → `pp_start_block`, „Speichern (Entwurf)", „Abschließen" → `pp_complete_block`.
-- Probenentnahme-Block: Repeater für erzeugte Proben (Bezeichnung, Anzahl, Kennzeichnung, Bemerkung).
-- Sperre bei `measurement_orders.locked_at`.
-
-**`OrderWorkflowTabs.tsx`**
-- Wenn `is_pilot_plant_process` → nur die Tabs „Übersicht", „Pilot-Plant-Prozess" (neu, ersetzt Workflow-Tab), „Dokumente", „Bericht", „Abschluss". Labor-Tabs erscheinen an den automatisch erzeugten Sample-Aufträgen.
-
-**`OrdersPage.tsx` / „Meine Aufgaben"**
-- Zusätzlich zu Workflow-Tasks werden offene Pilot-Plant-Blöcke gelistet (assigned_to = ich ODER Rolle passt und nicht zugewiesen). Klick öffnet den Auftrag mit direktem Sprung auf den Block.
-
-## 4. Bausteinfelder (fest verdrahtet)
-```
-stammdaten:     nur Anzeige (aus Auftragserstellung)
-rezeptur:       recipe_version_id (aus mixtures), rohstoff_hinweise
-knetung:        knetzeit_min, wasserzugabe_l, drehzahl_rpm, bediener, bemerkung
-extrusion:      mundstueck, extruder, druck_bar, drehzahl_rpm, bemerkung
-trocknung:      temperatur_c, dauer_h, bediener, bemerkung
-brennen:        brennkurve, ofen, temperatur_c, haltezeit_min, bemerkung
-probenentnahme: produced_samples[], gesamt_anzahl, bemerkung
-uebergabe:      auto (zeigt erzeugte Proben + Labor-Order-Links), Bestätigung
-abschluss:      qualitative Bewertung, freigabe boolean
+order_step_positions       (Positionsbasierte Ergebnisse: pro Probe/Mundstück/…)
+ ├─ step_run_id, position_ref, label
+ ├─ status: open | in_progress | completed | not_feasible
+ ├─ result_value, remarks, not_feasible_reason
+ └─ completed_by, completed_at
 ```
 
-## 5. Nicht-Ziele
-- Kein digitaler Laufzettel-Nachbau (PDF-Generierung kann später aus `shared_form_data` erfolgen).
-- Kein Umbau bestehender Labor-Aufträge.
-- Bestehende `order_analysis_requests`-Struktur bleibt vorerst unangetastet, wird aber im Pilot-Plant-Prozess-Modus nicht mehr befüllt.
+**Zentrale Regel:** `order_instances.shared_data` ist die _einzige_ persistente Datenschicht des Auftrags. Jeder abgeschlossene `order_step_run` mergt sein `form_response` per Trigger in `shared_data` unter einem step-key-Namespace. Folgeschritte lesen von dort → jedes Datum wird nur einmal erfasst.
 
-## 6. Ausführungsreihenfolge
-1. Migration (Enum, Tabellen, Trigger, RLS, RPCs)
-2. API-Modul
-3. `CreateOrderPage` Pilot-Plant-Modus umstellen
-4. `PilotPlantProcessPanel` + Integration in `OrderWorkflowTabs`
-5. „Meine Aufgaben" um PP-Blöcke erweitern
-6. Manuelle Verifikation: Auftrag erstellen → alle 9 Blöcke durchlaufen → prüfen, dass Samples + Labor-Orders korrekt entstehen.
+## Gemeinsame Workflow-Engine (Phase 2)
+
+Eine einzige Engine — keine Sonderfälle für Labor vs. Pilot Plant.
+
+Kern-RPCs:
+
+- `wf_seed_from_template(order_id, template_id)` — erzeugt `order_step_runs`.
+- `wf_start_step(step_run_id)` — Status `in_progress`, `opened_at=now()`.
+- `wf_complete_step(step_run_id, response, notes)` — validiert Pflichtfelder & Positionen, mergt in `shared_data`, erstellt `project_time_entries`, führt `auto_actions` aus (z.B. Sample-/Lab-Order-Erzeugung), prüft Instanz-Vollständigkeit.
+- `wf_finalize_order(order_id)` — automatischer Abschluss + Lock, wenn alle Steps `completed` und alle Positionen entweder `completed` oder `not_feasible` mit Begründung.
+
+Ein zentraler Trigger `trg_lock_on_finalize` sperrt `order_instances` und alle abhängigen Tabellen (Bypass nur via `app.bypass_order_lock` für die Engine selbst).
+
+Rollen, Berechtigungen (`has_role`), Kompetenzmatrix (`mdl_service_permissions`), Benachrichtigungen und Arbeitszeiterfassung greifen über einen einzigen Code-Pfad — unabhängig vom `kind`.
+
+## Service Designer UI-Erweiterung (Phase 3)
+
+Ein Designer, zwei Modi (nur UI-Unterschied):
+
+- **Modus „Labor"**: Steps zeigen Felder wie Prüfmethode, Gerät, Prüfparameter. Typischerweise 1–2 Steps.
+- **Modus „Pilot Plant"**: Steps sind Prozessbausteine (Knetung, Extrusion, …), üblicherweise 5–10. Palette wiederverwendbarer Bausteine ("Prozess-Snippets") aus `process_templates` mit `scope='snippet'`.
+
+Gemeinsam nutzbar: Formular-Editor, Feldtypen (inkl. `computed`, `handwriting`, `repeater`, Upload), Formel-Engine, Rollen-/Berechtigungs-Selector, Validierung, Vorschau.
+
+## Wiederverwendbare Vorlagen (Phase 4)
+
+- `form_definitions.scope='global'` → globale Formularbibliothek (z.B. „Standard-Bediener + Bemerkung").
+- `process_templates.scope='snippet'` → Prozess-Snippets, per Drag&Drop in andere Templates einfügbar.
+- Versionierung über `process_templates.version` + `is_active`. Bestehende Aufträge bleiben an ihre Snapshot-Version gebunden (Referenz in `order_instances.template_snapshot`).
+
+## Laufzettel, Protokolle, Berichte (Phase 5)
+
+- **Laufzettel** = generierte Ansicht aus `shared_data` + `order_step_runs` (kein separater Datentopf).
+- **Prozessprotokoll** = chronologische Sicht auf `order_step_runs` + `activity_log`.
+- **Ergebnisbericht** = konfigurierbar über `report_templates` (bereits vorhanden), mit Bindings auf `shared_data`-Pfade. Auto-Draft beim Abschluss.
+
+## Migration von Bestandsstrukturen
+
+Da keine produktiven Aufträge existieren, wird konsolidiert statt parallelisiert:
+
+| Alt                                         | Neu                                    |
+|---------------------------------------------|----------------------------------------|
+| `measurement_services` (labor)              | `process_templates` (kind=labor)       |
+| `service_workflow_definitions` + `_steps`   | `process_templates` + `process_steps`  |
+| `pilot_plant_blocks`                        | `order_step_runs` (kind=pilot_plant)   |
+| `service_data_fields`, `service_forms`      | `form_definitions` + `form_fields`     |
+| `measurement_orders`                        | `order_instances`                      |
+| `order_measurements`                        | `order_step_runs` (mit Position-Rows)  |
+| `order_workflow_tasks/positions`            | `order_step_runs/positions`            |
+| `pilot_plant_produced_samples`              | `auto_actions` in Step (kein neuer Typ)|
+
+Alt-Tabellen werden per Migration umgezogen, dann in einem Cleanup-Sprint entfernt. API-Layer (`src/lib/api/*`) wird auf die neuen Namen umgestellt; UI konsumiert nur noch die neuen Domains.
+
+## Umsetzungsreihenfolge
+
+1. **Datenschicht** (Migration): Neue Tabellen + GRANTs + RLS + Trigger für `shared_data`-Merge und Auto-Lock. Migrationsskripte für Alt→Neu.
+2. **API-Layer**: Neue Module `processTemplates`, `formDefinitions`, `orderInstances`, `orderStepRuns`, `workflowEngine`. Alt-Module als Thin-Wrapper markieren (`@deprecated`), damit UI schrittweise migriert.
+3. **Workflow-Engine**: RPCs `wf_seed_from_template`, `wf_start_step`, `wf_complete_step`, `wf_finalize_order` + `auto_actions`-Executor.
+4. **Service Designer UI**: Ein Designer mit Modus-Umschalter, Formular-Editor auf neuer Basis, Snippet-Bibliothek.
+5. **Auftrags-UI**: `CreateOrderPage` + `OrderWorkflowTabs` konsumieren `order_instances`; alte Pilot-Plant-Panels entfernt.
+6. **Laufzettel & Reports**: Auto-Generierung aus `shared_data`, Bindings in Report-Templates auf neue Pfade umstellen.
+7. **Cleanup**: Legacy-Tabellen dropen, Code aus `src/lib/api/*` und Komponenten entfernen.
+
+## Technische Leitplanken
+
+- Alle Datenzugriffe ausschließlich über `src/lib/api/*` (ESLint-Regel bleibt scharf).
+- Keine CHECK-Constraints für zeitabhängige Regeln → Trigger.
+- Jede neue `public`-Tabelle: `CREATE TABLE` → `GRANT` (authenticated + service_role) → `ENABLE RLS` → Policies.
+- RLS-Policies gehen konsequent über `has_role(auth.uid(), …)` — keine rekursiven Selects.
+- `shared_data` niemals aus dem Client direkt schreiben; nur über `wf_complete_step`.
+- Sperrmechanismus (`is_order_locked`) bleibt zentral in einer Funktion + Triggern auf allen abhängigen Tabellen.
+
+## Aufwandseinschätzung
+
+Phase 1–3 sind die eigentliche Architekturarbeit (~ groß). Phase 4–7 sind überwiegend UI-Umstellung und Cleanup auf der bereits stabilen neuen Basis.
+
+## Offene Entscheidungen vor Start
+
+1. **Big-Bang oder Migration in Etappen?** Ich empfehle Big-Bang, da noch keine Produktivdaten existieren — sauberer Cut, keine Zombie-Tabellen.
+2. **Umbenennung `measurement_orders` → `order_instances` durchziehen?** Empfohlen (verhindert Verwirrung Labor↔PP). Alternative: Tabelle behalten, nur Semantik erweitern.
+3. **Sollen `service_data_fields` in `form_fields` überführt werden, oder bleibt `form_definitions.schema` (jsonb) alleinige Wahrheit?** Empfehlung: normalisierte `form_fields` — bessere Query- und Validierungsleistung, saubere FKs für Berechnungen.
+
+Sag mir, ob ich mit Big-Bang starte und ob die drei offenen Punkte oben nach meiner Empfehlung entschieden werden — dann lege ich mit der Migration von Phase 1 los.
