@@ -140,6 +140,10 @@ import {
   workTasks,
 } from "./workObjects";
 import { pilotPlantBlocks, pilotPlantProducedSamples } from "./pilotPlantProcess";
+import { processTemplates } from "./processTemplates";
+import { processSteps as processTemplateSteps } from "./processSteps";
+import { formDefinitions } from "./formDefinitions";
+import { formFields } from "./formFields";
 
 
 
@@ -271,6 +275,12 @@ export const api = {
   // ---- pilot plant process (9-step workflow) ----
   pilotPlantBlocks,
   pilotPlantProducedSamples,
+
+  // ---- Phase 3: unified Prozess-Designer ----
+  processTemplates,
+  processTemplateSteps,
+  formDefinitions,
+  formFields,
 
 
 
