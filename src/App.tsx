@@ -22,6 +22,7 @@ import AdminServiceDesignerPage from "./pages/AdminServiceDesignerPage";
 import AdminServicePackagesPage from "./pages/AdminServicePackagesPage";
 import PortfoliosPage from "./pages/PortfoliosPage";
 import PortfolioDetailPage from "./pages/PortfolioDetailPage";
+import AdminWorkPackageCategoriesPage from "./pages/AdminWorkPackageCategoriesPage";
 
 import AdminStatsPage from "./pages/AdminStatsPage";
 import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
@@ -115,6 +116,7 @@ const App = () => (
               <Route path="/admin/firmeneinstellungen" element={<AdminCompanySettingsPage />} />
               <Route path="/admin/etiketten" element={<AdminLabelTemplatesPage />} />
               <Route path="/admin/symbole" element={<AdminSymbolsPage />} />
+              <Route path="/admin/ap-kategorien" element={<AdminWorkPackageCategoriesPage />} />
 
               <Route path="/kalender" element={<CalendarPage />} />
               <Route path="/ergebnisse" element={<ResultsDatabasePage />} />

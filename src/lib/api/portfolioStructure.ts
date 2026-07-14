@@ -11,10 +11,13 @@ export interface PortfolioWorkPackage {
   name: string;
   description: string | null;
   category_id: string | null;
+  is_active: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
 }
+
+export type PortfolioTaskStatus = "offen" | "in_arbeit" | "erledigt";
 
 export interface PortfolioTask {
   id: string;
@@ -22,6 +25,7 @@ export interface PortfolioTask {
   code: string | null;
   name: string;
   description: string | null;
+  status: PortfolioTaskStatus;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -96,4 +100,15 @@ export const portfolioFfgAnalytics = {
     rpc("get_portfolio_costs_by_work_package", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
   costsByCategory: (portfolioId: string, start?: string | null, end?: string | null) =>
     rpc("get_portfolio_costs_by_category", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
+  ffgSummary: (portfolioId: string) =>
+    rpc("get_portfolio_ffg_summary", { _portfolio_id: portfolioId }) as Promise<
+      Array<{
+        work_package_id: string;
+        work_package_code: string | null;
+        work_package_name: string;
+        category_id: string | null;
+        category_name: string | null;
+        hours: number;
+      }>
+    >,
 };

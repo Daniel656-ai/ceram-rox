@@ -25,6 +25,9 @@ import { ArrowLeft, Plus, Trash2, Pencil, Save, X, FolderPlus, Briefcase, Calend
 import PortfolioAnalyticsTab from "@/components/PortfolioAnalyticsTab";
 import PortfolioDocumentsTab from "@/components/PortfolioDocumentsTab";
 import PortfolioDashboardTab from "@/components/PortfolioDashboardTab";
+import PortfolioStructureTab from "@/components/portfolio/PortfolioStructureTab";
+import PortfolioFfgReportTab from "@/components/portfolio/PortfolioFfgReportTab";
+import { useCanManagePortfolio } from "@/hooks/useCanManagePortfolio";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { formatCurrency } from "@/lib/formatCurrency";
 
@@ -59,6 +62,7 @@ export default function PortfolioDetailPage() {
   const qc = useQueryClient();
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
+  const canManageStructure = useCanManagePortfolio();
   const isMaster = role === "master";
   const canEdit = isMaster || hasPermission("portfolios.edit" as any);
   const canAssign = isMaster || hasPermission("portfolios.assign_projects" as any);
@@ -286,14 +290,25 @@ export default function PortfolioDetailPage() {
       </div>
 
       <Tabs defaultValue="overview">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="overview">Stammdaten</TabsTrigger>
+          <TabsTrigger value="structure">Struktur (APs &amp; Tasks)</TabsTrigger>
           <TabsTrigger value="projects">Projekte ({members.length})</TabsTrigger>
           <TabsTrigger value="milestones">Meilensteine ({milestoneTimeline.length})</TabsTrigger>
           <TabsTrigger value="documents">Dokumente</TabsTrigger>
           <TabsTrigger value="analytics">Auswertungen</TabsTrigger>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="ffg">FFG-Bericht</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard &amp; KPIs</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="structure" className="mt-4">
+          <PortfolioStructureTab portfolioId={portfolioId} canManage={canManageStructure} />
+        </TabsContent>
+
+        <TabsContent value="ffg" className="mt-4">
+          <PortfolioFfgReportTab portfolioId={portfolioId} portfolioName={portfolio.name} />
+        </TabsContent>
+
 
         <TabsContent value="overview" className="mt-4">
           <Card>
