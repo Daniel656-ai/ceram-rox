@@ -46,4 +46,29 @@ export const processTemplates = {
         .eq("id", id)
     ),
   remove: (id: string) => run(dbClient.from("process_templates" as any).delete().eq("id", id)),
+
+  insertSnippet: async (targetTemplateId: string, snippetId: string) => {
+    const { data, error } = await dbClient.rpc("insert_snippet_into_template" as any, {
+      _target_template_id: targetTemplateId,
+      _snippet_id: snippetId,
+    } as any);
+    if (error) throw error;
+    return data as number;
+  },
+
+  cloneAsNewVersion: async (templateId: string) => {
+    const { data, error } = await dbClient.rpc("clone_template_as_new_version" as any, {
+      _template_id: templateId,
+    } as any);
+    if (error) throw error;
+    return data as string;
+  },
+
+  snapshot: async (templateId: string) => {
+    const { data, error } = await dbClient.rpc("snapshot_template" as any, {
+      _template_id: templateId,
+    } as any);
+    if (error) throw error;
+    return data as Record<string, unknown>;
+  },
 };

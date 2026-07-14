@@ -130,40 +130,53 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
         <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-2" />Neue Vorlage</Button>
       </div>
 
-      <div className="flex gap-2">
-        <Button variant={filterKind === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("all")}>Alle</Button>
-        <Button variant={filterKind === "labor" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("labor")}><Beaker className="h-4 w-4 mr-1" />Labor</Button>
-        <Button variant={filterKind === "pilot_plant" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("pilot_plant")}><Factory className="h-4 w-4 mr-1" />Pilot Plant</Button>
-      </div>
+      <Tabs defaultValue="templates">
+        <TabsList>
+          <TabsTrigger value="templates"><Layers className="h-4 w-4 mr-1" />Vorlagen & Snippets</TabsTrigger>
+          <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Name</TableHead><TableHead>Modus</TableHead><TableHead>Typ</TableHead>
-              <TableHead>Kategorie</TableHead><TableHead>Version</TableHead><TableHead>Status</TableHead>
-              <TableHead className="w-32"></TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Lade…</TableCell></TableRow>}
-              {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Vorlagen vorhanden.</TableCell></TableRow>}
-              {filtered.map(t => (
-                <TableRow key={t.id} className="cursor-pointer hover:bg-muted/40" onClick={() => navigate(`/admin/prozess-designer/${t.id}`)}>
-                  <TableCell className="font-medium">{t.name}</TableCell>
-                  <TableCell>{t.kind === "labor" ? <Badge variant="secondary"><Beaker className="h-3 w-3 mr-1" />Labor</Badge> : <Badge variant="secondary"><Factory className="h-3 w-3 mr-1" />Pilot Plant</Badge>}</TableCell>
-                  <TableCell>{t.scope === "snippet" ? <Badge variant="outline"><Puzzle className="h-3 w-3 mr-1" />Snippet</Badge> : <Badge variant="outline">Vorlage</Badge>}</TableCell>
-                  <TableCell>{t.category || "—"}</TableCell>
-                  <TableCell>v{t.version}</TableCell>
-                  <TableCell>{t.is_active ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(t)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+        <TabsContent value="templates" className="mt-4 space-y-4">
+          <div className="flex gap-2">
+            <Button variant={filterKind === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("all")}>Alle</Button>
+            <Button variant={filterKind === "labor" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("labor")}><Beaker className="h-4 w-4 mr-1" />Labor</Button>
+            <Button variant={filterKind === "pilot_plant" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("pilot_plant")}><Factory className="h-4 w-4 mr-1" />Pilot Plant</Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Name</TableHead><TableHead>Modus</TableHead><TableHead>Typ</TableHead>
+                  <TableHead>Kategorie</TableHead><TableHead>Version</TableHead><TableHead>Status</TableHead>
+                  <TableHead className="w-32"></TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Lade…</TableCell></TableRow>}
+                  {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Vorlagen vorhanden.</TableCell></TableRow>}
+                  {filtered.map(t => (
+                    <TableRow key={t.id} className="cursor-pointer hover:bg-muted/40" onClick={() => navigate(`/admin/prozess-designer/${t.id}`)}>
+                      <TableCell className="font-medium">{t.name}</TableCell>
+                      <TableCell>{t.kind === "labor" ? <Badge variant="secondary"><Beaker className="h-3 w-3 mr-1" />Labor</Badge> : <Badge variant="secondary"><Factory className="h-3 w-3 mr-1" />Pilot Plant</Badge>}</TableCell>
+                      <TableCell>{t.scope === "snippet" ? <Badge variant="outline"><Puzzle className="h-3 w-3 mr-1" />Snippet</Badge> : <Badge variant="outline">Vorlage</Badge>}</TableCell>
+                      <TableCell>{t.category || "—"}</TableCell>
+                      <TableCell>v{t.version}</TableCell>
+                      <TableCell>{t.is_active ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(t)}><Trash2 className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="library" className="mt-4">
+          <GlobalFormLibrary />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent>
@@ -263,24 +276,23 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
 
   const insertSnippetMut = useMutation({
     mutationFn: async (snippet: ProcessTemplate) => {
-      const order = (steps.at(-1)?.order_index ?? -1) + 1;
-      // seed a step with a form generated from the snippet (simple copy)
-      const snippetSteps = await api.processTemplateSteps.listForTemplate(snippet.id);
-      const first = snippetSteps[0];
-      const newStep = await api.processTemplateSteps.create({
-        template_id: templateId,
-        step_key: `${slugify(snippet.name)}_${order + 1}`,
-        name: snippet.name,
-        description: snippet.description,
-        order_index: order,
-        role_required: first?.role_required ?? null,
-        is_mandatory: first?.is_mandatory ?? true,
-        auto_actions: first?.auto_actions ?? [],
-        metadata: { from_snippet: snippet.id },
-      });
-      return newStep;
+      const count = await api.processTemplates.insertSnippet(templateId, snippet.id);
+      return { snippet, count };
     },
-    onSuccess: (s) => { invalidateSteps(); setSelectedStepId(s.id); toast.success("Snippet eingefügt"); },
+    onSuccess: ({ snippet, count }) => {
+      invalidateSteps();
+      toast.success(`${count} Schritt(e) aus „${snippet.name}" eingefügt`);
+    },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const cloneVersionMut = useMutation({
+    mutationFn: () => api.processTemplates.cloneAsNewVersion(templateId),
+    onSuccess: (newId) => {
+      toast.success("Neue Version erstellt");
+      qc.invalidateQueries({ queryKey: ["process-templates"] });
+      window.location.href = `/admin/prozess-designer/${newId}`;
+    },
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
@@ -321,9 +333,13 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
               {template.kind === "labor" ? <Badge variant="secondary"><Beaker className="h-3 w-3 mr-1" />Labor</Badge> : <Badge variant="secondary"><Factory className="h-3 w-3 mr-1" />Pilot Plant</Badge>}
               <Badge variant="outline">v{template.version}</Badge>
               {template.scope === "snippet" && <Badge variant="outline"><Puzzle className="h-3 w-3 mr-1" />Snippet</Badge>}
+              {!template.is_active && <Badge variant="outline">inaktiv</Badge>}
             </div>
           </div>
         </div>
+        <Button variant="outline" size="sm" onClick={() => { if (confirm("Neue Version erstellen? Die aktuelle Version wird archiviert.")) cloneVersionMut.mutate(); }} disabled={cloneVersionMut.isPending}>
+          <Layers className="h-4 w-4 mr-1" />Neue Version
+        </Button>
       </div>
 
       <Tabs defaultValue="steps">
@@ -663,5 +679,81 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------- Global Form Library ----------------
+function GlobalFormLibrary() {
+  const qc = useQueryClient();
+  const [newName, setNewName] = useState("");
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+
+  const { data: forms = [], isLoading } = useQuery({
+    queryKey: ["form-definitions", "global"],
+    queryFn: () => api.formDefinitions.list({ scope: "global" }),
+  });
+
+  const createMut = useMutation({
+    mutationFn: () => api.formDefinitions.create({ name: newName.trim(), scope: "global" }),
+    onSuccess: (f) => {
+      toast.success("Formular angelegt");
+      setNewName("");
+      qc.invalidateQueries({ queryKey: ["form-definitions", "global"] });
+      setSelectedFormId(f.id);
+    },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (id: string) => api.formDefinitions.remove(id),
+    onSuccess: () => {
+      toast.success("Gelöscht");
+      qc.invalidateQueries({ queryKey: ["form-definitions", "global"] });
+      setSelectedFormId(null);
+    },
+    onError: (e: any) => toast.error(e.message || "Löschen fehlgeschlagen"),
+  });
+
+  const selectedForm = forms.find(f => f.id === selectedFormId) ?? null;
+
+  return (
+    <div className="grid grid-cols-12 gap-4">
+      <Card className="col-span-4">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Globale Formulare</CardTitle>
+          <p className="text-xs text-muted-foreground">Wiederverwendbar über alle Prozessvorlagen hinweg.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Neuer Formularname" />
+            <Button size="sm" onClick={() => createMut.mutate()} disabled={!newName.trim() || createMut.isPending}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          {isLoading && <div className="text-xs text-muted-foreground">Lade…</div>}
+          {!isLoading && forms.length === 0 && <div className="text-xs text-muted-foreground py-4 text-center border rounded">Noch keine globalen Formulare.</div>}
+          <div className="space-y-1">
+            {forms.map(f => (
+              <div key={f.id} className={`flex items-center gap-1 rounded px-2 py-2 cursor-pointer ${selectedFormId === f.id ? "bg-primary/10" : "hover:bg-muted"}`} onClick={() => setSelectedFormId(f.id)}>
+                <span className="flex-1 text-sm truncate">{f.name}</span>
+                <Badge variant="outline" className="text-xs">v{f.version}</Badge>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); if (confirm(`Formular „${f.name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="col-span-8">
+        {selectedForm ? (
+          <Card>
+            <CardHeader><CardTitle className="text-sm">{selectedForm.name}</CardTitle></CardHeader>
+            <CardContent><FormFieldsEditor form={selectedForm} /></CardContent>
+          </Card>
+        ) : (
+          <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte ein Formular links auswählen oder anlegen.</CardContent></Card>
+        )}
+      </div>
+    </div>
   );
 }
