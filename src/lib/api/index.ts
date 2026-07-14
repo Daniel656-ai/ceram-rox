@@ -139,6 +139,7 @@ import {
   servicePackageWorkflowMap,
   workTasks,
 } from "./workObjects";
+import { pilotPlantBlocks, pilotPlantProducedSamples } from "./pilotPlantProcess";
 
 
 
