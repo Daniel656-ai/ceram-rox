@@ -314,9 +314,9 @@ export default function AdminServicesPage() {
                     <Button
                       size="sm"
                       className="h-7 text-xs gap-1"
-                      onClick={() => window.location.assign(`/admin/messdienstleistungen/${s.id}/designer`)}
+                      onClick={() => window.location.assign(`/admin/prozess-designer`)}
                     >
-                      <Settings2 className="h-3 w-3" /> Designer
+                      <Settings2 className="h-3 w-3" /> Prozess-Designer
                     </Button>
                   </div>
                 </TableCell>
