@@ -51,7 +51,7 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
 
           {showPP && (
             <TabsContent value="pilot_plant">
-              <PilotPlantTab order={order} canEdit={canEdit} />
+              <PilotPlantProcessPanel order={order} />
             </TabsContent>
           )}
 
