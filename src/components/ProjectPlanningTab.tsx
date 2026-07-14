@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { useState, Fragment } from "react";
+import { useState, Fragment, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import {
@@ -69,6 +71,15 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
   const { data: workPackages = [], isLoading: wpLoading } = useWorkPackages(projectId);
   const { data: dependencies = [] } = useWorkPackageDependencies(projectId);
   const { data: users = [] } = useUsers();
+  const { data: categories = [] } = useQuery({
+    queryKey: ["work-package-categories"],
+    queryFn: () => api.workPackageCategories.list(),
+  });
+  const defaultCategoryId = useMemo(
+    () => (categories.find((c: any) => c.name === "Grundlagen & Charakterisierung")?.id || categories[0]?.id || ""),
+    [categories],
+  );
+  const categoryName = (id?: string | null) => (categories as any[]).find((c) => c.id === id)?.name || "–";
 
   // Only project-level milestones (not attached to a work package) shown in the standalone card
   const milestones = (allMilestones as any[]).filter((m) => !m.work_package_id);
