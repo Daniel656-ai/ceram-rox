@@ -3118,6 +3118,7 @@ export type Database = {
           name: string
           portfolio_work_package_id: string
           sort_order: number
+          status: string
           updated_at: string
         }
         Insert: {
@@ -3129,6 +3130,7 @@ export type Database = {
           name: string
           portfolio_work_package_id: string
           sort_order?: number
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -3140,6 +3142,7 @@ export type Database = {
           name?: string
           portfolio_work_package_id?: string
           sort_order?: number
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -3160,6 +3163,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          is_active: boolean
           name: string
           portfolio_id: string
           sort_order: number
@@ -3172,6 +3176,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean
           name: string
           portfolio_id: string
           sort_order?: number
@@ -3184,6 +3189,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           portfolio_id?: string
           sort_order?: number
@@ -7113,6 +7119,17 @@ export type Database = {
       get_portfolio_dashboard: {
         Args: { _portfolio_id: string }
         Returns: Json
+      }
+      get_portfolio_ffg_summary: {
+        Args: { _portfolio_id: string }
+        Returns: {
+          category_id: string
+          category_name: string
+          hours: number
+          work_package_code: string
+          work_package_id: string
+          work_package_name: string
+        }[]
       }
       get_portfolio_hours_by_category: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
