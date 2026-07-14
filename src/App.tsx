@@ -22,6 +22,7 @@ import AdminServiceDesignerPage from "./pages/AdminServiceDesignerPage";
 import AdminServicePackagesPage from "./pages/AdminServicePackagesPage";
 import PortfoliosPage from "./pages/PortfoliosPage";
 import PortfolioDetailPage from "./pages/PortfolioDetailPage";
+import AdminWorkPackageCategoriesPage from "./pages/AdminWorkPackageCategoriesPage";
 
 import AdminStatsPage from "./pages/AdminStatsPage";
 import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
