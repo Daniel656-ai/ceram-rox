@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,469 +13,207 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import {
-  ArrowLeft, Plus, Pencil, Trash2, Database, FormInput, Workflow, Zap,
-  FileText, Eye, History, Settings, GripVertical, Layers, Upload,
-} from "lucide-react";
-import type { ServiceDataField, ServiceFieldType } from "@/lib/api/serviceDesigner";
-import { evaluateFormula } from "@/lib/formulaEngine";
-import FormDesignerTab from "@/components/ServiceDesigner/FormDesigner";
-import RulesDesigner from "@/components/ServiceDesigner/RulesDesigner";
-import DocumentsDesigner from "@/components/ServiceDesigner/DocumentsDesigner";
-import ServicePreview from "@/components/ServiceDesigner/ServicePreview";
-import BlockLibrary from "@/components/ServiceDesigner/BlockLibrary";
-import VersionsDesigner from "@/components/ServiceDesigner/VersionsDesigner";
-import ImportFieldsDialog from "@/components/ServiceDesigner/ImportFieldsDialog";
-import WorkflowDesigner from "@/components/ServiceDesigner/WorkflowDesigner";
-import WorkflowStepsDesigner from "@/components/ServiceDesigner/WorkflowStepsDesigner";
-import FormsLibrary from "@/components/ServiceDesigner/FormsLibrary";
+import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle } from "lucide-react";
+import type { ProcessKind, ProcessTemplate } from "@/lib/api/processTemplates";
+import type { ProcessStep } from "@/lib/api/processSteps";
+import type { FormDefinition } from "@/lib/api/formDefinitions";
+import type { FormField, FormFieldType } from "@/lib/api/formFields";
 
-const FIELD_TYPE_GROUPS: { label: string; types: { value: ServiceFieldType; label: string }[] }[] = [
-  {
-    label: "Standard",
-    types: [
-      { value: "text", label: "Text" },
-      { value: "longtext", label: "Mehrzeiliger Text" },
-      { value: "number", label: "Zahl" },
-      { value: "decimal", label: "Dezimalzahl" },
-      { value: "percent", label: "Prozent" },
-      { value: "boolean", label: "Ja / Nein" },
-    ],
-  },
-  {
-    label: "Datum & Zeit",
-    types: [
-      { value: "date", label: "Datum" },
-      { value: "time", label: "Uhrzeit" },
-      { value: "datetime", label: "Datum & Uhrzeit" },
-    ],
-  },
-  {
-    label: "Auswahl",
-    types: [
-      { value: "select", label: "Dropdown" },
-      { value: "multiselect", label: "Mehrfachauswahl" },
-    ],
-  },
-  {
-    label: "Dateien & Codes",
-    types: [
-      { value: "file", label: "Datei" },
-      { value: "image", label: "Bild" },
-      { value: "barcode", label: "Barcode" },
-      { value: "qrcode", label: "QR-Code" },
-      { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
-    ],
-    },
-
-  {
-    label: "Berechnung",
-    types: [
-      { value: "computed", label: "Berechnetes Feld (Formel)" },
-    ],
-  },
-  {
-    label: "Beziehungen",
-    types: [
-      { value: "ref_customer", label: "Kunde" },
-      { value: "ref_material", label: "Material" },
-      { value: "ref_product", label: "Produkt" },
-      { value: "ref_machine", label: "Maschine" },
-      { value: "ref_employee", label: "Mitarbeiter" },
-      { value: "ref_location", label: "Standort" },
-      { value: "ref_batch", label: "Chargennummer" },
-      { value: "ref_serial", label: "Seriennummer" },
-      { value: "repeater", label: "Unterliste (1:n)" },
-    ],
-  },
+const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
+  { label: "Standard", types: [
+    { value: "text", label: "Text" }, { value: "longtext", label: "Mehrzeiliger Text" },
+    { value: "number", label: "Zahl" }, { value: "decimal", label: "Dezimalzahl" },
+    { value: "percent", label: "Prozent" }, { value: "boolean", label: "Ja / Nein" },
+  ]},
+  { label: "Datum & Zeit", types: [
+    { value: "date", label: "Datum" }, { value: "time", label: "Uhrzeit" }, { value: "datetime", label: "Datum & Uhrzeit" },
+  ]},
+  { label: "Auswahl", types: [{ value: "select", label: "Dropdown" }, { value: "multiselect", label: "Mehrfachauswahl" }]},
+  { label: "Dateien & Codes", types: [
+    { value: "file", label: "Datei" }, { value: "image", label: "Bild" },
+    { value: "barcode", label: "Barcode" }, { value: "qrcode", label: "QR-Code" },
+    { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
+  ]},
+  { label: "Berechnung", types: [{ value: "computed", label: "Berechnetes Feld (Formel)" }]},
+  { label: "Beziehungen", types: [
+    { value: "ref_customer", label: "Kunde" }, { value: "ref_material", label: "Material" },
+    { value: "ref_product", label: "Produkt" }, { value: "ref_machine", label: "Maschine" },
+    { value: "ref_employee", label: "Mitarbeiter" }, { value: "ref_location", label: "Standort" },
+    { value: "ref_batch", label: "Chargennummer" }, { value: "ref_serial", label: "Seriennummer" },
+    { value: "repeater", label: "Unterliste (1:n)" },
+  ]},
 ];
-
-const ALL_TYPES = FIELD_TYPE_GROUPS.flatMap((g) => g.types);
+const ALL_TYPES = FIELD_TYPE_GROUPS.flatMap(g => g.types);
 
 function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 60);
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60);
 }
 
 export default function AdminServiceDesignerPage() {
-  const { serviceId } = useParams<{ serviceId: string }>();
+  const { templateId } = useParams<{ templateId?: string }>();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const { role } = useAuth();
   const canManage = role === "master" || hasPermission("admin.system" as any);
+
+  if (!canManage) {
+    return (
+      <div className="p-6"><Card><CardContent className="pt-6">
+        Sie haben keine Berechtigung, den Prozess-Designer zu verwalten.
+      </CardContent></Card></div>
+    );
+  }
+
+  return templateId ? <TemplateEditor templateId={templateId} onBack={() => navigate("/admin/prozess-designer")} /> : <TemplateList navigate={navigate} />;
+}
+
+// ---------------- List View ----------------
+function TemplateList({ navigate }: { navigate: (p: string) => void }) {
   const qc = useQueryClient();
+  const [filterKind, setFilterKind] = useState<"all" | ProcessKind>("all");
+  const [newOpen, setNewOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newKind, setNewKind] = useState<ProcessKind>("labor");
+  const [newCategory, setNewCategory] = useState("");
+  const [newScope, setNewScope] = useState<"template" | "snippet">("template");
+  const [confirmDelete, setConfirmDelete] = useState<ProcessTemplate | null>(null);
 
-
-  const { data: service, isLoading } = useQuery({
-    queryKey: ["service-designer", serviceId],
-    queryFn: () => api.measurementServices.getById(serviceId!),
-    enabled: !!serviceId,
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ["process-templates"],
+    queryFn: () => api.processTemplates.list({ includeArchived: false }),
   });
 
-  if (!serviceId) return null;
+  const filtered = useMemo(() => {
+    return templates.filter(t => filterKind === "all" || t.kind === filterKind);
+  }, [templates, filterKind]);
+
+  const createMut = useMutation({
+    mutationFn: async () => {
+      if (!newName.trim()) throw new Error("Name erforderlich");
+      const t = await api.processTemplates.create({
+        name: newName.trim(), kind: newKind, scope: newScope,
+        category: newCategory.trim() || null, is_active: true,
+      });
+      return t;
+    },
+    onSuccess: (t) => {
+      toast.success("Vorlage angelegt");
+      qc.invalidateQueries({ queryKey: ["process-templates"] });
+      setNewOpen(false); setNewName(""); setNewCategory("");
+      navigate(`/admin/prozess-designer/${t.id}`);
+    },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => api.processTemplates.remove(id),
+    onSuccess: () => {
+      toast.success("Gelöscht");
+      qc.invalidateQueries({ queryKey: ["process-templates"] });
+      setConfirmDelete(null);
+    },
+    onError: (e: any) => toast.error(e.message || "Löschen fehlgeschlagen"),
+  });
 
   return (
-    <div className="p-6 space-y-4 max-w-[1400px] mx-auto">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/admin/messdienstleistungen")}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Zurück
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold">
-              Service Designer
-              {service?.service_name ? <span className="text-muted-foreground"> · {service.service_name}</span> : null}
-            </h1>
-            <p className="text-sm text-muted-foreground">No-Code Konfiguration für Dienstleistungen</p>
-          </div>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2"><Layers className="h-6 w-6" /> Prozess-Designer</h1>
+          <p className="text-sm text-muted-foreground">Zentrale Vorlagen für Labor-Dienstleistungen und Pilot-Plant-Prozesse.</p>
         </div>
-        {!canManage && <Badge variant="outline">Nur Lesezugriff</Badge>}
+        <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-2" />Neue Vorlage</Button>
       </div>
 
-      <Tabs defaultValue="general">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="general"><Settings className="h-4 w-4 mr-1" />Allgemein</TabsTrigger>
-          <TabsTrigger value="data"><Database className="h-4 w-4 mr-1" />Datenmodell</TabsTrigger>
-          <TabsTrigger value="form"><FormInput className="h-4 w-4 mr-1" />Formular</TabsTrigger>
-          <TabsTrigger value="workflow"><Workflow className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
-          <TabsTrigger value="process"><Workflow className="h-4 w-4 mr-1" />Prozess-Schritte</TabsTrigger>
-          <TabsTrigger value="forms"><FormInput className="h-4 w-4 mr-1" />Formulare</TabsTrigger>
-          <TabsTrigger value="rules"><Zap className="h-4 w-4 mr-1" />Regeln</TabsTrigger>
-          <TabsTrigger value="docs"><FileText className="h-4 w-4 mr-1" />Dokumente</TabsTrigger>
-          <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
-          <TabsTrigger value="blocks"><Layers className="h-4 w-4 mr-1" />Bausteine</TabsTrigger>
-          <TabsTrigger value="versions"><History className="h-4 w-4 mr-1" />Versionen</TabsTrigger>
-        </TabsList>
+      <div className="flex gap-2">
+        <Button variant={filterKind === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("all")}>Alle</Button>
+        <Button variant={filterKind === "labor" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("labor")}><Beaker className="h-4 w-4 mr-1" />Labor</Button>
+        <Button variant={filterKind === "pilot_plant" ? "default" : "outline"} size="sm" onClick={() => setFilterKind("pilot_plant")}><Factory className="h-4 w-4 mr-1" />Pilot Plant</Button>
+      </div>
 
-        <TabsContent value="general">
-          <GeneralTab serviceId={serviceId} service={service} canManage={canManage} loading={isLoading} onSaved={() => qc.invalidateQueries({ queryKey: ["service-designer", serviceId] })} />
-        </TabsContent>
-
-        <TabsContent value="data">
-          <DataModelTab serviceId={serviceId} canManage={canManage} />
-        </TabsContent>
-
-        <TabsContent value="form">
-          <FormDesignerTab serviceId={serviceId} canManage={canManage} />
-        </TabsContent>
-
-        <TabsContent value="workflow">
-          <WorkflowDesigner serviceId={serviceId} canManage={canManage} />
-        </TabsContent>
-
-        <TabsContent value="process">
-          <WorkflowStepsDesigner serviceId={serviceId} canManage={canManage} />
-        </TabsContent>
-
-        <TabsContent value="forms">
-          <FormsLibrary serviceId={serviceId} canManage={canManage} />
-        </TabsContent>
-
-
-
-        <TabsContent value="rules">
-          <RulesDesigner serviceId={serviceId} canManage={canManage} />
-        </TabsContent>
-
-        <TabsContent value="docs">
-          <DocumentsDesigner serviceId={serviceId} canManage={canManage} />
-        </TabsContent>
-
-        <TabsContent value="preview">
-          <ServicePreview serviceId={serviceId} />
-        </TabsContent>
-
-        <TabsContent value="blocks">
-          <BlockLibrary canManage={canManage} />
-        </TabsContent>
-
-        <TabsContent value="versions">
-          <VersionsDesigner serviceId={serviceId} canManage={canManage} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-// ----------------------------- General Tab -----------------------------
-
-function GeneralTab({
-  serviceId, service, canManage, loading, onSaved,
-}: { serviceId: string; service: any; canManage: boolean; loading: boolean; onSaved: () => void }) {
-  const [form, setForm] = useState<any>({});
-  useEffect(() => { if (service) setForm({ ...service }); }, [service]);
-
-  const save = useMutation({
-    mutationFn: () =>
-      api.measurementServices.update(serviceId, {
-        service_name: form.service_name,
-        description: form.description ?? null,
-        icon: form.icon ?? null,
-        color: form.color ?? null,
-        department: form.department ?? null,
-        hourly_rate: form.hourly_rate != null ? Number(form.hourly_rate) : undefined,
-        price: form.price != null && form.price !== "" ? Number(form.price) : null,
-        standard_duration_hours: form.standard_duration_hours != null ? Number(form.standard_duration_hours) : undefined,
-        active: !!form.active,
-        work_instructions: form.work_instructions ?? null,
-      }),
-    onSuccess: () => { toast.success("Gespeichert"); onSaved(); },
-    onError: (e: any) => toast.error("Fehler", { description: e.message }),
-  });
-
-  if (loading || !service) return <Card><CardContent className="p-6 text-muted-foreground">Lade …</CardContent></Card>;
-
-  return (
-    <Card>
-      <CardHeader><CardTitle>Stammdaten</CardTitle></CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Name">
-            <Input value={form.service_name ?? ""} disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, service_name: e.target.value }))} />
-          </Field>
-          <Field label="Kategorie">
-            <Input value={form.category ?? ""} disabled />
-          </Field>
-          <Field label="Abteilung">
-            <Input value={form.department ?? ""} disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, department: e.target.value }))} />
-          </Field>
-          <Field label="Icon (Lucide-Name)">
-            <Input value={form.icon ?? ""} placeholder="z.B. flask-conical" disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, icon: e.target.value }))} />
-          </Field>
-          <Field label="Farbe">
-            <div className="flex items-center gap-2">
-              <Input type="color" value={form.color ?? "#3b82f6"} disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, color: e.target.value }))} className="h-9 w-16 p-1" />
-              <Input value={form.color ?? ""} placeholder="#3b82f6" disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, color: e.target.value }))} />
-            </div>
-          </Field>
-          <Field label="Standarddauer (h)">
-            <Input type="number" min={0.25} step={0.25} value={form.standard_duration_hours ?? ""} disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, standard_duration_hours: e.target.value }))} />
-          </Field>
-          <Field label="Stundensatz (€)">
-            <Input type="number" min={0} step={0.01} value={form.hourly_rate ?? ""} disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, hourly_rate: e.target.value }))} />
-          </Field>
-          <Field label="Festpreis (€, optional)">
-            <Input type="number" min={0} step={0.01} value={form.price ?? ""} disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, price: e.target.value }))} />
-          </Field>
-        </div>
-        <Field label="Beschreibung">
-          <Textarea rows={4} value={form.description ?? ""} disabled={!canManage} onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value }))} />
-        </Field>
-        <div className="border rounded-md p-4 bg-muted/30 space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-semibold">Arbeitsauftrag für den Messdienstleister</Label>
-            <Badge variant="outline" className="text-[10px]">Wird 1:1 in der Aufgabenansicht angezeigt</Badge>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Alle Vorgaben, Hinweise und Anweisungen, die der Messdienstleister bei der Abarbeitung sehen soll.
-            Diese Angaben sind vom Ergebnisformular, den Service-Parametern und den Messergebnissen getrennt.
-          </p>
-          <Textarea
-            rows={8}
-            placeholder="z.B. Probe vor der Messung 24h temperieren, Prüfmittel XY verwenden, besondere Sicherheitshinweise …"
-            value={form.work_instructions ?? ""}
-            disabled={!canManage}
-            onChange={(e) => setForm((f: any) => ({ ...f, work_instructions: e.target.value }))}
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <Switch checked={!!form.active} disabled={!canManage} onCheckedChange={(c) => setForm((f: any) => ({ ...f, active: c }))} />
-          <span className="text-sm">{form.active ? "Aktiv" : "Inaktiv"}</span>
-        </div>
-        {canManage && (
-          <div className="flex justify-end">
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>Speichern</Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-// ---------------------------- Data Model Tab ----------------------------
-
-function DataModelTab({ serviceId, canManage }: { serviceId: string; canManage: boolean }) {
-  const qc = useQueryClient();
-  const { data: fields = [], isLoading } = useQuery({
-    queryKey: ["service-data-fields", serviceId],
-    queryFn: () => api.serviceDataFields.listForService(serviceId),
-  });
-
-  const [editing, setEditing] = useState<ServiceDataField | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<ServiceDataField | null>(null);
-  const [showArchived, setShowArchived] = useState(false);
-
-  const visible = useMemo(
-    () => fields.filter((f) => showArchived || !f.archived),
-    [fields, showArchived]
-  );
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, ServiceDataField[]>();
-    for (const f of visible) {
-      const cat = f.category || "Allgemein";
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(f);
-    }
-    return Array.from(map.entries());
-  }, [visible]);
-
-  const removeField = useMutation({
-    mutationFn: (id: string) => api.serviceDataFields.delete(id),
-    onSuccess: () => {
-      toast.success("Feld gelöscht");
-      qc.invalidateQueries({ queryKey: ["service-data-fields", serviceId] });
-    },
-    onError: (e: any) => toast.error("Fehler", { description: e.message }),
-  });
-
-  return (
-    <div className="space-y-4">
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-3">
-          <div>
-            <CardTitle>Datenmodell</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Definiere alle Daten, die zu dieser Dienstleistung gehören. Diese Felder werden später in Formular, Workflow, Regeln, Dokumenten und Berichten wiederverwendet.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Switch checked={showArchived} onCheckedChange={setShowArchived} />
-              Archivierte zeigen
-            </label>
-            {canManage && (
-              <>
-                <Button variant="outline" onClick={() => setImporting(true)}><Upload className="h-4 w-4 mr-1" />Excel/CSV-Import</Button>
-                <Button onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" />Neues Feld</Button>
-              </>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-muted-foreground">Lade …</div>
-          ) : visible.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-8 text-center border border-dashed rounded-md">
-              Noch keine Datenfelder. {canManage && "Lege oben das erste Feld an."}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {grouped.map(([cat, items]) => (
-                <div key={cat} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium">{cat}</h3>
-                    <Badge variant="secondary" className="text-[10px]">{items.length}</Badge>
-                  </div>
-                  <div className="border rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-8"></TableHead>
-                          <TableHead>Anzeigename</TableHead>
-                          <TableHead>Schlüssel</TableHead>
-                          <TableHead>Typ</TableHead>
-                          <TableHead>Einheit</TableHead>
-                          <TableHead className="text-center">Pflicht</TableHead>
-                          <TableHead className="w-24"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {items.map((f) => (
-                          <TableRow key={f.id} className={f.archived ? "opacity-50" : ""}>
-                            <TableCell><GripVertical className="h-4 w-4 text-muted-foreground" /></TableCell>
-                            <TableCell className="font-medium">
-                              {f.display_name}
-                              {f.archived && <Badge variant="outline" className="ml-2 text-[10px]">archiviert</Badge>}
-                            </TableCell>
-                            <TableCell><code className="text-xs">{f.field_key}</code></TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {ALL_TYPES.find((t) => t.value === f.field_type)?.label ?? f.field_type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{f.unit || "—"}</TableCell>
-                            <TableCell className="text-center">{f.is_required ? "Ja" : "—"}</TableCell>
-                            <TableCell>
-                              {canManage && (
-                                <div className="flex gap-1 justify-end">
-                                  <Button size="icon" variant="ghost" onClick={() => setEditing(f)}><Pencil className="h-4 w-4" /></Button>
-                                  <Button size="icon" variant="ghost" onClick={() => setConfirmDelete(f)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead><TableHead>Modus</TableHead><TableHead>Typ</TableHead>
+              <TableHead>Kategorie</TableHead><TableHead>Version</TableHead><TableHead>Status</TableHead>
+              <TableHead className="w-32"></TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Lade…</TableCell></TableRow>}
+              {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Vorlagen vorhanden.</TableCell></TableRow>}
+              {filtered.map(t => (
+                <TableRow key={t.id} className="cursor-pointer hover:bg-muted/40" onClick={() => navigate(`/admin/prozess-designer/${t.id}`)}>
+                  <TableCell className="font-medium">{t.name}</TableCell>
+                  <TableCell>{t.kind === "labor" ? <Badge variant="secondary"><Beaker className="h-3 w-3 mr-1" />Labor</Badge> : <Badge variant="secondary"><Factory className="h-3 w-3 mr-1" />Pilot Plant</Badge>}</TableCell>
+                  <TableCell>{t.scope === "snippet" ? <Badge variant="outline"><Puzzle className="h-3 w-3 mr-1" />Snippet</Badge> : <Badge variant="outline">Vorlage</Badge>}</TableCell>
+                  <TableCell>{t.category || "—"}</TableCell>
+                  <TableCell>v{t.version}</TableCell>
+                  <TableCell>{t.is_active ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(t)}><Trash2 className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
-          )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      {(creating || editing) && (
-        <FieldDialog
-          serviceId={serviceId}
-          field={editing}
-          existingKeys={fields.map((f) => f.field_key)}
-          onClose={() => { setEditing(null); setCreating(false); }}
-          onSaved={() => {
-            qc.invalidateQueries({ queryKey: ["service-data-fields", serviceId] });
-            setEditing(null); setCreating(false);
-          }}
-        />
-      )}
-
-      {importing && (
-        <ImportFieldsDialog
-          serviceId={serviceId}
-          existingKeys={fields.map((f) => f.field_key)}
-          onClose={() => setImporting(false)}
-          onImported={() => qc.invalidateQueries({ queryKey: ["service-data-fields", serviceId] })}
-        />
-      )}
+      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Neue Vorlage anlegen</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name</Label>
+              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="z. B. Biegefestigkeit DIN EN 843-1" />
+            </div>
+            <div>
+              <Label>Modus (nach dem Anlegen nicht mehr änderbar)</Label>
+              <Select value={newKind} onValueChange={(v: ProcessKind) => setNewKind(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="labor">Labor — geräte-/methodenorientiert</SelectItem>
+                  <SelectItem value="pilot_plant">Pilot Plant — prozessorientiert</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Typ</Label>
+              <Select value={newScope} onValueChange={(v: any) => setNewScope(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="template">Vollständige Vorlage</SelectItem>
+                  <SelectItem value="snippet">Snippet (wiederverwendbar)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Kategorie (optional)</Label>
+              <Input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="z. B. Mechanik, Thermik" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewOpen(false)}>Abbrechen</Button>
+            <Button onClick={() => createMut.mutate()} disabled={createMut.isPending || !newName.trim()}>Anlegen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Feld löschen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              „{confirmDelete?.display_name}" wird unwiderruflich gelöscht. Wenn das Feld bereits in Aufträgen verwendet wird, archiviere es stattdessen.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Vorlage löschen?</AlertDialogTitle>
+            <AlertDialogDescription>„{confirmDelete?.name}" wird endgültig entfernt. Bereits laufende Aufträge behalten ihre Snapshot-Kopie.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { if (confirmDelete) removeField.mutate(confirmDelete.id); setConfirmDelete(null); }}>
-              Löschen
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => confirmDelete && deleteMut.mutate(confirmDelete.id)}>Löschen</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -484,447 +221,447 @@ function DataModelTab({ serviceId, canManage }: { serviceId: string; canManage: 
   );
 }
 
-// ----------------------- Field create/edit dialog -----------------------
+// ---------------- Editor ----------------
+function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: () => void }) {
+  const qc = useQueryClient();
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
-function FieldDialog({
-  serviceId, field, existingKeys, onClose, onSaved,
-}: {
-  serviceId: string;
-  field: ServiceDataField | null;
-  existingKeys: string[];
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const isEdit = !!field;
-  const [form, setForm] = useState<Partial<ServiceDataField>>(() =>
-    field ?? {
-      service_id: serviceId,
-      field_key: "",
-      display_name: "",
-      field_type: "text",
-      is_required: false,
-      readonly: false,
-      archived: false,
-      select_options: [],
-      category: "Allgemein",
-      sort_order: 0,
-    }
-  );
-  const [optionsText, setOptionsText] = useState<string>(() => {
-    const opts = (field?.select_options as any[]) ?? [];
-    return opts
-      .map((o) => (typeof o === "string" ? o : o?.label ?? o?.value ?? ""))
-      .filter(Boolean)
-      .join("\n");
+  const { data: template, isLoading: loadingT } = useQuery({
+    queryKey: ["process-template", templateId],
+    queryFn: () => api.processTemplates.get(templateId),
   });
-  const [autoKey, setAutoKey] = useState(!isEdit);
 
-  // Auto-generate key from display name while not edited manually
-  useEffect(() => {
-    if (autoKey && form.display_name) {
-      setForm((f) => ({ ...f, field_key: slugify(String(form.display_name)) }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.display_name, autoKey]);
+  const { data: steps = [] } = useQuery({
+    queryKey: ["process-steps", templateId],
+    queryFn: () => api.processTemplateSteps.listForTemplate(templateId),
+  });
 
-  const needsOptions = form.field_type === "select" || form.field_type === "multiselect";
+  const { data: snippets = [] } = useQuery({
+    queryKey: ["process-snippets", template?.kind],
+    queryFn: () => api.processTemplates.list({ kind: template!.kind, scope: "snippet" }),
+    enabled: !!template,
+  });
 
-  const save = useMutation({
+  const invalidateSteps = () => qc.invalidateQueries({ queryKey: ["process-steps", templateId] });
+
+  const updateTemplateMut = useMutation({
+    mutationFn: (u: Partial<ProcessTemplate>) => api.processTemplates.update(templateId, u),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["process-template", templateId] }); toast.success("Gespeichert"); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const addStepMut = useMutation({
     mutationFn: async () => {
-      const key = (form.field_key || "").trim();
-      if (!key) throw new Error("Schlüssel fehlt");
-      if (!isEdit && existingKeys.includes(key)) throw new Error("Schlüssel existiert bereits in dieser Dienstleistung");
-
-      const payload: any = {
-        service_id: serviceId,
-        field_key: key,
-        display_name: form.display_name,
-        description: form.description ?? null,
-        field_type: form.field_type,
-        category: form.category ?? null,
-        unit: form.unit ?? null,
-        is_required: !!form.is_required,
-        default_value: form.default_value ?? null,
-        min_value: form.min_value != null && form.min_value !== ("" as any) ? Number(form.min_value) : null,
-        max_value: form.max_value != null && form.max_value !== ("" as any) ? Number(form.max_value) : null,
-        decimal_places: form.decimal_places != null && form.decimal_places !== ("" as any) ? Number(form.decimal_places) : null,
-        readonly: form.field_type === "computed" ? true : !!form.readonly,
-        archived: !!form.archived,
-        select_options: needsOptions
-          ? optionsText.split("\n").map((s) => s.trim()).filter(Boolean)
-          : [],
-        sort_order: form.sort_order ?? 0,
-        validation: form.validation ?? {},
-      };
-      if (isEdit) {
-        await api.serviceDataFields.update(field!.id, payload);
-      } else {
-        await api.serviceDataFields.create(payload);
-      }
+      const order = (steps.at(-1)?.order_index ?? -1) + 1;
+      return api.processTemplateSteps.create({
+        template_id: templateId, step_key: `step_${order + 1}`, name: `Schritt ${order + 1}`, order_index: order,
+      });
     },
-    onSuccess: () => { toast.success(isEdit ? "Feld aktualisiert" : "Feld angelegt"); onSaved(); },
-    onError: (e: any) => toast.error("Fehler", { description: e.message }),
+    onSuccess: (s) => { invalidateSteps(); setSelectedStepId(s.id); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const insertSnippetMut = useMutation({
+    mutationFn: async (snippet: ProcessTemplate) => {
+      const order = (steps.at(-1)?.order_index ?? -1) + 1;
+      // seed a step with a form generated from the snippet (simple copy)
+      const snippetSteps = await api.processTemplateSteps.listForTemplate(snippet.id);
+      const first = snippetSteps[0];
+      const newStep = await api.processTemplateSteps.create({
+        template_id: templateId,
+        step_key: `${slugify(snippet.name)}_${order + 1}`,
+        name: snippet.name,
+        description: snippet.description,
+        order_index: order,
+        role_required: first?.role_required ?? null,
+        is_mandatory: first?.is_mandatory ?? true,
+        auto_actions: first?.auto_actions ?? [],
+        metadata: { from_snippet: snippet.id },
+      });
+      return newStep;
+    },
+    onSuccess: (s) => { invalidateSteps(); setSelectedStepId(s.id); toast.success("Snippet eingefügt"); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const moveMut = useMutation({
+    mutationFn: async ({ id, dir }: { id: string; dir: -1 | 1 }) => {
+      const idx = steps.findIndex(s => s.id === id);
+      const swap = steps[idx + dir];
+      if (!swap) return;
+      await api.processTemplateSteps.reorder([
+        { id: steps[idx].id, sort_order: swap.order_index } as any,
+        { id: swap.id, sort_order: steps[idx].order_index } as any,
+      ]);
+      // reorder uses order_index — call proper update
+      await api.processTemplateSteps.update(steps[idx].id, { order_index: swap.order_index });
+      await api.processTemplateSteps.update(swap.id, { order_index: steps[idx].order_index });
+    },
+    onSuccess: invalidateSteps,
+  });
+
+  const deleteStepMut = useMutation({
+    mutationFn: (id: string) => api.processTemplateSteps.remove(id),
+    onSuccess: () => { invalidateSteps(); setSelectedStepId(null); toast.success("Schritt gelöscht"); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  if (loadingT || !template) return <div className="p-6">Lade…</div>;
+
+  const selectedStep = steps.find(s => s.id === selectedStepId) ?? null;
+
+  return (
+    <div className="p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />Zurück</Button>
+          <div>
+            <h1 className="text-xl font-semibold">{template.name}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              {template.kind === "labor" ? <Badge variant="secondary"><Beaker className="h-3 w-3 mr-1" />Labor</Badge> : <Badge variant="secondary"><Factory className="h-3 w-3 mr-1" />Pilot Plant</Badge>}
+              <Badge variant="outline">v{template.version}</Badge>
+              {template.scope === "snippet" && <Badge variant="outline"><Puzzle className="h-3 w-3 mr-1" />Snippet</Badge>}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Tabs defaultValue="steps">
+        <TabsList>
+          <TabsTrigger value="steps"><Layers className="h-4 w-4 mr-1" />Prozessschritte</TabsTrigger>
+          <TabsTrigger value="meta"><FileText className="h-4 w-4 mr-1" />Stammdaten</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="meta" className="mt-4">
+          <TemplateMetaEditor template={template} onSave={(u) => updateTemplateMut.mutate(u)} />
+        </TabsContent>
+
+        <TabsContent value="steps" className="mt-4">
+          <div className="grid grid-cols-12 gap-4">
+            {/* Steps list */}
+            <Card className="col-span-3">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm">Schritte</CardTitle>
+                <Button size="sm" variant="ghost" onClick={() => addStepMut.mutate()}><Plus className="h-4 w-4" /></Button>
+              </CardHeader>
+              <CardContent className="p-2 space-y-1">
+                {steps.length === 0 && <div className="text-xs text-muted-foreground p-2">Noch keine Schritte.</div>}
+                {steps.map((s, i) => (
+                  <div key={s.id} className={`flex items-center gap-1 rounded px-2 py-2 cursor-pointer ${selectedStepId === s.id ? "bg-primary/10" : "hover:bg-muted"}`} onClick={() => setSelectedStepId(s.id)}>
+                    <GripVertical className="h-3 w-3 text-muted-foreground" />
+                    <span className="flex-1 text-sm truncate">{i + 1}. {s.name}</span>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" disabled={i === 0} onClick={(e) => { e.stopPropagation(); moveMut.mutate({ id: s.id, dir: -1 }); }}><ArrowUp className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" disabled={i === steps.length - 1} onClick={(e) => { e.stopPropagation(); moveMut.mutate({ id: s.id, dir: 1 }); }}><ArrowDown className="h-3 w-3" /></Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); if (confirm(`Schritt „${s.name}" löschen?`)) deleteStepMut.mutate(s.id); }}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Step editor */}
+            <div className="col-span-6">
+              {selectedStep ? <StepEditor step={selectedStep} onSaved={invalidateSteps} /> : (
+                <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte einen Schritt links auswählen oder anlegen.</CardContent></Card>
+              )}
+            </div>
+
+            {/* Snippets palette */}
+            <Card className="col-span-3">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2"><Puzzle className="h-4 w-4" />Snippets</CardTitle>
+              </CardHeader>
+              <CardContent className="p-2 space-y-1">
+                {snippets.length === 0 && <div className="text-xs text-muted-foreground p-2">Keine Snippets für Modus {template.kind}.</div>}
+                {snippets.map(sn => (
+                  <button key={sn.id} className="w-full text-left rounded border px-2 py-2 text-sm hover:bg-muted"
+                    onClick={() => insertSnippetMut.mutate(sn)} title={sn.description || ""}>
+                    <div className="font-medium truncate">{sn.name}</div>
+                    {sn.category && <div className="text-xs text-muted-foreground">{sn.category}</div>}
+                  </button>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// ---------------- Template Meta ----------------
+function TemplateMetaEditor({ template, onSave }: { template: ProcessTemplate; onSave: (u: Partial<ProcessTemplate>) => void }) {
+  const [name, setName] = useState(template.name);
+  const [desc, setDesc] = useState(template.description ?? "");
+  const [category, setCategory] = useState(template.category ?? "");
+  const [isActive, setIsActive] = useState(template.is_active);
+  return (
+    <Card><CardContent className="pt-6 space-y-4 max-w-2xl">
+      <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+      <div><Label>Beschreibung</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} /></div>
+      <div><Label>Kategorie</Label><Input value={category} onChange={e => setCategory(e.target.value)} /></div>
+      <div className="flex items-center gap-2"><Switch checked={isActive} onCheckedChange={setIsActive} /><Label>Aktiv</Label></div>
+      <Button onClick={() => onSave({ name: name.trim(), description: desc.trim() || null, category: category.trim() || null, is_active: isActive })}>Speichern</Button>
+    </CardContent></Card>
+  );
+}
+
+// ---------------- Step Editor ----------------
+function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState(step.name);
+  const [stepKey, setStepKey] = useState(step.step_key);
+  const [desc, setDesc] = useState(step.description ?? "");
+  const [role, setRole] = useState(step.role_required ?? "any");
+  const [mandatory, setMandatory] = useState(step.is_mandatory);
+  const [positionSource, setPositionSource] = useState<string>(step.position_source ?? "none");
+
+  // Sync when step changes
+  useMemo(() => { setName(step.name); setStepKey(step.step_key); setDesc(step.description ?? ""); setRole(step.role_required ?? "any"); setMandatory(step.is_mandatory); setPositionSource(step.position_source ?? "none"); }, [step.id]);
+
+  const saveMut = useMutation({
+    mutationFn: () => api.processTemplateSteps.update(step.id, {
+      name: name.trim(), step_key: stepKey.trim() || slugify(name),
+      description: desc.trim() || null,
+      role_required: role === "any" ? null : role,
+      is_mandatory: mandatory,
+      position_source: positionSource === "none" ? null : positionSource,
+    }),
+    onSuccess: () => { toast.success("Gespeichert"); onSaved(); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const { data: form } = useQuery({
+    queryKey: ["step-form", step.id, step.form_id],
+    queryFn: () => step.form_id ? api.formDefinitions.get(step.form_id) : Promise.resolve(null),
+  });
+
+  const createFormMut = useMutation({
+    mutationFn: async () => {
+      const f = await api.formDefinitions.create({ name: `Formular: ${step.name}`, scope: "template" });
+      await api.processTemplateSteps.update(step.id, { form_id: f.id });
+      return f;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); onSaved(); toast.success("Formular angelegt"); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Feld bearbeiten" : "Neues Feld"}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Field label="Anzeigename">
-              <Input value={form.display_name ?? ""} onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))} />
-            </Field>
-            <Field label="Interner Schlüssel">
-              <Input
-                value={form.field_key ?? ""}
-                onChange={(e) => { setAutoKey(false); setForm((f) => ({ ...f, field_key: slugify(e.target.value) })); }}
-                disabled={isEdit}
-              />
-            </Field>
-            <Field label="Datentyp">
-              <Select value={form.field_type as string} onValueChange={(v) => setForm((f) => ({ ...f, field_type: v as ServiceFieldType }))}>
+    <Card>
+      <CardHeader><CardTitle className="text-sm">Schritt bearbeiten</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+          <div><Label>Schlüssel</Label><Input value={stepKey} onChange={e => setStepKey(e.target.value)} /></div>
+        </div>
+        <div><Label>Beschreibung</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} /></div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <Label>Rolle</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Beliebig</SelectItem>
+                <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
+                <SelectItem value="durchfuehrer">Durchführer</SelectItem>
+                <SelectItem value="master">Master</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Positionsquelle</Label>
+            <Select value={positionSource} onValueChange={setPositionSource}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Keine (Einzel-Schritt)</SelectItem>
+                <SelectItem value="samples">Pro Probe</SelectItem>
+                <SelectItem value="mouthpieces">Pro Mundstück</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end gap-2"><Switch checked={mandatory} onCheckedChange={setMandatory} /><Label>Pflicht</Label></div>
+        </div>
+        <div className="flex justify-end"><Button onClick={() => saveMut.mutate()}>Schritt speichern</Button></div>
+
+        <div className="border-t pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2"><FormInput className="h-4 w-4" />Formular</h3>
+            {!step.form_id && <Button size="sm" onClick={() => createFormMut.mutate()}><Plus className="h-4 w-4 mr-1" />Formular anlegen</Button>}
+          </div>
+          {step.form_id && form && <FormFieldsEditor form={form} />}
+          {!step.form_id && <p className="text-sm text-muted-foreground">Für diesen Schritt ist noch kein Formular hinterlegt.</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------- Form Fields Editor ----------------
+function FormFieldsEditor({ form }: { form: FormDefinition }) {
+  const qc = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [newType, setNewType] = useState<FormFieldType>("text");
+  const [editingField, setEditingField] = useState<FormField | null>(null);
+
+  const { data: fields = [] } = useQuery({
+    queryKey: ["form-fields", form.id],
+    queryFn: () => api.formFields.listForForm(form.id),
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["form-fields", form.id] });
+
+  const addMut = useMutation({
+    mutationFn: async () => {
+      if (!newLabel.trim()) throw new Error("Bezeichnung erforderlich");
+      const key = slugify(newLabel);
+      const sort = (fields.at(-1)?.sort_order ?? -1) + 1;
+      return api.formFields.create({
+        form_id: form.id, field_key: key, display_name: newLabel.trim(), field_type: newType, sort_order: sort,
+      });
+    },
+    onSuccess: () => { invalidate(); setAddOpen(false); setNewLabel(""); setNewType("text"); toast.success("Feld hinzugefügt"); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (id: string) => api.formFields.remove(id),
+    onSuccess: () => { invalidate(); toast.success("Feld entfernt"); },
+  });
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-muted-foreground">Formular: <span className="font-medium">{form.name}</span></div>
+        <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-1" />Feld</Button>
+      </div>
+
+      {fields.length === 0 && <div className="text-sm text-muted-foreground py-4 text-center border rounded">Noch keine Felder.</div>}
+
+      <div className="space-y-1">
+        {fields.map(f => (
+          <div key={f.id} className="flex items-center gap-2 border rounded px-2 py-1.5 hover:bg-muted/40">
+            <span className="flex-1 text-sm"><span className="font-medium">{f.display_name}</span> <span className="text-muted-foreground text-xs">({f.field_key})</span></span>
+            <Badge variant="outline" className="text-xs">{ALL_TYPES.find(t => t.value === f.field_type)?.label ?? f.field_type}</Badge>
+            {f.is_required && <Badge variant="secondary" className="text-xs">Pflicht</Badge>}
+            {f.unit && <Badge variant="outline" className="text-xs">{f.unit}</Badge>}
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingField(f)}><FormInput className="h-3 w-3" /></Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { if (confirm(`Feld „${f.display_name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
+          </div>
+        ))}
+      </div>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Neues Feld</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Bezeichnung</Label><Input value={newLabel} onChange={e => setNewLabel(e.target.value)} autoFocus /></div>
+            <div>
+              <Label>Typ</Label>
+              <Select value={newType} onValueChange={(v: FormFieldType) => setNewType(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {FIELD_TYPE_GROUPS.map((g) => (
+                <SelectContent className="max-h-96">
+                  {FIELD_TYPE_GROUPS.map(g => (
                     <div key={g.label}>
-                      <div className="px-2 py-1 text-[10px] uppercase text-muted-foreground">{g.label}</div>
-                      {g.types.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">{g.label}</div>
+                      {g.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                     </div>
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
-            <Field label="Kategorie">
-              <Input value={form.category ?? ""} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} placeholder="z.B. Einstellparameter" />
-            </Field>
-            <Field label="Einheit">
-              <Input value={form.unit ?? ""} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} placeholder="z.B. mm, °C, %" />
-            </Field>
-            <Field label="Standardwert">
-              <Input value={form.default_value ?? ""} onChange={(e) => setForm((f) => ({ ...f, default_value: e.target.value }))} />
-            </Field>
-            {(form.field_type === "number" || form.field_type === "decimal" || form.field_type === "percent") && (
-              <>
-                <Field label="Minimum">
-                  <Input type="number" value={(form.min_value as any) ?? ""} onChange={(e) => setForm((f) => ({ ...f, min_value: e.target.value as any }))} />
-                </Field>
-                <Field label="Maximum">
-                  <Input type="number" value={(form.max_value as any) ?? ""} onChange={(e) => setForm((f) => ({ ...f, max_value: e.target.value as any }))} />
-                </Field>
-                <Field label="Nachkommastellen">
-                  <Input type="number" min={0} max={6} value={(form.decimal_places as any) ?? ""} onChange={(e) => setForm((f) => ({ ...f, decimal_places: e.target.value as any }))} />
-                </Field>
-              </>
-            )}
+            </div>
           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Abbrechen</Button>
+            <Button onClick={() => addMut.mutate()} disabled={addMut.isPending || !newLabel.trim()}>Anlegen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          {needsOptions && (
-            <Field label="Auswahloptionen (eine pro Zeile)">
-              <Textarea rows={5} value={optionsText} onChange={(e) => setOptionsText(e.target.value)} />
-            </Field>
-          )}
+      {editingField && <FieldEditDialog field={editingField} onClose={() => setEditingField(null)} onSaved={invalidate} />}
+    </div>
+  );
+}
 
-          <Field label="Beschreibung">
-            <Textarea rows={2} value={form.description ?? ""} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
-          </Field>
+// ---------------- Field Detail Editor ----------------
+function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClose: () => void; onSaved: () => void }) {
+  const [label, setLabel] = useState(field.display_name);
+  const [key, setKey] = useState(field.field_key);
+  const [desc, setDesc] = useState(field.description ?? "");
+  const [unit, setUnit] = useState(field.unit ?? "");
+  const [required, setRequired] = useState(field.is_required);
+  const [readonly, setReadonly] = useState(field.readonly);
+  const [defaultValue, setDefaultValue] = useState(field.default_value ?? "");
+  const [formula, setFormula] = useState(field.formula ?? "");
+  const [selectOptions, setSelectOptions] = useState((field.select_options ?? []).map(o => typeof o === "string" ? o : o.label).join("\n"));
+  const [decimalPlaces, setDecimalPlaces] = useState(field.decimal_places?.toString() ?? "");
+  const [minV, setMinV] = useState(field.min_value?.toString() ?? "");
+  const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
 
-          <div className="flex flex-wrap gap-6">
-            <label className="flex items-center gap-2 text-sm">
-              <Switch checked={!!form.is_required} onCheckedChange={(c) => setForm((f) => ({ ...f, is_required: c }))} />
-              Pflichtfeld
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Switch checked={!!form.readonly} onCheckedChange={(c) => setForm((f) => ({ ...f, readonly: c }))} />
-              Schreibgeschützt
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Switch checked={!!form.archived} onCheckedChange={(c) => setForm((f) => ({ ...f, archived: c }))} />
-              Archiviert
-            </label>
+  const isNumeric = ["number", "decimal", "percent"].includes(field.field_type);
+  const isSelect = ["select", "multiselect"].includes(field.field_type);
+  const isComputed = field.field_type === "computed";
+
+  const saveMut = useMutation({
+    mutationFn: () => api.formFields.update(field.id, {
+      display_name: label.trim(),
+      field_key: key.trim() || slugify(label),
+      description: desc.trim() || null,
+      unit: unit.trim() || null,
+      is_required: required,
+      readonly,
+      default_value: defaultValue.trim() || null,
+      formula: isComputed ? (formula.trim() || null) : null,
+      select_options: isSelect ? selectOptions.split("\n").map(l => l.trim()).filter(Boolean) : [],
+      decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
+      min_value: isNumeric && minV ? parseFloat(minV) : null,
+      max_value: isNumeric && maxV ? parseFloat(maxV) : null,
+    }),
+    onSuccess: () => { toast.success("Gespeichert"); onSaved(); onClose(); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Feld bearbeiten</DialogTitle></DialogHeader>
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Bezeichnung</Label><Input value={label} onChange={e => setLabel(e.target.value)} /></div>
+            <div><Label>Schlüssel</Label><Input value={key} onChange={e => setKey(e.target.value)} /></div>
           </div>
-
-          {(form.field_type === "file" || form.field_type === "image") && (
-            <UploadFieldConfigPanel
-              config={(form.validation as any)?.upload ?? {}}
-              onChange={(upload) => setForm((f) => ({ ...f, validation: { ...(f.validation ?? {}), upload } as any }))}
-            />
+          <div><Label>Beschreibung</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} /></div>
+          <div className="grid grid-cols-3 gap-3">
+            <div><Label>Einheit</Label><Input value={unit} onChange={e => setUnit(e.target.value)} placeholder="z.B. mm, °C" /></div>
+            <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
+            <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
+          </div>
+          {!isComputed && <div><Label>Standardwert</Label><Input value={defaultValue} onChange={e => setDefaultValue(e.target.value)} /></div>}
+          {isNumeric && (
+            <div className="grid grid-cols-3 gap-3">
+              <div><Label>Min</Label><Input value={minV} onChange={e => setMinV(e.target.value)} type="number" /></div>
+              <div><Label>Max</Label><Input value={maxV} onChange={e => setMaxV(e.target.value)} type="number" /></div>
+              <div><Label>Nachkommast.</Label><Input value={decimalPlaces} onChange={e => setDecimalPlaces(e.target.value)} type="number" /></div>
+            </div>
           )}
-
-          {isEdit && (form.field_type === "file" || form.field_type === "image") && (form.validation as any)?.upload?.templates_enabled && (
-            <FieldTemplatesManager fieldId={field!.id} />
+          {isSelect && (
+            <div>
+              <Label>Optionen (eine je Zeile)</Label>
+              <Textarea value={selectOptions} onChange={e => setSelectOptions(e.target.value)} rows={5} />
+            </div>
           )}
-
-          {form.field_type === "computed" && (
-            <ComputedFieldConfigPanel
-              serviceId={serviceId}
-              currentKey={form.field_key ?? ""}
-              formula={(form.validation as any)?.formula ?? ""}
-              onChange={(formula) => setForm((f) => ({ ...f, validation: { ...(f.validation ?? {}), formula } as any }))}
-            />
+          {isComputed && (
+            <div>
+              <Label>Formel</Label>
+              <Textarea value={formula} onChange={e => setFormula(e.target.value)} rows={3} placeholder="z.B. ROUND((laenge * breite) / 100, 2)" className="font-mono text-sm" />
+              <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
+            </div>
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !form.display_name || !form.field_key}>
-            {isEdit ? "Speichern" : "Anlegen"}
-          </Button>
+          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button onClick={() => saveMut.mutate()}>Speichern</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-// ----------------------- Upload field config panel -----------------------
-
-const ACCEPTED_PRESETS: { value: string; label: string }[] = [
-  { value: "image/*", label: "Bilder (JPG, PNG, GIF, WEBP)" },
-  { value: "application/pdf", label: "PDF" },
-  { value: ".xlsx", label: "Excel (.xlsx)" },
-  { value: ".xls", label: "Excel (.xls)" },
-  { value: ".docx", label: "Word (.docx)" },
-  { value: ".csv", label: "CSV" },
-  { value: ".txt", label: "Textdatei (.txt)" },
-];
-
-function UploadFieldConfigPanel({
-  config, onChange,
-}: {
-  config: any;
-  onChange: (v: any) => void;
-}) {
-  const cfg = { multiple: false, max_files: 1, max_size_mb: 20, accepted_types: [] as string[], templates_enabled: false, ...(config || {}) };
-  const patch = (p: Partial<typeof cfg>) => onChange({ ...cfg, ...p });
-  const toggleAccepted = (val: string, on: boolean) => {
-    const set = new Set(cfg.accepted_types);
-    if (on) set.add(val); else set.delete(val);
-    patch({ accepted_types: Array.from(set) });
-  };
-  return (
-    <div className="border rounded-md p-3 space-y-3 bg-muted/20">
-      <div className="flex items-center gap-2">
-        <Upload className="h-4 w-4 text-primary" />
-        <p className="text-sm font-medium">Upload-Einstellungen</p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <label className="flex items-center gap-2 text-xs">
-          <Switch checked={!!cfg.multiple} onCheckedChange={(c) => patch({ multiple: c, max_files: c ? Math.max(cfg.max_files || 1, 2) : 1 })} />
-          Mehrfach-Upload
-        </label>
-        <div>
-          <Label className="text-xs">Max. Dateien</Label>
-          <Input type="number" min={1} className="h-8"
-            value={cfg.max_files ?? 1}
-            disabled={!cfg.multiple}
-            onChange={(e) => patch({ max_files: Math.max(1, Number(e.target.value) || 1) })} />
-        </div>
-        <div>
-          <Label className="text-xs">Max. Größe (MB)</Label>
-          <Input type="number" min={1} className="h-8"
-            value={cfg.max_size_mb ?? 20}
-            onChange={(e) => patch({ max_size_mb: Math.max(1, Number(e.target.value) || 20) })} />
-        </div>
-      </div>
-      <div>
-        <Label className="text-xs">Zulässige Dateitypen</Label>
-        <p className="text-[10px] text-muted-foreground mb-1">Keine Auswahl = alle Typen erlaubt.</p>
-        <div className="flex flex-wrap gap-3">
-          {ACCEPTED_PRESETS.map((p) => (
-            <label key={p.value} className="flex items-center gap-1.5 text-xs">
-              <Switch
-                checked={cfg.accepted_types.includes(p.value)}
-                onCheckedChange={(c) => toggleAccepted(p.value, !!c)}
-              />
-              {p.label}
-            </label>
-          ))}
-        </div>
-      </div>
-      <label className="flex items-center gap-2 text-xs">
-        <Switch checked={!!cfg.templates_enabled} onCheckedChange={(c) => patch({ templates_enabled: c })} />
-        Vorlagen-Bibliothek für dieses Feld aktivieren
-      </label>
-    </div>
-  );
-}
-
-// ----------------------- Templates manager -----------------------
-
-function FieldTemplatesManager({ fieldId }: { fieldId: string }) {
-  const qc = useQueryClient();
-  const { data: templates = [] } = useQuery({
-    queryKey: ["service-field-templates", fieldId],
-    queryFn: () => api.serviceFieldTemplates.listForField(fieldId),
-  });
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const refresh = () => qc.invalidateQueries({ queryKey: ["service-field-templates", fieldId] });
-
-  const upload = async () => {
-    if (!file) { toast.error("Datei wählen"); return; }
-    if (!name.trim()) { toast.error("Name eingeben"); return; }
-    setBusy(true);
-    try {
-      await api.serviceFieldTemplates.upload(fieldId, file, name.trim(), description.trim() || undefined);
-      toast.success("Vorlage angelegt");
-      setName(""); setDescription(""); setFile(null);
-      refresh();
-    } catch (e: any) {
-      toast.error("Fehler", { description: e.message });
-    } finally { setBusy(false); }
-  };
-
-  const remove = async (id: string) => {
-    try {
-      await api.serviceFieldTemplates.remove(id);
-      toast.success("Vorlage gelöscht");
-      refresh();
-    } catch (e: any) {
-      toast.error("Fehler", { description: e.message });
-    }
-  };
-
-  const toggleActive = async (id: string, active: boolean) => {
-    await api.serviceFieldTemplates.update(id, { is_active: active });
-    refresh();
-  };
-
-  return (
-    <div className="border rounded-md p-3 space-y-3">
-      <div className="flex items-center gap-2">
-        <FileText className="h-4 w-4 text-primary" />
-        <p className="text-sm font-medium">Vorlagen-Bibliothek</p>
-        <Badge variant="outline" className="text-[10px]">{templates.length}</Badge>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <Input placeholder="Name der Vorlage" value={name} onChange={(e) => setName(e.target.value)} className="h-8" />
-        <Input placeholder="Beschreibung (optional)" value={description} onChange={(e) => setDescription(e.target.value)} className="h-8" />
-      </div>
-      <div className="flex items-center gap-2">
-        <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="h-8" />
-        <Button size="sm" onClick={upload} disabled={busy || !file || !name.trim()}>
-          <Upload className="h-3.5 w-3.5 mr-1" /> Hochladen
-        </Button>
-      </div>
-
-      {templates.length > 0 && (
-        <ul className="space-y-1.5">
-          {templates.map((t: any) => (
-            <li key={t.id} className="flex items-center gap-2 border rounded-md p-2 bg-muted/20">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium truncate">{t.name}</p>
-                <p className="text-[10px] text-muted-foreground truncate">
-                  {t.file_name}{t.description ? ` · ${t.description}` : ""}
-                </p>
-              </div>
-              <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Switch checked={t.is_active} onCheckedChange={(c) => toggleActive(t.id, !!c)} />
-                Aktiv
-              </label>
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(t.id)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-// ----------------------- Computed field config panel -----------------------
-
-function ComputedFieldConfigPanel({
-  serviceId, currentKey, formula, onChange,
-}: {
-  serviceId: string;
-  currentKey: string;
-  formula: string;
-  onChange: (v: string) => void;
-}) {
-  const { data: fields = [] } = useQuery({
-    queryKey: ["service-fields-for-formula", serviceId],
-    queryFn: () => api.serviceDataFields.listForService(serviceId),
-  });
-  const numericFields = (fields as any[]).filter(
-    (f) => f.field_key !== currentKey && ["number", "decimal", "percent", "computed"].includes(f.field_type)
-  );
-
-  const insert = (token: string) => onChange(((formula || "") + (formula && !formula.endsWith(" ") ? " " : "") + token));
-
-  // Live-Vorschau mit Beispielwert 1 pro Feld
-  const preview = (() => {
-    if (!formula) return null;
-    const ctx: Record<string, number> = {};
-    for (const f of fields as any[]) ctx[f.field_key] = 1;
-    const r = evaluateFormula(formula, ctx);
-    return r;
-  })();
-
-  return (
-    <div className="border rounded-md p-3 space-y-3 bg-muted/20">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Formel-Editor</span>
-        <Badge variant="secondary" className="text-[10px]">automatisch berechnet · schreibgeschützt</Badge>
-      </div>
-      <Textarea
-        rows={3}
-        placeholder="z.B. ((gewicht_1 + gewicht_2 + gewicht_3) / 3) / volumen"
-        value={formula}
-        onChange={(e) => onChange(e.target.value)}
-        className="font-mono text-xs"
-      />
-      <div className="space-y-2">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Verfügbare Felder</p>
-        <div className="flex flex-wrap gap-1">
-          {numericFields.length === 0 && (
-            <span className="text-xs text-muted-foreground">Keine numerischen Felder in dieser Dienstleistung.</span>
-          )}
-          {numericFields.map((f) => (
-            <Button key={f.id} type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => insert(f.field_key)}>
-              {f.display_name} <span className="ml-1 text-muted-foreground">({f.field_key})</span>
-            </Button>
-          ))}
-        </div>
-      </div>
-      <div className="space-y-2">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Funktionen</p>
-        <div className="flex flex-wrap gap-1">
-          {["SUM(a, b)", "AVERAGE(a, b)", "MIN(a, b)", "MAX(a, b)", "ROUND(x, 2)", "ABS(x)"].map((s) => (
-            <Button key={s} type="button" variant="outline" size="sm" className="h-6 text-[10px]" onClick={() => insert(s.split("(")[0] + "(")}>
-              {s}
-            </Button>
-          ))}
-          {["+", "-", "*", "/", "%", "(", ")"].map((s) => (
-            <Button key={s} type="button" variant="outline" size="sm" className="h-6 w-7 text-xs" onClick={() => insert(s)}>
-              {s}
-            </Button>
-          ))}
-        </div>
-      </div>
-      {preview && (
-        <div className="text-[11px]">
-          {preview.error ? (
-            <span className="text-destructive">Formelfehler: {preview.error}</span>
-          ) : (
-            <span className="text-muted-foreground">
-              Vorschau (alle Felder = 1): <span className="font-mono">{preview.value ?? "—"}</span>
-            </span>
-          )}
-        </div>
-      )}
-      <p className="text-[10px] text-muted-foreground">
-        Unterstützt: <span className="font-mono">+ − * / %</span> · Klammern · Funktionen SUM, AVERAGE, MIN, MAX, ROUND, ABS.
-        Referenzieren Sie andere Felder über ihren internen Schlüssel.
-      </p>
-    </div>
-  );
-}
-

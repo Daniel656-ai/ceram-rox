@@ -100,7 +100,9 @@ const App = () => (
               <Route path="/arbeitsplanung" element={<WorkPlanPage />} />
               <Route path="/admin/benutzer" element={<AdminUsersPage />} />
               <Route path="/admin/messdienstleistungen" element={<AdminServicesPage />} />
-              <Route path="/admin/messdienstleistungen/:serviceId/designer" element={<AdminServiceDesignerPage />} />
+              <Route path="/admin/prozess-designer" element={<AdminServiceDesignerPage />} />
+              <Route path="/admin/prozess-designer/:templateId" element={<AdminServiceDesignerPage />} />
+              <Route path="/admin/messdienstleistungen/:serviceId/designer" element={<Navigate to="/admin/prozess-designer" replace />} />
               <Route path="/admin/servicepakete" element={<AdminServicePackagesPage />} />
 
               <Route path="/admin/statistiken" element={<AdminStatsPage />} />
