@@ -3108,6 +3108,104 @@ export type Database = {
           },
         ]
       }
+      portfolio_tasks: {
+        Row: {
+          code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          portfolio_work_package_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          portfolio_work_package_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          portfolio_work_package_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_tasks_portfolio_work_package_id_fkey"
+            columns: ["portfolio_work_package_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_work_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_work_packages: {
+        Row: {
+          category_id: string | null
+          code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          portfolio_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          portfolio_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          portfolio_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_work_packages_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "work_package_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_work_packages_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "project_portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       process_steps: {
         Row: {
           assignee_rule: Json
@@ -4127,7 +4225,7 @@ export type Database = {
           {
             foreignKeyName: "project_portfolio_members_project_id_fkey"
             columns: ["project_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -4419,8 +4517,10 @@ export type Database = {
           note: string
           order_id: string | null
           person_id: string
+          portfolio_task_id: string | null
           project_id: string
           updated_at: string
+          work_package_id: string | null
         }
         Insert: {
           created_at?: string
@@ -4433,8 +4533,10 @@ export type Database = {
           note?: string
           order_id?: string | null
           person_id: string
+          portfolio_task_id?: string | null
           project_id: string
           updated_at?: string
+          work_package_id?: string | null
         }
         Update: {
           created_at?: string
@@ -4447,8 +4549,10 @@ export type Database = {
           note?: string
           order_id?: string | null
           person_id?: string
+          portfolio_task_id?: string | null
           project_id?: string
           updated_at?: string
+          work_package_id?: string | null
         }
         Relationships: [
           {
@@ -4459,10 +4563,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_time_entries_portfolio_task_id_fkey"
+            columns: ["portfolio_task_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_tasks"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_time_entries_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_time_entries_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -4624,11 +4742,13 @@ export type Database = {
       }
       project_work_packages: {
         Row: {
+          category_id: string
           created_at: string
           created_by: string
           description: string | null
           end_date: string | null
           id: string
+          is_mandatory: boolean
           milestone_id: string | null
           project_id: string
           start_date: string | null
@@ -4637,11 +4757,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category_id: string
           created_at?: string
           created_by: string
           description?: string | null
           end_date?: string | null
           id?: string
+          is_mandatory?: boolean
           milestone_id?: string | null
           project_id: string
           start_date?: string | null
@@ -4650,11 +4772,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category_id?: string
           created_at?: string
           created_by?: string
           description?: string | null
           end_date?: string | null
           id?: string
+          is_mandatory?: boolean
           milestone_id?: string | null
           project_id?: string
           start_date?: string | null
@@ -4663,6 +4787,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_work_packages_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "work_package_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_work_packages_milestone_id_fkey"
             columns: ["milestone_id"]
@@ -4689,6 +4820,7 @@ export type Database = {
           description: string | null
           end_date: string | null
           id: string
+          portfolio_id: string | null
           project_name: string | null
           project_number: string
           project_status: Database["public"]["Enums"]["project_status"]
@@ -4705,6 +4837,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          portfolio_id?: string | null
           project_name?: string | null
           project_number: string
           project_status?: Database["public"]["Enums"]["project_status"]
@@ -4721,6 +4854,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          portfolio_id?: string | null
           project_name?: string | null
           project_number?: string
           project_status?: Database["public"]["Enums"]["project_status"]
@@ -4728,7 +4862,15 @@ export type Database = {
           traffic_light?: Database["public"]["Enums"]["traffic_light_status"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "project_portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       raw_material_analyses: {
         Row: {
@@ -6477,6 +6619,36 @@ export type Database = {
         }
         Relationships: []
       }
+      work_package_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       workflow_template_steps: {
         Row: {
           condition_expr: Json
@@ -6896,6 +7068,14 @@ export type Database = {
           project_number: string
         }[]
       }
+      get_portfolio_costs_by_category: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          amount: number
+          category_id: string
+          category_name: string
+        }[]
+      }
       get_portfolio_costs_by_month: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
         Returns: {
@@ -6920,9 +7100,27 @@ export type Database = {
           project_number: string
         }[]
       }
+      get_portfolio_costs_by_work_package: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          amount: number
+          category_id: string
+          category_name: string
+          name: string
+          portfolio_work_package_id: string
+        }[]
+      }
       get_portfolio_dashboard: {
         Args: { _portfolio_id: string }
         Returns: Json
+      }
+      get_portfolio_hours_by_category: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          category_id: string
+          category_name: string
+          minutes: number
+        }[]
       }
       get_portfolio_hours_by_month: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
@@ -6951,6 +7149,27 @@ export type Database = {
           project_id: string
           project_name: string
           project_number: string
+        }[]
+      }
+      get_portfolio_hours_by_task: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          minutes: number
+          task_id: string
+          task_name: string
+          work_package_id: string
+          work_package_name: string
+        }[]
+      }
+      get_portfolio_hours_by_work_package: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          category_id: string
+          category_name: string
+          code: string
+          minutes: number
+          name: string
+          portfolio_work_package_id: string
         }[]
       }
       get_portfolio_milestone_timeline: {

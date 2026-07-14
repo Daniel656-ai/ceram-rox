@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { useState, Fragment } from "react";
+import { useState, Fragment, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import {
@@ -69,6 +71,15 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
   const { data: workPackages = [], isLoading: wpLoading } = useWorkPackages(projectId);
   const { data: dependencies = [] } = useWorkPackageDependencies(projectId);
   const { data: users = [] } = useUsers();
+  const { data: categories = [] } = useQuery({
+    queryKey: ["work-package-categories"],
+    queryFn: () => api.workPackageCategories.list(),
+  });
+  const defaultCategoryId = useMemo(
+    () => (categories.find((c: any) => c.name === "Grundlagen & Charakterisierung")?.id || categories[0]?.id || ""),
+    [categories],
+  );
+  const categoryName = (id?: string | null) => (categories as any[]).find((c) => c.id === id)?.name || "–";
 
   // Only project-level milestones (not attached to a work package) shown in the standalone card
   const milestones = (allMilestones as any[]).filter((m) => !m.work_package_id);
@@ -155,17 +166,23 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
     end_date: "",
     milestone_id: "",
     status: "planned",
+    category_id: "",
     assignee_ids: [] as string[],
   });
 
   const resetWpForm = () => {
-    setWpForm({ title: "", description: "", start_date: "", end_date: "", milestone_id: "", status: "planned", assignee_ids: [] });
+    setWpForm({ title: "", description: "", start_date: "", end_date: "", milestone_id: "", status: "planned", category_id: defaultCategoryId, assignee_ids: [] });
     setWpEditId(null);
   };
 
   const handleSaveWp = async () => {
     if (!wpForm.title.trim()) {
       toast.error(t("wp_title_required"));
+      return;
+    }
+    const categoryId = wpForm.category_id || defaultCategoryId;
+    if (!categoryId) {
+      toast.error(t("wp_category_required", { defaultValue: "Kategorie ist erforderlich" }));
       return;
     }
     if (wpForm.start_date && wpForm.end_date && wpForm.end_date < wpForm.start_date) {
@@ -183,6 +200,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
           end_date: wpForm.end_date || null,
           milestone_id: wpForm.milestone_id || null,
           status: wpForm.status,
+          category_id: categoryId,
           assignee_ids: wpForm.assignee_ids,
         });
         toast.success(t("wp_updated"));
@@ -190,6 +208,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
         await createWp.mutateAsync({
           project_id: projectId,
           title: wpForm.title,
+          category_id: categoryId,
           description: wpForm.description || undefined,
           start_date: wpForm.start_date || null,
           end_date: wpForm.end_date || null,
@@ -216,6 +235,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
       end_date: wp.end_date || "",
       milestone_id: wp.milestone_id || "",
       status: wp.status,
+      category_id: wp.category_id || defaultCategoryId,
       assignee_ids: wp.assignees || [],
     });
     setWpOpen(true);
@@ -286,6 +306,18 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                   <div className="space-y-2">
                     <Label>{t("wp_title")} *</Label>
                     <Input value={wpForm.title} onChange={(e) => setWpForm((f) => ({ ...f, title: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("wp_category", { defaultValue: "Kategorie" })} *</Label>
+                    <Select value={wpForm.category_id || defaultCategoryId} onValueChange={(v) => setWpForm((f) => ({ ...f, category_id: v }))}>
+                      <SelectTrigger><SelectValue placeholder={t("wp_select_category", { defaultValue: "Kategorie wählen" })} /></SelectTrigger>
+                      <SelectContent>
+                        {(categories as any[]).map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">{t("wp_category_hint", { defaultValue: "Die Kategorie verknüpft das Arbeitspaket mit dem Portfolio (FFG-Förderantrag)." })}</p>
                   </div>
                   <div className="space-y-2">
                     <Label>{t("wp_description")}</Label>
@@ -380,7 +412,11 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium">
-                        <div>{wp.title}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{wp.title}</span>
+                          {wp.is_mandatory && <Badge variant="secondary" className="text-[10px]">Pflicht-AP</Badge>}
+                          <Badge variant="outline" className="text-[10px]">{categoryName(wp.category_id)}</Badge>
+                        </div>
                         {wp.description && <div className="text-xs text-muted-foreground truncate max-w-xs">{wp.description}</div>}
                       </TableCell>
                       <TableCell>{wp.start_date ? new Date(wp.start_date).toLocaleDateString(locale) : "–"}</TableCell>
@@ -413,6 +449,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                             <Button variant="ghost" size="icon" onClick={() => handleEditWp(wp)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
+                            {!wp.is_mandatory && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
@@ -432,6 +469,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
+                            )}
                           </div>
                         </TableCell>
                       )}
