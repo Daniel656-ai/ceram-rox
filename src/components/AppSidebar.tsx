@@ -96,6 +96,7 @@ export function AppSidebar() {
     { title: "Firmeneinstellungen", url: "/admin/firmeneinstellungen", icon: ImageIcon, show: isAdmin || role === "master", nav: null as string | null },
     { title: "Etiketten-Vorlagen", url: "/admin/etiketten", icon: Tag, show: isAdmin || role === "master" || hasPerm("raw_materials.manage"), nav: null as string | null },
     { title: "Symbole verwalten", url: "/admin/symbole", icon: Sparkles, show: isAdmin || role === "master", nav: null as string | null },
+    { title: "AP-Kategorien", url: "/admin/ap-kategorien", icon: Tag, show: isAdmin || role === "master" || (customRoleName ?? "").toLowerCase() === "pmo", nav: null as string | null },
 
   ].filter((item) => item.show && (item.nav === null || hasNavPerm(item.nav)));
 
