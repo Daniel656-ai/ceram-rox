@@ -662,6 +662,36 @@ export default function CreateOrderPage() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Prozessvorlage (optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Select value={processTemplateId} onValueChange={setProcessTemplateId}>
+              <SelectTrigger><SelectValue placeholder="Keine Vorlage – klassischer Auftrag" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">– Keine Vorlage –</SelectItem>
+                {(processTemplates as any[])
+                  .filter((tpl) => {
+                    if (orderKind === "pilot_plant") return tpl.kind === "pilot_plant";
+                    if (orderKind === "labor") return tpl.kind === "labor";
+                    return true;
+                  })
+                  .map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      {tpl.name} {tpl.kind === "pilot_plant" ? "· PP" : "· Labor"} · v{tpl.version}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Bei Auswahl wird ein Prozess­ablauf mit definierten Schritten erzeugt und dem
+              Auftrag verknüpft.
+            </p>
+          </CardContent>
+        </Card>
+
+
         {orderKind !== "pilot_plant" && (
           <Card>
             <CardHeader><CardTitle className="text-base">{t("orders:sample")} *</CardTitle></CardHeader>
