@@ -138,6 +138,13 @@ export const workflowSteps = {
 
   remove: (id: string) => run(dbClient.from("service_workflow_steps" as any).delete().eq("id", id)),
 
+  listByIds: (ids: string[]) => {
+    if (ids.length === 0) return Promise.resolve([] as WorkflowStep[]);
+    return unwrap(
+      dbClient.from("service_workflow_steps" as any).select("*").in("id", ids)
+    ) as unknown as Promise<WorkflowStep[]>;
+  },
+
   reorder: async (orders: Array<{ id: string; order_index: number }>) => {
     for (const o of orders) {
       await run(
@@ -198,13 +205,15 @@ export interface WorkflowTask {
   form_id: string | null;
   assigned_to: string | null;
   assigned_role: string | null;
-  status: string; // pending | in_progress | completed | skipped | escalated
+  status: string;
   priority: string;
   due_at: string | null;
   opened_at: string | null;
   completed_at: string | null;
   form_response: Record<string, unknown>;
   notes: string | null;
+  time_entry_id: string | null;
+  auto_time_minutes: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -220,11 +229,31 @@ export const workflowTasks = {
         .order("due_at", { ascending: true, nullsFirst: false })
     ) as unknown as Promise<WorkflowTask[]>,
 
+  listForOrder: (orderId: string) =>
+    unwrap(
+      dbClient
+        .from("order_workflow_tasks" as any)
+        .select("*")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: true })
+    ) as unknown as Promise<WorkflowTask[]>,
+
   get: (id: string) =>
     unwrap(dbClient.from("order_workflow_tasks" as any).select("*").eq("id", id).single()) as unknown as Promise<WorkflowTask>,
 
   update: (id: string, updates: Partial<WorkflowTask>) =>
     run(dbClient.from("order_workflow_tasks" as any).update(updates as any).eq("id", id)),
+
+  start: (id: string) =>
+    run(dbClient.rpc("wf_start_task" as any, { _task_id: id } as any)),
+
+  saveDraft: (id: string, formResponse: Record<string, unknown>) =>
+    run(
+      dbClient
+        .from("order_workflow_tasks" as any)
+        .update({ form_response: formResponse, updated_at: new Date().toISOString() } as any)
+        .eq("id", id)
+    ),
 
   complete: (id: string, formResponse: Record<string, unknown>) =>
     run(
@@ -237,4 +266,60 @@ export const workflowTasks = {
         } as any)
         .eq("id", id)
     ),
+};
+
+// =====================================================================
+// order_workflow_task_positions
+// =====================================================================
+export interface WorkflowTaskPosition {
+  id: string;
+  task_id: string;
+  sample_id: string | null;
+  position_label: string | null;
+  status: "open" | "in_progress" | "completed" | "not_feasible";
+  result_value: string | null;
+  remarks: string | null;
+  not_feasible_reason: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const workflowTaskPositions = {
+  listForTask: (taskId: string) =>
+    unwrap(
+      dbClient
+        .from("order_workflow_task_positions" as any)
+        .select("*")
+        .eq("task_id", taskId)
+        .order("created_at", { ascending: true })
+    ) as unknown as Promise<WorkflowTaskPosition[]>,
+
+  update: (id: string, updates: Partial<WorkflowTaskPosition>) =>
+    run(dbClient.from("order_workflow_task_positions" as any).update(updates as any).eq("id", id)),
+
+  upsertMany: (rows: Array<Partial<WorkflowTaskPosition> & { id: string }>) =>
+    run(dbClient.from("order_workflow_task_positions" as any).upsert(rows as any)),
+};
+
+// =====================================================================
+// Shared form data on the order
+// =====================================================================
+export const orderSharedFormData = {
+  get: async (orderId: string): Promise<Record<string, unknown>> => {
+    const r = (await unwrap(
+      dbClient.from("measurement_orders" as any).select("shared_form_data").eq("id", orderId).single()
+    )) as any;
+    return (r?.shared_form_data ?? {}) as Record<string, unknown>;
+  },
+  merge: async (orderId: string, patch: Record<string, unknown>) => {
+    const current = await orderSharedFormData.get(orderId);
+    await run(
+      dbClient
+        .from("measurement_orders" as any)
+        .update({ shared_form_data: { ...current, ...patch } } as any)
+        .eq("id", orderId)
+    );
+  },
 };

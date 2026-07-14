@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
+import { WorkflowRuntimePanel } from "@/components/workflow/WorkflowRuntimePanel";
 import { Trash2, Plus, CheckCircle2 } from "lucide-react";
 
 const WORKFLOW_STATUSES = [
@@ -43,6 +44,7 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
             {showPP && <TabsTrigger value="pilot_plant">{t("orders:tabs.pilot_plant")}</TabsTrigger>}
             <TabsTrigger value="samples">{t("orders:tabs.samples")}</TabsTrigger>
             {showLab && <TabsTrigger value="analyses">{t("orders:tabs.analyses")}</TabsTrigger>}
+            <TabsTrigger value="workflow">Workflow</TabsTrigger>
             <TabsTrigger value="closure">{t("orders:tabs.closure")}</TabsTrigger>
           </TabsList>
 
@@ -61,6 +63,10 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
               <AnalysisRequestsTab order={order} canEdit={canEdit} />
             </TabsContent>
           )}
+
+          <TabsContent value="workflow">
+            <WorkflowRuntimePanel order={order} />
+          </TabsContent>
 
           <TabsContent value="closure">
             <ClosureTab order={order} canEdit={canEdit} />
