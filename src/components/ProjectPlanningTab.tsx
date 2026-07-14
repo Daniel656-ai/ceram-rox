@@ -469,6 +469,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
+                            )}
                           </div>
                         </TableCell>
                       )}
