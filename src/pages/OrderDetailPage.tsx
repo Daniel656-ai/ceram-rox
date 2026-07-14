@@ -47,6 +47,11 @@ export default function OrderDetailPage() {
   const canViewHourlyRates = role === "master" || hasPermission("costs.view_hourly_rates");
   const { data: order, isLoading } = useOrderDetail(id);
   const { data: auditLogs = [] } = useOrderAuditLog(id);
+  const { data: linkedInstance } = useQuery({
+    queryKey: ["order-instance-for-legacy", id],
+    queryFn: () => api.orderInstances.getByLegacyOrderId(id!),
+    enabled: !!id,
+  });
   const updateMeasurementStatus = useUpdateMeasurementStatus();
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
