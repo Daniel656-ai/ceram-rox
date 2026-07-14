@@ -66,8 +66,15 @@ export function WorkflowRuntimePanel({ order }: { order: any }) {
       </p>
     );
 
+  const orderLocked = order?.workflow_status === "abgeschlossen";
+
   return (
     <div className="space-y-4 pt-4">
+      {orderLocked && (
+        <div className="border rounded-md p-3 bg-green-500/5 border-green-500/40 text-sm">
+          Auftrag ist abgeschlossen und schreibgeschützt. Alle Ergebnisse sind gespeichert.
+        </div>
+      )}
       {tasks.map((task, idx) => (
         <TaskCard
           key={task.id}
@@ -77,6 +84,7 @@ export function WorkflowRuntimePanel({ order }: { order: any }) {
           sharedData={shared as Record<string, unknown>}
           isMaster={role === "master"}
           currentUserId={user?.id}
+          orderLocked={orderLocked}
           onChanged={invalidateAll}
         />
       ))}
