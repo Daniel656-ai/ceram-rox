@@ -31,6 +31,8 @@ import { useServicePermissions } from "@/hooks/useServicePermissions";
 import { useUsers } from "@/hooks/useUsers";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrderReportTab from "@/components/OrderReportTab";
+import { ProcessRuntimePanel } from "@/components/workflow/ProcessRuntimePanel";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 
@@ -45,6 +47,11 @@ export default function OrderDetailPage() {
   const canViewHourlyRates = role === "master" || hasPermission("costs.view_hourly_rates");
   const { data: order, isLoading } = useOrderDetail(id);
   const { data: auditLogs = [] } = useOrderAuditLog(id);
+  const { data: linkedInstance } = useQuery({
+    queryKey: ["order-instance-for-legacy", id],
+    queryFn: () => api.orderInstances.getByLegacyOrderId(id!),
+    enabled: !!id,
+  });
   const updateMeasurementStatus = useUpdateMeasurementStatus();
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
@@ -276,8 +283,12 @@ export default function OrderDetailPage() {
               <CardContent><p className="text-sm whitespace-pre-wrap">{order.notes}</p></CardContent>
             </Card>
           )}
-          {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
-            <OrderWorkflowTabs order={order} />
+          {linkedInstance ? (
+            <ProcessRuntimePanel legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
+          ) : (
+            (order as any).order_kind && (order as any).order_kind !== "legacy" && (
+              <OrderWorkflowTabs order={order} />
+            )
           )}
           <Card>
             <CardHeader><CardTitle className="text-base">Gewünschte Dienstleistungen ({measurements.length})</CardTitle></CardHeader>
@@ -360,8 +371,12 @@ export default function OrderDetailPage() {
         </Card>
       )}
 
-      {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
-        <OrderWorkflowTabs order={order} />
+      {linkedInstance ? (
+        <ProcessRuntimePanel legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
+      ) : (
+        (order as any).order_kind && (order as any).order_kind !== "legacy" && (
+          <OrderWorkflowTabs order={order} />
+        )
       )}
 
       {/* Measurements Table */}

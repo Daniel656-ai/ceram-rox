@@ -174,6 +174,10 @@ export default function CreateOrderPage() {
     queryKey: ["service-packages", "active-only"],
     queryFn: () => api.servicePackages.listWithItems({ includeInactive: false }),
   });
+  const { data: processTemplates = [] } = useQuery({
+    queryKey: ["process-templates", "active"],
+    queryFn: () => api.processTemplates.list({ scope: "template" }),
+  });
   const { data: workstations = [] } = useWorkstations();
   const { data: templates = [] } = useTemplates();
   const { data: allSamples = [] } = useSamples();
@@ -191,6 +195,7 @@ export default function CreateOrderPage() {
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
   const [selectedSampleId, setSelectedSampleId] = useState("");
+  const [processTemplateId, setProcessTemplateId] = useState<string>("__none__");
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
   const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
@@ -411,6 +416,32 @@ export default function CreateOrderPage() {
         }
       }
 
+      // Phase 5: If a process template was selected, spin up an order_instance
+      // linked to this measurement_order and seed its workflow steps.
+      if (processTemplateId && processTemplateId !== "__none__") {
+        try {
+          const tpl = (processTemplates as any[]).find(t => t.id === processTemplateId);
+          let snapshot: Record<string, unknown> | null = null;
+          try { snapshot = await api.processTemplates.snapshot(processTemplateId); } catch { /* optional */ }
+          const instance = await api.orderInstances.create({
+            template_id: processTemplateId,
+            template_snapshot: snapshot,
+            project_id: projectId,
+            legacy_order_id: order.id,
+            title: tpl?.name ?? null,
+            status: "planned",
+            sample_ids: selectedSampleId ? [selectedSampleId] : null,
+            shared_data: {},
+            created_by: user.id,
+          });
+          await api.workflowEngine.seedFromTemplate(instance.id, processTemplateId);
+        } catch (err: any) {
+          toast.error(`Prozessvorlage: ${err.message}`);
+        }
+      }
+
+
+
 
       // Analysis requests pool (only for PP / combined)
       for (const ar of analysisRequests) {
@@ -630,6 +661,36 @@ export default function CreateOrderPage() {
             </Select>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Prozessvorlage (optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Select value={processTemplateId} onValueChange={setProcessTemplateId}>
+              <SelectTrigger><SelectValue placeholder="Keine Vorlage – klassischer Auftrag" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">– Keine Vorlage –</SelectItem>
+                {(processTemplates as any[])
+                  .filter((tpl) => {
+                    if (orderKind === "pilot_plant") return tpl.kind === "pilot_plant";
+                    if (orderKind === "labor") return tpl.kind === "labor";
+                    return true;
+                  })
+                  .map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      {tpl.name} {tpl.kind === "pilot_plant" ? "· PP" : "· Labor"} · v{tpl.version}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Bei Auswahl wird ein Prozess­ablauf mit definierten Schritten erzeugt und dem
+              Auftrag verknüpft.
+            </p>
+          </CardContent>
+        </Card>
+
 
         {orderKind !== "pilot_plant" && (
           <Card>
