@@ -191,6 +191,7 @@ export default function CreateOrderPage() {
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
   const [selectedSampleId, setSelectedSampleId] = useState("");
+  const [processTemplateId, setProcessTemplateId] = useState<string>("__none__");
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
   const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
