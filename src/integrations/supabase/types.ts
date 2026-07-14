@@ -6720,6 +6720,10 @@ export type Database = {
       }
     }
     Functions: {
+      _clone_form_definition: {
+        Args: { _new_scope?: string; _source_form_id: string }
+        Returns: string
+      }
       _order_lock_bypass: { Args: never; Returns: boolean }
       activate_mixture_recipe_version: {
         Args: { _version_id: string }
@@ -6803,6 +6807,10 @@ export type Database = {
         }[]
       }
       claim_measurement: { Args: { _measurement_id: string }; Returns: string }
+      clone_template_as_new_version: {
+        Args: { _template_id: string }
+        Returns: string
+      }
       complete_mixture_batch: {
         Args: { _batch_id: string; _produced_quantity?: number }
         Returns: undefined
@@ -7052,6 +7060,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_snippet_into_template: {
+        Args: { _snippet_id: string; _target_template_id: string }
+        Returns: number
+      }
       is_assigned_to_measurement: {
         Args: { _measurement_id: string; _user_id: string }
         Returns: boolean
@@ -7155,6 +7167,7 @@ export type Database = {
           template_id: string
         }[]
       }
+      snapshot_template: { Args: { _template_id: string }; Returns: Json }
       start_mixture_batch:
         | { Args: { _batch_id: string }; Returns: undefined }
         | {
