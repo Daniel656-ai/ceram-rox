@@ -139,6 +139,7 @@ import {
   servicePackageWorkflowMap,
   workTasks,
 } from "./workObjects";
+import { pilotPlantBlocks, pilotPlantProducedSamples } from "./pilotPlantProcess";
 
 
 
@@ -266,6 +267,10 @@ export const api = {
   workflowTemplates,
   servicePackageWorkflowMap,
   workTasks,
+
+  // ---- pilot plant process (9-step workflow) ----
+  pilotPlantBlocks,
+  pilotPlantProducedSamples,
 
 
 

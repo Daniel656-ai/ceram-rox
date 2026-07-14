@@ -384,6 +384,34 @@ export default function CreateOrderPage() {
         pp_remarks: pp.remarks || null,
       });
 
+      // Pilot Plant: seed 9 process blocks and store Stammdaten into shared_form_data
+      if (orderKind === "pilot_plant" || orderKind === "combined") {
+        try {
+          await api.pilotPlantBlocks.seed(order.id);
+          await api.orderSharedFormData.merge(order.id, {
+            pp: {
+              stammdaten: {
+                versuchsnummer: pp.experiment_number || null,
+                experiment_date: pp.experiment_date || null,
+                versuchsart: pp.experiment_kind || null,
+                previous_experiments: pp.previous_experiments || null,
+                masse_type: pp.masse_type === "__none__" ? null : pp.masse_type,
+                remarks: pp.remarks || null,
+                requested_lab_service_ids: analysisRequests.map((a: any) => a.service_id),
+                requested_lab_services: analysisRequests.map((a: any) => ({
+                  service_id: a.service_id, service_name: a.service_name, quantity: a.quantity,
+                })),
+                created_by: user.id,
+                created_at: new Date().toISOString(),
+              },
+            },
+          });
+        } catch (err: any) {
+          toast.error(`Pilot-Plant-Bausteine: ${err.message}`);
+        }
+      }
+
+
       // Analysis requests pool (only for PP / combined)
       for (const ar of analysisRequests) {
         try {

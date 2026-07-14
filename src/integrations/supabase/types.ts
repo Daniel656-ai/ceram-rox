@@ -790,6 +790,7 @@ export type Database = {
           customer_name: string | null
           due_date: string | null
           id: string
+          is_pilot_plant_process: boolean
           notes: string | null
           order_kind: Database["public"]["Enums"]["order_kind"]
           order_number: string | null
@@ -820,6 +821,7 @@ export type Database = {
           customer_name?: string | null
           due_date?: string | null
           id?: string
+          is_pilot_plant_process?: boolean
           notes?: string | null
           order_kind?: Database["public"]["Enums"]["order_kind"]
           order_number?: string | null
@@ -852,6 +854,7 @@ export type Database = {
           customer_name?: string | null
           due_date?: string | null
           id?: string
+          is_pilot_plant_process?: boolean
           notes?: string | null
           order_kind?: Database["public"]["Enums"]["order_kind"]
           order_number?: string | null
@@ -2617,6 +2620,139 @@ export type Database = {
           target_user_id?: string
         }
         Relationships: []
+      }
+      pilot_plant_blocks: {
+        Row: {
+          assigned_role: string | null
+          assigned_to: string | null
+          block_key: Database["public"]["Enums"]["pilot_plant_block_key"]
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          data: Json
+          id: string
+          notes: string | null
+          order_id: string
+          order_index: number
+          started_at: string | null
+          started_by: string | null
+          status: Database["public"]["Enums"]["pilot_plant_block_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          block_key: Database["public"]["Enums"]["pilot_plant_block_key"]
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          notes?: string | null
+          order_id: string
+          order_index: number
+          started_at?: string | null
+          started_by?: string | null
+          status?: Database["public"]["Enums"]["pilot_plant_block_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          block_key?: Database["public"]["Enums"]["pilot_plant_block_key"]
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          notes?: string | null
+          order_id?: string
+          order_index?: number
+          started_at?: string | null
+          started_by?: string | null
+          status?: Database["public"]["Enums"]["pilot_plant_block_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_plant_blocks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pilot_plant_produced_samples: {
+        Row: {
+          block_id: string | null
+          created_at: string
+          created_order_id: string | null
+          created_sample_id: string | null
+          id: string
+          label: string
+          marking: string | null
+          notes: string | null
+          order_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          block_id?: string | null
+          created_at?: string
+          created_order_id?: string | null
+          created_sample_id?: string | null
+          id?: string
+          label: string
+          marking?: string | null
+          notes?: string | null
+          order_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          block_id?: string | null
+          created_at?: string
+          created_order_id?: string | null
+          created_sample_id?: string | null
+          id?: string
+          label?: string
+          marking?: string | null
+          notes?: string | null
+          order_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_plant_produced_samples_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "pilot_plant_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plant_produced_samples_created_order_id_fkey"
+            columns: ["created_order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plant_produced_samples_created_sample_id_fkey"
+            columns: ["created_sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_plant_produced_samples_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -4643,6 +4779,7 @@ export type Database = {
           mixture_batch_id: string | null
           order_id: string | null
           parent_sample_id: string | null
+          pilot_plant_order_id: string | null
           post_measurement_action:
             | Database["public"]["Enums"]["post_measurement_action"]
             | null
@@ -4675,6 +4812,7 @@ export type Database = {
           mixture_batch_id?: string | null
           order_id?: string | null
           parent_sample_id?: string | null
+          pilot_plant_order_id?: string | null
           post_measurement_action?:
             | Database["public"]["Enums"]["post_measurement_action"]
             | null
@@ -4707,6 +4845,7 @@ export type Database = {
           mixture_batch_id?: string | null
           order_id?: string | null
           parent_sample_id?: string | null
+          pilot_plant_order_id?: string | null
           post_measurement_action?:
             | Database["public"]["Enums"]["post_measurement_action"]
             | null
@@ -4751,6 +4890,13 @@ export type Database = {
             columns: ["parent_sample_id"]
             isOneToOne: false
             referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samples_pilot_plant_order_id_fkey"
+            columns: ["pilot_plant_order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
             referencedColumns: ["id"]
           },
           {
@@ -6465,6 +6611,16 @@ export type Database = {
         }
         Returns: string
       }
+      pp_complete_block: {
+        Args: { _block_id: string; _data?: Json; _notes?: string }
+        Returns: undefined
+      }
+      pp_round_minutes_to_15: {
+        Args: { _from: string; _to: string }
+        Returns: number
+      }
+      pp_seed_blocks: { Args: { _order_id: string }; Returns: undefined }
+      pp_start_block: { Args: { _block_id: string }; Returns: undefined }
       priority_enum_to_int: {
         Args: { p: Database["public"]["Enums"]["order_priority"] }
         Returns: number
@@ -6604,6 +6760,21 @@ export type Database = {
       order_priority: "normal" | "wichtig" | "hoechste"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
+      pilot_plant_block_key:
+        | "stammdaten"
+        | "rezeptur"
+        | "knetung"
+        | "extrusion"
+        | "trocknung"
+        | "brennen"
+        | "probenentnahme"
+        | "uebergabe"
+        | "abschluss"
+      pilot_plant_block_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "skipped"
       portfolio_document_category:
         | "foerderantrag"
         | "foerdervertrag"
@@ -6908,6 +7079,23 @@ export const Constants = {
       order_priority: ["normal", "wichtig", "hoechste"],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
+      pilot_plant_block_key: [
+        "stammdaten",
+        "rezeptur",
+        "knetung",
+        "extrusion",
+        "trocknung",
+        "brennen",
+        "probenentnahme",
+        "uebergabe",
+        "abschluss",
+      ],
+      pilot_plant_block_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "skipped",
+      ],
       portfolio_document_category: [
         "foerderantrag",
         "foerdervertrag",
