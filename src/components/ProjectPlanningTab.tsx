@@ -308,6 +308,18 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                     <Input value={wpForm.title} onChange={(e) => setWpForm((f) => ({ ...f, title: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
+                    <Label>{t("wp_category", { defaultValue: "Kategorie" })} *</Label>
+                    <Select value={wpForm.category_id || defaultCategoryId} onValueChange={(v) => setWpForm((f) => ({ ...f, category_id: v }))}>
+                      <SelectTrigger><SelectValue placeholder={t("wp_select_category", { defaultValue: "Kategorie wählen" })} /></SelectTrigger>
+                      <SelectContent>
+                        {(categories as any[]).map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">{t("wp_category_hint", { defaultValue: "Die Kategorie verknüpft das Arbeitspaket mit dem Portfolio (FFG-Förderantrag)." })}</p>
+                  </div>
+                  <div className="space-y-2">
                     <Label>{t("wp_description")}</Label>
                     <Textarea value={wpForm.description} onChange={(e) => setWpForm((f) => ({ ...f, description: e.target.value }))} rows={2} />
                   </div>
