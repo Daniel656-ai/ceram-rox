@@ -41,16 +41,7 @@ export function WorkflowRuntimePanel({ order }: { order: any }) {
   const { data: steps = [] } = useQuery({
     queryKey: ["wf-steps-for-order", orderId, tasks.map((t) => t.step_id).join(",")],
     enabled: tasks.length > 0,
-    queryFn: async () => {
-      const ids = Array.from(new Set(tasks.map((t) => t.step_id)));
-      // Cheap: reuse designer API by iterating (tasks small)
-      const out: any[] = [];
-      for (const id of ids) {
-        const s = await api.from("service_workflow_steps" as any).select("*").eq("id", id).maybeSingle();
-        if (s.data) out.push(s.data);
-      }
-      return out;
-    },
+    queryFn: () => api.workflowSteps.listByIds(Array.from(new Set(tasks.map((t) => t.step_id)))),
   });
 
   const stepById = useMemo(() => {
