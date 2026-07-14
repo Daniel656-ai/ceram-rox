@@ -25,6 +25,9 @@ import { ArrowLeft, Plus, Trash2, Pencil, Save, X, FolderPlus, Briefcase, Calend
 import PortfolioAnalyticsTab from "@/components/PortfolioAnalyticsTab";
 import PortfolioDocumentsTab from "@/components/PortfolioDocumentsTab";
 import PortfolioDashboardTab from "@/components/PortfolioDashboardTab";
+import PortfolioStructureTab from "@/components/portfolio/PortfolioStructureTab";
+import PortfolioFfgReportTab from "@/components/portfolio/PortfolioFfgReportTab";
+import { useCanManagePortfolio } from "@/hooks/useCanManagePortfolio";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { formatCurrency } from "@/lib/formatCurrency";
 
