@@ -681,3 +681,79 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
     </Dialog>
   );
 }
+
+// ---------------- Global Form Library ----------------
+function GlobalFormLibrary() {
+  const qc = useQueryClient();
+  const [newName, setNewName] = useState("");
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+
+  const { data: forms = [], isLoading } = useQuery({
+    queryKey: ["form-definitions", "global"],
+    queryFn: () => api.formDefinitions.list({ scope: "global" }),
+  });
+
+  const createMut = useMutation({
+    mutationFn: () => api.formDefinitions.create({ name: newName.trim(), scope: "global" }),
+    onSuccess: (f) => {
+      toast.success("Formular angelegt");
+      setNewName("");
+      qc.invalidateQueries({ queryKey: ["form-definitions", "global"] });
+      setSelectedFormId(f.id);
+    },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (id: string) => api.formDefinitions.remove(id),
+    onSuccess: () => {
+      toast.success("Gelöscht");
+      qc.invalidateQueries({ queryKey: ["form-definitions", "global"] });
+      setSelectedFormId(null);
+    },
+    onError: (e: any) => toast.error(e.message || "Löschen fehlgeschlagen"),
+  });
+
+  const selectedForm = forms.find(f => f.id === selectedFormId) ?? null;
+
+  return (
+    <div className="grid grid-cols-12 gap-4">
+      <Card className="col-span-4">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Globale Formulare</CardTitle>
+          <p className="text-xs text-muted-foreground">Wiederverwendbar über alle Prozessvorlagen hinweg.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Neuer Formularname" />
+            <Button size="sm" onClick={() => createMut.mutate()} disabled={!newName.trim() || createMut.isPending}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          {isLoading && <div className="text-xs text-muted-foreground">Lade…</div>}
+          {!isLoading && forms.length === 0 && <div className="text-xs text-muted-foreground py-4 text-center border rounded">Noch keine globalen Formulare.</div>}
+          <div className="space-y-1">
+            {forms.map(f => (
+              <div key={f.id} className={`flex items-center gap-1 rounded px-2 py-2 cursor-pointer ${selectedFormId === f.id ? "bg-primary/10" : "hover:bg-muted"}`} onClick={() => setSelectedFormId(f.id)}>
+                <span className="flex-1 text-sm truncate">{f.name}</span>
+                <Badge variant="outline" className="text-xs">v{f.version}</Badge>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); if (confirm(`Formular „${f.name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="col-span-8">
+        {selectedForm ? (
+          <Card>
+            <CardHeader><CardTitle className="text-sm">{selectedForm.name}</CardTitle></CardHeader>
+            <CardContent><FormFieldsEditor form={selectedForm} /></CardContent>
+          </Card>
+        ) : (
+          <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte ein Formular links auswählen oder anlegen.</CardContent></Card>
+        )}
+      </div>
+    </div>
+  );
+}
