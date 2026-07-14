@@ -1,0 +1,52 @@
+import { dbClient } from "./client";
+import { unwrap, run } from "./_helpers";
+
+export interface ProcessStep {
+  id: string;
+  template_id: string;
+  step_key: string;
+  name: string;
+  description: string | null;
+  order_index: number;
+  form_id: string | null;
+  role_required: string | null;
+  assignee_rule: Record<string, unknown>;
+  is_mandatory: boolean;
+  condition_expr: Record<string, unknown>;
+  auto_actions: Array<Record<string, unknown>>;
+  due_hours: number | null;
+  escalation_role: string | null;
+  position_source: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export const processSteps = {
+  listForTemplate: (templateId: string) =>
+    unwrap(
+      dbClient
+        .from("process_steps" as any)
+        .select("*")
+        .eq("template_id", templateId)
+        .order("order_index")
+    ) as unknown as Promise<ProcessStep[]>,
+
+  create: (input: Partial<ProcessStep> & { template_id: string; step_key: string; name: string }) =>
+    unwrap(
+      dbClient.from("process_steps" as any).insert(input as any).select().single()
+    ) as unknown as Promise<ProcessStep>,
+
+  update: (id: string, updates: Partial<ProcessStep>) =>
+    run(dbClient.from("process_steps" as any).update(updates as any).eq("id", id)),
+
+  remove: (id: string) => run(dbClient.from("process_steps" as any).delete().eq("id", id)),
+
+  reorder: async (orders: Array<{ id: string; order_index: number }>) => {
+    for (const o of orders) {
+      await run(
+        dbClient.from("process_steps" as any).update({ order_index: o.order_index } as any).eq("id", o.id)
+      );
+    }
+  },
+};
