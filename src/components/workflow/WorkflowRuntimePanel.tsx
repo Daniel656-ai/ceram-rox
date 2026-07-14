@@ -101,6 +101,7 @@ function TaskCard({
   sharedData,
   isMaster,
   currentUserId,
+  orderLocked,
   onChanged,
 }: {
   index: number;
@@ -109,13 +110,15 @@ function TaskCard({
   sharedData: Record<string, unknown>;
   isMaster: boolean;
   currentUserId?: string;
+  orderLocked?: boolean;
   onChanged: () => void;
 }) {
   const qc = useQueryClient();
   const canEdit =
+    !orderLocked && (
     isMaster ||
     task.assigned_to === currentUserId ||
-    (task.assigned_to == null && task.status !== "completed");
+    (task.assigned_to == null && task.status !== "completed"));
 
   const isCompleted = task.status === "completed";
   const isStarted = task.status === "in_progress";
