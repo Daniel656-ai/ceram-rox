@@ -290,14 +290,25 @@ export default function PortfolioDetailPage() {
       </div>
 
       <Tabs defaultValue="overview">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="overview">Stammdaten</TabsTrigger>
+          <TabsTrigger value="structure">Struktur (APs &amp; Tasks)</TabsTrigger>
           <TabsTrigger value="projects">Projekte ({members.length})</TabsTrigger>
           <TabsTrigger value="milestones">Meilensteine ({milestoneTimeline.length})</TabsTrigger>
           <TabsTrigger value="documents">Dokumente</TabsTrigger>
           <TabsTrigger value="analytics">Auswertungen</TabsTrigger>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="ffg">FFG-Bericht</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard &amp; KPIs</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="structure" className="mt-4">
+          <PortfolioStructureTab portfolioId={portfolioId} canManage={canManageStructure} />
+        </TabsContent>
+
+        <TabsContent value="ffg" className="mt-4">
+          <PortfolioFfgReportTab portfolioId={portfolioId} portfolioName={portfolio.name} />
+        </TabsContent>
+
 
         <TabsContent value="overview" className="mt-4">
           <Card>
