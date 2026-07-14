@@ -283,8 +283,12 @@ export default function OrderDetailPage() {
               <CardContent><p className="text-sm whitespace-pre-wrap">{order.notes}</p></CardContent>
             </Card>
           )}
-          {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
-            <OrderWorkflowTabs order={order} />
+          {linkedInstance ? (
+            <ProcessRuntimePanel legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
+          ) : (
+            (order as any).order_kind && (order as any).order_kind !== "legacy" && (
+              <OrderWorkflowTabs order={order} />
+            )
           )}
           <Card>
             <CardHeader><CardTitle className="text-base">Gewünschte Dienstleistungen ({measurements.length})</CardTitle></CardHeader>
