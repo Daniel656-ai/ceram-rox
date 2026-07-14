@@ -166,17 +166,23 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
     end_date: "",
     milestone_id: "",
     status: "planned",
+    category_id: "",
     assignee_ids: [] as string[],
   });
 
   const resetWpForm = () => {
-    setWpForm({ title: "", description: "", start_date: "", end_date: "", milestone_id: "", status: "planned", assignee_ids: [] });
+    setWpForm({ title: "", description: "", start_date: "", end_date: "", milestone_id: "", status: "planned", category_id: defaultCategoryId, assignee_ids: [] });
     setWpEditId(null);
   };
 
   const handleSaveWp = async () => {
     if (!wpForm.title.trim()) {
       toast.error(t("wp_title_required"));
+      return;
+    }
+    const categoryId = wpForm.category_id || defaultCategoryId;
+    if (!categoryId) {
+      toast.error(t("wp_category_required", { defaultValue: "Kategorie ist erforderlich" }));
       return;
     }
     if (wpForm.start_date && wpForm.end_date && wpForm.end_date < wpForm.start_date) {
@@ -194,6 +200,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
           end_date: wpForm.end_date || null,
           milestone_id: wpForm.milestone_id || null,
           status: wpForm.status,
+          category_id: categoryId,
           assignee_ids: wpForm.assignee_ids,
         });
         toast.success(t("wp_updated"));
@@ -201,6 +208,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
         await createWp.mutateAsync({
           project_id: projectId,
           title: wpForm.title,
+          category_id: categoryId,
           description: wpForm.description || undefined,
           start_date: wpForm.start_date || null,
           end_date: wpForm.end_date || null,
@@ -227,6 +235,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
       end_date: wp.end_date || "",
       milestone_id: wp.milestone_id || "",
       status: wp.status,
+      category_id: wp.category_id || defaultCategoryId,
       assignee_ids: wp.assignees || [],
     });
     setWpOpen(true);
