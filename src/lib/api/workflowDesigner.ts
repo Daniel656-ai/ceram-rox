@@ -138,6 +138,13 @@ export const workflowSteps = {
 
   remove: (id: string) => run(dbClient.from("service_workflow_steps" as any).delete().eq("id", id)),
 
+  listByIds: (ids: string[]) => {
+    if (ids.length === 0) return Promise.resolve([] as WorkflowStep[]);
+    return unwrap(
+      dbClient.from("service_workflow_steps" as any).select("*").in("id", ids)
+    ) as unknown as Promise<WorkflowStep[]>;
+  },
+
   reorder: async (orders: Array<{ id: string; order_index: number }>) => {
     for (const o of orders) {
       await run(
