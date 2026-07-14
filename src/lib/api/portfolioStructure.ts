@@ -11,10 +11,13 @@ export interface PortfolioWorkPackage {
   name: string;
   description: string | null;
   category_id: string | null;
+  is_active: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
 }
+
+export type PortfolioTaskStatus = "offen" | "in_arbeit" | "erledigt";
 
 export interface PortfolioTask {
   id: string;
@@ -22,6 +25,7 @@ export interface PortfolioTask {
   code: string | null;
   name: string;
   description: string | null;
+  status: PortfolioTaskStatus;
   sort_order: number;
   created_at: string;
   updated_at: string;
