@@ -13,14 +13,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import {
   Plus, Pencil, Trash2, ChevronUp, ChevronDown, Power, ChevronRight, ChevronDown as CDown,
-  ListChecks,
+  ListChecks, Link2,
 } from "lucide-react";
-import type { PortfolioTaskStatus } from "@/lib/api/portfolioStructure";
+import type { PortfolioTaskStatus, PortfolioWorkPackageStatus } from "@/lib/api/portfolioStructure";
+import PortfolioProjectWpMappingDialog from "./PortfolioProjectWpMappingDialog";
 
 const TASK_STATUS_LABEL: Record<PortfolioTaskStatus, string> = {
   offen: "Offen",
   in_arbeit: "In Arbeit",
   erledigt: "Erledigt",
+};
+
+const WP_STATUS_LABEL: Record<PortfolioWorkPackageStatus, string> = {
+  geplant: "Geplant",
+  in_arbeit: "In Arbeit",
+  abgeschlossen: "Abgeschlossen",
+  on_hold: "On Hold",
+  abgebrochen: "Abgebrochen",
 };
 
 interface Props {
@@ -46,11 +55,24 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
     queryFn: () => api.workPackageCategories.list(),
   });
 
+  const { data: users = [] } = useQuery({
+    queryKey: ["users-lookup"],
+    queryFn: () => api.users.listWithRoles(),
+  });
+
+  const userNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const u of users as any[]) {
+      map[u.user_id] = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.user_id;
+    }
+    return map;
+  }, [users]);
+
   const tasksByWp = useMemo(() => {
-    const map: Record<string, typeof tasks> = {};
+    const map: Record<string, any[]> = {};
     for (const t of tasks) {
       const key = (t as any).portfolio_work_package_id;
-      (map[key] ||= [] as any).push(t);
+      (map[key] ||= []).push(t);
     }
     return map;
   }, [tasks]);
@@ -63,7 +85,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
   // ----- WP dialog -----
   const [wpDialog, setWpDialog] = useState<{ open: boolean; id?: string; draft: any }>({
     open: false,
-    draft: { name: "", code: "", description: "", category_id: null, is_active: true },
+    draft: {},
   });
   const openNewWp = () => setWpDialog({
     open: true,
@@ -73,6 +95,11 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
       description: "",
       category_id: categories[0]?.id ?? null,
       is_active: true,
+      status: "geplant",
+      start_date: null,
+      end_date: null,
+      budget: null,
+      responsible_user_id: null,
     },
   });
   const openEditWp = (wp: any) => setWpDialog({
@@ -84,6 +111,11 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
       description: wp.description ?? "",
       category_id: wp.category_id ?? null,
       is_active: wp.is_active,
+      status: wp.status ?? "geplant",
+      start_date: wp.start_date ?? null,
+      end_date: wp.end_date ?? null,
+      budget: wp.budget ?? null,
+      responsible_user_id: wp.responsible_user_id ?? null,
     },
   });
 
@@ -96,6 +128,11 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
         description: d.description?.trim() || null,
         category_id: d.category_id || null,
         is_active: d.is_active,
+        status: d.status || "geplant",
+        start_date: d.start_date || null,
+        end_date: d.end_date || null,
+        budget: d.budget === "" || d.budget === null ? null : Number(d.budget),
+        responsible_user_id: d.responsible_user_id || null,
       };
       if (wpDialog.id) return api.portfolioWorkPackages.update(wpDialog.id, payload);
       return api.portfolioWorkPackages.create({
@@ -139,7 +176,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
   // ----- Task dialog -----
   const [taskDialog, setTaskDialog] = useState<{ open: boolean; wpId?: string; id?: string; draft: any }>({
     open: false,
-    draft: { name: "", code: "", description: "", status: "offen" as PortfolioTaskStatus },
+    draft: {},
   });
   const openNewTask = (wpId: string) => {
     const siblings = tasksByWp[wpId] || [];
@@ -153,6 +190,9 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
         code: `${parentCode}.${siblings.length + 1}`,
         description: "",
         status: "offen",
+        start_date: null,
+        end_date: null,
+        planned_effort_hours: null,
       },
     });
   };
@@ -160,7 +200,15 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
     open: true,
     wpId: task.portfolio_work_package_id,
     id: task.id,
-    draft: { name: task.name, code: task.code ?? "", description: task.description ?? "", status: task.status },
+    draft: {
+      name: task.name,
+      code: task.code ?? "",
+      description: task.description ?? "",
+      status: task.status,
+      start_date: task.start_date ?? null,
+      end_date: task.end_date ?? null,
+      planned_effort_hours: task.planned_effort_hours ?? null,
+    },
   });
 
   const saveTask = useMutation({
@@ -171,6 +219,12 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
         code: d.code?.trim() || null,
         description: d.description?.trim() || null,
         status: d.status,
+        start_date: d.start_date || null,
+        end_date: d.end_date || null,
+        planned_effort_hours:
+          d.planned_effort_hours === "" || d.planned_effort_hours === null
+            ? null
+            : Number(d.planned_effort_hours),
       };
       if (taskDialog.id) return api.portfolioTasks.update(taskDialog.id, payload);
       return api.portfolioTasks.create({
@@ -210,6 +264,20 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const toggle = (id: string) => setExpanded((s) => ({ ...s, [id]: !s[id] }));
 
+  // ----- Mapping dialog -----
+  const [mapDialog, setMapDialog] = useState<{
+    open: boolean;
+    target: { kind: "wp"; portfolioWpId: string; title: string } | { kind: "task"; portfolioTaskId: string; title: string } | null;
+  }>({ open: false, target: null });
+
+  const fmtRange = (s?: string | null, e?: string | null) => {
+    if (!s && !e) return "—";
+    const f = (d?: string | null) => (d ? new Date(d).toLocaleDateString("de-AT") : "—");
+    return `${f(s)} – ${f(e)}`;
+  };
+  const fmtEuro = (v?: number | null) =>
+    v == null ? "—" : new Intl.NumberFormat("de-AT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -237,9 +305,11 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                   <TableHead className="w-8"></TableHead>
                   <TableHead className="w-20">Nr.</TableHead>
                   <TableHead>Titel</TableHead>
-                  <TableHead>Kategorie</TableHead>
+                  <TableHead>Zeitraum</TableHead>
+                  <TableHead>Budget</TableHead>
                   <TableHead>Status</TableHead>
-                  {canManage && <TableHead className="w-52 text-right">Aktionen</TableHead>}
+                  <TableHead>Verantwortlich</TableHead>
+                  <TableHead className="w-64 text-right">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -257,56 +327,66 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                         <TableCell className="font-mono text-sm">{wp.code ?? `AP${idx + 1}`}</TableCell>
                         <TableCell>
                           <div className="font-medium">{wp.name}</div>
-                          {wp.description && (
-                            <div className="text-xs text-muted-foreground line-clamp-1">{wp.description}</div>
+                          {wp.category && (
+                            <Badge variant="outline" className="text-[10px] mt-1">{wp.category.name}</Badge>
                           )}
                         </TableCell>
+                        <TableCell className="text-xs whitespace-nowrap">{fmtRange(wp.start_date, wp.end_date)}</TableCell>
+                        <TableCell className="text-xs whitespace-nowrap">{fmtEuro(wp.budget)}</TableCell>
                         <TableCell>
-                          {wp.category ? (
-                            <Badge variant="outline">{wp.category.name}</Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={wp.is_active ? "default" : "secondary"}>
-                            {wp.is_active ? "Aktiv" : "Inaktiv"}
+                          <Badge variant={wp.is_active ? "default" : "secondary"} className="text-[10px]">
+                            {WP_STATUS_LABEL[(wp.status ?? "geplant") as PortfolioWorkPackageStatus]}
                           </Badge>
                           {wpTasks.length > 0 && (
                             <span className="ml-2 text-xs text-muted-foreground">{wpTasks.length} Tasks</span>
                           )}
                         </TableCell>
-                        {canManage && (
-                          <TableCell className="text-right">
-                            <div className="inline-flex gap-1">
-                              <Button size="icon" variant="ghost" onClick={() => reorderWp.mutate({ id: wp.id, direction: -1 })} disabled={idx === 0}>
-                                <ChevronUp className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={() => reorderWp.mutate({ id: wp.id, direction: 1 })} disabled={idx === wps.length - 1}>
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" title={wp.is_active ? "Deaktivieren" : "Aktivieren"} onClick={() => toggleActive.mutate(wp)}>
-                                <Power className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={() => openEditWp(wp)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={() => {
-                                if (wpTasks.length > 0) {
-                                  toast.error("Arbeitspaket enthält Tasks und kann nicht gelöscht werden.");
-                                  return;
-                                }
-                                if (confirm(`Arbeitspaket „${wp.name}" löschen?`)) removeWp.mutate(wp.id);
-                              }}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
+                        <TableCell className="text-xs">{wp.responsible_user_id ? (userNameById[wp.responsible_user_id] ?? "—") : "—"}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="inline-flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setMapDialog({
+                                  open: true,
+                                  target: { kind: "wp", portfolioWpId: wp.id, title: `${wp.code ?? ""} ${wp.name}` },
+                                })
+                              }
+                            >
+                              <Link2 className="h-3.5 w-3.5 mr-1" /> Projekt-APs
+                            </Button>
+                            {canManage && (
+                              <>
+                                <Button size="icon" variant="ghost" onClick={() => reorderWp.mutate({ id: wp.id, direction: -1 })} disabled={idx === 0}>
+                                  <ChevronUp className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => reorderWp.mutate({ id: wp.id, direction: 1 })} disabled={idx === wps.length - 1}>
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" title={wp.is_active ? "Deaktivieren" : "Aktivieren"} onClick={() => toggleActive.mutate(wp)}>
+                                  <Power className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => openEditWp(wp)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => {
+                                  if (wpTasks.length > 0) {
+                                    toast.error("Arbeitspaket enthält Tasks und kann nicht gelöscht werden.");
+                                    return;
+                                  }
+                                  if (confirm(`Arbeitspaket „${wp.name}" löschen?`)) removeWp.mutate(wp.id);
+                                }}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
                       {isOpen && (
                         <TableRow key={`${wp.id}-tasks`}>
-                          <TableCell colSpan={canManage ? 6 : 5} className="bg-muted/40 py-3">
+                          <TableCell colSpan={8} className="bg-muted/40 py-3">
                             <div className="pl-8 space-y-2">
                               <div className="flex items-center justify-between">
                                 <div className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -326,8 +406,10 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                                     <TableRow>
                                       <TableHead className="w-24">Nr.</TableHead>
                                       <TableHead>Titel</TableHead>
+                                      <TableHead>Zeitraum</TableHead>
+                                      <TableHead className="w-24">Aufwand&nbsp;(h)</TableHead>
                                       <TableHead className="w-32">Status</TableHead>
-                                      {canManage && <TableHead className="w-40 text-right">Aktionen</TableHead>}
+                                      <TableHead className="w-56 text-right">Aktionen</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
@@ -340,31 +422,47 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                                             <div className="text-xs text-muted-foreground line-clamp-1">{t.description}</div>
                                           )}
                                         </TableCell>
+                                        <TableCell className="text-xs whitespace-nowrap">{fmtRange(t.start_date, t.end_date)}</TableCell>
+                                        <TableCell className="text-xs">{t.planned_effort_hours ?? "—"}</TableCell>
                                         <TableCell>
                                           <Badge variant="outline" className="text-xs">
                                             {TASK_STATUS_LABEL[t.status as PortfolioTaskStatus] ?? t.status}
                                           </Badge>
                                         </TableCell>
-                                        {canManage && (
-                                          <TableCell className="text-right">
-                                            <div className="inline-flex gap-1">
-                                              <Button size="icon" variant="ghost" onClick={() => reorderTask.mutate({ id: t.id, wpId: wp.id, direction: -1 })} disabled={tidx === 0}>
-                                                <ChevronUp className="h-4 w-4" />
-                                              </Button>
-                                              <Button size="icon" variant="ghost" onClick={() => reorderTask.mutate({ id: t.id, wpId: wp.id, direction: 1 })} disabled={tidx === wpTasks.length - 1}>
-                                                <ChevronDown className="h-4 w-4" />
-                                              </Button>
-                                              <Button size="icon" variant="ghost" onClick={() => openEditTask(t)}>
-                                                <Pencil className="h-4 w-4" />
-                                              </Button>
-                                              <Button size="icon" variant="ghost" onClick={() => {
-                                                if (confirm(`Task „${t.name}" löschen?`)) removeTask.mutate(t.id);
-                                              }}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                              </Button>
-                                            </div>
-                                          </TableCell>
-                                        )}
+                                        <TableCell className="text-right">
+                                          <div className="inline-flex gap-1">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() =>
+                                                setMapDialog({
+                                                  open: true,
+                                                  target: { kind: "task", portfolioTaskId: t.id, title: `${t.code ?? ""} ${t.name}` },
+                                                })
+                                              }
+                                            >
+                                              <Link2 className="h-3.5 w-3.5 mr-1" /> Projekt-APs
+                                            </Button>
+                                            {canManage && (
+                                              <>
+                                                <Button size="icon" variant="ghost" onClick={() => reorderTask.mutate({ id: t.id, wpId: wp.id, direction: -1 })} disabled={tidx === 0}>
+                                                  <ChevronUp className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" onClick={() => reorderTask.mutate({ id: t.id, wpId: wp.id, direction: 1 })} disabled={tidx === wpTasks.length - 1}>
+                                                  <ChevronDown className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" onClick={() => openEditTask(t)}>
+                                                  <Pencil className="h-4 w-4" />
+                                                </Button>
+                                                <Button size="icon" variant="ghost" onClick={() => {
+                                                  if (confirm(`Task „${t.name}" löschen?`)) removeTask.mutate(t.id);
+                                                }}>
+                                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                              </>
+                                            )}
+                                          </div>
+                                        </TableCell>
                                       </TableRow>
                                     ))}
                                   </TableBody>
@@ -385,7 +483,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
 
       {/* WP dialog */}
       <Dialog open={wpDialog.open} onOpenChange={(o) => setWpDialog((s) => ({ ...s, open: o }))}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{wpDialog.id ? "Arbeitspaket bearbeiten" : "Neues Arbeitspaket"}</DialogTitle>
           </DialogHeader>
@@ -400,17 +498,62 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                 <Input value={wpDialog.draft.name ?? ""} onChange={(e) => setWpDialog((s) => ({ ...s, draft: { ...s.draft, name: e.target.value } }))} />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Kategorie</Label>
+                <Select
+                  value={wpDialog.draft.category_id ?? "__none__"}
+                  onValueChange={(v) => setWpDialog((s) => ({ ...s, draft: { ...s.draft, category_id: v === "__none__" ? null : v } }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Keine" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— keine —</SelectItem>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select
+                  value={wpDialog.draft.status ?? "geplant"}
+                  onValueChange={(v) => setWpDialog((s) => ({ ...s, draft: { ...s.draft, status: v } }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(WP_STATUS_LABEL) as PortfolioWorkPackageStatus[]).map((k) => (
+                      <SelectItem key={k} value={k}>{WP_STATUS_LABEL[k]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Startdatum</Label>
+                <Input type="date" value={wpDialog.draft.start_date ?? ""} onChange={(e) => setWpDialog((s) => ({ ...s, draft: { ...s.draft, start_date: e.target.value || null } }))} />
+              </div>
+              <div>
+                <Label>Enddatum</Label>
+                <Input type="date" value={wpDialog.draft.end_date ?? ""} onChange={(e) => setWpDialog((s) => ({ ...s, draft: { ...s.draft, end_date: e.target.value || null } }))} />
+              </div>
+              <div>
+                <Label>Budget (€)</Label>
+                <Input type="number" step="0.01" value={wpDialog.draft.budget ?? ""} onChange={(e) => setWpDialog((s) => ({ ...s, draft: { ...s.draft, budget: e.target.value } }))} />
+              </div>
+            </div>
             <div>
-              <Label>Kategorie</Label>
+              <Label>Verantwortlicher</Label>
               <Select
-                value={wpDialog.draft.category_id ?? "__none__"}
-                onValueChange={(v) => setWpDialog((s) => ({ ...s, draft: { ...s.draft, category_id: v === "__none__" ? null : v } }))}
+                value={wpDialog.draft.responsible_user_id ?? "__none__"}
+                onValueChange={(v) => setWpDialog((s) => ({ ...s, draft: { ...s.draft, responsible_user_id: v === "__none__" ? null : v } }))}
               >
-                <SelectTrigger><SelectValue placeholder="Keine" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">— keine —</SelectItem>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem value="__none__">— keiner —</SelectItem>
+                  {users.map((u: any) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>{`${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.user_id}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -440,7 +583,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
 
       {/* Task dialog */}
       <Dialog open={taskDialog.open} onOpenChange={(o) => setTaskDialog((s) => ({ ...s, open: o }))}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{taskDialog.id ? "Task bearbeiten" : "Neuer Task"}</DialogTitle>
           </DialogHeader>
@@ -453,6 +596,20 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
               <div className="col-span-2">
                 <Label>Titel *</Label>
                 <Input value={taskDialog.draft.name ?? ""} onChange={(e) => setTaskDialog((s) => ({ ...s, draft: { ...s.draft, name: e.target.value } }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label>Startdatum</Label>
+                <Input type="date" value={taskDialog.draft.start_date ?? ""} onChange={(e) => setTaskDialog((s) => ({ ...s, draft: { ...s.draft, start_date: e.target.value || null } }))} />
+              </div>
+              <div>
+                <Label>Enddatum</Label>
+                <Input type="date" value={taskDialog.draft.end_date ?? ""} onChange={(e) => setTaskDialog((s) => ({ ...s, draft: { ...s.draft, end_date: e.target.value || null } }))} />
+              </div>
+              <div>
+                <Label>Geplanter Aufwand (h)</Label>
+                <Input type="number" step="0.25" value={taskDialog.draft.planned_effort_hours ?? ""} onChange={(e) => setTaskDialog((s) => ({ ...s, draft: { ...s.draft, planned_effort_hours: e.target.value } }))} />
               </div>
             </div>
             <div>
@@ -479,6 +636,14 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mapping dialog */}
+      <PortfolioProjectWpMappingDialog
+        open={mapDialog.open}
+        onOpenChange={(o) => setMapDialog((s) => ({ ...s, open: o }))}
+        target={mapDialog.target}
+        canManage={canManage}
+      />
     </div>
   );
 }

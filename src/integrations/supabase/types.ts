@@ -3108,16 +3108,113 @@ export type Database = {
           },
         ]
       }
+      portfolio_structure_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          portfolio_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          portfolio_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          portfolio_id?: string | null
+        }
+        Relationships: []
+      }
+      portfolio_task_project_wp_map: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          funding_relevant: boolean
+          funding_share_pct: number
+          id: string
+          note: string | null
+          portfolio_task_id: string
+          project_work_package_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          funding_relevant?: boolean
+          funding_share_pct?: number
+          id?: string
+          note?: string | null
+          portfolio_task_id: string
+          project_work_package_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          funding_relevant?: boolean
+          funding_share_pct?: number
+          id?: string
+          note?: string | null
+          portfolio_task_id?: string
+          project_work_package_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_task_project_wp_map_portfolio_task_id_fkey"
+            columns: ["portfolio_task_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_task_project_wp_map_project_work_package_id_fkey"
+            columns: ["project_work_package_id"]
+            isOneToOne: false
+            referencedRelation: "project_work_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_task_project_wp_map_project_work_package_id_fkey"
+            columns: ["project_work_package_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_wp_without_funding"
+            referencedColumns: ["project_work_package_id"]
+          },
+        ]
+      }
       portfolio_tasks: {
         Row: {
           code: string | null
           created_at: string
           created_by: string | null
           description: string | null
+          end_date: string | null
           id: string
           name: string
+          planned_effort_hours: number | null
           portfolio_work_package_id: string
           sort_order: number
+          start_date: string | null
           status: string
           updated_at: string
         }
@@ -3126,10 +3223,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           name: string
+          planned_effort_hours?: number | null
           portfolio_work_package_id: string
           sort_order?: number
+          start_date?: string | null
           status?: string
           updated_at?: string
         }
@@ -3138,10 +3238,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           name?: string
+          planned_effort_hours?: number | null
           portfolio_work_package_id?: string
           sort_order?: number
+          start_date?: string | null
           status?: string
           updated_at?: string
         }
@@ -3157,42 +3260,57 @@ export type Database = {
       }
       portfolio_work_packages: {
         Row: {
+          budget: number | null
           category_id: string | null
           code: string | null
           created_at: string
           created_by: string | null
           description: string | null
+          end_date: string | null
           id: string
           is_active: boolean
           name: string
           portfolio_id: string
+          responsible_user_id: string | null
           sort_order: number
+          start_date: string | null
+          status: string
           updated_at: string
         }
         Insert: {
+          budget?: number | null
           category_id?: string | null
           code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           is_active?: boolean
           name: string
           portfolio_id: string
+          responsible_user_id?: string | null
           sort_order?: number
+          start_date?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
+          budget?: number | null
           category_id?: string | null
           code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           is_active?: boolean
           name?: string
           portfolio_id?: string
+          responsible_user_id?: string | null
           sort_order?: number
+          start_date?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -3209,6 +3327,64 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "project_portfolios"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_wp_project_wp_map: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          funding_relevant: boolean
+          funding_share_pct: number
+          id: string
+          note: string | null
+          portfolio_work_package_id: string
+          project_work_package_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          funding_relevant?: boolean
+          funding_share_pct?: number
+          id?: string
+          note?: string | null
+          portfolio_work_package_id: string
+          project_work_package_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          funding_relevant?: boolean
+          funding_share_pct?: number
+          id?: string
+          note?: string | null
+          portfolio_work_package_id?: string
+          project_work_package_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_wp_project_wp_map_portfolio_work_package_id_fkey"
+            columns: ["portfolio_work_package_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_work_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_wp_project_wp_map_project_work_package_id_fkey"
+            columns: ["project_work_package_id"]
+            isOneToOne: false
+            referencedRelation: "project_work_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_wp_project_wp_map_project_work_package_id_fkey"
+            columns: ["project_work_package_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_wp_without_funding"
+            referencedColumns: ["project_work_package_id"]
           },
         ]
       }
@@ -3908,6 +4084,13 @@ export type Database = {
             referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "project_expenses_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_wp_without_funding"
+            referencedColumns: ["project_work_package_id"]
+          },
         ]
       }
       project_knetung_materials: {
@@ -4114,6 +4297,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_milestones_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_wp_without_funding"
+            referencedColumns: ["project_work_package_id"]
           },
         ]
       }
@@ -4589,6 +4779,13 @@ export type Database = {
             referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "project_time_entries_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_wp_without_funding"
+            referencedColumns: ["project_work_package_id"]
+          },
         ]
       }
       project_weekly_reviews: {
@@ -4689,6 +4886,13 @@ export type Database = {
             referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "project_work_package_assignees_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_wp_without_funding"
+            referencedColumns: ["project_work_package_id"]
+          },
         ]
       }
       project_work_package_dependencies: {
@@ -4731,6 +4935,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_work_package_dependencies_predecessor_id_fkey"
+            columns: ["predecessor_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_wp_without_funding"
+            referencedColumns: ["project_work_package_id"]
+          },
+          {
             foreignKeyName: "project_work_package_dependencies_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -4743,6 +4954,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_work_package_dependencies_successor_id_fkey"
+            columns: ["successor_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_wp_without_funding"
+            referencedColumns: ["project_work_package_id"]
           },
         ]
       }
@@ -6895,6 +7113,41 @@ export type Database = {
           unit: string | null
         }
         Relationships: []
+      }
+      v_project_wp_without_funding: {
+        Row: {
+          end_date: string | null
+          project_id: string | null
+          project_work_package_id: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["milestone_status"] | null
+          title: string | null
+        }
+        Insert: {
+          end_date?: string | null
+          project_id?: string | null
+          project_work_package_id?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["milestone_status"] | null
+          title?: string | null
+        }
+        Update: {
+          end_date?: string | null
+          project_id?: string | null
+          project_work_package_id?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["milestone_status"] | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_work_packages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
