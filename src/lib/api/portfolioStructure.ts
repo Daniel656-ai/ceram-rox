@@ -50,14 +50,13 @@ export const portfolioWorkPackages = {
   listByPortfolio: (portfolioId: string) =>
     unwrap(
       f("portfolio_work_packages")
-        .select("*, category:work_package_categories(id,name), responsible:profiles!portfolio_work_packages_responsible_user_id_fkey(id,full_name)")
+        .select("*, category:work_package_categories(id,name)")
         .eq("portfolio_id", portfolioId)
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true })
     ) as Promise<
       (PortfolioWorkPackage & {
         category?: { id: string; name: string } | null;
-        responsible?: { id: string; full_name: string | null } | null;
       })[]
     >,
 
