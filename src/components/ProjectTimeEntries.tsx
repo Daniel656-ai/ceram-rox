@@ -64,6 +64,11 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const [meetingQuery, setMeetingQuery] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkWpId, setBulkWpId] = useState<string>("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+
 
   // Vorbelegung: wenn nur genau ein aktives AP existiert, dieses auswählen.
   const defaultWpId = useMemo(() => {
@@ -363,7 +368,48 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
     </div>
   );
 
-  const incompleteCount = (entries as any[]).filter((e: any) => !e.work_package_id).length;
+  const incompleteEntries = useMemo(
+    () => (entries as any[]).filter((e: any) => !e.work_package_id),
+    [entries]
+  );
+  const incompleteCount = incompleteEntries.length;
+  const incompleteIds = useMemo(() => incompleteEntries.map((e: any) => e.id), [incompleteEntries]);
+  const allIncompleteSelected = incompleteIds.length > 0 && incompleteIds.every((id) => selectedIds.includes(id));
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleSelectAllIncomplete = () =>
+    setSelectedIds(allIncompleteSelected ? [] : incompleteIds);
+
+  const handleBulkAssign = async () => {
+    if (!bulkWpId) return toast.error("Bitte ein Projektarbeitspaket auswählen.");
+    if (selectedIds.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const targets = (entries as any[]).filter((e: any) => selectedIds.includes(e.id));
+      for (const e of targets) {
+        await updateEntry.mutateAsync({
+          id: e.id,
+          project_id: projectId,
+          person_id: e.person_id,
+          entry_date: e.entry_date,
+          duration_minutes: e.duration_minutes,
+          note: e.note || "",
+          work_package_id: bulkWpId,
+        });
+      }
+      toast.success(`${targets.length} Buchung(en) zugeordnet.`);
+      setSelectedIds([]);
+      setBulkOpen(false);
+      setBulkWpId("");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
 
   return (
     <div className="space-y-4">
@@ -380,9 +426,14 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
         </Card>
 
         {incompleteCount > 0 && (
-          <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            <AlertTriangle className="h-4 w-4" />
-            {incompleteCount} Buchung(en) ohne Arbeitspaket – bitte nachpflegen.
+          <div className="flex items-center gap-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>{incompleteCount} bestehende Buchung(en) ohne Arbeitspaket – Zuordnung erforderlich.</span>
+            {selectedIds.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
+                {selectedIds.length} zuordnen…
+              </Button>
+            )}
           </div>
         )}
 
@@ -393,6 +444,7 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
               {t("time_add_entry")}
             </Button>
           </DialogTrigger>
+
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{t("time_add_entry")}</DialogTitle>
@@ -425,6 +477,15 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  {incompleteIds.length > 0 && (
+                    <Checkbox
+                      checked={allIncompleteSelected}
+                      onCheckedChange={toggleSelectAllIncomplete}
+                      aria-label="Alle unvollständigen auswählen"
+                    />
+                  )}
+                </TableHead>
                 <TableHead>{t("time_date")}</TableHead>
                 <TableHead>{t("time_type")}</TableHead>
                 <TableHead>{t("time_person")}</TableHead>
@@ -437,10 +498,11 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
             <TableBody>
               {(entries as any[]).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {t("time_no_entries")}
                   </TableCell>
                 </TableRow>
+
               ) : (
                 (entries as any[]).map((e: any) => {
                   const isMeeting = e.entry_type === "meeting";
@@ -450,6 +512,15 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
                   const wp = e.work_package_id ? wpById[e.work_package_id] : null;
                   return (
                     <TableRow key={e.id} className={!e.work_package_id ? "bg-amber-50/40" : undefined}>
+                      <TableCell>
+                        {!e.work_package_id && (
+                          <Checkbox
+                            checked={selectedIds.includes(e.id)}
+                            onCheckedChange={() => toggleSelect(e.id)}
+                            aria-label="Auswählen"
+                          />
+                        )}
+                      </TableCell>
                       <TableCell>
                         {format(new Date(e.entry_date), "dd.MM.yyyy", { locale: dateFnsLocale })}
                       </TableCell>
@@ -469,10 +540,11 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
                           <span>{wp.title}</span>
                         ) : (
                           <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300">
-                            <AlertTriangle className="h-3 w-3" /> Unvollständig
+                            <AlertTriangle className="h-3 w-3" /> Zuordnung erforderlich
                           </Badge>
                         )}
                       </TableCell>
+
                       <TableCell className="font-mono">{formatDuration(e.duration_minutes)}</TableCell>
                       <TableCell className="text-sm">{e.note || "–"}</TableCell>
                       <TableCell>
@@ -525,6 +597,36 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk-Zuordnung */}
+      <Dialog open={bulkOpen} onOpenChange={(o) => { setBulkOpen(o); if (!o) setBulkWpId(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Arbeitspaket für {selectedIds.length} Buchung(en) setzen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Projektarbeitspaket *</Label>
+            <Select value={bulkWpId} onValueChange={setBulkWpId}>
+              <SelectTrigger><SelectValue placeholder="Arbeitspaket auswählen …" /></SelectTrigger>
+              <SelectContent>
+                {(workPackages as any[]).map((wp) => (
+                  <SelectItem key={wp.id} value={wp.id}>
+                    {wp.title}{wp.is_mandatory ? " (Pflicht-AP)" : ""}
+                    {wp.status === "completed" ? " · abgeschlossen" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Wird auf alle ausgewählten Buchungen angewendet. Andere Felder bleiben unverändert.
+            </p>
+          </div>
+          <Button className="w-full" onClick={handleBulkAssign} disabled={bulkBusy || !bulkWpId}>
+            {bulkBusy ? "..." : "Zuordnen"}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
 }
