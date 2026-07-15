@@ -597,6 +597,36 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk-Zuordnung */}
+      <Dialog open={bulkOpen} onOpenChange={(o) => { setBulkOpen(o); if (!o) setBulkWpId(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Arbeitspaket für {selectedIds.length} Buchung(en) setzen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Projektarbeitspaket *</Label>
+            <Select value={bulkWpId} onValueChange={setBulkWpId}>
+              <SelectTrigger><SelectValue placeholder="Arbeitspaket auswählen …" /></SelectTrigger>
+              <SelectContent>
+                {(workPackages as any[]).map((wp) => (
+                  <SelectItem key={wp.id} value={wp.id}>
+                    {wp.title}{wp.is_mandatory ? " (Pflicht-AP)" : ""}
+                    {wp.status === "completed" ? " · abgeschlossen" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Wird auf alle ausgewählten Buchungen angewendet. Andere Felder bleiben unverändert.
+            </p>
+          </div>
+          <Button className="w-full" onClick={handleBulkAssign} disabled={bulkBusy || !bulkWpId}>
+            {bulkBusy ? "..." : "Zuordnen"}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
 }
