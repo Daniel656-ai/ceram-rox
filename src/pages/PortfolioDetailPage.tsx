@@ -297,6 +297,7 @@ export default function PortfolioDetailPage() {
           <TabsTrigger value="milestones">Meilensteine ({milestoneTimeline.length})</TabsTrigger>
           <TabsTrigger value="documents">Dokumente</TabsTrigger>
           <TabsTrigger value="analytics">Auswertungen</TabsTrigger>
+          <TabsTrigger value="mapping">Förder-Zuordnungen</TabsTrigger>
           <TabsTrigger value="ffg">FFG-Bericht</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard &amp; KPIs</TabsTrigger>
         </TabsList>
@@ -305,9 +306,15 @@ export default function PortfolioDetailPage() {
           <PortfolioStructureTab portfolioId={portfolioId} canManage={canManageStructure} />
         </TabsContent>
 
+        <TabsContent value="mapping" className="mt-4">
+          <PortfolioFundingMappingTab portfolioId={portfolioId} />
+        </TabsContent>
+
         <TabsContent value="ffg" className="mt-4">
           <PortfolioFfgReportTab portfolioId={portfolioId} portfolioName={portfolio.name} />
         </TabsContent>
+
+
 
 
         <TabsContent value="overview" className="mt-4">
