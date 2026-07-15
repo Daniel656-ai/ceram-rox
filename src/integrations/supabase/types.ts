@@ -3189,14 +3189,14 @@ export type Database = {
           {
             foreignKeyName: "portfolio_task_project_wp_map_project_work_package_id_fkey"
             columns: ["project_work_package_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "portfolio_task_project_wp_map_project_work_package_id_fkey"
             columns: ["project_work_package_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "v_project_wp_without_funding"
             referencedColumns: ["project_work_package_id"]
           },
@@ -3375,14 +3375,14 @@ export type Database = {
           {
             foreignKeyName: "portfolio_wp_project_wp_map_project_work_package_id_fkey"
             columns: ["project_work_package_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "project_work_packages"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "portfolio_wp_project_wp_map_project_work_package_id_fkey"
             columns: ["project_work_package_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "v_project_wp_without_funding"
             referencedColumns: ["project_work_package_id"]
           },
