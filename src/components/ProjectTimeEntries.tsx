@@ -64,6 +64,11 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
   const [meetingQuery, setMeetingQuery] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkWpId, setBulkWpId] = useState<string>("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+
 
   // Vorbelegung: wenn nur genau ein aktives AP existiert, dieses auswählen.
   const defaultWpId = useMemo(() => {
