@@ -60,6 +60,14 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
     queryFn: () => api.users.listWithRoles(),
   });
 
+  const userNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const u of users as any[]) {
+      map[u.user_id] = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.user_id;
+    }
+    return map;
+  }, [users]);
+
   const tasksByWp = useMemo(() => {
     const map: Record<string, any[]> = {};
     for (const t of tasks) {
