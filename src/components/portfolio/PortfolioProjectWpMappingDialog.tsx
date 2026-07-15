@@ -24,9 +24,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   target: Target | null;
   canManage: boolean;
+  portfolioId: string;
 }
 
-export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, target, canManage }: Props) {
+export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, target, canManage, portfolioId }: Props) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -49,10 +50,11 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
     enabled: !!target && open,
   });
 
+  // Nur Projekt-APs, deren Projekt Mitglied des Portfolios ist (und aktiv).
   const { data: allProjectWps = [] } = useQuery({
-    queryKey: ["project-wps-lookup"],
-    queryFn: () => api.projectWorkPackagesLookup.listAll(),
-    enabled: open,
+    queryKey: ["project-wps-for-portfolio", portfolioId],
+    queryFn: () => api.projectWorkPackagesLookup.listForPortfolio(portfolioId, { activeOnly: true }),
+    enabled: open && !!portfolioId,
   });
 
   // Alle bestehenden Zuordnungen (global) — für Sperrung bereits vergebener Projekt-APs

@@ -646,6 +646,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
         onOpenChange={(o) => setMapDialog((s) => ({ ...s, open: o }))}
         target={mapDialog.target}
         canManage={canManage}
+        portfolioId={portfolioId}
       />
     </div>
   );

@@ -236,6 +236,23 @@ export const projectWorkPackagesLookup = {
         .order("created_at", { ascending: false })
         .limit(2000)
     ) as Promise<any[]>,
+  /**
+   * Nur Projekt-APs, deren Projekt Mitglied des Portfolios ist. Optional inaktive (completed) ausschließen.
+   */
+  listForPortfolio: async (portfolioId: string, opts: { activeOnly?: boolean } = { activeOnly: true }) => {
+    const members = (await unwrap(
+      f("project_portfolio_members").select("project_id").eq("portfolio_id", portfolioId)
+    )) as Array<{ project_id: string }>;
+    const projectIds = members.map((m) => m.project_id);
+    if (projectIds.length === 0) return [] as any[];
+    let query = f("project_work_packages")
+      .select("id,title,status,start_date,end_date,project:projects(id,project_number,project_name,project_status)")
+      .in("project_id", projectIds)
+      .order("created_at", { ascending: false })
+      .limit(2000);
+    if (opts.activeOnly) query = query.in("status", ["planned", "in_progress"]);
+    return (await unwrap(query)) as any[];
+  },
   unassignedFunding: () =>
     unwrap(
       f("v_project_wp_without_funding")
