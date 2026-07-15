@@ -426,13 +426,24 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
         </Card>
 
         {incompleteCount > 0 && (
-          <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            <AlertTriangle className="h-4 w-4" />
-            {incompleteCount} Buchung(en) ohne Arbeitspaket – bitte nachpflegen.
+          <div className="flex items-center gap-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>{incompleteCount} bestehende Buchung(en) ohne Arbeitspaket – Zuordnung erforderlich.</span>
+            {selectedIds.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
+                {selectedIds.length} zuordnen…
+              </Button>
+            )}
           </div>
         )}
 
         <Dialog open={addOpen} onOpenChange={(o) => { setAddOpen(o); if (o) { resetForm(); } else { resetForm(); setMeetingPersonIds([]); setAddMode("individual"); } }}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              {t("time_add_entry")}
+            </Button>
+
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
