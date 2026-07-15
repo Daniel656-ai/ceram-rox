@@ -477,6 +477,15 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  {incompleteIds.length > 0 && (
+                    <Checkbox
+                      checked={allIncompleteSelected}
+                      onCheckedChange={toggleSelectAllIncomplete}
+                      aria-label="Alle unvollständigen auswählen"
+                    />
+                  )}
+                </TableHead>
                 <TableHead>{t("time_date")}</TableHead>
                 <TableHead>{t("time_type")}</TableHead>
                 <TableHead>{t("time_person")}</TableHead>
@@ -489,10 +498,11 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
             <TableBody>
               {(entries as any[]).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {t("time_no_entries")}
                   </TableCell>
                 </TableRow>
+
               ) : (
                 (entries as any[]).map((e: any) => {
                   const isMeeting = e.entry_type === "meeting";
