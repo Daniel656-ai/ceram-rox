@@ -341,7 +341,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                             <span className="ml-2 text-xs text-muted-foreground">{wpTasks.length} Tasks</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-xs">{wp.responsible?.full_name ?? "—"}</TableCell>
+                        <TableCell className="text-xs">{wp.responsible_user_id ? (userNameById[wp.responsible_user_id] ?? "—") : "—"}</TableCell>
                         <TableCell className="text-right">
                           <div className="inline-flex gap-1">
                             <Button
