@@ -4,21 +4,20 @@ import { api } from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Search, Trash2, Plus } from "lucide-react";
+import { Search, Trash2, Plus, Lock } from "lucide-react";
 
 /**
  * Zuordnung von Projekt-Arbeitspaketen zu einem Portfolio-Arbeitspaket
- * oder einem Portfolio-Task (M:N).
+ * oder einem Portfolio-Task (jeweils 1:1 — je Projekt-AP nur eine Zuordnung).
  */
 type Target =
   | { kind: "wp"; portfolioWpId: string; title: string }
-  | { kind: "task"; portfolioTaskId: string; title: string };
+  | { kind: "task"; portfolioTaskId: string; portfolioWpId: string; portfolioWpTitle: string; title: string };
 
 interface Props {
   open: boolean;
@@ -56,12 +55,73 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
     enabled: open,
   });
 
-  const mappedIds = useMemo(() => new Set(mappings.map((m: any) => m.project_work_package_id)), [mappings]);
+  // Alle bestehenden Zuordnungen (global) — für Sperrung bereits vergebener Projekt-APs
+  const { data: allWpAssignments = [] } = useQuery({
+    queryKey: ["portfolio-wp-map-all"],
+    queryFn: () => api.projectWorkPackagesLookup.listAllWpAssignments(),
+    enabled: open,
+  });
+  const { data: allTaskAssignments = [] } = useQuery({
+    queryKey: ["portfolio-task-map-all"],
+    queryFn: () => api.projectWorkPackagesLookup.listAllTaskAssignments(),
+    enabled: open,
+  });
+
+  const wpAssignmentByProjectWp = useMemo(() => {
+    const m = new Map<string, { portfolioWpId: string; label: string }>();
+    for (const a of allWpAssignments) {
+      m.set(a.project_work_package_id, {
+        portfolioWpId: a.portfolio_work_package_id,
+        label: `${a.portfolio_work_package?.code ?? ""} ${a.portfolio_work_package?.name ?? ""}`.trim() || "—",
+      });
+    }
+    return m;
+  }, [allWpAssignments]);
+
+  const taskAssignmentByProjectWp = useMemo(() => {
+    const m = new Map<string, { taskId: string; portfolioWpId: string; label: string }>();
+    for (const a of allTaskAssignments) {
+      m.set(a.project_work_package_id, {
+        taskId: a.portfolio_task_id,
+        portfolioWpId: a.portfolio_task?.portfolio_work_package_id ?? "",
+        label: `${a.portfolio_task?.code ?? ""} ${a.portfolio_task?.name ?? ""}`.trim() || "—",
+      });
+    }
+    return m;
+  }, [allTaskAssignments]);
+
+  const mappedIdsHere = useMemo(() => new Set(mappings.map((m: any) => m.project_work_package_id)), [mappings]);
+
+  /**
+   * Bestimmt, ob ein Projekt-AP für die aktuelle Zuordnung verfügbar ist.
+   * Liefert entweder null (verfügbar) oder einen menschlich lesbaren Sperr-Hinweis.
+   */
+  const blockedReason = (projectWpId: string): string | null => {
+    if (!target) return "Kein Ziel gewählt";
+    if (mappedIdsHere.has(projectWpId)) return null; // bereits hier — wird nicht angezeigt
+    if (target.kind === "wp") {
+      const existing = wpAssignmentByProjectWp.get(projectWpId);
+      if (existing && existing.portfolioWpId !== target.portfolioWpId) {
+        return `Bereits dem Portfolio-Arbeitspaket "${existing.label}" zugeordnet.`;
+      }
+      return null;
+    }
+    // task target
+    const existingTask = taskAssignmentByProjectWp.get(projectWpId);
+    if (existingTask && existingTask.taskId !== target.portfolioTaskId) {
+      return `Bereits dem Portfolio-Task "${existingTask.label}" zugeordnet.`;
+    }
+    const existingWp = wpAssignmentByProjectWp.get(projectWpId);
+    if (existingWp && existingWp.portfolioWpId !== target.portfolioWpId) {
+      return `Gehört zum Portfolio-Arbeitspaket "${existingWp.label}" — Task-Zuordnung nur innerhalb desselben APs möglich.`;
+    }
+    return null;
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allProjectWps.filter((wp: any) => {
-      if (mappedIds.has(wp.id)) return false;
+      if (mappedIdsHere.has(wp.id)) return false; // schon hier zugeordnet
       if (statusFilter !== "all" && wp.project?.project_status !== statusFilter) return false;
       if (!q) return true;
       return (
@@ -70,9 +130,13 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
         wp.project?.project_number?.toLowerCase().includes(q)
       );
     });
-  }, [allProjectWps, mappedIds, search, statusFilter]);
+  }, [allProjectWps, mappedIdsHere, search, statusFilter]);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey });
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey });
+    qc.invalidateQueries({ queryKey: ["portfolio-wp-map-all"] });
+    qc.invalidateQueries({ queryKey: ["portfolio-task-map-all"] });
+  };
 
   const addOne = useMutation({
     mutationFn: async (projectWpId: string) => {
@@ -88,8 +152,8 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
         project_work_package_id: projectWpId,
       });
     },
-    onSuccess: () => { toast.success("Zugeordnet"); invalidate(); },
-    onError: (e: any) => toast.error(e?.message || "Fehler"),
+    onSuccess: () => { toast.success("Zugeordnet"); invalidateAll(); },
+    onError: (e: any) => toast.error(e?.message || "Zuordnung nicht möglich"),
   });
 
   const removeOne = useMutation({
@@ -99,7 +163,7 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
         ? api.portfolioWpProjectMap.remove(mapId)
         : api.portfolioTaskProjectMap.remove(mapId);
     },
-    onSuccess: () => { toast.success("Entfernt"); invalidate(); },
+    onSuccess: () => { toast.success("Entfernt"); invalidateAll(); },
   });
 
   const updateOne = useMutation({
@@ -109,7 +173,7 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
         ? api.portfolioWpProjectMap.update(id, updates)
         : api.portfolioTaskProjectMap.update(id, updates);
     },
-    onSuccess: invalidate,
+    onSuccess: invalidateAll,
   });
 
   return (
@@ -117,6 +181,17 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
       <DialogContent className="max-w-5xl">
         <DialogHeader>
           <DialogTitle>Projekt-Arbeitspakete zuordnen{target ? ` – ${target.title}` : ""}</DialogTitle>
+          {target?.kind === "task" && (
+            <p className="text-xs text-muted-foreground">
+              Zuordnung nur für Projekt-APs möglich, die dem Portfolio-Arbeitspaket „{target.portfolioWpTitle}" zugeordnet
+              (oder noch keinem AP zugewiesen) sind. Jedes Projekt-AP darf nur einem Task angehören.
+            </p>
+          )}
+          {target?.kind === "wp" && (
+            <p className="text-xs text-muted-foreground">
+              Jedes Projekt-AP darf nur einem Portfolio-Arbeitspaket zugeordnet werden.
+            </p>
+          )}
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -221,29 +296,40 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
               ) : (
                 <Table>
                   <TableBody>
-                    {filtered.slice(0, 200).map((wp: any) => (
-                      <TableRow key={wp.id}>
-                        <TableCell>
-                          <div className="text-sm font-medium">{wp.project?.project_name ?? "—"}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {wp.project?.project_number} · {wp.title}
-                            {wp.project?.project_status && (
-                              <Badge variant="outline" className="ml-2 text-[10px]">{wp.project.project_status}</Badge>
+                    {filtered.slice(0, 200).map((wp: any) => {
+                      const reason = blockedReason(wp.id);
+                      const blocked = !!reason;
+                      return (
+                        <TableRow key={wp.id} className={blocked ? "opacity-60" : ""}>
+                          <TableCell>
+                            <div className="text-sm font-medium">{wp.project?.project_name ?? "—"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {wp.project?.project_number} · {wp.title}
+                              {wp.project?.project_status && (
+                                <Badge variant="outline" className="ml-2 text-[10px]">{wp.project.project_status}</Badge>
+                              )}
+                            </div>
+                            {blocked && (
+                              <div className="mt-1 text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                                <Lock className="h-3 w-3" />
+                                {reason}
+                              </div>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-16 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!canManage || addOne.isPending}
-                            onClick={() => addOne.mutate(wp.id)}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell className="w-16 text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!canManage || addOne.isPending || blocked}
+                              title={reason ?? undefined}
+                              onClick={() => addOne.mutate(wp.id)}
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
