@@ -440,7 +440,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                                               onClick={() =>
                                                 setMapDialog({
                                                   open: true,
-                                                  target: { kind: "task", portfolioTaskId: t.id, title: `${t.code ?? ""} ${t.name}` },
+                                                  target: { kind: "task", portfolioTaskId: t.id, portfolioWpId: wp.id, portfolioWpTitle: `${wp.code ?? ""} ${wp.name}`.trim(), title: `${t.code ?? ""} ${t.name}` },
                                                 })
                                               }
                                             >
