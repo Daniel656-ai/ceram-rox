@@ -21,6 +21,8 @@ export function useAddProjectTimeEntry() {
       duration_minutes: number;
       note: string;
       order_id?: string;
+      work_package_id?: string | null;
+      portfolio_task_id?: string | null;
     }) => api.projectTimeEntries.create({ ...entry, created_by: user!.id }),
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["project_time_entries", v.project_id] }),
   });
@@ -37,6 +39,8 @@ export function useAddProjectMeetingEntry() {
       duration_minutes: number;
       note: string;
       order_id?: string;
+      work_package_id?: string | null;
+      portfolio_task_id?: string | null;
     }) => api.projectTimeEntries.createMeeting({ ...meeting, created_by: user!.id }),
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["project_time_entries", v.project_id] }),
   });
@@ -52,6 +56,8 @@ export function useUpdateProjectTimeEntry() {
       entry_date?: string;
       duration_minutes?: number;
       note?: string;
+      work_package_id?: string | null;
+      portfolio_task_id?: string | null;
     }) => api.projectTimeEntries.update(id, updates),
     onSuccess: (_, v) => qc.invalidateQueries({ queryKey: ["project_time_entries", v.project_id] }),
   });
