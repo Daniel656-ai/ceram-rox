@@ -545,7 +545,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                 <SelectContent>
                   <SelectItem value="__none__">— keiner —</SelectItem>
                   {users.map((u: any) => (
-                    <SelectItem key={u.id} value={u.id}>{u.full_name ?? u.email ?? u.id}</SelectItem>
+                    <SelectItem key={u.user_id} value={u.user_id}>{`${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.user_id}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
