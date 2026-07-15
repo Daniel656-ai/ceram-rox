@@ -513,6 +513,15 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
                   return (
                     <TableRow key={e.id} className={!e.work_package_id ? "bg-amber-50/40" : undefined}>
                       <TableCell>
+                        {!e.work_package_id && (
+                          <Checkbox
+                            checked={selectedIds.includes(e.id)}
+                            onCheckedChange={() => toggleSelect(e.id)}
+                            aria-label="Auswählen"
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
                         {format(new Date(e.entry_date), "dd.MM.yyyy", { locale: dateFnsLocale })}
                       </TableCell>
                       <TableCell>
@@ -531,10 +540,11 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
                           <span>{wp.title}</span>
                         ) : (
                           <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300">
-                            <AlertTriangle className="h-3 w-3" /> Unvollständig
+                            <AlertTriangle className="h-3 w-3" /> Zuordnung erforderlich
                           </Badge>
                         )}
                       </TableCell>
+
                       <TableCell className="font-mono">{formatDuration(e.duration_minutes)}</TableCell>
                       <TableCell className="text-sm">{e.note || "–"}</TableCell>
                       <TableCell>
