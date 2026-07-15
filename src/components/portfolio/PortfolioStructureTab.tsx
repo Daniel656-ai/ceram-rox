@@ -57,7 +57,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
 
   const { data: users = [] } = useQuery({
     queryKey: ["users-lookup"],
-    queryFn: () => api.users.list(),
+    queryFn: () => api.users.listWithRoles(),
   });
 
   const tasksByWp = useMemo(() => {
