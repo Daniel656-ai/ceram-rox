@@ -368,7 +368,48 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
     </div>
   );
 
-  const incompleteCount = (entries as any[]).filter((e: any) => !e.work_package_id).length;
+  const incompleteEntries = useMemo(
+    () => (entries as any[]).filter((e: any) => !e.work_package_id),
+    [entries]
+  );
+  const incompleteCount = incompleteEntries.length;
+  const incompleteIds = useMemo(() => incompleteEntries.map((e: any) => e.id), [incompleteEntries]);
+  const allIncompleteSelected = incompleteIds.length > 0 && incompleteIds.every((id) => selectedIds.includes(id));
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleSelectAllIncomplete = () =>
+    setSelectedIds(allIncompleteSelected ? [] : incompleteIds);
+
+  const handleBulkAssign = async () => {
+    if (!bulkWpId) return toast.error("Bitte ein Projektarbeitspaket auswählen.");
+    if (selectedIds.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const targets = (entries as any[]).filter((e: any) => selectedIds.includes(e.id));
+      for (const e of targets) {
+        await updateEntry.mutateAsync({
+          id: e.id,
+          project_id: projectId,
+          person_id: e.person_id,
+          entry_date: e.entry_date,
+          duration_minutes: e.duration_minutes,
+          note: e.note || "",
+          work_package_id: bulkWpId,
+        });
+      }
+      toast.success(`${targets.length} Buchung(en) zugeordnet.`);
+      setSelectedIds([]);
+      setBulkOpen(false);
+      setBulkWpId("");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
 
   return (
     <div className="space-y-4">
