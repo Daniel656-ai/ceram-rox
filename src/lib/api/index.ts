@@ -124,7 +124,15 @@ import {
   portfolioDashboard,
 } from "./projectPortfolios";
 import { workPackageCategories } from "./workPackageCategories";
-import { portfolioWorkPackages, portfolioTasks, portfolioFfgAnalytics } from "./portfolioStructure";
+import {
+  portfolioWorkPackages,
+  portfolioTasks,
+  portfolioFfgAnalytics,
+  portfolioWpProjectMap,
+  portfolioTaskProjectMap,
+  projectWorkPackagesLookup,
+  portfolioStructureAudit,
+} from "./portfolioStructure";
 import {
   serviceForms,
   workflowDefinitions,
