@@ -242,6 +242,26 @@ export const projectWorkPackagesLookup = {
         .select("*")
         .limit(500)
     ) as Promise<any[]>,
+  /** Alle Projekt-AP -> Portfolio-AP Zuordnungen (mit Namen). */
+  listAllWpAssignments: () =>
+    unwrap(
+      f("portfolio_wp_project_wp_map")
+        .select("project_work_package_id, portfolio_work_package_id, portfolio_work_package:portfolio_work_packages(id,code,name)")
+    ) as Promise<Array<{
+      project_work_package_id: string;
+      portfolio_work_package_id: string;
+      portfolio_work_package: { id: string; code: string | null; name: string } | null;
+    }>>,
+  /** Alle Projekt-AP -> Portfolio-Task Zuordnungen (mit Namen und Parent-AP). */
+  listAllTaskAssignments: () =>
+    unwrap(
+      f("portfolio_task_project_wp_map")
+        .select("project_work_package_id, portfolio_task_id, portfolio_task:portfolio_tasks(id,code,name,portfolio_work_package_id)")
+    ) as Promise<Array<{
+      project_work_package_id: string;
+      portfolio_task_id: string;
+      portfolio_task: { id: string; code: string | null; name: string; portfolio_work_package_id: string } | null;
+    }>>,
 };
 
 // ---------- Audit-Log ----------

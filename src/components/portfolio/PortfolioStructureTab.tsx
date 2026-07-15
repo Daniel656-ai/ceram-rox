@@ -267,7 +267,10 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
   // ----- Mapping dialog -----
   const [mapDialog, setMapDialog] = useState<{
     open: boolean;
-    target: { kind: "wp"; portfolioWpId: string; title: string } | { kind: "task"; portfolioTaskId: string; title: string } | null;
+    target:
+      | { kind: "wp"; portfolioWpId: string; title: string }
+      | { kind: "task"; portfolioTaskId: string; portfolioWpId: string; portfolioWpTitle: string; title: string }
+      | null;
   }>({ open: false, target: null });
 
   const fmtRange = (s?: string | null, e?: string | null) => {
@@ -437,7 +440,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                                               onClick={() =>
                                                 setMapDialog({
                                                   open: true,
-                                                  target: { kind: "task", portfolioTaskId: t.id, title: `${t.code ?? ""} ${t.name}` },
+                                                  target: { kind: "task", portfolioTaskId: t.id, portfolioWpId: wp.id, portfolioWpTitle: `${wp.code ?? ""} ${wp.name}`.trim(), title: `${t.code ?? ""} ${t.name}` },
                                                 })
                                               }
                                             >
