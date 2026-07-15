@@ -443,13 +443,8 @@ export function ProjectTimeEntries({ projectId, orderId }: Props) {
               <Plus className="h-4 w-4 mr-2" />
               {t("time_add_entry")}
             </Button>
-
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {t("time_add_entry")}
-            </Button>
           </DialogTrigger>
+
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{t("time_add_entry")}</DialogTitle>
