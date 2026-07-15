@@ -26,6 +26,7 @@ import PortfolioAnalyticsTab from "@/components/PortfolioAnalyticsTab";
 import PortfolioDocumentsTab from "@/components/PortfolioDocumentsTab";
 import PortfolioDashboardTab from "@/components/PortfolioDashboardTab";
 import PortfolioStructureTab from "@/components/portfolio/PortfolioStructureTab";
+import PortfolioFundingMappingTab from "@/components/portfolio/PortfolioFundingMappingTab";
 import PortfolioFfgReportTab from "@/components/portfolio/PortfolioFfgReportTab";
 import { useCanManagePortfolio } from "@/hooks/useCanManagePortfolio";
 import { CurrencyInput } from "@/components/ui/currency-input";
