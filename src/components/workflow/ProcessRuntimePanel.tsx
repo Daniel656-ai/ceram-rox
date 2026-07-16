@@ -197,7 +197,8 @@ function StepRunItem({
   }, [values, fields]);
 
   const disabled = locked || run.status === "completed" || run.status === "skipped";
-  const canStart = !disabled && run.status === "pending";
+  const startBlocked = useStepStartBlocked(run.step_id, 1);
+  const canStart = !disabled && run.status === "pending" && !startBlocked;
   const canComplete = !disabled && run.status === "in_progress";
 
   async function handleStart() {
