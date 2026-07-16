@@ -27,6 +27,7 @@ import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner"
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
+import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
@@ -353,11 +354,16 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
       <Tabs defaultValue="steps">
         <TabsList>
           <TabsTrigger value="steps"><Layers className="h-4 w-4 mr-1" />Prozessschritte</TabsTrigger>
+          <TabsTrigger value="services"><Puzzle className="h-4 w-4 mr-1" />Dienstleistungen</TabsTrigger>
           <TabsTrigger value="meta"><FileText className="h-4 w-4 mr-1" />Stammdaten</TabsTrigger>
         </TabsList>
 
         <TabsContent value="meta" className="mt-4">
           <TemplateMetaEditor template={template} onSave={(u) => updateTemplateMut.mutate(u)} />
+        </TabsContent>
+
+        <TabsContent value="services" className="mt-4">
+          <ProcessServicesTab processTemplateId={template.id} canManage={true} />
         </TabsContent>
 
         <TabsContent value="steps" className="mt-4">
