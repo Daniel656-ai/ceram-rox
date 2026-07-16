@@ -28,6 +28,7 @@ import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer"
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
+import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
