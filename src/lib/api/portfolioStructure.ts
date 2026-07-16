@@ -239,18 +239,22 @@ export const projectWorkPackagesLookup = {
   /**
    * Nur Projekt-APs, deren Projekt Mitglied des Portfolios ist. Optional inaktive (completed) ausschließen.
    */
-  listForPortfolio: async (portfolioId: string, opts: { activeOnly?: boolean } = { activeOnly: true }) => {
+  listForPortfolio: async (
+    portfolioId: string,
+    opts: { activeOnly?: boolean; categoryId?: string | null } = { activeOnly: true }
+  ) => {
     const members = (await unwrap(
       f("project_portfolio_members").select("project_id").eq("portfolio_id", portfolioId)
     )) as Array<{ project_id: string }>;
     const projectIds = members.map((m) => m.project_id);
     if (projectIds.length === 0) return [] as any[];
     let query = f("project_work_packages")
-      .select("id,title,status,start_date,end_date,project:projects(id,project_number,project_name,project_status)")
+      .select("id,title,status,start_date,end_date,category_id,project:projects(id,project_number,project_name,project_status)")
       .in("project_id", projectIds)
       .order("created_at", { ascending: false })
       .limit(2000);
     if (opts.activeOnly) query = query.in("status", ["planned", "in_progress"]);
+    if (opts.categoryId) query = query.eq("category_id", opts.categoryId);
     return (await unwrap(query)) as any[];
   },
   unassignedFunding: () =>

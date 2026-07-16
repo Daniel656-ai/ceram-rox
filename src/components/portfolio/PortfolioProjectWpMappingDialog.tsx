@@ -16,8 +16,8 @@ import { Search, Trash2, Plus, Lock } from "lucide-react";
  * oder einem Portfolio-Task (jeweils 1:1 — je Projekt-AP nur eine Zuordnung).
  */
 type Target =
-  | { kind: "wp"; portfolioWpId: string; title: string }
-  | { kind: "task"; portfolioTaskId: string; portfolioWpId: string; portfolioWpTitle: string; title: string };
+  | { kind: "wp"; portfolioWpId: string; title: string; categoryId?: string | null; categoryName?: string | null }
+  | { kind: "task"; portfolioTaskId: string; portfolioWpId: string; portfolioWpTitle: string; title: string; categoryId?: string | null; categoryName?: string | null };
 
 interface Props {
   open: boolean;
@@ -50,10 +50,12 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
     enabled: !!target && open,
   });
 
-  // Nur Projekt-APs, deren Projekt Mitglied des Portfolios ist (und aktiv).
+  // Nur Projekt-APs, deren Projekt Mitglied des Portfolios ist (und aktiv),
+  // serverseitig zusätzlich nach Kategorie des Portfolio-APs / Portfolio-Tasks gefiltert.
+  const categoryId = target?.categoryId ?? null;
   const { data: allProjectWps = [] } = useQuery({
-    queryKey: ["project-wps-for-portfolio", portfolioId],
-    queryFn: () => api.projectWorkPackagesLookup.listForPortfolio(portfolioId, { activeOnly: true }),
+    queryKey: ["project-wps-for-portfolio", portfolioId, categoryId ?? "any"],
+    queryFn: () => api.projectWorkPackagesLookup.listForPortfolio(portfolioId, { activeOnly: true, categoryId }),
     enabled: open && !!portfolioId,
   });
 
