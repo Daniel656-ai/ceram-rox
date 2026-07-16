@@ -460,3 +460,202 @@ function ensureSpace(doc: any, y: number, need = 30): number {
   if (y + need > pageHeight - 40) { doc.addPage(); return 50; }
   return y;
 }
+
+// ============= Block-basierter Report Renderer =============
+
+function resolveSnapshotPath(snapshot: any, path: string): any {
+  if (!path) return undefined;
+  const parts = path.split(/\.|\[|\]/).filter(Boolean);
+  let cur: any = snapshot;
+  for (const p of parts) { if (cur == null) return undefined; cur = cur[p]; }
+  return cur;
+}
+
+const TOKEN_MAP: Record<string, string> = {
+  Auftragsnummer: "order.order_number",
+  Versuchsnummer: "order.pp_experiment_number",
+  Auftragsart: "order.order_type",
+  Auftragskategorie: "order.order_kind",
+  Status: "order.status",
+  Prioritaet: "order.priority",
+  Erstellt: "order.created_at",
+  Abgeschlossen: "order.completed_at",
+  Faelligkeit: "order.due_date",
+  Ersteller: "order.created_by_name",
+  Bearbeiter: "order.responsible_name",
+  Auftragsnotizen: "order.notes",
+  Projektnummer: "project.project_number",
+  Projekt: "project.project_name",
+  Kunde: "project.customer",
+  Projektleiter: "project.project_manager",
+  Projektstatus: "project.status",
+  Probennummer: "sample.sample_number",
+  Probe: "sample.sample_name",
+  Material: "sample.material_type",
+  Probenbeschreibung: "sample.description",
+  Hauptrohstoff: "raw_material.recipe[0].material",
+  Lotnummern: "raw_material.consumed_lots",
+  AktuellerSchritt: "workflow.current_step",
+  AbgeschlosseneSchritte: "workflow.completed_steps",
+  Dienstleistungen: "service.names",
+  ArbeitszeitGesamt: "worklog.total_hours",
+  ErzeugtAm: "system.generated_at",
+  Version: "system.version_no",
+  Firma: "system.company_name",
+};
+
+function fmt(v: any): string {
+  if (v == null || v === "") return "—";
+  if (typeof v === "boolean") return v ? "Ja" : "Nein";
+  if (Array.isArray(v)) {
+    if (!v.length) return "—";
+    if (typeof v[0] === "object") return v.map((x) => Object.values(x).join(" · ")).join("\n");
+    return v.join(", ");
+  }
+  if (typeof v === "object") return Object.entries(v).map(([k, val]) => `${k}: ${val}`).join(" · ");
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}(T|$)/.test(s)) { try { return new Date(s).toLocaleString("de-AT"); } catch {} }
+  return s;
+}
+
+function replaceTokens(text: string, snapshot: any): string {
+  if (!text) return "";
+  return text.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_m, raw: string) => {
+    const t = raw.trim();
+    if (t.startsWith("AG:")) return fmt(resolveSnapshotPath(snapshot, `customer_form.${t.slice(3).trim()}`));
+    if (t.startsWith("MDL:")) return fmt(resolveSnapshotPath(snapshot, `employee_form.${t.slice(4).trim()}`));
+    const path = TOKEN_MAP[t];
+    return path ? fmt(resolveSnapshotPath(snapshot, path)) : _m;
+  });
+}
+
+function renderBlockTemplate(snapshot: any, tpl: any) {
+  const orientation = tpl.orientation === "landscape" ? "landscape" : "portrait";
+  const doc = new jsPDF({ unit: "pt", format: "a4", orientation });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginX = 40;
+  let y = 60;
+
+  const drawHeaderFooter = () => {
+    if (tpl.header) {
+      doc.setFontSize(9).setTextColor(120).setFont("helvetica", "normal");
+      doc.text(replaceTokens(tpl.header, snapshot), marginX, 30);
+      doc.setDrawColor(220); doc.line(marginX, 40, pageWidth - marginX, 40);
+    }
+    if (tpl.footer) {
+      doc.setFontSize(8).setTextColor(140);
+      doc.text(replaceTokens(tpl.footer, snapshot), marginX, pageHeight - 25);
+    }
+  };
+  drawHeaderFooter();
+
+  const nextPage = () => { doc.addPage(); drawHeaderFooter(); y = 60; };
+  const ensure = (need: number) => { if (y + need > pageHeight - 50) nextPage(); };
+
+  for (const b of (tpl.blocks ?? [])) {
+    switch (b.type) {
+      case "heading": {
+        ensure(30);
+        const size = b.level === 1 ? 18 : b.level === 2 ? 14 : 12;
+        doc.setFontSize(size).setFont("helvetica", "bold").setTextColor(20);
+        doc.text(replaceTokens(b.text ?? "", snapshot), marginX, y);
+        y += size + 6;
+        break;
+      }
+      case "text": {
+        doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(40);
+        const lines = doc.splitTextToSize(replaceTokens(b.content ?? "", snapshot), pageWidth - 2 * marginX);
+        for (const line of lines) { ensure(14); doc.text(line, marginX, y); y += 12; }
+        y += 4;
+        break;
+      }
+      case "table": {
+        if (b.title) { ensure(20); doc.setFontSize(11).setFont("helvetica", "bold"); doc.text(b.title, marginX, y); y += 14; }
+        const cols = b.columns ?? [];
+        const colW = (pageWidth - 2 * marginX) / Math.max(1, cols.length);
+        ensure(18);
+        doc.setFillColor(240).setDrawColor(200);
+        doc.rect(marginX, y - 10, pageWidth - 2 * marginX, 16, "FD");
+        doc.setFontSize(9).setFont("helvetica", "bold").setTextColor(40);
+        cols.forEach((c: any, i: number) => doc.text(String(c.header ?? ""), marginX + 4 + i * colW, y));
+        y += 10;
+        doc.setFont("helvetica", "normal");
+        for (const row of (b.rows ?? [])) {
+          ensure(14);
+          row.forEach((cell: any, i: number) => {
+            const txt = replaceTokens(String(cell ?? ""), snapshot);
+            doc.text(doc.splitTextToSize(txt, colW - 6), marginX + 4 + i * colW, y);
+          });
+          doc.line(marginX, y + 3, pageWidth - marginX, y + 3);
+          y += 14;
+        }
+        y += 6;
+        break;
+      }
+      case "repeater": {
+        if (b.title) { ensure(20); doc.setFontSize(11).setFont("helvetica", "bold"); doc.text(b.title, marginX, y); y += 14; }
+        const rows = (resolveSnapshotPath(snapshot, b.sourcePath) as any[]) ?? [];
+        const cols = b.columns ?? [];
+        const colW = (pageWidth - 2 * marginX) / Math.max(1, cols.length);
+        ensure(18);
+        doc.setFillColor(240).setDrawColor(200);
+        doc.rect(marginX, y - 10, pageWidth - 2 * marginX, 16, "FD");
+        doc.setFontSize(9).setFont("helvetica", "bold").setTextColor(40);
+        cols.forEach((c: any, i: number) => doc.text(String(c.header ?? ""), marginX + 4 + i * colW, y));
+        y += 10;
+        doc.setFont("helvetica", "normal");
+        if (!rows.length) { ensure(14); doc.setTextColor(150).text("— keine Daten —", marginX + 4, y); y += 14; doc.setTextColor(40); }
+        for (const row of rows) {
+          ensure(14);
+          cols.forEach((c: any, i: number) => {
+            const v = fmt(resolveSnapshotPath(row, c.path));
+            doc.text(doc.splitTextToSize(v, colW - 6), marginX + 4 + i * colW, y);
+          });
+          doc.line(marginX, y + 3, pageWidth - marginX, y + 3);
+          y += 14;
+        }
+        y += 6;
+        break;
+      }
+      case "image": {
+        if (b.dataUrl) {
+          try {
+            const w = ((b.widthPercent ?? 60) / 100) * (pageWidth - 2 * marginX);
+            const h = w * 0.6;
+            ensure(h + 20);
+            doc.addImage(b.dataUrl, "PNG", marginX, y, w, h);
+            y += h + 6;
+            if (b.caption) { doc.setFontSize(8).setTextColor(120).text(b.caption, marginX, y); y += 10; }
+          } catch (e) { /* ignore */ }
+        }
+        break;
+      }
+      case "logo": {
+        if (snapshot.system?.logo_data_url) {
+          try { ensure(60); doc.addImage(snapshot.system.logo_data_url, "PNG", marginX, y, 100, 40); y += 46; } catch {}
+        }
+        break;
+      }
+      case "qr":
+      case "barcode": {
+        ensure(30);
+        doc.setFontSize(9).setFont("helvetica", "italic").setTextColor(80);
+        doc.text(`[${b.type === "qr" ? "QR" : "Barcode"}: ${replaceTokens(b.content ?? "", snapshot)}]`, marginX, y);
+        y += 12;
+        if (b.label) { doc.text(b.label, marginX, y); y += 12; }
+        break;
+      }
+      case "pagebreak": nextPage(); break;
+      case "signature": {
+        ensure(50); y += 30;
+        doc.setDrawColor(60).line(marginX, y, marginX + 200, y);
+        y += 12;
+        doc.setFontSize(9).setTextColor(80).text(b.label ?? "Unterschrift", marginX, y);
+        y += 14;
+        break;
+      }
+    }
+  }
+  return doc;
+}
