@@ -766,7 +766,7 @@ function GlobalFormLibrary() {
     onSuccess: (f) => {
       toast.success("Formular angelegt");
       setNewName("");
-      qc.invalidateQueries({ queryKey: ["form-definitions", "global"] });
+      qc.invalidateQueries({ queryKey: ["form-definitions"] });
       setSelectedFormId(f.id);
     },
     onError: (e: any) => toast.error(e.message || "Fehler"),
