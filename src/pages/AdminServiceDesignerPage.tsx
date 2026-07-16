@@ -23,6 +23,9 @@ import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FormField, FormFieldType } from "@/lib/api/formFields";
 import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
+import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner";
+import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
+import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
