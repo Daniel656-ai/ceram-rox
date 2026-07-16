@@ -529,6 +529,8 @@ export type Database = {
       }
       form_field_permissions: {
         Row: {
+          can_add: boolean
+          can_remove: boolean
           created_at: string
           field_id: string
           form_definition_id: string
@@ -539,6 +541,8 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          can_add?: boolean
+          can_remove?: boolean
           created_at?: string
           field_id: string
           form_definition_id: string
@@ -549,6 +553,8 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          can_add?: boolean
+          can_remove?: boolean
           created_at?: string
           field_id?: string
           form_definition_id?: string
