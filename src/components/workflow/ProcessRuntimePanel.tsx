@@ -385,6 +385,10 @@ function FieldInput({
           </Select>
         );
       }
+      case "raw_material_recipe": {
+        const RawMaterialRecipeField = require("@/components/RawMaterialRecipeField").default;
+        return <RawMaterialRecipeField value={value} onChange={onChange} readonly={isReadonly} />;
+      }
       default:
         return (
           <Input
