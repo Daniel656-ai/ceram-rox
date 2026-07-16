@@ -10,6 +10,8 @@ export interface FormFieldPermission {
   field_id: string;
   visibility: FieldVisibility;
   required: boolean;
+  can_add: boolean;
+  can_remove: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -17,10 +19,12 @@ export interface FormFieldPermission {
 export interface EffectivePermission {
   visibility: FieldVisibility;
   required: boolean;
+  can_add?: boolean;
+  can_remove?: boolean;
   locked?: boolean;
 }
 
-const DEFAULT: EffectivePermission = { visibility: "write", required: false };
+const DEFAULT: EffectivePermission = { visibility: "write", required: false, can_add: true, can_remove: true };
 
 export const formFieldPermissions = {
   listForForm: (formId: string) =>
@@ -44,7 +48,7 @@ export const formFieldPermissions = {
   async replaceForRole(
     formId: string,
     roleKey: string,
-    rows: Array<{ field_id: string; visibility: FieldVisibility; required: boolean }>
+    rows: Array<{ field_id: string; visibility: FieldVisibility; required: boolean; can_add?: boolean; can_remove?: boolean }>
   ) {
     await run(
       dbClient
@@ -64,15 +68,13 @@ export const formFieldPermissions = {
             field_id: r.field_id,
             visibility: r.visibility,
             required: r.required,
+            can_add: r.can_add ?? true,
+            can_remove: r.can_remove ?? true,
           })) as any
         )
     );
   },
 
-  /**
-   * Build an effective permission map for a role, defaulting all unspecified
-   * fields to `write` / not-required. `lockedFieldIds` overrides visibility → `read`.
-   */
   async getEffectiveMap(
     formId: string,
     roleKey: string,
@@ -84,12 +86,24 @@ export const formFieldPermissions = {
     const rows = await formFieldPermissions.listForRole(formId, roleKey);
     for (const r of rows) {
       if (!map.has(r.field_id)) continue;
-      map.set(r.field_id, { visibility: r.visibility, required: r.required });
+      map.set(r.field_id, {
+        visibility: r.visibility,
+        required: r.required,
+        can_add: r.can_add,
+        can_remove: r.can_remove,
+      });
     }
     const lockedSet = new Set(lockedFieldIds);
     for (const [id, p] of map) {
       if (lockedSet.has(id)) {
-        map.set(id, { ...p, visibility: p.visibility === "hidden" ? "hidden" : "read", locked: true, required: false });
+        map.set(id, {
+          ...p,
+          visibility: p.visibility === "hidden" ? "hidden" : "read",
+          locked: true,
+          required: false,
+          can_add: false,
+          can_remove: false,
+        });
       }
     }
     return map;

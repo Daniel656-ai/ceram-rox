@@ -36,6 +36,35 @@ export interface FormField {
   updated_at: string;
 }
 
+/** Config stored inside `form_fields.metadata` for fields of type `repeater`. */
+export interface RepeaterMeta {
+  min_entries?: number;
+  max_entries?: number;
+  item_label?: string;
+  add_label?: string;
+  /** Storage key used to persist entries in shared_form_data. Falls back to field_key. */
+  storage_key?: string;
+}
+
+export const readRepeaterMeta = (field: FormField): RepeaterMeta => {
+  const m = (field.metadata ?? {}) as Record<string, unknown>;
+  const r = (m.repeater ?? {}) as RepeaterMeta;
+  return {
+    min_entries: typeof r.min_entries === "number" ? r.min_entries : 0,
+    max_entries: typeof r.max_entries === "number" ? r.max_entries : undefined,
+    item_label: typeof r.item_label === "string" ? r.item_label : "Eintrag",
+    add_label: typeof r.add_label === "string" ? r.add_label : "Eintrag hinzufügen",
+    storage_key: typeof r.storage_key === "string" ? r.storage_key : undefined,
+  };
+};
+
+export const writeRepeaterMeta = (field: FormField, patch: Partial<RepeaterMeta>): Record<string, unknown> => {
+  const m = { ...((field.metadata ?? {}) as Record<string, unknown>) };
+  const cur = (m.repeater ?? {}) as RepeaterMeta;
+  m.repeater = { ...cur, ...patch };
+  return m;
+};
+
 export const formFields = {
   listForForm: (formId: string) =>
     unwrap(
@@ -65,3 +94,11 @@ export const formFields = {
     }
   },
 };
+
+/** Return children of a repeater field, in sort_order. */
+export const repeaterChildren = (all: FormField[], parentId: string): FormField[] =>
+  all.filter((f) => f.parent_field_id === parentId).sort((a, b) => a.sort_order - b.sort_order);
+
+/** All top-level (non-child) fields of a form. */
+export const topLevelFields = (all: FormField[]): FormField[] =>
+  all.filter((f) => f.parent_field_id == null);
