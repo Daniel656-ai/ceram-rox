@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat, Calculator } from "lucide-react";
 import UploadField from "@/components/upload/UploadField";
+import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
 import { evaluateFormula } from "@/lib/formulaEngine";
 import type { FormRoleView, FormSection, RepeatableConfig } from "@/lib/api/serviceFormLayouts";
 
@@ -425,6 +426,8 @@ function renderInput(field: any, value: any, onChange: (v: any) => void, readonl
         </Select>
       );
     }
+    case "raw_material_recipe":
+      return <RawMaterialRecipeField value={value} onChange={onChange} readonly={readonly} />;
     default:
       return <Input disabled={readonly} value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={cls} />;
   }
