@@ -817,7 +817,24 @@ function GlobalFormLibrary() {
         {selectedForm ? (
           <Card>
             <CardHeader><CardTitle className="text-sm">{selectedForm.name}</CardTitle></CardHeader>
-            <CardContent><FormFieldsEditor form={selectedForm} /></CardContent>
+            <CardContent>
+              <Tabs defaultValue="fields">
+                <TabsList>
+                  <TabsTrigger value="fields">Felder</TabsTrigger>
+                  <TabsTrigger value="layout">Formular-Designer</TabsTrigger>
+                  <TabsTrigger value="preview">Vorschau</TabsTrigger>
+                </TabsList>
+                <TabsContent value="fields" className="mt-3">
+                  <FormFieldsEditor form={selectedForm} />
+                </TabsContent>
+                <TabsContent value="layout" className="mt-3">
+                  <FormLayoutDesigner form={selectedForm} canManage={true} />
+                </TabsContent>
+                <TabsContent value="preview" className="mt-3">
+                  <FormPreviewTab form={selectedForm} />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
           </Card>
         ) : (
           <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte ein Formular links auswählen oder anlegen.</CardContent></Card>
