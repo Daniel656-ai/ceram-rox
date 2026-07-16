@@ -613,30 +613,159 @@ function Inspector({ node, fields, onChange, onDelete, canManage }: {
         </>
       )}
       {node.type === "field" && (
-        <>
-          <div>
-            <Label className="text-xs">Feld</Label>
-            <Select value={(node as FieldNode).field_id} onValueChange={(v) => onChange({ field_id: v } as any)} disabled={disabled}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+        <FieldInspector node={node as FieldNode} fields={fields} onChange={onChange} disabled={disabled} />
+      )}
+    </div>
+  );
+}
+
+function FieldInspector({
+  node, fields, onChange, disabled,
+}: {
+  node: FieldNode;
+  fields: FormField[];
+  onChange: (patch: Partial<LayoutNode>) => void;
+  disabled: boolean;
+}) {
+  const field = fields.find((f) => f.id === node.field_id);
+  const isRepeater = field?.field_type === "repeater";
+  return (
+    <>
+      <div>
+        <Label className="text-xs">Feld</Label>
+        <Select value={node.field_id} onValueChange={(v) => onChange({ field_id: v } as any)} disabled={disabled}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+          <SelectContent>
+            {fields.filter((f) => f.parent_field_id == null).map(f => (
+              <SelectItem key={f.id} value={f.id}>
+                {f.display_name} ({f.field_key}){f.field_type === "repeater" ? " · Repeater" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label className="text-xs">Label-Override</Label>
+        <Input value={node.label_override ?? ""} className="h-8 text-xs" onChange={(e) => onChange({ label_override: e.target.value } as any)} disabled={disabled} />
+      </div>
+      <div>
+        <Label className="text-xs">Hilfetext-Override</Label>
+        <Textarea rows={2} value={node.description_override ?? ""} onChange={(e) => onChange({ description_override: e.target.value } as any)} disabled={disabled} />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Nur lesend</Label>
+        <Switch checked={!!node.readonly} onCheckedChange={(v) => onChange({ readonly: v } as any)} disabled={disabled} />
+      </div>
+      {isRepeater && field && (
+        <RepeaterConfigPanel field={field} fields={fields} disabled={disabled} />
+      )}
+    </>
+  );
+}
+
+function RepeaterConfigPanel({
+  field, fields, disabled,
+}: { field: FormField; fields: FormField[]; disabled: boolean }) {
+  const qc = useQueryClient();
+  const meta = readRepeaterMeta(field);
+  const children = repeaterChildren(fields, field.id);
+
+  const [newKey, setNewKey] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [newType, setNewType] = useState<any>("text");
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["form-fields", field.form_id] });
+
+  const saveMeta = async (patch: any) => {
+    await api.formFields.update(field.id, { metadata: writeRepeaterMeta(field, patch) as any });
+    invalidate();
+  };
+  const addChild = async () => {
+    if (!newKey.trim() || !newLabel.trim()) return;
+    await api.formFields.create({
+      form_id: field.form_id,
+      field_key: newKey.trim(),
+      display_name: newLabel.trim(),
+      field_type: newType,
+      parent_field_id: field.id,
+      sort_order: children.length,
+    } as any);
+    setNewKey(""); setNewLabel("");
+    invalidate();
+    toast.success("Unterfeld hinzugefügt");
+  };
+  const removeChild = async (id: string) => {
+    if (!confirm("Unterfeld wirklich entfernen?")) return;
+    await api.formFields.remove(id);
+    invalidate();
+  };
+
+  return (
+    <div className="border-t pt-3 mt-3 space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Repeater-Einstellungen</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Min.</Label>
+          <Input type="number" className="h-8 text-xs" value={meta.min_entries ?? 0}
+            onChange={(e) => saveMeta({ min_entries: e.target.value === "" ? 0 : Number(e.target.value) })}
+            disabled={disabled} />
+        </div>
+        <div>
+          <Label className="text-xs">Max.</Label>
+          <Input type="number" className="h-8 text-xs" value={meta.max_entries ?? ""}
+            onChange={(e) => saveMeta({ max_entries: e.target.value === "" ? undefined : Number(e.target.value) })}
+            disabled={disabled} />
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs">Eintrag-Label</Label>
+        <Input className="h-8 text-xs" value={meta.item_label ?? ""} onChange={(e) => saveMeta({ item_label: e.target.value })} disabled={disabled} />
+      </div>
+      <div>
+        <Label className="text-xs">Button-Text "Hinzufügen"</Label>
+        <Input className="h-8 text-xs" value={meta.add_label ?? ""} onChange={(e) => saveMeta({ add_label: e.target.value })} disabled={disabled} />
+      </div>
+      <div>
+        <Label className="text-xs">Storage-Key (optional)</Label>
+        <Input className="h-8 text-xs" value={meta.storage_key ?? ""} placeholder={field.field_key}
+          onChange={(e) => saveMeta({ storage_key: e.target.value || undefined })} disabled={disabled} />
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Gleicher Storage-Key in mehreren Formularen → Daten werden zwischen Schritten übernommen.
+        </p>
+      </div>
+
+      <div className="pt-2 border-t">
+        <p className="text-xs font-semibold mb-2">Unterfelder ({children.length})</p>
+        <div className="space-y-1 mb-2">
+          {children.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 border rounded px-2 py-1">
+              <span className="flex-1 text-xs truncate">{c.display_name}</span>
+              <Badge variant="outline" className="text-[10px]">{c.field_type}</Badge>
+              <Button size="icon" variant="ghost" className="h-6 w-6" disabled={disabled} onClick={() => removeChild(c.id)}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+          {children.length === 0 && <p className="text-xs text-muted-foreground">Noch keine Unterfelder.</p>}
+        </div>
+        {!disabled && (
+          <div className="space-y-1">
+            <Input placeholder="field_key" className="h-8 text-xs" value={newKey} onChange={(e) => setNewKey(e.target.value)} />
+            <Input placeholder="Anzeigename" className="h-8 text-xs" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+            <Select value={newType} onValueChange={(v) => setNewType(v)}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {fields.map(f => <SelectItem key={f.id} value={f.id}>{f.display_name} ({f.field_key})</SelectItem>)}
+                {["text","longtext","number","decimal","percent","date","time","datetime","boolean","select"].map(t => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            <Button size="sm" className="w-full" onClick={addChild} disabled={!newKey || !newLabel}>
+              <Plus className="h-3 w-3 mr-1" />Unterfeld anlegen
+            </Button>
           </div>
-          <div>
-            <Label className="text-xs">Label-Override</Label>
-            <Input value={(node as FieldNode).label_override ?? ""} className="h-8 text-xs" onChange={(e) => onChange({ label_override: e.target.value } as any)} disabled={disabled} />
-          </div>
-          <div>
-            <Label className="text-xs">Hilfetext-Override</Label>
-            <Textarea rows={2} value={(node as FieldNode).description_override ?? ""} onChange={(e) => onChange({ description_override: e.target.value } as any)} disabled={disabled} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">Nur lesend</Label>
-            <Switch checked={!!(node as FieldNode).readonly} onCheckedChange={(v) => onChange({ readonly: v } as any)} disabled={disabled} />
-          </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
