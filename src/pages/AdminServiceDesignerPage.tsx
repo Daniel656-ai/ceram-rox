@@ -461,6 +461,25 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
+  // Vorhandene globale Formulare (aus Service Designer) verknüpfbar machen —
+  // vermeidet doppelte Formulare pro Prozessschritt.
+  const { data: globalForms = [] } = useQuery({
+    queryKey: ["form-definitions", "global"],
+    queryFn: () => api.formDefinitions.list({ scope: "global" }),
+  });
+
+  const linkFormMut = useMutation({
+    mutationFn: async (formId: string) => api.processTemplateSteps.update(step.id, { form_id: formId }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); onSaved(); toast.success("Formular verknüpft"); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const unlinkFormMut = useMutation({
+    mutationFn: async () => api.processTemplateSteps.update(step.id, { form_id: null }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); onSaved(); toast.success("Verknüpfung aufgehoben"); },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
   return (
     <Card>
       <CardHeader><CardTitle className="text-sm">Schritt bearbeiten</CardTitle></CardHeader>
@@ -501,10 +520,46 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
         <div className="border-t pt-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold flex items-center gap-2"><FormInput className="h-4 w-4" />Formular</h3>
-            {!step.form_id && <Button size="sm" onClick={() => createFormMut.mutate()}><Plus className="h-4 w-4 mr-1" />Formular anlegen</Button>}
+            {step.form_id && (
+              <Button size="sm" variant="ghost" onClick={() => { if (confirm("Formular-Verknüpfung aufheben? Das Formular selbst bleibt erhalten.")) unlinkFormMut.mutate(); }}>
+                Verknüpfung aufheben
+              </Button>
+            )}
           </div>
-          {step.form_id && form && <FormFieldsEditor form={form} />}
-          {!step.form_id && <p className="text-sm text-muted-foreground">Für diesen Schritt ist noch kein Formular hinterlegt.</p>}
+
+          {!step.form_id && (
+            <div className="space-y-3 rounded border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">
+                Vorhandenes Formular aus dem Service Designer verknüpfen (bevorzugt — vermeidet Duplikate)
+                oder neues, schritt-eigenes Formular anlegen.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select onValueChange={(v) => v && linkFormMut.mutate(v)}>
+                  <SelectTrigger className="w-72"><SelectValue placeholder="Vorhandenes Formular verknüpfen…" /></SelectTrigger>
+                  <SelectContent>
+                    {globalForms.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">Keine globalen Formulare vorhanden.</div>}
+                    {globalForms.map(gf => (
+                      <SelectItem key={gf.id} value={gf.id}>{gf.name} · v{gf.version}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-muted-foreground">oder</span>
+                <Button size="sm" variant="outline" onClick={() => createFormMut.mutate()}>
+                  <Plus className="h-4 w-4 mr-1" />Neues Formular
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step.form_id && form && (
+            <>
+              <div className="text-xs text-muted-foreground mb-2">
+                Verknüpftes Formular: <span className="font-medium">{form.name}</span>
+                {form.scope === "global" && <Badge variant="outline" className="ml-2 text-xs">Global (Service Designer)</Badge>}
+              </div>
+              <FormFieldsEditor form={form} />
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
