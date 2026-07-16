@@ -757,8 +757,8 @@ function GlobalFormLibrary() {
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
 
   const { data: forms = [], isLoading } = useQuery({
-    queryKey: ["form-definitions", "global"],
-    queryFn: () => api.formDefinitions.list({ scope: "global" }),
+    queryKey: ["form-definitions", "all"],
+    queryFn: () => api.formDefinitions.list(),
   });
 
   const createMut = useMutation({
@@ -766,7 +766,7 @@ function GlobalFormLibrary() {
     onSuccess: (f) => {
       toast.success("Formular angelegt");
       setNewName("");
-      qc.invalidateQueries({ queryKey: ["form-definitions", "global"] });
+      qc.invalidateQueries({ queryKey: ["form-definitions"] });
       setSelectedFormId(f.id);
     },
     onError: (e: any) => toast.error(e.message || "Fehler"),
@@ -776,7 +776,7 @@ function GlobalFormLibrary() {
     mutationFn: (id: string) => api.formDefinitions.remove(id),
     onSuccess: () => {
       toast.success("Gelöscht");
-      qc.invalidateQueries({ queryKey: ["form-definitions", "global"] });
+      qc.invalidateQueries({ queryKey: ["form-definitions"] });
       setSelectedFormId(null);
     },
     onError: (e: any) => toast.error(e.message || "Löschen fehlgeschlagen"),
@@ -804,6 +804,7 @@ function GlobalFormLibrary() {
             {forms.map(f => (
               <div key={f.id} className={`flex items-center gap-1 rounded px-2 py-2 cursor-pointer ${selectedFormId === f.id ? "bg-primary/10" : "hover:bg-muted"}`} onClick={() => setSelectedFormId(f.id)}>
                 <span className="flex-1 text-sm truncate">{f.name}</span>
+                <Badge variant="outline" className="text-xs">{f.scope === "global" ? "global" : "Vorlage"}</Badge>
                 <Badge variant="outline" className="text-xs">v{f.version}</Badge>
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); if (confirm(`Formular „${f.name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
               </div>
