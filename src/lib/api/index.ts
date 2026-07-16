@@ -301,6 +301,7 @@ export const api = {
   // ---- Phase 3: unified Prozess-Designer ----
   processTemplates,
   processTemplateSteps,
+  processStepRawMaterials,
   formDefinitions,
   formFields,
 
