@@ -36,7 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Settings2, Eye, AlertTriangle, CheckCircle2, MoreVertical, Pencil, Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { Plus, Settings2, Eye, AlertTriangle, CheckCircle2, MoreVertical, Pencil, Archive, ArchiveRestore, Trash2, FormInput } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
@@ -136,6 +136,7 @@ export default function AdminServicesPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [editService, setEditService] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [formLinksService, setFormLinksService] = useState<any | null>(null);
 
 
   const handleToggle = async (id: string, active: boolean) => {
@@ -350,6 +351,9 @@ export default function AdminServicesPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditService(s)}>
                         <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setFormLinksService(s)}>
+                        <FormInput className="h-4 w-4 mr-2" /> Formulare verknüpfen
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleToggle(s.id, !s.active)} disabled={archived}>
                         {s.active ? (
