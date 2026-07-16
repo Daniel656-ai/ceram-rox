@@ -28,6 +28,7 @@ import PortfolioDashboardTab from "@/components/PortfolioDashboardTab";
 import PortfolioStructureTab from "@/components/portfolio/PortfolioStructureTab";
 import PortfolioFundingMappingTab from "@/components/portfolio/PortfolioFundingMappingTab";
 import PortfolioFfgReportTab from "@/components/portfolio/PortfolioFfgReportTab";
+import PortfolioTimeEntries from "@/components/portfolio/PortfolioTimeEntries";
 import { useCanManagePortfolio } from "@/hooks/useCanManagePortfolio";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -301,6 +302,7 @@ export default function PortfolioDetailPage() {
           <TabsTrigger value="mapping">Förder-Zuordnungen</TabsTrigger>
           <TabsTrigger value="ffg">FFG-Bericht</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard &amp; KPIs</TabsTrigger>
+          {canManageStructure && <TabsTrigger value="time">Zeiterfassung</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="structure" className="mt-4">
@@ -314,6 +316,12 @@ export default function PortfolioDetailPage() {
         <TabsContent value="ffg" className="mt-4">
           <PortfolioFfgReportTab portfolioId={portfolioId} portfolioName={portfolio.name} />
         </TabsContent>
+
+        {canManageStructure && (
+          <TabsContent value="time" className="mt-4">
+            <PortfolioTimeEntries portfolioId={portfolioId} />
+          </TabsContent>
+        )}
 
 
 
