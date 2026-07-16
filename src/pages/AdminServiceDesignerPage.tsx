@@ -84,7 +84,8 @@ export default function AdminServiceDesignerPage() {
 function TemplateList({ navigate }: { navigate: (p: string) => void }) {
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "library" ? "library" : "templates";
+  const tabParam = searchParams.get("tab");
+  const initialTab = tabParam === "library" ? "library" : tabParam === "mapping" ? "mapping" : "templates";
   const [filterKind, setFilterKind] = useState<"all" | ProcessKind>("all");
   const [newOpen, setNewOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -140,11 +141,13 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
         <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-2" />Neue Vorlage</Button>
       </div>
 
-      <Tabs value={initialTab} onValueChange={(v) => setSearchParams(v === "library" ? { tab: "library" } : {}, { replace: true })}>
+      <Tabs value={initialTab} onValueChange={(v) => setSearchParams(v === "templates" ? {} : { tab: v }, { replace: true })}>
         <TabsList>
           <TabsTrigger value="templates"><Layers className="h-4 w-4 mr-1" />Vorlagen & Snippets</TabsTrigger>
           <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek (Service Designer)</TabsTrigger>
+          <TabsTrigger value="mapping"><LinkIcon className="h-4 w-4 mr-1" />Auftragsart-Zuordnung</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="templates" className="mt-4 space-y-4">
           <div className="flex gap-2">
@@ -186,7 +189,12 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
         <TabsContent value="library" className="mt-4">
           <GlobalFormLibrary />
         </TabsContent>
+
+        <TabsContent value="mapping" className="mt-4">
+          <OrderKindMappingTab />
+        </TabsContent>
       </Tabs>
+
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent>
