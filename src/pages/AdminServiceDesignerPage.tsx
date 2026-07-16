@@ -128,16 +128,16 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2"><Layers className="h-6 w-6" /> Prozess-Designer</h1>
-          <p className="text-sm text-muted-foreground">Zentrale Vorlagen für Labor-Dienstleistungen und Pilot-Plant-Prozesse.</p>
+          <h1 className="text-2xl font-semibold flex items-center gap-2"><Layers className="h-6 w-6" /> Service- & Prozess-Designer</h1>
+          <p className="text-sm text-muted-foreground">Formular-Bibliothek (Service Designer) und zentrale Vorlagen für Labor- & Pilot-Plant-Prozesse.</p>
         </div>
         <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-2" />Neue Vorlage</Button>
       </div>
 
-      <Tabs defaultValue="templates">
+      <Tabs value={initialTab} onValueChange={(v) => setSearchParams(v === "library" ? { tab: "library" } : {}, { replace: true })}>
         <TabsList>
           <TabsTrigger value="templates"><Layers className="h-4 w-4 mr-1" />Vorlagen & Snippets</TabsTrigger>
-          <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek</TabsTrigger>
+          <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek (Service Designer)</TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates" className="mt-4 space-y-4">
