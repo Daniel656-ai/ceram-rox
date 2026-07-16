@@ -1,9 +1,14 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FormInput, Layers, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FormInput, Layers, FileText, Calculator } from "lucide-react";
 import type { ProcessTemplate } from "@/lib/api/processTemplates";
+import { evaluateFormula, extractReferences } from "@/lib/formulaEngine";
+import type { Calculation } from "./CalculationsDesigner";
 
 export default function ServicePreviewTab({ template }: { template: ProcessTemplate }) {
   const meta = (template.metadata ?? {}) as Record<string, any>;
@@ -101,15 +106,17 @@ export default function ServicePreviewTab({ template }: { template: ProcessTempl
         </CardContent>
       </Card>
 
+      <CalcPreview meta={meta} />
+
       <Card className="lg:col-span-2 border-dashed">
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
-            <FileText className="h-4 w-4" /> Berichtsvorschau (in Vorbereitung)
+            <FileText className="h-4 w-4" /> Berichtsvorschau
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Wird verfügbar, sobald die Berichtsvorlage konfiguriert ist.
+            Bericht wird beim Auftragsabschluss aus den obigen Formularen und Berechnungen automatisch generiert (Single Source of Truth).
           </p>
         </CardContent>
       </Card>
