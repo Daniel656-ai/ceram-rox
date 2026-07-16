@@ -19,7 +19,7 @@ interface Props {
   disabled?: boolean;
 }
 
-const SOURCES = Object.keys(BINDING_PRESETS) as BindingSource[];
+
 
 const SOURCE_GROUPS: { label: string; sources: BindingSource[] }[] = [
   { label: "Auftrag & Kontext", sources: ["order", "project", "sample"] },
