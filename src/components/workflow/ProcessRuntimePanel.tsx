@@ -59,6 +59,31 @@ export function ProcessRuntimePanel({ legacyOrderId, orderInstanceId }: Props) {
     enabled: !!instanceId,
   });
 
+  // Kind aus template_snapshot oder Live-Template ermitteln.
+  const snapshotKind = (instance?.template_snapshot as any)?.kind as string | undefined;
+  const { data: template } = useQuery({
+    queryKey: ["process-template-kind", instance?.template_id],
+    queryFn: () => api.processTemplates.get(instance!.template_id!),
+    enabled: !!instance?.template_id && !snapshotKind,
+  });
+  const kind = snapshotKind ?? template?.kind ?? null;
+  const isPilotPlant = kind === "pilot_plant";
+
+  // Aktuellen Schritt automatisch aufklappen (Pilot Plant).
+  const currentRun = useMemo(
+    () =>
+      runs.find((r) => r.status === "in_progress") ??
+      runs.find((r) => r.status !== "completed" && r.status !== "skipped") ??
+      null,
+    [runs],
+  );
+  const [openStepId, setOpenStepId] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (isPilotPlant && currentRun && !openStepId) {
+      setOpenStepId(currentRun.id);
+    }
+  }, [isPilotPlant, currentRun, openStepId]);
+
   if (loadingInstance || loadingRuns) {
     return (
       <Card>
@@ -77,39 +102,55 @@ export function ProcessRuntimePanel({ legacyOrderId, orderInstanceId }: Props) {
   const done = runs.filter((r) => r.status === "completed").length;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle className="text-base flex items-center gap-2">
-            Prozessablauf
-            {locked && <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" /> Gesperrt</Badge>}
-          </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            {done} / {runs.length} Schritte erledigt
-            {instance.order_number ? ` · ${instance.order_number}` : ""}
-          </p>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {runs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Keine Prozessschritte vorhanden.</p>
-        ) : (
-          <Accordion type="single" collapsible className="w-full">
-            {runs.map((run) => (
-              <StepRunItem
-                key={run.id}
-                run={run}
-                locked={locked}
-                onChanged={() => {
-                  qc.invalidateQueries({ queryKey: ["order-step-runs", instanceId] });
-                  qc.invalidateQueries({ queryKey: ["order-instance", orderInstanceId ?? legacyOrderId] });
-                }}
-              />
-            ))}
-          </Accordion>
-        )}
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      {isPilotPlant && runs.length > 0 && (
+        <PilotPlantGuidedStepper
+          runs={runs}
+          activeRunId={openStepId ?? currentRun?.id ?? null}
+          onSelect={(id) => setOpenStepId(id)}
+        />
+      )}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              {isPilotPlant && <Factory className="h-4 w-4 text-primary" />}
+              Prozessablauf
+              {locked && <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" /> Gesperrt</Badge>}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              {done} / {runs.length} Schritte erledigt
+              {instance.order_number ? ` · ${instance.order_number}` : ""}
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {runs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Keine Prozessschritte vorhanden.</p>
+          ) : (
+            <Accordion
+              type="single"
+              collapsible
+              className="w-full"
+              value={openStepId}
+              onValueChange={(v) => setOpenStepId(v || undefined)}
+            >
+              {runs.map((run) => (
+                <StepRunItem
+                  key={run.id}
+                  run={run}
+                  locked={locked}
+                  onChanged={() => {
+                    qc.invalidateQueries({ queryKey: ["order-step-runs", instanceId] });
+                    qc.invalidateQueries({ queryKey: ["order-instance", orderInstanceId ?? legacyOrderId] });
+                  }}
+                />
+              ))}
+            </Accordion>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
