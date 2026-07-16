@@ -486,20 +486,49 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
 
 // ---------------- Template Meta ----------------
 function TemplateMetaEditor({ template, onSave }: { template: ProcessTemplate; onSave: (u: Partial<ProcessTemplate>) => void }) {
+  const meta = (template.metadata ?? {}) as Record<string, any>;
   const [name, setName] = useState(template.name);
   const [desc, setDesc] = useState(template.description ?? "");
   const [category, setCategory] = useState(template.category ?? "");
   const [isActive, setIsActive] = useState(template.is_active);
+  const [responsible, setResponsible] = useState<string>(meta.responsible ?? "");
+  const [billing, setBilling] = useState<string>(meta.billing ?? "");
+  const [duration, setDuration] = useState<string>(meta.duration ?? "");
+  const [cost, setCost] = useState<string>(meta.cost ?? "");
   return (
-    <Card><CardContent className="pt-6 space-y-4 max-w-2xl">
-      <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+    <Card><CardContent className="pt-6 space-y-4 max-w-3xl">
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+        <div><Label>Kategorie</Label><Input value={category} onChange={e => setCategory(e.target.value)} /></div>
+      </div>
       <div><Label>Beschreibung</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} /></div>
-      <div><Label>Kategorie</Label><Input value={category} onChange={e => setCategory(e.target.value)} /></div>
-      <div className="flex items-center gap-2"><Switch checked={isActive} onCheckedChange={setIsActive} /><Label>Aktiv</Label></div>
-      <Button onClick={() => onSave({ name: name.trim(), description: desc.trim() || null, category: category.trim() || null, is_active: isActive })}>Speichern</Button>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Verantwortlicher</Label><Input value={responsible} onChange={e => setResponsible(e.target.value)} placeholder="z. B. Abteilungsleiter Labor" /></div>
+        <div><Label>Abrechnung</Label><Input value={billing} onChange={e => setBilling(e.target.value)} placeholder="z. B. pauschal, pro Stunde" /></div>
+        <div><Label>Dauer</Label><Input value={duration} onChange={e => setDuration(e.target.value)} placeholder="z. B. 2 h" /></div>
+        <div><Label>Kosten</Label><Input value={cost} onChange={e => setCost(e.target.value)} placeholder="z. B. 250 €" /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Version</Label><Input value={`v${template.version}`} disabled /></div>
+        <div className="flex items-end gap-2"><Switch checked={isActive} onCheckedChange={setIsActive} /><Label>Aktiv</Label></div>
+      </div>
+      <Button onClick={() => onSave({
+        name: name.trim(),
+        description: desc.trim() || null,
+        category: category.trim() || null,
+        is_active: isActive,
+        metadata: {
+          ...(template.metadata ?? {}),
+          responsible: responsible.trim() || undefined,
+          billing: billing.trim() || undefined,
+          duration: duration.trim() || undefined,
+          cost: cost.trim() || undefined,
+        },
+      } as any)}>Speichern</Button>
     </CardContent></Card>
   );
 }
+
 
 // ---------------- Step Editor ----------------
 function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void }) {
