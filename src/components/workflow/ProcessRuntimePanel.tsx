@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { evaluateFormula } from "@/lib/formulaEngine";
 import { PilotPlantGuidedStepper } from "./PilotPlantGuidedStepper";
 import { StepMaterialAvailability, useStepStartBlocked } from "./StepMaterialAvailability";
+import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
 
 interface Props {
   /** Legacy measurement_orders.id — used to locate the linked order_instance. */
