@@ -567,6 +567,10 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
             </>
           )}
         </div>
+
+        <div className="border-t pt-4">
+          <ProcessStepRawMaterials stepId={step.id} />
+        </div>
       </CardContent>
     </Card>
   );
