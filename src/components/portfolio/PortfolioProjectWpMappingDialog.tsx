@@ -196,6 +196,15 @@ export default function PortfolioProjectWpMappingDialog({ open, onOpenChange, ta
               Jedes Projekt-AP darf nur einem Portfolio-Arbeitspaket zugeordnet werden.
             </p>
           )}
+          {target && (
+            <p className="text-xs text-muted-foreground">
+              {target.categoryId ? (
+                <>Kategoriefilter aktiv: Nur Projekt-APs mit Kategorie <b>{target.categoryName ?? "—"}</b> werden angezeigt.</>
+              ) : (
+                <>Für dieses {target.kind === "wp" ? "Portfolio-AP" : "übergeordnete Portfolio-AP"} ist keine Kategorie hinterlegt – es werden Projekt-APs aller Kategorien angezeigt.</>
+              )}
+            </p>
+          )}
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
