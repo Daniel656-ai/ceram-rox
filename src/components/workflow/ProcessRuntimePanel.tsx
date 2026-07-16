@@ -16,6 +16,7 @@ import { CheckCircle2, Circle, Clock, Lock, PlayCircle, Loader2, Info, Factory }
 import { toast } from "sonner";
 import { evaluateFormula } from "@/lib/formulaEngine";
 import { PilotPlantGuidedStepper } from "./PilotPlantGuidedStepper";
+import { StepMaterialAvailability, useStepStartBlocked } from "./StepMaterialAvailability";
 
 interface Props {
   /** Legacy measurement_orders.id — used to locate the linked order_instance. */
