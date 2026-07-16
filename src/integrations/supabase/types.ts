@@ -2423,6 +2423,38 @@ export type Database = {
           },
         ]
       }
+      order_kind_form_templates: {
+        Row: {
+          created_at: string
+          form_definition_id: string
+          order_kind: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          form_definition_id: string
+          order_kind: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          form_definition_id?: string
+          order_kind?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_kind_form_templates_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_measurements: {
         Row: {
           actual_duration_hours: number | null

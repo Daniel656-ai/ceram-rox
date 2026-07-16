@@ -164,6 +164,7 @@ import { orderWorkflow } from "./orderWorkflow";
 import { orderInstances } from "./orderInstances";
 import { orderStepRuns, orderStepPositions } from "./orderStepRuns";
 import { workflowEngine } from "./workflowEngine";
+import { orderKindFormTemplates } from "./orderKindFormTemplates";
 
 
 
@@ -324,6 +325,7 @@ export const api = {
   orderStepRuns,
   orderStepPositions,
   workflowEngine,
+  orderKindFormTemplates,
 
 
 

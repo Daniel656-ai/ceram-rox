@@ -27,6 +27,7 @@ import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
+import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
 
 interface SelectedMeasurement {
   uid: string;
@@ -210,6 +211,10 @@ export default function CreateOrderPage() {
     masse_type: "__none__" as string,
     remarks: "",
   });
+  // Dynamic template-driven values keyed by field_key (loaded per order kind
+  // from order_kind_form_templates). No hardcoded field list.
+  const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
+  const [dynamicFormId, setDynamicFormId] = useState<string | null>(null);
   // Analysis requests pool (Pilot Plant / Combined orders): pre-planned analyses without a sample yet
   const [analysisRequests, setAnalysisRequests] = useState<Array<{ uid: string; service_id: string; service_name: string; quantity: number }>>([]);
 
@@ -413,6 +418,23 @@ export default function CreateOrderPage() {
           });
         } catch (err: any) {
           toast.error(`Pilot-Plant-Bausteine: ${err.message}`);
+        }
+      }
+
+      // Persist template-driven dynamic form values (no hardcoded fields).
+      if (dynamicFormId && Object.keys(dynamicValues).length > 0) {
+        try {
+          await api.orderSharedFormData.merge(order.id, {
+            template: {
+              form_definition_id: dynamicFormId,
+              order_kind: orderKind,
+              values: dynamicValues,
+              saved_at: new Date().toISOString(),
+              saved_by: user.id,
+            },
+          });
+        } catch (err: any) {
+          toast.error(`Formularvorlage: ${err.message}`);
         }
       }
 
@@ -701,7 +723,19 @@ export default function CreateOrderPage() {
           </Card>
         )}
 
-        {(orderKind === "pilot_plant" || orderKind === "combined") && (
+        {/* Dynamic, template-driven form for the selected Auftragsart.
+            Fields, sections, labels and validations come exclusively from the
+            configured template — never from code. */}
+        <OrderKindDynamicForm
+          orderKind={orderKind}
+          values={dynamicValues}
+          onChange={(patch) => setDynamicValues((prev) => ({ ...prev, ...patch }))}
+          onTemplateResolved={setDynamicFormId}
+        />
+
+        {/* Legacy Pilot Plant Stammdaten — only rendered when no template is
+            mapped for this order kind, to preserve backward compatibility. */}
+        {(orderKind === "pilot_plant" || orderKind === "combined") && !dynamicFormId && (
           <Card>
             <CardHeader><CardTitle className="text-base">{t("orders:tabs.pilot_plant")}</CardTitle></CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
@@ -735,6 +769,7 @@ export default function CreateOrderPage() {
             </CardContent>
           </Card>
         )}
+
 
         {(orderKind === "pilot_plant" || orderKind === "combined") && (
           <Card>

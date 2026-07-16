@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle, LinkIcon } from "lucide-react";
 import type { ProcessKind, ProcessTemplate } from "@/lib/api/processTemplates";
 import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
@@ -28,6 +28,7 @@ import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer"
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
+import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
@@ -83,7 +84,8 @@ export default function AdminServiceDesignerPage() {
 function TemplateList({ navigate }: { navigate: (p: string) => void }) {
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") === "library" ? "library" : "templates";
+  const tabParam = searchParams.get("tab");
+  const initialTab = tabParam === "library" ? "library" : tabParam === "mapping" ? "mapping" : "templates";
   const [filterKind, setFilterKind] = useState<"all" | ProcessKind>("all");
   const [newOpen, setNewOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -139,11 +141,13 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
         <Button onClick={() => setNewOpen(true)}><Plus className="h-4 w-4 mr-2" />Neue Vorlage</Button>
       </div>
 
-      <Tabs value={initialTab} onValueChange={(v) => setSearchParams(v === "library" ? { tab: "library" } : {}, { replace: true })}>
+      <Tabs value={initialTab} onValueChange={(v) => setSearchParams(v === "templates" ? {} : { tab: v }, { replace: true })}>
         <TabsList>
           <TabsTrigger value="templates"><Layers className="h-4 w-4 mr-1" />Vorlagen & Snippets</TabsTrigger>
           <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek (Service Designer)</TabsTrigger>
+          <TabsTrigger value="mapping"><LinkIcon className="h-4 w-4 mr-1" />Auftragsart-Zuordnung</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="templates" className="mt-4 space-y-4">
           <div className="flex gap-2">
@@ -185,7 +189,12 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
         <TabsContent value="library" className="mt-4">
           <GlobalFormLibrary />
         </TabsContent>
+
+        <TabsContent value="mapping" className="mt-4">
+          <OrderKindMappingTab />
+        </TabsContent>
       </Tabs>
+
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent>
