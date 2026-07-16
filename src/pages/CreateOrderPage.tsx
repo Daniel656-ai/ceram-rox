@@ -706,7 +706,19 @@ export default function CreateOrderPage() {
           </Card>
         )}
 
-        {(orderKind === "pilot_plant" || orderKind === "combined") && (
+        {/* Dynamic, template-driven form for the selected Auftragsart.
+            Fields, sections, labels and validations come exclusively from the
+            configured template — never from code. */}
+        <OrderKindDynamicForm
+          orderKind={orderKind}
+          values={dynamicValues}
+          onChange={(patch) => setDynamicValues((prev) => ({ ...prev, ...patch }))}
+          onTemplateResolved={setDynamicFormId}
+        />
+
+        {/* Legacy Pilot Plant Stammdaten — only rendered when no template is
+            mapped for this order kind, to preserve backward compatibility. */}
+        {(orderKind === "pilot_plant" || orderKind === "combined") && !dynamicFormId && (
           <Card>
             <CardHeader><CardTitle className="text-base">{t("orders:tabs.pilot_plant")}</CardTitle></CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
@@ -740,6 +752,7 @@ export default function CreateOrderPage() {
             </CardContent>
           </Card>
         )}
+
 
         {(orderKind === "pilot_plant" || orderKind === "combined") && (
           <Card>
