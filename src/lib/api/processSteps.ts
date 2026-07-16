@@ -18,6 +18,10 @@ export interface ProcessStep {
   escalation_role: string | null;
   position_source: string | null;
   metadata: Record<string, unknown>;
+  /** Role view key to open (falls back to the user's role, then default). */
+  role_view_key: string | null;
+  /** Field IDs that are locked (read-only) after this step is completed. */
+  locked_field_ids: string[];
   created_at: string;
   updated_at: string;
 }
