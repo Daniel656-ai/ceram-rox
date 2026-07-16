@@ -453,20 +453,23 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
 
   const createFormMut = useMutation({
     mutationFn: async () => {
-      const f = await api.formDefinitions.create({ name: `Formular: ${step.name}`, scope: "template" });
+      // Neu angelegte Formulare landen direkt in der globalen Bibliothek,
+      // damit sie in weiteren Prozessschritten wiederverwendet werden können.
+      const f = await api.formDefinitions.create({ name: `Formular: ${step.name}`, scope: "global" });
       await api.processTemplateSteps.update(step.id, { form_id: f.id });
       return f;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); onSaved(); toast.success("Formular angelegt"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); qc.invalidateQueries({ queryKey: ["form-definitions"] }); onSaved(); toast.success("Formular angelegt"); },
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
-  // Vorhandene globale Formulare (aus Service Designer) verknüpfbar machen —
-  // vermeidet doppelte Formulare pro Prozessschritt.
-  const { data: globalForms = [] } = useQuery({
-    queryKey: ["form-definitions", "global"],
-    queryFn: () => api.formDefinitions.list({ scope: "global" }),
+  // Alle vorhandenen Formularvorlagen zur Verknüpfung anbieten (global + template-eigene),
+  // damit im Service/Prozess-Designer angelegte Formulare hier ausgewählt werden können.
+  const { data: allForms = [] } = useQuery({
+    queryKey: ["form-definitions", "all"],
+    queryFn: () => api.formDefinitions.list(),
   });
+  const linkableForms = allForms.filter(f => f.id !== step.form_id);
 
   const linkFormMut = useMutation({
     mutationFn: async (formId: string) => api.processTemplateSteps.update(step.id, { form_id: formId }),
