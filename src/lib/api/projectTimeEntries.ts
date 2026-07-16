@@ -1,6 +1,10 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 
+type Scope =
+  | { project_id: string; portfolio_id?: undefined }
+  | { portfolio_id: string; project_id?: undefined };
+
 export const projectTimeEntries = {
   list: (projectId: string, orderId?: string) => {
     let q = dbClient
@@ -12,14 +16,23 @@ export const projectTimeEntries = {
     return unwrap(q);
   },
 
-  create: (entry: {
-    project_id: string;
+  listForPortfolio: (portfolioId: string) =>
+    unwrap(
+      dbClient
+        .from("project_time_entries")
+        .select("*")
+        .eq("portfolio_id", portfolioId)
+        .order("entry_date", { ascending: false })
+    ),
+
+  create: (entry: Scope & {
     person_id: string;
     entry_date: string;
     duration_minutes: number;
     note: string;
     order_id?: string;
     work_package_id?: string | null;
+    portfolio_work_package_id?: string | null;
     portfolio_task_id?: string | null;
     created_by: string;
   }) =>
@@ -30,26 +43,28 @@ export const projectTimeEntries = {
         .single()
     ),
 
-  createMeeting: async (meeting: {
-    project_id: string;
+  createMeeting: async (meeting: Scope & {
     person_ids: string[];
     entry_date: string;
     duration_minutes: number;
     note: string;
     order_id?: string;
     work_package_id?: string | null;
+    portfolio_work_package_id?: string | null;
     portfolio_task_id?: string | null;
     created_by: string;
   }) => {
     const meeting_group_id = (globalThis.crypto as any).randomUUID();
     const rows = meeting.person_ids.map((pid) => ({
-      project_id: meeting.project_id,
+      project_id: (meeting as any).project_id ?? null,
+      portfolio_id: (meeting as any).portfolio_id ?? null,
       person_id: pid,
       entry_date: meeting.entry_date,
       duration_minutes: meeting.duration_minutes,
       note: meeting.note,
       order_id: meeting.order_id,
       work_package_id: meeting.work_package_id ?? null,
+      portfolio_work_package_id: meeting.portfolio_work_package_id ?? null,
       portfolio_task_id: meeting.portfolio_task_id ?? null,
       created_by: meeting.created_by,
       entry_type: "meeting",
@@ -66,6 +81,7 @@ export const projectTimeEntries = {
       duration_minutes?: number;
       note?: string;
       work_package_id?: string | null;
+      portfolio_work_package_id?: string | null;
       portfolio_task_id?: string | null;
     }
   ) => run((dbClient.from("project_time_entries") as any).update(updates).eq("id", id)),
