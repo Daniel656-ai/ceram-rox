@@ -7,7 +7,7 @@ import {
 } from "@dnd-kit/core";
 import { api } from "@/lib/api";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
-import type { FormField } from "@/lib/api/formFields";
+import { type FormField, readRepeaterMeta, writeRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import {
   type LayoutNode, type LayoutNodeType, type FormLayoutTree,
   type LayoutWidth, type FieldNode,
