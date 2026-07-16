@@ -123,3 +123,78 @@ export default function ServicePreviewTab({ template }: { template: ProcessTempl
     </div>
   );
 }
+
+function CalcPreview({ meta }: { meta: Record<string, any> }) {
+  const calcs: Calculation[] = Array.isArray(meta.calculations) ? meta.calculations : [];
+  const refs = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of calcs) extractReferences(c.formula).forEach((r) => s.add(r));
+    for (const c of calcs) s.delete(c.key);
+    return Array.from(s);
+  }, [calcs]);
+  const [vals, setVals] = useState<Record<string, string>>({});
+
+  const results = useMemo(() => {
+    const ctx: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(vals)) {
+      const n = Number(v.replace(",", "."));
+      ctx[k] = isFinite(n) ? n : v;
+    }
+    return calcs.map((c) => {
+      const r = evaluateFormula(c.formula, ctx);
+      if (r.value != null) ctx[c.key] = r.value;
+      return { c, r };
+    });
+  }, [calcs, vals]);
+
+  if (calcs.length === 0) return null;
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Calculator className="h-4 w-4" /> Berechnungen (Live-Simulation)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {refs.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {refs.map((r) => (
+              <div key={r}>
+                <Label className="text-xs font-mono">{r}</Label>
+                <Input
+                  value={vals[r] ?? ""}
+                  onChange={(e) => setVals({ ...vals, [r]: e.target.value })}
+                  placeholder="Testwert"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="space-y-1">
+          {results.map(({ c, r }) => (
+            <div
+              key={c.key}
+              className="flex items-center gap-2 text-sm border rounded px-2 py-1.5"
+            >
+              <span className="flex-1">{c.label}</span>
+              <span className="font-mono">
+                {r.value != null
+                  ? Number(r.value).toFixed(c.decimals ?? 2)
+                  : r.error
+                    ? "—"
+                    : "—"}
+                {c.unit ? ` ${c.unit}` : ""}
+              </span>
+              {r.error && (
+                <Badge variant="destructive" className="text-[10px]">
+                  {r.error}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
