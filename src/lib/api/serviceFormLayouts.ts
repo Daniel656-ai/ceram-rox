@@ -91,11 +91,20 @@ export const BINDING_PRESETS: Record<BindingSource, { label: string; presets: { 
     presets: [
       { path: "order_number", label: "Auftragsnummer" },
       { path: "order_type", label: "Auftragstyp" },
+      { path: "order_kind", label: "Auftragsart" },
       { path: "status", label: "Status" },
+      { path: "workflow_status", label: "Workflow-Status" },
       { path: "priority", label: "Priorität" },
       { path: "due_date", label: "Fälligkeitsdatum" },
-      { path: "created_at", label: "Erstellt am" },
+      { path: "created_at", label: "Erstellungsdatum" },
+      { path: "started_at", label: "Startdatum" },
+      { path: "completed_at", label: "Enddatum" },
       { path: "notes", label: "Anmerkungen" },
+      { path: "pp_experiment_number", label: "Versuchsnummer" },
+      { path: "pp_v2o5_percent", label: "% V₂O₅" },
+      { path: "pp_masse_type", label: "Massetyp" },
+      { path: "created_by_name", label: "Ersteller / Auftraggeber" },
+      { path: "responsible_name", label: "Verantwortlicher" },
     ],
   },
   project: {
@@ -104,8 +113,10 @@ export const BINDING_PRESETS: Record<BindingSource, { label: string; presets: { 
       { path: "project_number", label: "Projektnummer" },
       { path: "project_name", label: "Projektname" },
       { path: "project_manager", label: "Projektleiter" },
-      { path: "customer", label: "Auftraggeber" },
+      { path: "customer", label: "Kunde" },
       { path: "start_date", label: "Projektstart" },
+      { path: "end_date", label: "Projektende" },
+      { path: "status", label: "Projektstatus" },
     ],
   },
   sample: {
@@ -115,29 +126,88 @@ export const BINDING_PRESETS: Record<BindingSource, { label: string; presets: { 
       { path: "sample_name", label: "Probenname / Versuchsnummer" },
       { path: "description", label: "Beschreibung" },
       { path: "material_type", label: "Massetyp" },
+      { path: "is_hazardous", label: "Gefahrgut" },
     ],
   },
   customer_form: {
     label: "Auftraggeberformular",
     presets: [
-      { path: "V2O5", label: "%V₂O₅" },
-      { path: "art_des_versuches", label: "Art des Versuches" },
-      { path: "massetyp", label: "Massetyp" },
-      { path: "frühere_versuche", label: "Frühere Versuche" },
+      { path: "*", label: "Alle Felder" },
+      { path: "rezeptbasis", label: "Rezeptbasis" },
+      { path: "hauptrohstoff", label: "Hauptrohstoff" },
+      { path: "lotnummer", label: "Lotnummer" },
+      { path: "variante", label: "Variante" },
+      { path: "versuchsziel", label: "Versuchsziel" },
+      { path: "zusatzstoffe", label: "Zusatzstoffe (Repeater)" },
+      { path: "bemerkungen", label: "Bemerkungen" },
     ],
   },
   employee_form: {
     label: "Messdienstleisterformular",
-    presets: [],
+    presets: [
+      { path: "*", label: "Alle Felder" },
+    ],
   },
   measurement_parameter: {
     label: "Prozessparameter (Messung)",
-    presets: [],
+    presets: [
+      { path: "*", label: "Alle Prozessparameter (Tabelle)" },
+    ],
   },
   measurement_result: {
     label: "Messergebnis",
     presets: [
       { path: "*", label: "Alle Ergebnisse (Tabelle)" },
+    ],
+  },
+  workflow: {
+    label: "Workflow",
+    presets: [
+      { path: "steps", label: "Alle Prozessschritte (Tabelle)" },
+      { path: "completed_steps", label: "Erledigte Schritte" },
+      { path: "current_step", label: "Aktueller Schritt" },
+      { path: "approvals", label: "Freigaben" },
+    ],
+  },
+  raw_material: {
+    label: "Rohstoffe",
+    presets: [
+      { path: "*", label: "Alle verwendeten Rohstoffe" },
+      { path: "recipe", label: "Rezeptur (Tabelle)" },
+      { path: "consumed_lots", label: "Verbrauchte Lotnummern" },
+    ],
+  },
+  service: {
+    label: "Dienstleistungen",
+    presets: [
+      { path: "*", label: "Alle Dienstleistungen (Tabelle)" },
+      { path: "names", label: "Namen der Dienstleistungen" },
+      { path: "categories", label: "Kategorien" },
+    ],
+  },
+  worklog: {
+    label: "Arbeitszeiten",
+    presets: [
+      { path: "*", label: "Alle Arbeitszeiten (Tabelle)" },
+      { path: "total_hours", label: "Gesamtstunden" },
+      { path: "by_user", label: "Stunden pro Mitarbeiter" },
+    ],
+  },
+  attachment: {
+    label: "Anhänge / Fotos",
+    presets: [
+      { path: "*", label: "Alle Anhänge (Liste)" },
+      { path: "photos", label: "Nur Fotos" },
+      { path: "documents", label: "Nur Dokumente" },
+    ],
+  },
+  system: {
+    label: "Systemdaten",
+    presets: [
+      { path: "generated_at", label: "Berichts-Erstellungsdatum" },
+      { path: "generated_by", label: "Erzeugt von" },
+      { path: "version_no", label: "Berichtsversion" },
+      { path: "company_name", label: "Firmenname" },
     ],
   },
   computed: {
@@ -146,6 +216,7 @@ export const BINDING_PRESETS: Record<BindingSource, { label: string; presets: { 
       { path: "sum(measurement_result.value)", label: "Summe aller Ergebnisse" },
       { path: "avg(measurement_result.value)", label: "Mittelwert" },
       { path: "count(order_measurements)", label: "Anzahl Messungen" },
+      { path: "sum(worklog.hours)", label: "Summe Arbeitszeiten" },
     ],
   },
   free: {
