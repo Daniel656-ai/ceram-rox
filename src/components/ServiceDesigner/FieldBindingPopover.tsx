@@ -19,11 +19,14 @@ interface Props {
   disabled?: boolean;
 }
 
-const SOURCES: BindingSource[] = [
-  "order", "project", "sample",
-  "customer_form", "employee_form",
-  "measurement_parameter", "measurement_result",
-  "computed", "free",
+const SOURCES = Object.keys(BINDING_PRESETS) as BindingSource[];
+
+const SOURCE_GROUPS: { label: string; sources: BindingSource[] }[] = [
+  { label: "Auftrag & Kontext", sources: ["order", "project", "sample"] },
+  { label: "Formulardaten", sources: ["customer_form", "employee_form"] },
+  { label: "Messungen", sources: ["measurement_parameter", "measurement_result"] },
+  { label: "Prozess & Ressourcen", sources: ["workflow", "raw_material", "service", "worklog", "attachment"] },
+  { label: "Sonstiges", sources: ["system", "computed", "free"] },
 ];
 
 export default function FieldBindingPopover({ binding, onChange, disabled }: Props) {
