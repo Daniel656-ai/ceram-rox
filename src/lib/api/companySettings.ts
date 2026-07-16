@@ -1,12 +1,15 @@
 import { dbClient } from "./client";
 import { unwrap } from "./_helpers";
 
+export type RawMaterialCheckMode = "warn" | "allow" | "block";
+
 export interface CompanySettings {
   id: string;
   company_name: string | null;
   logo_data_url: string | null;
   logo_mime: string | null;
   logo_updated_at: string | null;
+  raw_material_check_mode: RawMaterialCheckMode;
   updated_at: string;
   updated_by: string | null;
 }
@@ -19,7 +22,12 @@ export const companySettings = {
   },
 
   async update(
-    patch: { company_name?: string | null; logo_data_url?: string | null; logo_mime?: string | null },
+    patch: {
+      company_name?: string | null;
+      logo_data_url?: string | null;
+      logo_mime?: string | null;
+      raw_material_check_mode?: RawMaterialCheckMode;
+    },
     userId: string
   ): Promise<CompanySettings> {
     const payload: any = { ...patch, updated_by: userId };
