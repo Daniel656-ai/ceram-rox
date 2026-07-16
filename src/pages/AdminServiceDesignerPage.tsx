@@ -77,6 +77,8 @@ export default function AdminServiceDesignerPage() {
 // ---------------- List View ----------------
 function TemplateList({ navigate }: { navigate: (p: string) => void }) {
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "library" ? "library" : "templates";
   const [filterKind, setFilterKind] = useState<"all" | ProcessKind>("all");
   const [newOpen, setNewOpen] = useState(false);
   const [newName, setNewName] = useState("");
