@@ -157,6 +157,10 @@ import { formDefinitions } from "./formDefinitions";
 import { formFields } from "./formFields";
 import { formRoleViews } from "./formRoleViews";
 import { formFieldPermissions } from "./formFieldPermissions";
+import { serviceFormLinks } from "./serviceFormLinks";
+import { processServiceLinks } from "./processServiceLinks";
+import { workflowProcessLinks } from "./workflowProcessLinks";
+import { orderWorkflow } from "./orderWorkflow";
 import { orderInstances } from "./orderInstances";
 import { orderStepRuns, orderStepPositions } from "./orderStepRuns";
 import { workflowEngine } from "./workflowEngine";
@@ -308,6 +312,12 @@ export const api = {
   formFields,
   formRoleViews,
   formFieldPermissions,
+
+  // ---- Workflow-Architektur: Vorlagen-Verknüpfungen & Auftrags-Instanzen ----
+  serviceFormLinks,
+  processServiceLinks,
+  workflowProcessLinks,
+  orderWorkflow,
 
   // ---- Phase 5: order_instances + workflow engine ----
   orderInstances,
