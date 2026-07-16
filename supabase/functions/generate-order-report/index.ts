@@ -223,7 +223,10 @@ Deno.serve(async (req: Request) => {
     };
 
     // ================= PDF rendern =================
-    const pdf = renderPdf(snapshot, layout);
+    // Bevorzugt: Block-basierte Berichtsvorlage aus Prozess-Template
+    const pdf = reportTemplate?.blocks?.length
+      ? renderBlockTemplate(snapshot, reportTemplate)
+      : renderPdf(snapshot, layout);
     const pdfBuffer = pdf.output("arraybuffer") as ArrayBuffer;
 
     const storagePath = `${orderId}/v${nextVersion}_${Date.now()}.pdf`;
@@ -234,7 +237,8 @@ Deno.serve(async (req: Request) => {
     const versionIns = await userClient.from("order_report_versions").insert({
       report_id: report.id,
       version_no: nextVersion,
-      layout_snapshot: layout ?? {},
+      layout_snapshot: reportTemplate ?? layout ?? {},
+
       data_snapshot: snapshot,
       pdf_storage_path: storagePath,
       change_reason: changeReason,
