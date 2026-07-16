@@ -74,23 +74,41 @@ type DragData =
   | { kind: "move"; nodeId: string };
 
 // ---------- main ----------
-export default function FormLayoutDesigner({ form, canManage }: { form: FormDefinition; canManage: boolean }) {
+export default function FormLayoutDesigner({
+  form,
+  canManage,
+  initialLayout,
+  onSaveLayout,
+  saveLabel = "Speichern",
+  headerTitle = "Formular-Aufbau",
+}: {
+  form: FormDefinition;
+  canManage: boolean;
+  /** Override the layout source. When provided, the form's own layout is not used. */
+  initialLayout?: FormLayoutTree | Record<string, unknown> | null;
+  /** Override how the layout is persisted. Defaults to saving on `form_definitions.layout`. */
+  onSaveLayout?: (layout: FormLayoutTree) => Promise<void>;
+  saveLabel?: string;
+  headerTitle?: string;
+}) {
   const qc = useQueryClient();
   const { data: fields = [] } = useQuery({
     queryKey: ["form-fields", form.id],
     queryFn: () => api.formFields.listForForm(form.id),
   });
 
-  const [layout, setLayout] = useState<FormLayoutTree>(() => normalizeLayout((form as any).layout));
+  const baseLayout = initialLayout ?? (form as any).layout;
+  const [layout, setLayout] = useState<FormLayoutTree>(() => normalizeLayout(baseLayout));
   const [dirty, setDirty] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<DragData | null>(null);
 
   useEffect(() => {
-    setLayout(normalizeLayout((form as any).layout));
+    setLayout(normalizeLayout(initialLayout ?? (form as any).layout));
     setDirty(false);
     setSelectedId(null);
-  }, [form.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.id, initialLayout]);
 
   const used = useMemo(() => collectUsedFieldIds(layout.nodes), [layout]);
   const unusedFields = useMemo(() => fields.filter(f => !used.has(f.id)), [fields, used]);
@@ -114,7 +132,6 @@ export default function FormLayoutDesigner({ form, canManage }: { form: FormDefi
       mutate(prev => {
         const found = findNode(prev.nodes, data.nodeId);
         if (!found) return prev;
-        // prevent dropping a container into itself/descendant
         if (parentId && isDescendant(found, parentId)) return prev;
         const removed = removeNode(prev.nodes, data.nodeId);
         return { ...prev, nodes: insertNode(removed, parentId, index, found) };
@@ -144,11 +161,15 @@ export default function FormLayoutDesigner({ form, canManage }: { form: FormDefi
   };
 
   const saveMut = useMutation({
-    mutationFn: () => api.formDefinitions.update(form.id, { layout: layout as any }),
+    mutationFn: async () => {
+      if (onSaveLayout) return onSaveLayout(layout);
+      return api.formDefinitions.update(form.id, { layout: layout as any });
+    },
     onSuccess: () => {
-      toast.success("Layout gespeichert");
+      toast.success(`${saveLabel} erfolgreich`);
       setDirty(false);
       qc.invalidateQueries({ queryKey: ["form-definitions"] });
+      qc.invalidateQueries({ queryKey: ["form-role-views", form.id] });
     },
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
@@ -187,10 +208,10 @@ export default function FormLayoutDesigner({ form, canManage }: { form: FormDefi
         <div className="col-span-6">
           <Card>
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">Formular-Aufbau</CardTitle>
+              <CardTitle className="text-sm">{headerTitle}</CardTitle>
               <div className="flex gap-2">
                 {dirty && <Badge variant="secondary">Ungespeichert</Badge>}
-                <Button size="sm" variant="ghost" onClick={() => { setLayout(normalizeLayout((form as any).layout)); setDirty(false); setSelectedId(null); }} disabled={!dirty}>
+                <Button size="sm" variant="ghost" onClick={() => { setLayout(normalizeLayout(initialLayout ?? (form as any).layout)); setDirty(false); setSelectedId(null); }} disabled={!dirty}>
                   <RotateCcw className="h-3 w-3 mr-1" />Zurücksetzen
                 </Button>
                 <Button size="sm" onClick={() => saveMut.mutate()} disabled={!dirty || !canManage || saveMut.isPending}>
