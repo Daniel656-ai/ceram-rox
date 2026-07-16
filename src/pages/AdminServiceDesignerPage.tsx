@@ -757,8 +757,8 @@ function GlobalFormLibrary() {
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
 
   const { data: forms = [], isLoading } = useQuery({
-    queryKey: ["form-definitions", "global"],
-    queryFn: () => api.formDefinitions.list({ scope: "global" }),
+    queryKey: ["form-definitions", "all"],
+    queryFn: () => api.formDefinitions.list(),
   });
 
   const createMut = useMutation({
