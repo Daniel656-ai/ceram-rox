@@ -89,6 +89,17 @@ Deno.serve(async (req: Request) => {
       layout = layoutRow?.layout ?? null;
     }
 
+    // Block-basierte Berichtsvorlage aus process_templates.metadata.report_template
+    let reportTemplate: any = null;
+    const { data: orderProc } = await admin.from("order_processes")
+      .select("process_template_id").eq("order_id", orderId).order("order_index").limit(1).maybeSingle();
+    if (orderProc?.process_template_id) {
+      const { data: pt } = await admin.from("process_templates")
+        .select("metadata").eq("id", orderProc.process_template_id).maybeSingle();
+      reportTemplate = (pt?.metadata as any)?.report_template ?? null;
+    }
+
+
     // Zusätzliche Datenquellen parallel laden
     const measurementIds = (order.order_measurements ?? []).map((m: any) => m.id);
     const [
