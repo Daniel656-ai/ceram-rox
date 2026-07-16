@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle, LinkIcon } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle, LinkIcon, Settings, Eye, Calculator, ClipboardList } from "lucide-react";
 import type { ProcessKind, ProcessTemplate } from "@/lib/api/processTemplates";
 import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
@@ -29,6 +29,8 @@ import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
+import RoleFormTab from "@/components/ServiceDesigner/RoleFormTab";
+import ServicePreviewTab from "@/components/ServiceDesigner/ServicePreviewTab";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
@@ -360,19 +362,74 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
         </Button>
       </div>
 
-      <Tabs defaultValue="steps">
-        <TabsList>
-          <TabsTrigger value="steps"><Layers className="h-4 w-4 mr-1" />Prozessschritte</TabsTrigger>
+      <Tabs defaultValue="general">
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="general"><Settings className="h-4 w-4 mr-1" />Allgemein</TabsTrigger>
+          <TabsTrigger value="steps"><Layers className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
+          <TabsTrigger value="customer_form"><FormInput className="h-4 w-4 mr-1" />Auftraggeberformular</TabsTrigger>
+          <TabsTrigger value="employee_form"><FormInput className="h-4 w-4 mr-1" />Messdienstleisterformular</TabsTrigger>
+          <TabsTrigger value="report"><FileText className="h-4 w-4 mr-1" />Berichtsvorlage</TabsTrigger>
+          <TabsTrigger value="calc"><Calculator className="h-4 w-4 mr-1" />Berechnungen</TabsTrigger>
+          <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
           <TabsTrigger value="services"><Puzzle className="h-4 w-4 mr-1" />Dienstleistungen</TabsTrigger>
-          <TabsTrigger value="meta"><FileText className="h-4 w-4 mr-1" />Stammdaten</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="meta" className="mt-4">
+        <TabsContent value="general" className="mt-4">
           <TemplateMetaEditor template={template} onSave={(u) => updateTemplateMut.mutate(u)} />
         </TabsContent>
 
         <TabsContent value="services" className="mt-4">
           <ProcessServicesTab processTemplateId={template.id} canManage={true} />
+        </TabsContent>
+
+        <TabsContent value="customer_form" className="mt-4">
+          <RoleFormTab
+            template={template}
+            metaKey="customer_form_id"
+            title="Auftraggeberformular"
+            description="Formular, das der Auftraggeber beim Anlegen dieser Dienstleistung ausfüllt."
+            defaultFormName={`Auftraggeberformular: ${template.name}`}
+            renderFieldsEditor={(f) => <FormFieldsEditor form={f} />}
+          />
+        </TabsContent>
+
+        <TabsContent value="employee_form" className="mt-4">
+          <RoleFormTab
+            template={template}
+            metaKey="employee_form_id"
+            title="Messdienstleisterformular"
+            description="Formular, das der Messdienstleister bei der Ausführung ausfüllt."
+            defaultFormName={`Messdienstleisterformular: ${template.name}`}
+            renderFieldsEditor={(f) => <FormFieldsEditor form={f} />}
+          />
+        </TabsContent>
+
+        <TabsContent value="report" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" />Berichtsvorlage</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>Dieser Tab ist vorbereitet für die Berichtsvorlage der Dienstleistung.</p>
+              <p>Die vollständige Konfiguration (Platzhalter, Layout, Auto-Zusammenführung aus Auftragsdaten) wird im nächsten Schritt hier integriert.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="calc" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2"><Calculator className="h-4 w-4" />Berechnungen</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground space-y-2">
+              <p>Dieser Tab ist vorbereitet für Formeldefinitionen und berechnete Felder auf Dienstleistungs-Ebene.</p>
+              <p>Formel-Editor und Feldreferenzen werden im nächsten Schritt hier integriert.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="preview" className="mt-4">
+          <ServicePreviewTab template={template} />
         </TabsContent>
 
         <TabsContent value="steps" className="mt-4">
@@ -429,20 +486,49 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
 
 // ---------------- Template Meta ----------------
 function TemplateMetaEditor({ template, onSave }: { template: ProcessTemplate; onSave: (u: Partial<ProcessTemplate>) => void }) {
+  const meta = (template.metadata ?? {}) as Record<string, any>;
   const [name, setName] = useState(template.name);
   const [desc, setDesc] = useState(template.description ?? "");
   const [category, setCategory] = useState(template.category ?? "");
   const [isActive, setIsActive] = useState(template.is_active);
+  const [responsible, setResponsible] = useState<string>(meta.responsible ?? "");
+  const [billing, setBilling] = useState<string>(meta.billing ?? "");
+  const [duration, setDuration] = useState<string>(meta.duration ?? "");
+  const [cost, setCost] = useState<string>(meta.cost ?? "");
   return (
-    <Card><CardContent className="pt-6 space-y-4 max-w-2xl">
-      <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+    <Card><CardContent className="pt-6 space-y-4 max-w-3xl">
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+        <div><Label>Kategorie</Label><Input value={category} onChange={e => setCategory(e.target.value)} /></div>
+      </div>
       <div><Label>Beschreibung</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} /></div>
-      <div><Label>Kategorie</Label><Input value={category} onChange={e => setCategory(e.target.value)} /></div>
-      <div className="flex items-center gap-2"><Switch checked={isActive} onCheckedChange={setIsActive} /><Label>Aktiv</Label></div>
-      <Button onClick={() => onSave({ name: name.trim(), description: desc.trim() || null, category: category.trim() || null, is_active: isActive })}>Speichern</Button>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Verantwortlicher</Label><Input value={responsible} onChange={e => setResponsible(e.target.value)} placeholder="z. B. Abteilungsleiter Labor" /></div>
+        <div><Label>Abrechnung</Label><Input value={billing} onChange={e => setBilling(e.target.value)} placeholder="z. B. pauschal, pro Stunde" /></div>
+        <div><Label>Dauer</Label><Input value={duration} onChange={e => setDuration(e.target.value)} placeholder="z. B. 2 h" /></div>
+        <div><Label>Kosten</Label><Input value={cost} onChange={e => setCost(e.target.value)} placeholder="z. B. 250 €" /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Version</Label><Input value={`v${template.version}`} disabled /></div>
+        <div className="flex items-end gap-2"><Switch checked={isActive} onCheckedChange={setIsActive} /><Label>Aktiv</Label></div>
+      </div>
+      <Button onClick={() => onSave({
+        name: name.trim(),
+        description: desc.trim() || null,
+        category: category.trim() || null,
+        is_active: isActive,
+        metadata: {
+          ...(template.metadata ?? {}),
+          responsible: responsible.trim() || undefined,
+          billing: billing.trim() || undefined,
+          duration: duration.trim() || undefined,
+          cost: cost.trim() || undefined,
+        },
+      } as any)}>Speichern</Button>
     </CardContent></Card>
   );
 }
+
 
 // ---------------- Step Editor ----------------
 function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void }) {
