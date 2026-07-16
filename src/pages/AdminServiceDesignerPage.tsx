@@ -25,6 +25,7 @@ import type { FormField, FormFieldType } from "@/lib/api/formFields";
 import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
 import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
+import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
@@ -838,6 +839,7 @@ function GlobalFormLibrary() {
                 <TabsList>
                   <TabsTrigger value="fields">Felder</TabsTrigger>
                   <TabsTrigger value="layout">Formular-Designer</TabsTrigger>
+                  <TabsTrigger value="roles">Rollenansichten</TabsTrigger>
                   <TabsTrigger value="preview">Vorschau</TabsTrigger>
                 </TabsList>
                 <TabsContent value="fields" className="mt-3">
@@ -845,6 +847,9 @@ function GlobalFormLibrary() {
                 </TabsContent>
                 <TabsContent value="layout" className="mt-3">
                   <FormLayoutDesigner form={selectedForm} canManage={true} />
+                </TabsContent>
+                <TabsContent value="roles" className="mt-3">
+                  <RoleViewsDesigner form={selectedForm} canManage={true} />
                 </TabsContent>
                 <TabsContent value="preview" className="mt-3">
                   <FormPreviewTab form={selectedForm} />

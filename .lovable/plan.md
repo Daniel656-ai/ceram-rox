@@ -1,50 +1,51 @@
+# Rollenbasierte Formularansichten im Workflow Designer
+
 ## Ziel
-Die Formular-Bibliothek im Service-/Prozess-Designer erhält je Formular einen vollwertigen Layout-Designer (Drag & Drop) zusätzlich zur bestehenden Feldverwaltung – so wie es in der früheren Version verfügbar war. Felddefinition (Datenstruktur) und Layout (Darstellung) bleiben getrennt.
+Formulare erhalten wieder **rollenspezifische Ansichten** (Auftraggeber, Messdienstleister, Labor, Administrator) mit eigenen Layouts und Feldberechtigungen (sichtbar / lesbar / bearbeitbar / pflicht). Ein Workflow-Schritt legt fest, welche Rolle welche Ansicht dieses Formulars sieht und welche Felder er sperrt.
 
-## Ansatz
-Wir bauen keine neue Datenstruktur, sondern nutzen die bereits vorhandenen Felder:
-- `form_definitions.layout` (JSONB) – speichert das Layout je Formular
-- `form_fields` – bleibt Quelle der Feld-Definitionen (Typ, Pflicht, Validierung)
+Alle Rollen arbeiten weiterhin auf **derselben Formularinstanz** (`shared_form_data` am Auftrag) – gefiltert wird nur die Darstellung.
 
-Der bestehende service-basierte `FormDesigner.tsx` dient als Vorlage; er wird zu einer form-basierten Variante adaptiert und in `FormsLibrary` eingebunden.
+## Bausteine
 
-## Umsetzung
+### 1. Datenmodell (Migration)
+- Neue Tabelle `form_role_views` (`id`, `form_definition_id`, `role_key`, `label`, `layout jsonb`, timestamps, unique (form_definition_id, role_key)). Ersetzt/ergänzt das alte `service_form_layouts`-Konzept auf Basis der neuen `form_definitions`.
+- Neue Tabelle `form_field_permissions` (`id`, `form_definition_id`, `role_key`, `field_id`, `visibility` ∈ {hidden, read, write}, `required boolean`, unique (form_definition_id, role_key, field_id)).
+- `process_steps`: neue Spalte `role_view_key text` (welche Ansicht der Schritt öffnet) und `locked_field_ids jsonb default '[]'` (nach Abschluss gesperrte Felder).
+- Rolle = frei wählbarer Text-Key (`auftraggeber`, `messdienstleister`, `labor`, `admin`, plus custom). Presets in Frontend-Konstante.
+- GRANTs + RLS: lesbar für `authenticated`, mutierbar für Master (analog `form_definitions`).
 
-1. **Layout-Schema** (`src/lib/api/formDefinitionLayout.ts`, neu)
-   - Types: `LayoutNode` (union): `section | group | tabs | columns | container | divider | heading | note | field`
-   - Gemeinsame Props: `id`, `visible`, `width` (12/9/8/6/4/3), `className`, `title`, `description`
-   - Root: `{ nodes: LayoutNode[] }`
+### 2. API-Layer (`src/lib/api/`)
+- `formRoleViews.ts`: list/get/upsert/remove pro Formular; `getEffectiveLayout(formId, roleKey)` mit Fallback auf Default-Layout aus `form_definitions.layout`.
+- `formFieldPermissions.ts`: list pro Formular; bulk-upsert (Matrix-Speicherung); `getEffectivePermissions(formId, roleKey, fieldIds)` → normalisierte Map.
+- `processSteps.ts`: `role_view_key`, `locked_field_ids` in Interface + Update.
 
-2. **FormLayoutDesigner-Komponente** (`src/components/ServiceDesigner/FormLayoutDesigner.tsx`, neu)
-   - Dreispaltiges Layout:
-     - **Links (Palette)**: Layout-Bausteine (Abschnitt, Gruppe, Tabs, Spalten 1/2/3, Container, Trennlinie, Überschrift, Hinweistext) + Liste noch nicht platzierter Felder aus `form_fields`
-     - **Mitte (Canvas)**: Drag & Drop Baum mit `@dnd-kit` (Sortable + Droppable), verschachtelbar
-     - **Rechts (Inspector)**: Eigenschaften des selektierten Knotens (Titel, Sichtbarkeit, Breite, CSS-Klassen, Beschreibung, Feld-Override-Label)
-   - Live-Vorschau via bestehende Render-Logik (siehe Punkt 4)
-   - "Zurücksetzen", "Speichern" (schreibt `form_definitions.layout`), Änderungs-Indikator
+### 3. Designer-UI
+- In `AdminServiceDesignerPage` beim ausgewählten Formular neuer Tab **„Rollenansichten"** neben *Felder / Formular-Designer / Vorschau*.
+- Komponente `RoleViewsDesigner.tsx`:
+  - Linke Spalte: Liste der Rollen (Add/Remove/Rename), Aktive Ansicht.
+  - Rechte Spalte: eingebetteter `FormLayoutDesigner` – pro Rolle eigenes Layout (fällt beim Anlegen auf Kopie des Default zurück).
+  - Zweite Registerkarte innerhalb: **Feldberechtigungsmatrix** (Tabelle Felder × Rollen: Sichtbarkeit Radio + Pflicht-Checkbox).
+- `WorkflowStepsDesigner.tsx`: pro Schritt zusätzliches Feld „Formularansicht (Rolle)" + Multi-Select „Felder nach Abschluss sperren" (Optionen aus `form_fields` des gewählten Formulars).
 
-3. **FormsLibrary erweitern** (`src/components/ServiceDesigner/FormsLibrary.tsx`)
-   - Beim Klick auf ein Formular öffnet sich ein Vollbild-Editor (Dialog oder Sub-Route) mit Tabs:
-     - **Felder** – bestehende Feldverwaltung (bereits vorhanden bzw. via `form_fields` API)
-     - **Layout** – neuer `FormLayoutDesigner`
-     - **Vorschau** – reine Read-only Ansicht des gerenderten Layouts
-   - Meta-Bearbeitung (Name, Typ, Global) bleibt als kleiner Dialog erhalten
+### 4. Runtime
+- `FormLayoutRenderer` erhält Prop `permissions: Map<field_id, { visibility, required, locked }>` und rendert Felder entsprechend (hidden, disabled, required-Marker).
+- `ProcessRuntimePanel` / `WorkflowRuntimePanel`:
+  - Ermittelt aktive Rolle des Users (via `useAuth`).
+  - Lädt `role_view_key` vom Schritt → Layout via `formRoleViews.getEffectiveLayout`.
+  - Merged `form_field_permissions` + `locked_field_ids` bereits abgeschlossener Schritte.
+  - Speichert weiter in `shared_form_data` (unverändert – nur Darstellung ist rollenspezifisch).
+- Client-seitige Validierung erzwingt `required` je Rolle vor Complete; Server-Trigger bleibt für `locked_field_ids` verantwortlich (Update dieser Felder nach Abschluss blockieren).
 
-4. **Renderer** (`src/components/ServiceDesigner/FormLayoutRenderer.tsx`, neu)
-   - Rendert `LayoutNode[]` als tatsächliches Formular (readonly Vorschau + wiederverwendbar in Runtime)
-   - Nutzt Tailwind-Grid (`grid-cols-12`) für Spaltenbreiten
-   - Unbekannte / unbenutzte Felder werden nicht gerendert (bleiben in Bibliothek)
-
-5. **API** (`src/lib/api/formDefinitions.ts`)
-   - Ergänzung: `saveLayout(id, layout)` – dünner Wrapper um `update`
-
-## Technische Details
-- Drag & Drop: `@dnd-kit/core` + `@dnd-kit/sortable` (bereits im Projekt in Verwendung)
-- Verschachtelte Sortables: eigener rekursiver `LayoutNodeItem`, `useSortable` je Knoten, `useDroppable` für Container/Section/Tab/Column/Group
-- State: lokal via `useState` + `useMutation` fürs Speichern; Dirty-Tracking via Referenzvergleich
-- Keine DB-Migration nötig – `form_definitions.layout jsonb` existiert bereits
-- Bestehender service-basierter `FormDesigner` bleibt unverändert (rollen-spezifische Views auf Service-Ebene)
+### 5. Migration Altbestand
+- Bestehende Einträge in `service_form_layouts` (customer/employee) werden per Migration in `form_role_views` überführt, sofern die Formulare bereits als `form_definitions` existieren (Best-Effort, sonst leer lassen). Kein Datenverlust – Alt-Tabelle bleibt bis manuelle Bestätigung erhalten.
 
 ## Nicht enthalten
-- Änderungen an Runtime/Ausführung von Formularen (nur Vorschau)
-- Migration existierender Service-Layouts in die Formular-Ebene
+- Kein neues UI für Runtime-Umschalter zwischen Rollen (Rolle des angemeldeten Users bestimmt Ansicht; Admin sieht Admin-Ansicht bzw. Fallback).
+- Keine Änderungen an Prozess-Runtime-Logik außer Darstellung/Permissions.
+
+## Technische Notizen
+- Rollen-Key-Format: `snake_case`, max 40 Zeichen, System-Presets nicht löschbar.
+- Fallback-Kaskade Layout: `form_role_views(role_key)` → `form_role_views('default')` → `form_definitions.layout`.
+- Fallback-Kaskade Permissions: explizit gesetzt → sonst `write`, nicht required.
+
+Nach Freigabe implementiere ich Migration, API-Module, Designer-Tab, Runtime-Anpassungen in dieser Reihenfolge.

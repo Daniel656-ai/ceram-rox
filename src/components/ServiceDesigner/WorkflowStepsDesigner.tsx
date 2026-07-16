@@ -14,7 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Workflow, Link2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Workflow, Link2, Lock, Users } from "lucide-react";
+import { ROLE_VIEW_PRESETS, DEFAULT_ROLE_KEY } from "@/lib/api/formRoleViews";
 
 const STEP_TYPES = [
   { value: "form", label: "Formular-Schritt" },
@@ -252,6 +253,16 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
                 <Label>Pflichtschritt</Label>
               </div>
 
+              {editing.form_id && (
+                <StepFormRoleControls
+                  formId={editing.form_id}
+                  roleViewKey={editing.role_view_key ?? null}
+                  lockedFieldIds={(editing.locked_field_ids as string[] | undefined) ?? []}
+                  onChangeRoleView={(v) => setEditing({ ...editing, role_view_key: v })}
+                  onChangeLocked={(ids) => setEditing({ ...editing, locked_field_ids: ids as any })}
+                />
+              )}
+
               <div className="border-t pt-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
@@ -305,6 +316,85 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function StepFormRoleControls({
+  formId,
+  roleViewKey,
+  lockedFieldIds,
+  onChangeRoleView,
+  onChangeLocked,
+}: {
+  formId: string;
+  roleViewKey: string | null;
+  lockedFieldIds: string[];
+  onChangeRoleView: (v: string | null) => void;
+  onChangeLocked: (ids: string[]) => void;
+}) {
+  const { data: roleViews = [] } = useQuery({
+    queryKey: ["form-role-views", formId],
+    queryFn: () => api.formRoleViews.list(formId),
+  });
+  const { data: fields = [] } = useQuery({
+    queryKey: ["form-fields", formId],
+    queryFn: () => api.formFields.listForForm(formId),
+  });
+
+  const availableRoles = [
+    { key: DEFAULT_ROLE_KEY, label: "Standard (Formular-Layout)" },
+    ...ROLE_VIEW_PRESETS.filter((p) => roleViews.some((rv) => rv.role_key === p.key)),
+    ...roleViews
+      .filter((rv) => !ROLE_VIEW_PRESETS.some((p) => p.key === rv.role_key))
+      .map((rv) => ({ key: rv.role_key, label: rv.label })),
+  ];
+
+  const toggleLock = (id: string, on: boolean) =>
+    onChangeLocked(on ? [...lockedFieldIds, id] : lockedFieldIds.filter((x) => x !== id));
+
+  return (
+    <div className="border-t pt-3 space-y-3">
+      <div>
+        <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Rollenansicht</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          Welche Rollenansicht des Formulars in diesem Schritt geöffnet wird. Wenn keine passende Ansicht existiert, wird das Standard-Layout verwendet.
+        </p>
+        <Select
+          value={roleViewKey ?? DEFAULT_ROLE_KEY}
+          onValueChange={(v) => onChangeRoleView(v === DEFAULT_ROLE_KEY ? null : v)}
+        >
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {availableRoles.map((r) => (
+              <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Felder sperren nach Abschluss</Label>
+        <p className="text-xs text-muted-foreground mb-1">
+          Diese Felder werden für alle Rollen schreibgeschützt, sobald der Schritt abgeschlossen ist.
+        </p>
+        <ScrollArea className="h-40 border rounded-md p-2">
+          {fields.length === 0 && (
+            <p className="text-xs text-muted-foreground p-2">Keine Felder verfügbar (oder Formular gehört nicht zum Formular-Designer).</p>
+          )}
+          <div className="space-y-1">
+            {fields.map((f) => {
+              const checked = lockedFieldIds.includes(f.id);
+              return (
+                <label key={f.id} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted cursor-pointer">
+                  <Checkbox checked={checked} onCheckedChange={(v) => toggleLock(f.id, !!v)} />
+                  <span className="text-sm flex-1">{f.display_name}</span>
+                  <span className="text-xs text-muted-foreground">{f.field_type}</span>
+                </label>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </div>
     </div>
   );
 }

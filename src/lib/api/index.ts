@@ -155,6 +155,8 @@ import { processSteps as processTemplateSteps } from "./processSteps";
 import { processStepRawMaterials } from "./processStepRawMaterials";
 import { formDefinitions } from "./formDefinitions";
 import { formFields } from "./formFields";
+import { formRoleViews } from "./formRoleViews";
+import { formFieldPermissions } from "./formFieldPermissions";
 import { orderInstances } from "./orderInstances";
 import { orderStepRuns, orderStepPositions } from "./orderStepRuns";
 import { workflowEngine } from "./workflowEngine";
@@ -304,6 +306,8 @@ export const api = {
   processStepRawMaterials,
   formDefinitions,
   formFields,
+  formRoleViews,
+  formFieldPermissions,
 
   // ---- Phase 5: order_instances + workflow engine ----
   orderInstances,
