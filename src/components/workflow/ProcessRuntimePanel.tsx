@@ -251,6 +251,7 @@ function StepRunItem({
       </AccordionTrigger>
       <AccordionContent>
         <div className="space-y-4 pt-2">
+          <StepMaterialAvailability stepId={run.step_id} scale={1} />
           {fields.length === 0 && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Info className="h-3 w-3" /> Keine Felder für diesen Schritt konfiguriert.
