@@ -14,7 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Workflow, Link2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Workflow, Link2, Lock, Users } from "lucide-react";
+import { ROLE_VIEW_PRESETS, DEFAULT_ROLE_KEY } from "@/lib/api/formRoleViews";
 
 const STEP_TYPES = [
   { value: "form", label: "Formular-Schritt" },
@@ -251,6 +252,16 @@ export default function WorkflowStepsDesigner({ serviceId, canManage }: Props) {
                 <Switch checked={editing.is_mandatory ?? true} onCheckedChange={(v) => setEditing({ ...editing, is_mandatory: v })} />
                 <Label>Pflichtschritt</Label>
               </div>
+
+              {editing.form_id && (
+                <StepFormRoleControls
+                  formId={editing.form_id}
+                  roleViewKey={editing.role_view_key ?? null}
+                  lockedFieldIds={(editing.locked_field_ids as string[] | undefined) ?? []}
+                  onChangeRoleView={(v) => setEditing({ ...editing, role_view_key: v })}
+                  onChangeLocked={(ids) => setEditing({ ...editing, locked_field_ids: ids as any })}
+                />
+              )}
 
               <div className="border-t pt-3 space-y-2">
                 <div className="flex items-center justify-between">
