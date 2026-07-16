@@ -31,6 +31,8 @@ import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab"
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
 import RoleFormTab from "@/components/ServiceDesigner/RoleFormTab";
 import ServicePreviewTab from "@/components/ServiceDesigner/ServicePreviewTab";
+import ReportTemplateDesigner from "@/components/ServiceDesigner/ReportTemplateDesigner";
+
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
