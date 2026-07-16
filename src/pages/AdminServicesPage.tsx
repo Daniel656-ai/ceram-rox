@@ -44,6 +44,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import ServiceParameterEditor from "@/components/ServiceParameterEditor";
 import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
+import ServiceFormLinksDialog from "@/components/ServiceDesigner/ServiceFormLinksDialog";
 import { Badge } from "@/components/ui/badge";
 import { usePermissions } from "@/hooks/usePermissions";
 
@@ -527,6 +528,11 @@ export default function AdminServicesPage() {
             toast.error("Löschen nicht möglich", { description: err.message });
           }
         }}
+      />
+
+      <ServiceFormLinksDialog
+        service={formLinksService}
+        onClose={() => setFormLinksService(null)}
       />
     </div>
   );
