@@ -804,6 +804,7 @@ function GlobalFormLibrary() {
             {forms.map(f => (
               <div key={f.id} className={`flex items-center gap-1 rounded px-2 py-2 cursor-pointer ${selectedFormId === f.id ? "bg-primary/10" : "hover:bg-muted"}`} onClick={() => setSelectedFormId(f.id)}>
                 <span className="flex-1 text-sm truncate">{f.name}</span>
+                <Badge variant="outline" className="text-xs">{f.scope === "global" ? "global" : "Vorlage"}</Badge>
                 <Badge variant="outline" className="text-xs">v{f.version}</Badge>
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); if (confirm(`Formular „${f.name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
               </div>
