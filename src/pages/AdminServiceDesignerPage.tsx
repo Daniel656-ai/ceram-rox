@@ -405,16 +405,9 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
         </TabsContent>
 
         <TabsContent value="report" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" />Berichtsvorlage</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>Dieser Tab ist vorbereitet für die Berichtsvorlage der Dienstleistung.</p>
-              <p>Die vollständige Konfiguration (Platzhalter, Layout, Auto-Zusammenführung aus Auftragsdaten) wird im nächsten Schritt hier integriert.</p>
-            </CardContent>
-          </Card>
+          <ReportTemplateDesigner template={template} />
         </TabsContent>
+
 
         <TabsContent value="calc" className="mt-4">
           <Card>
