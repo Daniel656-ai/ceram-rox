@@ -527,6 +527,54 @@ export type Database = {
         }
         Relationships: []
       }
+      form_field_permissions: {
+        Row: {
+          created_at: string
+          field_id: string
+          form_definition_id: string
+          id: string
+          required: boolean
+          role_key: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          form_definition_id: string
+          id?: string
+          required?: boolean
+          role_key: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          form_definition_id?: string
+          id?: string
+          required?: boolean
+          role_key?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_field_permissions_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "form_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_field_permissions_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_fields: {
         Row: {
           category: string | null
@@ -616,6 +664,50 @@ export type Database = {
             columns: ["parent_field_id"]
             isOneToOne: false
             referencedRelation: "form_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_role_views: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          form_definition_id: string
+          id: string
+          label: string
+          layout: Json
+          role_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          form_definition_id: string
+          id?: string
+          label: string
+          layout?: Json
+          role_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          form_definition_id?: string
+          id?: string
+          label?: string
+          layout?: Json
+          role_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_role_views_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
             referencedColumns: ["id"]
           },
         ]
@@ -3457,11 +3549,13 @@ export type Database = {
           form_id: string | null
           id: string
           is_mandatory: boolean
+          locked_field_ids: Json
           metadata: Json
           name: string
           order_index: number
           position_source: string | null
           role_required: string | null
+          role_view_key: string | null
           step_key: string
           template_id: string
           updated_at: string
@@ -3477,11 +3571,13 @@ export type Database = {
           form_id?: string | null
           id?: string
           is_mandatory?: boolean
+          locked_field_ids?: Json
           metadata?: Json
           name: string
           order_index?: number
           position_source?: string | null
           role_required?: string | null
+          role_view_key?: string | null
           step_key: string
           template_id: string
           updated_at?: string
@@ -3497,11 +3593,13 @@ export type Database = {
           form_id?: string | null
           id?: string
           is_mandatory?: boolean
+          locked_field_ids?: Json
           metadata?: Json
           name?: string
           order_index?: number
           position_source?: string | null
           role_required?: string | null
+          role_view_key?: string | null
           step_key?: string
           template_id?: string
           updated_at?: string
