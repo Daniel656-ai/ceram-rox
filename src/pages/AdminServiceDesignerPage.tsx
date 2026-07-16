@@ -22,6 +22,7 @@ import type { ProcessKind, ProcessTemplate } from "@/lib/api/processTemplates";
 import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FormField, FormFieldType } from "@/lib/api/formFields";
+import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
