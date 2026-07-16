@@ -79,6 +79,7 @@ export type Database = {
           logo_data_url: string | null
           logo_mime: string | null
           logo_updated_at: string | null
+          raw_material_check_mode: string
           singleton: boolean
           updated_at: string
           updated_by: string | null
@@ -89,6 +90,7 @@ export type Database = {
           logo_data_url?: string | null
           logo_mime?: string | null
           logo_updated_at?: string | null
+          raw_material_check_mode?: string
           singleton?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -99,6 +101,7 @@ export type Database = {
           logo_data_url?: string | null
           logo_mime?: string | null
           logo_updated_at?: string | null
+          raw_material_check_mode?: string
           singleton?: boolean
           updated_at?: string
           updated_by?: string | null
@@ -3385,6 +3388,60 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_project_wp_without_funding"
             referencedColumns: ["project_work_package_id"]
+          },
+        ]
+      }
+      process_step_raw_materials: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          raw_material_id: string
+          sort_order: number
+          step_id: string
+          target_quantity: number
+          tolerance_percent: number | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          raw_material_id: string
+          sort_order?: number
+          step_id: string
+          target_quantity: number
+          tolerance_percent?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          raw_material_id?: string
+          sort_order?: number
+          step_id?: string
+          target_quantity?: number
+          tolerance_percent?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_step_raw_materials_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_step_raw_materials_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "process_steps"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -7630,6 +7687,19 @@ export type Database = {
       priority_enum_to_int: {
         Args: { p: Database["public"]["Enums"]["order_priority"] }
         Returns: number
+      }
+      process_step_raw_material_availability: {
+        Args: { _scale?: number; _step_id: string }
+        Returns: {
+          available: number
+          material_name: string
+          material_number: string
+          missing: number
+          psrm_id: string
+          raw_material_id: string
+          required: number
+          unit: string
+        }[]
       }
       produce_mixture_batch: {
         Args: {

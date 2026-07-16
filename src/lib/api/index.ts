@@ -152,6 +152,7 @@ import {
 import { pilotPlantBlocks, pilotPlantProducedSamples } from "./pilotPlantProcess";
 import { processTemplates } from "./processTemplates";
 import { processSteps as processTemplateSteps } from "./processSteps";
+import { processStepRawMaterials } from "./processStepRawMaterials";
 import { formDefinitions } from "./formDefinitions";
 import { formFields } from "./formFields";
 import { orderInstances } from "./orderInstances";
@@ -300,6 +301,7 @@ export const api = {
   // ---- Phase 3: unified Prozess-Designer ----
   processTemplates,
   processTemplateSteps,
+  processStepRawMaterials,
   formDefinitions,
   formFields,
 

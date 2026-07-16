@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, Trash2, Image as ImageIcon, AlertCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, Trash2, Image as ImageIcon, AlertCircle, Package } from "lucide-react";
 import { toast } from "sonner";
 import { CompanyBrandingPreview } from "@/components/CompanyBrandingPreview";
 
@@ -181,6 +182,39 @@ export default function AdminCompanySettingsPage() {
               Zuletzt geändert: {new Date(settings.logo_updated_at).toLocaleString("de-DE")}
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Package className="h-4 w-4" />Materialverfügbarkeit</CardTitle>
+          <CardDescription>
+            Verhalten, wenn beim Start eines Prozessschritts nicht ausreichend Rohstoffe (aus vorhandenen
+            Gebinden / LOTs) verfügbar sind.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 max-w-md">
+          <Label>Prüfmodus</Label>
+          <Select
+            value={settings?.raw_material_check_mode ?? "warn"}
+            onValueChange={async (v) => {
+              if (!user) return;
+              try {
+                await updateMut.mutateAsync({ patch: { raw_material_check_mode: v as any }, userId: user.id });
+                toast.success("Gespeichert");
+              } catch (err: any) {
+                toast.error("Speichern fehlgeschlagen", { description: err.message });
+              }
+            }}
+            disabled={!canEdit}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="warn">Hinweis anzeigen (empfohlen)</SelectItem>
+              <SelectItem value="allow">Nur informieren – Auftrag trotzdem starten</SelectItem>
+              <SelectItem value="block">Auftrag erst nach Materialverfügbarkeit freigeben</SelectItem>
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 

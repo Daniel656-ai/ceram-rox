@@ -23,7 +23,7 @@ export function useUpdateCompanySettings() {
       patch,
       userId,
     }: {
-      patch: { company_name?: string | null; logo_data_url?: string | null; logo_mime?: string | null };
+      patch: { company_name?: string | null; logo_data_url?: string | null; logo_mime?: string | null; raw_material_check_mode?: "warn" | "allow" | "block" };
       userId: string;
     }) => api.companySettings.update(patch, userId),
     onSuccess: () => qc.invalidateQueries({ queryKey: COMPANY_SETTINGS_KEY }),

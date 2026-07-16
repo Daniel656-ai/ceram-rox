@@ -16,6 +16,7 @@ import { CheckCircle2, Circle, Clock, Lock, PlayCircle, Loader2, Info, Factory }
 import { toast } from "sonner";
 import { evaluateFormula } from "@/lib/formulaEngine";
 import { PilotPlantGuidedStepper } from "./PilotPlantGuidedStepper";
+import { StepMaterialAvailability, useStepStartBlocked } from "./StepMaterialAvailability";
 
 interface Props {
   /** Legacy measurement_orders.id — used to locate the linked order_instance. */
@@ -196,7 +197,8 @@ function StepRunItem({
   }, [values, fields]);
 
   const disabled = locked || run.status === "completed" || run.status === "skipped";
-  const canStart = !disabled && run.status === "pending";
+  const startBlocked = useStepStartBlocked(run.step_id, 1);
+  const canStart = !disabled && run.status === "pending" && !startBlocked;
   const canComplete = !disabled && run.status === "in_progress";
 
   async function handleStart() {
@@ -249,6 +251,7 @@ function StepRunItem({
       </AccordionTrigger>
       <AccordionContent>
         <div className="space-y-4 pt-2">
+          <StepMaterialAvailability stepId={run.step_id} scale={1} />
           {fields.length === 0 && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Info className="h-3 w-3" /> Keine Felder für diesen Schritt konfiguriert.
