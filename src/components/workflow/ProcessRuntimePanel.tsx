@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { FormField } from "@/lib/api/formFields";
@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle2, Circle, Clock, Lock, PlayCircle, Loader2, Info } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Lock, PlayCircle, Loader2, Info, Factory } from "lucide-react";
 import { toast } from "sonner";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import { PilotPlantGuidedStepper } from "./PilotPlantGuidedStepper";
 
 interface Props {
   /** Legacy measurement_orders.id — used to locate the linked order_instance. */
