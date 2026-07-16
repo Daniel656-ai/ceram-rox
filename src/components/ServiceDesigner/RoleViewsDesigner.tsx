@@ -222,25 +222,25 @@ function PermissionsMatrix({
     queryFn: () => api.formFieldPermissions.listForRole(formId, roleKey),
   });
 
-  const [local, setLocal] = useState<Record<string, { visibility: FieldVisibility; required: boolean }>>({});
+  const [local, setLocal] = useState<Record<string, { visibility: FieldVisibility; required: boolean; can_add: boolean; can_remove: boolean }>>({});
   const initialised = useMemo(() => {
-    const base: Record<string, { visibility: FieldVisibility; required: boolean }> = {};
-    for (const f of fields) base[f.id] = { visibility: "write", required: false };
-    for (const r of rows) base[r.field_id] = { visibility: r.visibility, required: r.required };
+    const base: Record<string, { visibility: FieldVisibility; required: boolean; can_add: boolean; can_remove: boolean }> = {};
+    for (const f of fields) base[f.id] = { visibility: "write", required: false, can_add: true, can_remove: true };
+    for (const r of rows) base[r.field_id] = { visibility: r.visibility, required: r.required, can_add: r.can_add ?? true, can_remove: r.can_remove ?? true };
     return base;
   }, [rows, fields]);
 
   const state = { ...initialised, ...local };
   const dirty = Object.keys(local).length > 0;
 
-  const update = (fieldId: string, patch: Partial<{ visibility: FieldVisibility; required: boolean }>) =>
+  const update = (fieldId: string, patch: Partial<{ visibility: FieldVisibility; required: boolean; can_add: boolean; can_remove: boolean }>) =>
     setLocal((prev) => ({ ...prev, [fieldId]: { ...state[fieldId], ...patch } }));
 
   const save = useMutation({
     mutationFn: async () => {
       const payload = Object.entries(state)
-        .filter(([, v]) => v.visibility !== "write" || v.required)
-        .map(([field_id, v]) => ({ field_id, visibility: v.visibility, required: v.required }));
+        .filter(([, v]) => v.visibility !== "write" || v.required || !v.can_add || !v.can_remove)
+        .map(([field_id, v]) => ({ field_id, visibility: v.visibility, required: v.required, can_add: v.can_add, can_remove: v.can_remove }));
       await api.formFieldPermissions.replaceForRole(formId, roleKey, payload);
     },
     onSuccess: () => {
@@ -255,7 +255,7 @@ function PermissionsMatrix({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          Sichtbarkeit und Pflichtfeldstatus je Feld für die Rolle. „Bearbeiten" ist der Standard.
+          Sichtbarkeit, Pflichtfeld sowie Add/Remove-Rechte für Repeater-Felder je Rolle.
         </p>
         <Button size="sm" onClick={() => save.mutate()} disabled={!dirty || !canManage || save.isPending}>
           <Save className="h-3 w-3 mr-1" /> Speichern
@@ -263,24 +263,26 @@ function PermissionsMatrix({
       </div>
       <div className="border rounded-md">
         <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-medium bg-muted border-b">
-          <div className="col-span-6">Feld</div>
-          <div className="col-span-4">Sichtbarkeit</div>
-          <div className="col-span-2">Pflichtfeld</div>
+          <div className="col-span-5">Feld</div>
+          <div className="col-span-3">Sichtbarkeit</div>
+          <div className="col-span-1">Pflicht</div>
+          <div className="col-span-3">Repeater-Rechte</div>
         </div>
         {fields.length === 0 && (
           <div className="p-4 text-sm text-muted-foreground text-center">Keine Felder definiert.</div>
         )}
         {fields.map((f) => {
-          const s = state[f.id] ?? { visibility: "write" as FieldVisibility, required: false };
+          const s = state[f.id] ?? { visibility: "write" as FieldVisibility, required: false, can_add: true, can_remove: true };
+          const isRepeater = f.field_type === "repeater";
           return (
             <div key={f.id} className="grid grid-cols-12 gap-2 px-3 py-2 border-b last:border-0 items-center">
-              <div className="col-span-6">
+              <div className="col-span-5">
                 <div className="text-sm">{f.display_name}</div>
                 <div className="text-xs text-muted-foreground">
                   {f.field_key} · {f.field_type}
                 </div>
               </div>
-              <div className="col-span-4">
+              <div className="col-span-3">
                 <Select
                   value={s.visibility}
                   onValueChange={(v) => update(f.id, { visibility: v as FieldVisibility })}
@@ -294,13 +296,28 @@ function PermissionsMatrix({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-2 flex items-center gap-2">
+              <div className="col-span-1 flex items-center">
                 <Switch
                   checked={s.required}
                   disabled={!canManage || s.visibility === "hidden"}
                   onCheckedChange={(v) => update(f.id, { required: v })}
                 />
-                <Label className="text-xs">Pflicht</Label>
+              </div>
+              <div className="col-span-3 flex items-center gap-3">
+                {isRepeater ? (
+                  <>
+                    <label className="flex items-center gap-1 text-xs">
+                      <Switch checked={s.can_add} disabled={!canManage} onCheckedChange={(v) => update(f.id, { can_add: v })} />
+                      Add
+                    </label>
+                    <label className="flex items-center gap-1 text-xs">
+                      <Switch checked={s.can_remove} disabled={!canManage} onCheckedChange={(v) => update(f.id, { can_remove: v })} />
+                      Remove
+                    </label>
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
               </div>
             </div>
           );
