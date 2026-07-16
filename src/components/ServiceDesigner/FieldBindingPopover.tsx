@@ -68,9 +68,16 @@ export default function FieldBindingPopover({ binding, onChange, disabled }: Pro
               <Label className="text-xs">Datenquelle</Label>
               <Select value={src} disabled={disabled} onValueChange={(v) => setSource(v as BindingSource)}>
                 <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SOURCES.map((s) => (
-                    <SelectItem key={s} value={s}>{BINDING_PRESETS[s].label}</SelectItem>
+                <SelectContent className="max-h-80">
+                  {SOURCE_GROUPS.map((g) => (
+                    <div key={g.label}>
+                      <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {g.label}
+                      </div>
+                      {g.sources.map((s) => (
+                        <SelectItem key={s} value={s}>{BINDING_PRESETS[s].label}</SelectItem>
+                      ))}
+                    </div>
                   ))}
                 </SelectContent>
               </Select>
