@@ -31,8 +31,7 @@ import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab"
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
 import RoleFormTab from "@/components/ServiceDesigner/RoleFormTab";
 import ServicePreviewTab from "@/components/ServiceDesigner/ServicePreviewTab";
-import ReportTemplateDesigner from "@/components/ServiceDesigner/ReportTemplateDesigner";
-
+import CalculationsDesigner from "@/components/ServiceDesigner/CalculationsDesigner";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
@@ -407,20 +406,19 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
         </TabsContent>
 
         <TabsContent value="report" className="mt-4">
-          <ReportTemplateDesigner template={template} />
-        </TabsContent>
-
-
-        <TabsContent value="calc" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2"><Calculator className="h-4 w-4" />Berechnungen</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" />Berichtsvorlage</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>Dieser Tab ist vorbereitet für Formeldefinitionen und berechnete Felder auf Dienstleistungs-Ebene.</p>
-              <p>Formel-Editor und Feldreferenzen werden im nächsten Schritt hier integriert.</p>
+              <p>Dieser Tab ist vorbereitet für die Berichtsvorlage der Dienstleistung.</p>
+              <p>Die vollständige Konfiguration (Platzhalter, Layout, Auto-Zusammenführung aus Auftragsdaten) wird im nächsten Schritt hier integriert.</p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="calc" className="mt-4">
+          <CalculationsDesigner template={template} />
         </TabsContent>
 
         <TabsContent value="preview" className="mt-4">
