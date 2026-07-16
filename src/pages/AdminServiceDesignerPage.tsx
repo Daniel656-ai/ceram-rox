@@ -40,6 +40,7 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: 
     { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
   ]},
   { label: "Berechnung", types: [{ value: "computed", label: "Berechnetes Feld (Formel)" }]},
+  { label: "Rohstoffe", types: [{ value: "raw_material_recipe", label: "Rezeptur / Rohstoffliste (Auftraggeber)" }]},
   { label: "Beziehungen", types: [
     { value: "ref_customer", label: "Kunde" }, { value: "ref_material", label: "Material" },
     { value: "ref_product", label: "Produkt" }, { value: "ref_machine", label: "Maschine" },
