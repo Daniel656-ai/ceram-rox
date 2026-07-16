@@ -27,6 +27,7 @@ import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
+import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
 
 interface SelectedMeasurement {
   uid: string;
@@ -210,6 +211,10 @@ export default function CreateOrderPage() {
     masse_type: "__none__" as string,
     remarks: "",
   });
+  // Dynamic template-driven values keyed by field_key (loaded per order kind
+  // from order_kind_form_templates). No hardcoded field list.
+  const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
+  const [dynamicFormId, setDynamicFormId] = useState<string | null>(null);
   // Analysis requests pool (Pilot Plant / Combined orders): pre-planned analyses without a sample yet
   const [analysisRequests, setAnalysisRequests] = useState<Array<{ uid: string; service_id: string; service_name: string; quantity: number }>>([]);
 
