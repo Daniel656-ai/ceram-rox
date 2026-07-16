@@ -540,9 +540,11 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
                 <Select onValueChange={(v) => v && linkFormMut.mutate(v)}>
                   <SelectTrigger className="w-72"><SelectValue placeholder="Vorhandenes Formular verknüpfen…" /></SelectTrigger>
                   <SelectContent>
-                    {globalForms.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">Keine globalen Formulare vorhanden.</div>}
-                    {globalForms.map(gf => (
-                      <SelectItem key={gf.id} value={gf.id}>{gf.name} · v{gf.version}</SelectItem>
+                    {linkableForms.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">Keine Formulare vorhanden.</div>}
+                    {linkableForms.map(gf => (
+                      <SelectItem key={gf.id} value={gf.id}>
+                        {gf.name} · v{gf.version}{gf.scope === "global" ? " · global" : ""}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
