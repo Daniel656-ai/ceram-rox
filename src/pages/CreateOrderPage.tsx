@@ -421,6 +421,23 @@ export default function CreateOrderPage() {
         }
       }
 
+      // Persist template-driven dynamic form values (no hardcoded fields).
+      if (dynamicFormId && Object.keys(dynamicValues).length > 0) {
+        try {
+          await api.orderSharedFormData.merge(order.id, {
+            template: {
+              form_definition_id: dynamicFormId,
+              order_kind: orderKind,
+              values: dynamicValues,
+              saved_at: new Date().toISOString(),
+              saved_by: user.id,
+            },
+          });
+        } catch (err: any) {
+          toast.error(`Formularvorlage: ${err.message}`);
+        }
+      }
+
       // Phase 5: If a process template was selected, spin up an order_instance
       // linked to this measurement_order and seed its workflow steps.
       if (processTemplateId && processTemplateId !== "__none__") {
