@@ -37,9 +37,12 @@ function FieldPreview({ field, node }: { field: FormField | undefined; node: Fie
       </div>
     );
   }
+  const perm = usePerm(field.id);
+  if (perm.visibility === "hidden") return null;
   const label = node.label_override || field.display_name;
   const desc = node.description_override ?? field.description;
-  const readonly = node.readonly || field.readonly;
+  const readonly = node.readonly || field.readonly || perm.visibility === "read";
+  const required = perm.required || field.is_required;
 
   const control = (() => {
     switch (field.field_type) {
@@ -79,9 +82,10 @@ function FieldPreview({ field, node }: { field: FormField | undefined; node: Fie
 
   return (
     <div className="space-y-1">
-      <Label className="text-xs">
-        {label} {field.is_required && <span className="text-destructive">*</span>}
+      <Label className="text-xs flex items-center gap-1">
+        {label} {required && <span className="text-destructive">*</span>}
         {field.unit && <span className="text-muted-foreground font-normal ml-1">[{field.unit}]</span>}
+        {perm.locked && <Lock className="h-3 w-3 text-muted-foreground" aria-label="Nach Abschluss gesperrt" />}
       </Label>
       {control}
       {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
@@ -198,13 +202,23 @@ function TabsInner({ defaultTab, children }: { defaultTab: string; children: Rea
   );
 }
 
-export default function FormLayoutRenderer({ layout, fields }: { layout: FormLayoutTree; fields: FormField[] }) {
+export default function FormLayoutRenderer({
+  layout,
+  fields,
+  permissions,
+}: {
+  layout: FormLayoutTree;
+  fields: FormField[];
+  permissions?: Map<string, EffectivePermission>;
+}) {
   if (!layout.nodes.length) {
     return <div className="text-sm text-muted-foreground border rounded p-6 text-center">Noch keine Elemente im Layout.</div>;
   }
   return (
-    <div className="grid grid-cols-12 gap-3">
-      {layout.nodes.map(n => <RenderNode key={n.id} node={n} fields={fields} />)}
-    </div>
+    <PermissionsCtx.Provider value={permissions ?? null}>
+      <div className="grid grid-cols-12 gap-3">
+        {layout.nodes.map(n => <RenderNode key={n.id} node={n} fields={fields} />)}
+      </div>
+    </PermissionsCtx.Provider>
   );
 }
