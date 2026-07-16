@@ -64,6 +64,10 @@ export interface WorkflowStep {
   escalation_role: string | null;
   auto_actions: Array<Record<string, unknown>>;
   notify_config: Record<string, unknown>;
+  /** Which role-view of the form to open in this step. */
+  role_view_key: string | null;
+  /** Field IDs that become read-only after this step is completed. */
+  locked_field_ids: string[];
   created_at: string;
   updated_at: string;
 }

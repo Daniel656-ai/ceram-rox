@@ -6655,10 +6655,12 @@ export type Database = {
           form_id: string | null
           id: string
           is_mandatory: boolean
+          locked_field_ids: Json
           name: string
           notify_config: Json
           order_index: number
           role_required: string | null
+          role_view_key: string | null
           step_key: string
           step_type: string
           updated_at: string
@@ -6675,10 +6677,12 @@ export type Database = {
           form_id?: string | null
           id?: string
           is_mandatory?: boolean
+          locked_field_ids?: Json
           name: string
           notify_config?: Json
           order_index?: number
           role_required?: string | null
+          role_view_key?: string | null
           step_key: string
           step_type?: string
           updated_at?: string
@@ -6695,10 +6699,12 @@ export type Database = {
           form_id?: string | null
           id?: string
           is_mandatory?: boolean
+          locked_field_ids?: Json
           name?: string
           notify_config?: Json
           order_index?: number
           role_required?: string | null
+          role_view_key?: string | null
           step_key?: string
           step_type?: string
           updated_at?: string
