@@ -1,0 +1,2 @@
+ALTER TABLE public.process_templates ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+CREATE INDEX IF NOT EXISTS process_templates_archived_at_idx ON public.process_templates (archived_at) WHERE archived_at IS NULL;
