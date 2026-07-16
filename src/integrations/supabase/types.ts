@@ -4713,8 +4713,10 @@ export type Database = {
           note: string
           order_id: string | null
           person_id: string
+          portfolio_id: string | null
           portfolio_task_id: string | null
-          project_id: string
+          portfolio_work_package_id: string | null
+          project_id: string | null
           updated_at: string
           work_package_id: string | null
         }
@@ -4729,8 +4731,10 @@ export type Database = {
           note?: string
           order_id?: string | null
           person_id: string
+          portfolio_id?: string | null
           portfolio_task_id?: string | null
-          project_id: string
+          portfolio_work_package_id?: string | null
+          project_id?: string | null
           updated_at?: string
           work_package_id?: string | null
         }
@@ -4745,8 +4749,10 @@ export type Database = {
           note?: string
           order_id?: string | null
           person_id?: string
+          portfolio_id?: string | null
           portfolio_task_id?: string | null
-          project_id?: string
+          portfolio_work_package_id?: string | null
+          project_id?: string | null
           updated_at?: string
           work_package_id?: string | null
         }
@@ -4759,10 +4765,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_time_entries_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "project_portfolios"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_time_entries_portfolio_task_id_fkey"
             columns: ["portfolio_task_id"]
             isOneToOne: false
             referencedRelation: "portfolio_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_time_entries_portfolio_work_package_id_fkey"
+            columns: ["portfolio_work_package_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_work_packages"
             referencedColumns: ["id"]
           },
           {
@@ -7570,6 +7590,7 @@ export type Database = {
         Returns: boolean
       }
       is_order_locked: { Args: { _order_id: string }; Returns: boolean }
+      is_pmo: { Args: { _user_id: string }; Returns: boolean }
       is_project_member: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
