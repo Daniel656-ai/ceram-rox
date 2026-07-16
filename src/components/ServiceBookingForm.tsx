@@ -426,6 +426,8 @@ function renderInput(field: any, value: any, onChange: (v: any) => void, readonl
         </Select>
       );
     }
+    case "raw_material_recipe":
+      return <RawMaterialRecipeField value={value} onChange={onChange} readonly={readonly} />;
     default:
       return <Input disabled={readonly} value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={cls} />;
   }
