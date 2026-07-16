@@ -268,8 +268,8 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
   const [mapDialog, setMapDialog] = useState<{
     open: boolean;
     target:
-      | { kind: "wp"; portfolioWpId: string; title: string }
-      | { kind: "task"; portfolioTaskId: string; portfolioWpId: string; portfolioWpTitle: string; title: string }
+      | { kind: "wp"; portfolioWpId: string; title: string; categoryId?: string | null; categoryName?: string | null }
+      | { kind: "task"; portfolioTaskId: string; portfolioWpId: string; portfolioWpTitle: string; title: string; categoryId?: string | null; categoryName?: string | null }
       | null;
   }>({ open: false, target: null });
 
@@ -353,7 +353,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                               onClick={() =>
                                 setMapDialog({
                                   open: true,
-                                  target: { kind: "wp", portfolioWpId: wp.id, title: `${wp.code ?? ""} ${wp.name}` },
+                                  target: { kind: "wp", portfolioWpId: wp.id, title: `${wp.code ?? ""} ${wp.name}`, categoryId: wp.category_id ?? null, categoryName: wp.category?.name ?? null },
                                 })
                               }
                             >
@@ -440,7 +440,7 @@ export default function PortfolioStructureTab({ portfolioId, canManage }: Props)
                                               onClick={() =>
                                                 setMapDialog({
                                                   open: true,
-                                                  target: { kind: "task", portfolioTaskId: t.id, portfolioWpId: wp.id, portfolioWpTitle: `${wp.code ?? ""} ${wp.name}`.trim(), title: `${t.code ?? ""} ${t.name}` },
+                                                  target: { kind: "task", portfolioTaskId: t.id, portfolioWpId: wp.id, portfolioWpTitle: `${wp.code ?? ""} ${wp.name}`.trim(), title: `${t.code ?? ""} ${t.name}`, categoryId: wp.category_id ?? null, categoryName: wp.category?.name ?? null },
                                                 })
                                               }
                                             >
