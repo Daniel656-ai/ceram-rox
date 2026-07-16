@@ -23,6 +23,9 @@ import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FormField, FormFieldType } from "@/lib/api/formFields";
 import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
+import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner";
+import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
+import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
   { label: "Standard", types: [
@@ -751,6 +754,19 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
 }
 
 // ---------------- Global Form Library ----------------
+function FormPreviewTab({ form }: { form: FormDefinition }) {
+  const { data: fields = [] } = useQuery({
+    queryKey: ["form-fields", form.id],
+    queryFn: () => api.formFields.listForForm(form.id),
+  });
+  const layout = normalizeLayout((form as any).layout);
+  return (
+    <div className="border rounded p-4 bg-background">
+      <FormLayoutRenderer layout={layout} fields={fields} />
+    </div>
+  );
+}
+
 function GlobalFormLibrary() {
   const qc = useQueryClient();
   const [newName, setNewName] = useState("");
@@ -817,7 +833,24 @@ function GlobalFormLibrary() {
         {selectedForm ? (
           <Card>
             <CardHeader><CardTitle className="text-sm">{selectedForm.name}</CardTitle></CardHeader>
-            <CardContent><FormFieldsEditor form={selectedForm} /></CardContent>
+            <CardContent>
+              <Tabs defaultValue="fields">
+                <TabsList>
+                  <TabsTrigger value="fields">Felder</TabsTrigger>
+                  <TabsTrigger value="layout">Formular-Designer</TabsTrigger>
+                  <TabsTrigger value="preview">Vorschau</TabsTrigger>
+                </TabsList>
+                <TabsContent value="fields" className="mt-3">
+                  <FormFieldsEditor form={selectedForm} />
+                </TabsContent>
+                <TabsContent value="layout" className="mt-3">
+                  <FormLayoutDesigner form={selectedForm} canManage={true} />
+                </TabsContent>
+                <TabsContent value="preview" className="mt-3">
+                  <FormPreviewTab form={selectedForm} />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
           </Card>
         ) : (
           <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte ein Formular links auswählen oder anlegen.</CardContent></Card>
