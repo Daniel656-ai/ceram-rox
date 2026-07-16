@@ -16,16 +16,19 @@ export type BindingSource =
   | "employee_form"
   | "measurement_parameter"
   | "measurement_result"
+  | "workflow"
+  | "raw_material"
+  | "service"
+  | "worklog"
+  | "attachment"
+  | "system"
   | "computed"
   | "free";
 
 export interface FieldBinding {
   source: BindingSource;
-  /** Pfad/Feldschlüssel/Formel innerhalb der Datenquelle (z.B. "order_number", "V2O5", "sum(results.value)"). */
   path?: string;
-  /** Wenn true, darf der automatisch übernommene Wert im Bericht überschrieben werden. Standard: false (schreibgeschützt). */
   editable?: boolean;
-  /** Optional: menschenlesbare Beschreibung der Quelle (nur für Designer-UI). */
   hint?: string;
 }
 
