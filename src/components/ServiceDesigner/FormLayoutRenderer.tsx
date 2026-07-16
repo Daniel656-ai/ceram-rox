@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, createContext, useContext } from "react";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree } from "@/lib/api/formDefinitionLayout";
 import type { FormField } from "@/lib/api/formFields";
+import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,14 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const PermissionsCtx = createContext<Map<string, EffectivePermission> | null>(null);
+const usePerm = (fieldId: string): EffectivePermission => {
+  const m = useContext(PermissionsCtx);
+  return m?.get(fieldId) ?? { visibility: "write", required: false };
+};
 
 const widthCls = (w?: LayoutWidth) => {
   switch (w) {
