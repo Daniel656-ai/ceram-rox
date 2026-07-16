@@ -2528,6 +2528,126 @@ export type Database = {
           },
         ]
       }
+      order_process_services: {
+        Row: {
+          assigned_role: string | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          order_index: number
+          order_process_id: string
+          service_id: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          order_process_id: string
+          service_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_role?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          order_process_id?: string
+          service_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_process_services_order_process_id_fkey"
+            columns: ["order_process_id"]
+            isOneToOne: false
+            referencedRelation: "order_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_process_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_processes: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          order_id: string
+          order_index: number
+          process_template_id: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          order_id: string
+          order_index?: number
+          process_template_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          order_id?: string
+          order_index?: number
+          process_template_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_processes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_processes_process_template_id_fkey"
+            columns: ["process_template_id"]
+            isOneToOne: false
+            referencedRelation: "process_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_report_versions: {
         Row: {
           approved_at: string | null
@@ -2615,6 +2735,66 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: true
             referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_service_forms: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          form_definition_id: string | null
+          id: string
+          name: string
+          order_index: number
+          order_process_service_id: string
+          response_data: Json
+          role_view_key: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          form_definition_id?: string | null
+          id?: string
+          name: string
+          order_index?: number
+          order_process_service_id: string
+          response_data?: Json
+          role_view_key?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          form_definition_id?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          order_process_service_id?: string
+          response_data?: Json
+          role_view_key?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_service_forms_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_service_forms_order_process_service_id_fkey"
+            columns: ["order_process_service_id"]
+            isOneToOne: false
+            referencedRelation: "order_process_services"
             referencedColumns: ["id"]
           },
         ]
@@ -3480,6 +3660,48 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_project_wp_without_funding"
             referencedColumns: ["project_work_package_id"]
+          },
+        ]
+      }
+      process_service_links: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number
+          process_template_id: string
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          process_template_id: string
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          process_template_id?: string
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_service_links_process_template_id_fkey"
+            columns: ["process_template_id"]
+            isOneToOne: false
+            referencedRelation: "process_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_service_links_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -6229,6 +6451,48 @@ export type Database = {
           },
         ]
       }
+      service_form_links: {
+        Row: {
+          created_at: string
+          form_definition_id: string
+          id: string
+          order_index: number
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          form_definition_id: string
+          id?: string
+          order_index?: number
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          form_definition_id?: string
+          id?: string
+          order_index?: number
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_form_links_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_form_links_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_forms: {
         Row: {
           archived_at: string | null
@@ -7057,6 +7321,48 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_process_links: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number
+          process_template_id: string
+          updated_at: string
+          workflow_template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          process_template_id: string
+          updated_at?: string
+          workflow_template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          process_template_id?: string
+          updated_at?: string
+          workflow_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_process_links_process_template_id_fkey"
+            columns: ["process_template_id"]
+            isOneToOne: false
+            referencedRelation: "process_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_process_links_workflow_template_id_fkey"
+            columns: ["workflow_template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_template_steps: {
         Row: {
           condition_expr: Json
@@ -7474,6 +7780,10 @@ export type Database = {
             }
             Returns: string
           }
+      create_order_workflow_instance: {
+        Args: { _order_id: string; _process_template_ids: string[] }
+        Returns: string[]
+      }
       delete_service_safe: { Args: { _service_id: string }; Returns: undefined }
       diff_recipe_versions: {
         Args: { _version_a: string; _version_b: string }
