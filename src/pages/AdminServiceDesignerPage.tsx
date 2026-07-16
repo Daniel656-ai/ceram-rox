@@ -754,6 +754,19 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
 }
 
 // ---------------- Global Form Library ----------------
+function FormPreviewTab({ form }: { form: FormDefinition }) {
+  const { data: fields = [] } = useQuery({
+    queryKey: ["form-fields", form.id],
+    queryFn: () => api.formFields.listForForm(form.id),
+  });
+  const layout = normalizeLayout((form as any).layout);
+  return (
+    <div className="border rounded p-4 bg-background">
+      <FormLayoutRenderer layout={layout} fields={fields} />
+    </div>
+  );
+}
+
 function GlobalFormLibrary() {
   const qc = useQueryClient();
   const [newName, setNewName] = useState("");
