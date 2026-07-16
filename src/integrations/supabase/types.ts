@@ -3468,6 +3468,7 @@ export type Database = {
       }
       process_templates: {
         Row: {
+          archived_at: string | null
           category: string | null
           created_at: string
           created_by: string | null
@@ -3483,6 +3484,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          archived_at?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -3498,6 +3500,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          archived_at?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
