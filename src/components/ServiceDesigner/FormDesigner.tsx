@@ -702,6 +702,13 @@ function PreviewField({ field, readonly }: { field: ServiceDataField; readonly: 
         Unterliste (1:n) — wird im echten Formular dynamisch gerendert.
       </div>
     );
+  } else if (t === "raw_material_recipe") {
+    control = (
+      <div className="border rounded-md p-2 text-xs text-muted-foreground">
+        Rezeptur / Rohstoffliste — der Auftraggeber wählt Rohstoffe aus der Rohstoffverwaltung
+        und trägt Sollmenge, Einheit und Bemerkung ein. Verfügbarkeit wird automatisch geprüft.
+      </div>
+    );
   } else if (t.startsWith("ref_")) {
     control = (
       <Select disabled={readonly}>
