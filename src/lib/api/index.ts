@@ -325,6 +325,7 @@ export const api = {
   orderStepRuns,
   orderStepPositions,
   workflowEngine,
+  orderKindFormTemplates,
 
 
 
