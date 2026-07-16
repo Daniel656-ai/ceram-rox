@@ -776,7 +776,7 @@ function GlobalFormLibrary() {
     mutationFn: (id: string) => api.formDefinitions.remove(id),
     onSuccess: () => {
       toast.success("Gelöscht");
-      qc.invalidateQueries({ queryKey: ["form-definitions", "global"] });
+      qc.invalidateQueries({ queryKey: ["form-definitions"] });
       setSelectedFormId(null);
     },
     onError: (e: any) => toast.error(e.message || "Löschen fehlgeschlagen"),
