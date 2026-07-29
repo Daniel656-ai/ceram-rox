@@ -152,7 +152,6 @@ export default function SampleDetailPage() {
     }
   };
 
-  const [docPreview, setDocPreview] = useState<any | null>(null);
 
   const loadSampleDocBlob = async (storagePath: string): Promise<Blob> => {
     const url = await api.sampleStorage.signedUrl(storagePath, 300);
