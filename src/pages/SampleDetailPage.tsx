@@ -73,6 +73,7 @@ export default function SampleDetailPage() {
   const [subDesc, setSubDesc] = useState("");
   const [svcSearch, setSvcSearch] = useState("");
   const [svcSort, setSvcSort] = useState<"updated" | "name" | "status">("updated");
+  const [docPreview, setDocPreview] = useState<any | null>(null);
 
   const canManage = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
