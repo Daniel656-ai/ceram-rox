@@ -27,6 +27,7 @@ const slug = (s: string) =>
 
 type FieldDraft = {
   id?: string;
+  object_id: string;
   field_key: string;
   display_name: string;
   description: string;
@@ -42,10 +43,12 @@ type FieldDraft = {
 };
 
 const emptyField: FieldDraft = {
+  object_id: "",
   field_key: "", display_name: "", description: "", data_type: "text",
   category: "", unit: "", default_value: "", data_source: "manual",
   list_id: null, calculation_id: null, validation_ids: [], is_repeatable: false,
 };
+
 
 const NONE = "__none__";
 
