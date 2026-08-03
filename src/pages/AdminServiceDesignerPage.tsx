@@ -837,15 +837,24 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Feld bearbeiten</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{isGlobalRef ? "Feld-Ansicht (globales Feld)" : "Feld bearbeiten"}</DialogTitle></DialogHeader>
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+          {isGlobalRef && (
+            <div className="rounded border bg-muted/40 p-2 text-xs text-muted-foreground">
+              Dieses Feld referenziert das globale Feld{" "}
+              <span className="font-mono text-foreground">{field.binding_path ?? field.field_key}</span>.
+              Die Definition wird zentral in der Feldbibliothek gepflegt — hier werden nur Ansicht und
+              Verhalten im Formular (Pflicht, Read-only, Standardwert) festgelegt.
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Bezeichnung</Label><Input value={label} onChange={e => setLabel(e.target.value)} /></div>
-            <div><Label>Schlüssel</Label><Input value={key} onChange={e => setKey(e.target.value)} /></div>
+            <div><Label>Bezeichnung</Label><Input value={label} disabled={isGlobalRef} onChange={e => setLabel(e.target.value)} /></div>
+            <div><Label>Schlüssel</Label><Input value={key} disabled={isGlobalRef} onChange={e => setKey(e.target.value)} /></div>
           </div>
-          <div><Label>Beschreibung</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} /></div>
+          <div><Label>Beschreibung</Label><Textarea value={desc} disabled={isGlobalRef} onChange={e => setDesc(e.target.value)} rows={2} /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div><Label>Einheit</Label><Input value={unit} onChange={e => setUnit(e.target.value)} placeholder="z.B. mm, °C" /></div>
+            <div><Label>Einheit</Label><Input value={unit} disabled={isGlobalRef} onChange={e => setUnit(e.target.value)} placeholder="z.B. mm, °C" /></div>
+
             <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
             <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
           </div>
