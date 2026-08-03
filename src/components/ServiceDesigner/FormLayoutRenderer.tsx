@@ -159,13 +159,13 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
 
   return (
     <div className="space-y-1">
-      <GlobalValidationHint field={field} />
       <Label className="text-xs flex items-center gap-1">
         {label} {required && <span className="text-destructive">*</span>}
         {field.unit && <span className="text-muted-foreground font-normal ml-1">[{field.unit}]</span>}
         {perm.locked && <Lock className="h-3 w-3 text-muted-foreground" aria-label="Nach Abschluss gesperrt" />}
       </Label>
       <FieldControl field={field} readonly={readonly} />
+      <GlobalValidationHint field={field} />
       {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
     </div>
   );
