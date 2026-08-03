@@ -150,7 +150,13 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
           <TabsTrigger value="templates"><Layers className="h-4 w-4 mr-1" />Vorlagen & Snippets</TabsTrigger>
           <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek (Service Designer)</TabsTrigger>
           <TabsTrigger value="mapping"><LinkIcon className="h-4 w-4 mr-1" />Auftragsart-Zuordnung</TabsTrigger>
+          <TabsTrigger value="global"><Boxes className="h-4 w-4 mr-1" />Globale Objekte & Felder</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="global" className="mt-4">
+          <GlobalModelTab />
+        </TabsContent>
+
 
 
         <TabsContent value="templates" className="mt-4 space-y-4">
