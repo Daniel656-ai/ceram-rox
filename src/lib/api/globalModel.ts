@@ -46,6 +46,14 @@ export interface GlobalField {
   version: number;
   sort_order: number;
   is_system: boolean;
+  /** Phase 3: optionale Verknüpfung mit einer globalen Liste (Auswahlwerte). */
+  list_id: string | null;
+  /** Phase 3: optionale Verknüpfung mit einer globalen Berechnung. */
+  calculation_id: string | null;
+  /** Phase 3: global gültige Validierungsregeln. */
+  validation_ids: string[];
+  /** Phase 3: Feld kann in wiederholenden Bereichen mehrfach erfasst werden. */
+  is_repeatable: boolean;
   archived_at: string | null;
   created_by: string | null;
   created_at: string;

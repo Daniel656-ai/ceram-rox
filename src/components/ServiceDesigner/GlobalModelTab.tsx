@@ -35,12 +35,19 @@ type FieldDraft = {
   unit: string;
   default_value: string;
   data_source: string;
+  list_id: string | null;
+  calculation_id: string | null;
+  validation_ids: string[];
+  is_repeatable: boolean;
 };
 
 const emptyField: FieldDraft = {
   field_key: "", display_name: "", description: "", data_type: "text",
   category: "", unit: "", default_value: "", data_source: "manual",
+  list_id: null, calculation_id: null, validation_ids: [], is_repeatable: false,
 };
+
+const NONE = "__none__";
 
 /**
  * Phase 1 des zentralen Datenmodells: Verwaltung globaler Objekte und
@@ -56,6 +63,10 @@ export default function GlobalModelTab() {
   );
   const [fieldOpen, setFieldOpen] = useState(false);
   const [fieldDraft, setFieldDraft] = useState<FieldDraft>(emptyField);
+
+  const { data: lists = [] } = useQuery({ queryKey: ["global-lists"], queryFn: () => api.globalLists.list() });
+  const { data: calcs = [] } = useQuery({ queryKey: ["global-calculations"], queryFn: () => api.globalCalculations.list() });
+  const { data: validations = [] } = useQuery({ queryKey: ["global-validations"], queryFn: () => api.globalValidations.list() });
 
   const { data: objects = [], isLoading } = useQuery({
     queryKey: ["global-objects"],
@@ -120,6 +131,10 @@ export default function GlobalModelTab() {
         unit: fieldDraft.unit || null,
         default_value: fieldDraft.default_value || null,
         data_source: fieldDraft.data_source as any,
+        list_id: fieldDraft.list_id,
+        calculation_id: fieldDraft.calculation_id,
+        validation_ids: fieldDraft.validation_ids,
+        is_repeatable: fieldDraft.is_repeatable,
       };
       if (fieldDraft.id) {
         const current = fields.find((f) => f.id === fieldDraft.id);
@@ -286,6 +301,8 @@ export default function GlobalModelTab() {
                         description: f.description ?? "", data_type: f.data_type,
                         category: f.category ?? "", unit: f.unit ?? "",
                         default_value: f.default_value ?? "", data_source: f.data_source,
+                        list_id: f.list_id ?? null, calculation_id: f.calculation_id ?? null,
+                        validation_ids: f.validation_ids ?? [], is_repeatable: !!f.is_repeatable,
                       });
                       setFieldOpen(true);
                     }}><Pencil className="h-3.5 w-3.5" /></Button>
@@ -379,6 +396,70 @@ export default function GlobalModelTab() {
             <div className="sm:col-span-2">
               <Label className="text-xs">Standardwert</Label>
               <Input value={fieldDraft.default_value} onChange={(e) => setFieldDraft({ ...fieldDraft, default_value: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Globale Liste (Auswahlwerte)</Label>
+              <Select
+                value={fieldDraft.list_id ?? NONE}
+                onValueChange={(v) => setFieldDraft({ ...fieldDraft, list_id: v === NONE ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Keine" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Keine</SelectItem>
+                  {lists.map((l) => <SelectItem key={l.id} value={l.id}>{l.display_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Globale Berechnung</Label>
+              <Select
+                value={fieldDraft.calculation_id ?? NONE}
+                onValueChange={(v) => setFieldDraft({ ...fieldDraft, calculation_id: v === NONE ? null : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Keine" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>Keine</SelectItem>
+                  {calcs.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Globale Validierungen</Label>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {validations.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Noch keine Regeln definiert.</p>
+                )}
+                {validations.map((v) => {
+                  const active = fieldDraft.validation_ids.includes(v.id);
+                  return (
+                    <Button
+                      key={v.id}
+                      type="button"
+                      size="sm"
+                      variant={active ? "default" : "outline"}
+                      className="h-7 text-xs"
+                      onClick={() => setFieldDraft({
+                        ...fieldDraft,
+                        validation_ids: active
+                          ? fieldDraft.validation_ids.filter((x) => x !== v.id)
+                          : [...fieldDraft.validation_ids, v.id],
+                      })}
+                    >
+                      {v.display_name}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={fieldDraft.is_repeatable}
+                  onChange={(e) => setFieldDraft({ ...fieldDraft, is_repeatable: e.target.checked })}
+                />
+                Wiederholbar (mehrere Proben, Messungen, Rohstoffe, Bilder – ohne feste Zeilenanzahl)
+              </label>
             </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Beschreibung</Label>

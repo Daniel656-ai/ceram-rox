@@ -33,6 +33,7 @@ import RoleFormTab from "@/components/ServiceDesigner/RoleFormTab";
 import ServicePreviewTab from "@/components/ServiceDesigner/ServicePreviewTab";
 import ReportTemplateDesigner from "@/components/ServiceDesigner/ReportTemplateDesigner";
 import GlobalModelTab from "@/components/ServiceDesigner/GlobalModelTab";
+import GlobalLibraryTab from "@/components/ServiceDesigner/GlobalLibraryTab";
 import GlobalFieldPicker from "@/components/ServiceDesigner/GlobalFieldPicker";
 
 
@@ -153,7 +154,12 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
           <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek (Service Designer)</TabsTrigger>
           <TabsTrigger value="mapping"><LinkIcon className="h-4 w-4 mr-1" />Auftragsart-Zuordnung</TabsTrigger>
           <TabsTrigger value="global"><Boxes className="h-4 w-4 mr-1" />Globale Objekte & Felder</TabsTrigger>
+          <TabsTrigger value="library-global"><Library className="h-4 w-4 mr-1" />Listen, Berechnungen & Validierungen</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="library-global" className="mt-4">
+          <GlobalLibraryTab />
+        </TabsContent>
 
         <TabsContent value="global" className="mt-4">
           <GlobalModelTab />
