@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Boxes, Pencil, Archive, Search, Lock } from "lucide-react";
+import { Plus, Boxes, Pencil, Archive, Search, Lock, Network } from "lucide-react";
+import FieldUsageDialog from "./FieldUsageDialog";
 import {
   GLOBAL_FIELD_SOURCES,
   GLOBAL_FIELD_TYPES,
+  GLOBAL_REFERENCE_SOURCES,
   type GlobalField,
   type GlobalObject,
 } from "@/lib/api/globalModel";
@@ -35,11 +37,14 @@ type FieldDraft = {
   unit: string;
   default_value: string;
   data_source: string;
+  reference_object_id: string;
+  reference_source: string;
 };
 
 const emptyField: FieldDraft = {
   field_key: "", display_name: "", description: "", data_type: "text",
   category: "", unit: "", default_value: "", data_source: "manual",
+  reference_object_id: "", reference_source: "",
 };
 
 /**
@@ -55,6 +60,7 @@ export default function GlobalModelTab() {
     { object_key: "", display_name: "", description: "", category: "" }
   );
   const [fieldOpen, setFieldOpen] = useState(false);
+  const [usageField, setUsageField] = useState<GlobalField | null>(null);
   const [fieldDraft, setFieldDraft] = useState<FieldDraft>(emptyField);
 
   const { data: objects = [], isLoading } = useQuery({
@@ -120,6 +126,8 @@ export default function GlobalModelTab() {
         unit: fieldDraft.unit || null,
         default_value: fieldDraft.default_value || null,
         data_source: fieldDraft.data_source as any,
+        reference_object_id: fieldDraft.reference_object_id || null,
+        reference_source: fieldDraft.reference_source || null,
       };
       if (fieldDraft.id) {
         const current = fields.find((f) => f.id === fieldDraft.id);
@@ -286,9 +294,14 @@ export default function GlobalModelTab() {
                         description: f.description ?? "", data_type: f.data_type,
                         category: f.category ?? "", unit: f.unit ?? "",
                         default_value: f.default_value ?? "", data_source: f.data_source,
+                        reference_object_id: f.reference_object_id ?? "",
+                        reference_source: f.reference_source ?? "",
                       });
                       setFieldOpen(true);
                     }}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button size="sm" variant="ghost" title="Feldverwendung anzeigen" onClick={() => setUsageField(f)}>
+                      <Network className="h-3.5 w-3.5" />
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => {
                       if (confirm("Feld archivieren?")) archiveField.mutate(f.id);
                     }}><Archive className="h-3.5 w-3.5" /></Button>
@@ -376,6 +389,32 @@ export default function GlobalModelTab() {
               <Label className="text-xs">Einheit</Label>
               <Input value={fieldDraft.unit} onChange={(e) => setFieldDraft({ ...fieldDraft, unit: e.target.value })} />
             </div>
+            <div>
+              <Label className="text-xs">Objektbeziehung (Referenz auf Objekt)</Label>
+              <Select
+                value={fieldDraft.reference_object_id || "__none__"}
+                onValueChange={(v) => setFieldDraft({ ...fieldDraft, reference_object_id: v === "__none__" ? "" : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Keine" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Keine</SelectItem>
+                  {objects.map((o) => <SelectItem key={o.id} value={o.id}>{o.display_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Stammdatenquelle</Label>
+              <Select
+                value={fieldDraft.reference_source || "__none__"}
+                onValueChange={(v) => setFieldDraft({ ...fieldDraft, reference_source: v === "__none__" ? "" : v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Keine" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Keine</SelectItem>
+                  {GLOBAL_REFERENCE_SOURCES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Standardwert</Label>
               <Input value={fieldDraft.default_value} onChange={(e) => setFieldDraft({ ...fieldDraft, default_value: e.target.value })} />
@@ -391,6 +430,12 @@ export default function GlobalModelTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FieldUsageDialog
+        field={usageField}
+        open={!!usageField}
+        onOpenChange={(v) => { if (!v) setUsageField(null); }}
+      />
     </div>
   );
 }
