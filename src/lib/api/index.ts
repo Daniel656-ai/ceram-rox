@@ -154,6 +154,7 @@ import { processTemplates } from "./processTemplates";
 import { processSteps as processTemplateSteps } from "./processSteps";
 import { processStepRawMaterials } from "./processStepRawMaterials";
 import { formDefinitions } from "./formDefinitions";
+import { globalObjects, globalFields } from "./globalModel";
 import { formFields } from "./formFields";
 import { formRoleViews } from "./formRoleViews";
 import { formFieldPermissions } from "./formFieldPermissions";
