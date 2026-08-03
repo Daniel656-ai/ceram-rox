@@ -583,6 +583,7 @@ export type Database = {
       }
       form_fields: {
         Row: {
+          binding_path: string | null
           category: string | null
           created_at: string
           decimal_places: number | null
@@ -593,6 +594,7 @@ export type Database = {
           field_type: string
           form_id: string
           formula: string | null
+          global_field_id: string | null
           id: string
           is_required: boolean
           max_value: number | null
@@ -608,6 +610,7 @@ export type Database = {
           validation: Json
         }
         Insert: {
+          binding_path?: string | null
           category?: string | null
           created_at?: string
           decimal_places?: number | null
@@ -618,6 +621,7 @@ export type Database = {
           field_type: string
           form_id: string
           formula?: string | null
+          global_field_id?: string | null
           id?: string
           is_required?: boolean
           max_value?: number | null
@@ -633,6 +637,7 @@ export type Database = {
           validation?: Json
         }
         Update: {
+          binding_path?: string | null
           category?: string | null
           created_at?: string
           decimal_places?: number | null
@@ -643,6 +648,7 @@ export type Database = {
           field_type?: string
           form_id?: string
           formula?: string | null
+          global_field_id?: string | null
           id?: string
           is_required?: boolean
           max_value?: number | null
@@ -663,6 +669,13 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_fields_global_field_id_fkey"
+            columns: ["global_field_id"]
+            isOneToOne: false
+            referencedRelation: "global_fields"
             referencedColumns: ["id"]
           },
           {
