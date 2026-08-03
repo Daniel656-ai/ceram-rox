@@ -870,13 +870,13 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
           {isSelect && (
             <div>
               <Label>Optionen (eine je Zeile)</Label>
-              <Textarea value={selectOptions} onChange={e => setSelectOptions(e.target.value)} rows={5} />
+              <Textarea value={selectOptions} disabled={isGlobalRef} onChange={e => setSelectOptions(e.target.value)} rows={5} />
             </div>
           )}
           {isComputed && (
             <div>
               <Label>Formel</Label>
-              <Textarea value={formula} onChange={e => setFormula(e.target.value)} rows={3} placeholder="z.B. ROUND((laenge * breite) / 100, 2)" className="font-mono text-sm" />
+              <Textarea value={formula} disabled={isGlobalRef} onChange={e => setFormula(e.target.value)} rows={3} placeholder="z.B. ROUND((laenge * breite) / 100, 2)" className="font-mono text-sm" />
               <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
             </div>
           )}
