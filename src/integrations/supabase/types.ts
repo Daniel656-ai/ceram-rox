@@ -775,6 +775,100 @@ export type Database = {
           },
         ]
       }
+      form_import_mappings: {
+        Row: {
+          binding_path: string | null
+          confirm_count: number
+          created_at: string
+          created_by: string | null
+          global_field_id: string | null
+          id: string
+          last_used_at: string
+          normalized_label: string
+          source_label: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          binding_path?: string | null
+          confirm_count?: number
+          created_at?: string
+          created_by?: string | null
+          global_field_id?: string | null
+          id?: string
+          last_used_at?: string
+          normalized_label: string
+          source_label: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          binding_path?: string | null
+          confirm_count?: number
+          created_at?: string
+          created_by?: string | null
+          global_field_id?: string | null
+          id?: string
+          last_used_at?: string
+          normalized_label?: string
+          source_label?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_import_mappings_global_field_id_fkey"
+            columns: ["global_field_id"]
+            isOneToOne: false
+            referencedRelation: "global_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_import_runs: {
+        Row: {
+          analysis: Json
+          created_at: string
+          created_by: string | null
+          field_count: number
+          file_name: string
+          file_type: string
+          form_id: string | null
+          id: string
+          new_global_field_count: number
+        }
+        Insert: {
+          analysis?: Json
+          created_at?: string
+          created_by?: string | null
+          field_count?: number
+          file_name: string
+          file_type: string
+          form_id?: string | null
+          id?: string
+          new_global_field_count?: number
+        }
+        Update: {
+          analysis?: Json
+          created_at?: string
+          created_by?: string | null
+          field_count?: number
+          file_name?: string
+          file_type?: string
+          form_id?: string | null
+          id?: string
+          new_global_field_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_import_runs_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_role_views: {
         Row: {
           created_at: string
