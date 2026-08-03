@@ -27,6 +27,7 @@ const slug = (s: string) =>
 
 type FieldDraft = {
   id?: string;
+  object_id: string;
   field_key: string;
   display_name: string;
   description: string;
@@ -42,12 +43,15 @@ type FieldDraft = {
 };
 
 const emptyField: FieldDraft = {
+  object_id: "",
   field_key: "", display_name: "", description: "", data_type: "text",
   category: "", unit: "", default_value: "", data_source: "manual",
   list_id: null, calculation_id: null, validation_ids: [], is_repeatable: false,
 };
 
+
 const NONE = "__none__";
+const ALL = "__all__";
 
 /**
  * Phase 1 des zentralen Datenmodells: Verwaltung globaler Objekte und
@@ -57,6 +61,8 @@ export default function GlobalModelTab() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState<string>(ALL);
+
   const [objOpen, setObjOpen] = useState(false);
   const [objDraft, setObjDraft] = useState<{ id?: string; object_key: string; display_name: string; description: string; category: string }>(
     { object_key: "", display_name: "", description: "", category: "" }
@@ -73,16 +79,18 @@ export default function GlobalModelTab() {
     queryFn: () => api.globalObjects.list(),
   });
 
+  // "Alle Objekte" ist ein vollwertiger Modus – die Bibliothek ist auch ohne
+  // ausgewähltes oder überhaupt vorhandenes Objekt nutzbar.
   const activeObject: GlobalObject | undefined = useMemo(
-    () => objects.find((o) => o.id === selectedId) ?? objects[0],
+    () => (selectedId && selectedId !== ALL ? objects.find((o) => o.id === selectedId) : undefined),
     [objects, selectedId]
   );
 
   const { data: fields = [] } = useQuery({
-    queryKey: ["global-fields", activeObject?.id],
-    queryFn: () => api.globalFields.list({ objectId: activeObject!.id }),
-    enabled: !!activeObject?.id,
+    queryKey: ["global-fields", activeObject?.id ?? "all"],
+    queryFn: () => api.globalFields.list(activeObject?.id ? { objectId: activeObject.id } : {}),
   });
+
 
   const invalidateObjects = () => qc.invalidateQueries({ queryKey: ["global-objects"] });
   const invalidateFields = () => qc.invalidateQueries({ queryKey: ["global-fields"] });
@@ -143,8 +151,10 @@ export default function GlobalModelTab() {
           version: (current?.version ?? 1) + 1,
         });
       } else {
+        const targetObjectId = fieldDraft.object_id || activeObject?.id || objects[0]?.id;
+        if (!targetObjectId) throw new Error("Bitte zuerst ein globales Objekt anlegen.");
         await api.globalFields.create({
-          object_id: activeObject!.id,
+          object_id: targetObjectId,
           field_key: fieldDraft.field_key || slug(fieldDraft.display_name),
           sort_order: (fields.at(-1)?.sort_order ?? 0) + 10,
           ...payload,
@@ -161,7 +171,15 @@ export default function GlobalModelTab() {
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
+  const objectName = (id: string) => objects.find((o) => o.id === id)?.display_name ?? "—";
+
+  const categories = useMemo(
+    () => Array.from(new Set(fields.map((f) => f.category).filter(Boolean) as string[])).sort(),
+    [fields]
+  );
+
   const visibleFields = fields.filter((f: GlobalField) => {
+    if (catFilter !== ALL && (f.category ?? "") !== catFilter) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -170,6 +188,12 @@ export default function GlobalModelTab() {
       (f.category ?? "").toLowerCase().includes(q)
     );
   });
+
+  const openNewField = () => {
+    setFieldDraft({ ...emptyField, object_id: activeObject?.id ?? objects[0]?.id ?? "" });
+    setFieldOpen(true);
+  };
+
 
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
@@ -184,6 +208,15 @@ export default function GlobalModelTab() {
         </CardHeader>
         <CardContent className="space-y-1">
           {isLoading && <p className="text-xs text-muted-foreground">Lade…</p>}
+          <button
+            onClick={() => setSelectedId(ALL)}
+            className={`w-full rounded px-2 py-1.5 text-left text-sm transition-colors ${
+              !activeObject ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted"
+            }`}
+          >
+            Alle Objekte
+            <span className="block text-[10px] text-muted-foreground">Gesamte Feldbibliothek</span>
+          </button>
           {objects.map((o) => (
             <button
               key={o.id}
@@ -215,7 +248,7 @@ export default function GlobalModelTab() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <CardTitle className="text-sm">
-                Globale Felder{activeObject ? ` · ${activeObject.display_name}` : ""}
+                Globale Felder{activeObject ? ` · ${activeObject.display_name}` : " · Alle Objekte"}
               </CardTitle>
               <p className="text-xs text-muted-foreground">
                 Jedes Datenfeld existiert genau einmal. Die technische ID ist unveränderlich.
@@ -247,13 +280,19 @@ export default function GlobalModelTab() {
                   className="h-8 w-48 pl-7 text-xs"
                 />
               </div>
-              <Button
-                size="sm"
-                disabled={!activeObject}
-                onClick={() => { setFieldDraft(emptyField); setFieldOpen(true); }}
-              >
+              <Select value={catFilter} onValueChange={setCatFilter}>
+                <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder="Kategorie" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Alle Kategorien</SelectItem>
+                  {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {/* Immer aktiv – die Verfügbarkeit hängt nur von der Berechtigung ab,
+                  nie vom Datenbestand. */}
+              <Button size="sm" onClick={openNewField}>
                 <Plus className="h-4 w-4 mr-1" /> Neues Feld
               </Button>
+
             </div>
           </div>
         </CardHeader>
@@ -263,6 +302,7 @@ export default function GlobalModelTab() {
               <TableRow>
                 <TableHead>Anzeigename</TableHead>
                 <TableHead>Technische ID</TableHead>
+                <TableHead>Objekt</TableHead>
                 <TableHead>Datentyp</TableHead>
                 <TableHead>Kategorie</TableHead>
                 <TableHead>Einheit</TableHead>
@@ -274,8 +314,12 @@ export default function GlobalModelTab() {
             <TableBody>
               {visibleFields.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
-                    Noch keine globalen Felder für dieses Objekt.
+                  <TableCell colSpan={9} className="py-10 text-center">
+                    <p className="text-sm font-medium">Noch keine globalen Felder vorhanden.</p>
+                    <p className="text-xs text-muted-foreground">Erstellen Sie Ihr erstes globales Feld.</p>
+                    <Button size="sm" className="mt-3" onClick={openNewField}>
+                      <Plus className="h-4 w-4 mr-1" /> Globales Feld erstellen
+                    </Button>
                   </TableCell>
                 </TableRow>
               )}
@@ -283,6 +327,8 @@ export default function GlobalModelTab() {
                 <TableRow key={f.id}>
                   <TableCell className="font-medium">{f.display_name}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{f.field_key}</TableCell>
+                  <TableCell className="text-xs">{objectName(f.object_id)}</TableCell>
+
                   <TableCell>
                     <Badge variant="outline" className="text-[10px]">
                       {GLOBAL_FIELD_TYPES.find((t) => t.value === f.data_type)?.label ?? f.data_type}
@@ -297,7 +343,7 @@ export default function GlobalModelTab() {
                   <TableCell className="text-right">
                     <Button size="sm" variant="ghost" onClick={() => {
                       setFieldDraft({
-                        id: f.id, field_key: f.field_key, display_name: f.display_name,
+                        id: f.id, object_id: f.object_id, field_key: f.field_key, display_name: f.display_name,
                         description: f.description ?? "", data_type: f.data_type,
                         category: f.category ?? "", unit: f.unit ?? "",
                         default_value: f.default_value ?? "", data_source: f.data_source,
@@ -355,6 +401,25 @@ export default function GlobalModelTab() {
           <DialogHeader><DialogTitle>{fieldDraft.id ? "Globales Feld bearbeiten" : "Neues globales Feld"}</DialogTitle></DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
+              <Label className="text-xs">Objekt</Label>
+              {objects.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Noch kein globales Objekt vorhanden – bitte zuerst links „Neues Objekt“ anlegen.
+                </p>
+              ) : (
+                <Select
+                  value={fieldDraft.object_id || objects[0].id}
+                  onValueChange={(v) => setFieldDraft({ ...fieldDraft, object_id: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {objects.map((o) => <SelectItem key={o.id} value={o.id}>{o.display_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="sm:col-span-2">
+
               <Label className="text-xs">Anzeigename</Label>
               <Input value={fieldDraft.display_name} onChange={(e) => setFieldDraft({ ...fieldDraft, display_name: e.target.value })} />
             </div>

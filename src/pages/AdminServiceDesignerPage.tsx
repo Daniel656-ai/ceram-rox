@@ -91,8 +91,15 @@ export default function AdminServiceDesignerPage() {
 function TemplateList({ navigate }: { navigate: (p: string) => void }) {
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  // Alle Tabs sind gleichwertig registriert. Neue Bereiche MÜSSEN hier ergänzt
+  // werden, sonst fällt der kontrollierte Tab still auf "templates" zurück und
+  // wirkt deaktiviert. Die Auswahl hängt nie vom Datenbestand ab.
+  const DESIGNER_TABS = ["templates", "library", "mapping", "global", "library-global"] as const;
   const tabParam = searchParams.get("tab");
-  const initialTab = tabParam === "library" ? "library" : tabParam === "mapping" ? "mapping" : "templates";
+  const initialTab = (DESIGNER_TABS as readonly string[]).includes(tabParam ?? "")
+    ? (tabParam as string)
+    : "templates";
+
   const [filterKind, setFilterKind] = useState<"all" | ProcessKind>("all");
   const [newOpen, setNewOpen] = useState(false);
   const [newName, setNewName] = useState("");

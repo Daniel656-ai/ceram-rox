@@ -488,6 +488,44 @@ export type Database = {
           },
         ]
       }
+      form_definition_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          form_definition_id: string
+          id: string
+          note: string | null
+          snapshot: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          form_definition_id: string
+          id?: string
+          note?: string | null
+          snapshot?: Json
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          form_definition_id?: string
+          id?: string
+          note?: string | null
+          snapshot?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_definition_versions_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_definitions: {
         Row: {
           archived_at: string | null
@@ -574,6 +612,56 @@ export type Database = {
           },
           {
             foreignKeyName: "form_field_permissions_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_field_rules: {
+        Row: {
+          action: string
+          condition: Json
+          created_at: string
+          created_by: string | null
+          form_definition_id: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          target_field_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          action?: string
+          condition?: Json
+          created_at?: string
+          created_by?: string | null
+          form_definition_id: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          target_field_ids?: string[]
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          condition?: Json
+          created_at?: string
+          created_by?: string | null
+          form_definition_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          target_field_ids?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_field_rules_form_definition_id_fkey"
             columns: ["form_definition_id"]
             isOneToOne: false
             referencedRelation: "form_definitions"
@@ -687,6 +775,100 @@ export type Database = {
           },
         ]
       }
+      form_import_mappings: {
+        Row: {
+          binding_path: string | null
+          confirm_count: number
+          created_at: string
+          created_by: string | null
+          global_field_id: string | null
+          id: string
+          last_used_at: string
+          normalized_label: string
+          source_label: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          binding_path?: string | null
+          confirm_count?: number
+          created_at?: string
+          created_by?: string | null
+          global_field_id?: string | null
+          id?: string
+          last_used_at?: string
+          normalized_label: string
+          source_label: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          binding_path?: string | null
+          confirm_count?: number
+          created_at?: string
+          created_by?: string | null
+          global_field_id?: string | null
+          id?: string
+          last_used_at?: string
+          normalized_label?: string
+          source_label?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_import_mappings_global_field_id_fkey"
+            columns: ["global_field_id"]
+            isOneToOne: false
+            referencedRelation: "global_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_import_runs: {
+        Row: {
+          analysis: Json
+          created_at: string
+          created_by: string | null
+          field_count: number
+          file_name: string
+          file_type: string
+          form_id: string | null
+          id: string
+          new_global_field_count: number
+        }
+        Insert: {
+          analysis?: Json
+          created_at?: string
+          created_by?: string | null
+          field_count?: number
+          file_name: string
+          file_type: string
+          form_id?: string | null
+          id?: string
+          new_global_field_count?: number
+        }
+        Update: {
+          analysis?: Json
+          created_at?: string
+          created_by?: string | null
+          field_count?: number
+          file_name?: string
+          file_type?: string
+          form_id?: string | null
+          id?: string
+          new_global_field_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_import_runs_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_role_views: {
         Row: {
           created_at: string
@@ -724,6 +906,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "form_role_views_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_value_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          field_key: string
+          field_label: string | null
+          form_definition_id: string | null
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          order_id: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          field_key: string
+          field_label?: string | null
+          form_definition_id?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          order_id?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          field_key?: string
+          field_label?: string | null
+          form_definition_id?: string | null
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_value_history_form_definition_id_fkey"
             columns: ["form_definition_id"]
             isOneToOne: false
             referencedRelation: "form_definitions"
@@ -801,6 +1027,8 @@ export type Database = {
           list_id: string | null
           metadata: Json
           object_id: string
+          reference_object_id: string | null
+          reference_source: string | null
           select_options: Json
           sort_order: number
           unit: string | null
@@ -826,6 +1054,8 @@ export type Database = {
           list_id?: string | null
           metadata?: Json
           object_id: string
+          reference_object_id?: string | null
+          reference_source?: string | null
           select_options?: Json
           sort_order?: number
           unit?: string | null
@@ -851,6 +1081,8 @@ export type Database = {
           list_id?: string | null
           metadata?: Json
           object_id?: string
+          reference_object_id?: string | null
+          reference_source?: string | null
           select_options?: Json
           sort_order?: number
           unit?: string | null
@@ -876,6 +1108,13 @@ export type Database = {
           {
             foreignKeyName: "global_fields_object_id_fkey"
             columns: ["object_id"]
+            isOneToOne: false
+            referencedRelation: "global_objects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_fields_reference_object_id_fkey"
+            columns: ["reference_object_id"]
             isOneToOne: false
             referencedRelation: "global_objects"
             referencedColumns: ["id"]
@@ -2705,6 +2944,51 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_form_versions: {
+        Row: {
+          created_at: string
+          form_definition_id: string
+          id: string
+          order_id: string
+          role_key: string | null
+          version: number
+          version_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          form_definition_id: string
+          id?: string
+          order_id: string
+          role_key?: string | null
+          version: number
+          version_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          form_definition_id?: string
+          id?: string
+          order_id?: string
+          role_key?: string | null
+          version?: number
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_form_versions_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_form_versions_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "form_definition_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -8423,6 +8707,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      global_field_usage: { Args: { _field_id: string }; Returns: Json }
       has_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
