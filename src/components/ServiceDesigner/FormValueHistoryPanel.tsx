@@ -31,7 +31,7 @@ export default function FormValueHistoryPanel({
 
   const { data: users = [] } = useQuery({
     queryKey: ["profiles-basic"],
-    queryFn: () => api.users.list(),
+    queryFn: () => api.users.listWithRoles(),
   });
   const userName = (id: string | null) => {
     if (!id) return "System";
