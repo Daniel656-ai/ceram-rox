@@ -33,6 +33,7 @@ import RoleFormTab from "@/components/ServiceDesigner/RoleFormTab";
 import ServicePreviewTab from "@/components/ServiceDesigner/ServicePreviewTab";
 import ReportTemplateDesigner from "@/components/ServiceDesigner/ReportTemplateDesigner";
 import GlobalModelTab from "@/components/ServiceDesigner/GlobalModelTab";
+import GlobalFieldPicker from "@/components/ServiceDesigner/GlobalFieldPicker";
 
 
 const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
@@ -690,6 +691,7 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
 function FormFieldsEditor({ form }: { form: FormDefinition }) {
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newType, setNewType] = useState<FormFieldType>("text");
   const [editingField, setEditingField] = useState<FormField | null>(null);
@@ -721,10 +723,17 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="text-xs text-muted-foreground">Formular: <span className="font-medium">{form.name}</span></div>
-        <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-1" />Feld</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setPickerOpen(true)}><Boxes className="h-4 w-4 mr-1" />Globales Feld</Button>
+          <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-1" />Lokales Feld</Button>
+        </div>
       </div>
+      <p className="text-[11px] text-muted-foreground">
+        Neue Felder werden bevorzugt aus der globalen Feldbibliothek referenziert — das Formular speichert dann nur
+        Position, Sichtbarkeit, Pflicht und Layout. Lokale Felder bleiben für Bestandsformulare weiterhin möglich.
+      </p>
 
       {fields.length === 0 && <div className="text-sm text-muted-foreground py-4 text-center border rounded">Noch keine Felder.</div>}
 
@@ -732,14 +741,28 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
         {fields.map(f => (
           <div key={f.id} className="flex items-center gap-2 border rounded px-2 py-1.5 hover:bg-muted/40">
             <span className="flex-1 text-sm"><span className="font-medium">{f.display_name}</span> <span className="text-muted-foreground text-xs">({f.field_key})</span></span>
+            {f.global_field_id && (
+              <Badge variant="secondary" className="text-xs font-mono" title="Referenz auf globales Feld">
+                {f.binding_path ?? "global"}
+              </Badge>
+            )}
             <Badge variant="outline" className="text-xs">{ALL_TYPES.find(t => t.value === f.field_type)?.label ?? f.field_type}</Badge>
             {f.is_required && <Badge variant="secondary" className="text-xs">Pflicht</Badge>}
             {f.unit && <Badge variant="outline" className="text-xs">{f.unit}</Badge>}
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingField(f)}><FormInput className="h-3 w-3" /></Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { if (confirm(`Feld „${f.display_name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { if (confirm(`Feld „${f.display_name}" entfernen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
           </div>
         ))}
       </div>
+
+      <GlobalFieldPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        formId={form.id}
+        existing={fields}
+        onInserted={invalidate}
+      />
+
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
@@ -789,6 +812,7 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
   const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
 
   const isNumeric = ["number", "decimal", "percent"].includes(field.field_type);
+  const isGlobalRef = !!field.global_field_id;
   const isSelect = ["select", "multiselect"].includes(field.field_type);
   const isComputed = field.field_type === "computed";
 
@@ -814,15 +838,24 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>Feld bearbeiten</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{isGlobalRef ? "Feld-Ansicht (globales Feld)" : "Feld bearbeiten"}</DialogTitle></DialogHeader>
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+          {isGlobalRef && (
+            <div className="rounded border bg-muted/40 p-2 text-xs text-muted-foreground">
+              Dieses Feld referenziert das globale Feld{" "}
+              <span className="font-mono text-foreground">{field.binding_path ?? field.field_key}</span>.
+              Die Definition wird zentral in der Feldbibliothek gepflegt — hier werden nur Ansicht und
+              Verhalten im Formular (Pflicht, Read-only, Standardwert) festgelegt.
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Bezeichnung</Label><Input value={label} onChange={e => setLabel(e.target.value)} /></div>
-            <div><Label>Schlüssel</Label><Input value={key} onChange={e => setKey(e.target.value)} /></div>
+            <div><Label>Bezeichnung</Label><Input value={label} disabled={isGlobalRef} onChange={e => setLabel(e.target.value)} /></div>
+            <div><Label>Schlüssel</Label><Input value={key} disabled={isGlobalRef} onChange={e => setKey(e.target.value)} /></div>
           </div>
-          <div><Label>Beschreibung</Label><Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2} /></div>
+          <div><Label>Beschreibung</Label><Textarea value={desc} disabled={isGlobalRef} onChange={e => setDesc(e.target.value)} rows={2} /></div>
           <div className="grid grid-cols-3 gap-3">
-            <div><Label>Einheit</Label><Input value={unit} onChange={e => setUnit(e.target.value)} placeholder="z.B. mm, °C" /></div>
+            <div><Label>Einheit</Label><Input value={unit} disabled={isGlobalRef} onChange={e => setUnit(e.target.value)} placeholder="z.B. mm, °C" /></div>
+
             <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
             <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
           </div>
@@ -837,13 +870,13 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
           {isSelect && (
             <div>
               <Label>Optionen (eine je Zeile)</Label>
-              <Textarea value={selectOptions} onChange={e => setSelectOptions(e.target.value)} rows={5} />
+              <Textarea value={selectOptions} disabled={isGlobalRef} onChange={e => setSelectOptions(e.target.value)} rows={5} />
             </div>
           )}
           {isComputed && (
             <div>
               <Label>Formel</Label>
-              <Textarea value={formula} onChange={e => setFormula(e.target.value)} rows={3} placeholder="z.B. ROUND((laenge * breite) / 100, 2)" className="font-mono text-sm" />
+              <Textarea value={formula} disabled={isGlobalRef} onChange={e => setFormula(e.target.value)} rows={3} placeholder="z.B. ROUND((laenge * breite) / 100, 2)" className="font-mono text-sm" />
               <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
             </div>
           )}

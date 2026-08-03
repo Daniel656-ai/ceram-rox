@@ -149,3 +149,20 @@ export const globalFields = {
 
   remove: (id: string) => run(dbClient.from("global_fields" as any).delete().eq("id", id)),
 };
+
+/**
+ * Abbildung Datentyp (globales Feld) -> Formularfeld-Typ.
+ * Rein additiv; unbekannte Typen fallen auf "text" zurück.
+ */
+export const globalTypeToFormFieldType = (t: string): string => {
+  const map: Record<string, string> = {
+    text: "text", longtext: "longtext", number: "number", decimal: "decimal",
+    percent: "percent", date: "date", time: "time", datetime: "datetime",
+    boolean: "boolean", select: "select", multiselect: "multiselect",
+    file: "file", image: "image", reference: "text", computed: "computed",
+  };
+  return map[t] ?? "text";
+};
+
+/** Kanonischer Bindungspfad, z.B. "order.versuchsnummer". */
+export const bindingPathFor = (objectKey: string, fieldKey: string) => `${objectKey}.${fieldKey}`;
