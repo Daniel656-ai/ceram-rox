@@ -2,6 +2,8 @@ import { useMemo, useState, createContext, useContext, useCallback } from "react
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
+import type { FormFieldRule } from "@/lib/api/formFieldRules";
+import { mergePermissionsWithRules } from "@/lib/fieldRules";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -458,6 +460,8 @@ export default function FormLayoutRenderer({
   permissions,
   values,
   onChange,
+  rules,
+  ruleContext,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
@@ -465,6 +469,10 @@ export default function FormLayoutRenderer({
   /** When provided, the renderer is interactive and binds inputs to these values. */
   values?: Record<string, any>;
   onChange?: (key: string, v: any) => void;
+  /** Phase 4: Feldregeln ("Wenn … dann …"). Ohne Regeln unverändertes Verhalten. */
+  rules?: FormFieldRule[];
+  /** Zusatzkontext für Regeln (z.B. { order_status: "completed", role: "labor" }). */
+  ruleContext?: Record<string, unknown>;
 }) {
   const interactive = !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
@@ -473,11 +481,19 @@ export default function FormLayoutRenderer({
     interactive,
   }), [values, onChange, interactive]);
 
+  const effectivePermissions = useMemo(() => {
+    if (!rules || rules.length === 0) return permissions ?? null;
+    return mergePermissionsWithRules(permissions, fields, rules, {
+      values: values ?? {},
+      context: ruleContext ?? {},
+    });
+  }, [permissions, fields, rules, values, ruleContext]);
+
   if (!layout.nodes.length) {
     return <div className="text-sm text-muted-foreground border rounded p-6 text-center">Noch keine Elemente im Layout.</div>;
   }
   return (
-    <PermissionsCtx.Provider value={permissions ?? null}>
+    <PermissionsCtx.Provider value={effectivePermissions}>
       <ValuesCtx.Provider value={bind}>
         <div className="grid grid-cols-12 gap-3">
           {layout.nodes.map(n => <RenderNode key={n.id} node={n} fields={fields} />)}
@@ -486,3 +502,4 @@ export default function FormLayoutRenderer({
     </PermissionsCtx.Provider>
   );
 }
+

@@ -42,6 +42,10 @@ export interface GlobalField {
   default_value: string | null;
   data_source: GlobalFieldSource;
   select_options: Array<string | { label: string; value: string }>;
+  /** Phase 4: Objektbeziehung – referenziertes globales Objekt. */
+  reference_object_id: string | null;
+  /** Phase 4: Stammdatenquelle, z.B. "raw_materials", "workstations", "projects". */
+  reference_source: string | null;
   metadata: Record<string, unknown>;
   version: number;
   sort_order: number;
@@ -77,6 +81,30 @@ export const GLOBAL_FIELD_SOURCES: { value: GlobalFieldSource; label: string }[]
   { value: "reference", label: "Referenz (Stammdaten)" },
   { value: "device", label: "Maschine / Messgerät" },
 ];
+
+/** Phase 4: verfügbare Stammdatenquellen für Objektbeziehungen. */
+export const GLOBAL_REFERENCE_SOURCES: { value: string; label: string }[] = [
+  { value: "raw_materials", label: "Rohstoffverwaltung" },
+  { value: "raw_material_batches", label: "Rohstoff-Chargen" },
+  { value: "workstations", label: "Maschinen-/Arbeitsplatzverwaltung" },
+  { value: "projects", label: "Projektverwaltung" },
+  { value: "samples", label: "Probenverwaltung" },
+  { value: "measurement_services", label: "Dienstleistungen" },
+  { value: "profiles", label: "Benutzerverwaltung" },
+  { value: "storage_locations", label: "Lagerorte" },
+  { value: "mixtures", label: "Mischungen / Rezepturen" },
+];
+
+/** Ergebnis der Verwendungsanalyse eines globalen Feldes. */
+export interface GlobalFieldUsage {
+  binding_path: string;
+  forms: Array<{ id: string; name: string }>;
+  reports: Array<{ id: string; name: string }>;
+  calculations: Array<{ id: string; name: string }>;
+  workflows: Array<{ id: string; name: string }>;
+}
+
+
 
 export const globalObjects = {
   list: (opts?: { includeArchived?: boolean }) => {
@@ -148,7 +176,22 @@ export const globalFields = {
     run(dbClient.from("global_fields" as any).update({ archived_at: null } as any).eq("id", id)),
 
   remove: (id: string) => run(dbClient.from("global_fields" as any).delete().eq("id", id)),
+
+  /** Phase 4: Wo wird dieses globale Feld überall verwendet? */
+  usage: async (fieldId: string): Promise<GlobalFieldUsage> => {
+    const { data, error } = await dbClient.rpc("global_field_usage" as any, { _field_id: fieldId });
+    if (error) throw error;
+    const d = (data ?? {}) as Partial<GlobalFieldUsage>;
+    return {
+      binding_path: d.binding_path ?? "",
+      forms: d.forms ?? [],
+      reports: d.reports ?? [],
+      calculations: d.calculations ?? [],
+      workflows: d.workflows ?? [],
+    };
+  },
 };
+
 
 /**
  * Abbildung Datentyp (globales Feld) -> Formularfeld-Typ.
