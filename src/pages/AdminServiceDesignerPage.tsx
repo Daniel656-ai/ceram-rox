@@ -812,6 +812,7 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
   const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
 
   const isNumeric = ["number", "decimal", "percent"].includes(field.field_type);
+  const isGlobalRef = !!field.global_field_id;
   const isSelect = ["select", "multiselect"].includes(field.field_type);
   const isComputed = field.field_type === "computed";
 
