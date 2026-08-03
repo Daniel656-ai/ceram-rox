@@ -28,6 +28,7 @@ import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer"
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import FieldRulesDesigner from "@/components/ServiceDesigner/FieldRulesDesigner";
 import FormVersionsPanel from "@/components/ServiceDesigner/FormVersionsPanel";
+import FormImportDialog from "@/components/ServiceDesigner/FormImportDialog";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
@@ -948,6 +949,7 @@ function GlobalFormLibrary() {
   const qc = useQueryClient();
   const [newName, setNewName] = useState("");
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ["form-definitions", "all"],
@@ -991,6 +993,14 @@ function GlobalFormLibrary() {
               <Plus className="h-4 w-4" />
             </Button>
           </div>
+          <Button size="sm" variant="outline" className="w-full" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-1" /> Formular importieren (KI)
+          </Button>
+          <FormImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            onImported={(f) => setSelectedFormId(f.id)}
+          />
           {isLoading && <div className="text-xs text-muted-foreground">Lade…</div>}
           {!isLoading && forms.length === 0 && <div className="text-xs text-muted-foreground py-4 text-center border rounded">Noch keine globalen Formulare.</div>}
           <div className="space-y-1">
