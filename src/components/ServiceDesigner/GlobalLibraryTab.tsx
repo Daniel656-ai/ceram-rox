@@ -286,7 +286,10 @@ function CalculationsSection() {
     }
     try {
       const r = evaluateFormula(draft.formula, ctx);
-      return typeof r === "number" && Number.isFinite(r) ? r.toFixed(draft.decimals) : String(r ?? "—");
+      if (r.error) return `Fehler: ${r.error}`;
+      return typeof r.value === "number" && Number.isFinite(r.value)
+        ? r.value.toFixed(draft.decimals)
+        : String(r.value ?? "—");
     } catch (e: any) {
       return `Fehler: ${e.message}`;
     }
@@ -459,13 +462,13 @@ function ValidationsSection() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button size="icon" variant="ghost" onClick={() => setDraft({
+                  <Button size="icon" variant="ghost" onClick={() => { setDraft({
                     id: v.id, validation_key: v.validation_key, display_name: v.display_name,
                     description: v.description ?? "", rule_type: v.rule_type,
                     min_value: v.min_value?.toString() ?? "", max_value: v.max_value?.toString() ?? "",
                     unit: v.unit ?? "", pattern: v.pattern ?? "", severity: v.severity,
                     error_message: v.error_message ?? "",
-                  }) || setOpen(true)}>
+                  }); setOpen(true); }}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button size="icon" variant="ghost" onClick={() => archive.mutate(v.id)}>
