@@ -161,6 +161,7 @@ import { formFieldPermissions } from "./formFieldPermissions";
 import { formFieldRules } from "./formFieldRules";
 import { formVersions, orderFormVersions } from "./formVersions";
 import { formValueHistory } from "./formValueHistory";
+import { formImport } from "./formImport";
 import { serviceFormLinks } from "./serviceFormLinks";
 import { processServiceLinks } from "./processServiceLinks";
 import { workflowProcessLinks } from "./workflowProcessLinks";
@@ -325,6 +326,7 @@ export const api = {
   formVersions,
   orderFormVersions,
   formValueHistory,
+  formImport,
 
   // ---- Workflow-Architektur: Vorlagen-Verknüpfungen & Auftrags-Instanzen ----
   serviceFormLinks,

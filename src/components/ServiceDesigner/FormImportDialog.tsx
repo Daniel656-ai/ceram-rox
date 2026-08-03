@@ -249,7 +249,7 @@ export default function FormImportDialog({
       qc.invalidateQueries({ queryKey: ["global-fields"] });
       qc.invalidateQueries({ queryKey: ["form-import-mappings"] });
       toast.success(`Formular importiert · ${allFields.length} Felder, ${newGlobals} neue globale Felder`);
-      onImported?.({ ...form, layout } as FormDefinition);
+      onImported?.({ ...form, layout: layout as unknown as Record<string, unknown> } as FormDefinition);
       reset();
       onOpenChange(false);
     } catch (e: any) {
