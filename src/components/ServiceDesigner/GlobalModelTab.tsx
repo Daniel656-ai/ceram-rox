@@ -149,8 +149,10 @@ export default function GlobalModelTab() {
           version: (current?.version ?? 1) + 1,
         });
       } else {
+        const targetObjectId = fieldDraft.object_id || activeObject?.id || objects[0]?.id;
+        if (!targetObjectId) throw new Error("Bitte zuerst ein globales Objekt anlegen.");
         await api.globalFields.create({
-          object_id: activeObject!.id,
+          object_id: targetObjectId,
           field_key: fieldDraft.field_key || slug(fieldDraft.display_name),
           sort_order: (fields.at(-1)?.sort_order ?? 0) + 10,
           ...payload,
