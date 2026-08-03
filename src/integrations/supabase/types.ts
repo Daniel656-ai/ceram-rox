@@ -731,9 +731,61 @@ export type Database = {
           },
         ]
       }
+      global_calculations: {
+        Row: {
+          archived_at: string | null
+          calc_key: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          decimals: number
+          description: string | null
+          display_name: string
+          formula: string
+          id: string
+          inputs: Json
+          is_system: boolean
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          calc_key: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          decimals?: number
+          description?: string | null
+          display_name: string
+          formula: string
+          id?: string
+          inputs?: Json
+          is_system?: boolean
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          calc_key?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          decimals?: number
+          description?: string | null
+          display_name?: string
+          formula?: string
+          id?: string
+          inputs?: Json
+          is_system?: boolean
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       global_fields: {
         Row: {
           archived_at: string | null
+          calculation_id: string | null
           category: string | null
           created_at: string
           created_by: string | null
@@ -744,17 +796,21 @@ export type Database = {
           display_name: string
           field_key: string
           id: string
+          is_repeatable: boolean
           is_system: boolean
+          list_id: string | null
           metadata: Json
           object_id: string
           select_options: Json
           sort_order: number
           unit: string | null
           updated_at: string
+          validation_ids: string[]
           version: number
         }
         Insert: {
           archived_at?: string | null
+          calculation_id?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -765,17 +821,21 @@ export type Database = {
           display_name: string
           field_key: string
           id?: string
+          is_repeatable?: boolean
           is_system?: boolean
+          list_id?: string | null
           metadata?: Json
           object_id: string
           select_options?: Json
           sort_order?: number
           unit?: string | null
           updated_at?: string
+          validation_ids?: string[]
           version?: number
         }
         Update: {
           archived_at?: string | null
+          calculation_id?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -786,16 +846,33 @@ export type Database = {
           display_name?: string
           field_key?: string
           id?: string
+          is_repeatable?: boolean
           is_system?: boolean
+          list_id?: string | null
           metadata?: Json
           object_id?: string
           select_options?: Json
           sort_order?: number
           unit?: string | null
           updated_at?: string
+          validation_ids?: string[]
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "global_fields_calculation_id_fkey"
+            columns: ["calculation_id"]
+            isOneToOne: false
+            referencedRelation: "global_calculations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "global_fields_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "global_lists"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "global_fields_object_id_fkey"
             columns: ["object_id"]
@@ -804,6 +881,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      global_list_items: {
+        Row: {
+          archived_at: string | null
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          item_value: string
+          label: string
+          list_id: string
+          metadata: Json
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_value: string
+          label: string
+          list_id: string
+          metadata?: Json
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_value?: string
+          label?: string
+          list_id?: string
+          metadata?: Json
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_list_items_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "global_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      global_lists: {
+        Row: {
+          archived_at: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_name: string
+          id: string
+          is_system: boolean
+          list_key: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          is_system?: boolean
+          list_key: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_system?: boolean
+          list_key?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       global_objects: {
         Row: {
@@ -847,6 +1013,69 @@ export type Database = {
           object_key?: string
           sort_order?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      global_validations: {
+        Row: {
+          archived_at: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_name: string
+          error_message: string | null
+          expression: string | null
+          id: string
+          is_system: boolean
+          max_value: number | null
+          min_value: number | null
+          pattern: string | null
+          rule_type: string
+          severity: string
+          unit: string | null
+          updated_at: string
+          validation_key: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          error_message?: string | null
+          expression?: string | null
+          id?: string
+          is_system?: boolean
+          max_value?: number | null
+          min_value?: number | null
+          pattern?: string | null
+          rule_type?: string
+          severity?: string
+          unit?: string | null
+          updated_at?: string
+          validation_key: string
+        }
+        Update: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          error_message?: string | null
+          expression?: string | null
+          id?: string
+          is_system?: boolean
+          max_value?: number | null
+          min_value?: number | null
+          pattern?: string | null
+          rule_type?: string
+          severity?: string
+          unit?: string | null
+          updated_at?: string
+          validation_key?: string
         }
         Relationships: []
       }
