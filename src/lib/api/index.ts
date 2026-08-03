@@ -311,6 +311,8 @@ export const api = {
   processTemplateSteps,
   processStepRawMaterials,
   formDefinitions,
+  globalObjects,
+  globalFields,
   formFields,
   formRoleViews,
   formFieldPermissions,
