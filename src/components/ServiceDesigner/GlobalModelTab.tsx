@@ -73,16 +73,19 @@ export default function GlobalModelTab() {
     queryFn: () => api.globalObjects.list(),
   });
 
+  // "Alle Objekte" ist ein vollwertiger Modus – die Bibliothek ist auch ohne
+  // ausgewähltes oder überhaupt vorhandenes Objekt nutzbar.
+  const ALL = "__all__";
   const activeObject: GlobalObject | undefined = useMemo(
-    () => objects.find((o) => o.id === selectedId) ?? objects[0],
+    () => (selectedId && selectedId !== ALL ? objects.find((o) => o.id === selectedId) : undefined),
     [objects, selectedId]
   );
 
   const { data: fields = [] } = useQuery({
-    queryKey: ["global-fields", activeObject?.id],
-    queryFn: () => api.globalFields.list({ objectId: activeObject!.id }),
-    enabled: !!activeObject?.id,
+    queryKey: ["global-fields", activeObject?.id ?? "all"],
+    queryFn: () => api.globalFields.list(activeObject?.id ? { objectId: activeObject.id } : {}),
   });
+
 
   const invalidateObjects = () => qc.invalidateQueries({ queryKey: ["global-objects"] });
   const invalidateFields = () => qc.invalidateQueries({ queryKey: ["global-fields"] });
