@@ -32,6 +32,10 @@ export interface FormField {
   parent_field_id: string | null;
   sort_order: number;
   metadata: Record<string, unknown>;
+  /** Phase 2: Referenz auf ein globales Feld (null = klassisches lokales Feld). */
+  global_field_id: string | null;
+  /** Automatische Datenbindung, z.B. "order.versuchsnummer". */
+  binding_path: string | null;
   created_at: string;
   updated_at: string;
 }
