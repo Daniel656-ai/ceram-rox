@@ -690,6 +690,7 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
 function FormFieldsEditor({ form }: { form: FormDefinition }) {
   const qc = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newType, setNewType] = useState<FormFieldType>("text");
   const [editingField, setEditingField] = useState<FormField | null>(null);
