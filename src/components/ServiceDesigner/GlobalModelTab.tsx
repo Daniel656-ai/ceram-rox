@@ -302,6 +302,7 @@ export default function GlobalModelTab() {
               <TableRow>
                 <TableHead>Anzeigename</TableHead>
                 <TableHead>Technische ID</TableHead>
+                <TableHead>Objekt</TableHead>
                 <TableHead>Datentyp</TableHead>
                 <TableHead>Kategorie</TableHead>
                 <TableHead>Einheit</TableHead>
@@ -313,8 +314,12 @@ export default function GlobalModelTab() {
             <TableBody>
               {visibleFields.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">
-                    Noch keine globalen Felder für dieses Objekt.
+                  <TableCell colSpan={9} className="py-10 text-center">
+                    <p className="text-sm font-medium">Noch keine globalen Felder vorhanden.</p>
+                    <p className="text-xs text-muted-foreground">Erstellen Sie Ihr erstes globales Feld.</p>
+                    <Button size="sm" className="mt-3" onClick={openNewField}>
+                      <Plus className="h-4 w-4 mr-1" /> Globales Feld erstellen
+                    </Button>
                   </TableCell>
                 </TableRow>
               )}
@@ -322,6 +327,8 @@ export default function GlobalModelTab() {
                 <TableRow key={f.id}>
                   <TableCell className="font-medium">{f.display_name}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{f.field_key}</TableCell>
+                  <TableCell className="text-xs">{objectName(f.object_id)}</TableCell>
+
                   <TableCell>
                     <Badge variant="outline" className="text-[10px]">
                       {GLOBAL_FIELD_TYPES.find((t) => t.value === f.data_type)?.label ?? f.data_type}
