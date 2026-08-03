@@ -248,7 +248,7 @@ export default function GlobalModelTab() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <CardTitle className="text-sm">
-                Globale Felder{activeObject ? ` · ${activeObject.display_name}` : ""}
+                Globale Felder{activeObject ? ` · ${activeObject.display_name}` : " · Alle Objekte"}
               </CardTitle>
               <p className="text-xs text-muted-foreground">
                 Jedes Datenfeld existiert genau einmal. Die technische ID ist unveränderlich.
