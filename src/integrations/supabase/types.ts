@@ -718,6 +718,125 @@ export type Database = {
           },
         ]
       }
+      global_fields: {
+        Row: {
+          archived_at: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          data_source: string
+          data_type: string
+          default_value: string | null
+          description: string | null
+          display_name: string
+          field_key: string
+          id: string
+          is_system: boolean
+          metadata: Json
+          object_id: string
+          select_options: Json
+          sort_order: number
+          unit: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_source?: string
+          data_type?: string
+          default_value?: string | null
+          description?: string | null
+          display_name: string
+          field_key: string
+          id?: string
+          is_system?: boolean
+          metadata?: Json
+          object_id: string
+          select_options?: Json
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_source?: string
+          data_type?: string
+          default_value?: string | null
+          description?: string | null
+          display_name?: string
+          field_key?: string
+          id?: string
+          is_system?: boolean
+          metadata?: Json
+          object_id?: string
+          select_options?: Json
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_fields_object_id_fkey"
+            columns: ["object_id"]
+            isOneToOne: false
+            referencedRelation: "global_objects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      global_objects: {
+        Row: {
+          archived_at: string | null
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_name: string
+          icon: string | null
+          id: string
+          is_system: boolean
+          object_key: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name: string
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          object_key: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_name?: string
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          object_key?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hazard_notification_log: {
         Row: {
           activity_id: string | null
