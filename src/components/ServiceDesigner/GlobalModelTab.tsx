@@ -169,7 +169,15 @@ export default function GlobalModelTab() {
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
+  const objectName = (id: string) => objects.find((o) => o.id === id)?.display_name ?? "—";
+
+  const categories = useMemo(
+    () => Array.from(new Set(fields.map((f) => f.category).filter(Boolean) as string[])).sort(),
+    [fields]
+  );
+
   const visibleFields = fields.filter((f: GlobalField) => {
+    if (catFilter !== ALL && (f.category ?? "") !== catFilter) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -178,6 +186,12 @@ export default function GlobalModelTab() {
       (f.category ?? "").toLowerCase().includes(q)
     );
   });
+
+  const openNewField = () => {
+    setFieldDraft({ ...emptyField, object_id: activeObject?.id ?? objects[0]?.id ?? "" });
+    setFieldOpen(true);
+  };
+
 
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
