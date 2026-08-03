@@ -60,6 +60,8 @@ export default function GlobalModelTab() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState<string>(ALL);
+
   const [objOpen, setObjOpen] = useState(false);
   const [objDraft, setObjDraft] = useState<{ id?: string; object_key: string; display_name: string; description: string; category: string }>(
     { object_key: "", display_name: "", description: "", category: "" }
