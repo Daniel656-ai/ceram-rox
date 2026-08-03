@@ -10,8 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy } from "lucide-react";
+import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalValidation";
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -156,6 +159,7 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
 
   return (
     <div className="space-y-1">
+      <GlobalValidationHint field={field} />
       <Label className="text-xs flex items-center gap-1">
         {label} {required && <span className="text-destructive">*</span>}
         {field.unit && <span className="text-muted-foreground font-normal ml-1">[{field.unit}]</span>}
@@ -163,6 +167,39 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
       </Label>
       <FieldControl field={field} readonly={readonly} />
       {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+    </div>
+  );
+}
+
+/**
+ * Zeigt Verstöße gegen zentral definierte globale Validierungen an.
+ * Rein additiv: Felder ohne verknüpfte Regeln verhalten sich unverändert.
+ */
+function GlobalValidationHint({ field }: { field: FormField }) {
+  const ids = validationIdsFromMetadata(field.metadata);
+  const { value } = useBinding(field.field_key);
+  const { data: rules = [] } = useQuery({
+    queryKey: ["global-validations"],
+    queryFn: () => api.globalValidations.list(),
+    enabled: ids.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+  if (ids.length === 0) return null;
+  const issues = evaluateValidations(value, rules.filter((r) => ids.includes(r.id)));
+  if (issues.length === 0) return null;
+  return (
+    <div className="space-y-0.5">
+      {issues.map((i) => (
+        <p
+          key={i.validationKey}
+          className={cn(
+            "flex items-center gap-1 text-xs",
+            i.severity === "error" ? "text-destructive" : "text-amber-600"
+          )}
+        >
+          <AlertTriangle className="h-3 w-3" /> {i.message}
+        </p>
+      ))}
     </div>
   );
 }
