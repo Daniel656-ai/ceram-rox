@@ -401,6 +401,25 @@ export default function GlobalModelTab() {
           <DialogHeader><DialogTitle>{fieldDraft.id ? "Globales Feld bearbeiten" : "Neues globales Feld"}</DialogTitle></DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
+              <Label className="text-xs">Objekt</Label>
+              {objects.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Noch kein globales Objekt vorhanden – bitte zuerst links „Neues Objekt“ anlegen.
+                </p>
+              ) : (
+                <Select
+                  value={fieldDraft.object_id || objects[0].id}
+                  onValueChange={(v) => setFieldDraft({ ...fieldDraft, object_id: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {objects.map((o) => <SelectItem key={o.id} value={o.id}>{o.display_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="sm:col-span-2">
+
               <Label className="text-xs">Anzeigename</Label>
               <Input value={fieldDraft.display_name} onChange={(e) => setFieldDraft({ ...fieldDraft, display_name: e.target.value })} />
             </div>
