@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle, LinkIcon, Settings, Eye, Calculator, ClipboardList, Boxes, Library } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle, LinkIcon, Settings, Eye, Calculator, ClipboardList, Boxes } from "lucide-react";
 import type { ProcessKind, ProcessTemplate } from "@/lib/api/processTemplates";
 import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
@@ -26,6 +26,8 @@ import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
 import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
+import FieldRulesDesigner from "@/components/ServiceDesigner/FieldRulesDesigner";
+import FormVersionsPanel from "@/components/ServiceDesigner/FormVersionsPanel";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
@@ -33,7 +35,6 @@ import RoleFormTab from "@/components/ServiceDesigner/RoleFormTab";
 import ServicePreviewTab from "@/components/ServiceDesigner/ServicePreviewTab";
 import ReportTemplateDesigner from "@/components/ServiceDesigner/ReportTemplateDesigner";
 import GlobalModelTab from "@/components/ServiceDesigner/GlobalModelTab";
-import GlobalLibraryTab from "@/components/ServiceDesigner/GlobalLibraryTab";
 import GlobalFieldPicker from "@/components/ServiceDesigner/GlobalFieldPicker";
 
 
@@ -154,12 +155,7 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
           <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek (Service Designer)</TabsTrigger>
           <TabsTrigger value="mapping"><LinkIcon className="h-4 w-4 mr-1" />Auftragsart-Zuordnung</TabsTrigger>
           <TabsTrigger value="global"><Boxes className="h-4 w-4 mr-1" />Globale Objekte & Felder</TabsTrigger>
-          <TabsTrigger value="library-global"><Library className="h-4 w-4 mr-1" />Listen, Berechnungen & Validierungen</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="library-global" className="mt-4">
-          <GlobalLibraryTab />
-        </TabsContent>
 
         <TabsContent value="global" className="mt-4">
           <GlobalModelTab />
@@ -902,10 +898,48 @@ function FormPreviewTab({ form }: { form: FormDefinition }) {
     queryKey: ["form-fields", form.id],
     queryFn: () => api.formFields.listForForm(form.id),
   });
+  const { data: rules = [] } = useQuery({
+    queryKey: ["form-field-rules", form.id],
+    queryFn: () => api.formFieldRules.listForForm(form.id),
+  });
+  const [testValues, setTestValues] = useState<Record<string, any>>({});
+  const [testRole, setTestRole] = useState("admin");
+  const [testStatus, setTestStatus] = useState("in_progress");
   const layout = normalizeLayout((form as any).layout);
   return (
-    <div className="border rounded p-4 bg-background">
-      <FormLayoutRenderer layout={layout} fields={fields} />
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Label className="text-xs">Test-Rolle</Label>
+        <Select value={testRole} onValueChange={setTestRole}>
+          <SelectTrigger className="h-8 w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
+            <SelectItem value="messdienstleister">Messdienstleister</SelectItem>
+            <SelectItem value="labor">Labor</SelectItem>
+            <SelectItem value="admin">Administrator</SelectItem>
+          </SelectContent>
+        </Select>
+        <Label className="text-xs">Auftragsstatus</Label>
+        <Select value={testStatus} onValueChange={setTestStatus}>
+          <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">offen</SelectItem>
+            <SelectItem value="in_progress">in Bearbeitung</SelectItem>
+            <SelectItem value="completed">abgeschlossen</SelectItem>
+          </SelectContent>
+        </Select>
+        {rules.length > 0 && <Badge variant="outline">{rules.length} Regel(n) aktiv</Badge>}
+      </div>
+      <div className="border rounded p-4 bg-background">
+        <FormLayoutRenderer
+          layout={layout}
+          fields={fields}
+          values={testValues}
+          onChange={(k, v) => setTestValues((prev) => ({ ...prev, [k]: v }))}
+          rules={rules}
+          ruleContext={{ role: testRole, order_status: testStatus, measurement_status: testStatus }}
+        />
+      </div>
     </div>
   );
 }
@@ -982,6 +1016,8 @@ function GlobalFormLibrary() {
                   <TabsTrigger value="fields">Felder</TabsTrigger>
                   <TabsTrigger value="layout">Formular-Designer</TabsTrigger>
                   <TabsTrigger value="roles">Rollenansichten</TabsTrigger>
+                  <TabsTrigger value="rules">Feldregeln</TabsTrigger>
+                  <TabsTrigger value="versions">Versionen</TabsTrigger>
                   <TabsTrigger value="preview">Vorschau</TabsTrigger>
                 </TabsList>
                 <TabsContent value="fields" className="mt-3">
@@ -992,6 +1028,12 @@ function GlobalFormLibrary() {
                 </TabsContent>
                 <TabsContent value="roles" className="mt-3">
                   <RoleViewsDesigner form={selectedForm} canManage={true} />
+                </TabsContent>
+                <TabsContent value="rules" className="mt-3">
+                  <FieldRulesDesigner form={selectedForm} canManage={true} />
+                </TabsContent>
+                <TabsContent value="versions" className="mt-3">
+                  <FormVersionsPanel form={selectedForm} canManage={true} />
                 </TabsContent>
                 <TabsContent value="preview" className="mt-3">
                   <FormPreviewTab form={selectedForm} />

@@ -2,6 +2,8 @@ import { useMemo, useState, createContext, useContext, useCallback } from "react
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
+import type { FormFieldRule } from "@/lib/api/formFieldRules";
+import { mergePermissionsWithRules } from "@/lib/fieldRules";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -10,11 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle } from "lucide-react";
+import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalValidation";
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -165,41 +164,7 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
         {perm.locked && <Lock className="h-3 w-3 text-muted-foreground" aria-label="Nach Abschluss gesperrt" />}
       </Label>
       <FieldControl field={field} readonly={readonly} />
-      <GlobalValidationHint field={field} />
       {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
-    </div>
-  );
-}
-
-/**
- * Zeigt Verstöße gegen zentral definierte globale Validierungen an.
- * Rein additiv: Felder ohne verknüpfte Regeln verhalten sich unverändert.
- */
-function GlobalValidationHint({ field }: { field: FormField }) {
-  const ids = validationIdsFromMetadata(field.metadata);
-  const { value } = useBinding(field.field_key);
-  const { data: rules = [] } = useQuery({
-    queryKey: ["global-validations"],
-    queryFn: () => api.globalValidations.list(),
-    enabled: ids.length > 0,
-    staleTime: 5 * 60 * 1000,
-  });
-  if (ids.length === 0) return null;
-  const issues = evaluateValidations(value, rules.filter((r) => ids.includes(r.id)));
-  if (issues.length === 0) return null;
-  return (
-    <div className="space-y-0.5">
-      {issues.map((i) => (
-        <p
-          key={i.validationKey}
-          className={cn(
-            "flex items-center gap-1 text-xs",
-            i.severity === "error" ? "text-destructive" : "text-amber-600"
-          )}
-        >
-          <AlertTriangle className="h-3 w-3" /> {i.message}
-        </p>
-      ))}
     </div>
   );
 }
@@ -495,6 +460,8 @@ export default function FormLayoutRenderer({
   permissions,
   values,
   onChange,
+  rules,
+  ruleContext,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
@@ -502,6 +469,10 @@ export default function FormLayoutRenderer({
   /** When provided, the renderer is interactive and binds inputs to these values. */
   values?: Record<string, any>;
   onChange?: (key: string, v: any) => void;
+  /** Phase 4: Feldregeln ("Wenn … dann …"). Ohne Regeln unverändertes Verhalten. */
+  rules?: FormFieldRule[];
+  /** Zusatzkontext für Regeln (z.B. { order_status: "completed", role: "labor" }). */
+  ruleContext?: Record<string, unknown>;
 }) {
   const interactive = !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
@@ -510,11 +481,19 @@ export default function FormLayoutRenderer({
     interactive,
   }), [values, onChange, interactive]);
 
+  const effectivePermissions = useMemo(() => {
+    if (!rules || rules.length === 0) return permissions ?? null;
+    return mergePermissionsWithRules(permissions, fields, rules, {
+      values: values ?? {},
+      context: ruleContext ?? {},
+    });
+  }, [permissions, fields, rules, values, ruleContext]);
+
   if (!layout.nodes.length) {
     return <div className="text-sm text-muted-foreground border rounded p-6 text-center">Noch keine Elemente im Layout.</div>;
   }
   return (
-    <PermissionsCtx.Provider value={permissions ?? null}>
+    <PermissionsCtx.Provider value={effectivePermissions}>
       <ValuesCtx.Provider value={bind}>
         <div className="grid grid-cols-12 gap-3">
           {layout.nodes.map(n => <RenderNode key={n.id} node={n} fields={fields} />)}
@@ -523,3 +502,4 @@ export default function FormLayoutRenderer({
     </PermissionsCtx.Provider>
   );
 }
+

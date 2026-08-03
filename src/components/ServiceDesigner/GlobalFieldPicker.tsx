@@ -50,13 +50,6 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
     enabled: open,
   });
 
-  // Globale Listen liefern die Auswahlwerte zentral – Formulare erben sie beim Einfügen.
-  const { data: lists = [] } = useQuery({
-    queryKey: ["global-lists"],
-    queryFn: () => api.globalLists.list(),
-    enabled: open,
-  });
-
   const objectById = useMemo(
     () => Object.fromEntries(objects.map((o: GlobalObject) => [o.id, o])),
     [objects]
@@ -100,12 +93,6 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
         const gf = allFields.find((f) => f.id === id);
         if (!gf) continue;
         const obj = objectById[gf.object_id];
-        // Auswahlwerte aus der globalen Liste übernehmen (falls verknüpft)
-        let options = gf.select_options as any;
-        if (gf.list_id && lists.some((l) => l.id === gf.list_id)) {
-          const items = await api.globalListItems.list(gf.list_id);
-          options = items.map((i) => ({ label: i.label, value: i.item_value }));
-        }
         await api.formFields.create({
           form_id: formId,
           field_key: gf.field_key,
@@ -115,16 +102,10 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
           unit: gf.unit,
           default_value: gf.default_value,
           category: gf.category,
-          select_options: options,
+          select_options: gf.select_options as any,
           sort_order: sort++,
           global_field_id: gf.id,
           binding_path: obj ? bindingPathFor(obj.object_key, gf.field_key) : gf.field_key,
-          metadata: {
-            global_list_id: gf.list_id ?? null,
-            global_calculation_id: gf.calculation_id ?? null,
-            validation_ids: gf.validation_ids ?? [],
-            is_repeatable: !!gf.is_repeatable,
-          },
         } as any);
       }
       return ids.length;

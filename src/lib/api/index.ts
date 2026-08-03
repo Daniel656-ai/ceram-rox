@@ -155,10 +155,12 @@ import { processSteps as processTemplateSteps } from "./processSteps";
 import { processStepRawMaterials } from "./processStepRawMaterials";
 import { formDefinitions } from "./formDefinitions";
 import { globalObjects, globalFields } from "./globalModel";
-import { globalLists, globalListItems, globalCalculations, globalValidations } from "./globalLibrary";
 import { formFields } from "./formFields";
 import { formRoleViews } from "./formRoleViews";
 import { formFieldPermissions } from "./formFieldPermissions";
+import { formFieldRules } from "./formFieldRules";
+import { formVersions, orderFormVersions } from "./formVersions";
+import { formValueHistory } from "./formValueHistory";
 import { serviceFormLinks } from "./serviceFormLinks";
 import { processServiceLinks } from "./processServiceLinks";
 import { workflowProcessLinks } from "./workflowProcessLinks";
@@ -314,13 +316,15 @@ export const api = {
   formDefinitions,
   globalObjects,
   globalFields,
-  globalLists,
-  globalListItems,
-  globalCalculations,
-  globalValidations,
   formFields,
   formRoleViews,
   formFieldPermissions,
+
+  // ---- Phase 4: modellgetriebene Formulararchitektur ----
+  formFieldRules,
+  formVersions,
+  orderFormVersions,
+  formValueHistory,
 
   // ---- Workflow-Architektur: Vorlagen-Verknüpfungen & Auftrags-Instanzen ----
   serviceFormLinks,
