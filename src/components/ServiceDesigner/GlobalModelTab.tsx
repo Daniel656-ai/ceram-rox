@@ -51,6 +51,7 @@ const emptyField: FieldDraft = {
 
 
 const NONE = "__none__";
+const ALL = "__all__";
 
 /**
  * Phase 1 des zentralen Datenmodells: Verwaltung globaler Objekte und
@@ -80,7 +81,6 @@ export default function GlobalModelTab() {
 
   // "Alle Objekte" ist ein vollwertiger Modus – die Bibliothek ist auch ohne
   // ausgewähltes oder überhaupt vorhandenes Objekt nutzbar.
-  const ALL = "__all__";
   const activeObject: GlobalObject | undefined = useMemo(
     () => (selectedId && selectedId !== ALL ? objects.find((o) => o.id === selectedId) : undefined),
     [objects, selectedId]
