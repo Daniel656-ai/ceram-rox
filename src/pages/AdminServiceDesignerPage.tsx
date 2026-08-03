@@ -721,10 +721,17 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="text-xs text-muted-foreground">Formular: <span className="font-medium">{form.name}</span></div>
-        <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-1" />Feld</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setPickerOpen(true)}><Boxes className="h-4 w-4 mr-1" />Globales Feld</Button>
+          <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-1" />Lokales Feld</Button>
+        </div>
       </div>
+      <p className="text-[11px] text-muted-foreground">
+        Neue Felder werden bevorzugt aus der globalen Feldbibliothek referenziert — das Formular speichert dann nur
+        Position, Sichtbarkeit, Pflicht und Layout. Lokale Felder bleiben für Bestandsformulare weiterhin möglich.
+      </p>
 
       {fields.length === 0 && <div className="text-sm text-muted-foreground py-4 text-center border rounded">Noch keine Felder.</div>}
 
@@ -732,14 +739,28 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
         {fields.map(f => (
           <div key={f.id} className="flex items-center gap-2 border rounded px-2 py-1.5 hover:bg-muted/40">
             <span className="flex-1 text-sm"><span className="font-medium">{f.display_name}</span> <span className="text-muted-foreground text-xs">({f.field_key})</span></span>
+            {f.global_field_id && (
+              <Badge variant="secondary" className="text-xs font-mono" title="Referenz auf globales Feld">
+                {f.binding_path ?? "global"}
+              </Badge>
+            )}
             <Badge variant="outline" className="text-xs">{ALL_TYPES.find(t => t.value === f.field_type)?.label ?? f.field_type}</Badge>
             {f.is_required && <Badge variant="secondary" className="text-xs">Pflicht</Badge>}
             {f.unit && <Badge variant="outline" className="text-xs">{f.unit}</Badge>}
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingField(f)}><FormInput className="h-3 w-3" /></Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { if (confirm(`Feld „${f.display_name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { if (confirm(`Feld „${f.display_name}" entfernen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
           </div>
         ))}
       </div>
+
+      <GlobalFieldPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        formId={form.id}
+        existing={fields}
+        onInserted={invalidate}
+      />
+
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
