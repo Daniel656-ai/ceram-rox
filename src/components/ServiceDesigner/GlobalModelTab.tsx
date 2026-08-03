@@ -303,7 +303,7 @@ export default function GlobalModelTab() {
                   <TableCell className="text-right">
                     <Button size="sm" variant="ghost" onClick={() => {
                       setFieldDraft({
-                        id: f.id, field_key: f.field_key, display_name: f.display_name,
+                        id: f.id, object_id: f.object_id, field_key: f.field_key, display_name: f.display_name,
                         description: f.description ?? "", data_type: f.data_type,
                         category: f.category ?? "", unit: f.unit ?? "",
                         default_value: f.default_value ?? "", data_source: f.data_source,
