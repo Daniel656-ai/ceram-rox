@@ -280,13 +280,19 @@ export default function GlobalModelTab() {
                   className="h-8 w-48 pl-7 text-xs"
                 />
               </div>
-              <Button
-                size="sm"
-                disabled={!activeObject}
-                onClick={() => { setFieldDraft(emptyField); setFieldOpen(true); }}
-              >
+              <Select value={catFilter} onValueChange={setCatFilter}>
+                <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder="Kategorie" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>Alle Kategorien</SelectItem>
+                  {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {/* Immer aktiv – die Verfügbarkeit hängt nur von der Berechtigung ab,
+                  nie vom Datenbestand. */}
+              <Button size="sm" onClick={openNewField}>
                 <Plus className="h-4 w-4 mr-1" /> Neues Feld
               </Button>
+
             </div>
           </div>
         </CardHeader>
