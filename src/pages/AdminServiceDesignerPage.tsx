@@ -26,6 +26,8 @@ import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
 import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
+import FieldRulesDesigner from "@/components/ServiceDesigner/FieldRulesDesigner";
+import FormVersionsPanel from "@/components/ServiceDesigner/FormVersionsPanel";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
 import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
@@ -976,6 +978,8 @@ function GlobalFormLibrary() {
                   <TabsTrigger value="fields">Felder</TabsTrigger>
                   <TabsTrigger value="layout">Formular-Designer</TabsTrigger>
                   <TabsTrigger value="roles">Rollenansichten</TabsTrigger>
+                  <TabsTrigger value="rules">Feldregeln</TabsTrigger>
+                  <TabsTrigger value="versions">Versionen</TabsTrigger>
                   <TabsTrigger value="preview">Vorschau</TabsTrigger>
                 </TabsList>
                 <TabsContent value="fields" className="mt-3">
@@ -986,6 +990,12 @@ function GlobalFormLibrary() {
                 </TabsContent>
                 <TabsContent value="roles" className="mt-3">
                   <RoleViewsDesigner form={selectedForm} canManage={true} />
+                </TabsContent>
+                <TabsContent value="rules" className="mt-3">
+                  <FieldRulesDesigner form={selectedForm} canManage={true} />
+                </TabsContent>
+                <TabsContent value="versions" className="mt-3">
+                  <FormVersionsPanel form={selectedForm} canManage={true} />
                 </TabsContent>
                 <TabsContent value="preview" className="mt-3">
                   <FormPreviewTab form={selectedForm} />
