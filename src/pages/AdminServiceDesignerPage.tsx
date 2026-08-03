@@ -898,10 +898,48 @@ function FormPreviewTab({ form }: { form: FormDefinition }) {
     queryKey: ["form-fields", form.id],
     queryFn: () => api.formFields.listForForm(form.id),
   });
+  const { data: rules = [] } = useQuery({
+    queryKey: ["form-field-rules", form.id],
+    queryFn: () => api.formFieldRules.listForForm(form.id),
+  });
+  const [testValues, setTestValues] = useState<Record<string, any>>({});
+  const [testRole, setTestRole] = useState("admin");
+  const [testStatus, setTestStatus] = useState("in_progress");
   const layout = normalizeLayout((form as any).layout);
   return (
-    <div className="border rounded p-4 bg-background">
-      <FormLayoutRenderer layout={layout} fields={fields} />
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Label className="text-xs">Test-Rolle</Label>
+        <Select value={testRole} onValueChange={setTestRole}>
+          <SelectTrigger className="h-8 w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auftraggeber">Auftraggeber</SelectItem>
+            <SelectItem value="messdienstleister">Messdienstleister</SelectItem>
+            <SelectItem value="labor">Labor</SelectItem>
+            <SelectItem value="admin">Administrator</SelectItem>
+          </SelectContent>
+        </Select>
+        <Label className="text-xs">Auftragsstatus</Label>
+        <Select value={testStatus} onValueChange={setTestStatus}>
+          <SelectTrigger className="h-8 w-44"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">offen</SelectItem>
+            <SelectItem value="in_progress">in Bearbeitung</SelectItem>
+            <SelectItem value="completed">abgeschlossen</SelectItem>
+          </SelectContent>
+        </Select>
+        {rules.length > 0 && <Badge variant="outline">{rules.length} Regel(n) aktiv</Badge>}
+      </div>
+      <div className="border rounded p-4 bg-background">
+        <FormLayoutRenderer
+          layout={layout}
+          fields={fields}
+          values={testValues}
+          onChange={(k, v) => setTestValues((prev) => ({ ...prev, [k]: v }))}
+          rules={rules}
+          ruleContext={{ role: testRole, order_status: testStatus, measurement_status: testStatus }}
+        />
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@
  */
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { formValueHistory } from "./formValueHistory";
 
 // =====================================================================
 // service_forms
@@ -324,8 +325,14 @@ export const orderSharedFormData = {
     )) as any;
     return (r?.shared_form_data ?? {}) as Record<string, unknown>;
   },
-  merge: async (orderId: string, patch: Record<string, unknown>) => {
+  merge: async (orderId: string, patch: Record<string, unknown>, opts?: { formId?: string | null; labels?: Record<string, string> }) => {
     const current = await orderSharedFormData.get(orderId);
+    // Phase 4: Historisierung – protokolliert Benutzer, Zeit, alten und neuen Wert.
+    await formValueHistory.record({
+      orderId,
+      formId: opts?.formId ?? null,
+      changes: formValueHistory.diff(current, { ...current, ...patch }, opts?.labels),
+    });
     await run(
       dbClient
         .from("measurement_orders" as any)
