@@ -208,6 +208,15 @@ export default function GlobalModelTab() {
         </CardHeader>
         <CardContent className="space-y-1">
           {isLoading && <p className="text-xs text-muted-foreground">Lade…</p>}
+          <button
+            onClick={() => setSelectedId(ALL)}
+            className={`w-full rounded px-2 py-1.5 text-left text-sm transition-colors ${
+              !activeObject ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted"
+            }`}
+          >
+            Alle Objekte
+            <span className="block text-[10px] text-muted-foreground">Gesamte Feldbibliothek</span>
+          </button>
           {objects.map((o) => (
             <button
               key={o.id}
