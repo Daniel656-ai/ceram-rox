@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -255,4 +255,3 @@ export function DataTable<T>({
   );
 }
 
-export { Fragment as _unusedFragment };
