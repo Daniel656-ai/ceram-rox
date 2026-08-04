@@ -4,7 +4,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useStorageLocations } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -30,6 +30,16 @@ import { type HazardClassKey } from "@/lib/hazardClasses";
 
 const DISPOSAL_CATEGORIES = ["laborabfall", "gefahrstoff", "sondermuell"] as const;
 
+const SAMPLE_STATUS_ORDER = [
+  "neu",
+  "in_bearbeitung",
+  "teilweise_verbraucht",
+  "eingelagert",
+  "vollstaendig_verbraucht",
+  "entsorgt",
+  "zurueckgesendet",
+];
+
 function formatLocation(loc: any) {
   if (!loc) return "–";
   return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" › ");
@@ -54,20 +64,6 @@ export default function SamplesPage() {
   const deleteSample = useDeleteSample();
   const etaMap = useEstimatedCompletion();
 
-  // Fetch measurement services for filter
-  const { data: services = [] } = useQuery({
-    queryKey: ["measurement-services-filter"],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("measurement_services")
-        .select("id, service_name")
-        .eq("active", true)
-        .order("service_name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
 
   // Fetch measurement orders with services for linking samples to measurement types
   const { data: sampleMeasurementTypes = new Map<string, string[]>() } = useQuery({
@@ -92,15 +88,6 @@ export default function SamplesPage() {
     enabled: !!user,
   });
 
-  // Search & filter state
-  const [search, setSearch] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filterProject, setFilterProject] = useState<string>("__all__");
-  const [filterService, setFilterService] = useState<string>("__all__");
-  const [filterHazardous, setFilterHazardous] = useState<string>("__all__");
-  const [filterTags, setFilterTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("created_desc");
 
   const [open, setOpen] = useState(false);
   const [createMode, setCreateMode] = useState<"single" | "bulk">("single");
@@ -135,7 +122,7 @@ export default function SamplesPage() {
 
   const canCreate = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
-  const hasActiveFilters = filterProject !== "__all__" || filterService !== "__all__" || filterHazardous !== "__all__" || filterTags.length > 0;
+
 
   // Collect all unique tags across samples for autocomplete
   const allTags = useMemo(() => {
@@ -164,93 +151,6 @@ export default function SamplesPage() {
 
   const currentList = categorized[activeTab] || categorized.all;
 
-  // Apply all filters + search + sort
-  const filtered = useMemo(() => {
-    let result = [...currentList];
-    const q = search.toLowerCase().trim();
-
-    // Text search: sample_number, sample_name, description, tags
-    if (q) {
-      result = result.filter((s: any) => {
-        const tags = Array.isArray(s.tags) ? s.tags : [];
-        return (
-          s.sample_number.toLowerCase().includes(q) ||
-          s.sample_name.toLowerCase().includes(q) ||
-          (s.description || "").toLowerCase().includes(q) ||
-          tags.some((t: string) => t.toLowerCase().includes(q))
-        );
-      });
-    }
-
-    // Project filter
-    if (filterProject !== "__all__") {
-      result = result.filter((s: any) => s.project_id === filterProject);
-    }
-
-    // Measurement type filter
-    if (filterService !== "__all__") {
-      result = result.filter((s: any) => {
-        const types = sampleMeasurementTypes.get(s.id) || [];
-        return types.some(name => {
-          const svc = services.find(sv => sv.service_name === name);
-          return svc?.id === filterService;
-        });
-      });
-    }
-
-    // Hazardous filter
-    if (filterHazardous === "yes") result = result.filter((s: any) => s.is_hazardous);
-    if (filterHazardous === "no") result = result.filter((s: any) => !s.is_hazardous);
-
-    // Tags filter
-    if (filterTags.length > 0) {
-      result = result.filter((s: any) => {
-        const tags: string[] = Array.isArray(s.tags) ? s.tags : [];
-        return filterTags.every(ft => tags.some(t => t.toLowerCase() === ft.toLowerCase()));
-      });
-    }
-
-    // Sort
-    result.sort((a: any, b: any) => {
-      switch (sortBy) {
-        case "created_asc": return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case "created_desc": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "name": return (a.sample_name || "").localeCompare(b.sample_name || "");
-        case "location": return formatLocation(a.storage_locations).localeCompare(formatLocation(b.storage_locations));
-        case "eta": {
-          const etaA = etaMap.get(a.id)?.getTime() || Infinity;
-          const etaB = etaMap.get(b.id)?.getTime() || Infinity;
-          return etaA - etaB;
-        }
-        case "priority": {
-          const etaA = etaMap.get(a.id)?.getTime() || Infinity;
-          const etaB = etaMap.get(b.id)?.getTime() || Infinity;
-          return etaA - etaB;
-        }
-        case "tags_count_desc": {
-          const ta: string[] = Array.isArray(a.tags) ? a.tags : [];
-          const tb: string[] = Array.isArray(b.tags) ? b.tags : [];
-          if (tb.length !== ta.length) return tb.length - ta.length;
-          const fa = [...ta].sort()[0] || "";
-          const fb = [...tb].sort()[0] || "";
-          return fa.localeCompare(fb);
-        }
-        case "tags_alpha": {
-          const ta: string[] = Array.isArray(a.tags) ? a.tags : [];
-          const tb: string[] = Array.isArray(b.tags) ? b.tags : [];
-          const fa = [...ta].sort()[0] || "";
-          const fb = [...tb].sort()[0] || "";
-          if (!fa && !fb) return 0;
-          if (!fa) return 1;
-          if (!fb) return -1;
-          return fa.localeCompare(fb);
-        }
-        default: return 0;
-      }
-    });
-
-    return result;
-  }, [currentList, search, filterProject, filterService, filterHazardous, filterTags, sortBy, sampleMeasurementTypes, services, etaMap]);
 
   const toggleHazard = (cat: string) => {
     setForm(f => {
@@ -353,26 +253,6 @@ export default function SamplesPage() {
     setBulkForm(f => ({ ...f, tags: f.tags.filter(t => t !== tag) }));
   };
 
-  const resetFilters = () => {
-    setFilterProject("__all__");
-    setFilterService("__all__");
-    setFilterHazardous("__all__");
-    setFilterTags([]);
-    setSortBy("created_desc");
-    setSearch("");
-  };
-
-  const addFilterTag = (tag: string) => {
-    const trimmed = tag.trim();
-    if (trimmed && !filterTags.includes(trimmed)) {
-      setFilterTags(prev => [...prev, trimmed]);
-    }
-    setTagInput("");
-  };
-
-  const removeFilterTag = (tag: string) => {
-    setFilterTags(prev => prev.filter(t => t !== tag));
-  };
 
   const addFormTag = (tag: string) => {
     const trimmed = tag.trim();
@@ -433,12 +313,163 @@ export default function SamplesPage() {
     { value: "gefahrstoff", icon: <ShieldAlert className="h-3.5 w-3.5" />, labelKey: "cat_gefahrstoff", count: categorized.gefahrstoff.length },
   ];
 
-  // Tag suggestions for filter input
-  const tagSuggestions = useMemo(() => {
-    if (!tagInput.trim()) return [];
-    const q = tagInput.toLowerCase();
-    return allTags.filter(t => t.toLowerCase().includes(q) && !filterTags.includes(t)).slice(0, 5);
-  }, [tagInput, allTags, filterTags]);
+  const sampleColumns = useMemo<DataTableColumn<any>[]>(() => {
+    const cols: DataTableColumn<any>[] = [
+      {
+        key: "sample_number",
+        header: t("sample_number"),
+        cell: (s) => (
+          <Link to={`/proben/${s.id}`} className="font-medium text-destructive underline underline-offset-2 hover:opacity-80">
+            {s.sample_number}
+          </Link>
+        ),
+      },
+      { key: "sample_name", header: t("name") },
+      {
+        key: "project",
+        header: t("project"),
+        accessor: (s) => s.projects?.project_number || "",
+      },
+      {
+        key: "status",
+        header: t("status"),
+        type: "status",
+        accessor: (s) => s.status || "neu",
+        statusOrder: SAMPLE_STATUS_ORDER,
+        statusLabels: Object.fromEntries(SAMPLE_STATUS_ORDER.map((st) => [st, t(`status_${st}`)])),
+        cell: (s) => getStatusBadge(s.status || "neu"),
+      },
+      {
+        key: "eta",
+        header: t("eta_short"),
+        type: "date",
+        accessor: (s) => etaMap.get(s.id) ?? null,
+        cell: (s) => {
+          const completed = ["vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"];
+          if (completed.includes(s.status)) return <span className="text-muted-foreground text-xs">{t("eta_completed")}</span>;
+          const eta = etaMap.get(s.id);
+          if (!eta) return <span className="text-muted-foreground text-xs">{t("eta_no_orders")}</span>;
+          return <Badge variant="outline" className="gap-1 text-xs"><CalendarClock className="h-3 w-3" />{eta.toLocaleDateString("de-DE")}</Badge>;
+        },
+      },
+      {
+        key: "location",
+        header: t("location"),
+        accessor: (s) => formatLocation(s.storage_locations),
+        className: "text-sm",
+      },
+      {
+        key: "measurement_types",
+        header: t("filter_measurement_type"),
+        accessor: (s) => (sampleMeasurementTypes.get(s.id) || []).join(", "),
+      },
+      {
+        key: "tags",
+        header: t("tags"),
+        accessor: (s) => (Array.isArray(s.tags) ? s.tags.join(", ") : ""),
+        cell: (s) => {
+          const sampleTags: string[] = Array.isArray(s.tags) ? s.tags : [];
+          return (
+            <div className="flex flex-wrap gap-1 max-w-[150px]">
+              {sampleTags.length > 0 ? sampleTags.slice(0, 3).map((tag) => (
+                <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+              )) : <span className="text-muted-foreground text-xs">–</span>}
+              {sampleTags.length > 3 && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{sampleTags.length - 3}</Badge>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        key: "is_hazardous",
+        header: t("hazardous"),
+        type: "boolean",
+        accessor: (s) => !!s.is_hazardous,
+        cell: (s) =>
+          s.is_hazardous ? (
+            <GhsPictogramList hazardClasses={s.hazard_categories} size="sm" max={5} />
+          ) : (
+            <span className="text-muted-foreground text-sm">{t("hazard_no")}</span>
+          ),
+      },
+    ];
+
+    if (activeTab === "kritisch") {
+      cols.push({
+        key: "expiry_remaining",
+        header: t("expiry_remaining"),
+        type: "number",
+        accessor: (s) => getDaysUntilExpiry(s.storage_expiry_date),
+        cell: (s) => {
+          const daysLeft = getDaysUntilExpiry(s.storage_expiry_date);
+          if (daysLeft === null) return <span className="text-muted-foreground">–</span>;
+          return (
+            <Badge variant={daysLeft <= 7 ? "destructive" : "outline"} className="gap-1">
+              <Timer className="h-3 w-3" />
+              {daysLeft <= 0 ? t("expiry_overdue") : t("expiry_days", { count: daysLeft })}
+            </Badge>
+          );
+        },
+      });
+    }
+
+    cols.push(
+      {
+        key: "created_at",
+        header: t("created_at"),
+        type: "date",
+        cell: (s) => new Date(s.created_at).toLocaleDateString("de-DE"),
+      },
+      {
+        key: "actions",
+        header: t("actions"),
+        type: "custom",
+        sortable: false,
+        filterable: false,
+        searchable: false,
+        headClassName: "w-24",
+        cell: (s) => {
+          const canDelete = role === "master" || s.created_by === user?.id;
+          if (!canCreate || !canDelete) return null;
+          return (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("delete_description_prefix")}{s.sample_number}{t("delete_description_suffix")}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={async () => {
+                      try {
+                        await deleteSample.mutateAsync(s.id);
+                        toast.success(t("deleted"));
+                      } catch (e: any) {
+                        toast.error(e.message || t("delete_error"));
+                      }
+                    }}
+                  >{t("delete")}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          );
+        },
+      },
+    );
+
+    return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t, activeTab, etaMap, sampleMeasurementTypes, role, user?.id, canCreate, deleteSample]);
 
   return (
     <div className="space-y-6">
@@ -783,147 +814,6 @@ export default function SamplesPage() {
         </TabsList>
       </Tabs>
 
-      {/* Search + Scanner + Filter toggle */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder={t("search_placeholder")} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <SampleScannerInput />
-        <Button
-          variant={hasActiveFilters ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilterOpen(o => !o)}
-          className="gap-1.5"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          {t("filter_show")}
-          {hasActiveFilters && (
-            <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px] bg-primary-foreground text-primary">
-              !
-            </Badge>
-          )}
-        </Button>
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1 text-muted-foreground">
-            <X className="h-3.5 w-3.5" />
-            {t("filter_reset")}
-          </Button>
-        )}
-      </div>
-
-      {/* Expandable Filter Panel */}
-      <Collapsible open={filterOpen} onOpenChange={setFilterOpen}>
-        <CollapsibleContent>
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Project filter */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">{t("filter_project")}</Label>
-                  <Select value={filterProject} onValueChange={setFilterProject}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">{t("filter_project_all")}</SelectItem>
-                      {projects.map(p => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.project_number}{p.project_name ? ` – ${p.project_name}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Measurement type filter */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">{t("filter_measurement_type")}</Label>
-                  <Select value={filterService} onValueChange={setFilterService}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">{t("filter_measurement_type_all")}</SelectItem>
-                      {services.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.service_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Hazardous filter */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">{t("filter_hazardous")}</Label>
-                  <Select value={filterHazardous} onValueChange={setFilterHazardous}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">{t("filter_hazardous_all")}</SelectItem>
-                      <SelectItem value="yes">{t("filter_hazardous_yes")}</SelectItem>
-                      <SelectItem value="no">{t("filter_hazardous_no")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Sort */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">{t("filter_sort")}</Label>
-                  <Select value={sortBy} onValueChange={v => setSortBy(v as SortOption)}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="created_desc">{t("sort_created_desc")}</SelectItem>
-                      <SelectItem value="created_asc">{t("sort_created_asc")}</SelectItem>
-                      <SelectItem value="name">{t("sort_name")}</SelectItem>
-                      <SelectItem value="eta">{t("sort_eta")}</SelectItem>
-                      <SelectItem value="location">{t("sort_location")}</SelectItem>
-                      <SelectItem value="tags_count_desc">{t("sort_tags_count_desc")}</SelectItem>
-                      <SelectItem value="tags_alpha">{t("sort_tags_alpha")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Tags filter row */}
-              <div className="mt-4 space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">{t("filter_tags")}</Label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {filterTags.map(tag => (
-                    <Badge key={tag} variant="secondary" className="gap-1 pr-1">
-                      <Tag className="h-3 w-3" />
-                      {tag}
-                      <button type="button" onClick={() => removeFilterTag(tag)} className="ml-0.5 hover:text-destructive">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-                <div className="relative max-w-sm">
-                  <Input
-                    value={tagInput}
-                    onChange={e => setTagInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === "Enter") { e.preventDefault(); addFilterTag(tagInput); }
-                    }}
-                    placeholder={t("filter_tags_placeholder")}
-                    className="h-9"
-                  />
-                  {tagSuggestions.length > 0 && (
-                    <div className="absolute z-10 top-full left-0 mt-1 w-full rounded-md border bg-popover shadow-md">
-                      {tagSuggestions.map(suggestion => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => addFilterTag(suggestion)}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </CollapsibleContent>
-      </Collapsible>
-
       {/* Critical storage warning */}
       {activeTab === "kritisch" && categorized.kritisch.length > 0 && (
         <div className="rounded-md border border-destructive/50 bg-destructive/5 p-3 flex items-center gap-2 text-sm text-destructive">
@@ -940,129 +830,17 @@ export default function SamplesPage() {
         </div>
       )}
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("sample_number")}</TableHead>
-                <TableHead>{t("name")}</TableHead>
-                <TableHead>{t("project")}</TableHead>
-                <TableHead>{t("status")}</TableHead>
-                <TableHead>{t("eta_short")}</TableHead>
-                <TableHead>{t("location")}</TableHead>
-                <TableHead>{t("tags")}</TableHead>
-                <TableHead>{t("hazardous")}</TableHead>
-                {activeTab === "kritisch" && <TableHead>{t("expiry_remaining")}</TableHead>}
-                <TableHead>{t("created_at")}</TableHead>
-                <TableHead className="w-24">{t("actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 12 : 11} className="text-center py-8">{t("loading")}</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={activeTab === "kritisch" ? 12 : 11} className="text-center py-8 text-muted-foreground">{t("no_samples")}</TableCell></TableRow>
-              ) : (
-                filtered.map((s: any) => {
-                  const project = s.projects;
-                  const location = s.storage_locations;
-                  const canDelete = role === "master" || s.created_by === user?.id;
-                  const daysLeft = getDaysUntilExpiry(s.storage_expiry_date);
-                  const sampleTags: string[] = Array.isArray(s.tags) ? s.tags : [];
-                  return (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-medium">
-                        <Link to={`/proben/${s.id}`} className="text-destructive underline underline-offset-2 hover:opacity-80">
-                          {s.sample_number}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{s.sample_name}</TableCell>
-                      <TableCell>{project?.project_number || "–"}</TableCell>
-                      <TableCell>{getStatusBadge(s.status || "neu")}</TableCell>
-                      <TableCell>
-                        {(() => {
-                          const completed = ["vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"];
-                          if (completed.includes(s.status)) return <span className="text-muted-foreground text-xs">{t("eta_completed")}</span>;
-                          const eta = etaMap.get(s.id);
-                          if (!eta) return <span className="text-muted-foreground text-xs">{t("eta_no_orders")}</span>;
-                          return <Badge variant="outline" className="gap-1 text-xs"><CalendarClock className="h-3 w-3" />{eta.toLocaleDateString("de-DE")}</Badge>;
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-sm">{formatLocation(location)}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1 max-w-[150px]">
-                          {sampleTags.length > 0 ? sampleTags.slice(0, 3).map(tag => (
-                            <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">
-                              {tag}
-                            </Badge>
-                          )) : <span className="text-muted-foreground text-xs">–</span>}
-                          {sampleTags.length > 3 && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{sampleTags.length - 3}</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {s.is_hazardous ? (
-                          <GhsPictogramList hazardClasses={s.hazard_categories} size="sm" max={5} />
-                        ) : (
-                          <span className="text-muted-foreground text-sm">{t("hazard_no")}</span>
-                        )}
-                      </TableCell>
-                      {activeTab === "kritisch" && (
-                        <TableCell>
-                          {daysLeft !== null && (
-                            <Badge variant={daysLeft <= 7 ? "destructive" : "outline"} className="gap-1">
-                              <Timer className="h-3 w-3" />
-                              {daysLeft <= 0 ? t("expiry_overdue") : t("expiry_days", { count: daysLeft })}
-                            </Badge>
-                          )}
-                        </TableCell>
-                      )}
-                      <TableCell>{new Date(s.created_at).toLocaleDateString("de-DE")}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {canCreate && canDelete && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    {t("delete_description_prefix")}{s.sample_number}{t("delete_description_suffix")}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    onClick={async () => {
-                                      try {
-                                        await deleteSample.mutateAsync(s.id);
-                                        toast.success(t("deleted"));
-                                      } catch (e: any) {
-                                        toast.error(e.message || t("delete_error"));
-                                      }
-                                    }}
-                                  >{t("delete")}</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        tableId="samples"
+        columns={sampleColumns}
+        rows={currentList}
+        rowKey={(s: any) => s.id}
+        isLoading={isLoading}
+        emptyMessage={t("no_samples")}
+        searchPlaceholder={t("search_placeholder")}
+        defaultSort={{ key: "created_at", dir: "desc" }}
+        toolbarActions={<SampleScannerInput />}
+      />
     </div>
   );
 }

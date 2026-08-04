@@ -11,6 +11,7 @@ import {
 import { useWorkstations } from "@/hooks/useWorkstations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -204,192 +205,236 @@ export default function AdminServicesPage() {
   const laborServices = visibleServices.filter(s => s.category === "labor");
   const pilotServices = visibleServices.filter(s => s.category === "pilot_plant");
 
-  const renderServiceTable = (title: string, items: typeof services) => (
+  const serviceColumns: DataTableColumn<any>[] = [
+    {
+      key: "service_name",
+      header: t("admin:service_name"),
+      className: "font-medium",
+      cell: (s) => (
+        <div className="flex items-center gap-2">
+          {s.service_name}
+          {!!s.archived_at && (
+            <Badge variant="outline" className="text-[10px] gap-1">
+              <Archive className="h-3 w-3" /> Archiviert
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "workstation",
+      header: t("admin:service_workstation"),
+      accessor: (s) => workstations.find(w => w.id === s.workstation_id)?.name || "",
+      cell: (s) => (
+        <Select
+          value={s.workstation_id || "none"}
+          onValueChange={v => handleWorkstationChange(s.id, v === "none" ? "" : v)}
+          disabled={!!s.archived_at}
+        >
+          <SelectTrigger className="w-44 h-8">
+            <SelectValue placeholder={t("common:not_assigned")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
+            {workstations.filter(w => w.status === "active").map(w => (
+              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      key: "responsible",
+      header: t("admin:service_responsible"),
+      accessor: (s) => {
+        const u = (users as any[]).find(u => u.user_id === s.responsible_user_id);
+        return u ? `${u.first_name} ${u.last_name}` : "";
+      },
+      cell: (s) => (
+        <Select
+          value={s.responsible_user_id || "none"}
+          onValueChange={v => handleResponsibleChange(s.id, v === "none" ? "" : v)}
+          disabled={!!s.archived_at}
+        >
+          <SelectTrigger className="w-44 h-8">
+            <SelectValue placeholder={t("common:not_assigned")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
+            {(users as any[]).map((u: any) => (
+              <SelectItem key={u.user_id} value={u.user_id}>
+                {u.first_name} {u.last_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      key: "standard_duration_hours",
+      header: t("admin:service_duration"),
+      type: "number",
+      cell: (s) => (
+        <DurationCell service={s} t={t} onUpdate={async (id, val) => {
+          try {
+            await updateService.mutateAsync({ id, standard_duration_hours: val } as any);
+            toast.success(t("admin:duration_updated"));
+          } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+        }} />
+      ),
+    },
+    ...(canViewRates ? [{
+      key: "hourly_rate",
+      header: t("admin:service_rate"),
+      type: "number" as const,
+      cell: (s: any) =>
+        canEditRates && editId === s.id ? (
+          <div className="flex gap-2">
+            <Input type="number" value={editRate} onChange={e => setEditRate(e.target.value)} className="w-24 h-8" />
+            <Button size="sm" onClick={() => handleRateUpdate(s.id)}>OK</Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>✕</Button>
+          </div>
+        ) : canEditRates ? (
+          <button className="hover:underline text-left" onClick={() => { setEditId(s.id); setEditRate(String(s.hourly_rate)); }}>
+            {s.hourly_rate} €/h
+          </button>
+        ) : (
+          <span>{s.hourly_rate} €/h</span>
+        ),
+    }] : []),
+    {
+      key: "parameters",
+      header: t("admin:service_parameters"),
+      type: "custom",
+      sortable: false,
+      filterable: false,
+      searchable: false,
+      cell: (s) => (
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1"
+            onClick={() => {
+              setParamEditorServiceId(s.id);
+              setParamEditorServiceName(s.service_name);
+            }}
+          >
+            <Settings2 className="h-3 w-3" /> {t("admin:service_parameters")}
+          </Button>
+          <Button
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={() => window.location.assign(`/admin/prozess-designer`)}
+          >
+            <Settings2 className="h-3 w-3" /> Prozess-Designer
+          </Button>
+        </div>
+      ),
+    },
+    {
+      key: "booking_form",
+      header: "Buchungsformular",
+      type: "custom",
+      sortable: false,
+      filterable: false,
+      searchable: false,
+      cell: (s) => (
+        <BookingFormStatusCell
+          serviceId={s.id}
+          onPreview={() => {
+            setPreviewServiceId(s.id);
+            setPreviewServiceName(s.service_name);
+            setPreviewValues({});
+          }}
+        />
+      ),
+    },
+    {
+      key: "active",
+      header: t("admin:service_status"),
+      type: "boolean",
+      accessor: (s) => !!s.active,
+      cell: (s) => (
+        <div className="flex items-center gap-2">
+          <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} disabled={!!s.archived_at} />
+          <span className="text-sm">{s.active ? t("admin:active") : t("admin:inactive")}</span>
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      type: "custom",
+      sortable: false,
+      filterable: false,
+      searchable: false,
+      headClassName: "w-12",
+      cell: (s) => {
+        const archived = !!s.archived_at;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditService(s)}>
+                <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFormLinksService(s)}>
+                <FormInput className="h-4 w-4 mr-2" /> Formulare verknüpfen
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleToggle(s.id, !s.active)} disabled={archived}>
+                {s.active ? (
+                  <><Settings2 className="h-4 w-4 mr-2" /> Deaktivieren</>
+                ) : (
+                  <><Settings2 className="h-4 w-4 mr-2" /> Aktivieren</>
+                )}
+              </DropdownMenuItem>
+              {archived ? (
+                <DropdownMenuItem onClick={async () => {
+                  try { await unarchiveService.mutateAsync(s.id); toast.success("Dienstleistung wiederhergestellt"); }
+                  catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+                }}>
+                  <ArchiveRestore className="h-4 w-4 mr-2" /> Wiederherstellen
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={async () => {
+                  try { await archiveService.mutateAsync(s.id); toast.success("Dienstleistung archiviert"); }
+                  catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+                }}>
+                  <Archive className="h-4 w-4 mr-2" /> Archivieren
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget(s)}>
+                <Trash2 className="h-4 w-4 mr-2" /> Löschen
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
+  const renderServiceTable = (title: string, items: typeof services, tableId: string) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">{title} ({items.length})</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("admin:service_name")}</TableHead>
-              <TableHead>{t("admin:service_workstation")}</TableHead>
-              <TableHead>{t("admin:service_responsible")}</TableHead>
-              <TableHead>{t("admin:service_duration")}</TableHead>
-              {canViewRates && <TableHead>{t("admin:service_rate")}</TableHead>}
-              <TableHead>{t("admin:service_parameters")}</TableHead>
-              <TableHead>Buchungsformular</TableHead>
-              <TableHead>{t("admin:service_status")}</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {items.map(s => {
-              const archived = !!(s as any).archived_at;
-              return (
-              <TableRow key={s.id} className={archived ? "opacity-60" : ""}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    {s.service_name}
-                    {archived && (
-                      <Badge variant="outline" className="text-[10px] gap-1">
-                        <Archive className="h-3 w-3" /> Archiviert
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={(s as any).workstation_id || "none"}
-                    onValueChange={v => handleWorkstationChange(s.id, v === "none" ? "" : v)}
-                    disabled={archived}
-                  >
-                    <SelectTrigger className="w-44 h-8">
-                      <SelectValue placeholder={t("common:not_assigned")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-                      {workstations.filter(w => w.status === "active").map(w => (
-                        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Select
-                    value={(s as any).responsible_user_id || "none"}
-                    onValueChange={v => handleResponsibleChange(s.id, v === "none" ? "" : v)}
-                    disabled={archived}
-                  >
-                    <SelectTrigger className="w-44 h-8">
-                      <SelectValue placeholder={t("common:not_assigned")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-                      {users.map((u: any) => (
-                        <SelectItem key={u.user_id} value={u.user_id}>
-                          {u.first_name} {u.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <DurationCell service={s} t={t} onUpdate={async (id, val) => {
-                    try {
-                      await updateService.mutateAsync({ id, standard_duration_hours: val } as any);
-                      toast.success(t("admin:duration_updated"));
-                    } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
-                  }} />
-                </TableCell>
-                {canViewRates && (
-                <TableCell>
-                  {canEditRates && editId === s.id ? (
-                    <div className="flex gap-2">
-                      <Input type="number" value={editRate} onChange={e => setEditRate(e.target.value)} className="w-24 h-8" />
-                      <Button size="sm" onClick={() => handleRateUpdate(s.id)}>OK</Button>
-                      <Button size="sm" variant="ghost" onClick={() => setEditId(null)}>✕</Button>
-                    </div>
-                  ) : canEditRates ? (
-                    <button className="hover:underline text-left" onClick={() => { setEditId(s.id); setEditRate(String(s.hourly_rate)); }}>
-                      {s.hourly_rate} €/h
-                    </button>
-                  ) : (
-                    <span>{s.hourly_rate} €/h</span>
-                  )}
-                </TableCell>
-                )}
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => {
-                        setParamEditorServiceId(s.id);
-                        setParamEditorServiceName(s.service_name);
-                      }}
-                    >
-                      <Settings2 className="h-3 w-3" /> {t("admin:service_parameters")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => window.location.assign(`/admin/prozess-designer`)}
-                    >
-                      <Settings2 className="h-3 w-3" /> Prozess-Designer
-                    </Button>
-                  </div>
-                </TableCell>
-
-                <TableCell>
-                  <BookingFormStatusCell
-                    serviceId={s.id}
-                    onPreview={() => {
-                      setPreviewServiceId(s.id);
-                      setPreviewServiceName(s.service_name);
-                      setPreviewValues({});
-                    }}
-                  />
-                </TableCell>
-
-
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Switch checked={s.active} onCheckedChange={v => handleToggle(s.id, v)} disabled={archived} />
-                    <span className="text-sm">{s.active ? t("admin:active") : t("admin:inactive")}</span>
-                  </div>
-                </TableCell>
-
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditService(s)}>
-                        <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setFormLinksService(s)}>
-                        <FormInput className="h-4 w-4 mr-2" /> Formulare verknüpfen
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggle(s.id, !s.active)} disabled={archived}>
-                        {s.active ? (
-                          <><Settings2 className="h-4 w-4 mr-2" /> Deaktivieren</>
-                        ) : (
-                          <><Settings2 className="h-4 w-4 mr-2" /> Aktivieren</>
-                        )}
-                      </DropdownMenuItem>
-                      {archived ? (
-                        <DropdownMenuItem onClick={async () => {
-                          try { await unarchiveService.mutateAsync(s.id); toast.success("Dienstleistung wiederhergestellt"); }
-                          catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
-                        }}>
-                          <ArchiveRestore className="h-4 w-4 mr-2" /> Wiederherstellen
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem onClick={async () => {
-                          try { await archiveService.mutateAsync(s.id); toast.success("Dienstleistung archiviert"); }
-                          catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
-                        }}>
-                          <Archive className="h-4 w-4 mr-2" /> Archivieren
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteTarget(s)}>
-                        <Trash2 className="h-4 w-4 mr-2" /> Löschen
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+      <CardContent>
+        <DataTable
+          tableId={tableId}
+          columns={serviceColumns}
+          rows={items as any[]}
+          rowKey={(s: any) => s.id}
+          emptyMessage="Keine Dienstleistungen gefunden."
+          searchPlaceholder="Dienstleistung suchen …"
+          defaultSort={{ key: "service_name", dir: "asc" }}
+          rowClassName={(s: any) => (s.archived_at ? "opacity-60" : "")}
+        />
       </CardContent>
     </Card>
   );
@@ -454,8 +499,8 @@ export default function AdminServicesPage() {
         <div className="flex items-center justify-center h-32"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
       ) : (
         <div className="space-y-6">
-          {renderServiceTable(t("common:category_labor"), laborServices)}
-          {renderServiceTable(t("common:category_pilot_plant"), pilotServices)}
+          {renderServiceTable(t("common:category_labor"), laborServices, "admin-services-labor")}
+          {renderServiceTable(t("common:category_pilot_plant"), pilotServices, "admin-services-pilot")}
         </div>
       )}
 
