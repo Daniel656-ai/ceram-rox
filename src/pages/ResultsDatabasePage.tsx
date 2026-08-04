@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -178,6 +178,40 @@ export default function ResultsDatabasePage() {
     });
     return Array.from(groups.entries()).map(([name, data]) => ({ name, data }));
   }, [chartData, groupBy]);
+
+
+  const resultColumns = useMemo<DataTableColumn<ResultRecord>[]>(() => {
+    const base: DataTableColumn<ResultRecord>[] = [
+      { key: "measurementNumber", header: "Messnr.", accessor: r => r.measurementNumber, cell: r => <span className="font-mono text-xs">{r.measurementNumber}</span> },
+      { key: "orderNumber", header: "Auftragsnr.", accessor: r => r.orderNumber, cell: r => <span className="font-mono text-xs">{r.orderNumber}</span> },
+      { key: "serviceName", type: "status", header: "Messart", accessor: r => r.serviceName, cell: r => <Badge variant="secondary" className="text-xs">{r.serviceName}</Badge> },
+      { key: "projectName", header: "Projekt", accessor: r => r.projectName || r.projectNumber },
+      { key: "sampleName", header: "Probe", accessor: r => r.sampleName || r.sampleNumber },
+      { key: "createdByName", type: "status", header: "Auftraggeber", accessor: r => r.createdByName },
+      { key: "assignedToName", type: "status", header: "MDL", accessor: r => r.assignedToName },
+      { key: "completedAt", type: "date", header: "Abgeschlossen", accessor: r => r.completedAt ?? null,
+        cell: r => r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yy", { locale: de }) : "-" },
+      { key: "duration", type: "number", header: "Dauer (h)", accessor: r => r.actualDurationHours ?? r.standardDurationHours ?? null,
+        cell: r => <span className="font-mono text-sm">{r.actualDurationHours ?? r.standardDurationHours ?? "-"}</span> },
+    ];
+    outputParameterNames.slice(0, 5).forEach(name => {
+      base.push({
+        key: `out_${name}`,
+        type: "number",
+        header: name,
+        accessor: r => {
+          const res = r.outputResults.find(o => o.result_name === name);
+          const v = res?.value;
+          return v == null ? null : v;
+        },
+        cell: r => {
+          const res = r.outputResults.find(o => o.result_name === name);
+          return <span className="font-mono text-sm">{res?.value != null ? String(res.value) : "-"}</span>;
+        },
+      });
+    });
+    return base;
+  }, [outputParameterNames]);
 
   if (isLoading) {
     return (
