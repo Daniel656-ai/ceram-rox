@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile, useResetUserPassword } from "@/hooks/useUsers";
 import { useCustomRoles } from "@/hooks/useCustomRoles";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -111,6 +111,78 @@ export default function AdminUsersPage() {
 
   const openEdit = (u: any) => { setEditFirstName(u.first_name || ""); setEditLastName(u.last_name || ""); setEditShortCode(u.short_code || ""); setEditUser(u); };
 
+  const userColumns = useMemo<DataTableColumn<any>[]>(() => [
+    {
+      key: "name",
+      header: t("admin:table_name"),
+      accessor: (u) => `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim(),
+      cell: (u) => <p className="font-medium">{u.first_name} {u.last_name}</p>,
+    },
+    {
+      key: "short_code",
+      header: t("admin:short_code"),
+      accessor: (u) => u.short_code || "",
+      cell: (u) => <span className="font-mono text-sm">{u.short_code || "–"}</span>,
+    },
+    {
+      key: "role",
+      type: "status",
+      header: t("admin:role"),
+      accessor: (u) => u.custom_role_name || "",
+      cell: (u) => (
+        <Select value={u.custom_role_id || ""} onValueChange={(v) => handleRoleChange(u.user_id, v)}>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder={u.custom_role_name || "–"} /></SelectTrigger>
+          <SelectContent>
+            {customRoles.map((r) => (
+              <SelectItem key={r.id} value={r.id}>
+                <div className="flex items-center gap-2">{r.name}{r.is_system && <Badge variant="outline" className="text-xs ml-1">{t("admin:role_type_system")}</Badge>}</div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ),
+    },
+    {
+      key: "is_active",
+      type: "boolean",
+      header: t("admin:status"),
+      accessor: (u) => !!u.is_active,
+      cell: (u) => (
+        <div className="flex items-center gap-2">
+          <Switch checked={u.is_active} onCheckedChange={(v) => handleStatusChange(u.user_id, v)} />
+          <span className="text-sm">{u.is_active ? t("admin:active") : t("admin:inactive")}</span>
+        </div>
+      ),
+    },
+    {
+      key: "created_at",
+      type: "date",
+      header: t("admin:table_created"),
+      accessor: (u) => u.created_at ?? null,
+      cell: (u) => new Date(u.created_at).toLocaleDateString(dateFmt),
+    },
+    {
+      key: "actions",
+      type: "custom",
+      header: t("admin:table_actions"),
+      sortable: false,
+      filterable: false,
+      searchable: false,
+      headClassName: "w-[160px]",
+      cell: (u) => {
+        const isSelf = u.user_id === currentUser?.id;
+        return (
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" title={t("admin:schedule_button")} onClick={() => setScheduleUser(u)}><CalendarClock className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => openEdit(u)}><Pencil className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" title={t("auth:admin_reset_button")} onClick={() => openReset(u)}><KeyRound className="h-4 w-4" /></Button>
+            {!isSelf && (<Button variant="ghost" size="icon" onClick={() => setDeleteTarget(u)}><Trash2 className="h-4 w-4 text-destructive" /></Button>)}
+          </div>
+        );
+      },
+    },
+  ], [t, customRoles, dateFmt, currentUser?.id]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -122,64 +194,17 @@ export default function AdminUsersPage() {
       </div>
 
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("admin:table_name")}</TableHead>
-                <TableHead>{t("admin:short_code")}</TableHead>
-                <TableHead>{t("admin:role")}</TableHead>
-                <TableHead>{t("admin:status")}</TableHead>
-                <TableHead>{t("admin:table_created")}</TableHead>
-                <TableHead className="w-[100px]">{t("admin:table_actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">{t("common:loading")}</TableCell></TableRow>
-              ) : users.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">{t("admin:no_users")}</TableCell></TableRow>
-              ) : (
-                users.map((u: any) => {
-                  const isSelf = u.user_id === currentUser?.id;
-                  return (
-                    <TableRow key={u.id}>
-                      <TableCell><p className="font-medium">{u.first_name} {u.last_name}</p></TableCell>
-                      <TableCell><span className="font-mono text-sm">{u.short_code || "–"}</span></TableCell>
-                      <TableCell>
-                        <Select value={u.custom_role_id || ""} onValueChange={(v) => handleRoleChange(u.user_id, v)}>
-                          <SelectTrigger className="w-[200px]"><SelectValue placeholder={u.custom_role_name || "–"} /></SelectTrigger>
-                          <SelectContent>
-                            {customRoles.map((r) => (
-                              <SelectItem key={r.id} value={r.id}>
-                                <div className="flex items-center gap-2">{r.name}{r.is_system && <Badge variant="outline" className="text-xs ml-1">{t("admin:role_type_system")}</Badge>}</div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Switch checked={u.is_active} onCheckedChange={(v) => handleStatusChange(u.user_id, v)} />
-                          <span className="text-sm">{u.is_active ? t("admin:active") : t("admin:inactive")}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{new Date(u.created_at).toLocaleDateString(dateFmt)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" title={t("admin:schedule_button")} onClick={() => setScheduleUser(u)}><CalendarClock className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(u)}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" title={t("auth:admin_reset_button")} onClick={() => openReset(u)}><KeyRound className="h-4 w-4" /></Button>
-                          {!isSelf && (<Button variant="ghost" size="icon" onClick={() => setDeleteTarget(u)}><Trash2 className="h-4 w-4 text-destructive" /></Button>)}
-
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-4">
+          <DataTable
+            tableId="admin-users"
+            columns={userColumns}
+            rows={users as any[]}
+            rowKey={(u) => u.id}
+            isLoading={isLoading}
+            emptyMessage={t("admin:no_users")}
+            searchPlaceholder={t("common:search", { defaultValue: "Suchen …" })}
+            defaultSort={{ key: "name", dir: "asc" }}
+          />
         </CardContent>
       </Card>
 
