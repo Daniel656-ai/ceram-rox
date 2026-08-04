@@ -320,6 +320,25 @@ export default function SampleDetailPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("project")}</span><span className="font-medium">{project?.project_number || "–"}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("description")}</span><span className="font-medium text-right max-w-[60%]">{s.description}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("created_at")}</span><span className="font-medium">{new Date(s.created_at).toLocaleDateString("de-DE")}</span></div>
+                {s.category && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("category")}</span><span className="font-medium">{t(`category_${s.category}`)}</span></div>
+                )}
+                {s.v2o5_content !== null && s.v2o5_content !== undefined && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("v2o5_content")}</span><span className="font-medium">{Number(s.v2o5_content).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</span></div>
+                )}
+                {s.operating_hours !== null && s.operating_hours !== undefined && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("operating_hours")}</span><span className="font-medium">{s.operating_hours}</span></div>
+                )}
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("used_catalyst")}</span><span className="font-medium">{s.is_used_catalyst ? t("hazard_yes") : t("hazard_no")}</span></div>
+                {s.raw_material_code && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("raw_material_code")}</span><span className="font-medium">{s.raw_material_code}{!s.raw_material_id ? ` (${t("raw_material_external")})` : ""}</span></div>
+                )}
+                {s.lot_number && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("lot_number")}</span><span className="font-medium">{s.lot_number}</span></div>
+                )}
+                {s.bigbag_number && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("bigbag_number")}</span><span className="font-medium">{s.bigbag_number}</span></div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{t("eta")}</span>
                   <span className="font-medium">
