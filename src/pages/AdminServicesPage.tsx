@@ -662,30 +662,6 @@ function EditServiceDialog({
                 <Input type="number" value={form.hourly_rate} onChange={e => setForm((f: any) => ({ ...f, hourly_rate: parseFloat(e.target.value) }))} />
               </div>
             )}
-            <div>
-              <Label>Arbeitsplatz</Label>
-              <Select value={form.workstation_id || "none"} onValueChange={v => setForm((f: any) => ({ ...f, workstation_id: v === "none" ? "" : v }))}>
-                <SelectTrigger><SelectValue placeholder="Nicht zugewiesen" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nicht zugewiesen</SelectItem>
-                  {workstations.filter(w => w.status === "active").map(w => (
-                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Verantwortlich</Label>
-              <Select value={form.responsible_user_id || "none"} onValueChange={v => setForm((f: any) => ({ ...f, responsible_user_id: v === "none" ? "" : v }))}>
-                <SelectTrigger><SelectValue placeholder="Nicht zugewiesen" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nicht zugewiesen</SelectItem>
-                  {users.map((u: any) => (
-                    <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <div>
             <Label>Arbeitsanweisung</Label>
