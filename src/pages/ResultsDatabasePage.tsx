@@ -274,67 +274,20 @@ export default function ResultsDatabasePage() {
         {/* Table View */}
         <TabsContent value="table">
           <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">Messnr.</TableHead>
-                      <TableHead className="whitespace-nowrap">Auftragsnr.</TableHead>
-                      <TableHead className="whitespace-nowrap">Messart</TableHead>
-                      <TableHead className="whitespace-nowrap">Projekt</TableHead>
-                      <TableHead className="whitespace-nowrap">Probe</TableHead>
-                      <TableHead className="whitespace-nowrap">Auftraggeber</TableHead>
-                      <TableHead className="whitespace-nowrap">MDL</TableHead>
-                      <TableHead className="whitespace-nowrap">Abgeschlossen</TableHead>
-                      <TableHead className="whitespace-nowrap">Dauer (h)</TableHead>
-                      {outputParameterNames.slice(0, 5).map(name => (
-                        <TableHead key={name} className="whitespace-nowrap">{name}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRecords.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9 + Math.min(outputParameterNames.length, 5)} className="text-center text-muted-foreground py-8">
-                          Keine abgeschlossenen Aufgaben gefunden
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredRecords.map(r => (
-                        <TableRow key={r.measurementId}>
-                          <TableCell className="font-mono text-xs">{r.measurementNumber}</TableCell>
-                          <TableCell className="font-mono text-xs">{r.orderNumber}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="text-xs">{r.serviceName}</Badge>
-                          </TableCell>
-                          <TableCell className="text-sm">{r.projectName || r.projectNumber}</TableCell>
-                          <TableCell className="text-sm">{r.sampleName || r.sampleNumber}</TableCell>
-                          <TableCell className="text-sm">{r.createdByName}</TableCell>
-                          <TableCell className="text-sm">{r.assignedToName}</TableCell>
-                          <TableCell className="text-sm whitespace-nowrap">
-                            {r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yy", { locale: de }) : "-"}
-                          </TableCell>
-                          <TableCell className="text-sm font-mono">
-                            {r.actualDurationHours ?? r.standardDurationHours}
-                          </TableCell>
-                          {outputParameterNames.slice(0, 5).map(name => {
-                            const res = r.outputResults.find(o => o.result_name === name);
-                            return (
-                              <TableCell key={name} className="text-sm font-mono">
-                                {res?.value != null ? res.value : "-"}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+            <CardContent className="p-4">
+              <DataTable
+                tableId="results-database"
+                columns={resultColumns}
+                rows={filteredRecords}
+                rowKey={(r) => r.measurementId}
+                searchPlaceholder="Tabelle durchsuchen …"
+                emptyMessage="Keine abgeschlossenen Aufgaben gefunden"
+                defaultSort={{ key: "completedAt", dir: "desc" }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
+
 
         {/* Statistics View */}
         <TabsContent value="statistics">
