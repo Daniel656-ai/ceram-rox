@@ -23,7 +23,6 @@ export interface ResultRecord {
   createdAt: string;
   actualDurationHours: number | null;
   standardDurationHours: number;
-  workstationName: string;
   inputParameters: Record<string, { value: string | null; unit: string | null }>;
   outputResults: Array<{
     id: string;
@@ -50,7 +49,7 @@ export function useResultsDatabase() {
         .from("order_measurements")
         .select(`
           id, measurement_number, status, assigned_to, actual_duration_hours,
-          created_at, updated_at, workstation_id,
+          created_at, updated_at,
           measurement_services(service_name, category, standard_duration_hours),
           measurement_orders(
             id, order_number, order_type, created_by, notes,
@@ -59,7 +58,6 @@ export function useResultsDatabase() {
           ),
           measurement_parameters(parameter_name, parameter_value, unit),
           measurement_results(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at),
-          workstations(name)
         `)
         .eq("status", "completed")
         .order("updated_at", { ascending: false });
@@ -106,7 +104,6 @@ export function useResultsDatabase() {
           createdAt: m.created_at,
           actualDurationHours: m.actual_duration_hours,
           standardDurationHours: service?.standard_duration_hours || 0,
-          workstationName: m.workstations?.name || "",
           inputParameters,
           outputResults: m.measurement_results || [],
           remarks: order?.notes || "",
