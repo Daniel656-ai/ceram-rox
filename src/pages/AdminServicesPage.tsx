@@ -608,8 +608,6 @@ function EditServiceDialog({
         standard_duration_hours: service.standard_duration_hours ?? 1,
         hourly_rate: service.hourly_rate ?? 0,
         work_instructions: service.work_instructions ?? "",
-        
-        work_instructions: service.work_instructions ?? "",
         active: !!service.active,
       });
     }
