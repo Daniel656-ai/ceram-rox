@@ -6694,6 +6694,8 @@ export type Database = {
       }
       samples: {
         Row: {
+          bigbag_number: string | null
+          category: string | null
           created_at: string
           created_by: string
           current_holder_id: string | null
@@ -6704,8 +6706,11 @@ export type Database = {
           hazard_categories: Json | null
           id: string
           is_hazardous: boolean
+          is_used_catalyst: boolean
           location_id: string | null
+          lot_number: string | null
           mixture_batch_id: string | null
+          operating_hours: number | null
           order_id: string | null
           parent_sample_id: string | null
           pilot_plant_order_id: string | null
@@ -6714,6 +6719,8 @@ export type Database = {
             | null
           post_measurement_action_text: string | null
           project_id: string
+          raw_material_code: string | null
+          raw_material_id: string | null
           sample_group: string | null
           sample_name: string
           sample_number: string
@@ -6725,8 +6732,11 @@ export type Database = {
           storage_min_duration: string | null
           tags: Json
           updated_at: string
+          v2o5_content: number | null
         }
         Insert: {
+          bigbag_number?: string | null
+          category?: string | null
           created_at?: string
           created_by: string
           current_holder_id?: string | null
@@ -6737,8 +6747,11 @@ export type Database = {
           hazard_categories?: Json | null
           id?: string
           is_hazardous?: boolean
+          is_used_catalyst?: boolean
           location_id?: string | null
+          lot_number?: string | null
           mixture_batch_id?: string | null
+          operating_hours?: number | null
           order_id?: string | null
           parent_sample_id?: string | null
           pilot_plant_order_id?: string | null
@@ -6747,6 +6760,8 @@ export type Database = {
             | null
           post_measurement_action_text?: string | null
           project_id: string
+          raw_material_code?: string | null
+          raw_material_id?: string | null
           sample_group?: string | null
           sample_name: string
           sample_number: string
@@ -6758,8 +6773,11 @@ export type Database = {
           storage_min_duration?: string | null
           tags?: Json
           updated_at?: string
+          v2o5_content?: number | null
         }
         Update: {
+          bigbag_number?: string | null
+          category?: string | null
           created_at?: string
           created_by?: string
           current_holder_id?: string | null
@@ -6770,8 +6788,11 @@ export type Database = {
           hazard_categories?: Json | null
           id?: string
           is_hazardous?: boolean
+          is_used_catalyst?: boolean
           location_id?: string | null
+          lot_number?: string | null
           mixture_batch_id?: string | null
+          operating_hours?: number | null
           order_id?: string | null
           parent_sample_id?: string | null
           pilot_plant_order_id?: string | null
@@ -6780,6 +6801,8 @@ export type Database = {
             | null
           post_measurement_action_text?: string | null
           project_id?: string
+          raw_material_code?: string | null
+          raw_material_id?: string | null
           sample_group?: string | null
           sample_name?: string
           sample_number?: string
@@ -6791,6 +6814,7 @@ export type Database = {
           storage_min_duration?: string | null
           tags?: Json
           updated_at?: string
+          v2o5_content?: number | null
         }
         Relationships: [
           {
@@ -6833,6 +6857,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samples_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
             referencedColumns: ["id"]
           },
         ]
