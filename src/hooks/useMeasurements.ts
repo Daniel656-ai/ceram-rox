@@ -21,14 +21,8 @@ export function useMyMeasurements() {
   return useQuery({
     queryKey: ["my-measurements", user?.id],
     queryFn: async () => {
-      const [assigned, viaStation] = await Promise.all([
-        api.measurements.listAssignedTo(user!.id),
-        api.measurements.listForUserResponsibleWorkstations(user!.id),
-      ]);
-
-      const map = new Map<string, any>();
-      [...(assigned || []), ...(viaStation || [])].forEach((m: any) => map.set(m.id, m));
-      const merged = Array.from(map.values());
+      const assigned = await api.measurements.listAssignedTo(user!.id);
+      const merged = [...(assigned || [])];
 
       const creatorIds = Array.from(
         new Set(merged.map((r: any) => r.measurement_orders?.created_by).filter(Boolean))
@@ -69,7 +63,7 @@ export function useMyMeasurements() {
 export function useAddOrderMeasurement() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (m: { order_id: string; service_id: string; planned_hours?: number; due_date?: string; workstation_id?: string; source_package_id?: string | null; source_package_name_snapshot?: string | null }) =>
+    mutationFn: (m: { order_id: string; service_id: string; planned_hours?: number; due_date?: string; source_package_id?: string | null; source_package_name_snapshot?: string | null }) =>
       api.measurements.add(m),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });
@@ -191,7 +185,7 @@ export function useAssignMeasurement() {
 export function useCreateService() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (service: { service_name: string; category: string; hourly_rate: number; responsible_user_id?: string | null; workstation_id?: string | null }) =>
+    mutationFn: (service: { service_name: string; category: string; hourly_rate: number }) =>
       api.measurementServices.create(service),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });
