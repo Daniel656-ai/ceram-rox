@@ -4,7 +4,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useStorageLocations } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
