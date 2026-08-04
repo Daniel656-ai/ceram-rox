@@ -27,6 +27,14 @@ import { api } from "@/lib/api";
 import { HazardClassSelector } from "@/components/HazardClassSelector";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { type HazardClassKey } from "@/lib/hazardClasses";
+import { SampleParametersFields } from "@/components/SampleParametersFields";
+import {
+  EMPTY_SAMPLE_PARAMETERS,
+  SAMPLE_CATEGORIES,
+  generateTagsFromDescription,
+  sampleParametersToPayload,
+  type SampleParameters,
+} from "@/lib/sampleParameters";
 
 const DISPOSAL_CATEGORIES = ["laborabfall", "gefahrstoff", "sondermuell"] as const;
 
@@ -101,6 +109,7 @@ export default function SamplesPage() {
     tags: [] as string[],
   });
   const [formTagInput, setFormTagInput] = useState("");
+  const [params, setParams] = useState<SampleParameters>({ ...EMPTY_SAMPLE_PARAMETERS });
 
   // Bulk creation state
   const [bulkPrefix, setBulkPrefix] = useState("Probe_");
@@ -170,6 +179,7 @@ export default function SamplesPage() {
       hazard_categories: [], is_hazardous: false, location_id: "",
       tags: [],
     });
+    setParams({ ...EMPTY_SAMPLE_PARAMETERS });
     setBulkPrefix("Probe_"); setBulkStartNum(1); setBulkEndNum(10);
     setBulkDescription(""); setBulkGroupName(""); setBulkProjectId("");
     setBulkCreatedCount(null); setCreateMode("single");
@@ -270,8 +280,15 @@ export default function SamplesPage() {
     if (!form.sample_name.trim() || !form.project_id || !form.description.trim() || !form.post_measurement_action) {
       toast.error(t("all_required")); return;
     }
+    // Automatische Schlagwörter aus der Beschreibung ergänzen (editierbar durch Nutzer)
+    const autoTags = generateTagsFromDescription(form.description);
+    const mergedTags = [...form.tags];
+    autoTags.forEach((tg) => {
+      if (!mergedTags.some((x) => x.toLowerCase() === tg.toLowerCase())) mergedTags.push(tg);
+    });
     try {
       await createSample.mutateAsync({
+        ...sampleParametersToPayload(params),
         sample_name: form.sample_name.trim(), project_id: form.project_id,
         description: form.description.trim(), created_by: user!.id,
         post_measurement_action: form.post_measurement_action || undefined,
@@ -284,7 +301,7 @@ export default function SamplesPage() {
         disposal_category: form.disposal_category || undefined,
         hazard_categories: form.hazard_categories, is_hazardous: form.is_hazardous,
         location_id: form.location_id || undefined,
-        tags: form.tags,
+        tags: mergedTags,
       });
       toast.success(t("created")); resetForm(); setOpen(false);
     } catch (e: any) { toast.error(e.message || t("create_error")); }
@@ -329,6 +346,59 @@ export default function SamplesPage() {
         key: "project",
         header: t("project"),
         accessor: (s) => s.projects?.project_number || "",
+      },
+      {
+        key: "category",
+        header: t("category"),
+        type: "status",
+        accessor: (s) => s.category || "",
+        statusOrder: [...SAMPLE_CATEGORIES],
+        statusLabels: Object.fromEntries(SAMPLE_CATEGORIES.map((c) => [c, t(`category_${c}`)])),
+        cell: (s) => (s.category ? <Badge variant="outline">{t(`category_${s.category}`)}</Badge> : <span className="text-muted-foreground text-xs">–</span>),
+      },
+      {
+        key: "description",
+        header: t("description_col"),
+        accessor: (s) => s.description || "",
+        cell: (s) => <span className="text-xs text-muted-foreground line-clamp-2 max-w-[220px]">{s.description || "–"}</span>,
+      },
+      {
+        key: "raw_material_code",
+        header: t("raw_material_code"),
+        accessor: (s) => s.raw_material_code || "",
+      },
+      {
+        key: "lot_number",
+        header: t("lot_number"),
+        accessor: (s) => s.lot_number || "",
+      },
+      {
+        key: "bigbag_number",
+        header: t("bigbag_number"),
+        accessor: (s) => s.bigbag_number || "",
+      },
+      {
+        key: "v2o5_content",
+        header: t("v2o5_content"),
+        type: "number",
+        accessor: (s) => (s.v2o5_content === null || s.v2o5_content === undefined ? null : Number(s.v2o5_content)),
+        cell: (s) =>
+          s.v2o5_content === null || s.v2o5_content === undefined
+            ? <span className="text-muted-foreground text-xs">–</span>
+            : <span className="text-sm">{Number(s.v2o5_content).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</span>,
+      },
+      {
+        key: "operating_hours",
+        header: t("operating_hours"),
+        type: "number",
+        accessor: (s) => (s.operating_hours ?? null),
+      },
+      {
+        key: "is_used_catalyst",
+        header: t("used_catalyst"),
+        type: "boolean",
+        accessor: (s) => !!s.is_used_catalyst,
+        cell: (s) => <span className="text-sm">{s.is_used_catalyst ? t("hazard_yes") : t("hazard_no")}</span>,
       },
       {
         key: "status",
@@ -533,6 +603,7 @@ export default function SamplesPage() {
                   <Label>{t("description")}</Label>
                   <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder={t("description_placeholder")} rows={2} />
                 </div>
+                <SampleParametersFields value={params} onChange={setParams} idPrefix="sample-params" />
                 <div className="space-y-2">
                   <Label>{t("post_measurement")}</Label>
                   <Select value={form.post_measurement_action} onValueChange={v => setForm(f => ({ ...f, post_measurement_action: v }))}>
