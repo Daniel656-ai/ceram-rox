@@ -6,7 +6,6 @@ import {
   LogOut,
   Beaker,
   BarChart3,
-  CalendarDays,
   CalendarClock,
   Building2,
   FlaskConical,
