@@ -15,7 +15,6 @@ import OrderDetailPage from "./pages/OrderDetailPage";
 import TaskExecutionPage from "./pages/TaskExecutionPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
-import WorkPlanPage from "./pages/WorkPlanPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminServicesPage from "./pages/AdminServicesPage";
 import AdminServiceDesignerPage from "./pages/AdminServiceDesignerPage";
@@ -97,7 +96,7 @@ const App = () => (
               <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
               <Route path="/proben" element={<SamplesPage />} />
               <Route path="/proben/:id" element={<SampleDetailPage />} />
-              <Route path="/arbeitsplanung" element={<WorkPlanPage />} />
+              <Route path="/arbeitsplanung" element={<Navigate to="/auftraege" replace />} />
               <Route path="/admin/benutzer" element={<AdminUsersPage />} />
               <Route path="/admin/messdienstleistungen" element={<AdminServicesPage />} />
               <Route path="/admin/prozess-designer" element={<AdminServiceDesignerPage />} />

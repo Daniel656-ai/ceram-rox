@@ -6,7 +6,6 @@ import {
   LogOut,
   Beaker,
   BarChart3,
-  CalendarDays,
   CalendarClock,
   Building2,
   FlaskConical,
@@ -76,7 +75,6 @@ export function AppSidebar() {
     { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view"), nav: "nav.raw_materials" },
     { title: t("navigation:mixtures"), url: "/mischungen", icon: FlaskRound, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") || hasPerm("mixtures.view"), nav: "nav.mixtures" as string | null },
     
-    { title: t("navigation:work_planning"), url: "/arbeitsplanung", icon: CalendarDays, show: hasPerm("measurements.enter"), nav: "nav.work_planning" },
     { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: (hasPerm("measurements.view") || hasPerm("measurements.enter")) && role !== "auftraggeber", nav: "nav.lab_planning" },
     { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master", nav: "nav.calendar" },
   ].filter((item) => item.show && (item.nav === null || hasNavPerm(item.nav)));
