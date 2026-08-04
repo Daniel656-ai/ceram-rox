@@ -214,19 +214,19 @@ export function SampleParametersFields({ value, onChange, idPrefix = "sp" }: Pro
         </h5>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>{t("bigbag_number")}</Label>
-            <Input
-              id={`${idPrefix}-bb`}
-              value={value.bigbag_number}
-              onChange={(e) => set({ bigbag_number: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
             <Label>{t("lot_number")}</Label>
             <Input
               id={`${idPrefix}-lot`}
               value={value.lot_number}
               onChange={(e) => set({ lot_number: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("bigbag_number")}</Label>
+            <Input
+              id={`${idPrefix}-bb`}
+              value={value.bigbag_number}
+              onChange={(e) => set({ bigbag_number: e.target.value })}
             />
           </div>
         </div>
