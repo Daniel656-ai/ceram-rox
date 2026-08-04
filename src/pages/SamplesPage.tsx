@@ -266,26 +266,6 @@ export default function SamplesPage() {
     setBulkForm(f => ({ ...f, tags: f.tags.filter(t => t !== tag) }));
   };
 
-  const resetFilters = () => {
-    setFilterProject("__all__");
-    setFilterService("__all__");
-    setFilterHazardous("__all__");
-    setFilterTags([]);
-    setSortBy("created_desc");
-    setSearch("");
-  };
-
-  const addFilterTag = (tag: string) => {
-    const trimmed = tag.trim();
-    if (trimmed && !filterTags.includes(trimmed)) {
-      setFilterTags(prev => [...prev, trimmed]);
-    }
-    setTagInput("");
-  };
-
-  const removeFilterTag = (tag: string) => {
-    setFilterTags(prev => prev.filter(t => t !== tag));
-  };
 
   const addFormTag = (tag: string) => {
     const trimmed = tag.trim();
