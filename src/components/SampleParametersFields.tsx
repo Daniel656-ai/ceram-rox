@@ -57,80 +57,64 @@ export function SampleParametersFields({ value, onChange, idPrefix = "sp" }: Pro
   const selectedLabel = value.raw_material_code || t("raw_material_code_placeholder");
 
   return (
-    <div className="space-y-4 rounded-md border p-3">
+    <div className="space-y-6 rounded-md border p-4">
       <div className="flex items-center gap-2">
         <PackageSearch className="h-4 w-4 text-muted-foreground" />
         <h4 className="text-sm font-semibold">{t("params_section")}</h4>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>{t("category")}</Label>
-          <Select
-            value={value.category || "__none__"}
-            onValueChange={(v) => {
-              const category = v === "__none__" ? "" : v;
-              set({
-                category,
-                v2o5_content: categoryHasV2O5(category) ? value.v2o5_content : "0.00",
-              });
-            }}
-          >
-            <SelectTrigger id={`${idPrefix}-category`}>
-              <SelectValue placeholder={t("select_category")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">{t("no_category")}</SelectItem>
-              {SAMPLE_CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>{t(`category_${c}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Materialinformationen */}
+      <div className="space-y-3">
+        <h5 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {t("material_information")}
+        </h5>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>{t("category")}</Label>
+            <Select
+              value={value.category || "__none__"}
+              onValueChange={(v) => {
+                const category = v === "__none__" ? "" : v;
+                set({
+                  category,
+                  v2o5_content: categoryHasV2O5(category) ? value.v2o5_content : "0.00",
+                });
+              }}
+            >
+              <SelectTrigger id={`${idPrefix}-category`}>
+                <SelectValue placeholder={t("select_category")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t("no_category")}</SelectItem>
+                {SAMPLE_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>{t(`category_${c}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("v2o5_content")}</Label>
+            {showV2O5 ? (
+              <Input
+                id={`${idPrefix}-v2o5`}
+                type="number"
+                step="0.01"
+                min="0"
+                value={value.v2o5_content}
+                onChange={(e) => set({ v2o5_content: e.target.value })}
+                placeholder="0,00"
+              />
+            ) : (
+              <div className="flex h-10 items-center gap-2 rounded-md border bg-muted/50 px-3">
+                <span className="text-sm text-muted-foreground">0,00 %</span>
+                <Badge variant="outline" className="text-[10px]">{t("v2o5_auto_zero")}</Badge>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2">
-          <Label>{t("v2o5_content")}</Label>
-          {showV2O5 ? (
-            <Input
-              id={`${idPrefix}-v2o5`}
-              type="number"
-              step="0.01"
-              min="0"
-              value={value.v2o5_content}
-              onChange={(e) => set({ v2o5_content: e.target.value })}
-              placeholder="0,00"
-            />
-          ) : (
-            <div className="flex h-10 items-center gap-2 rounded-md border bg-muted/50 px-3">
-              <span className="text-sm text-muted-foreground">0,00 %</span>
-              <Badge variant="outline" className="text-[10px]">{t("v2o5_auto_zero")}</Badge>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label>{t("operating_hours")}</Label>
-          <Input
-            id={`${idPrefix}-hours`}
-            type="number"
-            step="1"
-            min="0"
-            value={value.operating_hours}
-            onChange={(e) => set({ operating_hours: e.target.value })}
-            placeholder="0"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>{t("lot_number")}</Label>
-          <Input
-            id={`${idPrefix}-lot`}
-            value={value.lot_number}
-            onChange={(e) => set({ lot_number: e.target.value })}
-          />
-        </div>
-
-        <div className="space-y-2 col-span-2">
           <Label>{t("raw_material_code")}</Label>
           <Popover open={rmOpen} onOpenChange={setRmOpen}>
             <PopoverTrigger asChild>
@@ -199,26 +183,68 @@ export function SampleParametersFields({ value, onChange, idPrefix = "sp" }: Pro
             {value.raw_material_id ? t("raw_material_linked") : t("raw_material_hint")}
           </p>
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <Label>{t("bigbag_number")}</Label>
-          <Input
-            id={`${idPrefix}-bb`}
-            value={value.bigbag_number}
-            onChange={(e) => set({ bigbag_number: e.target.value })}
-          />
-        </div>
-
-        <div className="flex items-end">
-          <label className="flex items-center gap-2 text-sm" htmlFor={`${idPrefix}-used`}>
-            <Checkbox
-              id={`${idPrefix}-used`}
-              checked={value.is_used_catalyst}
-              onCheckedChange={(c) => set({ is_used_catalyst: !!c })}
+      {/* Prozessinformationen */}
+      <div className="space-y-3">
+        <h5 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {t("process_information")}
+        </h5>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>{t("operating_hours")}</Label>
+            <Input
+              id={`${idPrefix}-hours`}
+              type="number"
+              step="1"
+              min="0"
+              value={value.operating_hours}
+              onChange={(e) => set({ operating_hours: e.target.value })}
+              placeholder="0"
             />
-            {t("used_catalyst")}
-          </label>
+          </div>
+          <div />
         </div>
+      </div>
+
+      {/* Identifikation */}
+      <div className="space-y-3">
+        <h5 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {t("identification")}
+        </h5>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>{t("bigbag_number")}</Label>
+            <Input
+              id={`${idPrefix}-bb`}
+              value={value.bigbag_number}
+              onChange={(e) => set({ bigbag_number: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("lot_number")}</Label>
+            <Input
+              id={`${idPrefix}-lot`}
+              value={value.lot_number}
+              onChange={(e) => set({ lot_number: e.target.value })}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Materialzustand */}
+      <div className="space-y-3">
+        <h5 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {t("material_condition")}
+        </h5>
+        <label className="flex items-center gap-2 text-sm" htmlFor={`${idPrefix}-used`}>
+          <Checkbox
+            id={`${idPrefix}-used`}
+            checked={value.is_used_catalyst}
+            onCheckedChange={(c) => set({ is_used_catalyst: !!c })}
+          />
+          {t("used_catalyst")}
+        </label>
       </div>
     </div>
   );
