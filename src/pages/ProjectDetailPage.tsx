@@ -157,7 +157,20 @@ export default function ProjectDetailPage() {
 
   const totalCosts = costData.totalPersonnel + totalMaterialCosts;
 
-  // Total hours: measurement hours + project time entries
+  // Transparente Aufschlüsselung – nutzt exakt dieselben Quellen/Formeln wie oben,
+  // erzeugt daher keine zusätzlichen oder doppelten Kosten.
+  const costBreakdown = useMemo(
+    () => buildCostBreakdown({
+      measurements: allMeasurements,
+      timeEntries: timeEntries as any[],
+      consumables: projectConsumables as any[],
+      knetung: projectKnetung as any[],
+      expenses: projectExpenses as any[],
+    }),
+    [allMeasurements, timeEntries, projectConsumables, projectKnetung, projectExpenses]
+  );
+
+
   const timeEntryHours = useMemo(() => {
     return (timeEntries as any[]).reduce((s, e) => s + (e.duration_minutes || 0), 0) / 60;
   }, [timeEntries]);
