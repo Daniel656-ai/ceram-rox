@@ -36,7 +36,6 @@
   "project": "Project",
   "name": "Name",
   "actions": "Actions",
-
   "cat_all": "All",
   "cat_eingang": "Incoming",
   "cat_in_bearbeitung": "In Progress",
@@ -46,11 +45,9 @@
   "cat_gefahrstoff": "Hazardous",
   "cat_kritisch_warning": "{{count}} sample(s) with critical or expired storage duration.",
   "cat_gefahrstoff_warning": "{{count}} sample(s) contain hazardous substances. Observe special protective measures.",
-
   "expiry_remaining": "Time Remaining",
   "expiry_days": "{{count}} day(s)",
   "expiry_overdue": "Overdue",
-
   "status_neu": "New",
   "status_eingelagert": "Stored",
   "status_in_bearbeitung": "In Progress",
@@ -58,20 +55,17 @@
   "status_vollstaendig_verbraucht": "Fully Used",
   "status_entsorgt": "Disposed",
   "status_zurueckgesendet": "Returned",
-
   "post_measurement": "After Task *",
   "post_aufbewahren": "Store sample",
   "post_entsorgen": "Dispose sample",
   "post_zurueck": "Return to requester",
   "post_andere": "Other (free text)",
   "post_action_text_placeholder": "Please describe...",
-
   "storage_min_duration": "Minimum storage duration",
   "storage_min_duration_placeholder": "e.g. 6 months, 2 years",
   "storage_hints": "Storage instructions",
   "storage_hints_placeholder": "e.g. dry, cooled, light-protected",
   "storage_expiry_date": "Storage expiry date",
-
   "disposal_method": "Disposal method",
   "disposal_method_placeholder": "e.g. incineration, chemical neutralization",
   "disposal_hints": "Special disposal instructions",
@@ -80,7 +74,6 @@
   "disposal_laborabfall": "Laboratory waste",
   "disposal_gefahrstoff": "Hazardous material",
   "disposal_sondermuell": "Special waste",
-
   "hazard_section": "Safety & Hazard Information",
   "hazard_contains": "Contains hazardous substances",
   "hazard_gesundheitsschaedlich": "Harmful to health",
@@ -93,11 +86,9 @@
   "hazard_warning": "⚠️ Warning: This sample contains hazardous substances.",
   "hazard_yes": "Yes",
   "hazard_no": "No",
-
   "location_section": "Storage Location",
   "select_location": "Select storage location",
   "no_location": "No location",
-
   "documents": "Documents",
   "safety_data_sheet": "Safety Data Sheet",
   "upload_document": "Upload Document",
@@ -105,7 +96,6 @@
   "document_uploaded": "Document uploaded",
   "document_upload_error": "Error uploading document",
   "document_deleted": "Document deleted",
-
   "history": "History",
   "history_empty": "No entries yet",
   "history_action_created": "Sample created",
@@ -120,39 +110,33 @@
   "history_action_sent_back": "Sample sent back",
   "history_action_status_changed": "Status changed",
   "history_action_hazard_changed": "Hazard information changed",
-
   "handover": "Handover",
   "handover_to": "Hand over to",
   "handover_from": "Received from",
   "select_user": "Select employee",
   "handover_comment": "Comment",
   "handover_success": "Handover documented",
-
   "subsample": "Sub-sample",
   "subsamples": "Sub-samples",
   "create_subsample": "Create Sub-sample",
   "parent_sample": "Parent Sample",
   "subsample_name_placeholder": "Name of the sub-sample",
   "subsample_created": "Sub-sample created",
-
   "change_status": "Change Status",
   "change_location": "Change Location",
   "status_changed": "Status changed",
   "location_changed": "Location changed",
-
   "detail_title": "Sample Details",
   "overview": "Overview",
   "comment": "Comment",
   "comment_placeholder": "Optional comment",
   "save": "Save",
-
   "tab_overview": "Overview",
   "tab_history": "History",
   "tab_documents": "Documents",
   "tab_subsamples": "Sub-samples",
   "tab_services": "Services",
   "tab_measurements": "Tasks",
-
   "print_label": "Print Label",
   "label_size": "Label Size",
   "label_small": "Small (Lab tubes)",
@@ -165,12 +149,10 @@
   "scan_camera_hint": "Hold the QR code in front of the camera. Alternatively, use a USB barcode scanner.",
   "scan_not_found": "Sample not found",
   "camera_error": "Could not start camera",
-
   "eta": "Est. Completion",
   "eta_short": "ETA",
   "eta_no_orders": "No open orders",
   "eta_completed": "Completed",
-
   "filter_project": "Project",
   "filter_project_all": "All Projects",
   "filter_measurement_type": "Service",
@@ -196,5 +178,30 @@
   "tags": "Tags",
   "tags_placeholder": "Enter tag and press Enter",
   "tags_section": "Tags / Keywords",
-  "measurement_type": "Service"
+  "measurement_type": "Service",
+  "params_section": "Order parameters (global variables)",
+  "category": "Category",
+  "select_category": "Select category",
+  "no_category": "No category",
+  "category_dieselkatalysator": "Diesel catalyst",
+  "category_stationaerer_katalysator": "Stationary catalyst",
+  "category_plattenkatalysator": "Plate catalyst",
+  "category_marinekatalysator": "Marine catalyst",
+  "category_heat_media": "Heat Media",
+  "v2o5_content": "V₂O₅ content [%]",
+  "v2o5_auto_zero": "auto 0.00 %",
+  "operating_hours": "Operating hours",
+  "used_catalyst": "Used catalyst",
+  "raw_material_code": "Raw material code",
+  "raw_material_code_placeholder": "Search or enter raw material…",
+  "raw_material_search": "Enter code or name…",
+  "raw_material_internal": "Raw material master data",
+  "raw_material_external": "External raw material",
+  "raw_material_use_external": "use as external raw material code",
+  "raw_material_none": "No raw material found – the input is stored as an external code.",
+  "raw_material_hint": "External code – stored for this order only, no new master record.",
+  "raw_material_linked": "Linked to raw material master data.",
+  "lot_number": "Lot number",
+  "bigbag_number": "BigBag number (BB)",
+  "description_col": "Description"
 }

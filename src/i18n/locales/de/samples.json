@@ -36,7 +36,6 @@
   "project": "Projekt",
   "name": "Name",
   "actions": "Aktionen",
-
   "cat_all": "Alle",
   "cat_eingang": "Eingang",
   "cat_in_bearbeitung": "In Bearbeitung",
@@ -46,11 +45,9 @@
   "cat_gefahrstoff": "Gefahrstoffe",
   "cat_kritisch_warning": "{{count}} Probe(n) mit kritischer oder abgelaufener Lagerdauer.",
   "cat_gefahrstoff_warning": "{{count}} Probe(n) enthalten Gefahrstoffe. Besondere Schutzmaßnahmen beachten.",
-
   "expiry_remaining": "Restlaufzeit",
   "expiry_days": "{{count}} Tag(e)",
   "expiry_overdue": "Abgelaufen",
-
   "status_neu": "Neu angelegt",
   "status_eingelagert": "Eingelagert",
   "status_in_bearbeitung": "In Bearbeitung",
@@ -58,20 +55,17 @@
   "status_vollstaendig_verbraucht": "Vollständig verbraucht",
   "status_entsorgt": "Entsorgt",
   "status_zurueckgesendet": "Zurückgesendet",
-
   "post_measurement": "Nach der Aufgabe *",
   "post_aufbewahren": "Probe aufbewahren",
   "post_entsorgen": "Probe entsorgen",
   "post_zurueck": "Probe zurück an Auftraggeber",
   "post_andere": "Andere (Freitext)",
   "post_action_text_placeholder": "Bitte beschreiben...",
-
   "storage_min_duration": "Mindestdauer der Einlagerung",
   "storage_min_duration_placeholder": "z.B. 6 Monate, 2 Jahre",
   "storage_hints": "Lagerhinweise",
   "storage_hints_placeholder": "z.B. trocken, gekühlt, lichtgeschützt",
   "storage_expiry_date": "Ablaufdatum der Lagerung",
-
   "disposal_method": "Entsorgungsart",
   "disposal_method_placeholder": "z.B. Verbrennung, chemische Neutralisation",
   "disposal_hints": "Besondere Entsorgungshinweise",
@@ -80,7 +74,6 @@
   "disposal_laborabfall": "Laborabfall",
   "disposal_gefahrstoff": "Gefahrstoff",
   "disposal_sondermuell": "Sondermüll",
-
   "hazard_section": "Sicherheits- und Gefahreninformationen",
   "hazard_contains": "Enthält Gefahrstoffe",
   "hazard_gesundheitsschaedlich": "Gesundheitsschädlich",
@@ -93,11 +86,9 @@
   "hazard_warning": "⚠️ Warnung: Diese Probe enthält gefährliche Stoffe.",
   "hazard_yes": "Ja",
   "hazard_no": "Nein",
-
   "location_section": "Lagerort",
   "select_location": "Lagerort auswählen",
   "no_location": "Kein Lagerort",
-
   "documents": "Dokumente",
   "safety_data_sheet": "Sicherheitsdatenblatt",
   "upload_document": "Dokument hochladen",
@@ -105,7 +96,6 @@
   "document_uploaded": "Dokument hochgeladen",
   "document_upload_error": "Fehler beim Hochladen",
   "document_deleted": "Dokument gelöscht",
-
   "history": "Historie",
   "history_empty": "Noch keine Einträge",
   "history_action_created": "Probe angelegt",
@@ -120,39 +110,33 @@
   "history_action_sent_back": "Probe zurückgesendet",
   "history_action_status_changed": "Status geändert",
   "history_action_hazard_changed": "Gefahrstoffinformationen geändert",
-
   "handover": "Übergabe",
   "handover_to": "Übergabe an",
   "handover_from": "Übergabe von",
   "select_user": "Mitarbeiter auswählen",
   "handover_comment": "Kommentar",
   "handover_success": "Übergabe dokumentiert",
-
   "subsample": "Teilprobe",
   "subsamples": "Teilproben",
   "create_subsample": "Teilprobe erstellen",
   "parent_sample": "Hauptprobe",
   "subsample_name_placeholder": "Name der Teilprobe",
   "subsample_created": "Teilprobe erstellt",
-
   "change_status": "Status ändern",
   "change_location": "Lagerort ändern",
   "status_changed": "Status geändert",
   "location_changed": "Lagerort geändert",
-
   "detail_title": "Probendetails",
   "overview": "Übersicht",
   "comment": "Kommentar",
   "comment_placeholder": "Optionaler Kommentar",
   "save": "Speichern",
-
   "tab_overview": "Übersicht",
   "tab_history": "Historie",
   "tab_documents": "Dokumente",
   "tab_subsamples": "Teilproben",
   "tab_services": "Dienstleistungen",
   "tab_measurements": "Aufgaben",
-
   "print_label": "Etikett drucken",
   "label_size": "Etikettengröße",
   "label_small": "Klein (Laborröhrchen)",
@@ -165,12 +149,10 @@
   "scan_camera_hint": "Halten Sie den QR-Code vor die Kamera. Alternativ nutzen Sie einen USB-Barcodescanner.",
   "scan_not_found": "Probe nicht gefunden",
   "camera_error": "Kamera konnte nicht gestartet werden",
-
   "eta": "Voraussichtl. Fertigstellung",
   "eta_short": "ETA",
   "eta_no_orders": "Keine offenen Aufträge",
   "eta_completed": "Abgeschlossen",
-
   "filter_project": "Projekt",
   "filter_project_all": "Alle Projekte",
   "filter_measurement_type": "Dienstleistung",
@@ -196,5 +178,30 @@
   "tags": "Schlagworte",
   "tags_placeholder": "Schlagwort eingeben und Enter drücken",
   "tags_section": "Schlagworte / Tags",
-  "measurement_type": "Dienstleistung"
+  "measurement_type": "Dienstleistung",
+  "params_section": "Auftragsparameter (globale Variablen)",
+  "category": "Kategorie",
+  "select_category": "Kategorie auswählen",
+  "no_category": "Keine Kategorie",
+  "category_dieselkatalysator": "Dieselkatalysator",
+  "category_stationaerer_katalysator": "Stationärer Katalysator",
+  "category_plattenkatalysator": "Plattenkatalysator",
+  "category_marinekatalysator": "Marinekatalysator",
+  "category_heat_media": "Heat Media",
+  "v2o5_content": "V₂O₅-Gehalt [%]",
+  "v2o5_auto_zero": "automatisch 0,00 %",
+  "operating_hours": "Betriebsstunden",
+  "used_catalyst": "Gebrauchter Katalysator",
+  "raw_material_code": "Rohstoffcode",
+  "raw_material_code_placeholder": "Rohstoff suchen oder eingeben…",
+  "raw_material_search": "Code oder Bezeichnung eingeben…",
+  "raw_material_internal": "Rohstoffverwaltung",
+  "raw_material_external": "Externer Rohstoff",
+  "raw_material_use_external": "als externen Rohstoffcode übernehmen",
+  "raw_material_none": "Kein Rohstoff gefunden – Eingabe wird als externer Code gespeichert.",
+  "raw_material_hint": "Externer Code – wird nur für diesen Auftrag gespeichert, kein neuer Stammdatensatz.",
+  "raw_material_linked": "Mit Rohstoffverwaltung verknüpft.",
+  "lot_number": "Lotnummer",
+  "bigbag_number": "BigBag-Nummer (BB)",
+  "description_col": "Beschreibung"
 }

@@ -77,6 +77,14 @@ export function useCreateSample() {
       location_id?: string;
       parent_sample_id?: string;
       tags?: string[];
+      category?: string | null;
+      v2o5_content?: number | null;
+      operating_hours?: number | null;
+      is_used_catalyst?: boolean;
+      raw_material_id?: string | null;
+      raw_material_code?: string | null;
+      lot_number?: string | null;
+      bigbag_number?: string | null;
     }) => api.samples.create(sample),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["samples"] });
