@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,41 +74,57 @@ export default function AdminWorkPackageCategoriesPage() {
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-base">Kategorien</CardTitle></CardHeader>
         <CardContent>
-          {isLoading ? <p className="text-sm text-muted-foreground">Lade …</p> : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Beschreibung</TableHead>
-                  <TableHead className="w-24">Typ</TableHead>
-                  <TableHead className="w-32 text-right">Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cats.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{c.description ?? "—"}</TableCell>
-                    <TableCell>
-                      {c.is_system ? <Badge variant="secondary">System</Badge> : <Badge variant="outline">Custom</Badge>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => setDialog({ open: true, id: c.id, draft: { name: c.name, description: c.description ?? "" } })}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" disabled={c.is_system} onClick={() => {
-                        if (confirm(`Kategorie „${c.name}" löschen?`)) remove.mutate(c.id);
-                      }}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <DataTable<any>
+            tableId="admin.wp-categories"
+            isLoading={isLoading}
+            rows={cats}
+            rowKey={(c) => c.id}
+            emptyMessage="Keine Kategorien vorhanden."
+            searchPlaceholder="Name, Beschreibung …"
+            columns={[
+              { key: "name", header: "Name", type: "text", className: "font-medium" },
+              {
+                key: "description",
+                header: "Beschreibung",
+                type: "text",
+                className: "text-sm text-muted-foreground",
+                cell: (c) => c.description ?? "—",
+              },
+              {
+                key: "is_system",
+                header: "Typ",
+                type: "boolean",
+                headClassName: "w-24",
+                cell: (c) =>
+                  c.is_system ? <Badge variant="secondary">System</Badge> : <Badge variant="outline">Custom</Badge>,
+              },
+              {
+                key: "actions",
+                header: "Aktionen",
+                type: "custom",
+                sortable: false,
+                filterable: false,
+                searchable: false,
+                headClassName: "w-32 text-right",
+                className: "text-right",
+                cell: (c) => (
+                  <>
+                    <Button size="icon" variant="ghost" onClick={() => setDialog({ open: true, id: c.id, draft: { name: c.name, description: c.description ?? "" } })}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" disabled={c.is_system} onClick={() => {
+                      if (confirm(`Kategorie „${c.name}" löschen?`)) remove.mutate(c.id);
+                    }}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </>
+                ),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
+
 
       <Dialog open={dialog.open} onOpenChange={(o) => setDialog((s) => ({ ...s, open: o }))}>
         <DialogContent>
