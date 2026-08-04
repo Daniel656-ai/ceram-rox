@@ -620,42 +620,12 @@ export default function ProjectDetailPage() {
               canEdit={canManagePlanning}
               onSave={(updates) => handleUpdateProject(updates)}
             />
-            <Card>
-              <CardHeader><CardTitle>{t("cost_per_measurement")}</CardTitle></CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("measurement_number")}</TableHead>
-                      <TableHead>{t("measurement_type")}</TableHead>
-                      <TableHead>{t("hours")}</TableHead>
-                      <TableHead>{t("rate")}</TableHead>
-                      <TableHead>{t("personnel_costs")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {costData.perMeasurement.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t("no_work_logs")}</TableCell></TableRow>
-                    ) : (
-                      costData.perMeasurement.map(([mNum, data]) => (
-                        <TableRow key={mNum}>
-                          <TableCell className="font-medium">{mNum}</TableCell>
-                          <TableCell>{data.name}</TableCell>
-                          <TableCell>{data.hours.toFixed(1)}{t("hours_unit")}</TableCell>
-                          <TableCell>–</TableCell>
-                          <TableCell>{formatCurrency(data.cost)} {t("currency")}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                {costData.perMeasurement.length > 0 && (
-                  <div className="border-t p-4 flex justify-end">
-                    <span className="font-semibold">{t("total")}: {formatCurrency(costData.totalPersonnel)} {t("currency")}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ProjectCostBreakdown
+              breakdown={costBreakdown}
+              expectedTotal={totalCosts}
+              userName={(uid) => getUserName(users as any[], uid)}
+            />
+
           </div>
         </TabsContent>}
 
