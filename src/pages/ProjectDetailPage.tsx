@@ -25,7 +25,10 @@ import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
 import { ProjectGovernanceTab } from "@/components/ProjectGovernanceTab";
 import { ProjectClosureTab } from "@/components/ProjectClosureTab";
 import { ProjectBudgetCard } from "@/components/ProjectBudgetCard";
+import { ProjectCostBreakdown } from "@/components/ProjectCostBreakdown";
+import { buildCostBreakdown } from "@/lib/costBreakdown";
 import { ProjectServicesTab } from "@/components/ProjectServicesTab";
+
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -154,7 +157,20 @@ export default function ProjectDetailPage() {
 
   const totalCosts = costData.totalPersonnel + totalMaterialCosts;
 
-  // Total hours: measurement hours + project time entries
+  // Transparente Aufschlüsselung – nutzt exakt dieselben Quellen/Formeln wie oben,
+  // erzeugt daher keine zusätzlichen oder doppelten Kosten.
+  const costBreakdown = useMemo(
+    () => buildCostBreakdown({
+      measurements: allMeasurements,
+      timeEntries: timeEntries as any[],
+      consumables: projectConsumables as any[],
+      knetung: projectKnetung as any[],
+      expenses: projectExpenses as any[],
+    }),
+    [allMeasurements, timeEntries, projectConsumables, projectKnetung, projectExpenses]
+  );
+
+
   const timeEntryHours = useMemo(() => {
     return (timeEntries as any[]).reduce((s, e) => s + (e.duration_minutes || 0), 0) / 60;
   }, [timeEntries]);
@@ -620,42 +636,12 @@ export default function ProjectDetailPage() {
               canEdit={canManagePlanning}
               onSave={(updates) => handleUpdateProject(updates)}
             />
-            <Card>
-              <CardHeader><CardTitle>{t("cost_per_measurement")}</CardTitle></CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("measurement_number")}</TableHead>
-                      <TableHead>{t("measurement_type")}</TableHead>
-                      <TableHead>{t("hours")}</TableHead>
-                      <TableHead>{t("rate")}</TableHead>
-                      <TableHead>{t("personnel_costs")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {costData.perMeasurement.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t("no_work_logs")}</TableCell></TableRow>
-                    ) : (
-                      costData.perMeasurement.map(([mNum, data]) => (
-                        <TableRow key={mNum}>
-                          <TableCell className="font-medium">{mNum}</TableCell>
-                          <TableCell>{data.name}</TableCell>
-                          <TableCell>{data.hours.toFixed(1)}{t("hours_unit")}</TableCell>
-                          <TableCell>–</TableCell>
-                          <TableCell>{formatCurrency(data.cost)} {t("currency")}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                {costData.perMeasurement.length > 0 && (
-                  <div className="border-t p-4 flex justify-end">
-                    <span className="font-semibold">{t("total")}: {formatCurrency(costData.totalPersonnel)} {t("currency")}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ProjectCostBreakdown
+              breakdown={costBreakdown}
+              expectedTotal={totalCosts}
+              userName={(uid) => getUserName(users as any[], uid)}
+            />
+
           </div>
         </TabsContent>}
 
