@@ -543,8 +543,6 @@ export default function AdminServicesPage() {
       <EditServiceDialog
         service={editService}
         onClose={() => setEditService(null)}
-        users={users}
-        workstations={workstations}
         canEditRates={canViewRates && canEditRates}
         onSave={async (id, updates) => {
           try {
