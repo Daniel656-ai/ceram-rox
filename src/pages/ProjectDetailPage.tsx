@@ -25,7 +25,10 @@ import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
 import { ProjectGovernanceTab } from "@/components/ProjectGovernanceTab";
 import { ProjectClosureTab } from "@/components/ProjectClosureTab";
 import { ProjectBudgetCard } from "@/components/ProjectBudgetCard";
+import { ProjectCostBreakdown } from "@/components/ProjectCostBreakdown";
+import { buildCostBreakdown } from "@/lib/costBreakdown";
 import { ProjectServicesTab } from "@/components/ProjectServicesTab";
+
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
