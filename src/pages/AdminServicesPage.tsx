@@ -498,8 +498,8 @@ export default function AdminServicesPage() {
         <div className="flex items-center justify-center h-32"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
       ) : (
         <div className="space-y-6">
-          {renderServiceTable(t("common:category_labor"), laborServices)}
-          {renderServiceTable(t("common:category_pilot_plant"), pilotServices)}
+          {renderServiceTable(t("common:category_labor"), laborServices, "admin-services-labor")}
+          {renderServiceTable(t("common:category_pilot_plant"), pilotServices, "admin-services-pilot")}
         </div>
       )}
 
