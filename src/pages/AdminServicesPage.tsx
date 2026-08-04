@@ -587,13 +587,11 @@ export default function AdminServicesPage() {
 // Edit dialog
 // ============================================================
 function EditServiceDialog({
-  service, onClose, onSave, users, workstations, canEditRates,
+  service, onClose, onSave, canEditRates,
 }: {
   service: any | null;
   onClose: () => void;
   onSave: (id: string, updates: Record<string, any>) => Promise<void>;
-  users: any[];
-  workstations: any[];
   canEditRates: boolean;
 }) {
   const [form, setForm] = useState<any>({});
