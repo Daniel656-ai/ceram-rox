@@ -99,12 +99,6 @@ function PreviewEmptyHint({ serviceId }: { serviceId: string }) {
 
 
 
-function useDurchfuehrerUsers() {
-  return useQuery({
-    queryKey: ["durchfuehrer-users"],
-    queryFn: () => api.durchfuehrerUsers.list(),
-  });
-}
 
 
 export default function AdminServicesPage() {
