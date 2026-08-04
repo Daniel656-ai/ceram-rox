@@ -126,7 +126,7 @@ export default function SamplesPage() {
 
   const canCreate = role === "master" || role === "auftraggeber" || role === "durchfuehrer";
 
-  const hasActiveFilters = filterProject !== "__all__" || filterService !== "__all__" || filterHazardous !== "__all__" || filterTags.length > 0;
+
 
   // Collect all unique tags across samples for autocomplete
   const allTags = useMemo(() => {
