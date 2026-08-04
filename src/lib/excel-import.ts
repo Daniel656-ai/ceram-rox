@@ -30,7 +30,6 @@ export interface ParsedImportOrder {
     service_name: string;
     planned_hours: number;
     matched_service_id?: string;
-    matched_workstation_id?: string;
     parameters?: Record<string, string>;
   }[];
   errors: string[];
@@ -114,7 +113,7 @@ export function parseExcelFile(buffer: ArrayBuffer): { rows: ImportedOrderRow[];
 
 export function groupRowsIntoOrders(
   rows: ImportedOrderRow[],
-  existingServices: { id: string; service_name: string; workstation_id: string | null }[]
+  existingServices: { id: string; service_name: string }[]
 ): ParsedImportOrder[] {
   const groups = new Map<string, ImportedOrderRow[]>();
   for (const row of rows) {
@@ -150,7 +149,6 @@ export function groupRowsIntoOrders(
         service_name: r.service_name,
         planned_hours: r.planned_hours,
         matched_service_id: match?.id,
-        matched_workstation_id: match?.workstation_id || undefined,
         parameters: r.parameters,
       };
     });
@@ -211,7 +209,7 @@ export type RowFieldErrors = Record<string, string>;
 
 export function validateRows(
   rows: ImportedOrderRow[],
-  existingServices: { id: string; service_name: string; workstation_id: string | null }[]
+  existingServices: { id: string; service_name: string }[]
 ): RowFieldErrors[] {
   return rows.map((row) => {
     const errors: RowFieldErrors = {};
