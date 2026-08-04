@@ -99,7 +99,9 @@ export default function LabPlanningPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Laborplanung</h1>
-          <p className="text-muted-foreground">Drag & Drop Aufgabenplanung</p>
+          <p className="text-muted-foreground">
+            Drag &amp; Drop Aufgabenplanung · Platzhalter für die künftige Ressourcen- und Kapazitätsplanung
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={filterAssigned} onValueChange={setFilterAssigned}>
