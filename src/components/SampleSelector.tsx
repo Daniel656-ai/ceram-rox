@@ -17,6 +17,9 @@ import { ChevronsUpDown, Check, Plus, X, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { SampleParametersFields } from "@/components/SampleParametersFields";
+import { EMPTY_SAMPLE_PARAMETERS, sampleParametersToPayload, type SampleParameters } from "@/lib/sampleParameters";
+
 
 const HAZARD_CATEGORIES = [
   "gesundheitsschaedlich", "toxisch", "reizend", "aetzend", "entzuendlich", "umweltgefaehrlich", "sonstiges",
@@ -46,6 +49,8 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
   const [open, setOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formTagInput, setFormTagInput] = useState("");
+  const [params, setParams] = useState<SampleParameters>(EMPTY_SAMPLE_PARAMETERS);
+
   const [form, setForm] = useState({
     sample_name: "", project_id: "", description: "",
     post_measurement_action: "" as string, post_measurement_action_text: "",
@@ -74,7 +79,9 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
       tags: [],
     });
     setFormTagInput("");
+    setParams(EMPTY_SAMPLE_PARAMETERS);
   };
+
 
   const toggleHazard = (cat: string) => {
     setForm(f => {
@@ -120,6 +127,8 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
         is_hazardous: form.is_hazardous,
         location_id: form.location_id || undefined,
         tags: form.tags,
+        ...sampleParametersToPayload(params),
+
       });
       toast.success(t("created"));
       onSelect(newSample.id);
@@ -218,6 +227,8 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
               <Label>{t("description")}</Label>
               <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder={t("description_placeholder")} rows={2} />
             </div>
+            <SampleParametersFields value={params} onChange={setParams} idPrefix="selector-params" />
+
             <div className="space-y-2">
               <Label>{t("post_measurement")}</Label>
               <Select value={form.post_measurement_action} onValueChange={v => setForm(f => ({ ...f, post_measurement_action: v }))}>
