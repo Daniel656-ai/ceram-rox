@@ -433,12 +433,163 @@ export default function SamplesPage() {
     { value: "gefahrstoff", icon: <ShieldAlert className="h-3.5 w-3.5" />, labelKey: "cat_gefahrstoff", count: categorized.gefahrstoff.length },
   ];
 
-  // Tag suggestions for filter input
-  const tagSuggestions = useMemo(() => {
-    if (!tagInput.trim()) return [];
-    const q = tagInput.toLowerCase();
-    return allTags.filter(t => t.toLowerCase().includes(q) && !filterTags.includes(t)).slice(0, 5);
-  }, [tagInput, allTags, filterTags]);
+  const sampleColumns = useMemo<DataTableColumn<any>[]>(() => {
+    const cols: DataTableColumn<any>[] = [
+      {
+        key: "sample_number",
+        header: t("sample_number"),
+        cell: (s) => (
+          <Link to={`/proben/${s.id}`} className="font-medium text-destructive underline underline-offset-2 hover:opacity-80">
+            {s.sample_number}
+          </Link>
+        ),
+      },
+      { key: "sample_name", header: t("name") },
+      {
+        key: "project",
+        header: t("project"),
+        accessor: (s) => s.projects?.project_number || "",
+      },
+      {
+        key: "status",
+        header: t("status"),
+        type: "status",
+        accessor: (s) => s.status || "neu",
+        statusOrder: SAMPLE_STATUS_ORDER,
+        statusLabels: Object.fromEntries(SAMPLE_STATUS_ORDER.map((st) => [st, t(`status_${st}`)])),
+        cell: (s) => getStatusBadge(s.status || "neu"),
+      },
+      {
+        key: "eta",
+        header: t("eta_short"),
+        type: "date",
+        accessor: (s) => etaMap.get(s.id) ?? null,
+        cell: (s) => {
+          const completed = ["vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"];
+          if (completed.includes(s.status)) return <span className="text-muted-foreground text-xs">{t("eta_completed")}</span>;
+          const eta = etaMap.get(s.id);
+          if (!eta) return <span className="text-muted-foreground text-xs">{t("eta_no_orders")}</span>;
+          return <Badge variant="outline" className="gap-1 text-xs"><CalendarClock className="h-3 w-3" />{eta.toLocaleDateString("de-DE")}</Badge>;
+        },
+      },
+      {
+        key: "location",
+        header: t("location"),
+        accessor: (s) => formatLocation(s.storage_locations),
+        className: "text-sm",
+      },
+      {
+        key: "measurement_types",
+        header: t("filter_measurement_type"),
+        accessor: (s) => (sampleMeasurementTypes.get(s.id) || []).join(", "),
+      },
+      {
+        key: "tags",
+        header: t("tags"),
+        accessor: (s) => (Array.isArray(s.tags) ? s.tags.join(", ") : ""),
+        cell: (s) => {
+          const sampleTags: string[] = Array.isArray(s.tags) ? s.tags : [];
+          return (
+            <div className="flex flex-wrap gap-1 max-w-[150px]">
+              {sampleTags.length > 0 ? sampleTags.slice(0, 3).map((tag) => (
+                <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+              )) : <span className="text-muted-foreground text-xs">–</span>}
+              {sampleTags.length > 3 && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{sampleTags.length - 3}</Badge>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        key: "is_hazardous",
+        header: t("hazardous"),
+        type: "boolean",
+        accessor: (s) => !!s.is_hazardous,
+        cell: (s) =>
+          s.is_hazardous ? (
+            <GhsPictogramList hazardClasses={s.hazard_categories} size="sm" max={5} />
+          ) : (
+            <span className="text-muted-foreground text-sm">{t("hazard_no")}</span>
+          ),
+      },
+    ];
+
+    if (activeTab === "kritisch") {
+      cols.push({
+        key: "expiry_remaining",
+        header: t("expiry_remaining"),
+        type: "number",
+        accessor: (s) => getDaysUntilExpiry(s.storage_expiry_date),
+        cell: (s) => {
+          const daysLeft = getDaysUntilExpiry(s.storage_expiry_date);
+          if (daysLeft === null) return <span className="text-muted-foreground">–</span>;
+          return (
+            <Badge variant={daysLeft <= 7 ? "destructive" : "outline"} className="gap-1">
+              <Timer className="h-3 w-3" />
+              {daysLeft <= 0 ? t("expiry_overdue") : t("expiry_days", { count: daysLeft })}
+            </Badge>
+          );
+        },
+      });
+    }
+
+    cols.push(
+      {
+        key: "created_at",
+        header: t("created_at"),
+        type: "date",
+        cell: (s) => new Date(s.created_at).toLocaleDateString("de-DE"),
+      },
+      {
+        key: "actions",
+        header: t("actions"),
+        type: "custom",
+        sortable: false,
+        filterable: false,
+        searchable: false,
+        headClassName: "w-24",
+        cell: (s) => {
+          const canDelete = role === "master" || s.created_by === user?.id;
+          if (!canCreate || !canDelete) return null;
+          return (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t("delete_description_prefix")}{s.sample_number}{t("delete_description_suffix")}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={async () => {
+                      try {
+                        await deleteSample.mutateAsync(s.id);
+                        toast.success(t("deleted"));
+                      } catch (e: any) {
+                        toast.error(e.message || t("delete_error"));
+                      }
+                    }}
+                  >{t("delete")}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          );
+        },
+      },
+    );
+
+    return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t, activeTab, etaMap, sampleMeasurementTypes, role, user?.id, canCreate, deleteSample]);
 
   return (
     <div className="space-y-6">
