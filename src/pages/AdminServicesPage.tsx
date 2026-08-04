@@ -222,55 +222,6 @@ export default function AdminServicesPage() {
       ),
     },
     {
-      key: "workstation",
-      header: t("admin:service_workstation"),
-      accessor: (s) => workstations.find(w => w.id === s.workstation_id)?.name || "",
-      cell: (s) => (
-        <Select
-          value={s.workstation_id || "none"}
-          onValueChange={v => handleWorkstationChange(s.id, v === "none" ? "" : v)}
-          disabled={!!s.archived_at}
-        >
-          <SelectTrigger className="w-44 h-8">
-            <SelectValue placeholder={t("common:not_assigned")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-            {workstations.filter(w => w.status === "active").map(w => (
-              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
-    },
-    {
-      key: "responsible",
-      header: t("admin:service_responsible"),
-      accessor: (s) => {
-        const u = (users as any[]).find(u => u.user_id === s.responsible_user_id);
-        return u ? `${u.first_name} ${u.last_name}` : "";
-      },
-      cell: (s) => (
-        <Select
-          value={s.responsible_user_id || "none"}
-          onValueChange={v => handleResponsibleChange(s.id, v === "none" ? "" : v)}
-          disabled={!!s.archived_at}
-        >
-          <SelectTrigger className="w-44 h-8">
-            <SelectValue placeholder={t("common:not_assigned")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-            {(users as any[]).map((u: any) => (
-              <SelectItem key={u.user_id} value={u.user_id}>
-                {u.first_name} {u.last_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
-    },
-    {
       key: "standard_duration_hours",
       header: t("admin:service_duration"),
       type: "number",
