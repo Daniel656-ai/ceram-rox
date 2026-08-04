@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProjects, useCreateProject } from "@/hooks/useProjects";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useServices, useAddOrderMeasurement } from "@/hooks/useMeasurements";
-import { useWorkstations } from "@/hooks/useWorkstations";
 import { useServiceParameterDefs } from "@/hooks/useServiceParameters";
 import { useTemplates, useApplyTemplate } from "@/hooks/useTemplates";
 import { useSamples } from "@/hooks/useSamples";
@@ -34,7 +33,6 @@ interface SelectedMeasurement {
   service_id: string;
   service_name: string;
   planned_hours: number;
-  workstation_id: string;
   source_package_id?: string | null;
   source_package_name?: string | null;
 }
@@ -179,7 +177,6 @@ export default function CreateOrderPage() {
     queryKey: ["process-templates", "active"],
     queryFn: () => api.processTemplates.list({ scope: "template" }),
   });
-  const { data: workstations = [] } = useWorkstations();
   const { data: templates = [] } = useTemplates();
   const { data: allSamples = [] } = useSamples();
   const createOrder = useCreateOrder();
@@ -274,7 +271,7 @@ export default function CreateOrderPage() {
     if (!svc) return;
     setMeasurements((prev) => [
       ...prev,
-      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" },
+      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, planned_hours: 1 },
     ]);
   };
 
@@ -294,7 +291,6 @@ export default function CreateOrderPage() {
           service_id: svc.id,
           service_name: svc.service_name,
           planned_hours: svc.standard_duration_hours || 1,
-          workstation_id: svc.workstation_id || "",
           source_package_id: pkg.id,
           source_package_name: pkg.name,
         });
@@ -315,7 +311,7 @@ export default function CreateOrderPage() {
     for (const sid of serviceIds) {
       const svc = services.find((s) => s.id === sid);
       if (svc) {
-        newMeasurements.push({ uid: newUid(), service_id: sid, service_name: svc.service_name, planned_hours: 1, workstation_id: svc.workstation_id || "" });
+        newMeasurements.push({ uid: newUid(), service_id: sid, service_name: svc.service_name, planned_hours: 1 });
       }
     }
     setMeasurements(newMeasurements);
@@ -480,7 +476,7 @@ export default function CreateOrderPage() {
         const m = measurements[idx];
         const createdMeasurement = await addMeasurement.mutateAsync({
           order_id: order.id, service_id: m.service_id, planned_hours: m.planned_hours,
-          due_date: dueDate || undefined, workstation_id: m.workstation_id || undefined,
+          due_date: dueDate || undefined,
           source_package_id: m.source_package_id ?? null,
           source_package_name_snapshot: m.source_package_name ?? null,
         });
@@ -909,16 +905,6 @@ export default function CreateOrderPage() {
                             <Badge variant="outline" className="font-normal">manuell</Badge>
                           )}
                         </p>
-                      </div>
-                      <div className="w-36">
-                        <Label className="text-xs">{t("orders:workstation")}</Label>
-                        <Select value={m.workstation_id || "__none"} onValueChange={(v) => updateMeasurement(m.uid, "workstation_id", v === "__none" ? "" : v)}>
-                          <SelectTrigger className="h-8"><SelectValue placeholder={t("orders:choose_workstation")} /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none">{t("orders:none_workstation")}</SelectItem>
-                            {workstations.filter((w: any) => w.status === "active").map((w: any) => (<SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>))}
-                          </SelectContent>
-                        </Select>
                       </div>
                       <div className="w-24">
                         <Label className="text-xs">{t("common:hours")}</Label>

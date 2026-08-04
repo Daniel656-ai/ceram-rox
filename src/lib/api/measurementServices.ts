@@ -23,12 +23,12 @@ export const measurementServices = {
         .order("service_name")
     ),
 
-  /** All services incl. inactive, with workstation join (admin). */
+  /** All services incl. inactive (admin). */
   listAll: () =>
     unwrap(
       dbClient
         .from("measurement_services")
-        .select("*, workstations(id, name)")
+        .select("*")
         .order("category")
         .order("service_name")
     ),
@@ -37,8 +37,6 @@ export const measurementServices = {
     service_name: string;
     category: string;
     hourly_rate: number;
-    responsible_user_id?: string | null;
-    workstation_id?: string | null;
     description?: string | null;
     icon?: string | null;
     color?: string | null;
@@ -56,8 +54,6 @@ export const measurementServices = {
       active?: boolean;
       service_name?: string;
       category?: string;
-      responsible_user_id?: string | null;
-      workstation_id?: string | null;
       standard_duration_hours?: number;
       description?: string | null;
       icon?: string | null;

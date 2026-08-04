@@ -1,7 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 
-const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), workstations(id, name, responsible_user_id), measurement_orders(*, projects(project_number, project_name))`;
+const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_orders(*, projects(project_number, project_name))`;
 
 export const measurements = {
   /** Compact projection for ServiceStatistics widget, filtered by created_at range. */
@@ -22,21 +22,6 @@ export const measurements = {
         .select(MY_MEASUREMENT_SELECT)
         .eq("assigned_to", userId)
     ),
-
-  /** Measurements on workstations the user is responsible for. */
-  async listForUserResponsibleWorkstations(userId: string) {
-    const stations = await unwrap(
-      dbClient.from("workstations").select("id").eq("responsible_user_id", userId)
-    );
-    const ids = (stations || []).map((s: any) => s.id);
-    if (ids.length === 0) return [];
-    return unwrap(
-      dbClient
-        .from("order_measurements")
-        .select(MY_MEASUREMENT_SELECT)
-        .in("workstation_id", ids)
-    );
-  },
 
   /**
    * Unassigned, still-open measurements the user is qualified for
@@ -84,25 +69,12 @@ export const measurements = {
             .in("user_id", userIds)
         ),
 
-  /** All measurements assigned to a workstation. */
-  listForWorkstation: (workstationId: string) =>
-    unwrap(
-      dbClient
-        .from("order_measurements")
-        .select(
-          "*, measurement_services(service_name, category), measurement_orders(*, projects(project_number, project_name))"
-        )
-        .eq("workstation_id", workstationId)
-        .order("due_date")
-    ),
-
   // ---- writes ----
   add: (m: {
     order_id: string;
     service_id: string;
     planned_hours?: number;
     due_date?: string;
-    workstation_id?: string;
     source_package_id?: string | null;
     source_package_name_snapshot?: string | null;
   }) =>
@@ -121,7 +93,7 @@ export const measurements = {
       dbClient
         .from("order_measurements")
         .select(
-          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, work_instructions), workstations(id, name), measurement_results(*), measurement_parameters(*), measurement_orders(id, order_number, order_type, notes, created_by, project_id, sample_id, priority, due_date, status, projects(id, project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name))"
+          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, work_instructions), measurement_results(*), measurement_parameters(*), measurement_orders(id, order_number, order_type, notes, created_by, project_id, sample_id, priority, due_date, status, projects(id, project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name))"
         )
         .eq("id", id)
         .single()

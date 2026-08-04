@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ClipboardList, FolderOpen, Beaker, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { UtilizationSidebar } from "@/components/UtilizationSidebar";
 import { ProjectStatistics } from "@/components/ProjectStatistics";
 import { ServiceStatistics } from "@/components/ServiceStatistics";
 
@@ -78,7 +77,6 @@ export default function AdminStatsPage() {
 
       <ServiceStatistics />
 
-      <UtilizationSidebar />
     </div>
   );
 }

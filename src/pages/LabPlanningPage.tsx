@@ -27,10 +27,9 @@ function useLabMeasurements() {
         .from("order_measurements")
         .select(`
           id, measurement_number, status, assigned_to, due_date, priority, ranking,
-          planned_start_date, planned_end_date, workstation_id,
+          planned_start_date, planned_end_date,
           measurement_services(service_name, category, standard_duration_hours),
-          measurement_orders(order_number, projects(project_number, project_name), samples(sample_number, sample_name)),
-          workstations(name)
+          measurement_orders(order_number, projects(project_number, project_name), samples(sample_number, sample_name))
         `)
         .order("ranking", { ascending: true, nullsFirst: false })
         .order("priority", { ascending: false })
@@ -180,9 +179,6 @@ export default function LabPlanningPage() {
                           </span>
                         )}
                       </div>
-                      {m.workstations?.name && (
-                        <Badge variant="outline" className="text-[10px]">{m.workstations.name}</Badge>
-                      )}
                     </CardContent>
                   </Card>
                 ))}

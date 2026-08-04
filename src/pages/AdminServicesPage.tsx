@@ -8,7 +8,6 @@ import {
   useDeleteService,
   useServiceReferences,
 } from "@/hooks/useMeasurements";
-import { useWorkstations } from "@/hooks/useWorkstations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
@@ -100,19 +99,11 @@ function PreviewEmptyHint({ serviceId }: { serviceId: string }) {
 
 
 
-function useDurchfuehrerUsers() {
-  return useQuery({
-    queryKey: ["durchfuehrer-users"],
-    queryFn: () => api.durchfuehrerUsers.list(),
-  });
-}
 
 
 export default function AdminServicesPage() {
   const { t } = useTranslation(["admin", "common"]);
   const { data: services = [], isLoading } = useAllServices();
-  const { data: users = [] } = useDurchfuehrerUsers();
-  const { data: workstations = [] } = useWorkstations();
   const updateService = useUpdateService();
   const createService = useCreateService();
   const archiveService = useArchiveService();
@@ -125,10 +116,8 @@ export default function AdminServicesPage() {
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<string>("labor");
   const [newRate, setNewRate] = useState("75");
-  const [newResponsible, setNewResponsible] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState("");
-  const [newWorkstation, setNewWorkstation] = useState<string>("");
   const [newDuration, setNewDuration] = useState("1");
   const [paramEditorServiceId, setParamEditorServiceId] = useState<string | null>(null);
   const [paramEditorServiceName, setParamEditorServiceName] = useState("");
@@ -160,24 +149,6 @@ export default function AdminServicesPage() {
     }
   };
 
-  const handleResponsibleChange = async (id: string, userId: string) => {
-    try {
-      await updateService.mutateAsync({ id, responsible_user_id: userId || null });
-      toast.success(t("admin:responsible_assigned"));
-    } catch (err: any) {
-      toast.error(t("common:error"), { description: err.message });
-    }
-  };
-
-  const handleWorkstationChange = async (id: string, workstationId: string) => {
-    try {
-      await updateService.mutateAsync({ id, workstation_id: workstationId || null });
-      toast.success(t("admin:workstation_assigned"));
-    } catch (err: any) {
-      toast.error(t("common:error"), { description: err.message });
-    }
-  };
-
   const handleCreate = async () => {
     if (!newName) { toast.error(t("admin:name_required")); return; }
     try {
@@ -185,8 +156,6 @@ export default function AdminServicesPage() {
         service_name: newName,
         category: newCategory,
         hourly_rate: parseFloat(newRate),
-        responsible_user_id: newResponsible || null,
-        workstation_id: newWorkstation || null,
         standard_duration_hours: parseFloat(newDuration),
       } as any);
       toast.success(t("admin:service_created"));
@@ -194,8 +163,6 @@ export default function AdminServicesPage() {
       setNewName("");
       setNewRate("75");
       setNewDuration("1");
-      setNewResponsible("");
-      setNewWorkstation("");
     } catch (err: any) {
       toast.error(t("common:error"), { description: err.message });
     }
@@ -219,55 +186,6 @@ export default function AdminServicesPage() {
             </Badge>
           )}
         </div>
-      ),
-    },
-    {
-      key: "workstation",
-      header: t("admin:service_workstation"),
-      accessor: (s) => workstations.find(w => w.id === s.workstation_id)?.name || "",
-      cell: (s) => (
-        <Select
-          value={s.workstation_id || "none"}
-          onValueChange={v => handleWorkstationChange(s.id, v === "none" ? "" : v)}
-          disabled={!!s.archived_at}
-        >
-          <SelectTrigger className="w-44 h-8">
-            <SelectValue placeholder={t("common:not_assigned")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-            {workstations.filter(w => w.status === "active").map(w => (
-              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
-    },
-    {
-      key: "responsible",
-      header: t("admin:service_responsible"),
-      accessor: (s) => {
-        const u = (users as any[]).find(u => u.user_id === s.responsible_user_id);
-        return u ? `${u.first_name} ${u.last_name}` : "";
-      },
-      cell: (s) => (
-        <Select
-          value={s.responsible_user_id || "none"}
-          onValueChange={v => handleResponsibleChange(s.id, v === "none" ? "" : v)}
-          disabled={!!s.archived_at}
-        >
-          <SelectTrigger className="w-44 h-8">
-            <SelectValue placeholder={t("common:not_assigned")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-            {(users as any[]).map((u: any) => (
-              <SelectItem key={u.user_id} value={u.user_id}>
-                {u.first_name} {u.last_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       ),
     },
     {
@@ -471,20 +389,6 @@ export default function AdminServicesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>{t("admin:service_responsible")}</Label>
-                  <Select value={newResponsible || "none"} onValueChange={v => setNewResponsible(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder={t("common:not_assigned")} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-                      {users.map((u: any) => (
-                        <SelectItem key={u.user_id} value={u.user_id}>
-                          {u.first_name} {u.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
                 {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
                 <Button onClick={handleCreate}>{t("common:create")}</Button>
@@ -543,8 +447,6 @@ export default function AdminServicesPage() {
       <EditServiceDialog
         service={editService}
         onClose={() => setEditService(null)}
-        users={users}
-        workstations={workstations}
         canEditRates={canViewRates && canEditRates}
         onSave={async (id, updates) => {
           try {
@@ -587,13 +489,11 @@ export default function AdminServicesPage() {
 // Edit dialog
 // ============================================================
 function EditServiceDialog({
-  service, onClose, onSave, users, workstations, canEditRates,
+  service, onClose, onSave, canEditRates,
 }: {
   service: any | null;
   onClose: () => void;
   onSave: (id: string, updates: Record<string, any>) => Promise<void>;
-  users: any[];
-  workstations: any[];
   canEditRates: boolean;
 }) {
   const [form, setForm] = useState<any>({});
@@ -607,8 +507,6 @@ function EditServiceDialog({
         department: service.department ?? "",
         standard_duration_hours: service.standard_duration_hours ?? 1,
         hourly_rate: service.hourly_rate ?? 0,
-        workstation_id: service.workstation_id ?? "",
-        responsible_user_id: service.responsible_user_id ?? "",
         work_instructions: service.work_instructions ?? "",
         active: !!service.active,
       });
@@ -662,30 +560,6 @@ function EditServiceDialog({
                 <Input type="number" value={form.hourly_rate} onChange={e => setForm((f: any) => ({ ...f, hourly_rate: parseFloat(e.target.value) }))} />
               </div>
             )}
-            <div>
-              <Label>Arbeitsplatz</Label>
-              <Select value={form.workstation_id || "none"} onValueChange={v => setForm((f: any) => ({ ...f, workstation_id: v === "none" ? "" : v }))}>
-                <SelectTrigger><SelectValue placeholder="Nicht zugewiesen" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nicht zugewiesen</SelectItem>
-                  {workstations.filter(w => w.status === "active").map(w => (
-                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Verantwortlich</Label>
-              <Select value={form.responsible_user_id || "none"} onValueChange={v => setForm((f: any) => ({ ...f, responsible_user_id: v === "none" ? "" : v }))}>
-                <SelectTrigger><SelectValue placeholder="Nicht zugewiesen" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nicht zugewiesen</SelectItem>
-                  {users.map((u: any) => (
-                    <SelectItem key={u.user_id} value={u.user_id}>{u.first_name} {u.last_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <div>
             <Label>Arbeitsanweisung</Label>
@@ -701,8 +575,6 @@ function EditServiceDialog({
             department: form.department || null,
             standard_duration_hours: form.standard_duration_hours,
             ...(canEditRates ? { hourly_rate: form.hourly_rate } : {}),
-            workstation_id: form.workstation_id || null,
-            responsible_user_id: form.responsible_user_id || null,
             work_instructions: form.work_instructions || null,
           })}>Speichern</Button>
         </DialogFooter>

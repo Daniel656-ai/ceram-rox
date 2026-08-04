@@ -25,7 +25,6 @@ import PortfolioDetailPage from "./pages/PortfolioDetailPage";
 import AdminWorkPackageCategoriesPage from "./pages/AdminWorkPackageCategoriesPage";
 
 import AdminStatsPage from "./pages/AdminStatsPage";
-import AdminWorkstationsPage from "./pages/AdminWorkstationsPage";
 import AdminPermissionsPage from "./pages/AdminPermissionsPage";
 import AdminSyncPage from "./pages/AdminSyncPage";
 import AdminRolesPage from "./pages/AdminRolesPage";
@@ -107,7 +106,6 @@ const App = () => (
               <Route path="/admin/servicepakete" element={<AdminServicePackagesPage />} />
 
               <Route path="/admin/statistiken" element={<AdminStatsPage />} />
-              <Route path="/admin/arbeitsplaetze" element={<AdminWorkstationsPage />} />
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />
               <Route path="/admin/rollen" element={<AdminRolesPage />} />
               <Route path="/admin/synchronisation" element={<AdminSyncPage />} />

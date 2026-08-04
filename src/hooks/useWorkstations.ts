@@ -95,11 +95,3 @@ export function useDeleteTask() {
   });
 }
 
-// ── Workstation Measurements ──
-export function useWorkstationMeasurements(workstationId?: string) {
-  return useQuery({
-    queryKey: ["workstation_measurements", workstationId],
-    enabled: !!workstationId,
-    queryFn: () => api.measurements.listForWorkstation(workstationId!),
-  });
-}

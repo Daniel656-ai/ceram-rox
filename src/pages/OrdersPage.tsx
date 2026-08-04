@@ -310,7 +310,6 @@ function DurchfuehrerTasksView({
     | "priority"
     | "service"
     | "project"
-    | "workstation"
     | "order_number"
     | "creator"
     | "due_date"
@@ -361,7 +360,6 @@ function DurchfuehrerTasksView({
       case "priority": return m.ranking ?? m.measurement_orders?.ranking ?? 999;
       case "service": return (m.measurement_services?.service_name || "").toLowerCase();
       case "project": return (m.measurement_orders?.projects?.project_number || m.measurement_orders?.projects?.project_name || "").toLowerCase();
-      case "workstation": return (m.workstations?.name || "").toLowerCase();
       case "order_number": return (m.measurement_orders?.order_number || "").toLowerCase();
       case "creator": return m.creator_profile ? `${m.creator_profile.last_name || ""} ${m.creator_profile.first_name || ""}`.trim().toLowerCase() : "";
       case "due_date": return m.due_date ? new Date(m.due_date).getTime() : Number.POSITIVE_INFINITY;
@@ -511,7 +509,6 @@ function DurchfuehrerTasksView({
               <TableRow>
                 <SortableHead label="Aufgaben-Nr." sortKey="measurement_number" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label="Dienstleistung" sortKey="service" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
-                <SortableHead label="Arbeitsplatz" sortKey="workstation" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:order_number")} sortKey="order_number" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label="Ersteller" sortKey="creator" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
@@ -531,7 +528,6 @@ function DurchfuehrerTasksView({
                     <Link to={`/aufgaben/${m.id}`} className="text-primary hover:underline">{m.measurement_number}</Link>
                   </TableCell>
                   <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
-                  <TableCell>{m.workstations?.name || "–"}</TableCell>
                   <TableCell className="font-mono">{m.measurement_orders?.order_number || "–"}</TableCell>
                   <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                   <TableCell>
@@ -568,7 +564,6 @@ function DurchfuehrerTasksView({
               <TableRow>
                 <SortableHead label="Aufgaben-Nr." sortKey="measurement_number" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label="Dienstleistung" sortKey="service" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
-                <SortableHead label="Arbeitsplatz" sortKey="workstation" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:order_number")} sortKey="order_number" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
@@ -585,7 +580,6 @@ function DurchfuehrerTasksView({
                 <TableRow key={m.id}>
                   <TableCell className="font-mono font-medium">{m.measurement_number}</TableCell>
                   <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
-                  <TableCell>{m.workstations?.name || "–"}</TableCell>
                   <TableCell className="font-mono">
                     <Link to={`/auftraege/${m.order_id}`} className="text-primary hover:underline">
                       {m.measurement_orders?.order_number || "–"}

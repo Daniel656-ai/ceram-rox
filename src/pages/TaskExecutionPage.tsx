@@ -259,10 +259,6 @@ export default function TaskExecutionPage() {
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs">Arbeitsplatz</p>
-            <p className="font-medium">{m.workstations?.name ?? "–"}</p>
-          </div>
-          <div>
             <p className="text-muted-foreground text-xs">Bearbeiter</p>
             <p className="font-medium">
               {user ? `${user.email ?? ""}` : "–"}

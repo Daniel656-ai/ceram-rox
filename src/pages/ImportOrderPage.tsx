@@ -35,7 +35,7 @@ export default function ImportOrderPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const serviceList = useMemo(
-    () => services.map((s) => ({ id: s.id, service_name: s.service_name, workstation_id: s.workstation_id })),
+    () => services.map((s) => ({ id: s.id, service_name: s.service_name })),
     [services]
   );
 
@@ -130,7 +130,6 @@ export default function ImportOrderPage() {
                 service_id: m.matched_service_id!,
                 planned_hours: m.planned_hours,
                 due_date: order.due_date || undefined,
-                workstation_id: m.matched_workstation_id || undefined,
               }).then((created) => ({ created, params: m.parameters }))
             )
         );

@@ -390,7 +390,6 @@ export default function OrderDetailPage() {
                 <TableHead>Aufgabe</TableHead>
                 <TableHead>Priorität</TableHead>
                 <TableHead>Techniker</TableHead>
-                <TableHead>Arbeitsplatz</TableHead>
                 {role !== "durchfuehrer" && <TableHead>Kategorie</TableHead>}
                 <TableHead>Std-Dauer</TableHead>
                 <TableHead>Ist-Dauer</TableHead>
@@ -476,7 +475,6 @@ export default function OrderDetailPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>{m.workstations?.name ? <span className="cursor-pointer text-primary hover:underline" onClick={() => navigate("/admin/arbeitsplaetze")}>{m.workstations.name}</span> : <span className="text-muted-foreground">–</span>}</TableCell>
                     {role !== "durchfuehrer" && (
                       <TableCell>
                         <Badge variant="outline">{CATEGORY_LABELS[m.measurement_services?.category as keyof typeof CATEGORY_LABELS]}</Badge>
