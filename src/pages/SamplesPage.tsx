@@ -64,20 +64,6 @@ export default function SamplesPage() {
   const deleteSample = useDeleteSample();
   const etaMap = useEstimatedCompletion();
 
-  // Fetch measurement services for filter
-  const { data: services = [] } = useQuery({
-    queryKey: ["measurement-services-filter"],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("measurement_services")
-        .select("id, service_name")
-        .eq("active", true)
-        .order("service_name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
 
   // Fetch measurement orders with services for linking samples to measurement types
   const { data: sampleMeasurementTypes = new Map<string, string[]>() } = useQuery({
