@@ -679,8 +679,6 @@ function EditServiceDialog({
             ...(canEditRates ? { hourly_rate: form.hourly_rate } : {}),
             work_instructions: form.work_instructions || null,
           })}>Speichern</Button>
-            work_instructions: form.work_instructions || null,
-          })}>Speichern</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
