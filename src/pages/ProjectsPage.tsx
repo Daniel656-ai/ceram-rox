@@ -22,9 +22,6 @@ import { useTranslation } from "react-i18next";
 import { useCreateProject, useDeleteProject } from "@/hooks/useProjects";
 import { useAllWeeklyReviews } from "@/hooks/useWeeklyReviews";
 
-
-type SortOption = "created_desc" | "created_asc" | "name" | "samples" | "costs" | "owner" | "leader" | "start_date" | "end_date" | "updated_desc";
-
 export default function ProjectsPage() {
   const { t, i18n } = useTranslation("projects");
   const { data: projects = [], isLoading } = useProjectsWithStats();
@@ -48,26 +45,24 @@ export default function ProjectsPage() {
     }
     return map;
   }, [allReviews]);
-const { user, role } = useAuth();
+
+  const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
 
   // Strikt nach Kompetenzmatrix: nur Rollen mit explizitem 'projects.create'-Recht
-  // (oder Basisrolle 'master') dürfen Projekte anlegen. Auftraggeber/PO erhalten das
-  // Recht nur, wenn es in ihrer Rolle aktiv gesetzt ist.
-  const canCreateProject = role === 'master' || hasPermission('projects.create');
+  // (oder Basisrolle 'master') dürfen Projekte anlegen.
+  const canCreateProject = role === "master" || hasPermission("projects.create");
 
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("created_desc");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ project_number: "", project_name: "", description: "" });
   const [showCompleted, setShowCompleted] = useState(false);
 
   const getUserName = (userId: string | null | undefined) => {
-    if (!userId) return "–";
-    const u = (users as any[]).find((u: any) => u.user_id === userId);
-    return u ? `${u.first_name} ${u.last_name}`.trim() || "–" : "–";
+    if (!userId) return "";
+    const u = (users as any[]).find((x: any) => x.user_id === userId);
+    return u ? `${u.first_name} ${u.last_name}`.trim() : "";
   };
 
   // Map project_id -> { ownerName, leaderName }
@@ -87,61 +82,14 @@ const { user, role } = useAuth();
     return map;
   }, [memberIndex, users]);
 
-
-  const { activeProjects, completedProjects } = useMemo(() => {
-    let result = [...projects];
-    const q = search.toLowerCase().trim();
-
-    if (q) {
-      result = result.filter(p => {
-        const lead = projectLeads.get(p.id);
-        return (
-          p.project_number.toLowerCase().includes(q) ||
-          (p.project_name || "").toLowerCase().includes(q) ||
-          (p.description || "").toLowerCase().includes(q) ||
-          (lead?.ownerName || "").toLowerCase().includes(q) ||
-          (lead?.leaderName || "").toLowerCase().includes(q)
-        );
-      });
-    }
-
-
-    const leadName = (id: string, kind: "owner" | "leader") => {
-      const l = projectLeads.get(id);
-      return (kind === "owner" ? l?.ownerName : l?.leaderName) || "";
-    };
-
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "created_asc": return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case "created_desc": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "name": return (a.project_name || a.project_number).localeCompare(b.project_name || b.project_number);
-        case "samples": return (b.stats?.sampleCount || 0) - (a.stats?.sampleCount || 0);
-        case "costs": return ((b.stats?.totalCost || 0) + (b.stats?.materialCost || 0)) - ((a.stats?.totalCost || 0) + (a.stats?.materialCost || 0));
-        case "owner": return leadName(a.id, "owner").localeCompare(leadName(b.id, "owner"));
-        case "leader": return leadName(a.id, "leader").localeCompare(leadName(b.id, "leader"));
-        case "start_date": {
-          const av = (a as any).start_date ? new Date((a as any).start_date).getTime() : Infinity;
-          const bv = (b as any).start_date ? new Date((b as any).start_date).getTime() : Infinity;
-          return av - bv;
-        }
-        case "end_date": {
-          const av = (a as any).end_date ? new Date((a as any).end_date).getTime() : Infinity;
-          const bv = (b as any).end_date ? new Date((b as any).end_date).getTime() : Infinity;
-          return av - bv;
-        }
-        case "updated_desc": return new Date((b as any).updated_at).getTime() - new Date((a as any).updated_at).getTime();
-        default: return 0;
-      }
-
-    });
-
-    const active = result.filter(p => p.project_status !== "completed");
-    const completed = result.filter(p => p.project_status === "completed")
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-
-    return { activeProjects: active, completedProjects: completed };
-  }, [projects, search, sortBy, users, projectLeads]);
+  const activeProjects = useMemo(
+    () => (projects as any[]).filter((p) => p.project_status !== "completed"),
+    [projects],
+  );
+  const completedProjects = useMemo(
+    () => (projects as any[]).filter((p) => p.project_status === "completed"),
+    [projects],
+  );
 
   const handleCreate = async () => {
     if (!form.project_number.trim()) {
@@ -164,26 +112,36 @@ const { user, role } = useAuth();
   };
 
   const dateLocale = i18n.language === "en" ? "en-GB" : "de-DE";
-
   const formatDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString(dateLocale) : "–";
 
-  const renderProjectRow = (p: any) => {
-    const lead = projectLeads.get(p.id);
-    const ownerName = lead?.ownerName?.trim();
-    const leaderName = lead?.leaderName?.trim();
-    const unassigned = t("not_assigned", { defaultValue: "Nicht zugewiesen" });
-    return (
-    <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50">
-      <TableCell>
-        {(() => {
+  const unassigned = t("not_assigned", { defaultValue: "Nicht zugewiesen" });
+
+  const columns = useMemo<DataTableColumn<any>[]>(() => {
+    const cols: DataTableColumn<any>[] = [
+      {
+        key: "review",
+        type: "status",
+        header: (
+          <span className="inline-flex items-center gap-1" title="Letzte Weekly-Review-Bewertung">
+            <Flag className="h-3.5 w-3.5" />Review
+          </span>
+        ),
+        headClassName: "w-24",
+        accessor: (p) => {
+          const r = latestReviewByProject.get(p.id);
+          return r ? String(r.rating) : "";
+        },
+        statusOrder: ["1", "2", "3"],
+        statusLabels: { "1": "Schlecht", "2": "Mittel", "3": "Gut" },
+        cell: (p) => {
           const r = latestReviewByProject.get(p.id);
           if (!r) return <span className="text-muted-foreground text-xs italic">–</span>;
           const meta = r.rating === 1
-            ? { color: "#dc2626", label: "Schlecht", emoji: "🔴" }
+            ? { label: "Schlecht", emoji: "🔴" }
             : r.rating === 2
-            ? { color: "#eab308", label: "Mittel", emoji: "🟡" }
-            : { color: "#16a34a", label: "Gut", emoji: "🟢" };
+            ? { label: "Mittel", emoji: "🟡" }
+            : { label: "Gut", emoji: "🟢" };
           return (
             <span
               title={`Letzte Weekly-Review-Bewertung: ${meta.label}`}
@@ -193,44 +151,131 @@ const { user, role } = useAuth();
               {meta.emoji}
             </span>
           );
-        })()}
-      </TableCell>
-      <TableCell className="font-medium">
-        <Link to={`/projekte/${p.id}`} className="text-primary hover:underline">{p.project_number}</Link>
-      </TableCell>
-      <TableCell>
-        <Link to={`/projekte/${p.id}`} className="hover:underline">{p.project_name || "–"}</Link>
-      </TableCell>
-      <TableCell className={ownerName ? "" : "text-muted-foreground italic"}>
-        {ownerName || unassigned}
-      </TableCell>
-      <TableCell className={leaderName ? "" : "text-muted-foreground italic"}>
-        {leaderName || unassigned}
-      </TableCell>
-      <TableCell className="text-center">
-        <Badge variant="secondary">{p.stats.sampleCount}</Badge>
-      </TableCell>
-      <TableCell className="text-center">
-        <Badge variant="secondary">{p.stats.measurementCount}</Badge>
-      </TableCell>
-      <TableCell className="text-center">
-        {p.stats.totalHours > 0 ? `${p.stats.totalHours.toFixed(1)}h` : "–"}
-      </TableCell>
-      <TableCell className="text-center">
-        {(p.stats.totalCost + p.stats.materialCost) > 0 ? `${formatCurrency(p.stats.totalCost + p.stats.materialCost)} €` : "–"}
-      </TableCell>
-      <TableCell>{formatDate((p as any).start_date)}</TableCell>
-      <TableCell>{formatDate((p as any).end_date)}</TableCell>
-      <TableCell>{formatDate((p as any).updated_at)}</TableCell>
-      {role === "master" && (
-        <TableCell>
+        },
+      },
+      {
+        key: "project_number",
+        header: t("project_number"),
+        accessor: (p) => p.project_number,
+        cell: (p) => (
+          <Link to={`/projekte/${p.id}`} className="font-medium text-primary hover:underline">
+            {p.project_number}
+          </Link>
+        ),
+      },
+      {
+        key: "project_name",
+        header: t("project_name"),
+        accessor: (p) => p.project_name || "",
+        cell: (p) => (
+          <Link to={`/projekte/${p.id}`} className="hover:underline">{p.project_name || "–"}</Link>
+        ),
+      },
+      {
+        key: "owner",
+        header: (
+          <span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5" />{t("project_owner", { defaultValue: "Projekteigner" })}</span>
+        ),
+        accessor: (p) => projectLeads.get(p.id)?.ownerName || "",
+        cell: (p) => {
+          const n = projectLeads.get(p.id)?.ownerName?.trim();
+          return n ? <span>{n}</span> : <span className="text-muted-foreground italic">{unassigned}</span>;
+        },
+      },
+      {
+        key: "leader",
+        header: (
+          <span className="inline-flex items-center gap-1"><UserCog className="h-3.5 w-3.5" />{t("project_leader", { defaultValue: "Projektleiter" })}</span>
+        ),
+        accessor: (p) => projectLeads.get(p.id)?.leaderName || "",
+        cell: (p) => {
+          const n = projectLeads.get(p.id)?.leaderName?.trim();
+          return n ? <span>{n}</span> : <span className="text-muted-foreground italic">{unassigned}</span>;
+        },
+      },
+      {
+        key: "samples",
+        type: "number",
+        header: (
+          <span className="inline-flex items-center gap-1"><Package className="h-3.5 w-3.5" />{t("samples")}</span>
+        ),
+        className: "text-center",
+        accessor: (p) => p.stats?.sampleCount ?? 0,
+        cell: (p) => <Badge variant="secondary">{p.stats?.sampleCount ?? 0}</Badge>,
+      },
+      {
+        key: "measurements",
+        type: "number",
+        header: (
+          <span className="inline-flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5" />{t("measurements")}</span>
+        ),
+        className: "text-center",
+        accessor: (p) => p.stats?.measurementCount ?? 0,
+        cell: (p) => <Badge variant="secondary">{p.stats?.measurementCount ?? 0}</Badge>,
+      },
+      {
+        key: "hours",
+        type: "number",
+        header: (
+          <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{t("hours")}</span>
+        ),
+        className: "text-center",
+        accessor: (p) => p.stats?.totalHours ?? 0,
+        cell: (p) => (p.stats?.totalHours > 0 ? `${p.stats.totalHours.toFixed(1)}h` : "–"),
+      },
+      {
+        key: "costs",
+        type: "number",
+        header: (
+          <span className="inline-flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" />{t("costs")}</span>
+        ),
+        className: "text-center",
+        accessor: (p) => (p.stats?.totalCost ?? 0) + (p.stats?.materialCost ?? 0),
+        cell: (p) => {
+          const total = (p.stats?.totalCost ?? 0) + (p.stats?.materialCost ?? 0);
+          return total > 0 ? `${formatCurrency(total)} €` : "–";
+        },
+      },
+      {
+        key: "start_date",
+        type: "date",
+        header: t("project_start_date", { defaultValue: "Startdatum" }),
+        accessor: (p) => p.start_date ?? null,
+        cell: (p) => formatDate(p.start_date),
+      },
+      {
+        key: "end_date",
+        type: "date",
+        header: t("project_end_date", { defaultValue: "Enddatum" }),
+        accessor: (p) => p.end_date ?? null,
+        cell: (p) => formatDate(p.end_date),
+      },
+      {
+        key: "updated_at",
+        type: "date",
+        header: t("last_updated", { defaultValue: "Letzte Aktualisierung" }),
+        accessor: (p) => p.updated_at ?? null,
+        cell: (p) => formatDate(p.updated_at),
+      },
+    ];
+
+    if (role === "master") {
+      cols.push({
+        key: "actions",
+        type: "custom",
+        header: "",
+        sortable: false,
+        filterable: false,
+        searchable: false,
+        headClassName: "w-12",
+        cell: (p) => (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={e => e.stopPropagation()}>
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={(e) => e.stopPropagation()}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
               <AlertDialogHeader>
                 <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -255,48 +300,11 @@ const { user, role } = useAuth();
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </TableCell>
-      )}
-    </TableRow>
-    );
-  };
-
-  const tableHeaders = (
-    <TableHeader>
-      <TableRow>
-        <TableHead className="w-12">
-          <div className="flex items-center gap-1" title="Letzte Weekly-Review-Bewertung">
-            <Flag className="h-3.5 w-3.5" />Review
-          </div>
-        </TableHead>
-        <TableHead>{t("project_number")}</TableHead>
-        <TableHead>{t("project_name")}</TableHead>
-        <TableHead>
-          <div className="flex items-center gap-1"><User className="h-3.5 w-3.5" />{t("project_owner", { defaultValue: "Projekteigner" })}</div>
-        </TableHead>
-        <TableHead>
-          <div className="flex items-center gap-1"><UserCog className="h-3.5 w-3.5" />{t("project_leader", { defaultValue: "Projektleiter" })}</div>
-        </TableHead>
-        <TableHead className="text-center">
-          <div className="flex items-center justify-center gap-1"><Package className="h-3.5 w-3.5" />{t("samples")}</div>
-        </TableHead>
-        <TableHead className="text-center">
-          <div className="flex items-center justify-center gap-1"><FlaskConical className="h-3.5 w-3.5" />{t("measurements")}</div>
-        </TableHead>
-        <TableHead className="text-center">
-          <div className="flex items-center justify-center gap-1"><Clock className="h-3.5 w-3.5" />{t("hours")}</div>
-        </TableHead>
-        <TableHead className="text-center">
-          <div className="flex items-center justify-center gap-1"><DollarSign className="h-3.5 w-3.5" />{t("costs")}</div>
-        </TableHead>
-        <TableHead>{t("project_start_date", { defaultValue: "Startdatum" })}</TableHead>
-        <TableHead>{t("project_end_date", { defaultValue: "Enddatum" })}</TableHead>
-        <TableHead>{t("last_updated", { defaultValue: "Letzte Aktualisierung" })}</TableHead>
-        {role === "master" && <TableHead className="w-12"></TableHead>}
-      </TableRow>
-    </TableHeader>
-  );
-
+        ),
+      });
+    }
+    return cols;
+  }, [t, role, projectLeads, latestReviewByProject, unassigned, dateLocale, deleteProject]);
 
   return (
     <div className="space-y-6">
@@ -305,7 +313,7 @@ const { user, role } = useAuth();
           <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
-{canCreateProject && (
+        {canCreateProject && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" />{t("new_project")}</Button>
@@ -334,33 +342,6 @@ const { user, role } = useAuth();
         )}
       </div>
 
-      {/* Search & Sort */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder={t("search_placeholder")} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-          <SelectTrigger className="w-48">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="created_desc">{t("sort_created_desc")}</SelectItem>
-            <SelectItem value="created_asc">{t("sort_created_asc")}</SelectItem>
-            <SelectItem value="name">{t("sort_name")}</SelectItem>
-            <SelectItem value="samples">{t("sort_samples")}</SelectItem>
-            <SelectItem value="costs">{t("sort_costs")}</SelectItem>
-            <SelectItem value="owner">{t("sort_owner", { defaultValue: "Sortierung: Projekteigner" })}</SelectItem>
-            <SelectItem value="leader">{t("sort_leader", { defaultValue: "Sortierung: Projektleiter" })}</SelectItem>
-            <SelectItem value="start_date">{t("sort_start_date", { defaultValue: "Sortierung: Startdatum" })}</SelectItem>
-            <SelectItem value="end_date">{t("sort_end_date", { defaultValue: "Sortierung: Enddatum" })}</SelectItem>
-            <SelectItem value="updated_desc">{t("sort_updated_desc", { defaultValue: "Sortierung: Zuletzt aktualisiert" })}</SelectItem>
-
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Active Projects */}
       <Card>
         <CardHeader className="pb-3">
@@ -369,19 +350,17 @@ const { user, role } = useAuth();
             <Badge variant="secondary">{activeProjects.length}</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            {tableHeaders}
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={12} className="text-center py-8">{t("loading")}</TableCell></TableRow>
-              ) : activeProjects.length === 0 ? (
-                <TableRow><TableCell colSpan={12} className="text-center py-8 text-muted-foreground">{t("no_projects")}</TableCell></TableRow>
-              ) : (
-                activeProjects.map(renderProjectRow)
-              )}
-            </TableBody>
-          </Table>
+        <CardContent>
+          <DataTable
+            tableId="projects-active"
+            columns={columns}
+            rows={activeProjects}
+            rowKey={(p) => p.id}
+            isLoading={isLoading}
+            searchPlaceholder={t("search_placeholder")}
+            emptyMessage={t("no_projects")}
+            defaultSort={{ key: "updated_at", dir: "desc" }}
+          />
         </CardContent>
       </Card>
 
@@ -406,13 +385,16 @@ const { user, role } = useAuth();
                   {t("completed_projects")}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  {tableHeaders}
-                  <TableBody>
-                    {completedProjects.map(renderProjectRow)}
-                  </TableBody>
-                </Table>
+              <CardContent>
+                <DataTable
+                  tableId="projects-completed"
+                  columns={columns}
+                  rows={completedProjects}
+                  rowKey={(p) => p.id}
+                  searchPlaceholder={t("search_placeholder")}
+                  emptyMessage={t("no_projects")}
+                  defaultSort={{ key: "updated_at", dir: "desc" }}
+                />
               </CardContent>
             </Card>
           )}
