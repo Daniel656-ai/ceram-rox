@@ -608,7 +608,7 @@ function EditServiceDialog({
         standard_duration_hours: service.standard_duration_hours ?? 1,
         hourly_rate: service.hourly_rate ?? 0,
         workstation_id: service.workstation_id ?? "",
-        responsible_user_id: service.responsible_user_id ?? "",
+        
         work_instructions: service.work_instructions ?? "",
         active: !!service.active,
       });
