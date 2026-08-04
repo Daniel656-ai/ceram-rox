@@ -471,20 +471,6 @@ export default function AdminServicesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>{t("admin:service_responsible")}</Label>
-                  <Select value={newResponsible || "none"} onValueChange={v => setNewResponsible(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder={t("common:not_assigned")} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t("common:not_assigned")}</SelectItem>
-                      {users.map((u: any) => (
-                        <SelectItem key={u.user_id} value={u.user_id}>
-                          {u.first_name} {u.last_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
                 {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
                 <Button onClick={handleCreate}>{t("common:create")}</Button>
