@@ -57,7 +57,7 @@ export function useResultsDatabase() {
             samples(sample_number, sample_name)
           ),
           measurement_parameters(parameter_name, parameter_value, unit),
-          measurement_results(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at),
+          measurement_results(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at)
         `)
         .eq("status", "completed")
         .order("updated_at", { ascending: false });

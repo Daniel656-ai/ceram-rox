@@ -29,7 +29,7 @@ function useLabMeasurements() {
           id, measurement_number, status, assigned_to, due_date, priority, ranking,
           planned_start_date, planned_end_date,
           measurement_services(service_name, category, standard_duration_hours),
-          measurement_orders(order_number, projects(project_number, project_name), samples(sample_number, sample_name)),
+          measurement_orders(order_number, projects(project_number, project_name), samples(sample_number, sample_name))
         `)
         .order("ranking", { ascending: true, nullsFirst: false })
         .order("priority", { ascending: false })
