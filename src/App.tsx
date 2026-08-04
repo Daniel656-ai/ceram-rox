@@ -105,7 +105,7 @@ const App = () => (
               <Route path="/admin/messdienstleistungen/:serviceId/designer" element={<Navigate to="/admin/prozess-designer" replace />} />
               <Route path="/admin/servicepakete" element={<AdminServicePackagesPage />} />
 
-              <Route path="/admin/statistiken" element={<AdminStatsPage />} />} />
+              <Route path="/admin/statistiken" element={<AdminStatsPage />} />
               <Route path="/admin/berechtigungen" element={<AdminPermissionsPage />} />
               <Route path="/admin/rollen" element={<AdminRolesPage />} />
               <Route path="/admin/synchronisation" element={<AdminSyncPage />} />
