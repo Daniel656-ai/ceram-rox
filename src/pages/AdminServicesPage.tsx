@@ -160,24 +160,6 @@ export default function AdminServicesPage() {
     }
   };
 
-  const handleResponsibleChange = async (id: string, userId: string) => {
-    try {
-      await updateService.mutateAsync({ id, responsible_user_id: userId || null });
-      toast.success(t("admin:responsible_assigned"));
-    } catch (err: any) {
-      toast.error(t("common:error"), { description: err.message });
-    }
-  };
-
-  const handleWorkstationChange = async (id: string, workstationId: string) => {
-    try {
-      await updateService.mutateAsync({ id, workstation_id: workstationId || null });
-      toast.success(t("admin:workstation_assigned"));
-    } catch (err: any) {
-      toast.error(t("common:error"), { description: err.message });
-    }
-  };
-
   const handleCreate = async () => {
     if (!newName) { toast.error(t("admin:name_required")); return; }
     try {
@@ -185,8 +167,6 @@ export default function AdminServicesPage() {
         service_name: newName,
         category: newCategory,
         hourly_rate: parseFloat(newRate),
-        responsible_user_id: newResponsible || null,
-        workstation_id: newWorkstation || null,
         standard_duration_hours: parseFloat(newDuration),
       } as any);
       toast.success(t("admin:service_created"));
@@ -194,8 +174,6 @@ export default function AdminServicesPage() {
       setNewName("");
       setNewRate("75");
       setNewDuration("1");
-      setNewResponsible("");
-      setNewWorkstation("");
     } catch (err: any) {
       toast.error(t("common:error"), { description: err.message });
     }
