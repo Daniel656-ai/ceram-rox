@@ -92,15 +92,6 @@ export default function SamplesPage() {
     enabled: !!user,
   });
 
-  // Search & filter state
-  const [search, setSearch] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filterProject, setFilterProject] = useState<string>("__all__");
-  const [filterService, setFilterService] = useState<string>("__all__");
-  const [filterHazardous, setFilterHazardous] = useState<string>("__all__");
-  const [filterTags, setFilterTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("created_desc");
 
   const [open, setOpen] = useState(false);
   const [createMode, setCreateMode] = useState<"single" | "bulk">("single");
