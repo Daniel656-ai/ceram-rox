@@ -8,7 +8,6 @@ import {
   useDeleteService,
   useServiceReferences,
 } from "@/hooks/useMeasurements";
-import { useWorkstations } from "@/hooks/useWorkstations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
@@ -111,8 +110,6 @@ function useDurchfuehrerUsers() {
 export default function AdminServicesPage() {
   const { t } = useTranslation(["admin", "common"]);
   const { data: services = [], isLoading } = useAllServices();
-  const { data: users = [] } = useDurchfuehrerUsers();
-  const { data: workstations = [] } = useWorkstations();
   const updateService = useUpdateService();
   const createService = useCreateService();
   const archiveService = useArchiveService();
@@ -125,10 +122,8 @@ export default function AdminServicesPage() {
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState<string>("labor");
   const [newRate, setNewRate] = useState("75");
-  const [newResponsible, setNewResponsible] = useState<string>("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState("");
-  const [newWorkstation, setNewWorkstation] = useState<string>("");
   const [newDuration, setNewDuration] = useState("1");
   const [paramEditorServiceId, setParamEditorServiceId] = useState<string | null>(null);
   const [paramEditorServiceName, setParamEditorServiceName] = useState("");
