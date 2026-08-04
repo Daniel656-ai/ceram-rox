@@ -30,6 +30,16 @@ import { type HazardClassKey } from "@/lib/hazardClasses";
 
 const DISPOSAL_CATEGORIES = ["laborabfall", "gefahrstoff", "sondermuell"] as const;
 
+const SAMPLE_STATUS_ORDER = [
+  "neu",
+  "in_bearbeitung",
+  "teilweise_verbraucht",
+  "eingelagert",
+  "vollstaendig_verbraucht",
+  "entsorgt",
+  "zurueckgesendet",
+];
+
 function formatLocation(loc: any) {
   if (!loc) return "–";
   return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" › ");
