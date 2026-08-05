@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
     catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
 
-  const openEdit = (u: any) => { setEditFirstName(u.first_name || ""); setEditLastName(u.last_name || ""); setEditShortCode(u.short_code || ""); setEditUser(u); };
+  const openEdit = (u: any) => { setEditFirstName(u.first_name || ""); setEditLastName(u.last_name || ""); setEditShortCode(u.short_code || ""); setEditEmail(userEmails[u.user_id] || ""); setEditUser(u); };
 
   const userColumns = useMemo<DataTableColumn<any>[]>(() => [
     {
