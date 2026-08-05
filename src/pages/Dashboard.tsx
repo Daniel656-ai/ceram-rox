@@ -156,7 +156,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <GitHubCommitStatus />
+      {role === "master" && <GitHubCommitStatus />}
 
       {/* Universal Search */}
       <Card>
