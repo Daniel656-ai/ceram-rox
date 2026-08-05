@@ -271,6 +271,8 @@ export default function AdminUsersPage() {
               <div className="space-y-2"><Label>{t("admin:last_name")}</Label><Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} /></div>
             </div>
             <div className="space-y-2"><Label>{t("admin:short_code_required")}</Label><Input value={editShortCode} onChange={(e) => setEditShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder={t("admin:short_code_placeholder")} /></div>
+            <div className="space-y-2"><Label>{t("admin:email_required")}</Label><Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder={t("auth:email_placeholder")} /></div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>{t("common:cancel")}</Button>
