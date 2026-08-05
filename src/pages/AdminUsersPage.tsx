@@ -78,12 +78,12 @@ export default function AdminUsersPage() {
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
 
-  const openReset = (u: any) => { setResetUser(u); setResetPasswordValue(""); setResetDoneValue(null); };
+  const openReset = (u: any) => { setResetUser(u); setResetPasswordValue(""); setResetDoneValue(null); setResetMustChange(true); };
   const handleReset = async () => {
     if (!resetUser) return;
     if (!validatePassword(resetPasswordValue).valid) { toast.error(t("auth:policy_invalid")); return; }
     try {
-      await resetPassword.mutateAsync({ userId: resetUser.user_id, password: resetPasswordValue });
+      await resetPassword.mutateAsync({ userId: resetUser.user_id, password: resetPasswordValue, mustChange: resetMustChange });
       setResetDoneValue(resetPasswordValue);
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
@@ -92,11 +92,16 @@ export default function AdminUsersPage() {
   const handleEdit = async () => {
     if (!editUser) return;
     if (!editShortCode || editShortCode.length !== 3) { toast.error(t("admin:short_code_error")); return; }
+    const email = editEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast.error(t("admin:email_invalid")); return; }
+    const duplicate = users.some((u: any) => u.user_id !== editUser.user_id && (userEmails[u.user_id] || "").toLowerCase() === email);
+    if (duplicate) { toast.error(t("admin:email_duplicate")); return; }
     try {
-      await updateProfile.mutateAsync({ userId: editUser.user_id, firstName: editFirstName, lastName: editLastName, shortCode: editShortCode.toUpperCase() });
+      await updateProfile.mutateAsync({ userId: editUser.user_id, firstName: editFirstName, lastName: editLastName, shortCode: editShortCode.toUpperCase(), email });
       toast.success(t("admin:user_updated")); setEditUser(null);
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
+
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
