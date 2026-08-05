@@ -52,6 +52,9 @@ export default function AdminUsersPage() {
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
   const [editShortCode, setEditShortCode] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [resetMustChange, setResetMustChange] = useState(true);
+
 
   const dateFmt = i18n.language === "en" ? "en-GB" : "de-DE";
 
