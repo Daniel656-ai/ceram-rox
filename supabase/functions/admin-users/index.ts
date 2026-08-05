@@ -107,8 +107,24 @@ serve(async (req: Request) => {
       });
     }
 
+    if (action === "list_emails") {
+      const emails: Record<string, string> = {};
+      let page = 1;
+      // paginate through all users
+      while (page < 50) {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+        if (error) throw error;
+        for (const u of data.users) emails[u.id] = u.email ?? "";
+        if (data.users.length < 1000) break;
+        page++;
+      }
+      return new Response(JSON.stringify({ emails }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     if (action === "update") {
-      const { userId, firstName, lastName, shortCode } = params;
+      const { userId, firstName, lastName, shortCode, email } = params;
       if (!userId) throw new Error("User-ID erforderlich");
       if (shortCode !== undefined) {
         if (!shortCode || shortCode.length !== 3) throw new Error("Kurzzeichen muss genau 3 Zeichen lang sein");
@@ -119,6 +135,35 @@ serve(async (req: Request) => {
           .eq("short_code", shortCode.toUpperCase())
           .maybeSingle();
         if (existing && existing.user_id !== userId) throw new Error("Dieses Kurzzeichen ist bereits vergeben");
+      }
+
+      if (email !== undefined && email !== null && email !== "") {
+        const normalized = String(email).trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+          throw new Error("Ungültiges E-Mail-Format");
+        }
+        // Uniqueness check across all auth users
+        let page = 1;
+        let duplicate = false;
+        let currentEmail = "";
+        while (page < 50) {
+          const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+          if (error) throw error;
+          for (const u of data.users) {
+            if (u.id === userId) currentEmail = (u.email ?? "").toLowerCase();
+            else if ((u.email ?? "").toLowerCase() === normalized) duplicate = true;
+          }
+          if (data.users.length < 1000) break;
+          page++;
+        }
+        if (duplicate) throw new Error("Diese E-Mail-Adresse ist bereits vergeben");
+        if (currentEmail !== normalized) {
+          const { error: mailErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+            email: normalized,
+            email_confirm: true,
+          });
+          if (mailErr) throw mailErr;
+        }
       }
 
       const updateData: Record<string, string> = { first_name: firstName, last_name: lastName };
@@ -136,7 +181,7 @@ serve(async (req: Request) => {
     }
 
     if (action === "reset_password") {
-      const { userId, password } = params;
+      const { userId, password, mustChange } = params;
       if (!userId || !password) throw new Error("User-ID und Passwort erforderlich");
       if (typeof password !== "string" || password.length < 8) {
         throw new Error("Passwort erfüllt die Mindestanforderungen nicht");
@@ -147,20 +192,21 @@ serve(async (req: Request) => {
 
       await supabaseAdmin
         .from("profiles")
-        .update({ must_change_password: true })
+        .update({ must_change_password: mustChange !== false })
         .eq("user_id", userId);
 
       await supabaseAdmin.from("password_reset_log").insert({
         target_user_id: userId,
         performed_by: caller.id,
         action: "admin_reset",
-        metadata: { reason: "admin_initiated" },
+        metadata: { reason: "admin_initiated", must_change: mustChange !== false },
       });
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
 
     throw new Error("Unbekannte Aktion");
   } catch (error: any) {

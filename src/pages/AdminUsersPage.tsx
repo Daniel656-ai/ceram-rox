@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile, useResetUserPassword } from "@/hooks/useUsers";
+import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile, useResetUserPassword, useUserEmails } from "@/hooks/useUsers";
+import { Checkbox } from "@/components/ui/checkbox";
+
 import { useCustomRoles } from "@/hooks/useCustomRoles";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
@@ -24,6 +26,8 @@ import { validatePassword, generateStrongPassword } from "@/lib/passwordPolicy";
 export default function AdminUsersPage() {
   const { t, i18n } = useTranslation(["admin", "common", "auth"]);
   const { data: users = [], isLoading } = useUsers();
+  const { data: userEmails = {} } = useUserEmails();
+
   const { data: customRoles = [] } = useCustomRoles();
   const { user: currentUser } = useAuth();
   const updateRole = useUpdateUserRole();
@@ -52,6 +56,9 @@ export default function AdminUsersPage() {
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
   const [editShortCode, setEditShortCode] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [resetMustChange, setResetMustChange] = useState(true);
+
 
   const dateFmt = i18n.language === "en" ? "en-GB" : "de-DE";
 
@@ -71,12 +78,12 @@ export default function AdminUsersPage() {
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
 
-  const openReset = (u: any) => { setResetUser(u); setResetPasswordValue(""); setResetDoneValue(null); };
+  const openReset = (u: any) => { setResetUser(u); setResetPasswordValue(""); setResetDoneValue(null); setResetMustChange(true); };
   const handleReset = async () => {
     if (!resetUser) return;
     if (!validatePassword(resetPasswordValue).valid) { toast.error(t("auth:policy_invalid")); return; }
     try {
-      await resetPassword.mutateAsync({ userId: resetUser.user_id, password: resetPasswordValue });
+      await resetPassword.mutateAsync({ userId: resetUser.user_id, password: resetPasswordValue, mustChange: resetMustChange });
       setResetDoneValue(resetPasswordValue);
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
@@ -85,11 +92,16 @@ export default function AdminUsersPage() {
   const handleEdit = async () => {
     if (!editUser) return;
     if (!editShortCode || editShortCode.length !== 3) { toast.error(t("admin:short_code_error")); return; }
+    const email = editEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast.error(t("admin:email_invalid")); return; }
+    const duplicate = users.some((u: any) => u.user_id !== editUser.user_id && (userEmails[u.user_id] || "").toLowerCase() === email);
+    if (duplicate) { toast.error(t("admin:email_duplicate")); return; }
     try {
-      await updateProfile.mutateAsync({ userId: editUser.user_id, firstName: editFirstName, lastName: editLastName, shortCode: editShortCode.toUpperCase() });
+      await updateProfile.mutateAsync({ userId: editUser.user_id, firstName: editFirstName, lastName: editLastName, shortCode: editShortCode.toUpperCase(), email });
       toast.success(t("admin:user_updated")); setEditUser(null);
     } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
+
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -109,7 +121,7 @@ export default function AdminUsersPage() {
     catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
 
-  const openEdit = (u: any) => { setEditFirstName(u.first_name || ""); setEditLastName(u.last_name || ""); setEditShortCode(u.short_code || ""); setEditUser(u); };
+  const openEdit = (u: any) => { setEditFirstName(u.first_name || ""); setEditLastName(u.last_name || ""); setEditShortCode(u.short_code || ""); setEditEmail(userEmails[u.user_id] || ""); setEditUser(u); };
 
   const userColumns = useMemo<DataTableColumn<any>[]>(() => [
     {
@@ -259,6 +271,8 @@ export default function AdminUsersPage() {
               <div className="space-y-2"><Label>{t("admin:last_name")}</Label><Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} /></div>
             </div>
             <div className="space-y-2"><Label>{t("admin:short_code_required")}</Label><Input value={editShortCode} onChange={(e) => setEditShortCode(e.target.value.toUpperCase())} maxLength={3} placeholder={t("admin:short_code_placeholder")} /></div>
+            <div className="space-y-2"><Label>{t("admin:email_required")}</Label><Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder={t("auth:email_placeholder")} /></div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>{t("common:cancel")}</Button>
@@ -315,6 +329,11 @@ export default function AdminUsersPage() {
               </div>
               <PasswordInput value={resetPasswordValue} onChange={(e) => setResetPasswordValue(e.target.value)} />
               <PasswordStrengthMeter password={resetPasswordValue} />
+              <div className="flex items-center gap-2 pt-2">
+                <Checkbox id="mustChange" checked={resetMustChange} onCheckedChange={(v) => setResetMustChange(v === true)} />
+                <Label htmlFor="mustChange" className="text-sm font-normal">{t("auth:force_change_on_login")}</Label>
+              </div>
+
             </div>
           )}
           <DialogFooter>

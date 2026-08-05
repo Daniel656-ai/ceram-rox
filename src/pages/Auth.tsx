@@ -73,21 +73,8 @@ export default function Auth() {
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await api.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-    // Stets generische Erfolgsmeldung (kein Account-Enumeration-Hinweis)
-    if (error && error.message.toLowerCase().includes("rate")) {
-      toast.error(t("common:error"), { description: error.message });
-    } else {
-      toast.success(t("auth:email_sent"), { description: t("auth:email_sent_description") });
-      setMode("login");
-    }
-  };
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -128,9 +115,10 @@ export default function Auth() {
                 </Button>
                 <div className="flex items-center justify-between text-sm">
                   <button type="button" onClick={() => setMode("forgot")} className="text-primary hover:underline">
-                    {t("auth:forgot_password_link")}
+                    {t("auth:contact_admin_link")}
                   </button>
                 </div>
+
               </form>
             )}
 
@@ -168,21 +156,14 @@ export default function Auth() {
             )}
 
             {mode === "forgot" && (
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="forgotEmail">{t("auth:email")}</Label>
-                  <Input id="forgotEmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth:email_placeholder")} required />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t("auth:sending") : t("auth:send_link")}
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">{t("auth:contact_admin_text")}</p>
+                <Button type="button" className="w-full" onClick={() => setMode("login")}>
+                  {t("auth:back_to_login")}
                 </Button>
-                <p className="text-center text-sm text-muted-foreground">
-                  <button type="button" onClick={() => setMode("login")} className="text-primary hover:underline">
-                    {t("auth:back_to_login")}
-                  </button>
-                </p>
-              </form>
+              </div>
             )}
+
           </CardContent>
         </Card>
       </div>

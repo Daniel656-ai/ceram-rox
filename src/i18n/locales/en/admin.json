@@ -227,5 +227,7 @@
   "schedule_history": "History",
   "schedule_days": "days",
   "schedule_saved": "Working time saved",
-  "schedule_select_day": "Please select at least one working day"
+  "schedule_select_day": "Please select at least one working day",
+  "email_invalid": "Invalid email format",
+  "email_duplicate": "This email address is already in use"
 }
