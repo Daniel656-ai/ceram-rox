@@ -26,6 +26,8 @@ import { validatePassword, generateStrongPassword } from "@/lib/passwordPolicy";
 export default function AdminUsersPage() {
   const { t, i18n } = useTranslation(["admin", "common", "auth"]);
   const { data: users = [], isLoading } = useUsers();
+  const { data: userEmails = {} } = useUserEmails();
+
   const { data: customRoles = [] } = useCustomRoles();
   const { user: currentUser } = useAuth();
   const updateRole = useUpdateUserRole();
