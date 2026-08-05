@@ -329,6 +329,11 @@ export default function AdminUsersPage() {
               </div>
               <PasswordInput value={resetPasswordValue} onChange={(e) => setResetPasswordValue(e.target.value)} />
               <PasswordStrengthMeter password={resetPasswordValue} />
+              <div className="flex items-center gap-2 pt-2">
+                <Checkbox id="mustChange" checked={resetMustChange} onCheckedChange={(v) => setResetMustChange(v === true)} />
+                <Label htmlFor="mustChange" className="text-sm font-normal">{t("auth:force_change_on_login")}</Label>
+              </div>
+
             </div>
           )}
           <DialogFooter>
