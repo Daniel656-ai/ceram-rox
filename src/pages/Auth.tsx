@@ -73,21 +73,8 @@ export default function Auth() {
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { error } = await api.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setLoading(false);
-    // Stets generische Erfolgsmeldung (kein Account-Enumeration-Hinweis)
-    if (error && error.message.toLowerCase().includes("rate")) {
-      toast.error(t("common:error"), { description: error.message });
-    } else {
-      toast.success(t("auth:email_sent"), { description: t("auth:email_sent_description") });
-      setMode("login");
-    }
-  };
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
