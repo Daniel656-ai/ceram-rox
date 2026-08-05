@@ -128,9 +128,10 @@ export default function Auth() {
                 </Button>
                 <div className="flex items-center justify-between text-sm">
                   <button type="button" onClick={() => setMode("forgot")} className="text-primary hover:underline">
-                    {t("auth:forgot_password_link")}
+                    {t("auth:contact_admin_link")}
                   </button>
                 </div>
+
               </form>
             )}
 
