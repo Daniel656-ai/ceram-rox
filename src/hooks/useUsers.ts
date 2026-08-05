@@ -47,21 +47,35 @@ export function useDeleteUser() {
   });
 }
 
+export function useUserEmails() {
+  return useQuery({
+    queryKey: ["user-emails"],
+    queryFn: async () => {
+      const res: any = await api.users.adminInvoke({ action: "list_emails" });
+      return (res?.emails ?? {}) as Record<string, string>;
+    },
+  });
+}
+
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (params: { userId: string; firstName: string; lastName: string; shortCode: string }) =>
+    mutationFn: (params: { userId: string; firstName: string; lastName: string; shortCode: string; email?: string }) =>
       api.users.adminInvoke({ action: "update", ...params }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      qc.invalidateQueries({ queryKey: ["user-emails"] });
+    },
   });
 }
 
 export function useResetUserPassword() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (params: { userId: string; password: string }) =>
+    mutationFn: (params: { userId: string; password: string; mustChange?: boolean }) =>
       api.users.adminInvoke({ action: "reset_password", ...params }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 }
+
 
