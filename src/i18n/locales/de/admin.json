@@ -227,5 +227,7 @@
   "schedule_history": "Historie",
   "schedule_days": "Tage",
   "schedule_saved": "Arbeitszeit gespeichert",
-  "schedule_select_day": "Bitte mindestens einen Arbeitstag auswählen"
+  "schedule_select_day": "Bitte mindestens einen Arbeitstag auswählen",
+  "email_invalid": "Ungültiges E-Mail-Format",
+  "email_duplicate": "Diese E-Mail-Adresse ist bereits vergeben"
 }
