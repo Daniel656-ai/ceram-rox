@@ -167,6 +167,7 @@ import { orderInstances } from "./orderInstances";
 import { orderStepRuns, orderStepPositions } from "./orderStepRuns";
 import { workflowEngine } from "./workflowEngine";
 import { orderKindFormTemplates } from "./orderKindFormTemplates";
+import { systemContext } from "./systemContext";
 
 
 
@@ -334,6 +335,9 @@ export const api = {
   orderStepPositions,
   workflowEngine,
   orderKindFormTemplates,
+
+  // ---- Prozessmanager: globale Systemvariablen (Context Variables) ----
+  systemContext,
 
 
 
