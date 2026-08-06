@@ -156,7 +156,7 @@ import { processSteps as processTemplateSteps } from "./processSteps";
 import { processStepRawMaterials } from "./processStepRawMaterials";
 import { formDefinitions } from "./formDefinitions";
 import { globalObjects, globalFields } from "./globalModel";
-import { globalLists, globalListItems, globalCalculations, globalValidations } from "./globalLibrary";
+import { globalLists, globalListItems, globalListAttributes, masterData, globalCalculations, globalValidations } from "./globalLibrary";
 import { formFields } from "./formFields";
 import { formRoleViews } from "./formRoleViews";
 import { formFieldPermissions } from "./formFieldPermissions";
@@ -319,6 +319,8 @@ export const api = {
   globalFields,
   globalLists,
   globalListItems,
+  globalListAttributes,
+  masterData,
   globalCalculations,
   globalValidations,
   formFields,

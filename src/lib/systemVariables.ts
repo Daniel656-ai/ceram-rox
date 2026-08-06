@@ -194,6 +194,8 @@ export function groupSystemVariables(vars: SystemVariable[]) {
 /** Prüft, ob ein Pfad eine Systemvariable ist (Namespace-Präfix). */
 export function isSystemVariablePath(path: string): boolean {
   const ns = path.split(".")[0] as SystemNamespace;
+  // "stammdaten.*" = zentrale Stammdaten (siehe src/lib/masterData.ts)
+  if (ns === ("stammdaten" as string)) return true;
   return NAMESPACES.includes(ns);
 }
 
