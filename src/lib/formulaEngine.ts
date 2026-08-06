@@ -1,12 +1,13 @@
 /**
- * Formelauswertung für berechnete Felder im Service Designer.
+ * Formelauswertung für berechnete Felder, globale Berechnungen und Regeln.
  *
  * Unterstützt: +, -, *, /, %, Klammern, Zahlen (auch "1.234,56" oder "1,23"),
- * Variablen (Feldschlüssel) und Funktionen:
- *   AVERAGE(a, b, ...), SUM(a, b, ...), MIN(...), MAX(...), ROUND(x, n?)
+ * Variablen (Feldschlüssel, auch mit Punkt-Notation: probe.lotnummer) sowie
+ * Funktionen (siehe FUNCTIONS).
  *
- * Bewusst generisch aufgebaut, damit weitere Funktionen später einfach im
- * FUNCTIONS-Objekt ergänzt werden können.
+ * Mehrfachauswahl / Listen: Variablen dürfen Arrays enthalten
+ * (z.B. Brenntemperaturen = [550, 600, 650]). Aggregatfunktionen wie
+ * COUNT(), SUM(), AVERAGE(), MIN(), MAX() arbeiten direkt darauf.
  */
 
 export type FormulaContext = Record<string, unknown>;
@@ -16,20 +17,58 @@ export interface FormulaResult {
   error: string | null;
 }
 
-type FnImpl = (args: number[]) => number;
+/** Ein Wert im Ausdruck: Skalar oder Liste (Mehrfachauswahl). */
+type Val = number | number[];
+
+type FnImpl = (args: Val[]) => number;
+
+function flat(args: Val[]): number[] {
+  const out: number[] = [];
+  for (const a of args) {
+    if (Array.isArray(a)) out.push(...a.filter((n) => Number.isFinite(n)));
+    else if (Number.isFinite(a)) out.push(a);
+  }
+  return out;
+}
+
+function first(args: Val[]): number {
+  const f = flat(args);
+  return f.length ? f[0] : NaN;
+}
 
 const FUNCTIONS: Record<string, FnImpl> = {
-  SUM: (a) => a.reduce((s, v) => s + v, 0),
-  AVERAGE: (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : NaN),
-  AVG: (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : NaN),
-  MIN: (a) => (a.length ? Math.min(...a) : NaN),
-  MAX: (a) => (a.length ? Math.max(...a) : NaN),
-  ROUND: (a) => {
-    const [x, n = 0] = a;
-    const f = Math.pow(10, n);
-    return Math.round(x * f) / f;
+  SUM: (a) => flat(a).reduce((s, v) => s + v, 0),
+  AVERAGE: (a) => { const f = flat(a); return f.length ? f.reduce((s, v) => s + v, 0) / f.length : NaN; },
+  AVG: (a) => FUNCTIONS.AVERAGE(a),
+  MIN: (a) => { const f = flat(a); return f.length ? Math.min(...f) : NaN; },
+  MAX: (a) => { const f = flat(a); return f.length ? Math.max(...f) : NaN; },
+  COUNT: (a) => {
+    // Zählt Elemente – auch nicht-numerische Einträge einer Mehrfachauswahl.
+    let n = 0;
+    for (const v of a) n += Array.isArray(v) ? v.length : Number.isFinite(v) ? 1 : 0;
+    return n;
   },
-  ABS: (a) => Math.abs(a[0]),
+  MEDIAN: (a) => {
+    const f = flat(a).sort((x, y) => x - y);
+    if (!f.length) return NaN;
+    const m = Math.floor(f.length / 2);
+    return f.length % 2 ? f[m] : (f[m - 1] + f[m]) / 2;
+  },
+  ROUND: (a) => {
+    const f = flat(a);
+    const [x, n = 0] = f;
+    const p = Math.pow(10, n);
+    return Math.round(x * p) / p;
+  },
+  CEIL: (a) => Math.ceil(first(a)),
+  FLOOR: (a) => Math.floor(first(a)),
+  ABS: (a) => Math.abs(first(a)),
+  SQRT: (a) => Math.sqrt(first(a)),
+  POW: (a) => { const f = flat(a); return Math.pow(f[0], f[1]); },
+  IF: (a) => {
+    const f = flat(a);
+    return f[0] ? f[1] : f[2] ?? 0;
+  },
 };
 
 export const FORMULA_FUNCTIONS = Object.keys(FUNCTIONS);
@@ -44,8 +83,22 @@ function toNumber(v: unknown): number {
     s.includes(",") && s.lastIndexOf(",") > s.lastIndexOf(".")
       ? s.replace(/\./g, "").replace(",", ".")
       : s;
+  const m = normalized.match(/-?\d+(\.\d+)?/);
   const n = Number(normalized);
-  return isFinite(n) ? n : NaN;
+  if (isFinite(n)) return n;
+  // "550 °C" -> 550
+  return m ? Number(m[0]) : NaN;
+}
+
+/** Wandelt einen Kontextwert in einen Skalar oder eine Liste um. */
+function toVal(v: unknown): Val {
+  if (Array.isArray(v)) return v.map(toNumber);
+  return toNumber(v);
+}
+
+function scalar(v: Val): number {
+  if (Array.isArray(v)) return v.length === 1 ? v[0] : NaN;
+  return v;
 }
 
 // -------- Tokenizer --------
@@ -68,7 +121,6 @@ function tokenize(src: string): Tok[] {
     if (/[0-9.]/.test(c)) {
       let j = i;
       while (j < src.length && /[0-9._]/.test(src[j])) j++;
-      // allow decimal comma when clearly numeric literal
       const raw = src.slice(i, j).replace(/_/g, "");
       out.push({ t: "num", v: Number(raw) });
       i = j; continue;
@@ -104,35 +156,36 @@ class Parser {
   parse(): number {
     const v = this.expr();
     if (this.pos < this.toks.length) throw new Error("Unerwartete Token nach dem Ausdruck");
-    return v;
+    return scalar(v);
   }
-  expr(): number { // +, -
-    let v = this.term();
-    while (this.peek()?.t === "op" && (this.peek() as any).v === "+" || this.peek()?.t === "op" && (this.peek() as any).v === "-") {
+  expr(): Val { // +, -
+    let v = scalar(this.term());
+    while (this.peek()?.t === "op" && ["+", "-"].includes((this.peek() as any).v)) {
       const op = (this.eat() as any).v as string;
-      const rhs = this.term();
+      const rhs = scalar(this.term());
       v = op === "+" ? v + rhs : v - rhs;
     }
     return v;
   }
-  term(): number { // *, /, %
+  term(): Val { // *, /, %
     let v = this.unary();
     while (this.peek()?.t === "op" && "*/%".includes((this.peek() as any).v)) {
       const op = (this.eat() as any).v as string;
-      const rhs = this.unary();
-      if (op === "*") v = v * rhs;
-      else if (op === "/") v = rhs === 0 ? NaN : v / rhs;
-      else v = (v * rhs) / 100; // Prozentrechnung: a % b = a * b / 100
+      const lhs = scalar(v);
+      const rhs = scalar(this.unary());
+      if (op === "*") v = lhs * rhs;
+      else if (op === "/") v = rhs === 0 ? NaN : lhs / rhs;
+      else v = (lhs * rhs) / 100; // Prozentrechnung: a % b = a * b / 100
     }
     return v;
   }
-  unary(): number {
+  unary(): Val {
     const p = this.peek();
-    if (p?.t === "op" && (p as any).v === "-") { this.eat(); return -this.unary(); }
-    if (p?.t === "op" && (p as any).v === "+") { this.eat(); return this.unary(); }
+    if (p?.t === "op" && (p as any).v === "-") { this.eat(); return -scalar(this.unary()); }
+    if (p?.t === "op" && (p as any).v === "+") { this.eat(); return scalar(this.unary()); }
     return this.primary();
   }
-  primary(): number {
+  primary(): Val {
     const t = this.eat();
     if (!t) throw new Error("Unerwartetes Ende der Formel");
     if (t.t === "num") return t.v;
@@ -146,10 +199,10 @@ class Parser {
       const nxt = this.peek();
       if (nxt?.t === "lp") {
         this.eat(); // consume (
-        const args: number[] = [];
+        const args: Val[] = [];
         if (this.peek()?.t !== "rp") {
-          args.push(this.expr());
-          while (this.peek()?.t === "comma") { this.eat(); args.push(this.expr()); }
+          args.push(this.arg());
+          while (this.peek()?.t === "comma") { this.eat(); args.push(this.arg()); }
         }
         this.expect((x) => x.t === "rp", "')' erwartet");
         const fn = FUNCTIONS[name.toUpperCase()];
@@ -158,10 +211,25 @@ class Parser {
       }
       // Variable / Feldschlüssel
       if (!(name in this.ctx)) throw new Error(`Unbekanntes Feld: ${name}`);
-      const n = toNumber(this.ctx[name]);
-      return n;
+      return toVal(this.ctx[name]);
     }
     throw new Error("Ungültiger Ausdruck");
+  }
+  /** Funktionsargument – Listen bleiben hier erhalten. */
+  arg(): Val {
+    const start = this.pos;
+    const t = this.peek();
+    // Einzelne Variable als Argument -> Liste durchreichen
+    if (t?.t === "id") {
+      const after = this.toks[this.pos + 1];
+      const isTerminator = !after || after.t === "comma" || after.t === "rp";
+      if (isTerminator && t.v in this.ctx) {
+        this.eat();
+        return toVal(this.ctx[t.v]);
+      }
+    }
+    this.pos = start;
+    return this.expr();
   }
 }
 
