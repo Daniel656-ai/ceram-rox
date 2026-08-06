@@ -27,11 +27,43 @@ export interface GlobalListItem {
   description: string | null;
   color: string | null;
   sort_order: number;
+  /** Frei definierbare Attributwerte (Schlüssel = attribute_key der Kategorie). */
   metadata: Record<string, unknown>;
+  is_active: boolean;
   archived_at: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type MasterDataAttributeType =
+  | "text" | "longtext" | "number" | "date" | "boolean" | "select";
+
+export const MASTER_DATA_ATTRIBUTE_TYPES: { value: MasterDataAttributeType; label: string }[] = [
+  { value: "text", label: "Text" },
+  { value: "longtext", label: "Langtext" },
+  { value: "number", label: "Zahl" },
+  { value: "date", label: "Datum" },
+  { value: "boolean", label: "Ja/Nein" },
+  { value: "select", label: "Auswahl" },
+];
+
+/** Frei definierbare Eigenschaft einer Stammdaten-Kategorie. */
+export interface GlobalListAttribute {
+  id: string;
+  list_id: string;
+  attribute_key: string;
+  display_name: string;
+  data_type: MasterDataAttributeType;
+  unit: string | null;
+  options: string[];
+  is_required: boolean;
+  show_in_table: boolean;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 
 export interface GlobalCalculation {
   id: string;
