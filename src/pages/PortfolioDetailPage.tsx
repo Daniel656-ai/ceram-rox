@@ -303,6 +303,7 @@ export default function PortfolioDetailPage() {
           <TabsTrigger value="mapping">Förder-Zuordnungen</TabsTrigger>
           <TabsTrigger value="ffg">FFG-Bericht</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard &amp; KPIs</TabsTrigger>
+          <TabsTrigger value="controlling">Controlling</TabsTrigger>
           {canManageStructure && <TabsTrigger value="time">Zeiterfassung</TabsTrigger>}
         </TabsList>
 
