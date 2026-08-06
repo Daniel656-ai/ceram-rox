@@ -11,7 +11,7 @@ import { Beaker, Factory, Layers, Trash2 } from "lucide-react";
 const KINDS: { key: OrderKind; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "labor", label: "Labor", icon: Beaker },
   { key: "pilot_plant", label: "Pilot Plant", icon: Factory },
-  { key: "combined", label: "Kombiniert (Pilot Plant + Labor)", icon: Layers },
+  
 ];
 
 export default function OrderKindMappingTab() {
