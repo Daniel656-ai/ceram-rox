@@ -75,7 +75,12 @@ function tokenize(src: string): Tok[] {
     }
     if (/[A-Za-z_ÄÖÜäöüß]/.test(c)) {
       let j = i;
-      while (j < src.length && /[A-Za-z0-9_ÄÖÜäöüß]/.test(src[j])) j++;
+      // Bezeichner dürfen Punkte enthalten (Systemvariablen: probe.lotnummer)
+      while (
+        j < src.length &&
+        (/[A-Za-z0-9_ÄÖÜäöüß]/.test(src[j]) ||
+          (src[j] === "." && /[A-Za-z_ÄÖÜäöüß]/.test(src[j + 1] ?? "")))
+      ) j++;
       out.push({ t: "id", v: src.slice(i, j) });
       i = j; continue;
     }
