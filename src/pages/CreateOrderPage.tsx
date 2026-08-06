@@ -806,7 +806,7 @@ export default function CreateOrderPage() {
                       {laborServices.map((s) => (<SelectItem key={s.id} value={s.id}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
                     </>
                   )}
-                  {pilotServices.length > 0 && (
+                  {orderKind === "pilot_plant" && pilotServices.length > 0 && (
                     <>
                       <SelectItem value="__pilot_header" disabled>{t("orders:header_pilot", { defaultValue: "── Pilot Plant ──" })}</SelectItem>
                       {pilotServices.map((s) => (<SelectItem key={s.id} value={s.id}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
