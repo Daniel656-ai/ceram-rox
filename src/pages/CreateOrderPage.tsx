@@ -189,7 +189,7 @@ export default function CreateOrderPage() {
   // Single order state
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [orderType, setOrderType] = useState<string>("");
-  const [orderKind, setOrderKind] = useState<"labor" | "pilot_plant" | "combined">("labor");
+  const [orderKind, setOrderKind] = useState<"labor" | "pilot_plant">("labor");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
@@ -213,8 +213,6 @@ export default function CreateOrderPage() {
   // from order_kind_form_templates). No hardcoded field list.
   const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
   const [dynamicFormId, setDynamicFormId] = useState<string | null>(null);
-  // Analysis requests pool (Pilot Plant / Combined orders): pre-planned analyses without a sample yet
-  const [analysisRequests, setAnalysisRequests] = useState<Array<{ uid: string; service_id: string; service_name: string; quantity: number }>>([]);
 
   // Batch state
   const [batchTemplateId, setBatchTemplateId] = useState("");
@@ -384,7 +382,7 @@ export default function CreateOrderPage() {
         pp_experiment_number: pp.experiment_number || null,
         pp_v2o5_percent: pp.v2o5_percent === "" ? null : Number(pp.v2o5_percent),
         pp_experiment_date: pp.experiment_date || null,
-        pp_issuer_user_id: (orderKind === "pilot_plant" || orderKind === "combined") ? user.id : null,
+        pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
         pp_previous_experiments: pp.previous_experiments || null,
         pp_experiment_kind: pp.experiment_kind || null,
         pp_masse_type: (pp.masse_type === "__none__" ? null : pp.masse_type) as any,
@@ -392,7 +390,7 @@ export default function CreateOrderPage() {
       });
 
       // Pilot Plant: seed 9 process blocks and store Stammdaten into shared_form_data
-      if (orderKind === "pilot_plant" || orderKind === "combined") {
+      if (orderKind === "pilot_plant") {
         try {
           await api.pilotPlantBlocks.seed(order.id);
           await api.orderSharedFormData.merge(order.id, {
@@ -404,10 +402,6 @@ export default function CreateOrderPage() {
                 previous_experiments: pp.previous_experiments || null,
                 masse_type: pp.masse_type === "__none__" ? null : pp.masse_type,
                 remarks: pp.remarks || null,
-                requested_lab_service_ids: analysisRequests.map((a: any) => a.service_id),
-                requested_lab_services: analysisRequests.map((a: any) => ({
-                  service_id: a.service_id, service_name: a.service_name, quantity: a.quantity,
-                })),
                 created_by: user.id,
                 created_at: new Date().toISOString(),
               },
@@ -462,16 +456,6 @@ export default function CreateOrderPage() {
 
 
 
-      // Analysis requests pool (only for PP / combined)
-      for (const ar of analysisRequests) {
-        try {
-          await api.orderAnalysisRequests.create({
-            order_id: order.id, service_id: ar.service_id, quantity: ar.quantity, created_by: user.id,
-          });
-        } catch (err: any) {
-          toast.error(`Analyseanforderung ${ar.service_name}: ${err.message}`);
-        }
-      }
 
       for (let idx = 0; idx < measurements.length; idx++) {
         const m = measurements[idx];
