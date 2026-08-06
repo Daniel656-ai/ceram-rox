@@ -185,11 +185,13 @@ function StepRunItem({
 
   const systemVars = useSystemVariables();
   const computedValues = useMemo(() => {
-    const merged = { ...systemVars, ...values };
+    const merged = { ...values };
     for (const f of fields) {
       if (f.field_type === "computed" && f.formula) {
         try {
-          const res = evaluateFormula(f.formula, merged);
+          // Systemvariablen sind nur Eingabe für die Formel und werden
+          // bewusst NICHT mitgespeichert (Single Source of Truth).
+          const res = evaluateFormula(f.formula, { ...systemVars, ...merged });
           merged[f.field_key] = res;
         } catch {
           /* ignore */
@@ -198,6 +200,7 @@ function StepRunItem({
     }
     return merged;
   }, [values, fields, systemVars]);
+
 
   const disabled = locked || run.status === "completed" || run.status === "skipped";
   const startBlocked = useStepStartBlocked(run.step_id, 1);
