@@ -176,6 +176,7 @@ export default function CreateOrderPage() {
   const { data: processTemplates = [] } = useQuery({
     queryKey: ["process-templates", "active"],
     queryFn: () => api.processTemplates.list({ scope: "template" }),
+    enabled: role !== "auftraggeber",
   });
   const { data: templates = [] } = useTemplates();
   const { data: allSamples = [] } = useSamples();
@@ -680,6 +681,7 @@ export default function CreateOrderPage() {
           </CardContent>
         </Card>
 
+        {role !== "auftraggeber" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Prozessvorlage (optional)</CardTitle>
@@ -708,6 +710,7 @@ export default function CreateOrderPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
 
         {orderKind !== "pilot_plant" && (
