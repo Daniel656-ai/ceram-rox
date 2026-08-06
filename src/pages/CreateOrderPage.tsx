@@ -379,38 +379,19 @@ export default function CreateOrderPage() {
         due_date: dueDate || undefined, notes: notes || undefined,
         sample_id: selectedSampleId || undefined,
         order_kind: orderKind,
-        pp_experiment_number: pp.experiment_number || null,
-        pp_v2o5_percent: pp.v2o5_percent === "" ? null : Number(pp.v2o5_percent),
-        pp_experiment_date: pp.experiment_date || null,
         pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
-        pp_previous_experiments: pp.previous_experiments || null,
-        pp_experiment_kind: pp.experiment_kind || null,
-        pp_masse_type: (pp.masse_type === "__none__" ? null : pp.masse_type) as any,
-        pp_remarks: pp.remarks || null,
       });
 
-      // Pilot Plant: seed 9 process blocks and store Stammdaten into shared_form_data
+      // Pilot Plant: seed process blocks. Alle fachlichen Angaben kommen aus
+      // dem konfigurierten Auftraggeberformular (siehe unten), nicht aus Code.
       if (orderKind === "pilot_plant") {
         try {
           await api.pilotPlantBlocks.seed(order.id);
-          await api.orderSharedFormData.merge(order.id, {
-            pp: {
-              stammdaten: {
-                versuchsnummer: pp.experiment_number || null,
-                experiment_date: pp.experiment_date || null,
-                versuchsart: pp.experiment_kind || null,
-                previous_experiments: pp.previous_experiments || null,
-                masse_type: pp.masse_type === "__none__" ? null : pp.masse_type,
-                remarks: pp.remarks || null,
-                created_by: user.id,
-                created_at: new Date().toISOString(),
-              },
-            },
-          });
         } catch (err: any) {
           toast.error(`Pilot-Plant-Bausteine: ${err.message}`);
         }
       }
+
 
       // Persist template-driven dynamic form values (no hardcoded fields).
       if (dynamicFormId && Object.keys(dynamicValues).length > 0) {
