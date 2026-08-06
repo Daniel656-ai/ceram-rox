@@ -8523,6 +8523,10 @@ export type Database = {
           quantity: number
         }[]
       }
+      get_portfolio_controlling_report: {
+        Args: { _filters?: Json }
+        Returns: Json
+      }
       get_portfolio_cost_journal: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
         Returns: {
