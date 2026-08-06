@@ -1121,6 +1121,62 @@ export type Database = {
           },
         ]
       }
+      global_list_attributes: {
+        Row: {
+          attribute_key: string
+          created_at: string
+          data_type: string
+          description: string | null
+          display_name: string
+          id: string
+          is_required: boolean
+          list_id: string
+          options: Json
+          show_in_table: boolean
+          sort_order: number
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          attribute_key: string
+          created_at?: string
+          data_type?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_required?: boolean
+          list_id: string
+          options?: Json
+          show_in_table?: boolean
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attribute_key?: string
+          created_at?: string
+          data_type?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_required?: boolean
+          list_id?: string
+          options?: Json
+          show_in_table?: boolean
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "global_list_attributes_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "global_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_list_items: {
         Row: {
           archived_at: string | null
@@ -1128,6 +1184,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_active: boolean
           item_value: string
           label: string
           list_id: string
@@ -1141,6 +1198,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean
           item_value: string
           label: string
           list_id: string
@@ -1154,6 +1212,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean
           item_value?: string
           label?: string
           list_id?: string
