@@ -696,8 +696,6 @@ export default function CreateOrderPage() {
           onTemplateResolved={setDynamicFormId}
         />
 
-        {/* Legacy Pilot Plant Stammdaten — only rendered when no template is
-            mapped for this order kind, to preserve backward compatibility. */}
 
 
 
