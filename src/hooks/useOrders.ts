@@ -60,6 +60,17 @@ export function useDeleteOrder() {
   });
 }
 
+/** Kopiert einen Auftrag als unabhängigen neuen Entwurf. */
+export function useCopyOrder() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: (orderId: string) => api.orders.copy(orderId, user!.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
+  });
+}
+
+
 export function useUpdateOrderRanking() {
   const qc = useQueryClient();
   return useMutation({
