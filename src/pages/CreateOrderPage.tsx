@@ -698,40 +698,6 @@ export default function CreateOrderPage() {
 
         {/* Legacy Pilot Plant Stammdaten — only rendered when no template is
             mapped for this order kind, to preserve backward compatibility. */}
-        {orderKind === "pilot_plant" && !dynamicFormId && (
-          <Card>
-            <CardHeader><CardTitle className="text-base">{t("orders:tabs.pilot_plant")}</CardTitle></CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-2">
-              <div><Label>{t("orders:pp.experiment_number")}</Label>
-                <Input value={pp.experiment_number} onChange={e => setPp({ ...pp, experiment_number: e.target.value })} />
-              </div>
-              <div><Label>{t("orders:pp.v2o5_percent")}</Label>
-                <Input type="number" step="0.01" value={pp.v2o5_percent} onChange={e => setPp({ ...pp, v2o5_percent: e.target.value })} />
-              </div>
-              <div><Label>{t("orders:pp.experiment_date")}</Label>
-                <Input type="date" value={pp.experiment_date} onChange={e => setPp({ ...pp, experiment_date: e.target.value })} />
-              </div>
-              <div><Label>{t("orders:pp.masse_type")}</Label>
-                <Select value={pp.masse_type} onValueChange={(v) => setPp({ ...pp, masse_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">–</SelectItem>
-                    {["DK","GK","KK","MK","PK"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>{t("orders:pp.experiment_kind")}</Label>
-                <Input value={pp.experiment_kind} onChange={e => setPp({ ...pp, experiment_kind: e.target.value })} />
-              </div>
-              <div><Label>{t("orders:pp.previous_experiments")}</Label>
-                <Input value={pp.previous_experiments} onChange={e => setPp({ ...pp, previous_experiments: e.target.value })} />
-              </div>
-              <div className="md:col-span-2"><Label>{t("orders:pp.remarks")}</Label>
-                <Textarea rows={2} value={pp.remarks} onChange={e => setPp({ ...pp, remarks: e.target.value })} />
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
 
 
