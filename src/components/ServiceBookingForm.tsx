@@ -12,6 +12,7 @@ import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat, Calculator
 import UploadField from "@/components/upload/UploadField";
 import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import { useSystemVariables } from "@/context/ProcessContextProvider";
 import type { FormRoleView, FormSection, RepeatableConfig } from "@/lib/api/serviceFormLayouts";
 
 interface Props {
@@ -99,12 +100,15 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
     () => (fields as any[]).filter((f) => f.field_type === "computed" && !f.archived),
     [fields]
   );
+  const systemVars = useSystemVariables();
   useEffect(() => {
     if (computedFields.length === 0) return;
+    // Systemvariablen (Prozessmanager) stehen Formeln read-only zur Verfügung.
+    const formulaCtx = { ...systemVars, ...values };
     for (const f of computedFields) {
       const formula = (f.validation as any)?.formula ?? "";
       if (!formula) continue;
-      const { value } = evaluateFormula(formula, values);
+      const { value } = evaluateFormula(formula, formulaCtx);
       const decimals = f.decimal_places;
       const rounded =
         value != null && typeof decimals === "number" && decimals >= 0
@@ -116,7 +120,7 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, computedFields]);
+  }, [values, computedFields, systemVars]);
 
   if (sections.length === 0) return null;
 
