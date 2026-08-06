@@ -280,6 +280,7 @@ export const api = {
   portfolioDocuments,
   portfolioAnalytics,
   portfolioDashboard,
+  portfolioControlling,
   workPackageCategories,
   portfolioWorkPackages,
   portfolioTasks,
