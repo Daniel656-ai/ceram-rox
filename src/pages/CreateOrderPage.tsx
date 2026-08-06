@@ -199,16 +199,6 @@ export default function CreateOrderPage() {
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
   const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
 
-  // Pilot Plant fields
-  const [pp, setPp] = useState({
-    experiment_number: "",
-    v2o5_percent: "",
-    experiment_date: "",
-    previous_experiments: "",
-    experiment_kind: "",
-    masse_type: "__none__" as string,
-    remarks: "",
-  });
   // Dynamic template-driven values keyed by field_key (loaded per order kind
   // from order_kind_form_templates). No hardcoded field list.
   const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
@@ -379,38 +369,19 @@ export default function CreateOrderPage() {
         due_date: dueDate || undefined, notes: notes || undefined,
         sample_id: selectedSampleId || undefined,
         order_kind: orderKind,
-        pp_experiment_number: pp.experiment_number || null,
-        pp_v2o5_percent: pp.v2o5_percent === "" ? null : Number(pp.v2o5_percent),
-        pp_experiment_date: pp.experiment_date || null,
         pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
-        pp_previous_experiments: pp.previous_experiments || null,
-        pp_experiment_kind: pp.experiment_kind || null,
-        pp_masse_type: (pp.masse_type === "__none__" ? null : pp.masse_type) as any,
-        pp_remarks: pp.remarks || null,
       });
 
-      // Pilot Plant: seed 9 process blocks and store Stammdaten into shared_form_data
+      // Pilot Plant: seed process blocks. Alle fachlichen Angaben kommen aus
+      // dem konfigurierten Auftraggeberformular (siehe unten), nicht aus Code.
       if (orderKind === "pilot_plant") {
         try {
           await api.pilotPlantBlocks.seed(order.id);
-          await api.orderSharedFormData.merge(order.id, {
-            pp: {
-              stammdaten: {
-                versuchsnummer: pp.experiment_number || null,
-                experiment_date: pp.experiment_date || null,
-                versuchsart: pp.experiment_kind || null,
-                previous_experiments: pp.previous_experiments || null,
-                masse_type: pp.masse_type === "__none__" ? null : pp.masse_type,
-                remarks: pp.remarks || null,
-                created_by: user.id,
-                created_at: new Date().toISOString(),
-              },
-            },
-          });
         } catch (err: any) {
           toast.error(`Pilot-Plant-Bausteine: ${err.message}`);
         }
       }
+
 
       // Persist template-driven dynamic form values (no hardcoded fields).
       if (dynamicFormId && Object.keys(dynamicValues).length > 0) {
@@ -696,42 +667,6 @@ export default function CreateOrderPage() {
           onTemplateResolved={setDynamicFormId}
         />
 
-        {/* Legacy Pilot Plant Stammdaten — only rendered when no template is
-            mapped for this order kind, to preserve backward compatibility. */}
-        {orderKind === "pilot_plant" && !dynamicFormId && (
-          <Card>
-            <CardHeader><CardTitle className="text-base">{t("orders:tabs.pilot_plant")}</CardTitle></CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-2">
-              <div><Label>{t("orders:pp.experiment_number")}</Label>
-                <Input value={pp.experiment_number} onChange={e => setPp({ ...pp, experiment_number: e.target.value })} />
-              </div>
-              <div><Label>{t("orders:pp.v2o5_percent")}</Label>
-                <Input type="number" step="0.01" value={pp.v2o5_percent} onChange={e => setPp({ ...pp, v2o5_percent: e.target.value })} />
-              </div>
-              <div><Label>{t("orders:pp.experiment_date")}</Label>
-                <Input type="date" value={pp.experiment_date} onChange={e => setPp({ ...pp, experiment_date: e.target.value })} />
-              </div>
-              <div><Label>{t("orders:pp.masse_type")}</Label>
-                <Select value={pp.masse_type} onValueChange={(v) => setPp({ ...pp, masse_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">–</SelectItem>
-                    {["DK","GK","KK","MK","PK"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>{t("orders:pp.experiment_kind")}</Label>
-                <Input value={pp.experiment_kind} onChange={e => setPp({ ...pp, experiment_kind: e.target.value })} />
-              </div>
-              <div><Label>{t("orders:pp.previous_experiments")}</Label>
-                <Input value={pp.previous_experiments} onChange={e => setPp({ ...pp, previous_experiments: e.target.value })} />
-              </div>
-              <div className="md:col-span-2"><Label>{t("orders:pp.remarks")}</Label>
-                <Textarea rows={2} value={pp.remarks} onChange={e => setPp({ ...pp, remarks: e.target.value })} />
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
 
 
