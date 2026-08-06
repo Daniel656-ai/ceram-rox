@@ -272,7 +272,7 @@ export const orders = {
         );
         if (srcInstance.template_id) {
           await dbClient.rpc("wf_seed_from_template" as any, {
-            _order_instance_id: inst.id,
+            _order_id: inst.id,
             _template_id: srcInstance.template_id,
           } as any);
         }
