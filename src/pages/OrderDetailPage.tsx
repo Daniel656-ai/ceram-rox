@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProcessContextProvider } from "@/context/ProcessContextProvider";
-import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog } from "@/hooks/useOrders";
+import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog, useCopyOrder } from "@/hooks/useOrders";
 import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Clock, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Pencil, Trash2, Copy, Info } from "lucide-react";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
 import { OrderWorkflowTabs } from "@/components/OrderWorkflowTabs";
@@ -56,6 +56,17 @@ function OrderDetailPageInner() {
   const updateMeasurementStatus = useUpdateMeasurementStatus();
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
+  const copyOrder = useCopyOrder();
+  const isCopy = searchParams.get("copied") === "1";
+  const handleCopyOrder = async () => {
+    try {
+      const created = await copyOrder.mutateAsync(id!);
+      toast.success("Auftrag kopiert – neuer Entwurf erstellt");
+      navigate(`/auftraege/${created.id}?copied=1`);
+    } catch (e: any) {
+      toast.error("Kopieren fehlgeschlagen", { description: e.message });
+    }
+  };
   const addWorkLog = useAddWorkLog();
   const { data: durchfuehrerList = [] } = useDurchfuehrer();
   const { data: servicePermissions = [] } = useServicePermissions();
@@ -237,6 +248,9 @@ function OrderDetailPageInner() {
         )}
         {(order as any).workflow_status && <WorkflowStatusBadge status={(order as any).workflow_status} />}
         <StatusBadge status={order.status} />
+        <Button variant="outline" size="sm" onClick={handleCopyOrder} disabled={copyOrder.isPending}>
+          <Copy className="h-4 w-4 mr-1" /> Kopieren
+        </Button>
         {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={openEditDialog}>
@@ -266,6 +280,17 @@ function OrderDetailPageInner() {
           </div>
         )}
       </div>
+
+      {isCopy && (
+        <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <span>
+            Dieser Auftrag wurde als Kopie erstellt und befindet sich im Entwurf.
+            Bitte prüfen und anpassen. Ergebnisse, Messwerte und Zuweisungen wurden
+            nicht übernommen.
+          </span>
+        </div>
+      )}
 
       {canSwitchViews && (
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "requester" | "provider")}>
