@@ -162,5 +162,8 @@
   "instructions_3": "Required fields: Project number, Sample name, Sample description, Order type, Service",
   "instructions_4": "Order types: Customer Order, Production Order, R&D Order",
   "instructions_5": "Priorities: Normal, Important, Highest",
-  "instructions_6": "New: Errors can be corrected directly in the preview!"
+  "instructions_6": "New: Errors can be corrected directly in the preview!",
+  "copy_order": "Copy order",
+  "copy_success": "Order copied – new draft created",
+  "copy_error": "Copy failed"
 }

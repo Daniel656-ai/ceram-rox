@@ -1,4 +1,4 @@
-import { useOrders, useDeleteOrder, useUpdateOrderRanking } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
 import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
@@ -14,8 +14,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox } from "lucide-react";
+import { Plus, Search, Trash2, Copy, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAnyProjectLead } from "@/hooks/useProjectMembers";
@@ -29,6 +30,8 @@ export default function OrdersPage() {
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
   const { data: isAnyProjectLead = false } = useIsAnyProjectLead();
   const deleteOrder = useDeleteOrder();
+  const copyOrder = useCopyOrder();
+  const navigate = useNavigate();
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -111,6 +114,16 @@ export default function OrdersPage() {
 
   const canCreateOrder = role === "master" || role === "auftraggeber" || isAnyProjectLead;
   const canShowActions = role === "master" || role === "auftraggeber" || isAnyProjectLead;
+
+  const handleCopy = async (id: string) => {
+    try {
+      const created = await copyOrder.mutateAsync(id);
+      toast.success(t("orders:copy_success"));
+      navigate(`/auftraege/${created.id}?copied=1`);
+    } catch (e: any) {
+      toast.error(t("orders:copy_error"), { description: e.message });
+    }
+  };
 
   const canDelete = (o: any) => {
     if (role === "master") return true;
@@ -196,7 +209,7 @@ export default function OrdersPage() {
                 <SortableHead sortKey="status">{t("common:status")}</SortableHead>
                 <SortableHead sortKey="due_date">{t("orders:due_date")}</SortableHead>
                 <SortableHead sortKey="created_at">{t("common:created")}</SortableHead>
-                {canShowActions && <TableHead className="w-[60px]">{t("common:actions")}</TableHead>}
+                {canShowActions && <TableHead className="w-[100px]">{t("common:actions")}</TableHead>}
               </TableRow>
 
             </TableHeader>
@@ -250,6 +263,17 @@ export default function OrdersPage() {
                     <TableCell>{new Date(o.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
                     {canShowActions && (
                       <TableCell>
+                        <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          title={t("orders:copy_order")}
+                          disabled={copyOrder.isPending}
+                          onClick={() => handleCopy(o.id)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
                         {canDelete(o) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -273,6 +297,7 @@ export default function OrdersPage() {
                             </AlertDialogContent>
                           </AlertDialog>
                         )}
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
