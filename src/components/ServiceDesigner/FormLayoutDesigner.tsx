@@ -31,6 +31,7 @@ import {
   GripVertical, FolderTree, Folders, Plus, Rows,
 } from "lucide-react";
 import FormLayoutRenderer from "./FormLayoutRenderer";
+import SystemVariablesPanel from "./SystemVariablesPanel";
 
 // ---------- palette ----------
 const PALETTE: { key: LayoutNodeType; label: string; icon: any; extra?: any }[] = [
