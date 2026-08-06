@@ -23,6 +23,7 @@ import {
 } from "@/lib/api/globalLibrary";
 import { evaluateFormula } from "@/lib/formulaEngine";
 import MasterDataSection from "./MasterDataSection";
+import CalculationsSection from "./CalculationsSection";
 
 const slug = (s: string) =>
   s.toLowerCase()
@@ -31,138 +32,8 @@ const slug = (s: string) =>
     .replace(/^_+|_+$/g, "");
 
 /* ------------------------------------------------------------ Berechnungen */
+// Ausgelagert: Variablenzuordnung (Data Binding) + Formel + Ausgabe
 
-function CalculationsSection() {
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState<{ id?: string; calc_key: string; display_name: string; description: string; formula: string; unit: string; decimals: number }>(
-    { calc_key: "", display_name: "", description: "", formula: "", unit: "", decimals: 2 }
-  );
-  const [testValues, setTestValues] = useState("");
-
-  const { data: calcs = [] } = useQuery({ queryKey: ["global-calculations"], queryFn: () => api.globalCalculations.list() });
-
-  const save = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        calc_key: draft.calc_key || slug(draft.display_name),
-        display_name: draft.display_name.trim(),
-        description: draft.description.trim() || null,
-        formula: draft.formula.trim(),
-        unit: draft.unit.trim() || null,
-        decimals: draft.decimals,
-      };
-      if (!payload.display_name || !payload.formula) throw new Error("Bezeichnung und Formel erforderlich");
-      if (draft.id) {
-        const { calc_key: _k, ...rest } = payload;
-        await api.globalCalculations.update(draft.id, rest);
-      } else {
-        await api.globalCalculations.create(payload);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["global-calculations"] });
-      setOpen(false);
-      toast.success("Berechnung gespeichert");
-    },
-    onError: (e: any) => toast.error(e.message || "Fehler beim Speichern"),
-  });
-
-  const archive = useMutation({
-    mutationFn: (id: string) => api.globalCalculations.archive(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["global-calculations"] }),
-  });
-
-  const testResult = useMemo(() => {
-    if (!draft.formula.trim()) return null;
-    const ctx: Record<string, number> = {};
-    for (const pair of testValues.split(/[\n,;]+/)) {
-      const [k, v] = pair.split("=");
-      if (k && v && Number.isFinite(Number(v.trim()))) ctx[k.trim()] = Number(v.trim());
-    }
-    try {
-      const r = evaluateFormula(draft.formula, ctx);
-      if (r.error) return `Fehler: ${r.error}`;
-      return typeof r.value === "number" && Number.isFinite(r.value)
-        ? r.value.toFixed(draft.decimals)
-        : String(r.value ?? "—");
-    } catch (e: any) {
-      return `Fehler: ${e.message}`;
-    }
-  }, [draft.formula, draft.decimals, testValues]);
-
-  return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0 py-3">
-        <CardTitle className="text-sm">Globale Berechnungen</CardTitle>
-        <Button size="sm" onClick={() => { setDraft({ calc_key: "", display_name: "", description: "", formula: "", unit: "", decimals: 2 }); setTestValues(""); setOpen(true); }}>
-          <Plus className="mr-1 h-3.5 w-3.5" />Berechnung
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Bezeichnung</TableHead>
-              <TableHead>Schlüssel</TableHead>
-              <TableHead>Formel</TableHead>
-              <TableHead>Einheit</TableHead>
-              <TableHead className="w-24" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {calcs.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground">Noch keine Berechnungen definiert.</TableCell></TableRow>
-            )}
-            {calcs.map((c: GlobalCalculation) => (
-              <TableRow key={c.id}>
-                <TableCell>{c.display_name}</TableCell>
-                <TableCell className="font-mono text-xs">{c.calc_key}</TableCell>
-                <TableCell className="font-mono text-xs">{c.formula}</TableCell>
-                <TableCell>{c.unit}</TableCell>
-                <TableCell className="text-right">
-                  <Button size="icon" variant="ghost" onClick={() => { setDraft({ id: c.id, calc_key: c.calc_key, display_name: c.display_name, description: c.description ?? "", formula: c.formula, unit: c.unit ?? "", decimals: c.decimals }); setOpen(true); }}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={() => archive.mutate(c.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{draft.id ? "Berechnung bearbeiten" : "Neue globale Berechnung"}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Bezeichnung</Label><Input value={draft.display_name} onChange={(e) => setDraft((d) => ({ ...d, display_name: e.target.value }))} placeholder="z.B. Dichte" /></div>
-              <div><Label>Schlüssel</Label><Input value={draft.calc_key} disabled={!!draft.id} onChange={(e) => setDraft((d) => ({ ...d, calc_key: slug(e.target.value) }))} placeholder={slug(draft.display_name) || "dichte"} /></div>
-            </div>
-            <div><Label>Formel</Label><Textarea rows={2} className="font-mono text-sm" value={draft.formula} onChange={(e) => setDraft((d) => ({ ...d, formula: e.target.value }))} placeholder="masse / volumen" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Einheit</Label><Input value={draft.unit} onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))} placeholder="g/cm³" /></div>
-              <div><Label>Nachkommastellen</Label><Input type="number" value={draft.decimals} onChange={(e) => setDraft((d) => ({ ...d, decimals: Number(e.target.value) }))} /></div>
-            </div>
-            <div><Label>Beschreibung</Label><Textarea rows={2} value={draft.description} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} /></div>
-            <div className="rounded border bg-muted/30 p-2">
-              <Label className="text-xs">Testwerte (key=wert, kommagetrennt)</Label>
-              <Input className="mt-1 font-mono text-xs" value={testValues} onChange={(e) => setTestValues(e.target.value)} placeholder="masse=250, volumen=100" />
-              <p className="mt-2 text-xs">Ergebnis: <span className="font-mono">{testResult ?? "—"}</span> {draft.unit}</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Abbrechen</Button>
-            <Button disabled={save.isPending} onClick={() => save.mutate()}>Speichern</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-}
 
 /* ------------------------------------------------------------ Validierungen */
 
