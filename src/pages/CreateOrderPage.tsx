@@ -654,12 +654,22 @@ export default function CreateOrderPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:kind_label")} *</CardTitle></CardHeader>
           <CardContent>
-            <Select value={orderKind} onValueChange={(v) => setOrderKind(v as any)}>
+            <Select
+              value={orderKind}
+              onValueChange={(v) => {
+                const next = v as "labor" | "pilot_plant";
+                setOrderKind(next);
+                if (next === "labor") {
+                  // Laborauftrag: nur Labor-Dienstleistungen zulässig
+                  const laborIds = new Set(laborServices.map((s) => s.id));
+                  setMeasurements((prev) => prev.filter((m) => laborIds.has(m.service_id)));
+                }
+              }}
+            >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="labor">{t("orders:kind.labor")}</SelectItem>
                 <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
-                <SelectItem value="combined">{t("orders:kind.combined")}</SelectItem>
               </SelectContent>
             </Select>
           </CardContent>
@@ -688,7 +698,7 @@ export default function CreateOrderPage() {
 
         {/* Legacy Pilot Plant Stammdaten — only rendered when no template is
             mapped for this order kind, to preserve backward compatibility. */}
-        {(orderKind === "pilot_plant" || orderKind === "combined") && !dynamicFormId && (
+        {orderKind === "pilot_plant" && !dynamicFormId && (
           <Card>
             <CardHeader><CardTitle className="text-base">{t("orders:tabs.pilot_plant")}</CardTitle></CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
@@ -724,41 +734,7 @@ export default function CreateOrderPage() {
         )}
 
 
-        {(orderKind === "pilot_plant" || orderKind === "combined") && (
-          <Card>
-            <CardHeader><CardTitle className="text-base">{t("orders:analysis_requests.title")}</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">{t("orders:analysis_requests.hint")}</p>
-              <Select onValueChange={(sid) => {
-                const svc = services.find(s => s.id === sid);
-                if (!svc) return;
-                setAnalysisRequests(prev => [...prev, { uid: newUid(), service_id: sid, service_name: svc.service_name, quantity: 1 }]);
-              }}>
-                <SelectTrigger><SelectValue placeholder={t("orders:analysis_requests.add")} /></SelectTrigger>
-                <SelectContent>
-                  {services.map((s: any) => (<SelectItem key={s.id} value={s.id}>{s.service_name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-              {analysisRequests.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t("orders:analysis_requests.empty")}</p>
-              ) : (
-                <div className="space-y-1">
-                  {analysisRequests.map(ar => (
-                    <div key={ar.uid} className="flex items-center gap-2 p-2 border rounded-md">
-                      <span className="flex-1 text-sm">{ar.service_name}</span>
-                      <Input type="number" min={1} value={ar.quantity} onChange={(e) =>
-                        setAnalysisRequests(prev => prev.map(x => x.uid === ar.uid ? { ...x, quantity: parseInt(e.target.value) || 1 } : x))
-                      } className="w-20 h-8" />
-                      <Button type="button" variant="ghost" size="icon" onClick={() =>
-                        setAnalysisRequests(prev => prev.filter(x => x.uid !== ar.uid))
-                      }><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+
 
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
