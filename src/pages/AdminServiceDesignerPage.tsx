@@ -161,7 +161,7 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
           <TabsTrigger value="library"><FormInput className="h-4 w-4 mr-1" />Formular-Bibliothek (Service Designer)</TabsTrigger>
           <TabsTrigger value="mapping"><LinkIcon className="h-4 w-4 mr-1" />Auftragsart-Zuordnung</TabsTrigger>
           <TabsTrigger value="global"><Boxes className="h-4 w-4 mr-1" />Globale Objekte & Felder</TabsTrigger>
-          <TabsTrigger value="library-global"><Library className="h-4 w-4 mr-1" />Listen, Berechnungen & Validierungen</TabsTrigger>
+          <TabsTrigger value="library-global"><Library className="h-4 w-4 mr-1" />Stammdaten, Berechnungen & Validierungen</TabsTrigger>
         </TabsList>
 
         <TabsContent value="library-global" className="mt-4">

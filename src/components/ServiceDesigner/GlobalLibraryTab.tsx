@@ -22,6 +22,7 @@ import {
   type ValidationRuleType,
 } from "@/lib/api/globalLibrary";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import MasterDataSection from "./MasterDataSection";
 
 const slug = (s: string) =>
   s.toLowerCase()
@@ -531,18 +532,18 @@ function ValidationsSection() {
 }
 
 /**
- * Phase 3: zentrale Bibliothek für Listen, Berechnungen und Validierungen.
+ * Zentrale Bibliothek: Stammdaten, Berechnungen und Validierungen.
  * Rein ergänzend – bestehende Formulare funktionieren unverändert weiter.
  */
 export default function GlobalLibraryTab() {
   return (
     <Tabs defaultValue="lists" className="space-y-4">
       <TabsList>
-        <TabsTrigger value="lists"><List className="mr-1 h-4 w-4" />Globale Listen</TabsTrigger>
+        <TabsTrigger value="lists"><List className="mr-1 h-4 w-4" />Stammdaten</TabsTrigger>
         <TabsTrigger value="calcs"><Sigma className="mr-1 h-4 w-4" />Globale Berechnungen</TabsTrigger>
         <TabsTrigger value="validations"><ShieldCheck className="mr-1 h-4 w-4" />Globale Validierungen</TabsTrigger>
       </TabsList>
-      <TabsContent value="lists"><ListsSection /></TabsContent>
+      <TabsContent value="lists"><MasterDataSection /></TabsContent>
       <TabsContent value="calcs"><CalculationsSection /></TabsContent>
       <TabsContent value="validations"><ValidationsSection /></TabsContent>
     </Tabs>
