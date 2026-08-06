@@ -199,16 +199,6 @@ export default function CreateOrderPage() {
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
   const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
 
-  // Pilot Plant fields
-  const [pp, setPp] = useState({
-    experiment_number: "",
-    v2o5_percent: "",
-    experiment_date: "",
-    previous_experiments: "",
-    experiment_kind: "",
-    masse_type: "__none__" as string,
-    remarks: "",
-  });
   // Dynamic template-driven values keyed by field_key (loaded per order kind
   // from order_kind_form_templates). No hardcoded field list.
   const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
