@@ -680,6 +680,7 @@ export default function CreateOrderPage() {
           </CardContent>
         </Card>
 
+        {role !== "auftraggeber" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Prozessvorlage (optional)</CardTitle>
@@ -708,6 +709,7 @@ export default function CreateOrderPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
 
         {orderKind !== "pilot_plant" && (
