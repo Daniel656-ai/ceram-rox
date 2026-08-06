@@ -202,7 +202,11 @@ export default function FormLayoutDesigner({
               </ScrollArea>
             </CardContent>
           </Card>
+
+          {/* Systemvariablen aus dem Prozessmanager (read-only) */}
+          <SystemVariablesPanel compact />
         </div>
+
 
         {/* Canvas */}
         <div className="col-span-6">
