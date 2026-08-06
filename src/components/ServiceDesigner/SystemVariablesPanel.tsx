@@ -13,6 +13,7 @@ import {
   type SystemContextData,
 } from "@/lib/systemVariables";
 import { useProcessContext } from "@/context/ProcessContextProvider";
+import { listMasterDataTokens } from "@/lib/masterData";
 
 /**
  * Designer-Bereich „Systemvariablen“.
@@ -42,8 +43,22 @@ export default function SystemVariablesPanel({
     const filtered = needle
       ? vars.filter((v) => v.path.toLowerCase().includes(needle) || v.label.toLowerCase().includes(needle))
       : vars;
-    return groupSystemVariables(filtered);
-  }, [context, live.list, q]);
+    const base = groupSystemVariables(filtered);
+
+    // Stammdaten-Tokens (frei definierbare Attribute) ergänzen
+    const md = listMasterDataTokens(live.masterData ?? []).filter(
+      (t) => !needle || t.path.toLowerCase().includes(needle) || t.label.toLowerCase().includes(needle) || t.group.toLowerCase().includes(needle)
+    );
+    const byGroup = new Map<string, typeof md>();
+    for (const t of md) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t]);
+    const mdGroups = Array.from(byGroup.entries()).map(([label, items]) => ({
+      namespace: `stammdaten:${label}`,
+      label: `Stammdaten · ${label}`,
+      items: items.map((t) => ({ path: t.path, token: t.token, label: t.label, curated: true, value: undefined })),
+    }));
+
+    return [...base, ...mdGroups] as typeof base;
+  }, [context, live.list, live.masterData, q]);
 
   const use = (token: string) => {
     if (onInsert) onInsert(token);
@@ -64,7 +79,7 @@ export default function SystemVariablesPanel({
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           Werden vom Prozessmanager bereitgestellt (Auftrag, Probe, Projekt, Benutzer, Prozess) und
-          müssen nicht als Formularfeld angelegt werden.
+          müssen nicht als Formularfeld angelegt werden. Zusätzlich stehen alle Stammdaten-Eigenschaften zur Verfügung.
         </p>
       </CardHeader>
       <CardContent className="space-y-2">
