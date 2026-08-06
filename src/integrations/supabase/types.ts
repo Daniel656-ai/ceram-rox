@@ -969,8 +969,10 @@ export type Database = {
           display_name: string
           formula: string
           id: string
+          input_bindings: Json
           inputs: Json
           is_system: boolean
+          output_binding: Json | null
           unit: string | null
           updated_at: string
         }
@@ -985,8 +987,10 @@ export type Database = {
           display_name: string
           formula: string
           id?: string
+          input_bindings?: Json
           inputs?: Json
           is_system?: boolean
+          output_binding?: Json | null
           unit?: string | null
           updated_at?: string
         }
@@ -1001,8 +1005,10 @@ export type Database = {
           display_name?: string
           formula?: string
           id?: string
+          input_bindings?: Json
           inputs?: Json
           is_system?: boolean
+          output_binding?: Json | null
           unit?: string | null
           updated_at?: string
         }
