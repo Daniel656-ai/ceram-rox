@@ -9,6 +9,8 @@ import {
   type SystemContextData,
   type SystemVariable,
 } from "@/lib/systemVariables";
+import { flattenMasterDataCatalog, masterDataSelectionVariables } from "@/lib/masterData";
+import type { MasterDataCategory } from "@/lib/api/globalLibrary";
 
 /**
  * Prozessmanager-Kontext.
@@ -25,6 +27,8 @@ interface ProcessContextShape {
   list: SystemVariable[];
   /** Ersetzt {{...}} Tokens in einem Text. */
   render: (text: string) => string;
+  /** Zentrale Stammdaten (Kategorien inkl. Attributen und Einträgen). */
+  masterData: MasterDataCategory[];
   isLoading: boolean;
 }
 
@@ -33,6 +37,7 @@ const EMPTY: ProcessContextShape = {
   variables: {},
   list: [],
   render: (t) => t,
+  masterData: [],
   isLoading: false,
 };
 
@@ -40,8 +45,13 @@ const Ctx = createContext<ProcessContextShape>(EMPTY);
 
 export function ProcessContextProvider({
   children,
+  masterDataSelection,
   ...request
-}: SystemContextRequest & { children: ReactNode }) {
+}: SystemContextRequest & {
+  children: ReactNode;
+  /** Aktuell ausgewählte Stammdaten-Einträge: { mundstuecke: "m1" } */
+  masterDataSelection?: Record<string, string | null | undefined>;
+}) {
   const key = [
     "system-context",
     request.orderId ?? null,
@@ -64,17 +74,29 @@ export function ProcessContextProvider({
     staleTime: 60 * 1000,
   });
 
+  // Stammdaten stehen systemweit zur Verfügung – unabhängig vom Auftragskontext.
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["master-data-catalog"],
+    queryFn: () => api.masterData.catalog(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const value = useMemo<ProcessContextShape>(() => {
     const context = data ?? {};
-    const variables = flattenSystemContext(context);
+    const variables = {
+      ...flattenMasterDataCatalog(catalog),
+      ...masterDataSelectionVariables(catalog, masterDataSelection ?? {}),
+      ...flattenSystemContext(context),
+    };
     return {
       context,
       variables,
       list: listSystemVariables(context),
       render: (text: string) => renderSystemTokens(text, variables),
+      masterData: catalog,
       isLoading,
     };
-  }, [data, isLoading]);
+  }, [data, isLoading, catalog, JSON.stringify(masterDataSelection ?? {})]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
