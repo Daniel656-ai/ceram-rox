@@ -1,7 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 
-export type OrderKind = "labor" | "pilot_plant" | "combined";
+export type OrderKind = "labor" | "pilot_plant";
 
 export interface OrderKindFormTemplate {
   order_kind: OrderKind;

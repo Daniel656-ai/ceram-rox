@@ -34,8 +34,7 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
   const { hasPermission } = usePermissions();
   const canEdit = role === "master" || hasPermission("orders.edit") || (order?.created_by === user?.id);
   const kind: string = order?.order_kind || "labor";
-  const showPP = kind === "pilot_plant" || kind === "combined";
-  const showLab = kind === "labor" || kind === "combined";
+  const showPP = kind === "pilot_plant";
 
   return (
     <Card>
@@ -44,7 +43,6 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
           <TabsList className="flex flex-wrap h-auto">
             {showPP && <TabsTrigger value="pilot_plant">{t("orders:tabs.pilot_plant")}</TabsTrigger>}
             <TabsTrigger value="samples">{t("orders:tabs.samples")}</TabsTrigger>
-            {showLab && <TabsTrigger value="analyses">{t("orders:tabs.analyses")}</TabsTrigger>}
             <TabsTrigger value="workflow">Workflow</TabsTrigger>
             <TabsTrigger value="closure">{t("orders:tabs.closure")}</TabsTrigger>
           </TabsList>
@@ -59,11 +57,6 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
             <SamplesTab order={order} canEdit={canEdit} />
           </TabsContent>
 
-          {showLab && (
-            <TabsContent value="analyses">
-              <AnalysisRequestsTab order={order} canEdit={canEdit} />
-            </TabsContent>
-          )}
 
           <TabsContent value="workflow">
             <WorkflowRuntimePanel order={order} />
@@ -227,138 +220,6 @@ function SamplesTab({ order, canEdit }: { order: any; canEdit: boolean }) {
   );
 }
 
-/* ------------------ Analysis Requests Tab ------------------ */
-function AnalysisRequestsTab({ order, canEdit }: { order: any; canEdit: boolean }) {
-  const { t } = useTranslation(["orders"]);
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  const { data: services = [] } = useServices();
-  const [serviceId, setServiceId] = useState("");
-  const [qty, setQty] = useState("1");
-
-  const { data: requests = [] } = useQuery({
-    queryKey: ["analysis-requests", order.id],
-    queryFn: () => api.orderAnalysisRequests.listForOrder(order.id),
-  });
-  const { data: samples = [] } = useQuery({
-    queryKey: ["order-samples", order.id],
-    queryFn: () => api.samples.listForOrder(order.id),
-  });
-
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["analysis-requests", order.id] });
-    qc.invalidateQueries({ queryKey: ["order", order.id] });
-  };
-
-  const add = useMutation({
-    mutationFn: () => api.orderAnalysisRequests.create({
-      order_id: order.id, service_id: serviceId, quantity: parseInt(qty) || 1, created_by: user?.id ?? null,
-    }),
-    onSuccess: () => { invalidate(); setServiceId(""); setQty("1"); toast.success("Hinzugefügt"); },
-    onError: (e: any) => toast.error(e.message),
-  });
-  const del = useMutation({
-    mutationFn: (id: string) => api.orderAnalysisRequests.delete(id),
-    onSuccess: () => { invalidate(); toast.success("Entfernt"); },
-    onError: (e: any) => toast.error(e.message),
-  });
-  const assign = useMutation({
-    mutationFn: ({ requestId, sampleId }: { requestId: string; sampleId: string }) =>
-      api.orderAnalysisRequests.assignToSample(requestId, sampleId),
-    onSuccess: () => { invalidate(); toast.success("Analyse zugewiesen"); },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  return (
-    <div className="space-y-4 pt-4">
-      <p className="text-xs text-muted-foreground">{t("orders:analysis_requests.hint")}</p>
-
-      {canEdit && (
-        <div className="flex flex-wrap gap-2 items-end border rounded-md p-3 bg-muted/30">
-          <div className="flex-1 min-w-[220px]">
-            <Label>{t("orders:add_measurement")}</Label>
-            <Select value={serviceId} onValueChange={setServiceId}>
-              <SelectTrigger><SelectValue placeholder={t("orders:select_service")} /></SelectTrigger>
-              <SelectContent>
-                {services.map((s: any) => (
-                  <SelectItem key={s.id} value={s.id}>{s.service_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-24">
-            <Label>Anzahl</Label>
-            <Input type="number" min={1} value={qty} onChange={e => setQty(e.target.value)} />
-          </div>
-          <Button size="sm" onClick={() => add.mutate()} disabled={!serviceId || add.isPending}>
-            <Plus className="h-4 w-4 mr-1" /> {t("orders:analysis_requests.add")}
-          </Button>
-        </div>
-      )}
-
-      {requests.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("orders:analysis_requests.empty")}</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Analyse</TableHead>
-              <TableHead>Anzahl</TableHead>
-              <TableHead>{t("orders:analysis_requests.assign_to_sample")}</TableHead>
-              {canEdit && <TableHead></TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {requests.map((r: any) => (
-              <TableRow key={r.id}>
-                <TableCell>{r.measurement_services?.service_name}</TableCell>
-                <TableCell>{r.quantity}</TableCell>
-                <TableCell>
-                  {samples.length === 0 ? (
-                    <span className="text-xs text-muted-foreground">Erst Proben anlegen</span>
-                  ) : (
-                    <AssignSampleControl
-                      samples={samples}
-                      disabled={!canEdit || assign.isPending}
-                      onAssign={(sampleId) => assign.mutate({ requestId: r.id, sampleId })}
-                    />
-                  )}
-                </TableCell>
-                {canEdit && (
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => del.mutate(r.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </div>
-  );
-}
-
-function AssignSampleControl({ samples, onAssign, disabled }: { samples: any[]; onAssign: (id: string) => void; disabled: boolean }) {
-  const { t } = useTranslation(["orders"]);
-  const [val, setVal] = useState("");
-  return (
-    <div className="flex gap-2">
-      <Select value={val} onValueChange={setVal} disabled={disabled}>
-        <SelectTrigger className="w-[220px] h-8"><SelectValue placeholder={t("orders:analysis_requests.choose_sample")} /></SelectTrigger>
-        <SelectContent>
-          {samples.map((s: any) => (
-            <SelectItem key={s.id} value={s.id}>{s.sample_number} · {s.sample_name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button size="sm" variant="outline" disabled={!val || disabled} onClick={() => { onAssign(val); setVal(""); }}>
-        <CheckCircle2 className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-}
 
 /* ------------------ Closure Tab ------------------ */
 function ClosureTab({ order }: { order: any; canEdit?: boolean }) {
