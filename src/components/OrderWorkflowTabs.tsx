@@ -34,8 +34,7 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
   const { hasPermission } = usePermissions();
   const canEdit = role === "master" || hasPermission("orders.edit") || (order?.created_by === user?.id);
   const kind: string = order?.order_kind || "labor";
-  const showPP = kind === "pilot_plant" || kind === "combined";
-  const showLab = kind === "labor" || kind === "combined";
+  const showPP = kind === "pilot_plant";
 
   return (
     <Card>
@@ -44,7 +43,6 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
           <TabsList className="flex flex-wrap h-auto">
             {showPP && <TabsTrigger value="pilot_plant">{t("orders:tabs.pilot_plant")}</TabsTrigger>}
             <TabsTrigger value="samples">{t("orders:tabs.samples")}</TabsTrigger>
-            {showLab && <TabsTrigger value="analyses">{t("orders:tabs.analyses")}</TabsTrigger>}
             <TabsTrigger value="workflow">Workflow</TabsTrigger>
             <TabsTrigger value="closure">{t("orders:tabs.closure")}</TabsTrigger>
           </TabsList>
@@ -59,11 +57,6 @@ export function OrderWorkflowTabs({ order }: { order: any }) {
             <SamplesTab order={order} canEdit={canEdit} />
           </TabsContent>
 
-          {showLab && (
-            <TabsContent value="analyses">
-              <AnalysisRequestsTab order={order} canEdit={canEdit} />
-            </TabsContent>
-          )}
 
           <TabsContent value="workflow">
             <WorkflowRuntimePanel order={order} />
