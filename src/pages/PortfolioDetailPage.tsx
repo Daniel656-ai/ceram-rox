@@ -516,6 +516,10 @@ export default function PortfolioDetailPage() {
         <TabsContent value="dashboard" className="mt-4">
           <PortfolioDashboardTab portfolioId={portfolioId} portfolio={portfolio} canEdit={canEdit} />
         </TabsContent>
+
+        <TabsContent value="controlling" className="mt-4">
+          <PortfolioControllingTab portfolioId={portfolioId} portfolioName={portfolio?.name} />
+        </TabsContent>
       </Tabs>
 
       {/* Edit dialog */}
