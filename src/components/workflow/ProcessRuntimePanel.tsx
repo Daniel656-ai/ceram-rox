@@ -15,6 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { CheckCircle2, Circle, Clock, Lock, PlayCircle, Loader2, Info, Factory } from "lucide-react";
 import { toast } from "sonner";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import { useSystemVariables } from "@/context/ProcessContextProvider";
 import { PilotPlantGuidedStepper } from "./PilotPlantGuidedStepper";
 import { StepMaterialAvailability, useStepStartBlocked } from "./StepMaterialAvailability";
 import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
@@ -182,12 +183,15 @@ function StepRunItem({
   const [notes, setNotes] = useState<string>(run.notes ?? "");
   const [busy, setBusy] = useState(false);
 
+  const systemVars = useSystemVariables();
   const computedValues = useMemo(() => {
     const merged = { ...values };
     for (const f of fields) {
       if (f.field_type === "computed" && f.formula) {
         try {
-          const res = evaluateFormula(f.formula, merged);
+          // Systemvariablen sind nur Eingabe für die Formel und werden
+          // bewusst NICHT mitgespeichert (Single Source of Truth).
+          const res = evaluateFormula(f.formula, { ...systemVars, ...merged });
           merged[f.field_key] = res;
         } catch {
           /* ignore */
@@ -195,7 +199,8 @@ function StepRunItem({
       }
     }
     return merged;
-  }, [values, fields]);
+  }, [values, fields, systemVars]);
+
 
   const disabled = locked || run.status === "completed" || run.status === "skipped";
   const startBlocked = useStepStartBlocked(run.step_id, 1);

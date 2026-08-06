@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ProcessContextProvider } from "@/context/ProcessContextProvider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,7 +26,7 @@ import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
  * to `measurement_results` (never to service parameters / form definition)
  * and marks the measurement as completed.
  */
-export default function TaskExecutionPage() {
+function TaskExecutionPageInner() {
   const { measurementId } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -502,3 +503,27 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
   );
 }
 
+
+/**
+ * Prozessmanager-Wrapper: stellt dem gesamten Formularbaum den aktuellen
+ * Kontext (Auftrag, Probe, Projekt, Benutzer, Prozess) als schreibgeschützte
+ * Systemvariablen bereit.
+ */
+export default function TaskExecutionPage() {
+  const { measurementId } = useParams();
+  const { data: measurement } = useQuery({
+    queryKey: ["measurement-task", measurementId],
+    queryFn: () => api.measurements.get(measurementId!),
+    enabled: !!measurementId,
+  });
+  const order = (measurement as any)?.measurement_orders;
+  return (
+    <ProcessContextProvider
+      orderId={order?.id ?? null}
+      sampleId={order?.samples?.id ?? null}
+      projectId={order?.projects?.id ?? null}
+    >
+      <TaskExecutionPageInner />
+    </ProcessContextProvider>
+  );
+}

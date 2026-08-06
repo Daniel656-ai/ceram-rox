@@ -1,3 +1,9 @@
+import {
+  SYSTEM_ALIASES,
+  SYSTEM_NAMESPACE_LABELS,
+  type SystemNamespace,
+} from "@/lib/systemVariables";
+
 // Zentraler Katalog aller verfügbaren Platzhalter für den Berichtsdesigner.
 // Wird sowohl im Designer (Auswahl / Live-Preview) als auch beim Rendern
 // (Edge Function) verwendet.
@@ -118,6 +124,17 @@ export const PLACEHOLDER_CATALOG: PlaceholderGroup[] = [
       { key: "system.company_name", token: "{{Firma}}", label: "Firmenname" },
     ],
   },
+  // Systemvariablen des Prozessmanagers (Auftrag/Probe/Projekt/Benutzer/Prozess).
+  // Werden automatisch aus dem zentralen Katalog abgeleitet – neue Standardfelder
+  // stehen ohne Änderung am Berichtsdesigner zur Verfügung.
+  ...(Object.entries(SYSTEM_ALIASES).map(([ns, aliases]) => ({
+    label: `Systemvariablen · ${SYSTEM_NAMESPACE_LABELS[ns as SystemNamespace]}`,
+    items: aliases.map((a) => ({
+      key: `${ns}.${a.name}`,
+      token: `{{${ns}.${a.name}}}`,
+      label: a.label,
+    })),
+  })) as PlaceholderGroup[]),
 ];
 
 // Mapping von Token -> Pfad im Snapshot

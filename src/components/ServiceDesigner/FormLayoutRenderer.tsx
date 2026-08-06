@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalValidation";
+import { useSystemTextRenderer } from "@/context/ProcessContextProvider";
+import { containsSystemToken } from "@/lib/systemVariables";
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -72,6 +74,19 @@ const widthCls = (w?: LayoutWidth) => {
 function FieldControl({ field, readonly }: { field: FormField; readonly: boolean }) {
   const { value, setValue, interactive } = useBinding(field.field_key);
   const disabled = readonly || !interactive;
+  const renderTokens = useSystemTextRenderer();
+
+  // Systemvariablen sind read-only: enthält der Standardwert ein {{...}}-Token,
+  // wird der aktuelle Kontextwert angezeigt statt eines Eingabefeldes.
+  if (containsSystemToken(field.default_value)) {
+    const resolved = renderTokens(field.default_value ?? "");
+    return (
+      <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/40 text-sm">
+        <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+        <span className="truncate">{resolved || "—"}</span>
+      </div>
+    );
+  }
 
   switch (field.field_type) {
     case "longtext":
@@ -152,9 +167,11 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
     return <RepeaterField field={field} node={node} allFields={allFields} />;
   }
 
-  const label = node.label_override || field.display_name;
-  const desc = node.description_override ?? field.description;
-  const readonly = node.readonly || field.readonly || perm.visibility === "read";
+  const renderTokens = useSystemTextRenderer();
+  const label = renderTokens(node.label_override || field.display_name);
+  const desc = renderTokens(node.description_override ?? field.description ?? "") || null;
+  const readonly = node.readonly || field.readonly || perm.visibility === "read" ||
+    containsSystemToken(field.default_value);
   const required = perm.required || field.is_required;
 
   return (
@@ -380,6 +397,7 @@ function RepeaterEntry({
  * ---------------------------------------------------------------- */
 
 function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] }) {
+  const tr = useSystemTextRenderer();
   if (node.visible === false) return null;
 
   switch (node.type) {
@@ -387,8 +405,8 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
       const n = node;
       return (
         <div className={cn("border rounded-lg p-4 bg-card", widthCls(n.width), n.className)}>
-          {n.title && <div className="font-semibold text-sm mb-1">{n.title}</div>}
-          {n.description && <p className="text-xs text-muted-foreground mb-3">{n.description}</p>}
+          {n.title && <div className="font-semibold text-sm mb-1">{tr(n.title)}</div>}
+          {n.description && <p className="text-xs text-muted-foreground mb-3">{tr(n.description)}</p>}
           <div className="grid grid-cols-12 gap-3">
             {n.children.map(c => <RenderNode key={c.id} node={c} fields={fields} />)}
           </div>
@@ -400,7 +418,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
       const n = node;
       return (
         <div className={cn("border rounded p-3", widthCls(n.width), n.className)}>
-          {(n as any).title && <div className="font-medium text-sm mb-2">{(n as any).title}</div>}
+          {(n as any).title && <div className="font-medium text-sm mb-2">{tr((n as any).title)}</div>}
           <div className="grid grid-cols-12 gap-3">
             {(n as any).children.map((c: LayoutNode) => <RenderNode key={c.id} node={c} fields={fields} />)}
           </div>
@@ -444,12 +462,12 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     case "heading": {
       const n = node;
       const H = (`h${n.level ?? 3}` as any);
-      return <H className={cn("col-span-12 font-semibold", n.level === 1 && "text-2xl", n.level === 2 && "text-xl", (!n.level || n.level >= 3) && "text-base", n.className)}>{n.text}</H>;
+      return <H className={cn("col-span-12 font-semibold", n.level === 1 && "text-2xl", n.level === 2 && "text-xl", (!n.level || n.level >= 3) && "text-base", n.className)}>{tr(n.text)}</H>;
     }
     case "note": {
       const n = node;
       const vc = n.variant === "warning" ? "bg-amber-50 border-amber-200 text-amber-900" : n.variant === "muted" ? "bg-muted text-muted-foreground" : "bg-primary/5 border-primary/20";
-      return <div className={cn("col-span-12 text-sm border rounded p-3", vc, n.className)}>{n.text}</div>;
+      return <div className={cn("col-span-12 text-sm border rounded p-3", vc, n.className)}>{tr(n.text)}</div>;
     }
     case "field": {
       const f = fields.find(x => x.id === node.field_id);

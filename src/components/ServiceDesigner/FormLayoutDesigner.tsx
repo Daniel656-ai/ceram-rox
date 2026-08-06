@@ -31,6 +31,7 @@ import {
   GripVertical, FolderTree, Folders, Plus, Rows,
 } from "lucide-react";
 import FormLayoutRenderer from "./FormLayoutRenderer";
+import SystemVariablesPanel from "./SystemVariablesPanel";
 
 // ---------- palette ----------
 const PALETTE: { key: LayoutNodeType; label: string; icon: any; extra?: any }[] = [
@@ -202,7 +203,11 @@ export default function FormLayoutDesigner({
               </ScrollArea>
             </CardContent>
           </Card>
+
+          {/* Systemvariablen aus dem Prozessmanager (read-only) */}
+          <SystemVariablesPanel compact />
         </div>
+
 
         {/* Canvas */}
         <div className="col-span-6">

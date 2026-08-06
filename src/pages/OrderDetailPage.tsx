@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { ProcessContextProvider } from "@/context/ProcessContextProvider";
 import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog } from "@/hooks/useOrders";
 import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,7 +37,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 
-export default function OrderDetailPage() {
+function OrderDetailPageInner() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const measurementFilter = searchParams.get("measurement");
@@ -720,5 +721,20 @@ export default function OrderDetailPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** Prozessmanager-Wrapper: Systemvariablen für alle Formulare dieser Ansicht. */
+export default function OrderDetailPage() {
+  const { id } = useParams();
+  const { data: order } = useOrderDetail(id);
+  return (
+    <ProcessContextProvider
+      orderId={id ?? null}
+      sampleId={(order as any)?.samples?.id ?? null}
+      projectId={(order as any)?.project_id ?? null}
+    >
+      <OrderDetailPageInner />
+    </ProcessContextProvider>
   );
 }
