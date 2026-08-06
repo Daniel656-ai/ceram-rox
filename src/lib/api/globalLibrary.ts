@@ -27,11 +27,43 @@ export interface GlobalListItem {
   description: string | null;
   color: string | null;
   sort_order: number;
+  /** Frei definierbare Attributwerte (Schlüssel = attribute_key der Kategorie). */
   metadata: Record<string, unknown>;
+  is_active: boolean;
   archived_at: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type MasterDataAttributeType =
+  | "text" | "longtext" | "number" | "date" | "boolean" | "select";
+
+export const MASTER_DATA_ATTRIBUTE_TYPES: { value: MasterDataAttributeType; label: string }[] = [
+  { value: "text", label: "Text" },
+  { value: "longtext", label: "Langtext" },
+  { value: "number", label: "Zahl" },
+  { value: "date", label: "Datum" },
+  { value: "boolean", label: "Ja/Nein" },
+  { value: "select", label: "Auswahl" },
+];
+
+/** Frei definierbare Eigenschaft einer Stammdaten-Kategorie. */
+export interface GlobalListAttribute {
+  id: string;
+  list_id: string;
+  attribute_key: string;
+  display_name: string;
+  data_type: MasterDataAttributeType;
+  unit: string | null;
+  options: string[];
+  is_required: boolean;
+  show_in_table: boolean;
+  description: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 
 export interface GlobalCalculation {
   id: string;
@@ -120,7 +152,57 @@ export const globalListItems = {
   remove: (id: string) => run(table("global_list_items").delete().eq("id", id)),
 };
 
+export const globalListAttributes = {
+  list: (listId: string) =>
+    unwrap(
+      table("global_list_attributes")
+        .select("*")
+        .eq("list_id", listId)
+        .order("sort_order", { ascending: true })
+    ) as unknown as Promise<GlobalListAttribute[]>,
+  listAll: () =>
+    unwrap(
+      table("global_list_attributes").select("*").order("sort_order", { ascending: true })
+    ) as unknown as Promise<GlobalListAttribute[]>,
+  create: (input: Partial<GlobalListAttribute> & { list_id: string; attribute_key: string; display_name: string }) =>
+    unwrap(table("global_list_attributes").insert(input as any).select().single()) as unknown as Promise<GlobalListAttribute>,
+  update: (id: string, updates: Partial<GlobalListAttribute>) =>
+    run(table("global_list_attributes").update(updates as any).eq("id", id)),
+  remove: (id: string) => run(table("global_list_attributes").delete().eq("id", id)),
+};
+
+export interface MasterDataCategory {
+  list: GlobalList;
+  attributes: GlobalListAttribute[];
+  items: GlobalListItem[];
+}
+
+/**
+ * Zentrale Stammdaten (Single Source of Truth): alle Kategorien inkl.
+ * Attributdefinitionen und Einträgen in einem Rutsch.
+ */
+export const masterData = {
+  catalog: async (): Promise<MasterDataCategory[]> => {
+    const [lists, attrs, items] = await Promise.all([
+      globalLists.list(),
+      globalListAttributes.listAll(),
+      unwrap(
+        table("global_list_items")
+          .select("*")
+          .is("archived_at", null)
+          .order("sort_order", { ascending: true })
+      ) as unknown as Promise<GlobalListItem[]>,
+    ]);
+    return lists.map((list) => ({
+      list,
+      attributes: attrs.filter((a) => a.list_id === list.id),
+      items: items.filter((i) => i.list_id === list.id),
+    }));
+  },
+};
+
 export const globalCalculations = {
+
   list: (opts?: { includeArchived?: boolean }) => {
     let q = table("global_calculations").select("*").order("display_name", { ascending: true });
     if (!opts?.includeArchived) q = q.is("archived_at", null);

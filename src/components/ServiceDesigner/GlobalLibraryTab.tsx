@@ -22,217 +22,13 @@ import {
   type ValidationRuleType,
 } from "@/lib/api/globalLibrary";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import MasterDataSection from "./MasterDataSection";
 
 const slug = (s: string) =>
   s.toLowerCase()
     .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
-
-/* ------------------------------------------------------------------ Listen */
-
-function ListsSection() {
-  const qc = useQueryClient();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [listOpen, setListOpen] = useState(false);
-  const [listDraft, setListDraft] = useState<{ id?: string; list_key: string; display_name: string; description: string; category: string }>(
-    { list_key: "", display_name: "", description: "", category: "" }
-  );
-  const [itemOpen, setItemOpen] = useState(false);
-  const [itemDraft, setItemDraft] = useState<{ id?: string; item_value: string; label: string; description: string; sort_order: number }>(
-    { item_value: "", label: "", description: "", sort_order: 0 }
-  );
-
-  const { data: lists = [] } = useQuery({ queryKey: ["global-lists"], queryFn: () => api.globalLists.list() });
-  const selected = lists.find((l: GlobalList) => l.id === selectedId) ?? null;
-
-  const { data: items = [] } = useQuery({
-    queryKey: ["global-list-items", selectedId],
-    queryFn: () => api.globalListItems.list(selectedId!),
-    enabled: !!selectedId,
-  });
-
-  const saveList = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        list_key: listDraft.list_key || slug(listDraft.display_name),
-        display_name: listDraft.display_name.trim(),
-        description: listDraft.description.trim() || null,
-        category: listDraft.category.trim() || null,
-      };
-      if (!payload.display_name) throw new Error("Bezeichnung erforderlich");
-      if (listDraft.id) {
-        const { list_key: _k, ...rest } = payload;
-        await api.globalLists.update(listDraft.id, rest);
-      } else {
-        const created = await api.globalLists.create(payload);
-        setSelectedId(created.id);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["global-lists"] });
-      setListOpen(false);
-      toast.success("Liste gespeichert");
-    },
-    onError: (e: any) => toast.error(e.message || "Fehler beim Speichern"),
-  });
-
-  const saveItem = useMutation({
-    mutationFn: async () => {
-      if (!selectedId) throw new Error("Keine Liste ausgewählt");
-      const payload = {
-        list_id: selectedId,
-        item_value: itemDraft.item_value || slug(itemDraft.label),
-        label: itemDraft.label.trim(),
-        description: itemDraft.description.trim() || null,
-        sort_order: itemDraft.sort_order,
-      };
-      if (!payload.label) throw new Error("Bezeichnung erforderlich");
-      if (itemDraft.id) {
-        const { list_id: _l, ...rest } = payload;
-        await api.globalListItems.update(itemDraft.id, rest);
-      } else {
-        await api.globalListItems.create(payload);
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["global-list-items", selectedId] });
-      setItemOpen(false);
-      toast.success("Eintrag gespeichert");
-    },
-    onError: (e: any) => toast.error(e.message || "Fehler beim Speichern"),
-  });
-
-  const removeItem = useMutation({
-    mutationFn: (id: string) => api.globalListItems.remove(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["global-list-items", selectedId] }),
-  });
-
-  const archiveList = useMutation({
-    mutationFn: (id: string) => api.globalLists.archive(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["global-lists"] });
-      setSelectedId(null);
-      toast.success("Liste archiviert");
-    },
-  });
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0 py-3">
-          <CardTitle className="text-sm">Listen</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => { setListDraft({ list_key: "", display_name: "", description: "", category: "" }); setListOpen(true); }}>
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-1 pb-3">
-          {lists.length === 0 && <p className="text-xs text-muted-foreground">Noch keine Listen angelegt.</p>}
-          {lists.map((l: GlobalList) => (
-            <button
-              key={l.id}
-              onClick={() => setSelectedId(l.id)}
-              className={`w-full rounded px-2 py-1.5 text-left text-sm ${selectedId === l.id ? "bg-primary/10 font-medium text-primary" : "hover:bg-muted"}`}
-            >
-              {l.display_name}
-              <span className="ml-2 font-mono text-[10px] text-muted-foreground">{l.list_key}</span>
-            </button>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0 py-3">
-          <CardTitle className="text-sm">
-            {selected ? `Einträge – ${selected.display_name}` : "Einträge"}
-          </CardTitle>
-          {selected && (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => { setListDraft({ id: selected.id, list_key: selected.list_key, display_name: selected.display_name, description: selected.description ?? "", category: selected.category ?? "" }); setListOpen(true); }}>
-                <Pencil className="mr-1 h-3.5 w-3.5" />Liste bearbeiten
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => archiveList.mutate(selected.id)}>Archivieren</Button>
-              <Button size="sm" onClick={() => { setItemDraft({ item_value: "", label: "", description: "", sort_order: items.length }); setItemOpen(true); }}>
-                <Plus className="mr-1 h-3.5 w-3.5" />Eintrag
-              </Button>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {!selected ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Liste auswählen oder neu anlegen.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Bezeichnung</TableHead>
-                  <TableHead>Wert</TableHead>
-                  <TableHead>Beschreibung</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.length === 0 && (
-                  <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground">Keine Einträge.</TableCell></TableRow>
-                )}
-                {items.map((it: GlobalListItem) => (
-                  <TableRow key={it.id}>
-                    <TableCell>{it.label}</TableCell>
-                    <TableCell className="font-mono text-xs">{it.item_value}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{it.description}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => { setItemDraft({ id: it.id, item_value: it.item_value, label: it.label, description: it.description ?? "", sort_order: it.sort_order }); setItemOpen(true); }}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => removeItem.mutate(it.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={listOpen} onOpenChange={setListOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{listDraft.id ? "Liste bearbeiten" : "Neue globale Liste"}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Bezeichnung</Label><Input value={listDraft.display_name} onChange={(e) => setListDraft((d) => ({ ...d, display_name: e.target.value }))} placeholder="z.B. Mundstücke" /></div>
-            <div>
-              <Label>Schlüssel</Label>
-              <Input value={listDraft.list_key} disabled={!!listDraft.id} onChange={(e) => setListDraft((d) => ({ ...d, list_key: slug(e.target.value) }))} placeholder={slug(listDraft.display_name) || "mundstuecke"} />
-            </div>
-            <div><Label>Kategorie</Label><Input value={listDraft.category} onChange={(e) => setListDraft((d) => ({ ...d, category: e.target.value }))} /></div>
-            <div><Label>Beschreibung</Label><Textarea rows={2} value={listDraft.description} onChange={(e) => setListDraft((d) => ({ ...d, description: e.target.value }))} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setListOpen(false)}>Abbrechen</Button>
-            <Button disabled={saveList.isPending} onClick={() => saveList.mutate()}>Speichern</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={itemOpen} onOpenChange={setItemOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{itemDraft.id ? "Eintrag bearbeiten" : "Neuer Eintrag"}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Bezeichnung</Label><Input value={itemDraft.label} onChange={(e) => setItemDraft((d) => ({ ...d, label: e.target.value }))} /></div>
-            <div><Label>Wert</Label><Input value={itemDraft.item_value} onChange={(e) => setItemDraft((d) => ({ ...d, item_value: e.target.value }))} placeholder={slug(itemDraft.label)} /></div>
-            <div><Label>Beschreibung</Label><Input value={itemDraft.description} onChange={(e) => setItemDraft((d) => ({ ...d, description: e.target.value }))} /></div>
-            <div><Label>Reihenfolge</Label><Input type="number" value={itemDraft.sort_order} onChange={(e) => setItemDraft((d) => ({ ...d, sort_order: Number(e.target.value) }))} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setItemOpen(false)}>Abbrechen</Button>
-            <Button disabled={saveItem.isPending} onClick={() => saveItem.mutate()}>Speichern</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------ Berechnungen */
 
@@ -531,18 +327,18 @@ function ValidationsSection() {
 }
 
 /**
- * Phase 3: zentrale Bibliothek für Listen, Berechnungen und Validierungen.
+ * Zentrale Bibliothek: Stammdaten, Berechnungen und Validierungen.
  * Rein ergänzend – bestehende Formulare funktionieren unverändert weiter.
  */
 export default function GlobalLibraryTab() {
   return (
     <Tabs defaultValue="lists" className="space-y-4">
       <TabsList>
-        <TabsTrigger value="lists"><List className="mr-1 h-4 w-4" />Globale Listen</TabsTrigger>
+        <TabsTrigger value="lists"><List className="mr-1 h-4 w-4" />Stammdaten</TabsTrigger>
         <TabsTrigger value="calcs"><Sigma className="mr-1 h-4 w-4" />Globale Berechnungen</TabsTrigger>
         <TabsTrigger value="validations"><ShieldCheck className="mr-1 h-4 w-4" />Globale Validierungen</TabsTrigger>
       </TabsList>
-      <TabsContent value="lists"><ListsSection /></TabsContent>
+      <TabsContent value="lists"><MasterDataSection /></TabsContent>
       <TabsContent value="calcs"><CalculationsSection /></TabsContent>
       <TabsContent value="validations"><ValidationsSection /></TabsContent>
     </Tabs>

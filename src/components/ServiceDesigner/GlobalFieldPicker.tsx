@@ -50,7 +50,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
     enabled: open,
   });
 
-  // Globale Listen liefern die Auswahlwerte zentral – Formulare erben sie beim Einfügen.
+  // Stammdaten liefern die Auswahlwerte zentral – Formulare erben sie beim Einfügen.
   const { data: lists = [] } = useQuery({
     queryKey: ["global-lists"],
     queryFn: () => api.globalLists.list(),
