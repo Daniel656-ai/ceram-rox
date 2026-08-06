@@ -77,6 +77,10 @@ export interface GlobalCalculation {
   decimals: number;
   /** Dokumentation der erwarteten Eingangsgrößen (Keys). */
   inputs: string[];
+  /** Variablenzuordnung: Quelle je Eingangsvariable. */
+  input_bindings: unknown;
+  /** Zielzuordnung des Ergebnisses. */
+  output_binding: unknown;
   is_system: boolean;
   archived_at: string | null;
   created_by: string | null;
