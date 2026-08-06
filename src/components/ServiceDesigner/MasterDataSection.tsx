@@ -282,8 +282,10 @@ export default function MasterDataSection() {
                 <TabsTrigger value="schema">Eigenschaften</TabsTrigger>
               </TabsList>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setListDraft({ id: selected.id, list_key: selected.list_key, display_name: selected.display_name, description: selected.description ?? "", category: selected.category ?? "" })
-                  || setListOpen(true)}>
+                <Button size="sm" variant="outline" onClick={() => {
+                  setListDraft({ id: selected.id, list_key: selected.list_key, display_name: selected.display_name, description: selected.description ?? "", category: selected.category ?? "" });
+                  setListOpen(true);
+                }}>
                   <Pencil className="mr-1 h-3.5 w-3.5" />Kategorie bearbeiten
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => archiveList.mutate(selected.id)}>Archivieren</Button>
