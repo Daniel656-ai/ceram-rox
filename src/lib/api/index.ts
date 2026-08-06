@@ -123,6 +123,7 @@ import {
   portfolioAnalytics,
   portfolioDashboard,
 } from "./projectPortfolios";
+import { portfolioControlling } from "./portfolioControlling";
 import { workPackageCategories } from "./workPackageCategories";
 import {
   portfolioWorkPackages,
