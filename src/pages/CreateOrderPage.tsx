@@ -176,6 +176,7 @@ export default function CreateOrderPage() {
   const { data: processTemplates = [] } = useQuery({
     queryKey: ["process-templates", "active"],
     queryFn: () => api.processTemplates.list({ scope: "template" }),
+    enabled: role !== "auftraggeber",
   });
   const { data: templates = [] } = useTemplates();
   const { data: allSamples = [] } = useSamples();
