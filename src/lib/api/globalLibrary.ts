@@ -152,7 +152,57 @@ export const globalListItems = {
   remove: (id: string) => run(table("global_list_items").delete().eq("id", id)),
 };
 
+export const globalListAttributes = {
+  list: (listId: string) =>
+    unwrap(
+      table("global_list_attributes")
+        .select("*")
+        .eq("list_id", listId)
+        .order("sort_order", { ascending: true })
+    ) as unknown as Promise<GlobalListAttribute[]>,
+  listAll: () =>
+    unwrap(
+      table("global_list_attributes").select("*").order("sort_order", { ascending: true })
+    ) as unknown as Promise<GlobalListAttribute[]>,
+  create: (input: Partial<GlobalListAttribute> & { list_id: string; attribute_key: string; display_name: string }) =>
+    unwrap(table("global_list_attributes").insert(input as any).select().single()) as unknown as Promise<GlobalListAttribute>,
+  update: (id: string, updates: Partial<GlobalListAttribute>) =>
+    run(table("global_list_attributes").update(updates as any).eq("id", id)),
+  remove: (id: string) => run(table("global_list_attributes").delete().eq("id", id)),
+};
+
+export interface MasterDataCategory {
+  list: GlobalList;
+  attributes: GlobalListAttribute[];
+  items: GlobalListItem[];
+}
+
+/**
+ * Zentrale Stammdaten (Single Source of Truth): alle Kategorien inkl.
+ * Attributdefinitionen und Einträgen in einem Rutsch.
+ */
+export const masterData = {
+  catalog: async (): Promise<MasterDataCategory[]> => {
+    const [lists, attrs, items] = await Promise.all([
+      globalLists.list(),
+      globalListAttributes.listAll(),
+      unwrap(
+        table("global_list_items")
+          .select("*")
+          .is("archived_at", null)
+          .order("sort_order", { ascending: true })
+      ) as unknown as Promise<GlobalListItem[]>,
+    ]);
+    return lists.map((list) => ({
+      list,
+      attributes: attrs.filter((a) => a.list_id === list.id),
+      items: items.filter((i) => i.list_id === list.id),
+    }));
+  },
+};
+
 export const globalCalculations = {
+
   list: (opts?: { includeArchived?: boolean }) => {
     let q = table("global_calculations").select("*").order("display_name", { ascending: true });
     if (!opts?.includeArchived) q = q.is("archived_at", null);
