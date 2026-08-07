@@ -374,6 +374,8 @@ export default function GlobalModelTab() {
                         default_value: f.default_value ?? "", data_source: f.data_source,
                         list_id: f.list_id ?? null, calculation_id: f.calculation_id ?? null,
                         validation_ids: f.validation_ids ?? [], is_repeatable: !!f.is_repeatable,
+                        repeater: readGlobalRepeaterMeta(f),
+                        subfields: readGlobalRepeaterSubfields(f),
                       });
                       setFieldOpen(true);
                     }}><Pencil className="h-3.5 w-3.5" /></Button>
