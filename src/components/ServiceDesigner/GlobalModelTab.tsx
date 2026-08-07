@@ -591,3 +591,168 @@ export default function GlobalModelTab() {
     </div>
   );
 }
+
+/* ------------------------------------------------------------------
+ * Repeater-Einstellungen eines globalen Feldes (1:n-Unterliste)
+ * ------------------------------------------------------------------ */
+function GlobalRepeaterSettings({
+  draft,
+  onChange,
+}: {
+  draft: FieldDraft;
+  onChange: (patch: Partial<FieldDraft>) => void;
+}) {
+  const meta = draft.repeater ?? {};
+  const subfields = draft.subfields ?? [];
+  const [newKey, setNewKey] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [newType, setNewType] = useState("text");
+  const [newUnit, setNewUnit] = useState("");
+
+  const setMeta = (patch: Partial<GlobalRepeaterMeta>) => onChange({ repeater: { ...meta, ...patch } });
+  const setSubfields = (next: GlobalRepeaterSubfield[]) => onChange({ subfields: next });
+
+  const addSubfield = () => {
+    const key = slug(newKey || newLabel);
+    if (!key || !newLabel.trim()) return;
+    if (subfields.some((s) => s.field_key === key)) {
+      toast.error("Technische ID bereits vergeben");
+      return;
+    }
+    setSubfields([
+      ...subfields,
+      {
+        field_key: key,
+        display_name: newLabel.trim(),
+        data_type: newType as any,
+        unit: newUnit.trim() || null,
+        is_required: false,
+        select_options: [],
+      },
+    ]);
+    setNewKey(""); setNewLabel(""); setNewUnit(""); setNewType("text");
+  };
+
+  const patchSubfield = (i: number, patch: Partial<GlobalRepeaterSubfield>) =>
+    setSubfields(subfields.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= subfields.length) return;
+    const next = subfields.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    setSubfields(next);
+  };
+
+  return (
+    <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Repeater-Einstellungen (1:n-Unterliste)
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div>
+          <Label className="text-xs">Mindestanzahl</Label>
+          <Input
+            type="number" className="h-8 text-xs" value={meta.min_entries ?? 0}
+            onChange={(e) => setMeta({ min_entries: e.target.value === "" ? 0 : Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Maximalanzahl</Label>
+          <Input
+            type="number" className="h-8 text-xs" value={meta.max_entries ?? ""} placeholder="unbegrenzt"
+            onChange={(e) => setMeta({ max_entries: e.target.value === "" ? undefined : Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Eintrag-Label</Label>
+          <Input className="h-8 text-xs" value={meta.item_label ?? ""} placeholder="Eintrag"
+            onChange={(e) => setMeta({ item_label: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">Button-Text</Label>
+          <Input className="h-8 text-xs" value={meta.add_label ?? ""} placeholder="Rohstoff hinzufügen"
+            onChange={(e) => setMeta({ add_label: e.target.value })} />
+        </div>
+        <div className="sm:col-span-2">
+          <Label className="text-xs">Storage-Key (optional)</Label>
+          <Input className="h-8 text-xs font-mono" value={meta.storage_key ?? ""}
+            placeholder={draft.field_key || slug(draft.display_name)}
+            onChange={(e) => setMeta({ storage_key: e.target.value ? slug(e.target.value) : undefined })} />
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Gleicher Storage-Key in mehreren Formularen → die Liste wird im gesamten Auftrag geteilt
+            (Auftraggeber erfasst, Dienstleister sieht sie ohne erneute Eingabe).
+          </p>
+        </div>
+      </div>
+
+      <div className="border-t pt-2">
+        <p className="text-xs font-semibold mb-2">Unterfelder ({subfields.length})</p>
+        <div className="space-y-1 mb-2">
+          {subfields.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Noch keine Unterfelder – z. B. Rohstoff, Rohstoffcode, Lotnummer, Menge, Einheit, Bemerkung.
+            </p>
+          )}
+          {subfields.map((s, i) => (
+            <div key={s.field_key} className="rounded border bg-background px-2 py-1.5 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="flex-1 truncate text-xs font-medium">{s.display_name}</span>
+                <Badge variant="outline" className="font-mono text-[10px]">{s.field_key}</Badge>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(i, -1)}>↑</Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(i, 1)}>↓</Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6"
+                  onClick={() => setSubfields(subfields.filter((_, idx) => idx !== i))}>×</Button>
+              </div>
+              <div className="grid gap-1 sm:grid-cols-3">
+                <Select value={s.data_type} onValueChange={(v) => patchSubfield(i, { data_type: v as any })}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SUBFIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Input className="h-7 text-xs" placeholder="Einheit" value={s.unit ?? ""}
+                  onChange={(e) => patchSubfield(i, { unit: e.target.value || null })} />
+                <label className="flex items-center gap-2 text-xs">
+                  <input type="checkbox" checked={!!s.is_required}
+                    onChange={(e) => patchSubfield(i, { is_required: e.target.checked })} />
+                  Pflichtfeld
+                </label>
+              </div>
+              {(s.data_type === "select" || s.data_type === "multiselect") && (
+                <Input
+                  className="h-7 text-xs"
+                  placeholder="Optionen, mit Komma getrennt"
+                  value={(s.select_options ?? []).map((o: any) => (typeof o === "string" ? o : o.label)).join(", ")}
+                  onChange={(e) =>
+                    patchSubfield(i, {
+                      select_options: e.target.value.split(",").map((x) => x.trim()).filter(Boolean),
+                    })
+                  }
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-1 sm:grid-cols-2">
+          <Input className="h-8 text-xs" placeholder="Anzeigename (z. B. Rohstoff)"
+            value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+          <Input className="h-8 text-xs font-mono" placeholder={slug(newLabel) || "technische_id"}
+            value={newKey} onChange={(e) => setNewKey(e.target.value)} />
+          <Select value={newType} onValueChange={setNewType}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SUBFIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Input className="h-8 text-xs" placeholder="Einheit (optional)"
+            value={newUnit} onChange={(e) => setNewUnit(e.target.value)} />
+        </div>
+        <Button type="button" size="sm" variant="outline" className="mt-2 w-full"
+          disabled={!newLabel.trim()} onClick={addSubfield}>
+          <Plus className="h-3 w-3 mr-1" /> Unterfeld hinzufügen
+        </Button>
+      </div>
+    </div>
+  );
+}
