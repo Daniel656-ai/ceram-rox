@@ -480,7 +480,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="samples" className="print:block">
+      <Tabs defaultValue="time_entries" className="print:block">
         <TabsList className="print:hidden flex-wrap">
           <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
           <TabsTrigger value="services"><Briefcase className="h-3.5 w-3.5 mr-1" />Dienstleistungen</TabsTrigger>
