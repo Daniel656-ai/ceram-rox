@@ -436,7 +436,8 @@ export default function GlobalModelTab() {
       </Dialog>
 
       <Dialog open={fieldOpen} onOpenChange={setFieldOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+
           <DialogHeader><DialogTitle>{fieldDraft.id ? "Globales Feld bearbeiten" : "Neues globales Feld"}</DialogTitle></DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
