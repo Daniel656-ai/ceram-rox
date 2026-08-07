@@ -168,9 +168,18 @@ export default function GlobalModelTab() {
         calculation_id: fieldDraft.calculation_id,
         validation_ids: fieldDraft.validation_ids,
         is_repeatable: fieldDraft.data_type === "repeater" ? true : fieldDraft.is_repeatable,
-        metadata: (fieldDraft.data_type === "repeater"
-          ? { repeater: fieldDraft.repeater, subfields: fieldDraft.subfields }
-          : {}) as any,
+        metadata: (() => {
+          const current = (fields.find((f) => f.id === fieldDraft.id)?.metadata ?? {}) as Record<string, unknown>;
+          const next = { ...current };
+          if (fieldDraft.data_type === "repeater") {
+            next.repeater = fieldDraft.repeater;
+            next.subfields = fieldDraft.subfields;
+          } else {
+            delete next.repeater;
+            delete next.subfields;
+          }
+          return next;
+        })() as any,
       };
       if (fieldDraft.id) {
         const current = fields.find((f) => f.id === fieldDraft.id);
