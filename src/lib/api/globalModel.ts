@@ -210,6 +210,8 @@ export const globalTypeToFormFieldType = (t: string): string => {
     percent: "percent", date: "date", time: "time", datetime: "datetime",
     boolean: "boolean", select: "select", multiselect: "multiselect",
     file: "file", image: "image", reference: "text", computed: "computed",
+    repeater: "repeater",
+
   };
   return map[t] ?? "text";
 };
