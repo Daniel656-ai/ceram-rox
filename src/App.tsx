@@ -39,6 +39,7 @@ import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import ContainerScanPage from "./pages/ContainerScanPage";
 
 import LabPlanningPage from "./pages/LabPlanningPage";
+import MasterDataPage from "./pages/MasterDataPage";
 import MixturesPage from "./pages/MixturesPage";
 import MixtureDetailPage from "./pages/MixtureDetailPage";
 import BatchExecutionPage from "./pages/BatchExecutionPage";
