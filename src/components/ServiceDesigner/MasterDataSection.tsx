@@ -108,7 +108,16 @@ export default function MasterDataSection({
   }>({ item_value: "", label: "", description: "", sort_order: 0, is_active: true, metadata: {} });
 
   const { data: lists = [] } = useQuery({ queryKey: ["global-lists"], queryFn: () => api.globalLists.list() });
+
+  // Direkter Einstieg über die Navigation: Kategorie per list_key vorauswählen.
+  useEffect(() => {
+    if (!focusListKey) return;
+    const match = lists.find((l: GlobalList) => l.list_key === focusListKey);
+    setSelectedId(match ? match.id : null);
+  }, [focusListKey, lists]);
+
   const selected = lists.find((l: GlobalList) => l.id === selectedId) ?? null;
+
 
   const { data: attributes = [] } = useQuery({
     queryKey: ["master-data-attributes", selectedId],
