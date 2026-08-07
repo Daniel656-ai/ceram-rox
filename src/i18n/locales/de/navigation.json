@@ -23,5 +23,7 @@
   "batch_planning": "Batch-Planung",
   "bulk_samples": "Serien-Proben",
   "lab_planning": "Laborplanung",
-  "database": "Datenbank"
+  "database": "Datenbank",
+  "master_data": "Stammdaten",
+  "master_data_overview": "Übersicht"
 }

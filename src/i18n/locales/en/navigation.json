@@ -23,5 +23,7 @@
   "batch_planning": "Batch Planning",
   "bulk_samples": "Bulk Samples",
   "lab_planning": "Lab Planning",
-  "database": "Database"
+  "database": "Database",
+  "master_data": "Master Data",
+  "master_data_overview": "Overview"
 }
