@@ -12,6 +12,8 @@ import { Search, Boxes } from "lucide-react";
 import {
   GLOBAL_FIELD_TYPES,
   bindingPathFor,
+  readGlobalRepeaterMeta,
+  readGlobalRepeaterSubfields,
   globalTypeToFormFieldType,
   type GlobalField,
   type GlobalObject,
@@ -106,7 +108,8 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
           const items = await api.globalListItems.list(gf.list_id);
           options = items.map((i) => ({ label: i.label, value: i.item_value }));
         }
-        await api.formFields.create({
+        const isRepeater = gf.data_type === "repeater";
+        const created = await api.formFields.create({
           form_id: formId,
           field_key: gf.field_key,
           display_name: gf.display_name,
@@ -123,9 +126,37 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
             global_list_id: gf.list_id ?? null,
             global_calculation_id: gf.calculation_id ?? null,
             validation_ids: gf.validation_ids ?? [],
-            is_repeatable: !!gf.is_repeatable,
+            is_repeatable: isRepeater ? true : !!gf.is_repeatable,
+            ...(isRepeater
+              ? {
+                  repeater: {
+                    ...readGlobalRepeaterMeta(gf),
+                    storage_key: readGlobalRepeaterMeta(gf).storage_key || gf.field_key,
+                  },
+                }
+              : {}),
           },
         } as any);
+
+        // Repeater: Unterfelder aus der globalen Definition übernehmen.
+        if (isRepeater) {
+          const subs = readGlobalRepeaterSubfields(gf);
+          let subSort = 0;
+          for (const s of subs) {
+            await api.formFields.create({
+              form_id: formId,
+              field_key: s.field_key,
+              display_name: s.display_name,
+              field_type: globalTypeToFormFieldType(s.data_type) as any,
+              unit: s.unit ?? null,
+              is_required: !!s.is_required,
+              select_options: (s.select_options ?? []) as any,
+              parent_field_id: created.id,
+              sort_order: subSort++,
+            } as any);
+          }
+        }
+
       }
       return ids.length;
     },

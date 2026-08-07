@@ -25,9 +25,10 @@ export type GlobalFieldDataType =
   | "text" | "longtext" | "number" | "decimal" | "percent"
   | "date" | "time" | "datetime" | "boolean"
   | "select" | "multiselect"
-  | "file" | "image" | "reference" | "computed";
+  | "file" | "image" | "reference" | "computed" | "repeater";
 
 export type GlobalFieldSource = "manual" | "system" | "calculated" | "reference" | "device";
+
 
 export interface GlobalField {
   id: string;
@@ -76,7 +77,48 @@ export const GLOBAL_FIELD_TYPES: { value: GlobalFieldDataType; label: string }[]
   { value: "image", label: "Bild" },
   { value: "reference", label: "Referenz" },
   { value: "computed", label: "Berechnet" },
+  { value: "repeater", label: "Repeater / Unterliste (1:n)" },
 ];
+
+/** Unterfeld eines globalen Repeater-Feldes (in metadata.subfields gespeichert). */
+export interface GlobalRepeaterSubfield {
+  field_key: string;
+  display_name: string;
+  data_type: GlobalFieldDataType;
+  unit?: string | null;
+  is_required?: boolean;
+  select_options?: Array<string | { label: string; value: string }>;
+}
+
+/** Konfiguration eines globalen Repeater-Feldes (in metadata.repeater). */
+export interface GlobalRepeaterMeta {
+  min_entries?: number;
+  max_entries?: number;
+  item_label?: string;
+  add_label?: string;
+  storage_key?: string;
+}
+
+export const readGlobalRepeaterMeta = (
+  field: Pick<GlobalField, "metadata">
+): Required<Pick<GlobalRepeaterMeta, "min_entries" | "item_label" | "add_label">> & GlobalRepeaterMeta => {
+  const r = ((field.metadata ?? {}) as any).repeater ?? {};
+  return {
+    min_entries: typeof r.min_entries === "number" ? r.min_entries : 0,
+    max_entries: typeof r.max_entries === "number" ? r.max_entries : undefined,
+    item_label: typeof r.item_label === "string" ? r.item_label : "Eintrag",
+    add_label: typeof r.add_label === "string" ? r.add_label : "Eintrag hinzufügen",
+    storage_key: typeof r.storage_key === "string" && r.storage_key ? r.storage_key : undefined,
+  };
+};
+
+export const readGlobalRepeaterSubfields = (
+  field: Pick<GlobalField, "metadata">
+): GlobalRepeaterSubfield[] => {
+  const s = ((field.metadata ?? {}) as any).subfields;
+  return Array.isArray(s) ? (s as GlobalRepeaterSubfield[]) : [];
+};
+
 
 export const GLOBAL_FIELD_SOURCES: { value: GlobalFieldSource; label: string }[] = [
   { value: "manual", label: "Manuelle Eingabe" },
@@ -168,6 +210,8 @@ export const globalTypeToFormFieldType = (t: string): string => {
     percent: "percent", date: "date", time: "time", datetime: "datetime",
     boolean: "boolean", select: "select", multiselect: "multiselect",
     file: "file", image: "image", reference: "text", computed: "computed",
+    repeater: "repeater",
+
   };
   return map[t] ?? "text";
 };
