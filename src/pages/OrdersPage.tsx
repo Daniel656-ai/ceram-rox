@@ -264,16 +264,7 @@ export default function OrdersPage() {
                     {canShowActions && (
                       <TableCell>
                         <div className="flex items-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          title={t("orders:copy_order")}
-                          disabled={copyOrder.isPending}
-                          onClick={() => handleCopy(o.id)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        {/* Kopiervorschau temporär deaktiviert – siehe useCopyOrder/Hooks & API bleiben erhalten */}
                         {canDelete(o) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
