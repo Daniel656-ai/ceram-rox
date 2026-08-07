@@ -26,8 +26,12 @@ import {
   Sparkles,
   Briefcase,
   FormInput,
+  BookMarked,
 
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import type { GlobalList } from "@/lib/api/globalLibrary";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -78,6 +82,16 @@ export function AppSidebar() {
     { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: (hasPerm("measurements.view") || hasPerm("measurements.enter")) && role !== "auftraggeber", nav: "nav.lab_planning" },
     { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master", nav: "nav.calendar" },
   ].filter((item) => item.show && (item.nav === null || hasNavPerm(item.nav)));
+
+  // Stammdaten: Kategorien kommen aus der Datenbank – neue Listen erscheinen
+  // automatisch, ohne dass die Navigation angepasst werden muss.
+  const { data: masterDataLists = [] } = useQuery({
+    queryKey: ["global-lists"],
+    queryFn: () => api.globalLists.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const showMasterData = hasNavPerm("nav.master_data");
 
   const adminItems = [
     { title: t("navigation:users"), url: "/admin/benutzer", icon: Users, show: isAdmin, nav: "nav.admin.users" },
@@ -136,6 +150,43 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {showMasterData && (
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("navigation:master_data", "Stammdaten")}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to="/stammdaten"
+                      end
+                      className="hover:bg-sidebar-accent"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <BookMarked className="h-4 w-4" />
+                      <span>{t("navigation:master_data_overview", "Übersicht")}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {masterDataLists.map((l: GlobalList) => (
+                  <SidebarMenuItem key={l.id}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={`/stammdaten/${l.list_key}`}
+                        className="hover:bg-sidebar-accent"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      >
+                        <Layers className="h-4 w-4" />
+                        <span>{l.display_name}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {adminItems.length > 0 && (
           <SidebarGroup>

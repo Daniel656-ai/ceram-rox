@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,9 +85,13 @@ function formatValue(attr: GlobalListAttribute, v: unknown) {
   return `${v}${attr.unit ? ` ${attr.unit}` : ""}`;
 }
 
-export default function MasterDataSection() {
+export default function MasterDataSection({
+  focusListKey,
+  showCategoryList = true,
+}: { focusListKey?: string; showCategoryList?: boolean } = {}) {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
 
   const [listOpen, setListOpen] = useState(false);
   const [listDraft, setListDraft] = useState<{ id?: string; list_key: string; display_name: string; description: string; category: string }>(
@@ -104,7 +108,16 @@ export default function MasterDataSection() {
   }>({ item_value: "", label: "", description: "", sort_order: 0, is_active: true, metadata: {} });
 
   const { data: lists = [] } = useQuery({ queryKey: ["global-lists"], queryFn: () => api.globalLists.list() });
+
+  // Direkter Einstieg über die Navigation: Kategorie per list_key vorauswählen.
+  useEffect(() => {
+    if (!focusListKey) return;
+    const match = lists.find((l: GlobalList) => l.list_key === focusListKey);
+    setSelectedId(match ? match.id : null);
+  }, [focusListKey, lists]);
+
   const selected = lists.find((l: GlobalList) => l.id === selectedId) ?? null;
+
 
   const { data: attributes = [] } = useQuery({
     queryKey: ["master-data-attributes", selectedId],
@@ -246,7 +259,8 @@ export default function MasterDataSection() {
   });
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <div className={showCategoryList ? "grid gap-4 lg:grid-cols-[280px_1fr]" : "space-y-4"}>
+      {showCategoryList && (
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0 py-3">
           <CardTitle className="text-sm">Kategorien</CardTitle>
@@ -268,6 +282,8 @@ export default function MasterDataSection() {
           ))}
         </CardContent>
       </Card>
+      )}
+
 
       <div className="space-y-4">
         {!selected ? (
