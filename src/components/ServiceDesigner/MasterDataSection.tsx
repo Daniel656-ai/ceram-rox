@@ -259,7 +259,8 @@ export default function MasterDataSection({
   });
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <div className={showCategoryList ? "grid gap-4 lg:grid-cols-[280px_1fr]" : "space-y-4"}>
+      {showCategoryList && (
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0 py-3">
           <CardTitle className="text-sm">Kategorien</CardTitle>
@@ -281,6 +282,8 @@ export default function MasterDataSection({
           ))}
         </CardContent>
       </Card>
+      )}
+
 
       <div className="space-y-4">
         {!selected ? (
