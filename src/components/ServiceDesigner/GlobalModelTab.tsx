@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Plus, Boxes, Pencil, Archive, Search, Lock } from "lucide-react";
+import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 import {
   GLOBAL_FIELD_SOURCES,
   GLOBAL_FIELD_TYPES,
@@ -753,6 +754,21 @@ function GlobalRepeaterSettings({
           <Plus className="h-3 w-3 mr-1" /> Unterfeld hinzufügen
         </Button>
       </div>
+
+      {subfields.length > 0 && (
+        <div className="border-t pt-2">
+          <RepeaterLayoutDesigner
+            subfields={subfields.map((s) => ({
+              key: s.field_key, label: s.display_name, type: s.data_type, unit: s.unit,
+            }))}
+            value={meta.layout}
+            onChange={(layout) => setMeta({ layout })}
+          />
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Dieses Layout wird in jedem Formular verwendet, das diesen globalen Repeater referenziert.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,10 @@
 import { useMemo, useState, createContext, useContext, useCallback } from "react";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
+import {
+  normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass,
+  type RepeaterLayoutItem,
+} from "@/lib/repeaterLayout";
 import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -308,6 +312,7 @@ function RepeaterField({
             children={children}
             allFields={allFields}
             readonly={readonly}
+            layout={meta.layout}
             canRemove={canRemove && (!meta.min_entries || entries.length > meta.min_entries)}
             canReorder={interactive && !readonly}
             itemLabel={meta.item_label ?? "Eintrag"}
@@ -328,7 +333,7 @@ function RepeaterField({
 }
 
 function RepeaterEntry({
-  index, entry, children, allFields, readonly,
+  index, entry, children, allFields, readonly, layout,
   canRemove, canReorder, itemLabel,
   onChange, onRemove, onMoveUp, onMoveDown, onDuplicate,
 }: {
@@ -337,6 +342,7 @@ function RepeaterEntry({
   children: FormField[];
   allFields: FormField[];
   readonly: boolean;
+  layout?: unknown;
   canRemove: boolean;
   canReorder: boolean;
   itemLabel: string;
@@ -350,6 +356,46 @@ function RepeaterEntry({
     get: (k) => entry?.[k],
     set: (k, v) => onChange({ ...(entry ?? {}), [k]: v }),
   }), [entry, onChange]);
+
+  const keys = useMemo(() => children.map((c) => c.field_key), [children]);
+  const tree = useMemo(() => normalizeRepeaterLayout(layout, keys), [layout, keys]);
+  const byKey = useMemo(
+    () => Object.fromEntries(children.map((c) => [c.field_key, c])) as Record<string, FormField>,
+    [children]
+  );
+
+  const renderItem = (item: RepeaterLayoutItem): JSX.Element | null => {
+    if (item.type === "break") return <div key={item.id} className="col-span-12 h-0" />;
+    if (item.type === "spacer") return <div key={item.id} className={repeaterWidthClass(item.width)} />;
+    if (item.type === "heading") {
+      return (
+        <div key={item.id} className={cn(repeaterWidthClass(item.width), "text-xs font-semibold text-muted-foreground pt-1")}>
+          {item.text}
+        </div>
+      );
+    }
+    if (item.type === "group") {
+      return (
+        <div key={item.id} className={cn(repeaterWidthClass(item.width), "rounded border p-2 bg-muted/20")}>
+          {item.title && <p className="text-[11px] font-medium mb-2">{item.title}</p>}
+          <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
+            {item.children.map(renderItem)}
+          </div>
+        </div>
+      );
+    }
+    const cf = byKey[item.key];
+    if (!cf) return null;
+    return (
+      <div key={item.id} className={repeaterWidthClass(item.width)}>
+        <FieldWithLabel
+          field={cf}
+          node={{ id: `inline-${cf.id}`, type: "field", field_id: cf.id, width: 12 }}
+          allFields={allFields}
+        />
+      </div>
+    );
+  };
 
   return (
     <EntryScopeCtx.Provider value={scope}>
@@ -371,16 +417,8 @@ function RepeaterEntry({
             )}
           </div>
         </div>
-        <div className="grid grid-cols-12 gap-3">
-          {children.map((cf) => (
-            <div key={cf.id} className="col-span-12 md:col-span-6">
-              <FieldWithLabel
-                field={cf}
-                node={{ id: `inline-${cf.id}`, type: "field", field_id: cf.id, width: 12 }}
-                allFields={allFields}
-              />
-            </div>
-          ))}
+        <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
+          {tree.items.map(renderItem)}
           {children.length === 0 && (
             <p className="col-span-12 text-xs text-muted-foreground">
               Für diesen Repeater sind noch keine Unterfelder definiert.
