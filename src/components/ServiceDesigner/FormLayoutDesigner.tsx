@@ -668,7 +668,7 @@ function FieldInspector({
   );
 }
 
-function RepeaterConfigPanel({
+export function RepeaterConfigPanel({
   field, fields, disabled,
 }: { field: FormField; fields: FormField[]; disabled: boolean }) {
   const qc = useQueryClient();

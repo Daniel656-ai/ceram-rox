@@ -23,7 +23,7 @@ import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FormField, FormFieldType } from "@/lib/api/formFields";
 import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
-import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner";
+import FormLayoutDesigner, { RepeaterConfigPanel } from "@/components/ServiceDesigner/FormLayoutDesigner";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
@@ -54,12 +54,14 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: 
   ]},
   { label: "Berechnung", types: [{ value: "computed", label: "Berechnetes Feld (Formel)" }]},
   { label: "Rohstoffe", types: [{ value: "raw_material_recipe", label: "Rezeptur / Rohstoffliste (Auftraggeber)" }]},
+  { label: "Wiederholbare Gruppen", types: [
+    { value: "repeater", label: "Repeater (wiederholbare Einträge)" },
+  ]},
   { label: "Beziehungen", types: [
     { value: "ref_customer", label: "Kunde" }, { value: "ref_material", label: "Material" },
     { value: "ref_product", label: "Produkt" }, { value: "ref_machine", label: "Maschine" },
     { value: "ref_employee", label: "Mitarbeiter" }, { value: "ref_location", label: "Standort" },
     { value: "ref_batch", label: "Chargennummer" }, { value: "ref_serial", label: "Seriennummer" },
-    { value: "repeater", label: "Unterliste (1:n)" },
   ]},
 ];
 const ALL_TYPES = FIELD_TYPE_GROUPS.flatMap(g => g.types);
@@ -707,7 +709,7 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newType, setNewType] = useState<FormFieldType>("text");
-  const [editingField, setEditingField] = useState<FormField | null>(null);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
   const { data: fields = [] } = useQuery({
     queryKey: ["form-fields", form.id],
@@ -762,7 +764,7 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
             <Badge variant="outline" className="text-xs">{ALL_TYPES.find(t => t.value === f.field_type)?.label ?? f.field_type}</Badge>
             {f.is_required && <Badge variant="secondary" className="text-xs">Pflicht</Badge>}
             {f.unit && <Badge variant="outline" className="text-xs">{f.unit}</Badge>}
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingField(f)}><FormInput className="h-3 w-3" /></Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingFieldId(f.id)}><FormInput className="h-3 w-3" /></Button>
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { if (confirm(`Feld „${f.display_name}" entfernen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
           </div>
         ))}
@@ -804,13 +806,20 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
         </DialogContent>
       </Dialog>
 
-      {editingField && <FieldEditDialog field={editingField} onClose={() => setEditingField(null)} onSaved={invalidate} />}
+      {editingFieldId && fields.some(f => f.id === editingFieldId) && (
+        <FieldEditDialog
+          field={fields.find(f => f.id === editingFieldId)!}
+          allFields={fields}
+          onClose={() => setEditingFieldId(null)}
+          onSaved={invalidate}
+        />
+      )}
     </div>
   );
 }
 
 // ---------------- Field Detail Editor ----------------
-function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClose: () => void; onSaved: () => void }) {
+function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormField; allFields: FormField[]; onClose: () => void; onSaved: () => void }) {
   const [label, setLabel] = useState(field.display_name);
   const [key, setKey] = useState(field.field_key);
   const [desc, setDesc] = useState(field.description ?? "");
@@ -823,28 +832,67 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
   const [decimalPlaces, setDecimalPlaces] = useState(field.decimal_places?.toString() ?? "");
   const [minV, setMinV] = useState(field.min_value?.toString() ?? "");
   const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
+  const [fieldType, setFieldType] = useState<FormFieldType>(field.field_type);
 
-  const isNumeric = ["number", "decimal", "percent"].includes(field.field_type);
+  const isNumeric = ["number", "decimal", "percent"].includes(fieldType);
   const isGlobalRef = !!field.global_field_id;
-  const isSelect = ["select", "multiselect"].includes(field.field_type);
-  const isComputed = field.field_type === "computed";
+  const isSelect = ["select", "multiselect"].includes(fieldType);
+  const isComputed = fieldType === "computed";
+  const isRepeater = fieldType === "repeater";
+  const typeChanged = fieldType !== field.field_type;
+
+  const changeType = (next: FormFieldType) => {
+    if (next === fieldType) return;
+    const hadSpecifics =
+      (["select", "multiselect"].includes(fieldType) && selectOptions.trim() !== "") ||
+      (fieldType === "computed" && formula.trim() !== "") ||
+      (["number", "decimal", "percent"].includes(fieldType) && (minV || maxV || decimalPlaces)) ||
+      (fieldType === "repeater" && allFields.some(f => f.parent_field_id === field.id));
+    const nextKeepsSpecifics =
+      (["select", "multiselect"].includes(fieldType) && ["select", "multiselect"].includes(next)) ||
+      (["number", "decimal", "percent"].includes(fieldType) && ["number", "decimal", "percent"].includes(next));
+    if (hadSpecifics && !nextKeepsSpecifics) {
+      const ok = confirm(
+        "Beim Wechsel des Feldtyps werden die typspezifischen Einstellungen (Optionen, Formel, Grenzwerte bzw. Repeater-Unterfelder) zurückgesetzt.\n\nAllgemeine Eigenschaften bleiben erhalten. Fortfahren?"
+      );
+      if (!ok) return;
+      if (!["select", "multiselect"].includes(next)) setSelectOptions("");
+      if (next !== "computed") setFormula("");
+      if (!["number", "decimal", "percent"].includes(next)) { setMinV(""); setMaxV(""); setDecimalPlaces(""); }
+    }
+    setFieldType(next);
+  };
+
 
   const saveMut = useMutation({
-    mutationFn: () => api.formFields.update(field.id, {
-      display_name: label.trim(),
-      field_key: key.trim() || slugify(label),
-      description: desc.trim() || null,
-      unit: unit.trim() || null,
-      is_required: required,
-      readonly,
-      default_value: defaultValue.trim() || null,
-      formula: isComputed ? (formula.trim() || null) : null,
-      select_options: isSelect ? selectOptions.split("\n").map(l => l.trim()).filter(Boolean) : [],
-      decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
-      min_value: isNumeric && minV ? parseFloat(minV) : null,
-      max_value: isNumeric && maxV ? parseFloat(maxV) : null,
-    }),
-    onSuccess: () => { toast.success("Gespeichert"); onSaved(); onClose(); },
+    mutationFn: async () => {
+      if (typeChanged && field.field_type === "repeater") {
+        for (const c of allFields.filter(f => f.parent_field_id === field.id)) {
+          await api.formFields.remove(c.id);
+        }
+      }
+      return api.formFields.update(field.id, {
+        display_name: label.trim(),
+        field_key: key.trim() || slugify(label),
+        field_type: fieldType,
+        description: desc.trim() || null,
+        unit: unit.trim() || null,
+        is_required: required,
+        readonly,
+        default_value: defaultValue.trim() || null,
+        formula: isComputed ? (formula.trim() || null) : null,
+        select_options: isSelect ? selectOptions.split("\n").map(l => l.trim()).filter(Boolean) : [],
+        decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
+        min_value: isNumeric && minV ? parseFloat(minV) : null,
+        max_value: isNumeric && maxV ? parseFloat(maxV) : null,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Gespeichert");
+      onSaved();
+      // Beim Wechsel auf Repeater geöffnet lassen, damit die Repeater-Einstellungen direkt konfiguriert werden können.
+      if (!(typeChanged && fieldType === "repeater")) onClose();
+    },
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
@@ -864,6 +912,25 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Bezeichnung</Label><Input value={label} disabled={isGlobalRef} onChange={e => setLabel(e.target.value)} /></div>
             <div><Label>Schlüssel</Label><Input value={key} disabled={isGlobalRef} onChange={e => setKey(e.target.value)} /></div>
+          </div>
+          <div>
+            <Label>Feldtyp</Label>
+            <Select value={fieldType} onValueChange={(v: FormFieldType) => changeType(v)} disabled={isGlobalRef}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-96">
+                {FIELD_TYPE_GROUPS.map(g => (
+                  <div key={g.label}>
+                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">{g.label}</div>
+                    {g.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+            {typeChanged && (
+              <p className="text-xs text-amber-600 mt-1">
+                Typänderung wird beim Speichern übernommen. Allgemeine Eigenschaften bleiben erhalten.
+              </p>
+            )}
           </div>
           <div><Label>Beschreibung</Label><Textarea value={desc} disabled={isGlobalRef} onChange={e => setDesc(e.target.value)} rows={2} /></div>
           <div className="grid grid-cols-3 gap-3">
@@ -892,6 +959,16 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
               <Textarea value={formula} disabled={isGlobalRef} onChange={e => setFormula(e.target.value)} rows={3} placeholder="z.B. ROUND((laenge * breite) / 100, 2)" className="font-mono text-sm" />
               <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
             </div>
+          )}
+          {isRepeater && (
+            field.field_type === "repeater" ? (
+              <RepeaterConfigPanel field={field} fields={allFields} disabled={isGlobalRef} />
+            ) : (
+              <p className="text-xs text-muted-foreground border-t pt-3">
+                Nach dem Speichern erscheinen hier die Repeater-Einstellungen (Min./Max., Eintrag-Label,
+                Button-Text, Storage-Key und Unterfelder).
+              </p>
+            )
           )}
         </div>
         <DialogFooter>
