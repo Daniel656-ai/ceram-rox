@@ -887,7 +887,12 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
         max_value: isNumeric && maxV ? parseFloat(maxV) : null,
       });
     },
-    onSuccess: () => { toast.success("Gespeichert"); onSaved(); onClose(); },
+    onSuccess: () => {
+      toast.success("Gespeichert");
+      onSaved();
+      // Beim Wechsel auf Repeater geöffnet lassen, damit die Repeater-Einstellungen direkt konfiguriert werden können.
+      if (!(typeChanged && fieldType === "repeater")) onClose();
+    },
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
