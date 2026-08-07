@@ -819,7 +819,7 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
 }
 
 // ---------------- Field Detail Editor ----------------
-function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClose: () => void; onSaved: () => void }) {
+function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormField; allFields: FormField[]; onClose: () => void; onSaved: () => void }) {
   const [label, setLabel] = useState(field.display_name);
   const [key, setKey] = useState(field.field_key);
   const [desc, setDesc] = useState(field.description ?? "");
@@ -832,11 +832,37 @@ function FieldEditDialog({ field, onClose, onSaved }: { field: FormField; onClos
   const [decimalPlaces, setDecimalPlaces] = useState(field.decimal_places?.toString() ?? "");
   const [minV, setMinV] = useState(field.min_value?.toString() ?? "");
   const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
+  const [fieldType, setFieldType] = useState<FormFieldType>(field.field_type);
 
-  const isNumeric = ["number", "decimal", "percent"].includes(field.field_type);
+  const isNumeric = ["number", "decimal", "percent"].includes(fieldType);
   const isGlobalRef = !!field.global_field_id;
-  const isSelect = ["select", "multiselect"].includes(field.field_type);
-  const isComputed = field.field_type === "computed";
+  const isSelect = ["select", "multiselect"].includes(fieldType);
+  const isComputed = fieldType === "computed";
+  const isRepeater = fieldType === "repeater";
+  const typeChanged = fieldType !== field.field_type;
+
+  const changeType = (next: FormFieldType) => {
+    if (next === fieldType) return;
+    const hadSpecifics =
+      (["select", "multiselect"].includes(fieldType) && selectOptions.trim() !== "") ||
+      (fieldType === "computed" && formula.trim() !== "") ||
+      (["number", "decimal", "percent"].includes(fieldType) && (minV || maxV || decimalPlaces)) ||
+      (fieldType === "repeater" && allFields.some(f => f.parent_field_id === field.id));
+    const nextKeepsSpecifics =
+      (["select", "multiselect"].includes(fieldType) && ["select", "multiselect"].includes(next)) ||
+      (["number", "decimal", "percent"].includes(fieldType) && ["number", "decimal", "percent"].includes(next));
+    if (hadSpecifics && !nextKeepsSpecifics) {
+      const ok = confirm(
+        "Beim Wechsel des Feldtyps werden die typspezifischen Einstellungen (Optionen, Formel, Grenzwerte bzw. Repeater-Unterfelder) zurückgesetzt.\n\nAllgemeine Eigenschaften bleiben erhalten. Fortfahren?"
+      );
+      if (!ok) return;
+      if (!["select", "multiselect"].includes(next)) setSelectOptions("");
+      if (next !== "computed") setFormula("");
+      if (!["number", "decimal", "percent"].includes(next)) { setMinV(""); setMaxV(""); setDecimalPlaces(""); }
+    }
+    setFieldType(next);
+  };
+
 
   const saveMut = useMutation({
     mutationFn: () => api.formFields.update(field.id, {
