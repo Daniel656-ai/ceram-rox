@@ -23,7 +23,7 @@ import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FormField, FormFieldType } from "@/lib/api/formFields";
 import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
-import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner";
+import FormLayoutDesigner, { RepeaterConfigPanel } from "@/components/ServiceDesigner/FormLayoutDesigner";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
@@ -709,7 +709,7 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newType, setNewType] = useState<FormFieldType>("text");
-  const [editingField, setEditingField] = useState<FormField | null>(null);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
   const { data: fields = [] } = useQuery({
     queryKey: ["form-fields", form.id],
