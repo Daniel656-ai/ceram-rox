@@ -121,6 +121,10 @@ const App = () => (
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
               <Route path="/rohstoffe/scan" element={<ContainerScanPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
+              <Route path="/stammdaten" element={<MasterDataPage />} />
+              <Route path="/stammdaten/:listKey" element={<MasterDataPage />} />
+              
+
               
               <Route path="/laborplanung" element={<LabPlanningPage />} />
               <Route path="/mischungen" element={<MixturesPage />} />
