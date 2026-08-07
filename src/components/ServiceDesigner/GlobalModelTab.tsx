@@ -555,16 +555,27 @@ export default function GlobalModelTab() {
                 })}
               </div>
             </div>
-            <div className="sm:col-span-2">
-              <label className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={fieldDraft.is_repeatable}
-                  onChange={(e) => setFieldDraft({ ...fieldDraft, is_repeatable: e.target.checked })}
+            {fieldDraft.data_type !== "repeater" && (
+              <div className="sm:col-span-2">
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={fieldDraft.is_repeatable}
+                    onChange={(e) => setFieldDraft({ ...fieldDraft, is_repeatable: e.target.checked })}
+                  />
+                  Wiederholbar (mehrere Proben, Messungen, Rohstoffe, Bilder – ohne feste Zeilenanzahl)
+                </label>
+              </div>
+            )}
+            {fieldDraft.data_type === "repeater" && (
+              <div className="sm:col-span-2">
+                <GlobalRepeaterSettings
+                  draft={fieldDraft}
+                  onChange={(patch) => setFieldDraft({ ...fieldDraft, ...patch })}
                 />
-                Wiederholbar (mehrere Proben, Messungen, Rohstoffe, Bilder – ohne feste Zeilenanzahl)
-              </label>
-            </div>
+              </div>
+            )}
+
             <div className="sm:col-span-2">
               <Label className="text-xs">Beschreibung</Label>
               <Textarea rows={2} value={fieldDraft.description} onChange={(e) => setFieldDraft({ ...fieldDraft, description: e.target.value })} />
