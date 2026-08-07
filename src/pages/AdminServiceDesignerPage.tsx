@@ -54,12 +54,14 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: 
   ]},
   { label: "Berechnung", types: [{ value: "computed", label: "Berechnetes Feld (Formel)" }]},
   { label: "Rohstoffe", types: [{ value: "raw_material_recipe", label: "Rezeptur / Rohstoffliste (Auftraggeber)" }]},
+  { label: "Wiederholbare Gruppen", types: [
+    { value: "repeater", label: "Repeater (wiederholbare Einträge)" },
+  ]},
   { label: "Beziehungen", types: [
     { value: "ref_customer", label: "Kunde" }, { value: "ref_material", label: "Material" },
     { value: "ref_product", label: "Produkt" }, { value: "ref_machine", label: "Maschine" },
     { value: "ref_employee", label: "Mitarbeiter" }, { value: "ref_location", label: "Standort" },
     { value: "ref_batch", label: "Chargennummer" }, { value: "ref_serial", label: "Seriennummer" },
-    { value: "repeater", label: "Unterliste (1:n)" },
   ]},
 ];
 const ALL_TYPES = FIELD_TYPE_GROUPS.flatMap(g => g.types);
