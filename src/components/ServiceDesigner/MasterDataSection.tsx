@@ -85,9 +85,13 @@ function formatValue(attr: GlobalListAttribute, v: unknown) {
   return `${v}${attr.unit ? ` ${attr.unit}` : ""}`;
 }
 
-export default function MasterDataSection() {
+export default function MasterDataSection({
+  focusListKey,
+  showCategoryList = true,
+}: { focusListKey?: string; showCategoryList?: boolean } = {}) {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
 
   const [listOpen, setListOpen] = useState(false);
   const [listDraft, setListDraft] = useState<{ id?: string; list_key: string; display_name: string; description: string; category: string }>(
