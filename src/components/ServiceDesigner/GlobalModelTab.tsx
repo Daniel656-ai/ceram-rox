@@ -167,7 +167,10 @@ export default function GlobalModelTab() {
         list_id: fieldDraft.list_id,
         calculation_id: fieldDraft.calculation_id,
         validation_ids: fieldDraft.validation_ids,
-        is_repeatable: fieldDraft.is_repeatable,
+        is_repeatable: fieldDraft.data_type === "repeater" ? true : fieldDraft.is_repeatable,
+        metadata: (fieldDraft.data_type === "repeater"
+          ? { repeater: fieldDraft.repeater, subfields: fieldDraft.subfields }
+          : {}) as any,
       };
       if (fieldDraft.id) {
         const current = fields.find((f) => f.id === fieldDraft.id);
