@@ -44,6 +44,8 @@ type FieldDraft = {
   calculation_id: string | null;
   validation_ids: string[];
   is_repeatable: boolean;
+  repeater: GlobalRepeaterMeta;
+  subfields: GlobalRepeaterSubfield[];
 };
 
 const emptyField: FieldDraft = {
@@ -51,7 +53,26 @@ const emptyField: FieldDraft = {
   field_key: "", display_name: "", description: "", data_type: "text",
   category: "", unit: "", default_value: "", data_source: "manual",
   list_id: null, calculation_id: null, validation_ids: [], is_repeatable: false,
+  repeater: { min_entries: 0, item_label: "Eintrag", add_label: "Eintrag hinzufügen" },
+  subfields: [],
 };
+
+const SUBFIELD_TYPES = [
+  { value: "text", label: "Text" },
+  { value: "longtext", label: "Mehrzeiliger Text" },
+  { value: "number", label: "Zahl" },
+  { value: "decimal", label: "Dezimalzahl" },
+  { value: "percent", label: "Prozent" },
+  { value: "date", label: "Datum" },
+  { value: "time", label: "Uhrzeit" },
+  { value: "datetime", label: "Datum & Uhrzeit" },
+  { value: "boolean", label: "Ja/Nein (Checkbox)" },
+  { value: "select", label: "Dropdown" },
+  { value: "multiselect", label: "Mehrfachauswahl" },
+  { value: "file", label: "Datei" },
+  { value: "image", label: "Bild" },
+];
+
 
 
 const NONE = "__none__";
