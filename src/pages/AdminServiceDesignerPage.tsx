@@ -764,7 +764,7 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
             <Badge variant="outline" className="text-xs">{ALL_TYPES.find(t => t.value === f.field_type)?.label ?? f.field_type}</Badge>
             {f.is_required && <Badge variant="secondary" className="text-xs">Pflicht</Badge>}
             {f.unit && <Badge variant="outline" className="text-xs">{f.unit}</Badge>}
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingField(f)}><FormInput className="h-3 w-3" /></Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingFieldId(f.id)}><FormInput className="h-3 w-3" /></Button>
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { if (confirm(`Feld „${f.display_name}" entfernen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
           </div>
         ))}
@@ -806,7 +806,14 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
         </DialogContent>
       </Dialog>
 
-      {editingField && <FieldEditDialog field={editingField} onClose={() => setEditingField(null)} onSaved={invalidate} />}
+      {editingFieldId && fields.some(f => f.id === editingFieldId) && (
+        <FieldEditDialog
+          field={fields.find(f => f.id === editingFieldId)!}
+          allFields={fields}
+          onClose={() => setEditingFieldId(null)}
+          onSaved={invalidate}
+        />
+      )}
     </div>
   );
 }
