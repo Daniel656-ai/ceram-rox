@@ -913,6 +913,25 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
             <div><Label>Bezeichnung</Label><Input value={label} disabled={isGlobalRef} onChange={e => setLabel(e.target.value)} /></div>
             <div><Label>Schlüssel</Label><Input value={key} disabled={isGlobalRef} onChange={e => setKey(e.target.value)} /></div>
           </div>
+          <div>
+            <Label>Feldtyp</Label>
+            <Select value={fieldType} onValueChange={(v: FormFieldType) => changeType(v)} disabled={isGlobalRef}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-96">
+                {FIELD_TYPE_GROUPS.map(g => (
+                  <div key={g.label}>
+                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">{g.label}</div>
+                    {g.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+            {typeChanged && (
+              <p className="text-xs text-amber-600 mt-1">
+                Typänderung wird beim Speichern übernommen. Allgemeine Eigenschaften bleiben erhalten.
+              </p>
+            )}
+          </div>
           <div><Label>Beschreibung</Label><Textarea value={desc} disabled={isGlobalRef} onChange={e => setDesc(e.target.value)} rows={2} /></div>
           <div className="grid grid-cols-3 gap-3">
             <div><Label>Einheit</Label><Input value={unit} disabled={isGlobalRef} onChange={e => setUnit(e.target.value)} placeholder="z.B. mm, °C" /></div>
