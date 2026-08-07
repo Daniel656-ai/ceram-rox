@@ -31,6 +31,7 @@ import {
   GripVertical, FolderTree, Folders, Plus, Rows,
 } from "lucide-react";
 import FormLayoutRenderer from "./FormLayoutRenderer";
+import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 import SystemVariablesPanel from "./SystemVariablesPanel";
 
 // ---------- palette ----------
@@ -771,6 +772,17 @@ export function RepeaterConfigPanel({
           </div>
         )}
       </div>
+
+      {children.length > 0 && (
+        <div className="pt-2 border-t">
+          <RepeaterLayoutDesigner
+            subfields={children.map((c) => ({ key: c.field_key, label: c.display_name, type: c.field_type, unit: c.unit }))}
+            value={meta.layout}
+            disabled={disabled}
+            onChange={(layout) => saveMeta({ layout })}
+          />
+        </div>
+      )}
     </div>
   );
 }
