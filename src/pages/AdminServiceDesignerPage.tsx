@@ -865,20 +865,28 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
 
 
   const saveMut = useMutation({
-    mutationFn: () => api.formFields.update(field.id, {
-      display_name: label.trim(),
-      field_key: key.trim() || slugify(label),
-      description: desc.trim() || null,
-      unit: unit.trim() || null,
-      is_required: required,
-      readonly,
-      default_value: defaultValue.trim() || null,
-      formula: isComputed ? (formula.trim() || null) : null,
-      select_options: isSelect ? selectOptions.split("\n").map(l => l.trim()).filter(Boolean) : [],
-      decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
-      min_value: isNumeric && minV ? parseFloat(minV) : null,
-      max_value: isNumeric && maxV ? parseFloat(maxV) : null,
-    }),
+    mutationFn: async () => {
+      if (typeChanged && field.field_type === "repeater") {
+        for (const c of allFields.filter(f => f.parent_field_id === field.id)) {
+          await api.formFields.remove(c.id);
+        }
+      }
+      return api.formFields.update(field.id, {
+        display_name: label.trim(),
+        field_key: key.trim() || slugify(label),
+        field_type: fieldType,
+        description: desc.trim() || null,
+        unit: unit.trim() || null,
+        is_required: required,
+        readonly,
+        default_value: defaultValue.trim() || null,
+        formula: isComputed ? (formula.trim() || null) : null,
+        select_options: isSelect ? selectOptions.split("\n").map(l => l.trim()).filter(Boolean) : [],
+        decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
+        min_value: isNumeric && minV ? parseFloat(minV) : null,
+        max_value: isNumeric && maxV ? parseFloat(maxV) : null,
+      });
+    },
     onSuccess: () => { toast.success("Gespeichert"); onSaved(); onClose(); },
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
