@@ -960,6 +960,16 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
               <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
             </div>
           )}
+          {isRepeater && (
+            field.field_type === "repeater" ? (
+              <RepeaterConfigPanel field={field} fields={allFields} disabled={isGlobalRef} />
+            ) : (
+              <p className="text-xs text-muted-foreground border-t pt-3">
+                Nach dem Speichern erscheinen hier die Repeater-Einstellungen (Min./Max., Eintrag-Label,
+                Button-Text, Storage-Key und Unterfelder).
+              </p>
+            )
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
