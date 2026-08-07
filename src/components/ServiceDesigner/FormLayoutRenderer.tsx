@@ -1,6 +1,10 @@
 import { useMemo, useState, createContext, useContext, useCallback } from "react";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
+import {
+  normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass,
+  type RepeaterLayoutItem,
+} from "@/lib/repeaterLayout";
 import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
