@@ -12,6 +12,8 @@ import { Search, Boxes } from "lucide-react";
 import {
   GLOBAL_FIELD_TYPES,
   bindingPathFor,
+  readGlobalRepeaterMeta,
+  readGlobalRepeaterSubfields,
   globalTypeToFormFieldType,
   type GlobalField,
   type GlobalObject,
