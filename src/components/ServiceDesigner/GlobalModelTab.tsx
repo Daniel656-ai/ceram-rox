@@ -15,6 +15,10 @@ import { Plus, Boxes, Pencil, Archive, Search, Lock } from "lucide-react";
 import {
   GLOBAL_FIELD_SOURCES,
   GLOBAL_FIELD_TYPES,
+  readGlobalRepeaterMeta,
+  readGlobalRepeaterSubfields,
+  type GlobalRepeaterMeta,
+  type GlobalRepeaterSubfield,
   type GlobalField,
   type GlobalObject,
 } from "@/lib/api/globalModel";
