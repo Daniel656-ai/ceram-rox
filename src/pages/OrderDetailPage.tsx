@@ -248,9 +248,7 @@ function OrderDetailPageInner() {
         )}
         {(order as any).workflow_status && <WorkflowStatusBadge status={(order as any).workflow_status} />}
         <StatusBadge status={order.status} />
-        <Button variant="outline" size="sm" onClick={handleCopyOrder} disabled={copyOrder.isPending}>
-          <Copy className="h-4 w-4 mr-1" /> Kopieren
-        </Button>
+        {/* Kopierfunktion temporär deaktiviert – Handler/Hook bleiben erhalten */}
         {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={openEditDialog}>
@@ -281,7 +279,7 @@ function OrderDetailPageInner() {
         )}
       </div>
 
-      {isCopy && (
+      {false && isCopy && (
         <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
