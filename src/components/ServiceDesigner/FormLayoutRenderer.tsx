@@ -312,6 +312,7 @@ function RepeaterField({
             children={children}
             allFields={allFields}
             readonly={readonly}
+            layout={meta.layout}
             canRemove={canRemove && (!meta.min_entries || entries.length > meta.min_entries)}
             canReorder={interactive && !readonly}
             itemLabel={meta.item_label ?? "Eintrag"}
