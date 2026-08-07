@@ -48,6 +48,8 @@ export interface RepeaterMeta {
   add_label?: string;
   /** Storage key used to persist entries in shared_form_data. Falls back to field_key. */
   storage_key?: string;
+  /** Freies Layout der Unterfelder (siehe src/lib/repeaterLayout.ts). */
+  layout?: unknown;
 }
 
 export const readRepeaterMeta = (field: FormField): RepeaterMeta => {
@@ -59,6 +61,7 @@ export const readRepeaterMeta = (field: FormField): RepeaterMeta => {
     item_label: typeof r.item_label === "string" ? r.item_label : "Eintrag",
     add_label: typeof r.add_label === "string" ? r.add_label : "Eintrag hinzufügen",
     storage_key: typeof r.storage_key === "string" ? r.storage_key : undefined,
+    layout: r.layout ?? null,
   };
 };
 

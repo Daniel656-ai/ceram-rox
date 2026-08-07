@@ -97,6 +97,8 @@ export interface GlobalRepeaterMeta {
   item_label?: string;
   add_label?: string;
   storage_key?: string;
+  /** Freies Layout der Unterfelder (siehe src/lib/repeaterLayout.ts). */
+  layout?: unknown;
 }
 
 export const readGlobalRepeaterMeta = (
@@ -109,6 +111,7 @@ export const readGlobalRepeaterMeta = (
     item_label: typeof r.item_label === "string" ? r.item_label : "Eintrag",
     add_label: typeof r.add_label === "string" ? r.add_label : "Eintrag hinzufügen",
     storage_key: typeof r.storage_key === "string" && r.storage_key ? r.storage_key : undefined,
+    layout: r.layout ?? null,
   };
 };
 
