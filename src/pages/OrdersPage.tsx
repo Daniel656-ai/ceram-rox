@@ -83,11 +83,6 @@ export default function OrdersPage() {
   };
 
 
-  if (role === "durchfuehrer") {
-    return <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />;
-  }
-
-
   const visibleOrders = orders;
 
   const filtered = useMemo(() => {
