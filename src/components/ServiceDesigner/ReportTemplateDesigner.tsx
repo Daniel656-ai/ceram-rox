@@ -8,22 +8,49 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Heading1, Type, Table as TableIcon, Image as ImageIcon, QrCode, Barcode,
-  Minus, PenTool, ArrowUp, ArrowDown, Trash2, Plus, Repeat, FileImage,
-  PanelTop, PanelBottom, Save, Eye, Code2,
+  Minus, PenTool, Trash2, Plus, Repeat, FileImage, GripVertical, Tag as TagIcon,
+  PanelTop, PanelBottom, Save, Eye, Code2, EyeOff,
 } from "lucide-react";
-import { PLACEHOLDER_CATALOG, replaceTokens, resolvePath, SAMPLE_SNAPSHOT, formatPlaceholderValue } from "@/lib/reportPlaceholders";
+import { replaceTokens, resolvePath, SAMPLE_SNAPSHOT, formatPlaceholderValue } from "@/lib/reportPlaceholders";
+import ReportFieldPicker from "./ReportFieldPicker";
+import { useReportFieldCatalog } from "@/hooks/useReportFieldCatalog";
+import {
+  resolveReportPath, formatReportValue, sampleValueFor,
+  type ReportFieldGroup, type ReportFieldItem, type ReportNumberFormat,
+} from "@/lib/reportFieldCatalog";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy, arrayMove, useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ---------- Block-Schema ----------
 export type ReportBlock =
   | { id: string; type: "heading"; text: string; level: 1 | 2 | 3 }
   | { id: string; type: "text"; content: string }
+  | {
+      id: string; type: "field";
+      /** Pfad in der bestehenden Datenquelle, z.B. "customer_form.v2o5". */
+      path: string;
+      /** Anzeigename – frei überschreibbar. */
+      label: string;
+      /** Herkunft (nur Anzeige). */
+      sourceLabel?: string;
+      format?: ReportNumberFormat;
+      unit?: string | null;
+      showUnit?: boolean;
+      hideIfEmpty?: boolean;
+      hidden?: boolean;
+      inline?: boolean;
+    }
   | { id: string; type: "table"; title?: string; columns: { header: string; value: string }[]; rows: string[][] }
   | { id: string; type: "repeater"; title?: string; sourcePath: string; columns: { header: string; path: string }[] }
   | { id: string; type: "image"; dataUrl?: string; caption?: string; widthPercent?: number }
@@ -44,7 +71,7 @@ const EMPTY: ReportTemplate = { header: "", footer: "Seite {{Version}} · {{Firm
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
-const BLOCK_LIBRARY: { type: ReportBlock["type"]; label: string; icon: any; make: () => ReportBlock }[] = [
+const BLOCK_LIBRARY: { type: Exclude<ReportBlock["type"], "field">; label: string; icon: any; make: () => ReportBlock }[] = [
   { type: "heading", label: "Überschrift", icon: Heading1, make: () => ({ id: uid(), type: "heading", text: "Neue Überschrift", level: 2 }) },
   { type: "text", label: "Text / Absatz", icon: Type, make: () => ({ id: uid(), type: "text", content: "Text mit {{Auftragsnummer}} und {{Kunde}}." }) },
   { type: "table", label: "Tabelle (statisch)", icon: TableIcon, make: () => ({ id: uid(), type: "table", title: "Tabelle", columns: [{ header: "Feld", value: "" }, { header: "Wert", value: "" }], rows: [["", ""]] }) },
@@ -56,6 +83,33 @@ const BLOCK_LIBRARY: { type: ReportBlock["type"]; label: string; icon: any; make
   { type: "pagebreak", label: "Seitenumbruch", icon: Minus, make: () => ({ id: uid(), type: "pagebreak" }) },
   { type: "signature", label: "Unterschrift", icon: PenTool, make: () => ({ id: uid(), type: "signature", label: "Unterschrift" }) },
 ];
+
+const FORMAT_OPTIONS: { value: ReportNumberFormat; label: string }[] = [
+  { value: "auto", label: "Automatisch" },
+  { value: "0", label: "Ganzzahl (0)" },
+  { value: "0.0", label: "1 Nachkommastelle (0,0)" },
+  { value: "0.00", label: "2 Nachkommastellen (0,00)" },
+  { value: "0.000", label: "3 Nachkommastellen (0,000)" },
+  { value: "date", label: "Datum" },
+  { value: "datetime", label: "Datum & Uhrzeit" },
+  { value: "time", label: "Uhrzeit" },
+];
+
+function makeFieldBlock(item: ReportFieldItem): ReportBlock {
+  if (item.kind === "repeater") {
+    const cols = (item.subfields ?? []).map((s) => ({ header: s.label, path: s.key }));
+    return {
+      id: uid(), type: "repeater", title: item.label, sourcePath: item.path,
+      columns: cols.length ? cols : [{ header: "Wert", path: "value" }],
+    };
+  }
+  return {
+    id: uid(), type: "field", path: item.path, label: item.label,
+    sourceLabel: item.sourceLabel, format: "auto", unit: item.unit ?? null,
+    showUnit: !!item.unit, hideIfEmpty: false, hidden: false, inline: true,
+  };
+}
+
 
 // ---------- Designer-Komponente ----------
 export default function ReportTemplateDesigner({ template }: { template: ProcessTemplate }) {
@@ -74,7 +128,15 @@ export default function ReportTemplateDesigner({ template }: { template: Process
 
   const selected = doc.blocks.find(b => b.id === selectedId) ?? null;
 
-  const addBlock = (type: ReportBlock["type"]) => {
+  const { data: catalog = [], isLoading: catalogLoading } = useReportFieldCatalog(template.id);
+  const repeaterOptions = useMemo(
+    () => catalog.flatMap(g => g.items.filter(i => i.kind === "repeater")),
+    [catalog]
+  );
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const addBlock = (type: Exclude<ReportBlock["type"], "field">) => {
     const factory = BLOCK_LIBRARY.find(b => b.type === type)!;
     const nb = factory.make();
     setDoc(d => ({ ...d, blocks: [...d.blocks, nb] }));
@@ -83,17 +145,36 @@ export default function ReportTemplateDesigner({ template }: { template: Process
   const updateBlock = (id: string, patch: Partial<ReportBlock>) => {
     setDoc(d => ({ ...d, blocks: d.blocks.map(b => b.id === id ? { ...b, ...patch } as ReportBlock : b) }));
   };
-  const moveBlock = (id: string, dir: -1 | 1) => {
-    const idx = doc.blocks.findIndex(b => b.id === id);
-    const target = idx + dir;
-    if (idx < 0 || target < 0 || target >= doc.blocks.length) return;
-    const next = [...doc.blocks];
-    [next[idx], next[target]] = [next[target], next[idx]];
-    setDoc(d => ({ ...d, blocks: next }));
-  };
   const removeBlock = (id: string) => {
     setDoc(d => ({ ...d, blocks: d.blocks.filter(b => b.id !== id) }));
     if (selectedId === id) setSelectedId(null);
+  };
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setDoc(d => {
+      const from = d.blocks.findIndex(b => b.id === active.id);
+      const to = d.blocks.findIndex(b => b.id === over.id);
+      if (from < 0 || to < 0) return d;
+      return { ...d, blocks: arrayMove(d.blocks, from, to) };
+    });
+  };
+  const insertFieldBlock = (item: ReportFieldItem) => {
+    const nb = makeFieldBlock(item);
+    setDoc(d => {
+      const idx = d.blocks.findIndex(b => b.id === selectedId);
+      const blocks = [...d.blocks];
+      blocks.splice(idx >= 0 ? idx + 1 : blocks.length, 0, nb);
+      return { ...d, blocks };
+    });
+    setSelectedId(nb.id);
+  };
+  const insertToken = (item: ReportFieldItem) => {
+    if (!selected || (selected.type !== "text" && selected.type !== "heading" && selected.type !== "qr" && selected.type !== "barcode")) {
+      toast.info("Bitte zuerst einen Text-, Überschrift-, QR- oder Barcode-Baustein auswählen");
+      return;
+    }
+    insertTokenIntoBlock(selected, `{{${item.path}}}`, (p) => updateBlock(selected.id, p));
   };
 
   return (
@@ -101,6 +182,13 @@ export default function ReportTemplateDesigner({ template }: { template: Process
       {/* Toolbar */}
       <Card>
         <CardContent className="p-3 flex flex-wrap items-center gap-2">
+          <ReportFieldPicker
+            groups={catalog}
+            isLoading={catalogLoading}
+            onInsertField={insertFieldBlock}
+            onInsertToken={insertToken}
+          />
+          <Separator orientation="vertical" className="h-6" />
           {BLOCK_LIBRARY.map(({ type, label, icon: Icon }) => (
             <Button key={type} size="sm" variant="outline" onClick={() => addBlock(type)}>
               <Icon className="h-3.5 w-3.5 mr-1" />{label}
@@ -146,29 +234,32 @@ export default function ReportTemplateDesigner({ template }: { template: Process
             </CardContent>
           </Card>
 
-          {/* Blockliste */}
+          {/* Blockliste (frei sortierbar) */}
           <Card className="col-span-12 md:col-span-5">
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Bausteine</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Bausteine</CardTitle>
+              <p className="text-[11px] text-muted-foreground">Reihenfolge per Drag &amp; Drop frei anpassbar.</p>
+            </CardHeader>
             <CardContent className="p-2 space-y-1">
               {doc.blocks.length === 0 && (
                 <div className="text-sm text-muted-foreground p-4 text-center">
-                  Noch keine Bausteine. Fügen Sie oben Bausteine hinzu.
+                  Noch keine Bausteine. Fügen Sie oben Felder oder Bausteine hinzu.
                 </div>
               )}
-              {doc.blocks.map((b, i) => (
-                <div key={b.id} className={`flex items-center gap-1 p-2 rounded border ${selectedId === b.id ? "border-primary bg-accent/40" : "border-border"}`}>
-                  <button className="flex-1 text-left text-sm" onClick={() => setSelectedId(b.id)}>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">{i + 1}</Badge>
-                      <span className="font-medium">{blockLabel(b)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">{blockSummary(b)}</div>
-                  </button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={i === 0} onClick={() => moveBlock(b.id, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={i === doc.blocks.length - 1} onClick={() => moveBlock(b.id, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeBlock(b.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                </div>
-              ))}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <SortableContext items={doc.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                  {doc.blocks.map((b, i) => (
+                    <SortableBlockRow
+                      key={b.id}
+                      block={b}
+                      index={i}
+                      selected={selectedId === b.id}
+                      onSelect={() => setSelectedId(b.id)}
+                      onRemove={() => removeBlock(b.id)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </CardContent>
           </Card>
 
@@ -176,23 +267,66 @@ export default function ReportTemplateDesigner({ template }: { template: Process
           <Card className="col-span-12 md:col-span-7">
             <CardHeader className="pb-2 flex-row items-center justify-between">
               <CardTitle className="text-sm">Eigenschaften</CardTitle>
-              <PlaceholderPicker onInsert={(token) => {
-                if (!selected) { toast.info("Zuerst Baustein auswählen"); return; }
-                insertTokenIntoBlock(selected, token, (p) => updateBlock(selected.id, p));
-              }} />
+              <ReportFieldPicker
+                groups={catalog}
+                isLoading={catalogLoading}
+                onInsertField={insertFieldBlock}
+                onInsertToken={insertToken}
+              />
             </CardHeader>
             <CardContent className="p-3">
               {!selected ? (
                 <div className="text-sm text-muted-foreground">Kein Baustein ausgewählt.</div>
               ) : (
-                <BlockInspector block={selected} onChange={(p) => updateBlock(selected.id, p)} />
+                <BlockInspector
+                  block={selected}
+                  onChange={(p) => updateBlock(selected.id, p)}
+                  catalog={catalog}
+                  repeaterOptions={repeaterOptions}
+                />
               )}
             </CardContent>
           </Card>
         </div>
       ) : (
-        <PreviewCanvas doc={doc} />
+        <PreviewCanvas doc={doc} catalog={catalog} />
       )}
+    </div>
+
+  );
+}
+
+// ---------- Sortierbare Zeile ----------
+function SortableBlockRow({
+  block, index, selected, onSelect, onRemove,
+}: { block: ReportBlock; index: number; selected: boolean; onSelect: () => void; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-1 p-2 rounded border ${selected ? "border-primary bg-accent/40" : "border-border"}`}
+    >
+      <button
+        className="cursor-grab active:cursor-grabbing text-muted-foreground p-1"
+        {...attributes}
+        {...listeners}
+        aria-label="Baustein verschieben"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <button className="flex-1 text-left text-sm min-w-0" onClick={onSelect}>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">{index + 1}</Badge>
+          <span className="font-medium">{blockLabel(block)}</span>
+          {block.type === "field" && block.hidden && <EyeOff className="h-3 w-3 text-muted-foreground" />}
+        </div>
+        <div className="text-xs text-muted-foreground truncate">{blockSummary(block)}</div>
+      </button>
+      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onRemove}>
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
@@ -202,6 +336,7 @@ function blockLabel(b: ReportBlock): string {
   switch (b.type) {
     case "heading": return `Überschrift H${b.level}`;
     case "text": return "Absatz";
+    case "field": return `Feld · ${b.label}`;
     case "table": return "Tabelle";
     case "repeater": return "Repeater";
     case "image": return "Bild";
@@ -216,6 +351,7 @@ function blockSummary(b: ReportBlock): string {
   switch (b.type) {
     case "heading": return b.text;
     case "text": return b.content.slice(0, 80);
+    case "field": return `${b.sourceLabel ? b.sourceLabel + " · " : ""}${b.path}`;
     case "table": return `${b.columns.length} Spalten · ${b.rows.length} Zeilen`;
     case "repeater": return `Quelle: ${b.sourcePath}`;
     case "image": return b.dataUrl ? "Bild eingebettet" : "Kein Bild";
@@ -233,12 +369,20 @@ function insertTokenIntoBlock(b: ReportBlock, token: string, patch: (p: Partial<
 }
 
 // ---------- Inspector pro Block ----------
-function BlockInspector({ block, onChange }: { block: ReportBlock; onChange: (p: Partial<ReportBlock>) => void }) {
+function BlockInspector({ block, onChange, catalog, repeaterOptions }: {
+  block: ReportBlock;
+  onChange: (p: Partial<ReportBlock>) => void;
+  catalog: ReportFieldGroup[];
+  repeaterOptions: ReportFieldItem[];
+}) {
   switch (block.type) {
+    case "field":
+      return <FieldBlockInspector block={block} onChange={onChange} catalog={catalog} />;
     case "heading":
       return (
         <div className="space-y-2">
           <div>
+
             <Label className="text-xs">Text</Label>
             <Input value={block.text} onChange={(e) => onChange({ text: e.target.value } as any)} />
           </div>
@@ -320,21 +464,30 @@ function BlockInspector({ block, onChange }: { block: ReportBlock; onChange: (p:
             <Input value={block.title ?? ""} onChange={(e) => onChange({ title: e.target.value } as any)} />
           </div>
           <div>
-            <Label className="text-xs">Datenquelle (Pfad)</Label>
-            <Select value={block.sourcePath} onValueChange={(v) => onChange({ sourcePath: v } as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="measurement_result">Messwerte</SelectItem>
-                <SelectItem value="measurement_parameter">Messparameter</SelectItem>
-                <SelectItem value="raw_material.recipe">Rohstoffe / Rezeptur</SelectItem>
-                <SelectItem value="workflow.steps">Prozessschritte</SelectItem>
-                <SelectItem value="worklog.entries">Arbeitszeiten</SelectItem>
-                <SelectItem value="service.list">Dienstleistungen</SelectItem>
-                <SelectItem value="attachment.all">Anhänge</SelectItem>
-                <SelectItem value="attachment.photos">Fotos</SelectItem>
+            <Label className="text-xs">Repeater / Datenquelle (aus den vorhandenen Formularen)</Label>
+            <Select
+              value={block.sourcePath}
+              onValueChange={(v) => {
+                const opt = repeaterOptions.find(o => o.path === v);
+                const cols = (opt?.subfields ?? []).map(s => ({ header: s.label, path: s.key }));
+                onChange({ sourcePath: v, ...(cols.length ? { columns: cols } : {}) } as any);
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Repeater wählen" /></SelectTrigger>
+              <SelectContent className="max-h-80">
+                {repeaterOptions.map((o) => (
+                  <SelectItem key={o.path} value={o.path}>{o.label} · {o.sourceLabel}</SelectItem>
+                ))}
+                {!repeaterOptions.some(o => o.path === block.sourcePath) && block.sourcePath && (
+                  <SelectItem value={block.sourcePath}>{block.sourcePath}</SelectItem>
+                )}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Spalten werden aus den Unterfeldern des gewählten Repeaters übernommen und können danach frei angepasst werden.
+            </p>
           </div>
+
           <div className="space-y-1">
             <Label className="text-xs">Spalten (Pfad im Zeilenobjekt, z.B. „value", „result_name", „material")</Label>
             {block.columns.map((c, i) => (
@@ -407,43 +560,111 @@ function BlockInspector({ block, onChange }: { block: ReportBlock; onChange: (p:
   }
 }
 
-// ---------- Placeholder Picker ----------
-function PlaceholderPicker({ onInsert }: { onInsert: (token: string) => void }) {
-  const [open, setOpen] = useState(false);
+// ---------- Inspector für Feld-Bausteine ----------
+function FieldBlockInspector({ block, onChange, catalog }: {
+  block: Extract<ReportBlock, { type: "field" }>;
+  onChange: (p: Partial<ReportBlock>) => void;
+  catalog: ReportFieldGroup[];
+}) {
+  const group = catalog.find(g => g.items.some(i => i.path === block.path));
+  const item = group?.items.find(i => i.path === block.path);
+  const groupItems = group?.items.filter(i => i.kind !== "repeater") ?? [];
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" />Platzhalter</Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="end">
-        <ScrollArea className="h-96">
-          <div className="p-2 space-y-3">
-            {PLACEHOLDER_CATALOG.map((g) => (
-              <div key={g.label}>
-                <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">{g.label}</div>
-                <div className="space-y-1">
-                  {g.items.map((p) => (
-                    <button key={p.key} className="w-full text-left text-sm p-1.5 rounded hover:bg-accent flex items-center justify-between gap-2"
-                      onClick={() => { onInsert(p.token); setOpen(false); }}>
-                      <div>
-                        <div className="font-medium">{p.label}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{p.token}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <TagIcon className="h-3.5 w-3.5" />
+        <span className="font-mono">{block.path}</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Datenquelle</Label>
+          <Select
+            value={group?.key ?? "__unknown__"}
+            onValueChange={(gk) => {
+              const g = catalog.find(x => x.key === gk);
+              const first = g?.items.find(i => i.kind !== "repeater");
+              if (first) onChange({ path: first.path, label: first.label, sourceLabel: first.sourceLabel, unit: first.unit ?? null } as any);
+            }}
+          >
+            <SelectTrigger><SelectValue placeholder="Datenquelle" /></SelectTrigger>
+            <SelectContent className="max-h-80">
+              {catalog.map(g => <SelectItem key={g.key} value={g.key}>{g.label}</SelectItem>)}
+              {!group && <SelectItem value="__unknown__">Freier Pfad</SelectItem>}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Feld</Label>
+          <Select
+            value={block.path}
+            onValueChange={(p) => {
+              const it = groupItems.find(i => i.path === p);
+              onChange({ path: p, label: it?.label ?? block.label, sourceLabel: it?.sourceLabel, unit: it?.unit ?? block.unit } as any);
+            }}
+          >
+            <SelectTrigger><SelectValue placeholder="Feld" /></SelectTrigger>
+            <SelectContent className="max-h-80">
+              {groupItems.map(i => <SelectItem key={i.path} value={i.path}>{i.label}</SelectItem>)}
+              {!item && <SelectItem value={block.path}>{block.path}</SelectItem>}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-xs">Bezeichnung / Label</Label>
+        <Input value={block.label} onChange={(e) => onChange({ label: e.target.value } as any)} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Formatierung</Label>
+          <Select value={block.format ?? "auto"} onValueChange={(v) => onChange({ format: v as ReportNumberFormat } as any)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {FORMAT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Einheit</Label>
+          <Input value={block.unit ?? ""} placeholder="z.B. %" onChange={(e) => onChange({ unit: e.target.value } as any)} />
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Einheit anzeigen</Label>
+          <Switch checked={block.showUnit !== false} onCheckedChange={(c) => onChange({ showUnit: c } as any)} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Ausblenden, wenn leer</Label>
+          <Switch checked={!!block.hideIfEmpty} onCheckedChange={(c) => onChange({ hideIfEmpty: c } as any)} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Sichtbar im Bericht</Label>
+          <Switch checked={!block.hidden} onCheckedChange={(c) => onChange({ hidden: !c } as any)} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Label und Wert in einer Zeile</Label>
+          <Switch checked={block.inline !== false} onCheckedChange={(c) => onChange({ inline: c } as any)} />
+        </div>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground">
+        Die Reihenfolge wird über Drag &amp; Drop in der Bausteinliste festgelegt.
+      </p>
+    </div>
   );
 }
 
 // ---------- Live-Vorschau ----------
-function PreviewCanvas({ doc }: { doc: ReportTemplate }) {
-  const snapshot = useMemo(() => SAMPLE_SNAPSHOT, []);
+function PreviewCanvas({ doc, catalog }: { doc: ReportTemplate; catalog: ReportFieldGroup[] }) {
+  const snapshot = useMemo(() => buildPreviewSnapshot(catalog), [catalog]);
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -470,6 +691,35 @@ function PreviewCanvas({ doc }: { doc: ReportTemplate }) {
   );
 }
 
+/** Beispieldaten: bestehender Demo-Snapshot + Beispielwerte für alle Katalogfelder. */
+function buildPreviewSnapshot(catalog: ReportFieldGroup[]): any {
+  const snap = JSON.parse(JSON.stringify(SAMPLE_SNAPSHOT));
+  for (const g of catalog) {
+    for (const item of g.items) {
+      if (resolveReportPath(snap, item.path) != null) continue;
+      const value = item.kind === "repeater"
+        ? [
+            Object.fromEntries((item.subfields ?? []).map((s, i) => [s.key, i === 0 ? "Beispiel A" : String(i + 1)])),
+            Object.fromEntries((item.subfields ?? []).map((s, i) => [s.key, i === 0 ? "Beispiel B" : String(i + 2)])),
+          ]
+        : sampleValueFor(item);
+      setPath(snap, item.path, value);
+    }
+  }
+  return snap;
+}
+
+function setPath(obj: any, path: string, value: unknown) {
+  const parts = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (typeof cur[parts[i]] !== "object" || cur[parts[i]] == null) cur[parts[i]] = {};
+    cur = cur[parts[i]];
+  }
+  cur[parts[parts.length - 1]] = value;
+}
+
+
 function BlockPreview({ block, snapshot }: { block: ReportBlock; snapshot: any }) {
   switch (block.type) {
     case "heading": {
@@ -479,6 +729,28 @@ function BlockPreview({ block, snapshot }: { block: ReportBlock; snapshot: any }
     }
     case "text":
       return <p className="text-sm whitespace-pre-wrap">{replaceTokens(block.content, snapshot)}</p>;
+    case "field": {
+      if (block.hidden) return null;
+      const raw = resolveReportPath(snapshot, block.path);
+      const text = formatReportValue(raw, {
+        format: block.format,
+        unit: block.unit,
+        showUnit: block.showUnit !== false,
+      });
+      if (block.hideIfEmpty && !text) return null;
+      return block.inline === false ? (
+        <div className="text-sm">
+          <div className="text-xs text-gray-500">{block.label}</div>
+          <div className="font-medium">{text || "—"}</div>
+        </div>
+      ) : (
+        <div className="text-sm flex gap-2">
+          <span className="text-gray-600">{block.label}:</span>
+          <span className="font-medium">{text || "—"}</span>
+        </div>
+      );
+    }
+
     case "table":
       return (
         <div>
@@ -498,7 +770,7 @@ function BlockPreview({ block, snapshot }: { block: ReportBlock; snapshot: any }
         </div>
       );
     case "repeater": {
-      const rows = (resolvePath(snapshot, block.sourcePath) as any[]) ?? [];
+      const rows = (resolveReportPath(snapshot, block.sourcePath) as any[]) ?? [];
       return (
         <div>
           {block.title && <div className="font-semibold text-sm mb-1">{block.title}</div>}

@@ -181,7 +181,7 @@ export function formatPlaceholderValue(v: unknown): string {
   return s;
 }
 
-/** Ersetzt {{Token}}, {{AG:key}} und {{MDL:key}} in einem Text durch Werte aus dem Snapshot. */
+/** Ersetzt {{Token}}, {{AG:key}}, {{MDL:key}} und {{pfad.zum.feld}} durch Werte aus dem Snapshot. */
 export function replaceTokens(text: string, snapshot: any): string {
   if (!text) return "";
   return text.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_m, raw: string) => {
@@ -196,10 +196,16 @@ export function replaceTokens(text: string, snapshot: any): string {
     }
     const token = `{{${t}}}`;
     const path = TOKEN_TO_PATH[token];
-    if (!path) return _m;
-    return formatPlaceholderValue(resolvePath(snapshot, path));
+    if (path) return formatPlaceholderValue(resolvePath(snapshot, path));
+    // Freie Pfadangabe, z.B. {{customer_form.hauptrohstoff}}
+    if (t.includes(".")) {
+      const v = resolvePath(snapshot, t);
+      if (v !== undefined) return formatPlaceholderValue(v);
+    }
+    return _m;
   });
 }
+
 
 // Beispiel-Snapshot für die Live-Vorschau im Designer.
 export const SAMPLE_SNAPSHOT: any = {

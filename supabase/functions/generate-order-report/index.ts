@@ -463,13 +463,60 @@ function ensureSpace(doc: any, y: number, need = 30): number {
 
 // ============= Block-basierter Report Renderer =============
 
-function resolveSnapshotPath(snapshot: any, path: string): any {
+function pickPath(snapshot: any, path: string): any {
   if (!path) return undefined;
   const parts = path.split(/\.|\[|\]/).filter(Boolean);
   let cur: any = snapshot;
   for (const p of parts) { if (cur == null) return undefined; cur = cur[p]; }
   return cur;
 }
+
+/** Auflösung mit Fallbacks auf die bekannten Formularbereiche. */
+function resolveSnapshotPath(snapshot: any, path: string): any {
+  const direct = pickPath(snapshot, path);
+  if (direct !== undefined && direct !== null && direct !== "") return direct;
+  const key = path.split(".").slice(1).join(".") || path;
+  for (const f of [`customer_form.${key}`, `employee_form.${key}`, `order.${key}`, `shared_form_data.${key}`, `computed.${key}`]) {
+    if (f === path) continue;
+    const v = pickPath(snapshot, f);
+    if (v !== undefined && v !== null && v !== "") return v;
+  }
+  return direct;
+}
+
+function fmtReportValue(value: any, opts: { format?: string; unit?: string | null; showUnit?: boolean }): string {
+  const { format = "auto", unit, showUnit = true } = opts;
+  if (value == null || value === "") return "";
+  if (typeof value === "boolean") return value ? "Ja" : "Nein";
+  if (Array.isArray(value) || typeof value === "object") return fmt(value);
+
+  const raw = String(value);
+  if (format === "date" || format === "datetime" || format === "time") {
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) {
+      if (format === "date") return d.toLocaleDateString("de-AT");
+      if (format === "time") return d.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" });
+      return d.toLocaleString("de-AT");
+    }
+    return raw;
+  }
+
+  let out = raw;
+  const n = Number(raw.replace(",", "."));
+  if (isFinite(n) && raw.trim() !== "") {
+    if (format === "0" || format === "0.0" || format === "0.00" || format === "0.000") {
+      const dec = format === "0" ? 0 : format.split(".")[1].length;
+      out = n.toLocaleString("de-DE", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    } else if (/^-?\d+(\.\d+)?$/.test(raw.trim())) {
+      out = n.toLocaleString("de-DE");
+    }
+  } else {
+    out = fmt(value);
+  }
+  if (showUnit && unit) out = `${out} ${unit}`;
+  return out;
+}
+
 
 const TOKEN_MAP: Record<string, string> = {
   Auftragsnummer: "order.order_number",
@@ -525,7 +572,13 @@ function replaceTokens(text: string, snapshot: any): string {
     if (t.startsWith("AG:")) return fmt(resolveSnapshotPath(snapshot, `customer_form.${t.slice(3).trim()}`));
     if (t.startsWith("MDL:")) return fmt(resolveSnapshotPath(snapshot, `employee_form.${t.slice(4).trim()}`));
     const path = TOKEN_MAP[t];
-    return path ? fmt(resolveSnapshotPath(snapshot, path)) : _m;
+    if (path) return fmt(resolveSnapshotPath(snapshot, path));
+    if (t.includes(".")) {
+      const v = resolveSnapshotPath(snapshot, t);
+      if (v !== undefined) return fmt(v);
+    }
+    return _m;
+
   });
 }
 
@@ -570,6 +623,23 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
         y += 4;
         break;
       }
+      case "field": {
+        if (b.hidden) break;
+        const value = resolveSnapshotPath(snapshot, b.path);
+        const text = fmtReportValue(value, { format: b.format, unit: b.unit, showUnit: b.showUnit !== false });
+        if (b.hideIfEmpty && !text) break;
+        ensure(16);
+        doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(110);
+        const label = `${b.label ?? b.path}:`;
+        doc.text(label, marginX, y);
+        const labelW = doc.getTextWidth(label) + 6;
+        doc.setFont("helvetica", "bold").setTextColor(30);
+        const lines = doc.splitTextToSize(text || "—", pageWidth - 2 * marginX - labelW);
+        doc.text(lines, marginX + labelW, y);
+        y += 12 * Math.max(1, lines.length) + 2;
+        break;
+      }
+
       case "table": {
         if (b.title) { ensure(20); doc.setFontSize(11).setFont("helvetica", "bold"); doc.text(b.title, marginX, y); y += 14; }
         const cols = b.columns ?? [];
