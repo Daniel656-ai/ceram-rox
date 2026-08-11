@@ -8,22 +8,49 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Heading1, Type, Table as TableIcon, Image as ImageIcon, QrCode, Barcode,
-  Minus, PenTool, ArrowUp, ArrowDown, Trash2, Plus, Repeat, FileImage,
-  PanelTop, PanelBottom, Save, Eye, Code2,
+  Minus, PenTool, Trash2, Plus, Repeat, FileImage, GripVertical, Tag as TagIcon,
+  PanelTop, PanelBottom, Save, Eye, Code2, EyeOff,
 } from "lucide-react";
-import { PLACEHOLDER_CATALOG, replaceTokens, resolvePath, SAMPLE_SNAPSHOT, formatPlaceholderValue } from "@/lib/reportPlaceholders";
+import { replaceTokens, resolvePath, SAMPLE_SNAPSHOT, formatPlaceholderValue } from "@/lib/reportPlaceholders";
+import ReportFieldPicker from "./ReportFieldPicker";
+import { useReportFieldCatalog } from "@/hooks/useReportFieldCatalog";
+import {
+  resolveReportPath, formatReportValue, sampleValueFor,
+  type ReportFieldGroup, type ReportFieldItem, type ReportNumberFormat,
+} from "@/lib/reportFieldCatalog";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy, arrayMove, useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ---------- Block-Schema ----------
 export type ReportBlock =
   | { id: string; type: "heading"; text: string; level: 1 | 2 | 3 }
   | { id: string; type: "text"; content: string }
+  | {
+      id: string; type: "field";
+      /** Pfad in der bestehenden Datenquelle, z.B. "customer_form.v2o5". */
+      path: string;
+      /** Anzeigename – frei überschreibbar. */
+      label: string;
+      /** Herkunft (nur Anzeige). */
+      sourceLabel?: string;
+      format?: ReportNumberFormat;
+      unit?: string | null;
+      showUnit?: boolean;
+      hideIfEmpty?: boolean;
+      hidden?: boolean;
+      inline?: boolean;
+    }
   | { id: string; type: "table"; title?: string; columns: { header: string; value: string }[]; rows: string[][] }
   | { id: string; type: "repeater"; title?: string; sourcePath: string; columns: { header: string; path: string }[] }
   | { id: string; type: "image"; dataUrl?: string; caption?: string; widthPercent?: number }
@@ -44,7 +71,7 @@ const EMPTY: ReportTemplate = { header: "", footer: "Seite {{Version}} · {{Firm
 
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
-const BLOCK_LIBRARY: { type: ReportBlock["type"]; label: string; icon: any; make: () => ReportBlock }[] = [
+const BLOCK_LIBRARY: { type: Exclude<ReportBlock["type"], "field">; label: string; icon: any; make: () => ReportBlock }[] = [
   { type: "heading", label: "Überschrift", icon: Heading1, make: () => ({ id: uid(), type: "heading", text: "Neue Überschrift", level: 2 }) },
   { type: "text", label: "Text / Absatz", icon: Type, make: () => ({ id: uid(), type: "text", content: "Text mit {{Auftragsnummer}} und {{Kunde}}." }) },
   { type: "table", label: "Tabelle (statisch)", icon: TableIcon, make: () => ({ id: uid(), type: "table", title: "Tabelle", columns: [{ header: "Feld", value: "" }, { header: "Wert", value: "" }], rows: [["", ""]] }) },
@@ -56,6 +83,33 @@ const BLOCK_LIBRARY: { type: ReportBlock["type"]; label: string; icon: any; make
   { type: "pagebreak", label: "Seitenumbruch", icon: Minus, make: () => ({ id: uid(), type: "pagebreak" }) },
   { type: "signature", label: "Unterschrift", icon: PenTool, make: () => ({ id: uid(), type: "signature", label: "Unterschrift" }) },
 ];
+
+const FORMAT_OPTIONS: { value: ReportNumberFormat; label: string }[] = [
+  { value: "auto", label: "Automatisch" },
+  { value: "0", label: "Ganzzahl (0)" },
+  { value: "0.0", label: "1 Nachkommastelle (0,0)" },
+  { value: "0.00", label: "2 Nachkommastellen (0,00)" },
+  { value: "0.000", label: "3 Nachkommastellen (0,000)" },
+  { value: "date", label: "Datum" },
+  { value: "datetime", label: "Datum & Uhrzeit" },
+  { value: "time", label: "Uhrzeit" },
+];
+
+function makeFieldBlock(item: ReportFieldItem): ReportBlock {
+  if (item.kind === "repeater") {
+    const cols = (item.subfields ?? []).map((s) => ({ header: s.label, path: s.key }));
+    return {
+      id: uid(), type: "repeater", title: item.label, sourcePath: item.path,
+      columns: cols.length ? cols : [{ header: "Wert", path: "value" }],
+    };
+  }
+  return {
+    id: uid(), type: "field", path: item.path, label: item.label,
+    sourceLabel: item.sourceLabel, format: "auto", unit: item.unit ?? null,
+    showUnit: !!item.unit, hideIfEmpty: false, hidden: false, inline: true,
+  };
+}
+
 
 // ---------- Designer-Komponente ----------
 export default function ReportTemplateDesigner({ template }: { template: ProcessTemplate }) {
