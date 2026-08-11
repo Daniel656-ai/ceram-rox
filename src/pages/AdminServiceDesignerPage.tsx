@@ -58,7 +58,7 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: 
     { value: "repeater", label: "Repeater (wiederholbare Einträge)" },
   ]},
   { label: "Beziehungen", types: [
-    { value: "ref_customer", label: "Kunde" }, { value: "ref_material", label: "Material" },
+    { value: "ref_customer", label: "Kunde" }, { value: "ref_material", label: "Rohstoff (aus Rohstoffverwaltung)" },
     { value: "ref_product", label: "Produkt" }, { value: "ref_machine", label: "Maschine" },
     { value: "ref_employee", label: "Mitarbeiter" }, { value: "ref_location", label: "Standort" },
     { value: "ref_batch", label: "Chargennummer" }, { value: "ref_serial", label: "Seriennummer" },
