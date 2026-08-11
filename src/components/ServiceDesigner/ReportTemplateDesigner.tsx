@@ -464,21 +464,30 @@ function BlockInspector({ block, onChange, catalog, repeaterOptions }: {
             <Input value={block.title ?? ""} onChange={(e) => onChange({ title: e.target.value } as any)} />
           </div>
           <div>
-            <Label className="text-xs">Datenquelle (Pfad)</Label>
-            <Select value={block.sourcePath} onValueChange={(v) => onChange({ sourcePath: v } as any)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="measurement_result">Messwerte</SelectItem>
-                <SelectItem value="measurement_parameter">Messparameter</SelectItem>
-                <SelectItem value="raw_material.recipe">Rohstoffe / Rezeptur</SelectItem>
-                <SelectItem value="workflow.steps">Prozessschritte</SelectItem>
-                <SelectItem value="worklog.entries">Arbeitszeiten</SelectItem>
-                <SelectItem value="service.list">Dienstleistungen</SelectItem>
-                <SelectItem value="attachment.all">Anhänge</SelectItem>
-                <SelectItem value="attachment.photos">Fotos</SelectItem>
+            <Label className="text-xs">Repeater / Datenquelle (aus den vorhandenen Formularen)</Label>
+            <Select
+              value={block.sourcePath}
+              onValueChange={(v) => {
+                const opt = repeaterOptions.find(o => o.path === v);
+                const cols = (opt?.subfields ?? []).map(s => ({ header: s.label, path: s.key }));
+                onChange({ sourcePath: v, ...(cols.length ? { columns: cols } : {}) } as any);
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Repeater wählen" /></SelectTrigger>
+              <SelectContent className="max-h-80">
+                {repeaterOptions.map((o) => (
+                  <SelectItem key={o.path} value={o.path}>{o.label} · {o.sourceLabel}</SelectItem>
+                ))}
+                {!repeaterOptions.some(o => o.path === block.sourcePath) && block.sourcePath && (
+                  <SelectItem value={block.sourcePath}>{block.sourcePath}</SelectItem>
+                )}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Spalten werden aus den Unterfeldern des gewählten Repeaters übernommen und können danach frei angepasst werden.
+            </p>
           </div>
+
           <div className="space-y-1">
             <Label className="text-xs">Spalten (Pfad im Zeilenobjekt, z.B. „value", „result_name", „material")</Label>
             {block.columns.map((c, i) => (
