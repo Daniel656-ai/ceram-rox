@@ -79,8 +79,10 @@ export const GLOBAL_FIELD_TYPES: { value: GlobalFieldDataType; label: string }[]
   { value: "image", label: "Bild" },
   { value: "reference", label: "Referenz" },
   { value: "computed", label: "Berechnet" },
+  { value: "ref_material", label: "Rohstoff (aus Rohstoffverwaltung)" },
   { value: "repeater", label: "Repeater / Unterliste (1:n)" },
 ];
+
 
 /** Unterfeld eines globalen Repeater-Feldes (in metadata.subfields gespeichert). */
 export interface GlobalRepeaterSubfield {
