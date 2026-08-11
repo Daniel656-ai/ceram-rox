@@ -560,43 +560,111 @@ function BlockInspector({ block, onChange, catalog, repeaterOptions }: {
   }
 }
 
-// ---------- Placeholder Picker ----------
-function PlaceholderPicker({ onInsert }: { onInsert: (token: string) => void }) {
-  const [open, setOpen] = useState(false);
+// ---------- Inspector für Feld-Bausteine ----------
+function FieldBlockInspector({ block, onChange, catalog }: {
+  block: Extract<ReportBlock, { type: "field" }>;
+  onChange: (p: Partial<ReportBlock>) => void;
+  catalog: ReportFieldGroup[];
+}) {
+  const group = catalog.find(g => g.items.some(i => i.path === block.path));
+  const item = group?.items.find(i => i.path === block.path);
+  const groupItems = group?.items.filter(i => i.kind !== "repeater") ?? [];
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" />Platzhalter</Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="end">
-        <ScrollArea className="h-96">
-          <div className="p-2 space-y-3">
-            {PLACEHOLDER_CATALOG.map((g) => (
-              <div key={g.label}>
-                <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">{g.label}</div>
-                <div className="space-y-1">
-                  {g.items.map((p) => (
-                    <button key={p.key} className="w-full text-left text-sm p-1.5 rounded hover:bg-accent flex items-center justify-between gap-2"
-                      onClick={() => { onInsert(p.token); setOpen(false); }}>
-                      <div>
-                        <div className="font-medium">{p.label}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{p.token}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <TagIcon className="h-3.5 w-3.5" />
+        <span className="font-mono">{block.path}</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Datenquelle</Label>
+          <Select
+            value={group?.key ?? "__unknown__"}
+            onValueChange={(gk) => {
+              const g = catalog.find(x => x.key === gk);
+              const first = g?.items.find(i => i.kind !== "repeater");
+              if (first) onChange({ path: first.path, label: first.label, sourceLabel: first.sourceLabel, unit: first.unit ?? null } as any);
+            }}
+          >
+            <SelectTrigger><SelectValue placeholder="Datenquelle" /></SelectTrigger>
+            <SelectContent className="max-h-80">
+              {catalog.map(g => <SelectItem key={g.key} value={g.key}>{g.label}</SelectItem>)}
+              {!group && <SelectItem value="__unknown__">Freier Pfad</SelectItem>}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Feld</Label>
+          <Select
+            value={block.path}
+            onValueChange={(p) => {
+              const it = groupItems.find(i => i.path === p);
+              onChange({ path: p, label: it?.label ?? block.label, sourceLabel: it?.sourceLabel, unit: it?.unit ?? block.unit } as any);
+            }}
+          >
+            <SelectTrigger><SelectValue placeholder="Feld" /></SelectTrigger>
+            <SelectContent className="max-h-80">
+              {groupItems.map(i => <SelectItem key={i.path} value={i.path}>{i.label}</SelectItem>)}
+              {!item && <SelectItem value={block.path}>{block.path}</SelectItem>}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-xs">Bezeichnung / Label</Label>
+        <Input value={block.label} onChange={(e) => onChange({ label: e.target.value } as any)} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Formatierung</Label>
+          <Select value={block.format ?? "auto"} onValueChange={(v) => onChange({ format: v as ReportNumberFormat } as any)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {FORMAT_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Einheit</Label>
+          <Input value={block.unit ?? ""} placeholder="z.B. %" onChange={(e) => onChange({ unit: e.target.value } as any)} />
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Einheit anzeigen</Label>
+          <Switch checked={block.showUnit !== false} onCheckedChange={(c) => onChange({ showUnit: c } as any)} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Ausblenden, wenn leer</Label>
+          <Switch checked={!!block.hideIfEmpty} onCheckedChange={(c) => onChange({ hideIfEmpty: c } as any)} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Sichtbar im Bericht</Label>
+          <Switch checked={!block.hidden} onCheckedChange={(c) => onChange({ hidden: !c } as any)} />
+        </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Label und Wert in einer Zeile</Label>
+          <Switch checked={block.inline !== false} onCheckedChange={(c) => onChange({ inline: c } as any)} />
+        </div>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground">
+        Die Reihenfolge wird über Drag &amp; Drop in der Bausteinliste festgelegt.
+      </p>
+    </div>
   );
 }
 
 // ---------- Live-Vorschau ----------
-function PreviewCanvas({ doc }: { doc: ReportTemplate }) {
-  const snapshot = useMemo(() => SAMPLE_SNAPSHOT, []);
+function PreviewCanvas({ doc, catalog }: { doc: ReportTemplate; catalog: ReportFieldGroup[] }) {
+  const snapshot = useMemo(() => buildPreviewSnapshot(catalog), [catalog]);
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -622,6 +690,35 @@ function PreviewCanvas({ doc }: { doc: ReportTemplate }) {
     </Card>
   );
 }
+
+/** Beispieldaten: bestehender Demo-Snapshot + Beispielwerte für alle Katalogfelder. */
+function buildPreviewSnapshot(catalog: ReportFieldGroup[]): any {
+  const snap = JSON.parse(JSON.stringify(SAMPLE_SNAPSHOT));
+  for (const g of catalog) {
+    for (const item of g.items) {
+      if (resolveReportPath(snap, item.path) != null) continue;
+      const value = item.kind === "repeater"
+        ? [
+            Object.fromEntries((item.subfields ?? []).map((s, i) => [s.key, i === 0 ? "Beispiel A" : String(i + 1)])),
+            Object.fromEntries((item.subfields ?? []).map((s, i) => [s.key, i === 0 ? "Beispiel B" : String(i + 2)])),
+          ]
+        : sampleValueFor(item);
+      setPath(snap, item.path, value);
+    }
+  }
+  return snap;
+}
+
+function setPath(obj: any, path: string, value: unknown) {
+  const parts = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (typeof cur[parts[i]] !== "object" || cur[parts[i]] == null) cur[parts[i]] = {};
+    cur = cur[parts[i]];
+  }
+  cur[parts[parts.length - 1]] = value;
+}
+
 
 function BlockPreview({ block, snapshot }: { block: ReportBlock; snapshot: any }) {
   switch (block.type) {
