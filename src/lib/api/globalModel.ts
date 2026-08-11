@@ -25,7 +25,9 @@ export type GlobalFieldDataType =
   | "text" | "longtext" | "number" | "decimal" | "percent"
   | "date" | "time" | "datetime" | "boolean"
   | "select" | "multiselect"
-  | "file" | "image" | "reference" | "computed" | "repeater";
+  | "file" | "image" | "reference" | "computed" | "repeater"
+  | "ref_material";
+
 
 export type GlobalFieldSource = "manual" | "system" | "calculated" | "reference" | "device";
 
