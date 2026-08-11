@@ -729,6 +729,28 @@ function BlockPreview({ block, snapshot }: { block: ReportBlock; snapshot: any }
     }
     case "text":
       return <p className="text-sm whitespace-pre-wrap">{replaceTokens(block.content, snapshot)}</p>;
+    case "field": {
+      if (block.hidden) return null;
+      const raw = resolveReportPath(snapshot, block.path);
+      const text = formatReportValue(raw, {
+        format: block.format,
+        unit: block.unit,
+        showUnit: block.showUnit !== false,
+      });
+      if (block.hideIfEmpty && !text) return null;
+      return block.inline === false ? (
+        <div className="text-sm">
+          <div className="text-xs text-gray-500">{block.label}</div>
+          <div className="font-medium">{text || "—"}</div>
+        </div>
+      ) : (
+        <div className="text-sm flex gap-2">
+          <span className="text-gray-600">{block.label}:</span>
+          <span className="font-medium">{text || "—"}</span>
+        </div>
+      );
+    }
+
     case "table":
       return (
         <div>
