@@ -128,7 +128,15 @@ export default function ReportTemplateDesigner({ template }: { template: Process
 
   const selected = doc.blocks.find(b => b.id === selectedId) ?? null;
 
-  const addBlock = (type: ReportBlock["type"]) => {
+  const { data: catalog = [], isLoading: catalogLoading } = useReportFieldCatalog(template.id);
+  const repeaterOptions = useMemo(
+    () => catalog.flatMap(g => g.items.filter(i => i.kind === "repeater")),
+    [catalog]
+  );
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const addBlock = (type: Exclude<ReportBlock["type"], "field">) => {
     const factory = BLOCK_LIBRARY.find(b => b.type === type)!;
     const nb = factory.make();
     setDoc(d => ({ ...d, blocks: [...d.blocks, nb] }));
@@ -137,17 +145,36 @@ export default function ReportTemplateDesigner({ template }: { template: Process
   const updateBlock = (id: string, patch: Partial<ReportBlock>) => {
     setDoc(d => ({ ...d, blocks: d.blocks.map(b => b.id === id ? { ...b, ...patch } as ReportBlock : b) }));
   };
-  const moveBlock = (id: string, dir: -1 | 1) => {
-    const idx = doc.blocks.findIndex(b => b.id === id);
-    const target = idx + dir;
-    if (idx < 0 || target < 0 || target >= doc.blocks.length) return;
-    const next = [...doc.blocks];
-    [next[idx], next[target]] = [next[target], next[idx]];
-    setDoc(d => ({ ...d, blocks: next }));
-  };
   const removeBlock = (id: string) => {
     setDoc(d => ({ ...d, blocks: d.blocks.filter(b => b.id !== id) }));
     if (selectedId === id) setSelectedId(null);
+  };
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setDoc(d => {
+      const from = d.blocks.findIndex(b => b.id === active.id);
+      const to = d.blocks.findIndex(b => b.id === over.id);
+      if (from < 0 || to < 0) return d;
+      return { ...d, blocks: arrayMove(d.blocks, from, to) };
+    });
+  };
+  const insertFieldBlock = (item: ReportFieldItem) => {
+    const nb = makeFieldBlock(item);
+    setDoc(d => {
+      const idx = d.blocks.findIndex(b => b.id === selectedId);
+      const blocks = [...d.blocks];
+      blocks.splice(idx >= 0 ? idx + 1 : blocks.length, 0, nb);
+      return { ...d, blocks };
+    });
+    setSelectedId(nb.id);
+  };
+  const insertToken = (item: ReportFieldItem) => {
+    if (!selected || (selected.type !== "text" && selected.type !== "heading" && selected.type !== "qr" && selected.type !== "barcode")) {
+      toast.info("Bitte zuerst einen Text-, Überschrift-, QR- oder Barcode-Baustein auswählen");
+      return;
+    }
+    insertTokenIntoBlock(selected, `{{${item.path}}}`, (p) => updateBlock(selected.id, p));
   };
 
   return (
@@ -155,6 +182,13 @@ export default function ReportTemplateDesigner({ template }: { template: Process
       {/* Toolbar */}
       <Card>
         <CardContent className="p-3 flex flex-wrap items-center gap-2">
+          <ReportFieldPicker
+            groups={catalog}
+            isLoading={catalogLoading}
+            onInsertField={insertFieldBlock}
+            onInsertToken={insertToken}
+          />
+          <Separator orientation="vertical" className="h-6" />
           {BLOCK_LIBRARY.map(({ type, label, icon: Icon }) => (
             <Button key={type} size="sm" variant="outline" onClick={() => addBlock(type)}>
               <Icon className="h-3.5 w-3.5 mr-1" />{label}
@@ -200,29 +234,32 @@ export default function ReportTemplateDesigner({ template }: { template: Process
             </CardContent>
           </Card>
 
-          {/* Blockliste */}
+          {/* Blockliste (frei sortierbar) */}
           <Card className="col-span-12 md:col-span-5">
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Bausteine</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Bausteine</CardTitle>
+              <p className="text-[11px] text-muted-foreground">Reihenfolge per Drag &amp; Drop frei anpassbar.</p>
+            </CardHeader>
             <CardContent className="p-2 space-y-1">
               {doc.blocks.length === 0 && (
                 <div className="text-sm text-muted-foreground p-4 text-center">
-                  Noch keine Bausteine. Fügen Sie oben Bausteine hinzu.
+                  Noch keine Bausteine. Fügen Sie oben Felder oder Bausteine hinzu.
                 </div>
               )}
-              {doc.blocks.map((b, i) => (
-                <div key={b.id} className={`flex items-center gap-1 p-2 rounded border ${selectedId === b.id ? "border-primary bg-accent/40" : "border-border"}`}>
-                  <button className="flex-1 text-left text-sm" onClick={() => setSelectedId(b.id)}>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">{i + 1}</Badge>
-                      <span className="font-medium">{blockLabel(b)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">{blockSummary(b)}</div>
-                  </button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={i === 0} onClick={() => moveBlock(b.id, -1)}><ArrowUp className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={i === doc.blocks.length - 1} onClick={() => moveBlock(b.id, 1)}><ArrowDown className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeBlock(b.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                </div>
-              ))}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <SortableContext items={doc.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                  {doc.blocks.map((b, i) => (
+                    <SortableBlockRow
+                      key={b.id}
+                      block={b}
+                      index={i}
+                      selected={selectedId === b.id}
+                      onSelect={() => setSelectedId(b.id)}
+                      onRemove={() => removeBlock(b.id)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </CardContent>
           </Card>
 
@@ -230,24 +267,32 @@ export default function ReportTemplateDesigner({ template }: { template: Process
           <Card className="col-span-12 md:col-span-7">
             <CardHeader className="pb-2 flex-row items-center justify-between">
               <CardTitle className="text-sm">Eigenschaften</CardTitle>
-              <PlaceholderPicker onInsert={(token) => {
-                if (!selected) { toast.info("Zuerst Baustein auswählen"); return; }
-                insertTokenIntoBlock(selected, token, (p) => updateBlock(selected.id, p));
-              }} />
+              <ReportFieldPicker
+                groups={catalog}
+                isLoading={catalogLoading}
+                onInsertField={insertFieldBlock}
+                onInsertToken={insertToken}
+              />
             </CardHeader>
             <CardContent className="p-3">
               {!selected ? (
                 <div className="text-sm text-muted-foreground">Kein Baustein ausgewählt.</div>
               ) : (
-                <BlockInspector block={selected} onChange={(p) => updateBlock(selected.id, p)} />
+                <BlockInspector
+                  block={selected}
+                  onChange={(p) => updateBlock(selected.id, p)}
+                  catalog={catalog}
+                  repeaterOptions={repeaterOptions}
+                />
               )}
             </CardContent>
           </Card>
         </div>
       ) : (
-        <PreviewCanvas doc={doc} />
+        <PreviewCanvas doc={doc} catalog={catalog} />
       )}
     </div>
+
   );
 }
 
