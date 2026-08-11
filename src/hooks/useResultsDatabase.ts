@@ -54,7 +54,7 @@ export function useResultsDatabase() {
           measurement_orders(
             id, order_number, order_type, created_by, notes,
             projects(project_number, project_name),
-            samples(sample_number, sample_name)
+            samples!measurement_orders_sample_id_fkey(sample_number, sample_name)
           ),
           measurement_parameters(parameter_name, parameter_value, unit),
           measurement_results(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at)
