@@ -770,7 +770,7 @@ function BlockPreview({ block, snapshot }: { block: ReportBlock; snapshot: any }
         </div>
       );
     case "repeater": {
-      const rows = (resolvePath(snapshot, block.sourcePath) as any[]) ?? [];
+      const rows = (resolveReportPath(snapshot, block.sourcePath) as any[]) ?? [];
       return (
         <div>
           {block.title && <div className="font-semibold text-sm mb-1">{block.title}</div>}
