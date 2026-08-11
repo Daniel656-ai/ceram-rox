@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat, Calculator } from "lucide-react";
 import UploadField from "@/components/upload/UploadField";
 import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
+import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 import { evaluateFormula } from "@/lib/formulaEngine";
 import { useSystemVariables } from "@/context/ProcessContextProvider";
 import type { FormRoleView, FormSection, RepeatableConfig } from "@/lib/api/serviceFormLayouts";
@@ -430,6 +431,8 @@ function renderInput(field: any, value: any, onChange: (v: any) => void, readonl
         </Select>
       );
     }
+    case "ref_material":
+      return <RawMaterialSelectField value={value} onChange={onChange} disabled={readonly} />;
     case "raw_material_recipe":
       return <RawMaterialRecipeField value={value} onChange={onChange} readonly={readonly} />;
     default:
