@@ -476,18 +476,27 @@ function OrderDetailPageInner() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
-                            {durchfuehrerList
-                              .filter((u: any) =>
+                            {(() => {
+                              const eligible = durchfuehrerList.filter((u: any) =>
                                 (servicePermissions as any[]).some(
                                   (p) => p.user_id === u.user_id && p.service_id === m.service_id
                                 )
-                              )
-                              .map((u: any) => (
+                              );
+                              if (eligible.length === 0) {
+                                return (
+                                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                    Keine berechtigten Mitarbeiter (Kompetenzmatrix)
+                                  </div>
+                                );
+                              }
+                              return eligible.map((u: any) => (
                                 <SelectItem key={u.user_id} value={u.user_id}>
                                   {u.first_name} {u.last_name}
                                 </SelectItem>
-                              ))}
+                              ));
+                            })()}
                           </SelectContent>
+
                         </Select>
                       ) : (
                         <span className="text-sm">
