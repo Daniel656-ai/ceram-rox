@@ -296,11 +296,47 @@ export default function ReportTemplateDesigner({ template }: { template: Process
   );
 }
 
+// ---------- Sortierbare Zeile ----------
+function SortableBlockRow({
+  block, index, selected, onSelect, onRemove,
+}: { block: ReportBlock; index: number; selected: boolean; onSelect: () => void; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-1 p-2 rounded border ${selected ? "border-primary bg-accent/40" : "border-border"}`}
+    >
+      <button
+        className="cursor-grab active:cursor-grabbing text-muted-foreground p-1"
+        {...attributes}
+        {...listeners}
+        aria-label="Baustein verschieben"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <button className="flex-1 text-left text-sm min-w-0" onClick={onSelect}>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">{index + 1}</Badge>
+          <span className="font-medium">{blockLabel(block)}</span>
+          {block.type === "field" && block.hidden && <EyeOff className="h-3 w-3 text-muted-foreground" />}
+        </div>
+        <div className="text-xs text-muted-foreground truncate">{blockSummary(block)}</div>
+      </button>
+      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={onRemove}>
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
 // ---------- Baustein-Helper ----------
 function blockLabel(b: ReportBlock): string {
   switch (b.type) {
     case "heading": return `Überschrift H${b.level}`;
     case "text": return "Absatz";
+    case "field": return `Feld · ${b.label}`;
     case "table": return "Tabelle";
     case "repeater": return "Repeater";
     case "image": return "Bild";
@@ -315,6 +351,7 @@ function blockSummary(b: ReportBlock): string {
   switch (b.type) {
     case "heading": return b.text;
     case "text": return b.content.slice(0, 80);
+    case "field": return `${b.sourceLabel ? b.sourceLabel + " · " : ""}${b.path}`;
     case "table": return `${b.columns.length} Spalten · ${b.rows.length} Zeilen`;
     case "repeater": return `Quelle: ${b.sourcePath}`;
     case "image": return b.dataUrl ? "Bild eingebettet" : "Kein Bild";
@@ -332,12 +369,20 @@ function insertTokenIntoBlock(b: ReportBlock, token: string, patch: (p: Partial<
 }
 
 // ---------- Inspector pro Block ----------
-function BlockInspector({ block, onChange }: { block: ReportBlock; onChange: (p: Partial<ReportBlock>) => void }) {
+function BlockInspector({ block, onChange, catalog, repeaterOptions }: {
+  block: ReportBlock;
+  onChange: (p: Partial<ReportBlock>) => void;
+  catalog: ReportFieldGroup[];
+  repeaterOptions: ReportFieldItem[];
+}) {
   switch (block.type) {
+    case "field":
+      return <FieldBlockInspector block={block} onChange={onChange} catalog={catalog} />;
     case "heading":
       return (
         <div className="space-y-2">
           <div>
+
             <Label className="text-xs">Text</Label>
             <Input value={block.text} onChange={(e) => onChange({ text: e.target.value } as any)} />
           </div>
