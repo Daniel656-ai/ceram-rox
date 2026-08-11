@@ -623,6 +623,23 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
         y += 4;
         break;
       }
+      case "field": {
+        if (b.hidden) break;
+        const value = resolveSnapshotPath(snapshot, b.path);
+        const text = fmtReportValue(value, { format: b.format, unit: b.unit, showUnit: b.showUnit !== false });
+        if (b.hideIfEmpty && !text) break;
+        ensure(16);
+        doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(110);
+        const label = `${b.label ?? b.path}:`;
+        doc.text(label, marginX, y);
+        const labelW = doc.getTextWidth(label) + 6;
+        doc.setFont("helvetica", "bold").setTextColor(30);
+        const lines = doc.splitTextToSize(text || "—", pageWidth - 2 * marginX - labelW);
+        doc.text(lines, marginX + labelW, y);
+        y += 12 * Math.max(1, lines.length) + 2;
+        break;
+      }
+
       case "table": {
         if (b.title) { ensure(20); doc.setFontSize(11).setFont("helvetica", "bold"); doc.text(b.title, marginX, y); y += 14; }
         const cols = b.columns ?? [];
