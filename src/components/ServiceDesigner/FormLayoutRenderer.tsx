@@ -21,6 +21,7 @@ import { api } from "@/lib/api";
 import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalValidation";
 import { useSystemTextRenderer } from "@/context/ProcessContextProvider";
 import { containsSystemToken } from "@/lib/systemVariables";
+import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -144,6 +145,15 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
           value={value ?? ""}
           placeholder={field.default_value ?? ""}
           onChange={(e) => setValue(e.target.value === "" ? null : Number(e.target.value))}
+        />
+      );
+    case "ref_material":
+      // Auswahl aus der bestehenden Rohstoffverwaltung (inkl. externer Rohstoffe).
+      return (
+        <RawMaterialSelectField
+          value={value}
+          disabled={disabled}
+          onChange={(v) => setValue(v)}
         />
       );
     case "file":
