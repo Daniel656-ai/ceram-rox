@@ -572,7 +572,13 @@ function replaceTokens(text: string, snapshot: any): string {
     if (t.startsWith("AG:")) return fmt(resolveSnapshotPath(snapshot, `customer_form.${t.slice(3).trim()}`));
     if (t.startsWith("MDL:")) return fmt(resolveSnapshotPath(snapshot, `employee_form.${t.slice(4).trim()}`));
     const path = TOKEN_MAP[t];
-    return path ? fmt(resolveSnapshotPath(snapshot, path)) : _m;
+    if (path) return fmt(resolveSnapshotPath(snapshot, path));
+    if (t.includes(".")) {
+      const v = resolveSnapshotPath(snapshot, t);
+      if (v !== undefined) return fmt(v);
+    }
+    return _m;
+
   });
 }
 
