@@ -106,6 +106,9 @@ export default function OrdersPage() {
     });
   }, [visibleOrders, search, statusFilter, sort, i18n.language]);
 
+  if (role === "durchfuehrer") {
+    return <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />;
+  }
 
   const canCreateOrder = role === "master" || role === "auftraggeber" || isAnyProjectLead;
   const canShowActions = role === "master" || role === "auftraggeber" || isAnyProjectLead;
