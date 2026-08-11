@@ -19,6 +19,7 @@ import { useSystemVariables } from "@/context/ProcessContextProvider";
 import { PilotPlantGuidedStepper } from "./PilotPlantGuidedStepper";
 import { StepMaterialAvailability, useStepStartBlocked } from "./StepMaterialAvailability";
 import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
+import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 
 interface Props {
   /** Legacy measurement_orders.id — used to locate the linked order_instance. */
@@ -391,6 +392,8 @@ function FieldInput({
           </Select>
         );
       }
+      case "ref_material":
+        return <RawMaterialSelectField value={value} onChange={onChange} disabled={isReadonly} />;
       case "raw_material_recipe":
         return <RawMaterialRecipeField value={value} onChange={onChange} readonly={isReadonly} />;
       default:

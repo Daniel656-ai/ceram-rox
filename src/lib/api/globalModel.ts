@@ -25,7 +25,9 @@ export type GlobalFieldDataType =
   | "text" | "longtext" | "number" | "decimal" | "percent"
   | "date" | "time" | "datetime" | "boolean"
   | "select" | "multiselect"
-  | "file" | "image" | "reference" | "computed" | "repeater";
+  | "file" | "image" | "reference" | "computed" | "repeater"
+  | "ref_material";
+
 
 export type GlobalFieldSource = "manual" | "system" | "calculated" | "reference" | "device";
 
@@ -77,8 +79,10 @@ export const GLOBAL_FIELD_TYPES: { value: GlobalFieldDataType; label: string }[]
   { value: "image", label: "Bild" },
   { value: "reference", label: "Referenz" },
   { value: "computed", label: "Berechnet" },
+  { value: "ref_material", label: "Rohstoff (aus Rohstoffverwaltung)" },
   { value: "repeater", label: "Repeater / Unterliste (1:n)" },
 ];
+
 
 /** Unterfeld eines globalen Repeater-Feldes (in metadata.subfields gespeichert). */
 export interface GlobalRepeaterSubfield {
@@ -213,9 +217,10 @@ export const globalTypeToFormFieldType = (t: string): string => {
     percent: "percent", date: "date", time: "time", datetime: "datetime",
     boolean: "boolean", select: "select", multiselect: "multiselect",
     file: "file", image: "image", reference: "text", computed: "computed",
-    repeater: "repeater",
+    repeater: "repeater", ref_material: "ref_material",
 
   };
+
   return map[t] ?? "text";
 };
 

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Boxes, Pencil, Archive, Search, Lock } from "lucide-react";
+import { Plus, Boxes, Pencil, Archive, Search, Lock, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 import {
   GLOBAL_FIELD_SOURCES,
@@ -45,6 +45,7 @@ type FieldDraft = {
   calculation_id: string | null;
   validation_ids: string[];
   is_repeatable: boolean;
+  select_options: Array<{ label: string; value: string }>;
   repeater: GlobalRepeaterMeta;
   subfields: GlobalRepeaterSubfield[];
 };
@@ -54,6 +55,7 @@ const emptyField: FieldDraft = {
   field_key: "", display_name: "", description: "", data_type: "text",
   category: "", unit: "", default_value: "", data_source: "manual",
   list_id: null, calculation_id: null, validation_ids: [], is_repeatable: false,
+  select_options: [],
   repeater: { min_entries: 0, item_label: "Eintrag", add_label: "Eintrag hinzufügen" },
   subfields: [],
 };
@@ -72,6 +74,7 @@ const SUBFIELD_TYPES = [
   { value: "multiselect", label: "Mehrfachauswahl" },
   { value: "file", label: "Datei" },
   { value: "image", label: "Bild" },
+  { value: "ref_material", label: "Rohstoff (aus Rohstoffverwaltung)" },
 ];
 
 
@@ -168,6 +171,10 @@ export default function GlobalModelTab() {
         list_id: fieldDraft.list_id,
         calculation_id: fieldDraft.calculation_id,
         validation_ids: fieldDraft.validation_ids,
+        select_options:
+          fieldDraft.data_type === "select" || fieldDraft.data_type === "multiselect"
+            ? (fieldDraft.select_options as any)
+            : ([] as any),
         is_repeatable: fieldDraft.data_type === "repeater" ? true : fieldDraft.is_repeatable,
         metadata: (() => {
           const current = (fields.find((f) => f.id === fieldDraft.id)?.metadata ?? {}) as Record<string, unknown>;
@@ -387,6 +394,9 @@ export default function GlobalModelTab() {
                         default_value: f.default_value ?? "", data_source: f.data_source,
                         list_id: f.list_id ?? null, calculation_id: f.calculation_id ?? null,
                         validation_ids: f.validation_ids ?? [], is_repeatable: !!f.is_repeatable,
+                        select_options: (f.select_options ?? []).map((o: any) =>
+                          typeof o === "string" ? { label: o, value: o } : { label: o.label ?? o.value, value: o.value ?? o.label }
+                        ),
                         repeater: readGlobalRepeaterMeta(f),
                         subfields: readGlobalRepeaterSubfields(f),
                       });
@@ -557,6 +567,15 @@ export default function GlobalModelTab() {
                 })}
               </div>
             </div>
+            {(fieldDraft.data_type === "select" || fieldDraft.data_type === "multiselect") && (
+              <div className="sm:col-span-2">
+                <SelectOptionsEditor
+                  options={fieldDraft.select_options}
+                  disabled={!!fieldDraft.list_id}
+                  onChange={(opts) => setFieldDraft({ ...fieldDraft, select_options: opts })}
+                />
+              </div>
+            )}
             {fieldDraft.data_type !== "repeater" && (
               <div className="sm:col-span-2">
                 <label className="flex items-center gap-2 text-xs">
@@ -767,6 +786,96 @@ function GlobalRepeaterSettings({
           <p className="mt-1 text-[10px] text-muted-foreground">
             Dieses Layout wird in jedem Formular verwendet, das diesen globalen Repeater referenziert.
           </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------
+ * Auswahlwerte eines globalen Auswahl-Feldes (hinzufügen, bearbeiten,
+ * löschen, Reihenfolge ändern). Bei verknüpfter Stammdatenliste liefern
+ * die Stammdaten die Werte – dann ist der Editor deaktiviert.
+ * ------------------------------------------------------------------ */
+function SelectOptionsEditor({
+  options, onChange, disabled,
+}: {
+  options: Array<{ label: string; value: string }>;
+  onChange: (o: Array<{ label: string; value: string }>) => void;
+  disabled?: boolean;
+}) {
+  const patch = (i: number, p: Partial<{ label: string; value: string }>) =>
+    onChange(options.map((o, idx) => (idx === i ? { ...o, ...p } : o)));
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= options.length) return;
+    const next = [...options];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+
+  return (
+    <div className="rounded-md border p-2 space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Auswahlwerte (Optionen)</Label>
+        {!disabled && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            onClick={() => onChange([...options, { label: "", value: "" }])}
+          >
+            <Plus className="h-3 w-3 mr-1" /> Option
+          </Button>
+        )}
+      </div>
+
+      {disabled ? (
+        <p className="text-xs text-muted-foreground">
+          Die Optionen stammen aus der verknüpften Stammdatenliste. Zum manuellen Pflegen die Liste auf „Keine“ setzen.
+        </p>
+      ) : options.length === 0 ? (
+        <p className="text-xs text-muted-foreground">Noch keine Optionen definiert.</p>
+      ) : (
+        <div className="space-y-1">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 text-[10px] uppercase text-muted-foreground px-1">
+            <div>Anzeige</div><div>Wert (technisch)</div><div />
+          </div>
+          {options.map((o, i) => (
+            <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+              <Input
+                className="h-8"
+                value={o.label}
+                placeholder="z. B. Diesel catalyst"
+                onChange={(e) => {
+                  const label = e.target.value;
+                  const autoValue = !o.value || o.value === slug(o.label);
+                  patch(i, autoValue ? { label, value: slug(label) } : { label });
+                }}
+              />
+              <Input
+                className="h-8 font-mono text-xs"
+                value={o.value}
+                placeholder="diesel_catalyst"
+                onChange={(e) => patch(i, { value: e.target.value })}
+              />
+              <div className="flex items-center gap-0.5">
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(i, -1)}>
+                  <ArrowUp className="h-3 w-3" />
+                </Button>
+                <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(i, 1)}>
+                  <ArrowDown className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button" size="icon" variant="ghost" className="h-7 w-7"
+                  onClick={() => onChange(options.filter((_, idx) => idx !== i))}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
