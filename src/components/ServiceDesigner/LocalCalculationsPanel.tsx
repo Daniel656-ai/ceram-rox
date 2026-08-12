@@ -52,6 +52,8 @@ interface Draft {
   tokens: CalcToken[];
   advanced: boolean;
   formula: string;
+  is_result: boolean;
+  result_label: string;
 }
 
 const emptyDraft = (): Draft => ({
@@ -60,6 +62,8 @@ const emptyDraft = (): Draft => ({
   tokens: [{ type: "operand", source: "field", ref: "" }],
   advanced: false,
   formula: "",
+  is_result: false,
+  result_label: "",
 });
 
 export default function LocalCalculationsPanel({
