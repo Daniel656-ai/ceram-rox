@@ -834,6 +834,8 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
   const [minV, setMinV] = useState(field.min_value?.toString() ?? "");
   const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
   const [fieldType, setFieldType] = useState<FormFieldType>(field.field_type);
+  const [isResult, setIsResult] = useState(!!(field as any).is_result);
+  const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
 
   const isNumeric = ["number", "decimal", "percent"].includes(fieldType);
   const isGlobalRef = !!field.global_field_id;
