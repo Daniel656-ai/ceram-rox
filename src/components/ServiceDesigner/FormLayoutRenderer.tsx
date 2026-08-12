@@ -509,11 +509,10 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     }
     case "columns": {
       const n = node as ColumnsNode;
-      const spanCls = n.columnCount === 3 ? "col-span-12 md:col-span-4" : n.columnCount === 2 ? "col-span-12 md:col-span-6" : "col-span-12";
       return (
-        <div className={cn("grid grid-cols-12 gap-3", widthCls(n.width), n.className)}>
+        <div className={cn("rox-cols gap-3", widthCls(n.width), n.className)} style={columnsGridStyle(n) as any}>
           {n.children.map(col => (
-            <div key={col.id} className={spanCls}>
+            <div key={col.id} className="min-w-0">
               <div className="grid grid-cols-12 gap-3">
                 {col.children.map(c => <RenderNode key={c.id} node={c} fields={fields} />)}
               </div>
