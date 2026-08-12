@@ -133,7 +133,7 @@ function TaskExecutionPageInner() {
 
       // Numeric single value → store in `value`; everything else → JSON in `remarks`.
       let payload: any = {
-        result_name: key,
+        result_name: resultName,
         measured_by: user?.id ?? null,
         measured_at: measuredAt,
         value: null,
