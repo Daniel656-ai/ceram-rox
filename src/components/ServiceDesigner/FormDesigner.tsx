@@ -508,6 +508,15 @@ function FieldBlock({
     data: { kind: "field", sectionId, refId: refItem.id },
     disabled: !canManage,
   });
+  const qc = useQueryClient();
+  const markResult = useMutation({
+    mutationFn: async (v: boolean) => {
+      if (!field) return;
+      await api.serviceDataFields.update(field.id, { is_result: v } as any);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["service-data-fields"] }),
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
