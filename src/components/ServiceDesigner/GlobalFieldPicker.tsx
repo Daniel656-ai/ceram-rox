@@ -112,6 +112,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
       const ids = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
       if (ids.length === 0) throw new Error("Keine Felder ausgewählt");
       let sort = (existing.at(-1)?.sort_order ?? -1) + 1;
+      const usedKeys = new Set(takenKeys);
       for (const id of ids) {
         const gf = allFields.find((f) => f.id === id);
         if (!gf) continue;
@@ -123,10 +124,24 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
           options = items.map((i) => ({ label: i.label, value: i.item_value }));
         }
         const isRepeater = gf.data_type === "repeater";
+
+        // Mehrfachverwendung: eindeutiger technischer Key je Verwendung,
+        // die globale Definition (global_field_id / binding_path) bleibt identisch.
+        const usageIndex = (usageCount.get(gf.id) ?? 0) + 1;
+        let fieldKey = gf.field_key;
+        if (usedKeys.has(fieldKey)) {
+          let n = Math.max(usageIndex, 2);
+          while (usedKeys.has(`${gf.field_key}_${n}`)) n++;
+          fieldKey = `${gf.field_key}_${n}`;
+        }
+        usedKeys.add(fieldKey);
+        const displayName =
+          usageIndex > 1 ? `${gf.display_name} (Verwendung ${usageIndex})` : gf.display_name;
+
         const created = await api.formFields.create({
           form_id: formId,
-          field_key: gf.field_key,
-          display_name: gf.display_name,
+          field_key: fieldKey,
+          display_name: displayName,
           field_type: globalTypeToFormFieldType(gf.data_type) as any,
           description: gf.description,
           unit: gf.unit,
@@ -141,16 +156,18 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
             global_calculation_id: gf.calculation_id ?? null,
             validation_ids: gf.validation_ids ?? [],
             is_repeatable: isRepeater ? true : !!gf.is_repeatable,
+            usage_index: usageIndex,
             ...(isRepeater
               ? {
                   repeater: {
                     ...readGlobalRepeaterMeta(gf),
-                    storage_key: readGlobalRepeaterMeta(gf).storage_key || gf.field_key,
+                    storage_key: readGlobalRepeaterMeta(gf).storage_key || fieldKey,
                   },
                 }
               : {}),
           },
         } as any);
+
 
         // Repeater: Unterfelder aus der globalen Definition übernehmen.
         if (isRepeater) {
