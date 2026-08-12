@@ -575,18 +575,7 @@ function Inspector({ node, fields, formId, onChange, onDelete, canManage }: {
         </>
       )}
       {node.type === "columns" && (
-        <div>
-          <Label className="text-xs">Anzahl Spalten</Label>
-          <Select value={String((node as any).columnCount ?? 2)} onValueChange={(v) => {
-            const count = parseInt(v, 10);
-            const existing = (node as any).children ?? [];
-            const nextCols = Array.from({ length: count }, (_, i) => existing[i] ?? ({ id: Math.random().toString(36).slice(2, 10), type: "column", children: [], visible: true, width: 12 }));
-            onChange({ columnCount: count, children: nextCols } as any);
-          }} disabled={disabled}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>{[1, 2, 3].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
+        <ColumnsInspector node={node as any} onChange={onChange} disabled={disabled} />
       )}
       {node.type === "heading" && (
         <>
