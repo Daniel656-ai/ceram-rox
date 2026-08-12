@@ -888,7 +888,9 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
         decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
         min_value: isNumeric && minV ? parseFloat(minV) : null,
         max_value: isNumeric && maxV ? parseFloat(maxV) : null,
-      });
+        is_result: isResult,
+        result_label: isResult ? (resultLabel.trim() || null) : null,
+      } as any);
     },
     onSuccess: () => {
       toast.success("Gespeichert");
