@@ -130,6 +130,8 @@ export default function LocalCalculationsPanel({
       tokens: tokens.length ? tokens : [{ type: "operand", source: "field", ref: "" }],
       advanced: tokens.length === 0,
       formula: c.formula ?? "",
+      is_result: !!(c as any).is_result,
+      result_label: (c as any).result_label ?? "",
     });
     setTestValues({});
     setOpen(true);
