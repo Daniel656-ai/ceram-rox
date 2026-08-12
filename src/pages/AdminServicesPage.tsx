@@ -221,36 +221,6 @@ export default function AdminServicesPage() {
         ),
     }] : []),
     {
-      key: "parameters",
-      header: t("admin:service_parameters"),
-      type: "custom",
-      sortable: false,
-      filterable: false,
-      searchable: false,
-      cell: (s) => (
-        <div className="flex gap-1">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs gap-1"
-            onClick={() => {
-              setParamEditorServiceId(s.id);
-              setParamEditorServiceName(s.service_name);
-            }}
-          >
-            <Settings2 className="h-3 w-3" /> {t("admin:service_parameters")}
-          </Button>
-          <Button
-            size="sm"
-            className="h-7 text-xs gap-1"
-            onClick={() => window.location.assign(`/admin/prozess-designer`)}
-          >
-            <Settings2 className="h-3 w-3" /> Prozess-Designer
-          </Button>
-        </div>
-      ),
-    },
-    {
       key: "booking_form",
       header: "Buchungsformular",
       type: "custom",
