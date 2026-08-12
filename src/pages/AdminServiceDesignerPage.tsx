@@ -1081,30 +1081,24 @@ function GlobalFormLibrary() {
           <Card>
             <CardHeader><CardTitle className="text-sm">{selectedForm.name}</CardTitle></CardHeader>
             <CardContent>
-              <Tabs defaultValue="fields">
+              <Tabs defaultValue="designer">
                 <TabsList>
-                  <TabsTrigger value="fields">Felder</TabsTrigger>
-                  <TabsTrigger value="layout">Formular-Designer</TabsTrigger>
-                  <TabsTrigger value="calculations">Berechnungen</TabsTrigger>
-                  <TabsTrigger value="roles">Rollenansichten</TabsTrigger>
+                  <TabsTrigger value="designer">Formular-Designer</TabsTrigger>
                   <TabsTrigger value="preview">Vorschau</TabsTrigger>
                 </TabsList>
-                <TabsContent value="fields" className="mt-3">
-                  <FormFieldsEditor form={selectedForm} />
-                </TabsContent>
-                <TabsContent value="layout" className="mt-3">
-                  <FormLayoutDesigner form={selectedForm} canManage={true} />
-                </TabsContent>
-                <TabsContent value="calculations" className="mt-3">
-                  <LocalCalculationsPanel form={selectedForm} canManage={true} />
-                </TabsContent>
-                <TabsContent value="roles" className="mt-3">
-                  <RoleViewsDesigner form={selectedForm} canManage={true} />
+                <TabsContent value="designer" className="mt-3">
+                  <RoleViewsDesigner
+                    form={selectedForm}
+                    canManage={true}
+                    fieldsSlot={<FormFieldsEditor form={selectedForm} />}
+                    calculationsSlot={<LocalCalculationsPanel form={selectedForm} canManage={true} />}
+                  />
                 </TabsContent>
                 <TabsContent value="preview" className="mt-3">
                   <FormPreviewTab form={selectedForm} />
                 </TabsContent>
               </Tabs>
+
             </CardContent>
           </Card>
         ) : (
