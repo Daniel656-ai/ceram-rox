@@ -501,6 +501,8 @@ export type Database = {
           formula: string
           id: string
           inputs: Json
+          is_result: boolean
+          result_label: string | null
           result_type: string
           rounding: string
           sort_order: number
@@ -519,6 +521,8 @@ export type Database = {
           formula?: string
           id?: string
           inputs?: Json
+          is_result?: boolean
+          result_label?: string | null
           result_type?: string
           rounding?: string
           sort_order?: number
@@ -537,6 +541,8 @@ export type Database = {
           formula?: string
           id?: string
           inputs?: Json
+          is_result?: boolean
+          result_label?: string | null
           result_type?: string
           rounding?: string
           sort_order?: number
@@ -750,12 +756,14 @@ export type Database = {
           global_field_id: string | null
           id: string
           is_required: boolean
+          is_result: boolean
           max_value: number | null
           metadata: Json
           min_value: number | null
           parent_field_id: string | null
           readonly: boolean
           ref_target: string | null
+          result_label: string | null
           select_options: Json
           sort_order: number
           unit: string | null
@@ -777,12 +785,14 @@ export type Database = {
           global_field_id?: string | null
           id?: string
           is_required?: boolean
+          is_result?: boolean
           max_value?: number | null
           metadata?: Json
           min_value?: number | null
           parent_field_id?: string | null
           readonly?: boolean
           ref_target?: string | null
+          result_label?: string | null
           select_options?: Json
           sort_order?: number
           unit?: string | null
@@ -804,12 +814,14 @@ export type Database = {
           global_field_id?: string | null
           id?: string
           is_required?: boolean
+          is_result?: boolean
           max_value?: number | null
           metadata?: Json
           min_value?: number | null
           parent_field_id?: string | null
           readonly?: boolean
           ref_target?: string | null
+          result_label?: string | null
           select_options?: Json
           sort_order?: number
           unit?: string | null
@@ -1036,8 +1048,10 @@ export type Database = {
           id: string
           input_bindings: Json
           inputs: Json
+          is_result: boolean
           is_system: boolean
           output_binding: Json | null
+          result_label: string | null
           unit: string | null
           updated_at: string
         }
@@ -1054,8 +1068,10 @@ export type Database = {
           id?: string
           input_bindings?: Json
           inputs?: Json
+          is_result?: boolean
           is_system?: boolean
           output_binding?: Json | null
+          result_label?: string | null
           unit?: string | null
           updated_at?: string
         }
@@ -1072,8 +1088,10 @@ export type Database = {
           id?: string
           input_bindings?: Json
           inputs?: Json
+          is_result?: boolean
           is_system?: boolean
           output_binding?: Json | null
+          result_label?: string | null
           unit?: string | null
           updated_at?: string
         }
@@ -1094,12 +1112,14 @@ export type Database = {
           field_key: string
           id: string
           is_repeatable: boolean
+          is_result: boolean
           is_system: boolean
           list_id: string | null
           metadata: Json
           object_id: string
           reference_object_id: string | null
           reference_source: string | null
+          result_label: string | null
           select_options: Json
           sort_order: number
           unit: string | null
@@ -1121,12 +1141,14 @@ export type Database = {
           field_key: string
           id?: string
           is_repeatable?: boolean
+          is_result?: boolean
           is_system?: boolean
           list_id?: string | null
           metadata?: Json
           object_id: string
           reference_object_id?: string | null
           reference_source?: string | null
+          result_label?: string | null
           select_options?: Json
           sort_order?: number
           unit?: string | null
@@ -1148,12 +1170,14 @@ export type Database = {
           field_key?: string
           id?: string
           is_repeatable?: boolean
+          is_result?: boolean
           is_system?: boolean
           list_id?: string | null
           metadata?: Json
           object_id?: string
           reference_object_id?: string | null
           reference_source?: string | null
+          result_label?: string | null
           select_options?: Json
           sort_order?: number
           unit?: string | null
@@ -7054,12 +7078,14 @@ export type Database = {
           field_type: Database["public"]["Enums"]["service_field_type"]
           id: string
           is_required: boolean
+          is_result: boolean
           legacy_parameter_id: string | null
           max_value: number | null
           min_value: number | null
           parent_field_id: string | null
           readonly: boolean
           ref_target: string | null
+          result_label: string | null
           select_options: Json
           service_id: string
           sort_order: number
@@ -7080,12 +7106,14 @@ export type Database = {
           field_type?: Database["public"]["Enums"]["service_field_type"]
           id?: string
           is_required?: boolean
+          is_result?: boolean
           legacy_parameter_id?: string | null
           max_value?: number | null
           min_value?: number | null
           parent_field_id?: string | null
           readonly?: boolean
           ref_target?: string | null
+          result_label?: string | null
           select_options?: Json
           service_id: string
           sort_order?: number
@@ -7106,12 +7134,14 @@ export type Database = {
           field_type?: Database["public"]["Enums"]["service_field_type"]
           id?: string
           is_required?: boolean
+          is_result?: boolean
           legacy_parameter_id?: string | null
           max_value?: number | null
           min_value?: number | null
           parent_field_id?: string | null
           readonly?: boolean
           ref_target?: string | null
+          result_label?: string | null
           select_options?: Json
           service_id?: string
           sort_order?: number
