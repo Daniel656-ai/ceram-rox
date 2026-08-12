@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ProjectTabsNav } from "@/components/ProjectTabsNav";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -96,6 +97,7 @@ export default function PortfolioDetailPage() {
     enabled: !!user && !!portfolioId,
   });
 
+  const [activeTab, setActiveTab] = useState("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<any>({});
   const [addProjectOpen, setAddProjectOpen] = useState(false);
@@ -292,20 +294,27 @@ export default function PortfolioDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="overview">Stammdaten</TabsTrigger>
-          <TabsTrigger value="structure">Struktur (APs &amp; Tasks)</TabsTrigger>
-          <TabsTrigger value="projects">Projekte ({members.length})</TabsTrigger>
-          <TabsTrigger value="milestones">Meilensteine ({milestoneTimeline.length})</TabsTrigger>
-          <TabsTrigger value="documents">Dokumente</TabsTrigger>
-          <TabsTrigger value="analytics">Auswertungen</TabsTrigger>
-          <TabsTrigger value="mapping">Förder-Zuordnungen</TabsTrigger>
-          <TabsTrigger value="ffg">FFG-Bericht</TabsTrigger>
-          <TabsTrigger value="dashboard">Dashboard &amp; KPIs</TabsTrigger>
-          <TabsTrigger value="controlling">Controlling</TabsTrigger>
-          {canManageStructure && <TabsTrigger value="time">Zeiterfassung</TabsTrigger>}
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 w-full">
+        <ProjectTabsNav
+          active={activeTab}
+          onChange={setActiveTab}
+          mainTabs={[
+            { value: "overview", label: "Stammdaten" },
+            { value: "structure", label: "Struktur (APs & Tasks)" },
+            { value: "projects", label: `Projekte (${members.length})` },
+            { value: "milestones", label: `Meilensteine (${milestoneTimeline.length})` },
+            ...(canManageStructure ? [{ value: "time", label: "Zeiterfassung" }] : []),
+            { value: "analytics", label: "Auswertungen" },
+          ]}
+          advancedTabs={[
+            { value: "dashboard", label: "Dashboard & KPIs" },
+            { value: "controlling", label: "Controlling" },
+            { value: "documents", label: "Dokumente" },
+            { value: "mapping", label: "Förder-Zuordnungen" },
+            { value: "ffg", label: "FFG-Bericht" },
+          ]}
+        />
+
 
         <TabsContent value="structure" className="mt-4">
           <PortfolioStructureTab portfolioId={portfolioId} canManage={canManageStructure} />
