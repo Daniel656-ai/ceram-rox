@@ -27,6 +27,7 @@ import TemplateManager from "@/components/TemplateManager";
 import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
+import ServiceLinkedForms, { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
 
 interface SelectedMeasurement {
   uid: string;
@@ -489,8 +490,17 @@ export default function CreateOrderPage() {
 
           // Split values: uploads vs. parameters, including inside repeatable arrays
           const paramInserts: Array<{ order_measurement_id: string; parameter_name: string; parameter_value: string; unit: string | null }> = [];
+          // Werte verknüpfter Formulare (Dienstleistung → Formular) je Aufgabe
+          const linkedFormValues: Array<{ formId: string; fieldKey: string; value: any }> = [];
           for (const [key, v] of Object.entries(formVals)) {
             if (v == null) continue;
+
+            const linked = parseLinkedFormValueKey(key);
+            if (linked) {
+              linkedFormValues.push({ formId: linked.formId, fieldKey: linked.fieldKey, value: v });
+              continue;
+            }
+
 
             // Top-level upload field
             if (uploadKeys.has(key) && isUploadValue(v)) {
@@ -543,6 +553,28 @@ export default function CreateOrderPage() {
           const pending: Array<[string, number, any]> = (persistUpload as any)._pending || [];
           for (const [fk, idx, entry] of pending) await persistUpload(fk, idx, entry);
           (persistUpload as any)._pending = [];
+
+          // Werte der verknüpften Formulare je Aufgabe persistieren
+          if (linkedFormValues.length > 0) {
+            const formIds = [...new Set(linkedFormValues.map((x) => x.formId))];
+            for (const fid of formIds) {
+              const ff = await api.formFields.listForForm(fid);
+              for (const item of linkedFormValues.filter((x) => x.formId === fid)) {
+                const def = (ff as any[]).find((x) => x.field_key === item.fieldKey);
+                const raw = item.value;
+                if (typeof raw === "string" && raw.trim() === "") continue;
+                paramInserts.push({
+                  order_measurement_id: createdMeasurement.id,
+                  parameter_name: def?.display_name || item.fieldKey,
+                  parameter_value:
+                    typeof raw === "boolean" ? (raw ? "true" : "false")
+                      : typeof raw === "object" ? JSON.stringify(raw)
+                      : String(raw),
+                  unit: def?.unit || null,
+                });
+              }
+            }
+          }
 
           if (paramInserts.length > 0) {
             await api.measurementParameters.bulkInsert(paramInserts);
@@ -789,6 +821,11 @@ export default function CreateOrderPage() {
                       paramValues={measurementParams[m.uid] || {}}
                       onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)}
                       t={t}
+                    />
+                    <ServiceLinkedForms
+                      serviceId={m.service_id}
+                      values={measurementFormValues[m.uid] || {}}
+                      onChange={(key, value) => updateFormValue(m.uid, key, value)}
                     />
                   </div>
                 ))}
