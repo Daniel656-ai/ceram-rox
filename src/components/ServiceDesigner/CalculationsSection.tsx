@@ -147,6 +147,24 @@ export default function CalculationsSection() {
     setOpen(true);
   };
 
+  const duplicate = (c: GlobalCalculation) => {
+    const existing = new Set((calcs as GlobalCalculation[]).map((x) => x.calc_key));
+    let key = `${c.calc_key}_kopie`;
+    let n = 2;
+    while (existing.has(key)) key = `${c.calc_key}_kopie_${n++}`;
+    setDraft({
+      calc_key: key,
+      display_name: `${c.display_name} (Kopie)`,
+      description: c.description ?? "", formula: c.formula, unit: c.unit ?? "", decimals: c.decimals,
+      inputs: parseInputBindings(c.input_bindings).map((b) => ({ ...b })),
+      output: parseOutputBinding(c.output_binding) ?? { target: "form_field", ref: "" },
+    });
+    setTestValues("");
+    setOpen(true);
+  };
+
+
+
   const setInput = (i: number, patch: Partial<CalcInputBinding>) =>
     setDraft((d) => ({ ...d, inputs: d.inputs.map((b, idx) => (idx === i ? { ...b, ...patch } : b)) }));
 
