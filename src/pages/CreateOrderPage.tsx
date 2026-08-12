@@ -790,6 +790,11 @@ export default function CreateOrderPage() {
                       onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)}
                       t={t}
                     />
+                    <ServiceLinkedForms
+                      serviceId={m.service_id}
+                      values={measurementFormValues[m.uid] || {}}
+                      onChange={(key, value) => updateFormValue(m.uid, key, value)}
+                    />
                   </div>
                 ))}
               </div>
