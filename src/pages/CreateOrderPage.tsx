@@ -45,81 +45,6 @@ const newUid = () =>
     ? crypto.randomUUID()
     : `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-function ServiceRequiredParams({ serviceId, paramValues, onParamChange, t }: {
-  serviceId: string; paramValues: Record<string, string>;
-  onParamChange: (paramId: string, value: string) => void; t: any;
-}) {
-  const { data: defs = [] } = useServiceParameterDefs(serviceId);
-  const inputDefs = defs.filter((d) => d.parameter_category === "input" && !d.conditional_on);
-  if (inputDefs.length === 0) return null;
-
-  const requiredDefs = inputDefs.filter((d) => d.is_required);
-  const optionalDefs = inputDefs.filter((d) => !d.is_required);
-
-  const renderField = (def: typeof inputDefs[0]) => {
-    const val = paramValues[def.id] || "";
-    const hasError = def.is_required && !val.trim();
-    return (
-      <div key={def.id} className="space-y-0.5">
-        <Label className="text-xs flex items-center gap-1">
-          {def.parameter_name}
-          {def.unit && <span className="text-muted-foreground font-normal">({def.unit})</span>}
-          {def.is_required && <span className="text-destructive">*</span>}
-          {hasError && <AlertCircle className="h-3 w-3 text-destructive" />}
-        </Label>
-        {def.description && (
-          <p className="text-[10px] text-muted-foreground">{def.description}</p>
-        )}
-        {def.parameter_type === "number" && (
-          <Input type="number" step="any" value={val} onChange={(e) => onParamChange(def.id, e.target.value)} placeholder={def.default_value || ""} className={`h-7 text-xs ${hasError ? "border-destructive" : ""}`} />
-        )}
-        {def.parameter_type === "text" && (
-          <Input value={val} onChange={(e) => onParamChange(def.id, e.target.value)} placeholder={def.default_value || ""} className={`h-7 text-xs ${hasError ? "border-destructive" : ""}`} />
-        )}
-        {def.parameter_type === "boolean" && (
-          <div className="flex items-center gap-2">
-            <Switch checked={val === "true"} onCheckedChange={(c) => onParamChange(def.id, c ? "true" : "false")} />
-            <span className="text-xs">{val === "true" ? t("common:yes") : t("common:no")}</span>
-          </div>
-        )}
-        {def.parameter_type === "select" && (
-          <Select value={val} onValueChange={(v) => onParamChange(def.id, v)}>
-            <SelectTrigger className={`h-7 text-xs ${hasError ? "border-destructive" : ""}`}>
-              <SelectValue placeholder={t("orders:please_select")} />
-            </SelectTrigger>
-            <SelectContent>
-              {(def.select_options || []).map((o) => (
-                <SelectItem key={o} value={o}>{o}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="mt-2 pl-2 border-l-2 border-primary/20 space-y-2">
-      {requiredDefs.length > 0 && (
-        <>
-          <p className="text-xs font-medium text-muted-foreground">{t("orders:required_params")}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {requiredDefs.map(renderField)}
-          </div>
-        </>
-      )}
-      {optionalDefs.length > 0 && (
-        <>
-          <p className="text-xs font-medium text-muted-foreground mt-2">{t("orders:optional_params", { defaultValue: "Optionale Parameter" })}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {optionalDefs.map(renderField)}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 /**
  * Zeigt bei der Aufgabenerstellung ausschließlich das Auftraggeberformular
  * ("customer") der Dienstleistung. Existiert dafür keine Konfiguration, wird
@@ -156,7 +81,6 @@ export default function CreateOrderPage() {
   const { hasPermission } = usePermissions();
   const canViewRates = hasPermission("costs.view_hourly_rates");
   // Auftragserstellung = Auftraggeber-Kontext, unabhängig davon, wer den Auftrag anlegt.
-  const roleView: FormRoleView = "customer";
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
   const { data: projects = [] } = useProjects();
@@ -291,7 +215,7 @@ export default function CreateOrderPage() {
     for (const sid of serviceIds) {
       const svc = services.find((s) => s.id === sid);
       if (svc) {
-        newMeasurements.push({ uid: newUid(), service_id: sid, service_name: svc.service_name, planned_hours: 1 });
+        newMeasurements.push({ uid: newUid(), service_id: sid, service_name: svc.service_name });
       }
     }
     setMeasurements(newMeasurements);
