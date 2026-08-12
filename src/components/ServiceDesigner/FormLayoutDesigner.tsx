@@ -10,7 +10,7 @@ import type { FormDefinition } from "@/lib/api/formDefinitions";
 import { type FormField, readRepeaterMeta, writeRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import {
   type LayoutNode, type LayoutNodeType, type FormLayoutTree,
-  type LayoutWidth, type FieldNode,
+  type LayoutWidth, type FieldNode, type CalculationNode,
   createNode, normalizeLayout, findNode, updateNode,
   removeNode, insertNode, collectUsedFieldIds,
 } from "@/lib/api/formDefinitionLayout";
