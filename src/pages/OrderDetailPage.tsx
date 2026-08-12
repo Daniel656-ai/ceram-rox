@@ -33,6 +33,7 @@ import { useUsers } from "@/hooks/useUsers";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrderReportTab from "@/components/OrderReportTab";
 import { ProcessOrderTabs } from "@/components/workflow/ProcessOrderTabs";
+import CompletedResultForm from "@/components/CompletedResultForm";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -341,6 +342,17 @@ function OrderDetailPageInner() {
               </Table>
             </CardContent>
           </Card>
+          {measurements
+            .filter((m: any) => m.status === "completed")
+            .map((m: any) => (
+              <CompletedResultForm
+                key={m.id}
+                measurementId={m.id}
+                serviceId={m.service_id}
+                measurementNumber={m.measurement_number}
+                serviceName={m.measurement_services?.service_name}
+              />
+            ))}
           {(order as any).samples && (
             <Card>
               <CardHeader><CardTitle className="text-base">Probe</CardTitle></CardHeader>
