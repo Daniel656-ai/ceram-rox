@@ -8,7 +8,8 @@ import { useProjectExpenses } from "@/hooks/useProjectExpenses";
 import { useProjectTimeEntries } from "@/hooks/useProjectTimeEntries";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ProjectTabsNav } from "@/components/ProjectTabsNav";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ export default function ProjectDetailPage() {
   const isProjectCompleted = (project as any)?.project_status === "completed";
   const canEditIdentity = isMaster || isLeaderOrOwner || canEditByPermission;
   const [editIdentityOpen, setEditIdentityOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("time_entries");
 
   const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
     if (!id) return;
@@ -480,22 +482,31 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="time_entries" className="print:block">
-        <TabsList className="print:hidden flex-wrap">
-          <TabsTrigger value="time_entries">{t("tab_time_entries")}</TabsTrigger>
-          <TabsTrigger value="services"><Briefcase className="h-3.5 w-3.5 mr-1" />Dienstleistungen</TabsTrigger>
-          <TabsTrigger value="samples">{t("tab_samples")}</TabsTrigger>
-          <TabsTrigger value="measurements">{t("tab_measurements")}</TabsTrigger>
-          <TabsTrigger value="team"><Users className="h-3.5 w-3.5 mr-1" />{t("tab_team")}</TabsTrigger>
-          <TabsTrigger value="planning">{t("tab_planning")}</TabsTrigger>
-          <TabsTrigger value="weekly_reviews"><ClipboardList className="h-3.5 w-3.5 mr-1" />Weekly Reviews</TabsTrigger>
-          {canViewPersonnelCosts && <TabsTrigger value="costs">{t("tab_costs")}</TabsTrigger>}
-          <TabsTrigger value="material_costs">{t("materials:tab_material_costs")}</TabsTrigger>
-          <TabsTrigger value="documents"><FileText className="h-3.5 w-3.5 mr-1" />Dokumente</TabsTrigger>
-          <TabsTrigger value="governance"><Shield className="h-3.5 w-3.5 mr-1" />Governance</TabsTrigger>
-          <TabsTrigger value="closure"><ClipboardCheck className="h-3.5 w-3.5 mr-1" />Projektabschluss</TabsTrigger>
-          <TabsTrigger value="report">{t("tab_report")}</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="print:block min-w-0 w-full">
+        <ProjectTabsNav
+          active={activeTab}
+          onChange={setActiveTab}
+          mainTabs={[
+            { value: "time_entries", label: t("tab_time_entries") },
+            { value: "team", label: t("tab_team"), icon: <Users className="h-3.5 w-3.5 mr-1" /> },
+            { value: "planning", label: t("tab_planning") },
+            { value: "weekly_reviews", label: "Weekly Reviews", icon: <ClipboardList className="h-3.5 w-3.5 mr-1" /> },
+            { value: "material_costs", label: t("materials:tab_material_costs") },
+          ]}
+          advancedTabs={[
+            { value: "services", label: "Dienstleistungen", icon: <Briefcase className="h-4 w-4 shrink-0" /> },
+            { value: "samples", label: t("tab_samples"), icon: <FlaskConical className="h-4 w-4 shrink-0" /> },
+            { value: "measurements", label: t("tab_measurements"), icon: <ClipboardList className="h-4 w-4 shrink-0" /> },
+            ...(canViewPersonnelCosts
+              ? [{ value: "costs", label: t("tab_costs"), icon: <DollarSign className="h-4 w-4 shrink-0" /> }]
+              : []),
+            { value: "documents", label: "Dokumente", icon: <FileText className="h-4 w-4 shrink-0" /> },
+            { value: "governance", label: "Governance", icon: <Shield className="h-4 w-4 shrink-0" /> },
+            { value: "closure", label: "Projektabschluss", icon: <ClipboardCheck className="h-4 w-4 shrink-0" /> },
+            { value: "report", label: t("tab_report"), icon: <FileText className="h-4 w-4 shrink-0" /> },
+          ]}
+        />
+
 
         <TabsContent value="governance">
           <ProjectGovernanceTab projectId={id!} canEdit={canManagePlanning} canApprove={canManagePlanning} />
