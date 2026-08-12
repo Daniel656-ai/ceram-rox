@@ -157,3 +157,22 @@
      browsers that don't support `position: running()` will at least keep
      the in-flow .print-header on page 1. */
 }
+
+/* Flexible Spaltenlayouts im Formulardesigner/-renderer.
+   Mobil einspaltig, Tablet reduziert, Desktop mit konfigurierten Verhältnissen. */
+@layer components {
+  .rox-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 640px) {
+    .rox-cols {
+      grid-template-columns: var(--rox-cols-md, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .rox-cols {
+      grid-template-columns: var(--rox-cols-lg, minmax(0, 1fr));
+    }
+  }
+}
