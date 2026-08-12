@@ -1,5 +1,5 @@
-import { useMemo, useState, createContext, useContext, useCallback } from "react";
-import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree } from "@/lib/api/formDefinitionLayout";
+import { useMemo, useState, useEffect, createContext, useContext, useCallback } from "react";
+import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree, CalculationNode } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import {
   normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass,
@@ -22,6 +22,11 @@ import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalVali
 import { useSystemTextRenderer } from "@/context/ProcessContextProvider";
 import { containsSystemToken } from "@/lib/systemVariables";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
+import { Calculator } from "lucide-react";
+import { evaluateLocalCalculations, formatCalcResult } from "@/lib/localCalculations";
+import type { FormCalculation } from "@/lib/api/formCalculations";
+import { runCalculation } from "@/lib/calculationBindings";
+import { walkNodes } from "@/lib/api/formDefinitionLayout";
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -45,6 +50,18 @@ const ValuesCtx = createContext<ValuesCtxShape | null>(null);
 
 /** Nested overlay context used inside repeater entries so field values bind to
  *  the entry object instead of the top-level form state. */
+export interface CalcDisplayResult {
+  value: number | null;
+  error: string | null;
+  label: string;
+  unit: string | null;
+  decimals: number;
+  description?: string | null;
+}
+
+/** Ergebnisse aller im Formular eingebundenen Berechnungen (lokal + global). */
+const CalcResultsCtx = createContext<Record<string, CalcDisplayResult>>({});
+
 const EntryScopeCtx = createContext<{
   get: (key: string) => any;
   set: (key: string, v: any) => void;
@@ -534,9 +551,47 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
         </div>
       );
     }
+    case "calculation": {
+      const n = node as CalculationNode;
+      return (
+        <div className={cn(widthCls(n.width), n.className)}>
+          <CalculationDisplay node={n} />
+        </div>
+      );
+    }
     default:
       return null;
   }
+}
+
+function CalculationDisplay({ node }: { node: CalculationNode }) {
+  const results = useContext(CalcResultsCtx);
+  const res = results[`${node.scope}:${node.calc_key}`];
+  const label = node.label_override || res?.label || node.calc_key || "Berechnung";
+  const desc = node.description_override ?? res?.description ?? null;
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs flex items-center gap-1">
+        <Calculator className="h-3 w-3 text-muted-foreground" />
+        {label}
+        {node.show_unit !== false && res?.unit && (
+          <span className="text-muted-foreground font-normal ml-1">[{res.unit}]</span>
+        )}
+      </Label>
+      <div className={cn(
+        "flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/40 text-sm",
+        node.highlight && "border-primary/50 bg-primary/5 font-medium",
+      )}>
+        {res
+          ? <span className="truncate">{formatCalcResult(res.value, res.decimals, node.show_unit === false ? null : res.unit)}</span>
+          : <span className="text-muted-foreground text-xs">Berechnung nicht gefunden</span>}
+        <Lock className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
+      </div>
+      {res?.error && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{res.error}</p>}
+      {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+    </div>
+  );
 }
 
 function TabsInner({ defaultTab, tabs, children }: { defaultTab: string; tabs: { id: string; title: string }[]; children: React.ReactNode }) {
@@ -561,6 +616,8 @@ export default function FormLayoutRenderer({
   permissions,
   values,
   onChange,
+  formId,
+  localCalculations,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
@@ -568,6 +625,10 @@ export default function FormLayoutRenderer({
   /** When provided, the renderer is interactive and binds inputs to these values. */
   values?: Record<string, any>;
   onChange?: (key: string, v: any) => void;
+  /** Formular-ID: lädt die lokalen Berechnungen dieses Formulars. */
+  formId?: string;
+  /** Optional bereits geladene lokale Berechnungen (z. B. Live-Vorschau im Designer). */
+  localCalculations?: FormCalculation[];
 }) {
   const interactive = !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
@@ -576,16 +637,87 @@ export default function FormLayoutRenderer({
     interactive,
   }), [values, onChange, interactive]);
 
+  const calcNodes = useMemo(() => {
+    const out: CalculationNode[] = [];
+    walkNodes(layout.nodes, (n) => { if (n.type === "calculation") out.push(n as CalculationNode); });
+    return out;
+  }, [layout]);
+  const hasGlobalNodes = calcNodes.some((n) => n.scope === "global");
+
+  const { data: fetchedLocal = [] } = useQuery({
+    queryKey: ["form-calculations", formId],
+    queryFn: () => api.formCalculations.listForForm(formId!),
+    enabled: !!formId && !localCalculations,
+    staleTime: 60 * 1000,
+  });
+  const localCalcs = (localCalculations ?? fetchedLocal) as FormCalculation[];
+
+  const { data: globalCalcs = [] } = useQuery({
+    queryKey: ["global-calculations"],
+    queryFn: () => api.globalCalculations.list(),
+    enabled: hasGlobalNodes,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const calcResults = useMemo(() => {
+    const out: Record<string, CalcDisplayResult> = {};
+    const vals = values ?? {};
+    const local = evaluateLocalCalculations(localCalcs, vals);
+    for (const c of localCalcs) {
+      const r = local[c.calc_key];
+      out[`local:${c.calc_key}`] = {
+        value: r?.value ?? null,
+        error: r?.error ?? null,
+        label: c.display_name,
+        unit: c.unit,
+        decimals: c.decimals ?? 2,
+        description: c.description,
+      };
+    }
+    if (hasGlobalNodes) {
+      const enriched = { ...vals } as Record<string, unknown>;
+      for (const c of localCalcs) {
+        const v = local[c.calc_key]?.value;
+        if (v != null) enriched[c.calc_key] = v;
+      }
+      for (const g of globalCalcs as any[]) {
+        const r = runCalculation(g, { formValues: enriched, calculations: globalCalcs as any });
+        out[`global:${g.calc_key}`] = {
+          value: r.value,
+          error: r.error,
+          label: g.display_name,
+          unit: g.unit ?? null,
+          decimals: g.decimals ?? 2,
+          description: g.description,
+        };
+      }
+    }
+    return out;
+  }, [localCalcs, globalCalcs, values, hasGlobalNodes]);
+
+  /** Ergebnisse in die Formularwerte zurückschreiben – für Speicherung & Folgeberechnungen. */
+  useEffect(() => {
+    if (!interactive) return;
+    for (const [k, r] of Object.entries(calcResults)) {
+      const key = k.split(":")[1];
+      if (!key) continue;
+      if ((values as any)?.[key] !== r.value) onChange?.(key, r.value);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calcResults, interactive]);
+
   if (!layout.nodes.length) {
     return <div className="text-sm text-muted-foreground border rounded p-6 text-center">Noch keine Elemente im Layout.</div>;
   }
   return (
     <PermissionsCtx.Provider value={permissions ?? null}>
+      <CalcResultsCtx.Provider value={calcResults}>
       <ValuesCtx.Provider value={bind}>
         <div className="grid grid-cols-12 gap-3">
           {layout.nodes.map(n => <RenderNode key={n.id} node={n} fields={fields} />)}
         </div>
       </ValuesCtx.Provider>
+      </CalcResultsCtx.Provider>
     </PermissionsCtx.Provider>
   );
 }
