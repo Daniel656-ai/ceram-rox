@@ -450,6 +450,23 @@ export default function LocalCalculationsPanel({
               </div>
             </div>
 
+            <div className="rounded border p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Switch checked={draft.is_result}
+                  onCheckedChange={(v) => setDraft((d) => ({ ...d, is_result: v }))} />
+                <Label className="text-xs">Offizielles Ergebnis</Label>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Nur markierte Werte werden beim Abschluss der Aufgabe in die Ergebnisdatenbank übernommen.
+              </p>
+              {draft.is_result && (
+                <Input className="h-8" placeholder={draft.display_name || "Ergebnis-Bezeichnung"}
+                  value={draft.result_label}
+                  onChange={(e) => setDraft((d) => ({ ...d, result_label: e.target.value }))} />
+              )}
+            </div>
+
+
             {/* Live-Test */}
             {referenced.length > 0 && (
               <div className="border rounded p-3 space-y-2">
