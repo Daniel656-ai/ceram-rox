@@ -64,10 +64,8 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
     [objects]
   );
 
-  const alreadyLinked = useMemo(
-    () => new Set(existing.map((f) => f.global_field_id).filter(Boolean) as string[]),
-    [existing]
-  );
+  /** Anzahl bisheriger Verwendungen je globalem Feld (für „Verwendung n"). */
+
 
   /** Anzahl bisheriger Verwendungen je globalem Feld (für „Verwendung n"). */
   const usageCount = useMemo(() => {
