@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUp, ArrowDown, FormInput, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,10 +36,12 @@ export default function ServiceFormLinksDialog({ service, onClose }: Props) {
     enabled: open,
   });
 
-  const [orderedIds, setOrderedIds] = useState<string[]>([]);
+  type Entry = { form_definition_id: string; role_view: "customer" | "employee" | null };
+  const [entries, setEntries] = useState<Entry[]>([]);
   useEffect(() => {
-    setOrderedIds(links.map((l) => l.form_definition_id));
+    setEntries(links.map((l) => ({ form_definition_id: l.form_definition_id, role_view: l.role_view ?? null })));
   }, [links, service?.id]);
+  const orderedIds = useMemo(() => entries.map((e) => e.form_definition_id), [entries]);
 
   const [search, setSearch] = useState("");
   const unusedForms = useMemo(
@@ -53,18 +56,22 @@ export default function ServiceFormLinksDialog({ service, onClose }: Props) {
 
   const linkedForms = useMemo(
     () =>
-      orderedIds
-        .map((id) => allForms.find((f) => f.id === id))
-        .filter((f): f is NonNullable<typeof f> => !!f),
-    [orderedIds, allForms]
+      entries
+        .map((e) => ({ entry: e, form: allForms.find((f) => f.id === e.form_definition_id) }))
+        .filter((x): x is { entry: Entry; form: NonNullable<typeof x.form> } => !!x.form),
+    [entries, allForms]
   );
 
   const dirty =
-    orderedIds.length !== links.length ||
-    orderedIds.some((id, i) => links[i]?.form_definition_id !== id);
+    entries.length !== links.length ||
+    entries.some(
+      (e, i) =>
+        links[i]?.form_definition_id !== e.form_definition_id ||
+        (links[i]?.role_view ?? null) !== e.role_view
+    );
 
   const save = useMutation({
-    mutationFn: () => api.serviceFormLinks.setForService(service!.id, orderedIds),
+    mutationFn: () => api.serviceFormLinks.setForService(service!.id, entries),
     onSuccess: () => {
       toast.success("Formulare zugeordnet");
       qc.invalidateQueries({ queryKey: ["service-form-links", service!.id] });
@@ -75,10 +82,10 @@ export default function ServiceFormLinksDialog({ service, onClose }: Props) {
 
   const move = (idx: number, dir: -1 | 1) => {
     const t = idx + dir;
-    if (t < 0 || t >= orderedIds.length) return;
-    const next = [...orderedIds];
+    if (t < 0 || t >= entries.length) return;
+    const next = [...entries];
     [next[idx], next[t]] = [next[t], next[idx]];
-    setOrderedIds(next);
+    setEntries(next);
   };
 
   return (
@@ -110,7 +117,9 @@ export default function ServiceFormLinksDialog({ service, onClose }: Props) {
                 >
                   <Checkbox
                     checked={false}
-                    onCheckedChange={(v) => v && setOrderedIds((prev) => [...prev, f.id])}
+                    onCheckedChange={(v) =>
+                      v && setEntries((prev) => [...prev, { form_definition_id: f.id, role_view: null }])
+                    }
                   />
                   <span className="text-sm flex-1 truncate">{f.name}</span>
                   <Badge variant="outline" className="text-[10px]">v{f.version}</Badge>
@@ -121,7 +130,7 @@ export default function ServiceFormLinksDialog({ service, onClose }: Props) {
 
           <div>
             <div className="text-xs font-medium mb-2">
-              Zugeordnete Formulare · Reihenfolge <span className="text-muted-foreground">({orderedIds.length})</span>
+              Zugeordnete Formulare · Rolle & Reihenfolge <span className="text-muted-foreground">({entries.length})</span>
             </div>
             <ScrollArea className="h-[336px] border rounded-md p-2">
               {linkedForms.length === 0 && (
@@ -129,10 +138,29 @@ export default function ServiceFormLinksDialog({ service, onClose }: Props) {
                   Noch keine Formulare zugeordnet.
                 </p>
               )}
-              {linkedForms.map((f, i) => (
+              {linkedForms.map(({ entry, form: f }, i) => (
                 <div key={f.id} className="flex items-center gap-1 py-1 px-2 rounded hover:bg-muted">
                   <span className="text-xs text-muted-foreground w-5">{i + 1}.</span>
                   <span className="text-sm flex-1 truncate">{f.name}</span>
+                  <Select
+                    value={entry.role_view ?? "__none__"}
+                    onValueChange={(v) =>
+                      setEntries((prev) =>
+                        prev.map((e, idx) =>
+                          idx === i ? { ...e, role_view: v === "__none__" ? null : (v as "customer" | "employee") } : e
+                        )
+                      )
+                    }
+                  >
+                    <SelectTrigger className="h-7 w-[170px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Keine Rolle (inaktiv)</SelectItem>
+                      <SelectItem value="customer">Auftraggeberformular</SelectItem>
+                      <SelectItem value="employee">Messdienstleisterformular</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button size="icon" variant="ghost" className="h-6 w-6" disabled={i === 0} onClick={() => move(i, -1)}>
                     <ArrowUp className="h-3 w-3" />
                   </Button>
@@ -149,7 +177,7 @@ export default function ServiceFormLinksDialog({ service, onClose }: Props) {
                     size="icon"
                     variant="ghost"
                     className="h-6 w-6"
-                    onClick={() => setOrderedIds((prev) => prev.filter((id) => id !== f.id))}
+                    onClick={() => setEntries((prev) => prev.filter((_, idx) => idx !== i))}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
