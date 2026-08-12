@@ -174,9 +174,16 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
           const subs = readGlobalRepeaterSubfields(gf);
           let subSort = 0;
           for (const s of subs) {
+            let subKey = s.field_key;
+            if (usedKeys.has(subKey)) {
+              let n = 2;
+              while (usedKeys.has(`${s.field_key}_${n}`)) n++;
+              subKey = `${s.field_key}_${n}`;
+            }
+            usedKeys.add(subKey);
             await api.formFields.create({
               form_id: formId,
-              field_key: s.field_key,
+              field_key: subKey,
               display_name: s.display_name,
               field_type: globalTypeToFormFieldType(s.data_type) as any,
               unit: s.unit ?? null,
@@ -186,6 +193,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
               sort_order: subSort++,
             } as any);
           }
+
         }
 
       }
