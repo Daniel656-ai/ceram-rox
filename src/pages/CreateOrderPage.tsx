@@ -489,8 +489,17 @@ export default function CreateOrderPage() {
 
           // Split values: uploads vs. parameters, including inside repeatable arrays
           const paramInserts: Array<{ order_measurement_id: string; parameter_name: string; parameter_value: string; unit: string | null }> = [];
+          // Werte verknüpfter Formulare (Dienstleistung → Formular) je Aufgabe
+          const linkedFormValues: Array<{ formId: string; fieldKey: string; value: any }> = [];
           for (const [key, v] of Object.entries(formVals)) {
             if (v == null) continue;
+
+            const linked = parseLinkedFormValueKey(key);
+            if (linked) {
+              linkedFormValues.push({ formId: linked.formId, fieldKey: linked.fieldKey, value: v });
+              continue;
+            }
+
 
             // Top-level upload field
             if (uploadKeys.has(key) && isUploadValue(v)) {
