@@ -135,14 +135,27 @@ function ServiceBookingOrLegacyParams({
   onParamChange: (paramId: string, value: string) => void;
   t: any;
 }) {
-  const { data: hasLayout, isLoading } = useServiceHasFormLayout(serviceId, roleView);
-  if (isLoading) return null;
-  if (hasLayout) {
+  // Bei der Auftragserstellung wird immer das Auftraggeberformular ("customer")
+  // der Dienstleistung bevorzugt. Existiert dafür keine Konfiguration, wird auf
+  // die Bearbeiter-Ansicht ("employee") zurückgefallen, damit ein konfiguriertes
+  // Formular niemals verloren geht. Rein datengetrieben – keine Sonderfälle.
+  const { data: hasPreferred, isLoading } = useServiceHasFormLayout(serviceId, roleView);
+  const { data: hasEmployee, isLoading: loadingEmployee } = useServiceHasFormLayout(serviceId, "employee");
+  const { data: hasCustomer, isLoading: loadingCustomer } = useServiceHasFormLayout(serviceId, "customer");
+  if (isLoading || loadingEmployee || loadingCustomer) return null;
+  const effectiveView: FormRoleView | null = hasPreferred
+    ? roleView
+    : hasCustomer
+      ? "customer"
+      : hasEmployee
+        ? "employee"
+        : null;
+  if (effectiveView) {
     return (
       <div className="mt-2 pl-2 border-l-2 border-primary/30">
         <ServiceBookingForm
           serviceId={serviceId}
-          roleView={roleView}
+          roleView={effectiveView}
           values={formValues}
           onChange={onFormChange}
           compact
@@ -150,6 +163,7 @@ function ServiceBookingOrLegacyParams({
       </div>
     );
   }
+
   return (
     <ServiceRequiredParams
       serviceId={serviceId}
