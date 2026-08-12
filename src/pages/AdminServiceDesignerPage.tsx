@@ -834,6 +834,8 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
   const [minV, setMinV] = useState(field.min_value?.toString() ?? "");
   const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
   const [fieldType, setFieldType] = useState<FormFieldType>(field.field_type);
+  const [isResult, setIsResult] = useState(!!(field as any).is_result);
+  const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
 
   const isNumeric = ["number", "decimal", "percent"].includes(fieldType);
   const isGlobalRef = !!field.global_field_id;
@@ -886,7 +888,9 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
         decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
         min_value: isNumeric && minV ? parseFloat(minV) : null,
         max_value: isNumeric && maxV ? parseFloat(maxV) : null,
-      });
+        is_result: isResult,
+        result_label: isResult ? (resultLabel.trim() || null) : null,
+      } as any);
     },
     onSuccess: () => {
       toast.success("Gespeichert");
@@ -939,6 +943,21 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
 
             <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
             <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
+          </div>
+          <div className="rounded border p-3 space-y-2 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Switch checked={isResult} onCheckedChange={setIsResult} />
+              <Label>Offizielles Ergebnis</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Nur so markierte Felder werden beim Abschluss der Aufgabe in die Ergebnisdatenbank übernommen.
+            </p>
+            {isResult && (
+              <div>
+                <Label className="text-xs">Ergebnis-Bezeichnung (optional)</Label>
+                <Input value={resultLabel} onChange={e => setResultLabel(e.target.value)} placeholder={label} />
+              </div>
+            )}
           </div>
           {!isComputed && <div><Label>Standardwert</Label><Input value={defaultValue} onChange={e => setDefaultValue(e.target.value)} /></div>}
           {isNumeric && (

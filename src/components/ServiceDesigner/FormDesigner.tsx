@@ -508,6 +508,15 @@ function FieldBlock({
     data: { kind: "field", sectionId, refId: refItem.id },
     disabled: !canManage,
   });
+  const qc = useQueryClient();
+  const markResult = useMutation({
+    mutationFn: async (v: boolean) => {
+      if (!field) return;
+      await api.serviceDataFields.update(field.id, { is_result: v } as any);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["service-data-fields"] }),
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -589,6 +598,15 @@ function FieldBlock({
             />
             Ausgeblendet
           </label>
+          <label className="flex items-center gap-1 text-[11px] text-muted-foreground" title="Wert wird beim Abschluss der Aufgabe in die Ergebnisdatenbank übernommen">
+            <Checkbox
+              checked={!!(field as any).is_result}
+              disabled={!canManage || markResult.isPending}
+              onCheckedChange={(c) => markResult.mutate(!!c)}
+            />
+            Ergebnis
+          </label>
+
           <FieldBindingPopover
             binding={refItem.binding}
             disabled={!canManage}

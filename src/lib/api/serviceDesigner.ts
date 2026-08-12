@@ -32,6 +32,10 @@ export interface ServiceDataField {
   parent_field_id: string | null;
   sort_order: number;
   legacy_parameter_id: string | null;
+  /** Als offizielles Ergebnis in die Ergebnisdatenbank übernehmen. */
+  is_result: boolean;
+  /** Optionaler Anzeigename in der Ergebnisdatenbank. */
+  result_label: string | null;
   created_at: string;
   updated_at: string;
 }

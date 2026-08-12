@@ -96,6 +96,30 @@ function TaskExecutionPageInner() {
 
   const isCompleted = (measurement as any)?.status === "completed";
 
+  /**
+   * Ergebnis-Definition: nur Felder/Berechnungen, die im Designer als
+   * „offizielles Ergebnis" markiert sind, werden in die Ergebnisdatenbank
+   * übernommen. Ist nichts markiert, bleibt das bisherige Verhalten (alles)
+   * erhalten, damit bestehende Dienstleistungen weiter funktionieren.
+   */
+  const { data: serviceFields = [] } = useQuery({
+    queryKey: ["service-data-fields", serviceId],
+    queryFn: () => api.serviceDataFields.listForService(serviceId!),
+    enabled: !!serviceId,
+  });
+
+  const { resultKeys, resultLabels } = useMemo(() => {
+    const labels = new Map<string, string>();
+    const keys = new Set<string>();
+    for (const f of serviceFields as any[]) {
+      if (!f.is_result) continue;
+      keys.add(f.field_key);
+      labels.set(f.field_key, (f.result_label || f.display_name || f.field_key) as string);
+    }
+    return { resultKeys: keys.size ? keys : null, resultLabels: labels };
+  }, [serviceFields]);
+
+
   const [completeOpen, setCompleteOpen] = useState(false);
   const [actualDuration, setActualDuration] = useState("");
   const [deviationReason, setDeviationReason] = useState("");
@@ -125,11 +149,15 @@ function TaskExecutionPageInner() {
         raw === "" ||
         (Array.isArray(raw) && raw.length === 0);
       if (isEmpty) continue;
-      activeKeys.add(key);
+      // Nur als „offizielles Ergebnis" markierte Felder gelangen in die Ergebnisdatenbank.
+      if (resultKeys && !resultKeys.has(key)) continue;
+      const resultName = resultLabels.get(key) || key;
+      activeKeys.add(resultName);
+
 
       // Numeric single value → store in `value`; everything else → JSON in `remarks`.
       let payload: any = {
-        result_name: key,
+        result_name: resultName,
         measured_by: user?.id ?? null,
         measured_at: measuredAt,
         value: null,
@@ -146,7 +174,7 @@ function TaskExecutionPageInner() {
         payload.remarks = JSON.stringify(raw);
       }
 
-      const prev = existingByName.get(key);
+      const prev = existingByName.get(resultName);
       if (prev) {
         await api.measurementResults.update(prev.id, payload);
       } else {

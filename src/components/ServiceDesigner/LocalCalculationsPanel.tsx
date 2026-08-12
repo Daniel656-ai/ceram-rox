@@ -52,6 +52,8 @@ interface Draft {
   tokens: CalcToken[];
   advanced: boolean;
   formula: string;
+  is_result: boolean;
+  result_label: string;
 }
 
 const emptyDraft = (): Draft => ({
@@ -60,6 +62,8 @@ const emptyDraft = (): Draft => ({
   tokens: [{ type: "operand", source: "field", ref: "" }],
   advanced: false,
   formula: "",
+  is_result: false,
+  result_label: "",
 });
 
 export default function LocalCalculationsPanel({
@@ -126,6 +130,8 @@ export default function LocalCalculationsPanel({
       tokens: tokens.length ? tokens : [{ type: "operand", source: "field", ref: "" }],
       advanced: tokens.length === 0,
       formula: c.formula ?? "",
+      is_result: !!(c as any).is_result,
+      result_label: (c as any).result_label ?? "",
     });
     setTestValues({});
     setOpen(true);
@@ -154,6 +160,8 @@ export default function LocalCalculationsPanel({
         unit: draft.unit.trim() || null,
         decimals: draft.decimals,
         rounding: draft.rounding,
+        is_result: draft.is_result,
+        result_label: draft.is_result ? (draft.result_label.trim() || null) : null,
       };
       if (draft.id) {
         const { form_id: _f, ...rest } = payload;
@@ -441,6 +449,23 @@ export default function LocalCalculationsPanel({
                 </Select>
               </div>
             </div>
+
+            <div className="rounded border p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Switch checked={draft.is_result}
+                  onCheckedChange={(v) => setDraft((d) => ({ ...d, is_result: v }))} />
+                <Label className="text-xs">Offizielles Ergebnis</Label>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Nur markierte Werte werden beim Abschluss der Aufgabe in die Ergebnisdatenbank übernommen.
+              </p>
+              {draft.is_result && (
+                <Input className="h-8" placeholder={draft.display_name || "Ergebnis-Bezeichnung"}
+                  value={draft.result_label}
+                  onChange={(e) => setDraft((d) => ({ ...d, result_label: e.target.value }))} />
+              )}
+            </div>
+
 
             {/* Live-Test */}
             {referenced.length > 0 && (
