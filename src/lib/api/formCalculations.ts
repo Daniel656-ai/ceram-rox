@@ -45,6 +45,10 @@ export interface FormCalculation {
   decimals: number;
   rounding: CalcRounding;
   result_type: string;
+  /** Als offizielles Ergebnis der Messung in die Ergebnisdatenbank übernehmen. */
+  is_result: boolean;
+  /** Optionaler Anzeigename in der Ergebnisdatenbank. */
+  result_label: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
