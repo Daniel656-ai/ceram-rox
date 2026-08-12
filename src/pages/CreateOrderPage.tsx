@@ -779,23 +779,54 @@ export default function CreateOrderPage() {
 
             <div>
               <Label>{t("orders:add_measurement")}</Label>
-              <Select onValueChange={addService}>
-                <SelectTrigger><SelectValue placeholder={t("orders:select_service")} /></SelectTrigger>
-                <SelectContent>
-                  {laborServices.length > 0 && (
-                    <>
-                      <SelectItem value="__labor_header" disabled>{t("orders:header_lab", { defaultValue: "── Lab ──" })}</SelectItem>
-                      {laborServices.map((s) => (<SelectItem key={s.id} value={s.id}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
-                    </>
-                  )}
-                  {orderKind === "pilot_plant" && pilotServices.length > 0 && (
-                    <>
-                      <SelectItem value="__pilot_header" disabled>{t("orders:header_pilot", { defaultValue: "── Pilot Plant ──" })}</SelectItem>
-                      {pilotServices.map((s) => (<SelectItem key={s.id} value={s.id}>{s.service_name}{canViewRates ? ` (${s.hourly_rate} €/h)` : ""}</SelectItem>))}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
+              <Popover open={servicePickerOpen} onOpenChange={setServicePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={servicePickerOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate text-muted-foreground">{t("orders:select_service")}</span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command filter={(v, s) => (v.toLowerCase().includes(s.toLowerCase()) ? 1 : 0)}>
+                    <CommandInput placeholder={t("orders:search_service", { defaultValue: "Dienstleistung suchen…" })} />
+                    <CommandList>
+                      <CommandEmpty>{t("orders:no_service_found", { defaultValue: "Keine Dienstleistung gefunden." })}</CommandEmpty>
+                      {laborServices.length > 0 && (
+                        <CommandGroup heading={t("orders:header_lab", { defaultValue: "Lab" })}>
+                          {laborServices.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={`${s.service_name} ${s.category ?? ""}`}
+                              onSelect={() => { addService(s.id); setServicePickerOpen(false); }}
+                            >
+                              <span className="truncate">{s.service_name}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                      {orderKind === "pilot_plant" && pilotServices.length > 0 && (
+                        <CommandGroup heading={t("orders:header_pilot", { defaultValue: "Pilot Plant" })}>
+                          {pilotServices.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={`${s.service_name} ${s.category ?? ""}`}
+                              onSelect={() => { addService(s.id); setServicePickerOpen(false); }}
+                            >
+                              <span className="truncate">{s.service_name}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <p className="text-[11px] text-muted-foreground mt-1">
                 {t("orders:duplicate_hint", { defaultValue: "Dieselbe Dienstleistung kann mehrfach hinzugefügt werden – jede Position ist unabhängig." })}
               </p>
