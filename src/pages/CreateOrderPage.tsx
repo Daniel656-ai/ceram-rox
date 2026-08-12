@@ -553,6 +553,28 @@ export default function CreateOrderPage() {
           for (const [fk, idx, entry] of pending) await persistUpload(fk, idx, entry);
           (persistUpload as any)._pending = [];
 
+          // Werte der verknüpften Formulare je Aufgabe persistieren
+          if (linkedFormValues.length > 0) {
+            const formIds = [...new Set(linkedFormValues.map((x) => x.formId))];
+            for (const fid of formIds) {
+              const ff = await api.formFields.listForForm(fid);
+              for (const item of linkedFormValues.filter((x) => x.formId === fid)) {
+                const def = (ff as any[]).find((x) => x.field_key === item.fieldKey);
+                const raw = item.value;
+                if (typeof raw === "string" && raw.trim() === "") continue;
+                paramInserts.push({
+                  order_measurement_id: createdMeasurement.id,
+                  parameter_name: def?.display_name || item.fieldKey,
+                  parameter_value:
+                    typeof raw === "boolean" ? (raw ? "true" : "false")
+                      : typeof raw === "object" ? JSON.stringify(raw)
+                      : String(raw),
+                  unit: def?.unit || null,
+                });
+              }
+            }
+          }
+
           if (paramInserts.length > 0) {
             await api.measurementParameters.bulkInsert(paramInserts);
           }
