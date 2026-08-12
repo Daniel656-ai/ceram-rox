@@ -160,6 +160,8 @@ export default function LocalCalculationsPanel({
         unit: draft.unit.trim() || null,
         decimals: draft.decimals,
         rounding: draft.rounding,
+        is_result: draft.is_result,
+        result_label: draft.is_result ? (draft.result_label.trim() || null) : null,
       };
       if (draft.id) {
         const { form_id: _f, ...rest } = payload;
