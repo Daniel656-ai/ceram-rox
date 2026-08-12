@@ -22,6 +22,8 @@ interface Props {
   values: Record<string, any>;
   onChange: (key: string, value: any) => void;
   compact?: boolean;
+  /** Renders the whole form strictly read-only (no edits, no repeater controls). */
+  readOnly?: boolean;
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -40,7 +42,7 @@ export function getRepeaterEntries(values: Record<string, any>, sec: FormSection
  * Renders the booking form configured in the Service Designer for the
  * given service & role.
  */
-export default function ServiceBookingForm({ serviceId, roleView, values, onChange, compact }: Props) {
+export default function ServiceBookingForm({ serviceId, roleView, values, onChange, compact, readOnly }: Props) {
   const { data: fields = [] } = useQuery({
     queryKey: ["service-data-fields", serviceId],
     queryFn: () => api.serviceDataFields.listForService(serviceId),
@@ -103,6 +105,7 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
   );
   const systemVars = useSystemVariables();
   useEffect(() => {
+    if (readOnly) return;
     if (computedFields.length === 0) return;
     // Systemvariablen (Prozessmanager) stehen Formeln read-only zur Verfügung.
     const formulaCtx = { ...systemVars, ...values };
@@ -121,7 +124,7 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [values, computedFields, systemVars]);
+  }, [values, computedFields, systemVars, readOnly]);
 
   if (sections.length === 0) return null;
 
@@ -140,6 +143,7 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
             evaluatedRules={evaluatedRules}
             inputSize={inputSize}
             compact={compact}
+            readOnly={readOnly}
           />
         ) : (
           <StaticSection
@@ -151,6 +155,7 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
             evaluatedRules={evaluatedRules}
             inputSize={inputSize}
             compact={compact}
+            readOnly={readOnly}
           />
         )
       )}
@@ -161,7 +166,7 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
 // ---------------- Static (non-repeatable) section ----------------
 
 function StaticSection({
-  sec, fieldById, values, onValueChange, evaluatedRules, inputSize, compact,
+  sec, fieldById, values, onValueChange, evaluatedRules, inputSize, compact, readOnly,
 }: {
   sec: FormSection;
   fieldById: Map<string, any>;
@@ -170,6 +175,7 @@ function StaticSection({
   evaluatedRules: { hidden: Set<string>; required: Set<string> };
   inputSize: string;
   compact?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <div className="border rounded-md p-3 space-y-2">
@@ -186,6 +192,7 @@ function StaticSection({
         evaluatedRules={evaluatedRules}
         inputSize={inputSize}
         compact={compact}
+        readOnly={readOnly}
       />
     </div>
   );
@@ -194,7 +201,7 @@ function StaticSection({
 // ---------------- Repeatable section ----------------
 
 function RepeatableSection({
-  sec, fieldById, values, onChange, evaluatedRules, inputSize, compact,
+  sec, fieldById, values, onChange, evaluatedRules, inputSize, compact, readOnly,
 }: {
   sec: FormSection;
   fieldById: Map<string, any>;
@@ -203,6 +210,7 @@ function RepeatableSection({
   evaluatedRules: { hidden: Set<string>; required: Set<string> };
   inputSize: string;
   compact?: boolean;
+  readOnly?: boolean;
 }) {
   const rep: RepeatableConfig = sec.repeatable!;
   const storageKey = repeaterStorageKey(sec);
@@ -279,7 +287,7 @@ function RepeatableSection({
               <p className="text-xs font-medium text-muted-foreground">
                 {itemLabel} #{idx + 1}
               </p>
-              <div className="flex items-center gap-1">
+              <div className={`flex items-center gap-1 ${readOnly ? "hidden" : ""}`}>
                 <Button type="button" size="icon" variant="ghost" className="h-7 w-7"
                   onClick={() => move(idx, -1)} disabled={idx === 0} title="Nach oben">
                   <ArrowUp className="h-3.5 w-3.5" />
@@ -306,12 +314,13 @@ function RepeatableSection({
               evaluatedRules={evaluatedRules}
               inputSize={inputSize}
               compact={compact}
+              readOnly={readOnly}
             />
           </div>
         ))}
       </div>
 
-      <Button type="button" variant="outline" size="sm" onClick={addEntry} disabled={entries.length >= max}>
+      <Button type="button" variant="outline" size="sm" onClick={addEntry} disabled={entries.length >= max} className={readOnly ? "hidden" : ""}>
         <Plus className="h-3.5 w-3.5 mr-1" /> {addLabel}
       </Button>
     </div>
@@ -321,7 +330,7 @@ function RepeatableSection({
 // ---------------- Field grid (shared) ----------------
 
 function SectionFieldGrid({
-  sec, fieldById, values, onValueChange, evaluatedRules, inputSize, compact,
+  sec, fieldById, values, onValueChange, evaluatedRules, inputSize, compact, readOnly,
 }: {
   sec: FormSection;
   fieldById: Map<string, any>;
@@ -330,6 +339,7 @@ function SectionFieldGrid({
   evaluatedRules: { hidden: Set<string>; required: Set<string> };
   inputSize: string;
   compact?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <div className="grid grid-cols-12 gap-3">
@@ -348,7 +358,7 @@ function SectionFieldGrid({
         const isRequired = f.is_required || evaluatedRules.required.has(f.field_key);
         const val = values[f.field_key];
         const hasError = isRequired && (val == null || val === "");
-        const readonly = ref.readonly || f.readonly;
+        const readonly = !!readOnly || ref.readonly || f.readonly;
         const label = ref.label_override?.trim() || f.display_name;
         const help = ref.description_override?.trim() || f.description;
         return (
@@ -363,6 +373,7 @@ function SectionFieldGrid({
                 config={(f.validation as any)?.upload ?? {}}
                 value={Array.isArray(val) ? val : []}
                 onChange={(v) => onValueChange(f.field_key, v)}
+                disabled={readonly}
                 compact={compact}
               />
             ) : f.field_type === "computed" ? (
