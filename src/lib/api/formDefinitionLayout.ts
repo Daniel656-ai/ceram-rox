@@ -257,3 +257,48 @@ export function normalizeLayout(raw: unknown): FormLayoutTree {
   }
   return emptyLayout();
 }
+
+// --- column layout helpers ----------------------------------------
+/**
+ * Normalisierte Verhältniswerte einer Spaltengruppe.
+ * Ohne gespeicherte `ratios` sind alle Spalten gleich breit (abwärtskompatibel).
+ */
+export function columnRatios(node: Pick<ColumnsNode, "columnCount" | "ratios">): number[] {
+  const count = Math.max(1, Math.min(6, Math.round(node.columnCount || 1)));
+  const r = node.ratios;
+  if (Array.isArray(r) && r.length === count && r.every(v => typeof v === "number" && v > 0)) {
+    return r.map(v => Math.max(1, Math.min(12, Math.round(v))));
+  }
+  return Array.from({ length: count }, () => 1);
+}
+
+/** Vordefinierte, häufig benötigte Spaltenaufteilungen. */
+export const COLUMN_PRESETS: { label: string; ratios: number[] }[] = [
+  { label: "100 %", ratios: [1] },
+  { label: "50 / 50", ratios: [1, 1] },
+  { label: "25 / 75", ratios: [1, 3] },
+  { label: "75 / 25", ratios: [3, 1] },
+  { label: "33 / 67", ratios: [1, 2] },
+  { label: "67 / 33", ratios: [2, 1] },
+  { label: "33 / 33 / 33", ratios: [1, 1, 1] },
+  { label: "25 / 50 / 25", ratios: [1, 2, 1] },
+  { label: "50 / 25 / 25", ratios: [2, 1, 1] },
+  { label: "25 / 25 / 50", ratios: [1, 1, 2] },
+  { label: "4 × 25 %", ratios: [1, 1, 1, 1] },
+  { label: "5 × 20 %", ratios: [1, 1, 1, 1, 1] },
+  { label: "6 × 16,7 %", ratios: [1, 1, 1, 1, 1, 1] },
+];
+
+/**
+ * CSS-Variablen für die responsive Spaltendarstellung (`.rox-cols`).
+ * Mobil einspaltig, Tablet reduziert, Desktop mit konfigurierten Verhältnissen.
+ */
+export function columnsGridStyle(node: Pick<ColumnsNode, "columnCount" | "ratios">): Record<string, string> {
+  const ratios = columnRatios(node);
+  const lg = ratios.map(v => `${v}fr`).join(" ");
+  const mid = ratios.length <= 2 ? ratios.length : ratios.length <= 4 ? 2 : 3;
+  return {
+    ["--rox-cols-md" as string]: `repeat(${mid}, minmax(0, 1fr))`,
+    ["--rox-cols-lg" as string]: lg,
+  };
+}
