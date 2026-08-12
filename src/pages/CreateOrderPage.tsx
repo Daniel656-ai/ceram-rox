@@ -180,8 +180,9 @@ export default function CreateOrderPage() {
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const canViewRates = hasPermission("costs.view_hourly_rates");
-  // Service-Designer role view mapping
-  const roleView: FormRoleView = role === "auftraggeber" ? "customer" : "employee";
+  // Auftragserstellung = Auftraggeber-Kontext, unabhängig davon, wer den Auftrag anlegt.
+  const roleView: FormRoleView = "customer";
+
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
   const { data: servicePackages = [] } = useQuery({
