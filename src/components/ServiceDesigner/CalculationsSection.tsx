@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Copy } from "lucide-react";
 import type { GlobalCalculation } from "@/lib/api/globalLibrary";
 import { FORMULA_FUNCTIONS } from "@/lib/formulaEngine";
 import {
@@ -185,7 +185,7 @@ export default function CalculationsSection() {
               <TableHead>Formel</TableHead>
               <TableHead>Eingänge</TableHead>
               <TableHead>Ausgabe</TableHead>
-              <TableHead className="w-24" />
+              <TableHead className="w-32" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -208,7 +208,8 @@ export default function CalculationsSection() {
                   </TableCell>
                   <TableCell className="font-mono text-xs">{output ? output.ref : "—"}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="icon" variant="ghost" onClick={() => edit(c)}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" title="Bearbeiten" onClick={() => edit(c)}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" title="Kopieren" onClick={() => duplicate(c)}><Copy className="h-3.5 w-3.5" /></Button>
                     <Button size="icon" variant="ghost" onClick={() => archive.mutate(c.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </TableCell>
                 </TableRow>
