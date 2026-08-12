@@ -64,10 +64,18 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
     [objects]
   );
 
-  const alreadyLinked = useMemo(
-    () => new Set(existing.map((f) => f.global_field_id).filter(Boolean) as string[]),
-    [existing]
-  );
+  const usageCount = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of existing) {
+      if (!f.global_field_id) continue;
+      m.set(f.global_field_id, (m.get(f.global_field_id) ?? 0) + 1);
+    }
+    return m;
+  }, [existing]);
+
+  /** Bereits vergebene technische Keys im Formular (UNIQUE form_id+field_key). */
+  const takenKeys = useMemo(() => new Set(existing.map((f) => f.field_key)), [existing]);
+
 
   const q = search.trim().toLowerCase();
   const visible = allFields.filter((f: GlobalField) => {
@@ -98,6 +106,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
       const ids = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
       if (ids.length === 0) throw new Error("Keine Felder ausgewählt");
       let sort = (existing.at(-1)?.sort_order ?? -1) + 1;
+      const usedKeys = new Set(takenKeys);
       for (const id of ids) {
         const gf = allFields.find((f) => f.id === id);
         if (!gf) continue;
@@ -109,10 +118,24 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
           options = items.map((i) => ({ label: i.label, value: i.item_value }));
         }
         const isRepeater = gf.data_type === "repeater";
+
+        // Mehrfachverwendung: eindeutiger technischer Key je Verwendung,
+        // die globale Definition (global_field_id / binding_path) bleibt identisch.
+        const usageIndex = (usageCount.get(gf.id) ?? 0) + 1;
+        let fieldKey = gf.field_key;
+        if (usedKeys.has(fieldKey)) {
+          let n = Math.max(usageIndex, 2);
+          while (usedKeys.has(`${gf.field_key}_${n}`)) n++;
+          fieldKey = `${gf.field_key}_${n}`;
+        }
+        usedKeys.add(fieldKey);
+        const displayName =
+          usageIndex > 1 ? `${gf.display_name} (Verwendung ${usageIndex})` : gf.display_name;
+
         const created = await api.formFields.create({
           form_id: formId,
-          field_key: gf.field_key,
-          display_name: gf.display_name,
+          field_key: fieldKey,
+          display_name: displayName,
           field_type: globalTypeToFormFieldType(gf.data_type) as any,
           description: gf.description,
           unit: gf.unit,
@@ -127,25 +150,34 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
             global_calculation_id: gf.calculation_id ?? null,
             validation_ids: gf.validation_ids ?? [],
             is_repeatable: isRepeater ? true : !!gf.is_repeatable,
+            usage_index: usageIndex,
             ...(isRepeater
               ? {
                   repeater: {
                     ...readGlobalRepeaterMeta(gf),
-                    storage_key: readGlobalRepeaterMeta(gf).storage_key || gf.field_key,
+                    storage_key: readGlobalRepeaterMeta(gf).storage_key || fieldKey,
                   },
                 }
               : {}),
           },
         } as any);
 
+
         // Repeater: Unterfelder aus der globalen Definition übernehmen.
         if (isRepeater) {
           const subs = readGlobalRepeaterSubfields(gf);
           let subSort = 0;
           for (const s of subs) {
+            let subKey = s.field_key;
+            if (usedKeys.has(subKey)) {
+              let n = 2;
+              while (usedKeys.has(`${s.field_key}_${n}`)) n++;
+              subKey = `${s.field_key}_${n}`;
+            }
+            usedKeys.add(subKey);
             await api.formFields.create({
               form_id: formId,
-              field_key: s.field_key,
+              field_key: subKey,
               display_name: s.display_name,
               field_type: globalTypeToFormFieldType(s.data_type) as any,
               unit: s.unit ?? null,
@@ -155,6 +187,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
               sort_order: subSort++,
             } as any);
           }
+
         }
 
       }
@@ -224,15 +257,18 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                     {objectById[objId]?.display_name ?? "Unbekannt"}
                   </div>
                   {list.map((f) => {
-                    const linked = alreadyLinked.has(f.id);
+                    const uses = usageCount.get(f.id) ?? 0;
+                    const repeatable = !!f.is_repeatable || f.data_type === "repeater";
+                    // Wiederholbare Felder dürfen mehrfach eingefügt werden.
+                    const blocked = uses > 0 && !repeatable;
                     return (
                       <label
                         key={f.id}
-                        className={`flex items-center gap-2 border-b px-2 py-1.5 text-sm ${linked ? "opacity-50" : "cursor-pointer hover:bg-muted/40"}`}
+                        className={`flex items-center gap-2 border-b px-2 py-1.5 text-sm ${blocked ? "opacity-50" : "cursor-pointer hover:bg-muted/40"}`}
                       >
                         <Checkbox
                           checked={!!selected[f.id]}
-                          disabled={linked}
+                          disabled={blocked}
                           onCheckedChange={(c) => setSelected((s) => ({ ...s, [f.id]: !!c }))}
                         />
                         <span className="flex-1 truncate">
@@ -245,10 +281,18 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                         <Badge variant="outline" className="text-[10px]">
                           {GLOBAL_FIELD_TYPES.find((t) => t.value === f.data_type)?.label ?? f.data_type}
                         </Badge>
-                        {linked && <Badge variant="secondary" className="text-[10px]">im Formular</Badge>}
+                        {repeatable && (
+                          <Badge variant="outline" className="text-[10px]">wiederholbar</Badge>
+                        )}
+                        {uses > 0 && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            {repeatable ? `${uses}× im Formular` : "im Formular"}
+                          </Badge>
+                        )}
                       </label>
                     );
                   })}
+
                 </div>
               ))}
             </ScrollArea>
