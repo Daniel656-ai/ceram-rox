@@ -69,6 +69,20 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
     [existing]
   );
 
+  /** Anzahl bisheriger Verwendungen je globalem Feld (für „Verwendung n"). */
+  const usageCount = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of existing) {
+      if (!f.global_field_id) continue;
+      m.set(f.global_field_id, (m.get(f.global_field_id) ?? 0) + 1);
+    }
+    return m;
+  }, [existing]);
+
+  /** Bereits vergebene technische Keys im Formular (UNIQUE form_id+field_key). */
+  const takenKeys = useMemo(() => new Set(existing.map((f) => f.field_key)), [existing]);
+
+
   const q = search.trim().toLowerCase();
   const visible = allFields.filter((f: GlobalField) => {
     if (objectId && f.object_id !== objectId) return false;
