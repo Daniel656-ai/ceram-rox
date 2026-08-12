@@ -93,6 +93,16 @@ export default function LocalCalculationsPanel({
     ?? calcs.find((c) => c.calc_key === key)?.display_name
     ?? key;
 
+  /** Alle im aktuellen Formular gültigen Referenzen (Felder + Berechnungen). */
+  const knownRefs = useMemo(
+    () => new Set<string>([
+      ...fields.map((f) => f.field_key),
+      ...(calcs as FormCalculation[]).map((c) => c.calc_key),
+    ]),
+    [fields, calcs]
+  );
+  const isKnownRef = (key: string) => knownRefs.has(key);
+
   const formula = draft.advanced ? draft.formula : buildFormulaFromTokens(draft.tokens);
 
   const cycle = useMemo(() => {
@@ -107,18 +117,40 @@ export default function LocalCalculationsPanel({
       ...(calcs as FormCalculation[]).filter((c) => c.calc_key !== key),
       { ...(emptyStub()), id: "draft", form_id: form.id, calc_key: key, display_name: draft.display_name, formula, decimals: draft.decimals, rounding: draft.rounding } as FormCalculation,
     ];
-    const res = evaluateLocalCalculations(merged, testValues);
+    const res = evaluateLocalCalculations(merged, testValues, fields.map((f) => f.field_key));
     return res[key];
-  }, [calcs, draft, formula, testValues, form.id]);
+  }, [calcs, draft, formula, testValues, form.id, fields]);
 
   const referenced = useMemo(
     () => extractReferences(formula).filter((r) => !FORMULA_FUNCTIONS.includes(r)),
     [formula]
   );
+  /** Referenzen, die es im Formular tatsächlich nicht (mehr) gibt. */
+  const unknownRefs = useMemo(
+    () => referenced.filter((r) => !isKnownRef(r)),
+    [referenced, knownRefs]
+  );
+
 
   const openNew = () => { setDraft(emptyDraft()); setTestValues({}); setOpen(true); };
+
+  /**
+   * Referenzen anhand der stabilen ID auflösen: wurde der technische
+   * Feldschlüssel nachträglich geändert, wird der Token automatisch korrigiert
+   * statt als „unbekanntes Feld" zu gelten.
+   */
+  const healTokens = (tokens: CalcToken[]): CalcToken[] =>
+    tokens.map((t) => {
+      if (t.type !== "operand" || t.source === "const" || !t.ref_id) return t;
+      const key = t.source === "calc"
+        ? (calcs as FormCalculation[]).find((c) => c.id === t.ref_id)?.calc_key
+        : fields.find((f) => f.id === t.ref_id)?.field_key;
+      return key && key !== t.ref ? { ...t, ref: key } : t;
+    });
+
   const openEdit = (c: FormCalculation) => {
-    const tokens = Array.isArray(c.expression) && c.expression.length ? (c.expression as CalcToken[]) : [];
+    const raw = Array.isArray(c.expression) && c.expression.length ? (c.expression as CalcToken[]) : [];
+    const tokens = healTokens(raw);
     setDraft({
       id: c.id,
       calc_key: c.calc_key,
@@ -129,13 +161,14 @@ export default function LocalCalculationsPanel({
       rounding: (c.rounding as CalcRounding) ?? "round",
       tokens: tokens.length ? tokens : [{ type: "operand", source: "field", ref: "" }],
       advanced: tokens.length === 0,
-      formula: c.formula ?? "",
+      formula: tokens.length ? buildFormulaFromTokens(tokens) : (c.formula ?? ""),
       is_result: !!(c as any).is_result,
       result_label: (c as any).result_label ?? "",
     });
     setTestValues({});
     setOpen(true);
   };
+
   const openCopy = (c: FormCalculation) => {
     openEdit(c);
     setDraft((d) => ({ ...d, id: undefined, calc_key: `${c.calc_key}_kopie`, display_name: `${c.display_name} (Kopie)` }));
@@ -247,9 +280,10 @@ export default function LocalCalculationsPanel({
                       {extractReferences(c.formula).length
                         ? c.formula.split(/\s+/).map((p, i) =>
                             /^[a-zA-Z_]/.test(p)
-                              ? <Badge key={i} variant="secondary" className="mr-1 mb-1">{fieldLabel(p)}</Badge>
+                              ? <Badge key={i} variant={isKnownRef(p) || FORMULA_FUNCTIONS.includes(p.toUpperCase()) ? "secondary" : "destructive"} className="mr-1 mb-1">{fieldLabel(p)}</Badge>
                               : <span key={i} className="mr-1">{p}</span>)
                         : <span className="text-muted-foreground">{c.formula}</span>}
+
                     </TableCell>
                     <TableCell className="text-xs">{c.unit ?? "—"}</TableCell>
                     <TableCell className="text-xs">{c.decimals}</TableCell>
@@ -326,10 +360,17 @@ export default function LocalCalculationsPanel({
                           <Select
                             value={t.ref || "__none__"}
                             onValueChange={(v) => {
-                              if (v === "__const__") { setToken(i, { source: "const", ref: null, value: 0 } as any); return; }
-                              const isCalc = (calcs as FormCalculation[]).some((c) => c.calc_key === v);
-                              setToken(i, { source: isCalc ? "calc" : "field", ref: v === "__none__" ? "" : v } as any);
+                              if (v === "__const__") { setToken(i, { source: "const", ref: null, ref_id: null, value: 0 } as any); return; }
+                              if (v === "__none__") { setToken(i, { source: "field", ref: "", ref_id: null } as any); return; }
+                              const calc = (calcs as FormCalculation[]).find((c) => c.calc_key === v);
+                              const field = fields.find((f) => f.field_key === v);
+                              setToken(i, {
+                                source: calc ? "calc" : "field",
+                                ref: v,
+                                ref_id: calc ? calc.id : field?.id ?? null,
+                              } as any);
                             }}
+
                           >
                             <SelectTrigger className="w-56 h-9"><SelectValue placeholder="Feld wählen" /></SelectTrigger>
                             <SelectContent>
@@ -417,10 +458,18 @@ export default function LocalCalculationsPanel({
                 Ergebnis ={" "}
                 {referenced.length
                   ? formula.split(/\s+/).map((p, i) => /^[a-zA-Z_]/.test(p)
-                      ? <Badge key={i} variant="secondary" className="mr-1">{fieldLabel(p)}</Badge>
+                      ? <Badge key={i} variant={isKnownRef(p) || FORMULA_FUNCTIONS.includes(p.toUpperCase()) ? "secondary" : "destructive"} className="mr-1">{fieldLabel(p)}</Badge>
                       : <span key={i} className="mr-1">{p}</span>)
                   : <span>{formula || "—"}</span>}
               </div>
+
+              {unknownRefs.length > 0 && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Nicht auflösbar: {unknownRefs.join(", ")} — Feld existiert nicht (mehr) in diesem Formular.
+                </p>
+              )}
+
 
               {cycle && (
                 <p className="text-xs text-destructive flex items-center gap-1">

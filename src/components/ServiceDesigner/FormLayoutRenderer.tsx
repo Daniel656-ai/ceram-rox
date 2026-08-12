@@ -662,7 +662,7 @@ export default function FormLayoutRenderer({
   const calcResults = useMemo(() => {
     const out: Record<string, CalcDisplayResult> = {};
     const vals = values ?? {};
-    const local = evaluateLocalCalculations(localCalcs, vals);
+    const local = evaluateLocalCalculations(localCalcs, vals, fields.map((f) => f.field_key));
     for (const c of localCalcs) {
       const r = local[c.calc_key];
       out[`local:${c.calc_key}`] = {
@@ -693,7 +693,7 @@ export default function FormLayoutRenderer({
       }
     }
     return out;
-  }, [localCalcs, globalCalcs, values, hasGlobalNodes]);
+  }, [localCalcs, globalCalcs, values, hasGlobalNodes, fields]);
 
   /** Ergebnisse in die Formularwerte zurückschreiben – für Speicherung & Folgeberechnungen. */
   useEffect(() => {

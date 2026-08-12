@@ -17,8 +17,14 @@ export interface CalcOperand {
   type: "operand";
   /** field = Formularfeld dieses Formulars, calc = andere lokale Berechnung, const = fester Wert */
   source: "field" | "calc" | "const";
-  /** field_key bzw. calc_key */
+  /** field_key bzw. calc_key (Anzeige-/Formelreferenz) */
   ref?: string | null;
+  /**
+   * Stabile Referenz auf das Formularfeld (form_fields.id) bzw. die Berechnung
+   * (form_calculations.id). Damit bleiben Berechnungen gültig, wenn sich der
+   * technische Feldschlüssel oder die Bezeichnung ändert.
+   */
+  ref_id?: string | null;
   value?: number | null;
 }
 

@@ -17,12 +17,18 @@ import { toast } from "sonner";
 import { Plus, Trash2, Save, Users } from "lucide-react";
 import FormLayoutDesigner from "./FormLayoutDesigner";
 
+const STANDARD_KEY = "__standard__";
+
 interface Props {
   form: FormDefinition;
   canManage: boolean;
+  /** Feld-Editor des Formulars (wird von der Formular-Bibliothek eingesetzt). */
+  fieldsSlot?: React.ReactNode;
+  /** Panel für lokale Berechnungen des Formulars. */
+  calculationsSlot?: React.ReactNode;
 }
 
-export default function RoleViewsDesigner({ form, canManage }: Props) {
+export default function RoleViewsDesigner({ form, canManage, fieldsSlot, calculationsSlot }: Props) {
   const qc = useQueryClient();
 
   const { data: roleViews = [] } = useQuery({
@@ -34,14 +40,16 @@ export default function RoleViewsDesigner({ form, canManage }: Props) {
     queryFn: () => api.formFields.listForForm(form.id),
   });
 
-  const [selectedRoleKey, setSelectedRoleKey] = useState<string | null>(null);
+  const [selectedRoleKey, setSelectedRoleKey] = useState<string>(STANDARD_KEY);
   const [newRoleKey, setNewRoleKey] = useState("");
   const [newRoleLabel, setNewRoleLabel] = useState("");
 
+  const isStandard = selectedRoleKey === STANDARD_KEY;
   const activeView = useMemo(
     () => roleViews.find((v) => v.role_key === selectedRoleKey) ?? null,
     [roleViews, selectedRoleKey]
   );
+
 
   const createView = useMutation({
     mutationFn: async (v: { role_key: string; label: string }) =>

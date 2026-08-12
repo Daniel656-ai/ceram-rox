@@ -142,9 +142,16 @@ function tokenize(src: string): Tok[] {
 }
 
 // -------- Parser (recursive descent) --------
+/** Signal: Referenz ist bekannt, aber (noch) ohne Wert – kein Fehler. */
+class IncompleteSignal extends Error {}
+
 class Parser {
   pos = 0;
-  constructor(private toks: Tok[], private ctx: FormulaContext) {}
+  constructor(
+    private toks: Tok[],
+    private ctx: FormulaContext,
+    private known: Set<string> = new Set(),
+  ) {}
   peek(): Tok | undefined { return this.toks[this.pos]; }
   eat(): Tok { return this.toks[this.pos++]; }
   expect(pred: (t: Tok) => boolean, msg: string): Tok {
@@ -210,7 +217,11 @@ class Parser {
         return fn(args);
       }
       // Variable / Feldschlüssel
-      if (!(name in this.ctx)) throw new Error(`Unbekanntes Feld: ${name}`);
+      if (!(name in this.ctx)) {
+        // Bekanntes Feld des Formulars, das (noch) keinen Wert hat -> kein Fehler.
+        if (this.known.has(name)) throw new IncompleteSignal(name);
+        throw new Error(`Unbekanntes Feld: ${name}`);
+      }
       return toVal(this.ctx[name]);
     }
     throw new Error("Ungültiger Ausdruck");
@@ -233,18 +244,34 @@ class Parser {
   }
 }
 
-export function evaluateFormula(formula: string, ctx: FormulaContext): FormulaResult {
+export interface EvaluateOptions {
+  /**
+   * Alle Referenzen, die im aktuellen Kontext gültig sind (Feldschlüssel des
+   * Formulars, Berechnungsschlüssel …). Fehlt ein Wert für eine bekannte
+   * Referenz, gilt die Berechnung als „noch unvollständig“ – nicht als Fehler.
+   */
+  knownReferences?: Iterable<string>;
+}
+
+export function evaluateFormula(
+  formula: string,
+  ctx: FormulaContext,
+  opts: EvaluateOptions = {},
+): FormulaResult {
   const src = (formula || "").trim();
   if (!src) return { value: null, error: null };
   try {
     const toks = tokenize(src);
-    const v = new Parser(toks, ctx).parse();
+    const known = new Set(opts.knownReferences ?? []);
+    const v = new Parser(toks, ctx, known).parse();
     if (!isFinite(v) || isNaN(v)) return { value: null, error: null };
     return { value: v, error: null };
   } catch (e: any) {
+    if (e instanceof IncompleteSignal) return { value: null, error: null };
     return { value: null, error: e?.message ?? "Formelfehler" };
   }
 }
+
 
 /** Extrahiert alle referenzierten Feldschlüssel aus einer Formel. */
 export function extractReferences(formula: string): string[] {

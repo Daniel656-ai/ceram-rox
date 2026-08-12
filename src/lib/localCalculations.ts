@@ -114,11 +114,18 @@ export interface LocalCalcResult {
  */
 export function evaluateLocalCalculations(
   calcs: FormCalculation[],
-  values: Record<string, unknown>
+  values: Record<string, unknown>,
+  /** Feldschlüssel des Formulars – auch ohne Wert gültige Eingangsgrößen. */
+  knownFieldKeys: Iterable<string> = []
 ): Record<string, LocalCalcResult> {
   const { ordered, cyclic } = orderCalculations(calcs);
   const out: Record<string, LocalCalcResult> = {};
   const ctx: Record<string, unknown> = { ...values };
+  const known = new Set<string>([
+    ...Object.keys(values ?? {}),
+    ...knownFieldKeys,
+    ...calcs.map((c) => c.calc_key),
+  ]);
 
   for (const key of cyclic) {
     out[key] = { value: null, error: "Zyklische Abhängigkeit" };
@@ -129,7 +136,7 @@ export function evaluateLocalCalculations(
       out[c.calc_key] = { value: null, error: null };
       continue;
     }
-    const res = evaluateFormula(c.formula, ctx);
+    const res = evaluateFormula(c.formula, ctx, { knownReferences: known });
     const value = res.value == null || res.error
       ? null
       : applyRounding(res.value, c.decimals ?? 2, (c.rounding as CalcRounding) ?? "round");
