@@ -105,7 +105,7 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
  * Fallback layout for templates that have fields but no explicit layout tree
  * yet: one section per category, in the field order defined in the designer.
  */
-function autoLayout(fields: FormField[]): FormLayoutTree {
+export function autoLayout(fields: FormField[]): FormLayoutTree {
   const top = topLevelFields(fields);
   const groups = new Map<string, FormField[]>();
   top.forEach((f) => {
