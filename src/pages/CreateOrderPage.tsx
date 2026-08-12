@@ -137,21 +137,15 @@ function ServiceBookingOrLegacyParams({
   onParamChange: (paramId: string, value: string) => void;
   t: any;
 }) {
-  // Bei der Auftragserstellung wird immer das Auftraggeberformular ("customer")
-  // der Dienstleistung bevorzugt. Existiert dafür keine Konfiguration, wird auf
-  // die Bearbeiter-Ansicht ("employee") zurückgefallen, damit ein konfiguriertes
-  // Formular niemals verloren geht. Rein datengetrieben – keine Sonderfälle.
-  const { data: hasPreferred, isLoading } = useServiceHasFormLayout(serviceId, roleView);
-  const { data: hasEmployee, isLoading: loadingEmployee } = useServiceHasFormLayout(serviceId, "employee");
+  // Bei der Auftragserstellung wird ausschließlich das Auftraggeberformular
+  // ("customer") der Dienstleistung angezeigt. Existiert dafür keine
+  // Konfiguration, wird KEIN Formularbereich und kein Platzhalter gerendert –
+  // das Messdienstleisterformular ("employee") bleibt der Technikeransicht
+  // vorbehalten. Rein datengetrieben – keine Sonderfälle.
   const { data: hasCustomer, isLoading: loadingCustomer } = useServiceHasFormLayout(serviceId, "customer");
-  if (isLoading || loadingEmployee || loadingCustomer) return null;
-  const effectiveView: FormRoleView | null = hasPreferred
-    ? roleView
-    : hasCustomer
-      ? "customer"
-      : hasEmployee
-        ? "employee"
-        : null;
+  if (loadingCustomer) return null;
+  const effectiveView: FormRoleView | null = hasCustomer ? "customer" : null;
+
   if (effectiveView) {
     return (
       <div className="mt-2 pl-2 border-l-2 border-primary/30">
