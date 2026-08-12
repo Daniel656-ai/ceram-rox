@@ -292,20 +292,27 @@ export default function PortfolioDetailPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="overview">Stammdaten</TabsTrigger>
-          <TabsTrigger value="structure">Struktur (APs &amp; Tasks)</TabsTrigger>
-          <TabsTrigger value="projects">Projekte ({members.length})</TabsTrigger>
-          <TabsTrigger value="milestones">Meilensteine ({milestoneTimeline.length})</TabsTrigger>
-          <TabsTrigger value="documents">Dokumente</TabsTrigger>
-          <TabsTrigger value="analytics">Auswertungen</TabsTrigger>
-          <TabsTrigger value="mapping">Förder-Zuordnungen</TabsTrigger>
-          <TabsTrigger value="ffg">FFG-Bericht</TabsTrigger>
-          <TabsTrigger value="dashboard">Dashboard &amp; KPIs</TabsTrigger>
-          <TabsTrigger value="controlling">Controlling</TabsTrigger>
-          {canManageStructure && <TabsTrigger value="time">Zeiterfassung</TabsTrigger>}
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 w-full">
+        <ProjectTabsNav
+          active={activeTab}
+          onChange={setActiveTab}
+          mainTabs={[
+            { value: "overview", label: "Stammdaten" },
+            { value: "structure", label: "Struktur (APs & Tasks)" },
+            { value: "projects", label: `Projekte (${members.length})` },
+            { value: "milestones", label: `Meilensteine (${milestoneTimeline.length})` },
+            ...(canManageStructure ? [{ value: "time", label: "Zeiterfassung" }] : []),
+            { value: "analytics", label: "Auswertungen" },
+          ]}
+          advancedTabs={[
+            { value: "dashboard", label: "Dashboard & KPIs" },
+            { value: "controlling", label: "Controlling" },
+            { value: "documents", label: "Dokumente" },
+            { value: "mapping", label: "Förder-Zuordnungen" },
+            { value: "ffg", label: "FFG-Bericht" },
+          ]}
+        />
+
 
         <TabsContent value="structure" className="mt-4">
           <PortfolioStructureTab portfolioId={portfolioId} canManage={canManageStructure} />
