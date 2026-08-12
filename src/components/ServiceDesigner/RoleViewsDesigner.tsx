@@ -69,7 +69,7 @@ export default function RoleViewsDesigner({ form, canManage, fieldsSlot, calcula
     onSuccess: () => {
       toast.success("Rollenansicht gelöscht");
       qc.invalidateQueries({ queryKey: ["form-role-views", form.id] });
-      setSelectedRoleKey(null);
+      setSelectedRoleKey(STANDARD_KEY);
     },
   });
 
@@ -87,17 +87,27 @@ export default function RoleViewsDesigner({ form, canManage, fieldsSlot, calcula
       <Card className="col-span-3">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs uppercase tracking-wide flex items-center gap-1">
-            <Users className="h-3 w-3" /> Rollenansichten
+            <Users className="h-3 w-3" /> Ansichten
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
+            <div
+              className={`flex items-center gap-1 rounded px-2 py-1.5 cursor-pointer ${
+                isStandard ? "bg-primary/10" : "hover:bg-muted"
+              }`}
+              onClick={() => setSelectedRoleKey(STANDARD_KEY)}
+            >
+              <span className="flex-1 text-sm truncate">Standardformular</span>
+              <Badge variant="outline" className="text-xs">alle Rollen</Badge>
+            </div>
             {roleViews.length === 0 && (
               <p className="text-xs text-muted-foreground p-2">
-                Noch keine Rollenansichten definiert. Ohne Rollenansicht sehen alle
-                Beteiligten das Standard-Layout des Formulars.
+                Noch keine rollenspezifischen Ansichten. Ohne Rollenansicht sehen alle
+                Beteiligten das Standardformular.
               </p>
             )}
+
             {roleViews.map((v) => (
               <div
                 key={v.id}
