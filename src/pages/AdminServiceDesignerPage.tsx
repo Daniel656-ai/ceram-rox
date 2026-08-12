@@ -944,6 +944,21 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
             <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
             <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
           </div>
+          <div className="rounded border p-3 space-y-2 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Switch checked={isResult} onCheckedChange={setIsResult} />
+              <Label>Offizielles Ergebnis</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Nur so markierte Felder werden beim Abschluss der Aufgabe in die Ergebnisdatenbank übernommen.
+            </p>
+            {isResult && (
+              <div>
+                <Label className="text-xs">Ergebnis-Bezeichnung (optional)</Label>
+                <Input value={resultLabel} onChange={e => setResultLabel(e.target.value)} placeholder={label} />
+              </div>
+            )}
+          </div>
           {!isComputed && <div><Label>Standardwert</Label><Input value={defaultValue} onChange={e => setDefaultValue(e.target.value)} /></div>}
           {isNumeric && (
             <div className="grid grid-cols-3 gap-3">
