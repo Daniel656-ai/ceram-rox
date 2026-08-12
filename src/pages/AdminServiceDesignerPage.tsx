@@ -24,6 +24,7 @@ import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FormField, FormFieldType } from "@/lib/api/formFields";
 import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
 import FormLayoutDesigner, { RepeaterConfigPanel } from "@/components/ServiceDesigner/FormLayoutDesigner";
+import LocalCalculationsPanel from "@/components/ServiceDesigner/LocalCalculationsPanel";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
@@ -1065,6 +1066,7 @@ function GlobalFormLibrary() {
                 <TabsList>
                   <TabsTrigger value="fields">Felder</TabsTrigger>
                   <TabsTrigger value="layout">Formular-Designer</TabsTrigger>
+                  <TabsTrigger value="calculations">Berechnungen</TabsTrigger>
                   <TabsTrigger value="roles">Rollenansichten</TabsTrigger>
                   <TabsTrigger value="preview">Vorschau</TabsTrigger>
                 </TabsList>
@@ -1073,6 +1075,9 @@ function GlobalFormLibrary() {
                 </TabsContent>
                 <TabsContent value="layout" className="mt-3">
                   <FormLayoutDesigner form={selectedForm} canManage={true} />
+                </TabsContent>
+                <TabsContent value="calculations" className="mt-3">
+                  <LocalCalculationsPanel form={selectedForm} canManage={true} />
                 </TabsContent>
                 <TabsContent value="roles" className="mt-3">
                   <RoleViewsDesigner form={selectedForm} canManage={true} />
