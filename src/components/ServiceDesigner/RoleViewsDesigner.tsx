@@ -174,13 +174,41 @@ export default function RoleViewsDesigner({ form, canManage, fieldsSlot, calcula
 
       {/* Right: designer */}
       <div className="col-span-9">
-        {!activeView ? (
+        {isStandard ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                Standardformular
+                <Badge variant="outline">alle Rollen</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue={fieldsSlot ? "fields" : "layout"}>
+                <TabsList>
+                  {fieldsSlot && <TabsTrigger value="fields">Felder</TabsTrigger>}
+                  <TabsTrigger value="layout">Layout</TabsTrigger>
+                  {calculationsSlot && <TabsTrigger value="calculations">Berechnungen</TabsTrigger>}
+                </TabsList>
+                {fieldsSlot && (
+                  <TabsContent value="fields" className="mt-3">{fieldsSlot}</TabsContent>
+                )}
+                <TabsContent value="layout" className="mt-3">
+                  <FormLayoutDesigner form={form} canManage={canManage} />
+                </TabsContent>
+                {calculationsSlot && (
+                  <TabsContent value="calculations" className="mt-3">{calculationsSlot}</TabsContent>
+                )}
+              </Tabs>
+            </CardContent>
+          </Card>
+        ) : !activeView ? (
           <Card>
             <CardContent className="pt-6 text-sm text-muted-foreground text-center">
               Bitte links eine Rollenansicht auswählen oder eine neue anlegen.
             </CardContent>
           </Card>
         ) : (
+
           <Card>
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
