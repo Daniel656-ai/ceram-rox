@@ -153,9 +153,11 @@ export const createNode = (type: LayoutNodeType, extra: Partial<LayoutNode> = {}
     } as TabsNode;
     case "tab": return { ...base, type, title: "Neuer Tab", children: [] } as TabNode;
     case "columns": {
-      const count = (extra as any).columnCount ?? 2;
+      const rawRatios = (extra as any).ratios as number[] | undefined;
+      const count = Math.max(1, Math.min(6, (extra as any).columnCount ?? rawRatios?.length ?? 2));
       return {
         ...base, type, columnCount: count,
+        ...(rawRatios && rawRatios.length === count ? { ratios: rawRatios } : {}),
         children: Array.from({ length: count }, () => (
           { id: uid(), type: "column", children: [], visible: true, width: 12 } as ColumnNode
         )),
