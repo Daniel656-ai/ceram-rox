@@ -8,7 +8,8 @@ import { useProjectExpenses } from "@/hooks/useProjectExpenses";
 import { useProjectTimeEntries } from "@/hooks/useProjectTimeEntries";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ProjectTabsNav } from "@/components/ProjectTabsNav";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ export default function ProjectDetailPage() {
   const isProjectCompleted = (project as any)?.project_status === "completed";
   const canEditIdentity = isMaster || isLeaderOrOwner || canEditByPermission;
   const [editIdentityOpen, setEditIdentityOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("time_entries");
 
   const handleUpdateProject = useCallback(async (updates: Record<string, any>) => {
     if (!id) return;
