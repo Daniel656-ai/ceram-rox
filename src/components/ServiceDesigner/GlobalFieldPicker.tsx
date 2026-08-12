@@ -64,10 +64,6 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
     [objects]
   );
 
-  /** Anzahl bisheriger Verwendungen je globalem Feld (für „Verwendung n"). */
-
-
-  /** Anzahl bisheriger Verwendungen je globalem Feld (für „Verwendung n"). */
   const usageCount = useMemo(() => {
     const m = new Map<string, number>();
     for (const f of existing) {
