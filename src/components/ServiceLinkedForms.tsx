@@ -89,6 +89,8 @@ function LinkedForm({ formId, values, onChange }: SingleProps) {
 
 interface Props {
   serviceId: string;
+  /** Nur Formulare anzeigen, die explizit dieser Rolle zugeordnet sind. */
+  roleView: "customer" | "employee";
   values: Record<string, any>;
   onChange: (key: string, value: any) => void;
 }
@@ -100,10 +102,10 @@ interface Props {
  * Fully data-driven — no service-specific logic. Any service that gets a form
  * linked in its configuration automatically shows that form here.
  */
-export default function ServiceLinkedForms({ serviceId, values, onChange }: Props) {
+export default function ServiceLinkedForms({ serviceId, roleView, values, onChange }: Props) {
   const { data: links = [] } = useQuery({
-    queryKey: ["service-form-links", serviceId],
-    queryFn: () => api.serviceFormLinks.listForService(serviceId),
+    queryKey: ["service-form-links", serviceId, roleView],
+    queryFn: () => api.serviceFormLinks.listForService(serviceId, roleView),
     enabled: !!serviceId,
   });
 

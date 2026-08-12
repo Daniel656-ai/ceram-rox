@@ -35,7 +35,6 @@ interface SelectedMeasurement {
   uid: string;
   service_id: string;
   service_name: string;
-  planned_hours: number;
   source_package_id?: string | null;
   source_package_name?: string | null;
 }
@@ -122,51 +121,31 @@ function ServiceRequiredParams({ serviceId, paramValues, onParamChange, t }: {
 }
 
 /**
- * Switches between the new Service-Designer form (if a layout exists for
- * the role) and the legacy parameter system as a fallback.
+ * Zeigt bei der Aufgabenerstellung ausschließlich das Auftraggeberformular
+ * ("customer") der Dienstleistung. Existiert dafür keine Konfiguration, wird
+ * KEIN Formularbereich gerendert – kein Fallback auf Messdienstleister-
+ * formulare oder das alte Parametersystem.
  */
-function ServiceBookingOrLegacyParams({
-  serviceId, roleView, formValues, onFormChange,
-  paramValues, onParamChange, t,
+function ServiceCustomerForm({
+  serviceId, formValues, onFormChange,
 }: {
   serviceId: string;
-  roleView: FormRoleView;
   formValues: Record<string, any>;
   onFormChange: (key: string, value: any) => void;
-  paramValues: Record<string, string>;
-  onParamChange: (paramId: string, value: string) => void;
-  t: any;
 }) {
-  // Bei der Auftragserstellung wird ausschließlich das Auftraggeberformular
-  // ("customer") der Dienstleistung angezeigt. Existiert dafür keine
-  // Konfiguration, wird KEIN Formularbereich und kein Platzhalter gerendert –
-  // das Messdienstleisterformular ("employee") bleibt der Technikeransicht
-  // vorbehalten. Rein datengetrieben – keine Sonderfälle.
-  const { data: hasCustomer, isLoading: loadingCustomer } = useServiceHasFormLayout(serviceId, "customer");
-  if (loadingCustomer) return null;
-  const effectiveView: FormRoleView | null = hasCustomer ? "customer" : null;
-
-  if (effectiveView) {
-    return (
-      <div className="mt-2 pl-2 border-l-2 border-primary/30">
-        <ServiceBookingForm
-          serviceId={serviceId}
-          roleView={effectiveView}
-          values={formValues}
-          onChange={onFormChange}
-          compact
-        />
-      </div>
-    );
-  }
+  const { data: hasCustomer, isLoading } = useServiceHasFormLayout(serviceId, "customer");
+  if (isLoading || !hasCustomer) return null;
 
   return (
-    <ServiceRequiredParams
-      serviceId={serviceId}
-      paramValues={paramValues}
-      onParamChange={onParamChange}
-      t={t}
-    />
+    <div className="mt-2 pl-2 border-l-2 border-primary/30">
+      <ServiceBookingForm
+        serviceId={serviceId}
+        roleView="customer"
+        values={formValues}
+        onChange={onFormChange}
+        compact
+      />
+    </div>
   );
 }
 
@@ -273,7 +252,7 @@ export default function CreateOrderPage() {
     if (!svc) return;
     setMeasurements((prev) => [
       ...prev,
-      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, planned_hours: 1 },
+      { uid: newUid(), service_id: serviceId, service_name: svc.service_name },
     ]);
   };
 
@@ -292,7 +271,6 @@ export default function CreateOrderPage() {
           uid: newUid(),
           service_id: svc.id,
           service_name: svc.service_name,
-          planned_hours: svc.standard_duration_hours || 1,
           source_package_id: pkg.id,
           source_package_name: pkg.name,
         });
@@ -444,7 +422,7 @@ export default function CreateOrderPage() {
       for (let idx = 0; idx < measurements.length; idx++) {
         const m = measurements[idx];
         const createdMeasurement = await addMeasurement.mutateAsync({
-          order_id: order.id, service_id: m.service_id, planned_hours: m.planned_hours,
+          order_id: order.id, service_id: m.service_id,
           due_date: dueDate || undefined,
           source_package_id: m.source_package_id ?? null,
           source_package_name_snapshot: m.source_package_name ?? null,
@@ -849,24 +827,17 @@ export default function CreateOrderPage() {
                           )}
                         </p>
                       </div>
-                      <div className="w-24">
-                        <Label className="text-xs">{t("common:hours")}</Label>
-                        <Input type="number" min={0.5} step={0.5} value={m.planned_hours} onChange={(e) => updateMeasurement(m.uid, "planned_hours", parseFloat(e.target.value) || 0)} className="h-8" />
-                      </div>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateMeasurement(m.uid)} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(m.uid)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <ServiceBookingOrLegacyParams
+                    <ServiceCustomerForm
                       serviceId={m.service_id}
-                      roleView={roleView}
                       formValues={measurementFormValues[m.uid] || {}}
                       onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
-                      paramValues={measurementParams[m.uid] || {}}
-                      onParamChange={(paramId, value) => updateParam(m.uid, paramId, value)}
-                      t={t}
                     />
                     <ServiceLinkedForms
                       serviceId={m.service_id}
+                      roleView="customer"
                       values={measurementFormValues[m.uid] || {}}
                       onChange={(key, value) => updateFormValue(m.uid, key, value)}
                     />
