@@ -7331,6 +7331,7 @@ export type Database = {
           form_definition_id: string
           id: string
           order_index: number
+          role_view: string | null
           service_id: string
           updated_at: string
         }
@@ -7339,6 +7340,7 @@ export type Database = {
           form_definition_id: string
           id?: string
           order_index?: number
+          role_view?: string | null
           service_id: string
           updated_at?: string
         }
@@ -7347,6 +7349,7 @@ export type Database = {
           form_definition_id?: string
           id?: string
           order_index?: number
+          role_view?: string | null
           service_id?: string
           updated_at?: string
         }
