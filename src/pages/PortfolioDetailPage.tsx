@@ -97,6 +97,7 @@ export default function PortfolioDetailPage() {
     enabled: !!user && !!portfolioId,
   });
 
+  const [activeTab, setActiveTab] = useState("overview");
   const [editOpen, setEditOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<any>({});
   const [addProjectOpen, setAddProjectOpen] = useState(false);
