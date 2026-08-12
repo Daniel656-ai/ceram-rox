@@ -36,6 +36,10 @@ export interface FormField {
   global_field_id: string | null;
   /** Automatische Datenbindung, z.B. "order.versuchsnummer". */
   binding_path: string | null;
+  /** Als offizielles Ergebnis in die Ergebnisdatenbank übernehmen. */
+  is_result: boolean;
+  /** Optionaler Anzeigename in der Ergebnisdatenbank. */
+  result_label: string | null;
   created_at: string;
   updated_at: string;
 }
