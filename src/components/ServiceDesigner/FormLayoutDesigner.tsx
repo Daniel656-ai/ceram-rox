@@ -10,7 +10,7 @@ import type { FormDefinition } from "@/lib/api/formDefinitions";
 import { type FormField, readRepeaterMeta, writeRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import {
   type LayoutNode, type LayoutNodeType, type FormLayoutTree,
-  type LayoutWidth, type FieldNode,
+  type LayoutWidth, type FieldNode, type CalculationNode,
   createNode, normalizeLayout, findNode, updateNode,
   removeNode, insertNode, collectUsedFieldIds,
 } from "@/lib/api/formDefinitionLayout";
@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutGrid, Columns3, Columns2, Square, Minus, Heading1,
   StickyNote, Save, RotateCcw, Trash2, ChevronRight, ChevronDown,
-  GripVertical, FolderTree, Folders, Plus, Rows,
+  GripVertical, FolderTree, Folders, Plus, Rows, Calculator,
 } from "lucide-react";
 import FormLayoutRenderer from "./FormLayoutRenderer";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
@@ -46,6 +46,7 @@ const PALETTE: { key: LayoutNodeType; label: string; icon: any; extra?: any }[] 
   { key: "divider", label: "Trennlinie", icon: Minus },
   { key: "heading", label: "Überschrift", icon: Heading1 },
   { key: "note", label: "Hinweistext", icon: StickyNote },
+  { key: "calculation", label: "Berechnung", icon: Calculator },
 ];
 
 const WIDTH_OPTS: { v: LayoutWidth; l: string }[] = [
@@ -56,7 +57,7 @@ const WIDTH_OPTS: { v: LayoutWidth; l: string }[] = [
 const TYPE_LABELS: Record<LayoutNodeType, string> = {
   section: "Abschnitt", group: "Gruppe", tabs: "Tabs", tab: "Tab",
   columns: "Spalten", column: "Spalte", container: "Container", divider: "Trennlinie",
-  heading: "Überschrift", note: "Hinweis", field: "Feld",
+  heading: "Überschrift", note: "Hinweis", field: "Feld", calculation: "Berechnung",
 };
 
 // ---------- dnd id encoding ----------
@@ -241,7 +242,7 @@ export default function FormLayoutDesigner({
             <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Eigenschaften</CardTitle></CardHeader>
             <CardContent>
               {selected ? (
-                <Inspector node={selected} fields={fields}
+                <Inspector node={selected} fields={fields} formId={form.id}
                   onChange={(patch) => mutate(prev => ({ ...prev, nodes: updateNode(prev.nodes, selected.id, patch) }))}
                   onDelete={() => { mutate(prev => ({ ...prev, nodes: removeNode(prev.nodes, selected.id) })); setSelectedId(null); }}
                   canManage={canManage} />
@@ -255,7 +256,7 @@ export default function FormLayoutDesigner({
             <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Live-Vorschau</CardTitle></CardHeader>
             <CardContent>
               <div className="scale-[0.85] origin-top-left w-[118%]">
-                <FormLayoutRenderer layout={layout} fields={fields} />
+                <FormLayoutRenderer layout={layout} fields={fields} formId={form.id} />
               </div>
             </CardContent>
           </Card>
@@ -520,8 +521,8 @@ function ColumnsChildrenEditor({ node, fields, onMutate, selectedId, onSelect, d
 }
 
 // ---------- inspector ----------
-function Inspector({ node, fields, onChange, onDelete, canManage }: {
-  node: LayoutNode; fields: FormField[];
+function Inspector({ node, fields, formId, onChange, onDelete, canManage }: {
+  node: LayoutNode; fields: FormField[]; formId: string;
   onChange: (patch: Partial<LayoutNode>) => void;
   onDelete: () => void; canManage: boolean;
 }) {
@@ -621,7 +622,75 @@ function Inspector({ node, fields, onChange, onDelete, canManage }: {
       {node.type === "field" && (
         <FieldInspector node={node as FieldNode} fields={fields} onChange={onChange} disabled={disabled} />
       )}
+      {node.type === "calculation" && (
+        <CalculationInspector node={node as CalculationNode} formId={formId} onChange={onChange} disabled={disabled} />
+      )}
     </div>
+  );
+}
+
+function CalculationInspector({
+  node, formId, onChange, disabled,
+}: {
+  node: CalculationNode; formId: string;
+  onChange: (patch: Partial<LayoutNode>) => void;
+  disabled: boolean;
+}) {
+  const { data: localCalcs = [] } = useQuery({
+    queryKey: ["form-calculations", formId],
+    queryFn: () => api.formCalculations.listForForm(formId),
+  });
+  const { data: globalCalcs = [] } = useQuery({
+    queryKey: ["global-calculations"],
+    queryFn: () => api.globalCalculations.list(),
+  });
+  const options = node.scope === "global"
+    ? (globalCalcs as any[]).map((c) => ({ key: c.calc_key, label: c.display_name }))
+    : (localCalcs as any[]).map((c) => ({ key: c.calc_key, label: c.display_name }));
+
+  return (
+    <>
+      <div>
+        <Label className="text-xs">Art der Berechnung</Label>
+        <Select value={node.scope ?? "local"} onValueChange={(v) => onChange({ scope: v, calc_key: "" } as any)} disabled={disabled}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="local">Lokal (nur dieses Formular)</SelectItem>
+            <SelectItem value="global">Global (formularübergreifend)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label className="text-xs">Berechnung</Label>
+        <Select value={node.calc_key || "__none__"} onValueChange={(v) => onChange({ calc_key: v === "__none__" ? "" : v } as any)} disabled={disabled}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Berechnung wählen" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— wählen —</SelectItem>
+            {options.map((o) => <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {options.length === 0 && (
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {node.scope === "global"
+              ? "Keine globalen Berechnungen vorhanden."
+              : "Noch keine lokalen Berechnungen – im Tab „Berechnungen“ anlegen."}
+          </p>
+        )}
+      </div>
+      <div>
+        <Label className="text-xs">Beschriftung (optional)</Label>
+        <Input value={node.label_override ?? ""} className="h-8 text-xs"
+          onChange={(e) => onChange({ label_override: e.target.value } as any)} disabled={disabled} />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Einheit anzeigen</Label>
+        <Switch checked={node.show_unit !== false} onCheckedChange={(v) => onChange({ show_unit: v } as any)} disabled={disabled} />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Hervorheben</Label>
+        <Switch checked={!!node.highlight} onCheckedChange={(v) => onChange({ highlight: v } as any)} disabled={disabled} />
+      </div>
+    </>
   );
 }
 

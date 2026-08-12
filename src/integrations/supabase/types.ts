@@ -488,6 +488,71 @@ export type Database = {
           },
         ]
       }
+      form_calculations: {
+        Row: {
+          calc_key: string
+          created_at: string
+          created_by: string | null
+          decimals: number
+          description: string | null
+          display_name: string
+          expression: Json
+          form_id: string
+          formula: string
+          id: string
+          inputs: Json
+          result_type: string
+          rounding: string
+          sort_order: number
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          calc_key: string
+          created_at?: string
+          created_by?: string | null
+          decimals?: number
+          description?: string | null
+          display_name: string
+          expression?: Json
+          form_id: string
+          formula?: string
+          id?: string
+          inputs?: Json
+          result_type?: string
+          rounding?: string
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          calc_key?: string
+          created_at?: string
+          created_by?: string | null
+          decimals?: number
+          description?: string | null
+          display_name?: string
+          expression?: Json
+          form_id?: string
+          formula?: string
+          id?: string
+          inputs?: Json
+          result_type?: string
+          rounding?: string
+          sort_order?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_calculations_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_definition_versions: {
         Row: {
           created_at: string
