@@ -56,7 +56,7 @@ const WIDTH_OPTS: { v: LayoutWidth; l: string }[] = [
 const TYPE_LABELS: Record<LayoutNodeType, string> = {
   section: "Abschnitt", group: "Gruppe", tabs: "Tabs", tab: "Tab",
   columns: "Spalten", column: "Spalte", container: "Container", divider: "Trennlinie",
-  heading: "Überschrift", note: "Hinweis", field: "Feld",
+  heading: "Überschrift", note: "Hinweis", field: "Feld", calculation: "Berechnung",
 };
 
 // ---------- dnd id encoding ----------
