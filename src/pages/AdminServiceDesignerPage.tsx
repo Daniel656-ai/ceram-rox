@@ -990,7 +990,7 @@ function FormPreviewTab({ form }: { form: FormDefinition }) {
   const layout = normalizeLayout((form as any).layout);
   return (
     <div className="border rounded p-4 bg-background">
-      <FormLayoutRenderer layout={layout} fields={fields} />
+      <FormLayoutRenderer layout={layout} fields={fields} formId={form.id} />
     </div>
   );
 }
