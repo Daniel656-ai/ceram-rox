@@ -125,7 +125,11 @@ function TaskExecutionPageInner() {
         raw === "" ||
         (Array.isArray(raw) && raw.length === 0);
       if (isEmpty) continue;
-      activeKeys.add(key);
+      // Nur als „offizielles Ergebnis" markierte Felder gelangen in die Ergebnisdatenbank.
+      if (resultKeys && !resultKeys.has(key)) continue;
+      const resultName = resultLabels.get(key) || key;
+      activeKeys.add(resultName);
+
 
       // Numeric single value → store in `value`; everything else → JSON in `remarks`.
       let payload: any = {
