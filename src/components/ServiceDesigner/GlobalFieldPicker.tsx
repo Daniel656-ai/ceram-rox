@@ -263,15 +263,18 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                     {objectById[objId]?.display_name ?? "Unbekannt"}
                   </div>
                   {list.map((f) => {
-                    const linked = alreadyLinked.has(f.id);
+                    const uses = usageCount.get(f.id) ?? 0;
+                    const repeatable = !!f.is_repeatable || f.data_type === "repeater";
+                    // Wiederholbare Felder dürfen mehrfach eingefügt werden.
+                    const blocked = uses > 0 && !repeatable;
                     return (
                       <label
                         key={f.id}
-                        className={`flex items-center gap-2 border-b px-2 py-1.5 text-sm ${linked ? "opacity-50" : "cursor-pointer hover:bg-muted/40"}`}
+                        className={`flex items-center gap-2 border-b px-2 py-1.5 text-sm ${blocked ? "opacity-50" : "cursor-pointer hover:bg-muted/40"}`}
                       >
                         <Checkbox
                           checked={!!selected[f.id]}
-                          disabled={linked}
+                          disabled={blocked}
                           onCheckedChange={(c) => setSelected((s) => ({ ...s, [f.id]: !!c }))}
                         />
                         <span className="flex-1 truncate">
@@ -284,10 +287,18 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                         <Badge variant="outline" className="text-[10px]">
                           {GLOBAL_FIELD_TYPES.find((t) => t.value === f.data_type)?.label ?? f.data_type}
                         </Badge>
-                        {linked && <Badge variant="secondary" className="text-[10px]">im Formular</Badge>}
+                        {repeatable && (
+                          <Badge variant="outline" className="text-[10px]">wiederholbar</Badge>
+                        )}
+                        {uses > 0 && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            {repeatable ? `${uses}× im Formular` : "im Formular"}
+                          </Badge>
+                        )}
                       </label>
                     );
                   })}
+
                 </div>
               ))}
             </ScrollArea>
