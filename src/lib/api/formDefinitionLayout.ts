@@ -24,7 +24,8 @@ export type LayoutNodeType =
   | "divider"
   | "heading"
   | "note"
-  | "field";
+  | "field"
+  | "calculation";
 
 export interface SectionNode extends LayoutNodeBase {
   type: "section";
@@ -90,6 +91,23 @@ export interface FieldNode extends LayoutNodeBase {
   readonly?: boolean;
 }
 
+/**
+ * Eingebundene Berechnung – verhält sich im Formular wie ein (schreibgeschütztes)
+ * Feld. `scope` unterscheidet lokale Berechnungen dieses Formulars von den
+ * zentral verwalteten globalen Berechnungen.
+ */
+export interface CalculationNode extends LayoutNodeBase {
+  type: "calculation";
+  scope: "local" | "global";
+  /** calc_key der lokalen bzw. globalen Berechnung. */
+  calc_key: string;
+  calc_id?: string;
+  label_override?: string;
+  description_override?: string;
+  show_unit?: boolean;
+  highlight?: boolean;
+}
+
 export type LayoutNode =
   | SectionNode
   | GroupNode
@@ -101,7 +119,8 @@ export type LayoutNode =
   | DividerNode
   | HeadingNode
   | NoteNode
-  | FieldNode;
+  | FieldNode
+  | CalculationNode;
 
 export interface FormLayoutTree {
   version: 1;
@@ -142,6 +161,13 @@ export const createNode = (type: LayoutNodeType, extra: Partial<LayoutNode> = {}
     case "heading": return { ...base, type, text: "Überschrift", level: 3 } as HeadingNode;
     case "note": return { ...base, type, text: "Hinweistext …", variant: "info" } as NoteNode;
     case "field": return { ...base, type, field_id: (extra as any).field_id ?? "" } as FieldNode;
+    case "calculation": return {
+      ...base, type,
+      scope: (extra as any).scope ?? "local",
+      calc_key: (extra as any).calc_key ?? "",
+      calc_id: (extra as any).calc_id,
+      show_unit: true,
+    } as CalculationNode;
   }
 };
 
