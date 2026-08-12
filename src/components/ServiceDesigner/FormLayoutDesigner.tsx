@@ -509,16 +509,87 @@ function TabsChildrenEditor({ node, fields, onMutate, selectedId, onSelect, dept
 }
 
 function ColumnsChildrenEditor({ node, fields, onMutate, selectedId, onSelect, depth, canManage }: any) {
+  const ratios = columnRatios(node);
   return (
-    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${node.columnCount}, minmax(0,1fr))` }}>
+    <div className="grid gap-2" style={{ gridTemplateColumns: ratios.map(r => `${r}fr`).join(" ") }}>
       {node.children.map((col: LayoutNode, ci: number) => (
-        <div key={col.id} className="border rounded p-1 min-h-[80px]">
-          <div className="text-[10px] text-muted-foreground px-1 py-0.5">Spalte {ci + 1}</div>
+        <div key={col.id} className="border rounded p-1 min-h-[80px] min-w-0">
+          <div className="text-[10px] text-muted-foreground px-1 py-0.5">
+            Spalte {ci + 1} · {Math.round((ratios[ci] / ratios.reduce((a, b) => a + b, 0)) * 100)} %
+          </div>
           <ContainerChildren parentId={col.id} children={(col as any).children} depth={depth + 1}
             fields={fields} selectedId={selectedId} onSelect={onSelect}
             onMutate={onMutate} canManage={canManage} />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Konfiguration eines Spaltenlayouts: Anzahl, Presets und freie Verhältnisse. */
+function ColumnsInspector({ node, onChange, disabled }: {
+  node: any; onChange: (patch: Partial<LayoutNode>) => void; disabled: boolean;
+}) {
+  const ratios = columnRatios(node);
+  const total = ratios.reduce((a, b) => a + b, 0);
+
+  const applyRatios = (next: number[]) => {
+    const count = next.length;
+    const existing = node.children ?? [];
+    const nextCols = Array.from({ length: count }, (_, i) => existing[i] ?? createNode("column"));
+    onChange({ columnCount: count, ratios: next, children: nextCols } as any);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Anzahl Spalten</Label>
+        <Select value={String(node.columnCount ?? 2)} onValueChange={(v) => {
+          const count = parseInt(v, 10);
+          applyRatios(Array.from({ length: count }, (_, i) => ratios[i] ?? 1));
+        }} disabled={disabled}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>{[1, 2, 3, 4, 5, 6].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-xs">Aufteilung (Vorlage)</Label>
+        <Select value="" onValueChange={(v) => {
+          const preset = COLUMN_PRESETS.find(p => p.ratios.join("-") === v);
+          if (preset) applyRatios([...preset.ratios]);
+        }} disabled={disabled}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Vorlage wählen …" /></SelectTrigger>
+          <SelectContent>
+            {COLUMN_PRESETS.map(p => (
+              <SelectItem key={p.ratios.join("-")} value={p.ratios.join("-")}>{p.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-xs">Breitenverhältnis je Spalte</Label>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {ratios.map((r, i) => (
+            <div key={i} className="flex flex-col items-center">
+              <Input
+                type="number" min={1} max={12} value={r} disabled={disabled}
+                className="h-8 w-14 text-xs"
+                onChange={(e) => {
+                  const v = Math.max(1, Math.min(12, parseInt(e.target.value, 10) || 1));
+                  const next = ratios.slice(); next[i] = v;
+                  onChange({ ratios: next, columnCount: next.length } as any);
+                }}
+              />
+              <span className="text-[10px] text-muted-foreground">{Math.round((r / total) * 100)} %</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Beispiel: 1 / 2 / 1 ergibt 25 % / 50 % / 25 %.
+        </p>
+      </div>
     </div>
   );
 }
