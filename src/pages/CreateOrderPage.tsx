@@ -184,6 +184,7 @@ export default function CreateOrderPage() {
   const canViewRates = hasPermission("costs.view_hourly_rates");
   // Auftragserstellung = Auftraggeber-Kontext, unabhängig davon, wer den Auftrag anlegt.
   const roleView: FormRoleView = "customer";
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
   const { data: projects = [] } = useProjects();
   const { data: services = [] } = useServices();
