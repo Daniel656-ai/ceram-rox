@@ -53,7 +53,13 @@ export interface TabNode extends LayoutNodeBase {
 
 export interface ColumnsNode extends LayoutNodeBase {
   type: "columns";
-  columnCount: 1 | 2 | 3;
+  /** 1..6 Spalten. Historisch waren nur 1–3 möglich (abwärtskompatibel). */
+  columnCount: number;
+  /**
+   * Optionale Breitenverhältnisse je Spalte, z. B. [1,2,1] = 25/50/25 %.
+   * Fehlt der Wert, sind alle Spalten gleich breit (bisheriges Verhalten).
+   */
+  ratios?: number[];
   children: ColumnNode[];
 }
 export interface ColumnNode extends LayoutNodeBase {
