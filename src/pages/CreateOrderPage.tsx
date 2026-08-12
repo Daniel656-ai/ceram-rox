@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProjects, useCreateProject } from "@/hooks/useProjects";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useServices, useAddOrderMeasurement } from "@/hooks/useMeasurements";
-import { useServiceParameterDefs } from "@/hooks/useServiceParameters";
 import { useTemplates, useApplyTemplate } from "@/hooks/useTemplates";
 import { useSamples } from "@/hooks/useSamples";
 import { api } from "@/lib/api";
@@ -27,7 +26,6 @@ import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy,
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
-import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
 import ServiceLinkedForms, { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
 
