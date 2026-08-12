@@ -150,7 +150,7 @@ function TaskExecutionPageInner() {
         payload.remarks = JSON.stringify(raw);
       }
 
-      const prev = existingByName.get(key);
+      const prev = existingByName.get(resultName);
       if (prev) {
         await api.measurementResults.update(prev.id, payload);
       } else {
