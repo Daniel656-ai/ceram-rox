@@ -89,15 +89,25 @@ export default function CompletedResultForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <ServiceBookingForm
+        {hasLegacyForm && (
+          <ServiceBookingForm
+            serviceId={serviceId}
+            roleView={roleView}
+            values={values}
+            onChange={() => {}}
+            readOnly
+          />
+        )}
+        <ServiceLinkedForms
           serviceId={serviceId}
-          roleView={roleView}
+          context="result"
           values={values}
           onChange={() => {}}
           readOnly
         />
         <OrderUploadedFiles measurementId={measurementId} canDelete={false} />
       </CardContent>
+
     </Card>
   );
 }
