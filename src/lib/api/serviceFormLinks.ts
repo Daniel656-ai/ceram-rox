@@ -19,21 +19,35 @@ const TBL = "service_form_links" as const;
 
 export const serviceFormLinks = {
   /**
-   * Verknüpfte Formulare einer Dienstleistung. Mit `roleView` werden
-   * ausschließlich Formulare geliefert, die explizit dieser Rolle zugeordnet
-   * sind – kein Fallback auf andere Rollen oder rollenlose Altverknüpfungen.
+   * Verknüpfte Globale Formulare einer Dienstleistung.
+   *
+   * Es wird NICHT mehr nach Rolle gefiltert: Eine Dienstleistung verknüpft ein
+   * Globales Formular, die Rollen-/Kontextansicht wird im Formular selbst
+   * (`form_role_views`) aufgelöst. Der Parameter existiert nur noch aus
+   * Kompatibilitätsgründen und wird ignoriert.
    */
-  listForService: (serviceId: string, roleView?: ServiceFormLinkRole) => {
-    let q = dbClient.from(TBL as any).select("*").eq("service_id", serviceId);
-    if (roleView === "customer") {
-      // Auftraggeber: strikt nur explizit zugeordnete Formulare.
-      q = q.eq("role_view", "customer");
-    } else if (roleView === "employee") {
-      // Messdienstleister: explizit zugeordnete + Altverknüpfungen ohne Rolle.
-      q = q.or("role_view.eq.employee,role_view.is.null");
-    }
-    return unwrap(q.order("order_index")) as unknown as Promise<ServiceFormLink[]>;
+  listForService: (serviceId: string, _legacyRoleView?: ServiceFormLinkRole) =>
+    unwrap(
+      dbClient.from(TBL as any).select("*").eq("service_id", serviceId).order("order_index")
+    ) as unknown as Promise<ServiceFormLink[]>,
+
+  /** Das (erste) verknüpfte Globale Formular einer Dienstleistung. */
+  globalFormId: async (serviceId: string): Promise<string | null> => {
+    const rows = await serviceFormLinks.listForService(serviceId);
+    return rows[0]?.form_definition_id ?? null;
   },
+
+  /** Setzt genau ein Globales Formular für die Dienstleistung (oder entfernt es). */
+  setGlobalForm: async (serviceId: string, formId: string | null) => {
+    await run(dbClient.from(TBL as any).delete().eq("service_id", serviceId));
+    if (!formId) return;
+    await run(
+      dbClient
+        .from(TBL as any)
+        .insert({ service_id: serviceId, form_definition_id: formId, order_index: 0, role_view: null } as any)
+    );
+  },
+
 
   listForForm: (formId: string) =>
     unwrap(

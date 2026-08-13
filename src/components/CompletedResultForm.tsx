@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import ServiceBookingForm from "@/components/ServiceBookingForm";
 import OrderUploadedFiles from "@/components/OrderUploadedFiles";
+import ServiceLinkedForms from "@/components/ServiceLinkedForms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Lock } from "lucide-react";
@@ -42,7 +43,15 @@ export default function CompletedResultForm({
     enabled: !!serviceId,
   });
 
-  const hasForm = !!employeeLayout?.layout?.sections?.length;
+  // Globales Formular der Dienstleistung (Ergebnis-Ansicht).
+  const { data: links = [] } = useQuery({
+    queryKey: ["service-form-links", serviceId],
+    queryFn: () => api.serviceFormLinks.listForService(serviceId!),
+    enabled: !!serviceId,
+  });
+
+  const hasLegacyForm = !!employeeLayout?.layout?.sections?.length;
+  const hasGlobalForm = links.length > 0;
 
   // Same de-serialisation as the technician view uses when resuming a draft.
   const values = useMemo(() => {
@@ -62,7 +71,8 @@ export default function CompletedResultForm({
     return out;
   }, [results]);
 
-  if (!serviceId || !hasForm) return null;
+  if (!serviceId || (!hasLegacyForm && !hasGlobalForm)) return null;
+
 
   return (
     <Card className="border-green-600/30">
@@ -80,15 +90,25 @@ export default function CompletedResultForm({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <ServiceBookingForm
+        {hasLegacyForm && (
+          <ServiceBookingForm
+            serviceId={serviceId}
+            roleView={roleView}
+            values={values}
+            onChange={() => {}}
+            readOnly
+          />
+        )}
+        <ServiceLinkedForms
           serviceId={serviceId}
-          roleView={roleView}
+          context="result"
           values={values}
           onChange={() => {}}
           readOnly
         />
         <OrderUploadedFiles measurementId={measurementId} canDelete={false} />
       </CardContent>
+
     </Card>
   );
 }
