@@ -91,8 +91,16 @@ export const orders = {
         .eq("id", id)
     ),
 
-  delete: (id: string) =>
-    run(dbClient.from("measurement_orders").delete().eq("id", id)),
+  delete: async (id: string) => {
+    const rows: any = await unwrap(
+      dbClient.from("measurement_orders").delete().eq("id", id).select("id")
+    );
+    if (!rows || rows.length === 0) {
+      throw new Error(
+        "Auftrag konnte nicht gelöscht werden (keine Berechtigung oder Auftrag ist gesperrt)."
+      );
+    }
+  },
 
   /** Reduced list used by the ETA calculator. */
   listOpenForETA: () =>
