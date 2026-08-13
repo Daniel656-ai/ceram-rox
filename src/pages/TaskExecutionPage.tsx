@@ -55,11 +55,11 @@ function TaskExecutionPageInner() {
 
   const hasLayoutForm = !!employeeLayout?.layout?.sections?.length;
 
-  // Im Service-Designer verknüpfte Formulardefinitionen der Dienstleistung
-  // (führende Zuordnung: Dienstleistung -> Messdienstleisterformular).
+  // Mit der Dienstleistung verknüpftes Globales Formular (Ansicht
+  // „Messdienstleister" wird im Formular selbst aufgelöst).
   const { data: linkedForms = [] } = useQuery({
-    queryKey: ["service-form-links", serviceId, "employee"],
-    queryFn: () => api.serviceFormLinks.listForService(serviceId!, "employee"),
+    queryKey: ["service-form-links", serviceId],
+    queryFn: () => api.serviceFormLinks.listForService(serviceId!),
     enabled: !!serviceId,
   });
 
