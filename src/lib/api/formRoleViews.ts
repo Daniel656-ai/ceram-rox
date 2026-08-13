@@ -4,19 +4,38 @@ import type { FormLayoutTree } from "./formDefinitionLayout";
 import { emptyLayout, normalizeLayout } from "./formDefinitionLayout";
 
 /**
- * Role-based views of a form definition. Same field set, different layout
- * and (via `form_field_permissions`) different visibility/editability.
+ * Rollenansichten eines Globalen Formulars. Gleiches Feld-Set, unterschiedliches
+ * Layout und (über `form_field_permissions`) unterschiedliche Sichtbarkeit /
+ * Bearbeitbarkeit.
  *
- * Preset role keys — arbitrary custom keys are also allowed.
+ * Kanonische Ansichten eines Globalen Formulars – zusätzliche eigene Schlüssel
+ * sind weiterhin erlaubt.
  */
 export const ROLE_VIEW_PRESETS: { key: string; label: string }[] = [
   { key: "auftraggeber", label: "Auftraggeber" },
   { key: "messdienstleister", label: "Messdienstleister" },
-  { key: "labor", label: "Labor" },
-  { key: "admin", label: "Administrator" },
+  { key: "ergebnis", label: "Ergebnis" },
 ];
 
+/** Laufzeit-Kontext, in dem ein Globales Formular gerendert wird. */
+export type FormViewContext = "customer" | "employee" | "result";
+
+/** Kanonischer Ansichts-Schlüssel je Kontext. */
+export const VIEW_KEY_BY_CONTEXT: Record<FormViewContext, string> = {
+  customer: "auftraggeber",
+  employee: "messdienstleister",
+  result: "ergebnis",
+};
+
+/** Historische Schlüssel, die auf denselben Kontext zeigen (Altdaten). */
+export const LEGACY_VIEW_KEYS: Record<FormViewContext, string[]> = {
+  customer: ["customer", "auftraggeber_ansicht"],
+  employee: ["employee", "messdienstleister_ansicht", "labor"],
+  result: ["result", "ergebnisformular", "report"],
+};
+
 export const DEFAULT_ROLE_KEY = "default";
+
 
 export interface FormRoleView {
   id: string;
