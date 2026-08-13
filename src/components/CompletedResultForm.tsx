@@ -42,7 +42,15 @@ export default function CompletedResultForm({
     enabled: !!serviceId,
   });
 
-  const hasForm = !!employeeLayout?.layout?.sections?.length;
+  // Globales Formular der Dienstleistung (Ergebnis-Ansicht).
+  const { data: links = [] } = useQuery({
+    queryKey: ["service-form-links", serviceId],
+    queryFn: () => api.serviceFormLinks.listForService(serviceId!),
+    enabled: !!serviceId,
+  });
+
+  const hasLegacyForm = !!employeeLayout?.layout?.sections?.length;
+  const hasGlobalForm = links.length > 0;
 
   // Same de-serialisation as the technician view uses when resuming a draft.
   const values = useMemo(() => {
@@ -62,7 +70,8 @@ export default function CompletedResultForm({
     return out;
   }, [results]);
 
-  if (!serviceId || !hasForm) return null;
+  if (!serviceId || (!hasLegacyForm && !hasGlobalForm)) return null;
+
 
   return (
     <Card className="border-green-600/30">
