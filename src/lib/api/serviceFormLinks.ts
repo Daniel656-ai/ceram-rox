@@ -25,7 +25,13 @@ export const serviceFormLinks = {
    */
   listForService: (serviceId: string, roleView?: ServiceFormLinkRole) => {
     let q = dbClient.from(TBL as any).select("*").eq("service_id", serviceId);
-    if (roleView) q = q.eq("role_view", roleView);
+    if (roleView === "customer") {
+      // Auftraggeber: strikt nur explizit zugeordnete Formulare.
+      q = q.eq("role_view", "customer");
+    } else if (roleView === "employee") {
+      // Messdienstleister: explizit zugeordnete + Altverknüpfungen ohne Rolle.
+      q = q.or("role_view.eq.employee,role_view.is.null");
+    }
     return unwrap(q.order("order_index")) as unknown as Promise<ServiceFormLink[]>;
   },
 
