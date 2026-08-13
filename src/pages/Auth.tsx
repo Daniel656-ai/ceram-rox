@@ -109,15 +109,12 @@ export default function Auth() {
                 <div className="space-y-2">
                   <Label htmlFor="password">{t("auth:password")}</Label>
                   <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" />
+                  <p className="text-xs text-muted-foreground">{t("auth:forgot_hint")}</p>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? t("auth:logging_in") : t("auth:login")}
                 </Button>
-                <div className="flex items-center justify-between text-sm">
-                  <button type="button" onClick={() => setMode("forgot")} className="text-primary hover:underline">
-                    {t("auth:contact_admin_link")}
-                  </button>
-                </div>
+
 
               </form>
             )}
