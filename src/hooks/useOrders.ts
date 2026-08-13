@@ -56,7 +56,13 @@ export function useDeleteOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.orders.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
+    onSuccess: (_d, id) => {
+      qc.removeQueries({ queryKey: ["order", id] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["my-measurements"] });
+      qc.invalidateQueries({ queryKey: ["lab-planning-measurements"] });
+      qc.invalidateQueries({ queryKey: ["unassigned-qualified-measurements"] });
+    },
   });
 }
 
