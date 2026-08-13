@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ArrowLeft, CheckCircle2, ClipboardList } from "lucide-react";
 import OrderUploadedFiles from "@/components/OrderUploadedFiles";
+import ServiceLinkedForms from "@/components/ServiceLinkedForms";
 import { toast } from "sonner";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
 
@@ -61,7 +62,17 @@ function TaskExecutionPageInner() {
   }, [employeeLayout, customerLayout]);
 
   const activeLayout = roleView === "employee" ? employeeLayout : customerLayout;
-  const hasForm = !!activeLayout?.layout?.sections?.length;
+  const hasLayoutForm = !!activeLayout?.layout?.sections?.length;
+
+  // Im Service-Designer verknüpfte Formulardefinitionen der Dienstleistung
+  // (führende Zuordnung: Dienstleistung -> Messdienstleisterformular).
+  const { data: linkedForms = [] } = useQuery({
+    queryKey: ["service-form-links", serviceId, "employee"],
+    queryFn: () => api.serviceFormLinks.listForService(serviceId!, "employee"),
+    enabled: !!serviceId,
+  });
+
+  const hasForm = hasLayoutForm || linkedForms.length > 0;
 
   const [values, setValues] = useState<Record<string, any>>({});
   const [initialized, setInitialized] = useState(false);
@@ -337,12 +348,22 @@ function TaskExecutionPageInner() {
               Bitte im Service-Designer ein Formular für die Rolle „{roleView}" definieren.
             </p>
           ) : (
-            <ServiceBookingForm
-              serviceId={serviceId}
-              roleView={roleView}
-              values={values}
-              onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
-            />
+            <>
+              {hasLayoutForm && (
+                <ServiceBookingForm
+                  serviceId={serviceId}
+                  roleView={roleView}
+                  values={values}
+                  onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
+                />
+              )}
+              <ServiceLinkedForms
+                serviceId={serviceId}
+                roleView="employee"
+                values={values}
+                onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
+              />
+            </>
           )}
         </CardContent>
       </Card>
