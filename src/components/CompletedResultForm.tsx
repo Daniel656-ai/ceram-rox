@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import ServiceBookingForm from "@/components/ServiceBookingForm";
@@ -32,27 +32,17 @@ export default function CompletedResultForm({
     enabled: !!measurementId,
   });
 
-  const [roleView, setRoleView] = useState<FormRoleView>("employee");
+  // Strikt die Messdienstleister-Ansicht – kein Fallback auf das
+  // Auftraggeberformular.
+  const roleView: FormRoleView = "employee";
 
   const { data: employeeLayout } = useQuery({
     queryKey: ["service-form-layout", serviceId, "employee"],
     queryFn: () => api.serviceFormLayouts.get(serviceId!, "employee"),
     enabled: !!serviceId,
   });
-  const { data: customerLayout } = useQuery({
-    queryKey: ["service-form-layout", serviceId, "customer"],
-    queryFn: () => api.serviceFormLayouts.get(serviceId!, "customer"),
-    enabled: !!serviceId,
-  });
 
-  useEffect(() => {
-    const employeeHas = !!employeeLayout?.layout?.sections?.length;
-    const customerHas = !!customerLayout?.layout?.sections?.length;
-    setRoleView(!employeeHas && customerHas ? "customer" : "employee");
-  }, [employeeLayout, customerLayout]);
-
-  const activeLayout = roleView === "employee" ? employeeLayout : customerLayout;
-  const hasForm = !!activeLayout?.layout?.sections?.length;
+  const hasForm = !!employeeLayout?.layout?.sections?.length;
 
   // Same de-serialisation as the technician view uses when resuming a draft.
   const values = useMemo(() => {

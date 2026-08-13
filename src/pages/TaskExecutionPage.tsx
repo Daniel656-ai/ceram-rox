@@ -41,28 +41,19 @@ function TaskExecutionPageInner() {
 
   const serviceId: string | undefined = (measurement as any)?.service_id;
 
-  // Prefer the employee-facing form; fall back to the customer form.
-  const [roleView, setRoleView] = useState<FormRoleView>("employee");
+  /**
+   * Strikte Rollentrennung: Der Messdienstleister sieht ausschließlich das
+   * Messdienstleisterformular der Dienstleistung. Kein Fallback auf das
+   * Auftraggeberformular und kein pauschales „Ergebnisformular".
+   */
+  const roleView: FormRoleView = "employee";
   const { data: employeeLayout } = useQuery({
     queryKey: ["service-form-layout", serviceId, "employee"],
     queryFn: () => api.serviceFormLayouts.get(serviceId!, "employee"),
     enabled: !!serviceId,
   });
-  const { data: customerLayout } = useQuery({
-    queryKey: ["service-form-layout", serviceId, "customer"],
-    queryFn: () => api.serviceFormLayouts.get(serviceId!, "customer"),
-    enabled: !!serviceId,
-  });
 
-  useEffect(() => {
-    const employeeHas = !!employeeLayout?.layout?.sections?.length;
-    const customerHas = !!customerLayout?.layout?.sections?.length;
-    if (!employeeHas && customerHas) setRoleView("customer");
-    else setRoleView("employee");
-  }, [employeeLayout, customerLayout]);
-
-  const activeLayout = roleView === "employee" ? employeeLayout : customerLayout;
-  const hasLayoutForm = !!activeLayout?.layout?.sections?.length;
+  const hasLayoutForm = !!employeeLayout?.layout?.sections?.length;
 
   // Im Service-Designer verknüpfte Formulardefinitionen der Dienstleistung
   // (führende Zuordnung: Dienstleistung -> Messdienstleisterformular).
@@ -333,10 +324,12 @@ function TaskExecutionPageInner() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
           <CardTitle className="text-base flex items-center gap-2">
-            Ergebnisformular
-            <Badge variant="outline" className="text-[10px]">
-              {roleView === "employee" ? "Techniker-Ansicht" : "Standardformular"}
-            </Badge>
+            Messdienstleisterformular
+            {m.measurement_services?.service_name && (
+              <span className="font-normal text-muted-foreground">
+                – {m.measurement_services.service_name}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -344,8 +337,9 @@ function TaskExecutionPageInner() {
             <p className="text-sm text-muted-foreground">Keine Dienstleistung verknüpft.</p>
           ) : !hasForm ? (
             <p className="text-sm text-muted-foreground">
-              Für diese Dienstleistung wurde im Service-Designer noch kein Formular hinterlegt.
-              Bitte im Service-Designer ein Formular für die Rolle „{roleView}" definieren.
+              Für diese Dienstleistung ist kein Messdienstleisterformular hinterlegt.
+              Bitte im Service- und Prozessdesigner ein Formular der Rolle
+              „Messdienstleister" zuordnen.
             </p>
           ) : (
             <>
