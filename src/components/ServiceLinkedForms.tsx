@@ -26,6 +26,8 @@ export const parseLinkedFormValueKey = (key: string): { formId: string; fieldKey
 interface SingleProps {
   formId: string;
   context: FormViewContext;
+  /** Alte rollenbezogene Verknüpfung (Migrationsfallback). */
+  legacyRole?: "customer" | "employee" | null;
   values: Record<string, any>;
   onChange: (key: string, value: any) => void;
   /** Ergebnisansicht bzw. abgeschlossene Aufgaben: alles schreibgeschützt. */
@@ -38,7 +40,7 @@ interface SingleProps {
  * stammen aus den Rollenansichten des Formulars – nicht aus separaten
  * Rollenformularen.
  */
-function LinkedForm({ formId, context, values, onChange, readOnly }: SingleProps) {
+function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly }: SingleProps) {
   const { data: form } = useQuery({
     queryKey: ["form-definition", formId],
     queryFn: () => api.formDefinitions.get(formId),
@@ -104,8 +106,9 @@ function LinkedForm({ formId, context, values, onChange, readOnly }: SingleProps
 
   if (isLoading || viewLoading) return <p className="text-sm text-muted-foreground">Lade Formular…</p>;
   if (typedFields.length === 0) return null;
-  // Keine Ansicht für diesen Kontext konfiguriert -> bewusst nichts anzeigen.
-  if (!viewKey) return null;
+  // Keine Ansicht für diesen Kontext konfiguriert: nur noch Altverknüpfungen
+  // (Formular war früher direkt einer Rolle zugeordnet) werden angezeigt.
+  if (!viewKey && !(legacyRole && legacyRole === context)) return null;
 
   return (
     <div className="rounded-md border bg-muted/20 p-3 space-y-2">
@@ -156,6 +159,7 @@ export default function ServiceLinkedForms({ serviceId, context, values, onChang
           key={l.id}
           formId={l.form_definition_id}
           context={context}
+          legacyRole={(l.role_view as "customer" | "employee" | null) ?? null}
           values={values}
           onChange={onChange}
           readOnly={readOnly}
