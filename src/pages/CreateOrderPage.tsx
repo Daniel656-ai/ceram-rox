@@ -63,7 +63,7 @@ function ServiceCustomerForm({
     <div className="mt-2 pl-2 border-l-2 border-primary/30">
       <ServiceBookingForm
         serviceId={serviceId}
-        roleView="customer"
+        context="customer"
         values={formValues}
         onChange={onFormChange}
         compact
