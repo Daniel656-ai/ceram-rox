@@ -272,7 +272,7 @@ export default function AdminServicesPage() {
                 <Pencil className="h-4 w-4 mr-2" /> Bearbeiten
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setFormLinksService(s)}>
-                <FormInput className="h-4 w-4 mr-2" /> Formulare verknüpfen
+                <FormInput className="h-4 w-4 mr-2" /> Globales Formular verknüpfen
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleToggle(s.id, !s.active)} disabled={archived}>
                 {s.active ? (

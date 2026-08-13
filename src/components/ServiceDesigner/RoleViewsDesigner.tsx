@@ -138,7 +138,7 @@ export default function RoleViewsDesigner({ form, canManage, fieldsSlot, calcula
           {canManage && (
             <>
               <div className="pt-2 border-t space-y-2">
-                <p className="text-xs text-muted-foreground">Preset hinzufügen:</p>
+                <p className="text-xs text-muted-foreground">Ansicht hinzufügen (Auftraggeber, Messdienstleister, Ergebnis):</p>
                 <div className="flex flex-wrap gap-1">
                   {ROLE_VIEW_PRESETS.map((p) => (
                     <Button
