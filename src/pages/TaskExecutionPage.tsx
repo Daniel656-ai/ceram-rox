@@ -324,10 +324,12 @@ function TaskExecutionPageInner() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
           <CardTitle className="text-base flex items-center gap-2">
-            Ergebnisformular
-            <Badge variant="outline" className="text-[10px]">
-              {roleView === "employee" ? "Techniker-Ansicht" : "Standardformular"}
-            </Badge>
+            Messdienstleisterformular
+            {m.measurement_services?.service_name && (
+              <span className="font-normal text-muted-foreground">
+                – {m.measurement_services.service_name}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -335,8 +337,9 @@ function TaskExecutionPageInner() {
             <p className="text-sm text-muted-foreground">Keine Dienstleistung verknüpft.</p>
           ) : !hasForm ? (
             <p className="text-sm text-muted-foreground">
-              Für diese Dienstleistung wurde im Service-Designer noch kein Formular hinterlegt.
-              Bitte im Service-Designer ein Formular für die Rolle „{roleView}" definieren.
+              Für diese Dienstleistung ist kein Messdienstleisterformular hinterlegt.
+              Bitte im Service- und Prozessdesigner ein Formular der Rolle
+              „Messdienstleister" zuordnen.
             </p>
           ) : (
             <>
