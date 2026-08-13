@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import ServiceBookingForm from "@/components/ServiceBookingForm";
 import OrderUploadedFiles from "@/components/OrderUploadedFiles";
+import ServiceLinkedForms from "@/components/ServiceLinkedForms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Lock } from "lucide-react";
