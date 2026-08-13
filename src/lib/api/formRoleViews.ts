@@ -104,4 +104,18 @@ export const formRoleViews = {
     const normalized = normalizeLayout(baseLayout);
     return normalized.nodes.length ? normalized : emptyLayout();
   },
+
+  /**
+   * Ermittelt den tatsächlich zu verwendenden Ansichts-Schlüssel eines
+   * Globalen Formulars für einen Laufzeit-Kontext. Kanonischer Schlüssel hat
+   * Vorrang, danach historische Schlüssel (Altdaten), sonst `null`.
+   */
+  async resolveViewKey(formId: string, context: FormViewContext): Promise<string | null> {
+    const views = await formRoleViews.list(formId);
+    const canonical = VIEW_KEY_BY_CONTEXT[context];
+    if (views.some((v) => v.role_key === canonical)) return canonical;
+    const legacy = LEGACY_VIEW_KEYS[context].find((k) => views.some((v) => v.role_key === k));
+    return legacy ?? null;
+  },
+
 };
