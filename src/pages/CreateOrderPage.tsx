@@ -63,7 +63,7 @@ function ServiceCustomerForm({
     <div className="mt-2 pl-2 border-l-2 border-primary/30">
       <ServiceBookingForm
         serviceId={serviceId}
-        context="customer"
+        roleView="customer"
         values={formValues}
         onChange={onFormChange}
         compact
@@ -759,7 +759,7 @@ export default function CreateOrderPage() {
                     />
                     <ServiceLinkedForms
                       serviceId={m.service_id}
-                      roleView="customer"
+                      context="customer"
                       values={measurementFormValues[m.uid] || {}}
                       onChange={(key, value) => updateFormValue(m.uid, key, value)}
                     />
