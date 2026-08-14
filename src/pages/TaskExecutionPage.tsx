@@ -254,12 +254,21 @@ function TaskExecutionPageInner() {
         raw == null ||
         raw === "" ||
         (Array.isArray(raw) && raw.length === 0);
-      if (isEmpty) continue;
+      if (isEmpty) {
+        const prev = existingByName.get(key);
+        // A temporarily non-evaluable calculation must never erase an already
+        // stored official result. On final completion it is rejected above;
+        // during draft saves the last valid official value is retained.
+        if (candidate.kind === "calculation" && candidate.official && prev?.is_official === true) {
+          activeKeys.add(key);
+        }
+        continue;
+      }
       const resultName = key;
       activeKeys.add(resultName);
 
       // Numeric single value → store in `value`; everything else → JSON in `remarks`.
-      let payload: any = {
+      const payload: any = {
         result_name: resultName,
         display_label: candidate.label,
         is_official: candidate.official,
