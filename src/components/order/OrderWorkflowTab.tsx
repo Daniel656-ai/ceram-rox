@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WorkflowRuntimePanel } from "@/components/workflow/WorkflowRuntimePanel";
+import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
+
 import { ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { ListChecks, History, ArrowRight } from "lucide-react";
 
