@@ -82,12 +82,9 @@ export function useResultsDatabase() {
       const records: ResultRecord[] = (measurements || []).map((m: any) => {
         const order = m.measurement_orders;
         const service = m.measurement_services;
-        const params = m.measurement_parameters || [];
-
+        // Eingabe-/Messparameter sind keine Ergebnisse und erscheinen hier nicht.
         const inputParameters: Record<string, { value: string | null; unit: string | null }> = {};
-        params.forEach((p: any) => {
-          inputParameters[p.parameter_name] = { value: p.parameter_value, unit: p.unit };
-        });
+
 
         return {
           measurementId: m.id,
