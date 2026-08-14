@@ -3272,6 +3272,7 @@ export type Database = {
           id: string
           measurement_number: string
           order_id: string
+          original_sample_id: string | null
           planned_end_date: string | null
           planned_hours: number | null
           planned_start_date: string | null
@@ -3297,6 +3298,7 @@ export type Database = {
           id?: string
           measurement_number: string
           order_id: string
+          original_sample_id?: string | null
           planned_end_date?: string | null
           planned_hours?: number | null
           planned_start_date?: string | null
@@ -3322,6 +3324,7 @@ export type Database = {
           id?: string
           measurement_number?: string
           order_id?: string
+          original_sample_id?: string | null
           planned_end_date?: string | null
           planned_hours?: number | null
           planned_start_date?: string | null
@@ -3349,6 +3352,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_measurements_original_sample_id_fkey"
+            columns: ["original_sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
             referencedColumns: ["id"]
           },
           {
@@ -3597,21 +3607,42 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_replacement: boolean
           order_id: string
+          replaced_at: string | null
+          replaced_by: string | null
+          replaced_by_order_sample_id: string | null
+          replacement_note: string | null
+          replacement_reason: string | null
+          replaces_order_sample_id: string | null
           sample_id: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_replacement?: boolean
           order_id: string
+          replaced_at?: string | null
+          replaced_by?: string | null
+          replaced_by_order_sample_id?: string | null
+          replacement_note?: string | null
+          replacement_reason?: string | null
+          replaces_order_sample_id?: string | null
           sample_id: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_replacement?: boolean
           order_id?: string
+          replaced_at?: string | null
+          replaced_by?: string | null
+          replaced_by_order_sample_id?: string | null
+          replacement_note?: string | null
+          replacement_reason?: string | null
+          replaces_order_sample_id?: string | null
           sample_id?: string
         }
         Relationships: [
@@ -3620,6 +3651,20 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_samples_replaced_by_order_sample_id_fkey"
+            columns: ["replaced_by_order_sample_id"]
+            isOneToOne: false
+            referencedRelation: "order_samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_samples_replaces_order_sample_id_fkey"
+            columns: ["replaces_order_sample_id"]
+            isOneToOne: false
+            referencedRelation: "order_samples"
             referencedColumns: ["id"]
           },
           {
@@ -8619,6 +8664,16 @@ export type Database = {
           _project_id?: string
           _project_reference?: string
           _quantity: number
+        }
+        Returns: string
+      }
+      book_replacement_sample: {
+        Args: {
+          p_note?: string
+          p_order_id: string
+          p_original_sample_id: string
+          p_reason: string
+          p_replacement_sample_id: string
         }
         Returns: string
       }
