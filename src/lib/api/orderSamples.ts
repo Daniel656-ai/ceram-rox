@@ -105,9 +105,10 @@ export const orderSamples = {
       dbClient
         .from("order_measurements")
         .select(
-          `id, sample_id, service_id, status, measurement_number,
+          `id, sample_id, original_sample_id, service_id, status, measurement_number,
            measurement_services(id, service_name),
-           samples(${SAMPLE_FIELDS}),
+           samples:samples!order_measurements_sample_id_fkey(${SAMPLE_FIELDS}),
+           original_sample:samples!order_measurements_original_sample_id_fkey(${SAMPLE_FIELDS}),
            measurement_results(id, result_name, display_label, value, unit, is_official, measured_at)`
         )
         .eq("order_id", orderId)
