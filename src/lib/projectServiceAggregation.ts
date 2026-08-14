@@ -1,0 +1,160 @@
+/**
+ * Ableitung der „Gebuchten Dienstleistungen" eines Projekts.
+ *
+ * Es werden ausschließlich bestehende Daten aggregiert:
+ * Projekt → Auftrag → Aufgabe (order_measurements) → Dienstleistung.
+ * Es entstehen keine eigenen Dienstleistungs-Datensätze auf Projektebene.
+ * Stunden/Kosten folgen exakt derselben Formel wie die Projekt-Kostenlogik
+ * (Ist-Dauer bei erledigten Aufgaben, sonst Summe der Arbeitszeitprotokolle).
+ */
+
+export type BookedServiceStatus =
+  | "planned"
+  | "open"
+  | "in_progress"
+  | "partially_completed"
+  | "completed"
+  | "cancelled";
+
+export interface BookedServiceRow {
+  key: string;
+  orderId: string;
+  orderNumber: string;
+  serviceId: string | null;
+  serviceName: string;
+  sampleCount: number;
+  measurementCount: number;
+  completedCount: number;
+  status: BookedServiceStatus;
+  startDate: string | null;
+  completedDate: string | null;
+  hours: number;
+  cost: number;
+  measurementIds: string[];
+}
+
+export function measurementHours(m: any): number {
+  const workLogHours = (m.work_logs || []).reduce(
+    (s: number, wl: any) => s + (wl.hours || 0),
+    0
+  );
+  const useActual = m.status === "completed" && m.actual_duration_hours != null;
+  return useActual ? Number(m.actual_duration_hours) : workLogHours;
+}
+
+function minDate(a: string | null, b: string | null | undefined): string | null {
+  if (!b) return a;
+  if (!a) return b;
+  return new Date(b) < new Date(a) ? b : a;
+}
+
+function maxDate(a: string | null, b: string | null | undefined): string | null {
+  if (!b) return a;
+  if (!a) return b;
+  return new Date(b) > new Date(a) ? b : a;
+}
+
+/** orders: Ergebnis von api.projects.listOrdersWithDetails() */
+export function buildBookedServices(orders: any[]): BookedServiceRow[] {
+  const rows = new Map<string, BookedServiceRow>();
+
+  for (const order of orders || []) {
+    for (const m of order.order_measurements || []) {
+      const serviceId = m.service_id ?? null;
+      const key = `${order.id}::${serviceId ?? m.id}`;
+      let row = rows.get(key);
+      if (!row) {
+        row = {
+          key,
+          orderId: order.id,
+          orderNumber: order.order_number,
+          serviceId,
+          serviceName: m.measurement_services?.service_name || "–",
+          sampleCount: 0,
+          measurementCount: 0,
+          completedCount: 0,
+          status: "open",
+          startDate: null,
+          completedDate: null,
+          hours: 0,
+          cost: 0,
+          measurementIds: [],
+        };
+        rows.set(key, row);
+      }
+
+      row.measurementCount++;
+      row.measurementIds.push(m.id);
+      if (m.status === "completed") {
+        row.completedCount++;
+        row.completedDate = maxDate(row.completedDate, m.updated_at);
+      }
+
+      const firstLog = (m.work_logs || [])
+        .map((wl: any) => wl.work_date || wl.created_at)
+        .filter(Boolean)
+        .sort()[0];
+      row.startDate = minDate(row.startDate, m.planned_start_date || firstLog);
+
+      const hours = measurementHours(m);
+      row.hours += hours;
+      row.cost += hours * (m.measurement_services?.hourly_rate || 0);
+    }
+  }
+
+  // Probenanzahl je Zeile: eindeutige Proben der zugehörigen Aufgaben,
+  // ersatzweise die dem Auftrag zugeordneten Proben.
+  for (const order of orders || []) {
+    const orderSampleIds = new Set<string>(
+      [
+        ...((order.order_samples || []).map((os: any) => os.sample_id)),
+        order.sample_id,
+      ].filter(Boolean)
+    );
+    for (const row of rows.values()) {
+      if (row.orderId !== order.id) continue;
+      const ids = new Set<string>();
+      for (const m of order.order_measurements || []) {
+        if ((m.service_id ?? m.id) !== (row.serviceId ?? m.id)) continue;
+        if (row.serviceId && m.service_id !== row.serviceId) continue;
+        if (m.sample_id) ids.add(m.sample_id);
+      }
+      row.sampleCount = ids.size > 0 ? ids.size : orderSampleIds.size;
+    }
+  }
+
+  for (const row of rows.values()) {
+    if (row.measurementCount === 0) row.status = "planned";
+    else if (row.completedCount === row.measurementCount) row.status = "completed";
+    else if (row.completedCount > 0) row.status = "partially_completed";
+    else if (row.measurementIds.length > 0 && row.hours > 0) row.status = "in_progress";
+    else row.status = "open";
+  }
+
+  // Status „in Bearbeitung" hat Vorrang, sobald eine Aufgabe aktiv ist.
+  for (const order of orders || []) {
+    for (const m of order.order_measurements || []) {
+      if (m.status !== "in_progress") continue;
+      const key = `${order.id}::${m.service_id ?? m.id}`;
+      const row = rows.get(key);
+      if (row && row.status !== "completed" && row.status !== "partially_completed") {
+        row.status = "in_progress";
+      }
+    }
+  }
+
+  return Array.from(rows.values()).sort(
+    (a, b) =>
+      a.orderNumber?.localeCompare(b.orderNumber || "") ||
+      a.serviceName.localeCompare(b.serviceName)
+  );
+}
+
+export const BOOKED_SERVICE_STATUS_LABEL: Record<BookedServiceStatus, string> = {
+  planned: "geplant",
+  open: "offen",
+  in_progress: "in Bearbeitung",
+  partially_completed: "teilweise erledigt",
+  completed: "erledigt",
+  cancelled: "abgebrochen",
+};

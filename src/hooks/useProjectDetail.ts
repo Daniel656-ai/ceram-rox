@@ -29,6 +29,26 @@ export function useProjectOrders(projectId?: string) {
   });
 }
 
+/** Proben-Zuordnungen (inkl. Ersatzproben) aller Aufträge eines Projekts. */
+export function useProjectOrderSampleLinks(projectId?: string) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["project-order-sample-links", projectId],
+    queryFn: () => api.projects.listOrderSampleLinks(projectId!),
+    enabled: !!user && !!projectId,
+  });
+}
+
+/** Nur offiziell freigegebene Ergebnisse des Projekts. */
+export function useProjectOfficialResults(projectId?: string) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["project-official-results", projectId],
+    queryFn: () => api.projects.listOfficialResults(projectId!),
+    enabled: !!user && !!projectId,
+  });
+}
+
 export function useProjectSampleHistory(sampleIds: string[]) {
   const { user } = useAuth();
   return useQuery({

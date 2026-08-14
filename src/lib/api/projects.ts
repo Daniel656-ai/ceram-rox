@@ -63,6 +63,44 @@ export const projects = {
         .order("created_at", { ascending: false })
     ),
 
+  /**
+   * Proben-Zuordnungen (n:m) aller Aufträge eines Projekts – inkl. Ersatzproben-Beziehung.
+   * Es werden keine Daten dupliziert, sondern nur bestehende Verknüpfungen gelesen.
+   */
+  listOrderSampleLinks: (projectId: string) =>
+    unwrap(
+      dbClient
+        .from("order_samples")
+        .select(
+          `id, order_id, sample_id, created_at, is_replacement, replaces_order_sample_id,
+           replaced_by_order_sample_id, replacement_reason, replaced_at,
+           measurement_orders!inner(id, order_number, project_id),
+           samples(id, sample_number, sample_name)`
+        )
+        .eq("measurement_orders.project_id", projectId)
+    ),
+
+  /**
+   * Ausschließlich als „Offizielles Ergebnis" freigegebene Werte des Projekts
+   * (Ergebnis → Messung → Auftrag → Projekt). Der Tätigkeitsstatus ist irrelevant.
+   */
+  listOfficialResults: (projectId: string) =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(
+          `id, measurement_number, status, updated_at, assigned_to, sample_id, original_sample_id,
+           measurement_services(id, service_name, category),
+           measurement_orders!inner(id, order_number, project_id),
+           samples:samples!order_measurements_sample_id_fkey(id, sample_number, sample_name),
+           original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
+           measurement_results!inner(id, result_name, display_label, value, unit, is_official, measured_at, remarks)`
+        )
+        .eq("measurement_orders.project_id", projectId)
+        .eq("measurement_results.is_official", true)
+        .order("updated_at", { ascending: false })
+    ),
+
   // ---- raw rows used by the project-list aggregation ----
   listSampleIndex: () => unwrap(dbClient.from("samples").select("id, project_id")),
   listOrderIndex: () =>
