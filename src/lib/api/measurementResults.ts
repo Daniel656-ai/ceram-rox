@@ -22,6 +22,10 @@ export const measurementResults = {
     remarks?: string;
     measured_at?: string;
     measured_by?: string;
+    /** Nur als „Offizielles Ergebnis" markierte Werte erscheinen in der Ergebnisdatenbank. */
+    is_official?: boolean;
+    /** Fachliche Bezeichnung für die Anzeige (nie technische IDs). */
+    display_label?: string | null;
   }) =>
     unwrap(
       dbClient.from("measurement_results").insert(result).select().single()
@@ -39,6 +43,8 @@ export const measurementResults = {
       remarks?: string;
       measured_at?: string;
       measured_by?: string;
+      is_official?: boolean;
+      display_label?: string | null;
     }
   ) => run(dbClient.from("measurement_results").update(updates).eq("id", id)),
 
