@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useProjectDetail, useProjectSamples, useProjectOrders, useProjectSampleHistory } from "@/hooks/useProjectDetail";
+import { useProjectDetail, useProjectSamples, useProjectOrders, useProjectSampleHistory, useProjectOrderSampleLinks, useProjectOfficialResults } from "@/hooks/useProjectDetail";
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjectConsumables, useProjectKnetungMaterials } from "@/hooks/useProjectMaterials";
@@ -29,6 +29,13 @@ import { ProjectBudgetCard } from "@/components/ProjectBudgetCard";
 import { ProjectCostBreakdown } from "@/components/ProjectCostBreakdown";
 import { buildCostBreakdown } from "@/lib/costBreakdown";
 import { ProjectServicesTab } from "@/components/ProjectServicesTab";
+import { ProjectOrdersTab } from "@/components/project/ProjectOrdersTab";
+import { ProjectBookedServicesTab } from "@/components/project/ProjectBookedServicesTab";
+import { ProjectSamplesTab } from "@/components/project/ProjectSamplesTab";
+import { ProjectResultsTab, buildProjectResultRows } from "@/components/project/ProjectResultsTab";
+import { buildBookedServices, BOOKED_SERVICE_STATUS_LABEL } from "@/lib/projectServiceAggregation";
+
+
 
 
 import { usePermissions } from "@/hooks/usePermissions";
@@ -58,6 +65,9 @@ export default function ProjectDetailPage() {
   const { data: project, isLoading } = useProjectDetail(id);
   const { data: samples = [] } = useProjectSamples(id);
   const { data: orders = [] } = useProjectOrders(id);
+  const { data: orderSampleLinks = [] } = useProjectOrderSampleLinks(id);
+  const { data: officialResultsRaw = [] } = useProjectOfficialResults(id);
+
   const { data: users = [] } = useUsers();
   const { data: projectConsumables = [] } = useProjectConsumables(id);
   const { data: projectKnetung = [] } = useProjectKnetungMaterials(id);
@@ -97,6 +107,18 @@ export default function ProjectDetailPage() {
 
   const sampleIds = useMemo(() => (samples as any[]).map((s: any) => s.id), [samples]);
   const { data: history = [] } = useProjectSampleHistory(sampleIds);
+
+  /** Gebuchte Dienstleistungen – aggregiert aus den Aufträgen des Projekts. */
+  const bookedServices = useMemo(() => buildBookedServices(orders as any[]), [orders]);
+
+
+  /** Nur offizielle Ergebnisse – Quelle ist die bestehende Ergebnislogik. */
+  const officialResultRows = useMemo(
+    () => buildProjectResultRows(officialResultsRaw as any[], (uid: string) => getUserName(users as any[], uid)),
+    [officialResultsRaw, users]
+  );
+
+
 
   // Aggregate all measurements from all orders
   const allMeasurements = useMemo(() => {
@@ -267,6 +289,40 @@ export default function ProjectDetailPage() {
     }
     lines.push([t("total"), "", "", "", "", "", "", String(expTotal.toFixed(2)), "", ""].join(sep));
     lines.push("");
+
+    // Gebuchte Dienstleistungen (aus Aufträgen abgeleitet)
+    lines.push(["Gebuchte Dienstleistungen"].join(sep));
+    lines.push(["Auftrag", "Dienstleistung", "Proben", "Status", "Start", "Erledigt", "Stunden", "Kosten"].join(sep));
+    for (const r of bookedServices) {
+      lines.push([
+        esc(r.orderNumber || ""),
+        esc(r.serviceName),
+        String(r.sampleCount),
+        esc(BOOKED_SERVICE_STATUS_LABEL[r.status]),
+        esc(r.startDate ? new Date(r.startDate).toLocaleDateString("de-DE") : ""),
+        esc(r.completedDate ? new Date(r.completedDate).toLocaleDateString("de-DE") : ""),
+        r.hours.toFixed(2),
+        r.cost.toFixed(2),
+      ].join(sep));
+    }
+    lines.push("");
+
+    // Offizielle Ergebnisse
+    lines.push(["Offizielle Ergebnisse"].join(sep));
+    lines.push(["Probe", "Auftrag", "Dienstleistung", "Parameter", "Ergebnis", "Einheit", "Messdatum"].join(sep));
+    for (const r of officialResultRows) {
+      lines.push([
+        esc(r.sampleNumber),
+        esc(r.orderNumber),
+        esc(r.serviceName),
+        esc(r.parameter),
+        r.value != null ? String(r.value) : "",
+        esc(r.unit || ""),
+        esc(r.measuredAt ? new Date(r.measuredAt).toLocaleDateString("de-DE") : ""),
+      ].join(sep));
+    }
+    lines.push("");
+
 
     // Cost summary
     lines.push([t("csv_cost_summary")].join(sep));
@@ -494,8 +550,10 @@ export default function ProjectDetailPage() {
             { value: "material_costs", label: t("materials:tab_material_costs") },
           ]}
           advancedTabs={[
-            { value: "services", label: "Dienstleistungen", icon: <Briefcase className="h-4 w-4 shrink-0" /> },
+            { value: "orders", label: "Aufträge", icon: <ClipboardList className="h-4 w-4 shrink-0" /> },
+            { value: "services", label: "Gebuchte Dienstleistungen", icon: <Briefcase className="h-4 w-4 shrink-0" /> },
             { value: "samples", label: t("tab_samples"), icon: <FlaskConical className="h-4 w-4 shrink-0" /> },
+            { value: "results", label: "Ergebnisse", icon: <CheckCircle2 className="h-4 w-4 shrink-0" /> },
             { value: "measurements", label: t("tab_measurements"), icon: <ClipboardList className="h-4 w-4 shrink-0" /> },
             ...(canViewPersonnelCosts
               ? [{ value: "costs", label: t("tab_costs"), icon: <DollarSign className="h-4 w-4 shrink-0" /> }]
@@ -512,8 +570,21 @@ export default function ProjectDetailPage() {
           <ProjectGovernanceTab projectId={id!} canEdit={canManagePlanning} canApprove={canManagePlanning} />
         </TabsContent>
 
+        <TabsContent value="orders">
+          <ProjectOrdersTab orders={orders as any[]} sampleLinks={orderSampleLinks as any[]} />
+        </TabsContent>
+
         <TabsContent value="services">
-          <ProjectServicesTab projectId={id!} canEdit={isMaster || !!myProjectRole || canEditByPermission} />
+          <ProjectBookedServicesTab
+            projectId={id!}
+            orders={orders as any[]}
+            canEdit={isMaster || !!myProjectRole || canEditByPermission}
+            canViewCosts={canViewPersonnelCosts}
+          />
+        </TabsContent>
+
+        <TabsContent value="results">
+          <ProjectResultsTab rows={officialResultRows} />
         </TabsContent>
 
         <TabsContent value="closure">
@@ -529,53 +600,15 @@ export default function ProjectDetailPage() {
 
         {/* SAMPLES TAB */}
         <TabsContent value="samples">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("sample_id")}</TableHead>
-                    <TableHead>{t("sample_name")}</TableHead>
-                    <TableHead>{t("status")}</TableHead>
-                    <TableHead>{t("location")}</TableHead>
-                    <TableHead>{t("hazard")}</TableHead>
-                    <TableHead>{t("eta")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(samples as any[]).length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t("no_samples")}</TableCell></TableRow>
-                  ) : (
-                    (samples as any[]).map((s: any) => {
-                      const eta = etaMap.get(s.id);
-                      return (
-                        <TableRow key={s.id}>
-                          <TableCell className="font-medium">
-                            <Link to={`/proben/${s.id}`} className="text-primary hover:underline">{s.sample_number}</Link>
-                          </TableCell>
-                          <TableCell>{s.sample_name}</TableCell>
-                          <TableCell>{getStatusBadge(s.status)}</TableCell>
-                          <TableCell>{formatLocation(s.storage_locations)}</TableCell>
-                          <TableCell>
-                            {s.is_hazardous && <AlertTriangle className="h-4 w-4 text-destructive" />}
-                          </TableCell>
-                          <TableCell>
-                            {eta ? (
-                              <Badge variant="outline" className="gap-1">
-                                <CalendarClock className="h-3 w-3" />
-                                {eta.toLocaleDateString("de-DE")}
-                              </Badge>
-                            ) : "–"}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <ProjectSamplesTab
+            samples={samples as any[]}
+            orders={orders as any[]}
+            sampleLinks={orderSampleLinks as any[]}
+            etaMap={etaMap as any}
+            statusBadge={getStatusBadge}
+          />
         </TabsContent>
+
 
         {/* MEASUREMENTS TAB */}
         <TabsContent value="measurements">
@@ -792,6 +825,44 @@ export default function ProjectDetailPage() {
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Offizielle Ergebnisse – direkt aus der bestehenden Ergebnislogik */}
+                <div>
+                  <h3 className="font-semibold mb-2">Offizielle Ergebnisse</h3>
+                  {officialResultRows.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Keine als offizielles Ergebnis freigegebenen Werte vorhanden.
+                    </p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Probe</TableHead>
+                          <TableHead>Auftrag</TableHead>
+                          <TableHead>Dienstleistung</TableHead>
+                          <TableHead>Parameter</TableHead>
+                          <TableHead>Ergebnis</TableHead>
+                          <TableHead>Einheit</TableHead>
+                          <TableHead>Messdatum</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {officialResultRows.map((r) => (
+                          <TableRow key={r.id}>
+                            <TableCell>{r.sampleNumber}</TableCell>
+                            <TableCell>{r.orderNumber}</TableCell>
+                            <TableCell>{r.serviceName}</TableCell>
+                            <TableCell>{r.parameter}</TableCell>
+                            <TableCell>{r.value != null ? r.value : "–"}</TableCell>
+                            <TableCell>{r.unit || "–"}</TableCell>
+                            <TableCell>{r.measuredAt ? new Date(r.measuredAt).toLocaleDateString("de-DE") : "–"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+
 
                 {/* Time Entries */}
                 <div>
