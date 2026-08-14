@@ -103,7 +103,7 @@ export default function ReplacementSampleDialog({
             <Label>Tatsächlich verwendete Probe</Label>
             <SampleSelector
               value={replacementId}
-              onValueChange={(v: string) => setReplacementId(v)}
+              onSelect={(v: string) => setReplacementId(v)}
               projectId={projectId}
             />
           </div>
