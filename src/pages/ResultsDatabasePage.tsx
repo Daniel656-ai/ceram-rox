@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useResultsDatabase, getUniqueParameterNames, getParameterValue, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
