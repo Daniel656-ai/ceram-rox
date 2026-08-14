@@ -107,7 +107,7 @@ export default function CreateOrderPage() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [measurements, setMeasurements] = useState<SelectedMeasurement[]>([]);
-  const [selectedSampleId, setSelectedSampleId] = useState("");
+  const [selectedSampleIds, setSelectedSampleIds] = useState<string[]>([]);
   const [processTemplateId, setProcessTemplateId] = useState<string>("__none__");
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
@@ -268,7 +268,7 @@ export default function CreateOrderPage() {
       toast.error(t("orders:fill_required"));
       return;
     }
-    if (!isPurePP && (measurements.length === 0 || !selectedSampleId)) {
+    if (!isPurePP && (measurements.length === 0 || selectedSampleIds.length === 0)) {
       toast.error(t("orders:fill_required"));
       return;
     }
@@ -280,7 +280,7 @@ export default function CreateOrderPage() {
       const order = await createOrder.mutateAsync({
         project_id: projectId, order_type: orderType as any, created_by: user.id,
         due_date: dueDate || undefined, notes: notes || undefined,
-        sample_id: selectedSampleId || undefined,
+        sample_id: selectedSampleIds[0] || undefined,
         order_kind: orderKind,
         pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
       });
@@ -327,7 +327,7 @@ export default function CreateOrderPage() {
             legacy_order_id: order.id,
             title: tpl?.name ?? null,
             status: "planned",
-            sample_ids: selectedSampleId ? [selectedSampleId] : null,
+            sample_ids: selectedSampleIds.length > 0 ? selectedSampleIds : null,
             shared_data: {},
             created_by: user.id,
           });
@@ -341,10 +341,26 @@ export default function CreateOrderPage() {
 
 
 
-      for (let idx = 0; idx < measurements.length; idx++) {
-        const m = measurements[idx];
+      // Alle ausgewählten Proben dem Auftrag zuordnen (n:m)
+      if (selectedSampleIds.length > 0) {
+        try {
+          await api.orderSamples.add(order.id, selectedSampleIds, user.id);
+        } catch (err: any) {
+          toast.error(`Probenzuordnung: ${err.message}`);
+        }
+      }
+
+      // Je Probe und Dienstleistung entsteht eine eigene Aufgabe, damit
+      // Ergebnisse eindeutig der jeweiligen Probe zugeordnet bleiben.
+      const sampleTargets: Array<string | null> =
+        selectedSampleIds.length > 0 ? selectedSampleIds : [null];
+
+      for (let idx = 0; idx < measurements.length * sampleTargets.length; idx++) {
+        const m = measurements[Math.floor(idx / sampleTargets.length)];
+        const sampleTarget = sampleTargets[idx % sampleTargets.length];
         const createdMeasurement = await addMeasurement.mutateAsync({
           order_id: order.id, service_id: m.service_id,
+          sample_id: sampleTarget,
           due_date: dueDate || undefined,
           source_package_id: m.source_package_id ?? null,
           source_package_name_snapshot: m.source_package_name ?? null,
@@ -596,7 +612,7 @@ export default function CreateOrderPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">{t("orders:sample")} *</CardTitle></CardHeader>
             <CardContent>
-              <SampleSelector value={selectedSampleId} onSelect={setSelectedSampleId} projectId={selectedProjectId || undefined} />
+              <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} />
             </CardContent>
           </Card>
         )}

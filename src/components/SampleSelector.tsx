@@ -33,12 +33,19 @@ function formatLocation(loc: any) {
 }
 
 interface SampleSelectorProps {
-  value: string;
-  onSelect: (sampleId: string) => void;
+  /** Einzelauswahl (Legacy-Modus) */
+  value?: string;
+  onSelect?: (sampleId: string) => void;
+  /** Mehrfachauswahl: bei gesetztem `values` arbeitet die Komponente im Multi-Modus */
+  values?: string[];
+  onValuesChange?: (sampleIds: string[]) => void;
   projectId?: string;
 }
 
-export default function SampleSelector({ value, onSelect, projectId }: SampleSelectorProps) {
+export default function SampleSelector({ value, onSelect, values, onValuesChange, projectId }: SampleSelectorProps) {
+  const multiple = Array.isArray(values);
+  const selectedIds = multiple ? values! : value ? [value] : [];
+
   const { t } = useTranslation("samples");
   const { data: samples = [] } = useSamples();
   const { data: projects = [] } = useProjects();
@@ -68,6 +75,28 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
   }, [samples, projectId]);
 
   const selected = samples.find((s) => s.id === value);
+  const selectedSamples = useMemo(
+    () => selectedIds.map((id) => samples.find((s) => s.id === id)).filter(Boolean) as any[],
+    [selectedIds, samples]
+  );
+
+  const pick = (sampleId: string) => {
+    if (multiple) {
+      const next = selectedIds.includes(sampleId)
+        ? selectedIds.filter((s) => s !== sampleId)
+        : [...selectedIds, sampleId];
+      onValuesChange?.(next);
+    } else {
+      onSelect?.(sampleId);
+      setOpen(false);
+    }
+  };
+
+  const removeSelected = (sampleId: string) => {
+    if (multiple) onValuesChange?.(selectedIds.filter((s) => s !== sampleId));
+    else onSelect?.("");
+  };
+
 
   const resetForm = () => {
     setForm({
@@ -131,7 +160,8 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
 
       });
       toast.success(t("created"));
-      onSelect(newSample.id);
+      if (multiple) onValuesChange?.([...selectedIds, newSample.id]);
+      else onSelect?.(newSample.id);
       resetForm();
       setDialogOpen(false);
     } catch (e: any) {
@@ -139,12 +169,21 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
     }
   };
 
+  const placeholder = t("select_project").replace("Projekt", "Probe");
+
   return (
     <>
+      <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
-            {selected ? `${selected.sample_number} – ${selected.sample_name}` : t("select_project").replace("Projekt", "Probe")}
+            {multiple
+              ? selectedIds.length > 0
+                ? `${selectedIds.length} ${selectedIds.length === 1 ? "Probe" : "Proben"} ausgewählt`
+                : "Proben auswählen"
+              : selected
+                ? `${selected.sample_number} – ${selected.sample_name}`
+                : placeholder}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -173,16 +212,14 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
               <CommandGroup>
                 {filteredSamples.map((s) => {
                   const proj = (s as any).projects;
+                  const isSelected = selectedIds.includes(s.id);
                   return (
                     <CommandItem
                       key={s.id}
                       value={`${s.sample_number} ${s.sample_name} ${proj?.project_number || ""}`}
-                      onSelect={() => {
-                        onSelect(s.id);
-                        setOpen(false);
-                      }}
+                      onSelect={() => pick(s.id)}
                     >
-                      <Check className={cn("mr-2 h-4 w-4", value === s.id ? "opacity-100" : "opacity-0")} />
+                      <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
                       <div className="flex flex-col">
                         <span className="font-medium">
                           {s.sample_number} – {s.sample_name}
@@ -194,9 +231,32 @@ export default function SampleSelector({ value, onSelect, projectId }: SampleSel
               </CommandGroup>
             </CommandList>
 
+
           </Command>
         </PopoverContent>
       </Popover>
+
+      {multiple && selectedSamples.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedSamples.map((s) => (
+            <Badge key={s.id} variant="secondary" className="gap-1 py-1 pl-2 pr-1">
+              <span className="font-mono text-xs">{s.sample_number}</span>
+              <span className="text-xs">– {s.sample_name}</span>
+              <button
+                type="button"
+                aria-label={`${s.sample_number} entfernen`}
+                onClick={() => removeSelected(s.id)}
+                className="ml-1 rounded-sm p-0.5 hover:bg-muted"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      </div>
+
+
 
       <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

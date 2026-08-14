@@ -3278,6 +3278,7 @@ export type Database = {
           priority: number
           processing_time_hours: number
           ranking: number | null
+          sample_id: string | null
           service_id: string
           source_package_id: string | null
           source_package_name_snapshot: string | null
@@ -3302,6 +3303,7 @@ export type Database = {
           priority?: number
           processing_time_hours?: number
           ranking?: number | null
+          sample_id?: string | null
           service_id: string
           source_package_id?: string | null
           source_package_name_snapshot?: string | null
@@ -3326,6 +3328,7 @@ export type Database = {
           priority?: number
           processing_time_hours?: number
           ranking?: number | null
+          sample_id?: string | null
           service_id?: string
           source_package_id?: string | null
           source_package_name_snapshot?: string | null
@@ -3346,6 +3349,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_measurements_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
             referencedColumns: ["id"]
           },
           {
@@ -3578,6 +3588,45 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: true
             referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_samples: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          order_id: string
+          sample_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id: string
+          sample_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          order_id?: string
+          sample_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_samples_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_samples_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
             referencedColumns: ["id"]
           },
         ]

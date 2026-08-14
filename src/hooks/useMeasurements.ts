@@ -63,7 +63,7 @@ export function useMyMeasurements() {
 export function useAddOrderMeasurement() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (m: { order_id: string; service_id: string; planned_hours?: number; due_date?: string; source_package_id?: string | null; source_package_name_snapshot?: string | null }) =>
+    mutationFn: (m: { order_id: string; service_id: string; sample_id?: string | null; planned_hours?: number; due_date?: string; source_package_id?: string | null; source_package_name_snapshot?: string | null }) =>
       api.measurements.add(m),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["orders"] });

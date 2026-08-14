@@ -34,6 +34,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrderReportTab from "@/components/OrderReportTab";
 import { ProcessOrderTabs } from "@/components/workflow/ProcessOrderTabs";
 import CompletedResultForm from "@/components/CompletedResultForm";
+import OrderResultsOverview from "@/components/OrderResultsOverview";
+import OrderSamplesCard from "@/components/OrderSamplesCard";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -590,6 +592,19 @@ function OrderDetailPageInner() {
               })}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <OrderSamplesCard
+        orderId={id!}
+        projectId={(order as any).project_id}
+        canEdit={role === "master" || (order as any).created_by === user?.id}
+      />
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Ergebnisse</CardTitle></CardHeader>
+        <CardContent>
+          <OrderResultsOverview orderId={id!} />
         </CardContent>
       </Card>
 

@@ -34,6 +34,7 @@ import {
   projectKnetungMaterials,
 } from "./projectMaterials";
 import { orders } from "./orders";
+import { orderSamples } from "./orderSamples";
 import { measurements, workLogs } from "./measurements";
 import {
   measurementServices,
@@ -195,6 +196,7 @@ export const api = {
   projectConsumables,
   projectKnetungMaterials,
   orders,
+  orderSamples,
   measurements,
   workLogs,
   measurementServices,
