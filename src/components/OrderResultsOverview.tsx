@@ -48,7 +48,8 @@ export default function OrderResultsOverview({ orderId }: { orderId: string }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Probe</TableHead>
+                  <TableHead>Vorgesehene Probe</TableHead>
+                  <TableHead>Gemessene Probe</TableHead>
                   {g.columns.map((c) => (
                     <TableHead key={c.key} className="text-right">
                       {c.label}{c.unit ? ` (${c.unit})` : ""}
@@ -59,9 +60,15 @@ export default function OrderResultsOverview({ orderId }: { orderId: string }) {
               <TableBody>
                 {g.rows.map((r) => (
                   <TableRow key={r.measurementId}>
+                    <TableCell className="font-mono text-xs">
+                      {r.originalSampleNumber ?? r.sampleNumber}
+                    </TableCell>
                     <TableCell>
                       <span className="font-mono text-xs mr-2">{r.sampleNumber}</span>
                       {r.sampleName}
+                      {r.isReplacement && (
+                        <span className="ml-2 text-xs text-muted-foreground">(Ersatzprobe)</span>
+                      )}
                     </TableCell>
                     {g.columns.map((c) => {
                       const cell = r.cells[c.key];
@@ -74,7 +81,7 @@ export default function OrderResultsOverview({ orderId }: { orderId: string }) {
                   </TableRow>
                 ))}
                 <TableRow className="bg-muted/40 font-medium">
-                  <TableCell>Mittelwert aller Proben</TableCell>
+                  <TableCell colSpan={2}>Mittelwert aller Proben</TableCell>
                   {g.columns.map((c) => {
                     const agg = g.averages[c.key];
                     return (
