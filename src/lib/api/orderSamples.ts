@@ -4,6 +4,11 @@ import { unwrap, run } from "./_helpers";
 const SAMPLE_FIELDS =
   "id, sample_number, sample_name, description, is_hazardous, status, project_id";
 
+/** Erweiterte Probenfelder für den Proben-Tab (Status, Lagerort, Entsorgung). */
+const SAMPLE_FIELDS_FULL = `${SAMPLE_FIELDS}, location_id, disposal_method, disposal_category,
+   post_measurement_action, updated_at, storage_locations:location_id(id, hall, room, shelf, position)`;
+
+
 /**
  * Zuordnung Auftrag ↔ Proben (n:m).
  *
