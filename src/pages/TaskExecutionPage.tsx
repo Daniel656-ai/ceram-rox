@@ -18,6 +18,7 @@ import OrderUploadedFiles from "@/components/OrderUploadedFiles";
 import ServiceLinkedForms, { linkedFormValueKey } from "@/components/ServiceLinkedForms";
 import { toast } from "sonner";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
+import { buildLinkedFormResultCandidates, type OfficialResultCandidate } from "@/lib/officialResults";
 
 /**
  * Task-focused execution view for a measurement (Messdienstleister workflow).
@@ -177,30 +178,91 @@ function TaskExecutionPageInner() {
     setCompleteOpen(true);
   };
 
-  const persistResults = async () => {
+  const persistResults = async (requireOfficialCalculations = false) => {
     if (!measurementId) return;
     const existing = ((measurement as any).measurement_results ?? []) as any[];
     const existingByName = new Map(existing.map((r) => [r.result_name, r]));
     const measuredAt = new Date().toISOString().slice(0, 10);
 
+    // Fetch authoritative definitions at save time. Completion must never
+    // depend on whether a metadata query or a calculation render effect has
+    // already finished in the UI.
+    const [freshServiceFields, linkedDefinitions] = await Promise.all([
+      serviceId ? api.serviceDataFields.listForService(serviceId) : Promise.resolve([]),
+      Promise.all(formIds.map(async (formId) => {
+        const [fields, calculations] = await Promise.all([
+          api.formFields.listForForm(formId),
+          api.formCalculations.listForForm(formId),
+        ]);
+        return { formId, fields, calculations };
+      })),
+    ]);
+
+    const candidates = new Map<string, OfficialResultCandidate>();
+    for (const field of freshServiceFields) {
+      candidates.set(field.field_key, {
+        key: field.field_key,
+        label: field.result_label || field.display_name || field.field_key,
+        value: values[field.field_key],
+        official: field.is_result === true,
+        kind: "field",
+      });
+    }
+    for (const definition of linkedDefinitions) {
+      for (const candidate of buildLinkedFormResultCandidates(
+        definition.formId,
+        definition.fields,
+        definition.calculations,
+        values,
+      )) {
+        candidates.set(candidate.key, candidate);
+      }
+    }
+
+    // Preserve values outside the currently known definitions (legacy data,
+    // removed forms). They must not be deleted or declassified accidentally.
+    for (const [key, raw] of Object.entries(values)) {
+      if (candidates.has(key)) continue;
+      const prev = existingByName.get(key);
+      candidates.set(key, {
+        key,
+        label: prev?.display_label ?? resultMeta.get(key)?.label ?? key,
+        value: raw,
+        official: prev?.is_official === true,
+        kind: "field",
+      });
+    }
+
+    const invalidOfficialCalculation = [...candidates.values()].find((candidate) =>
+      requireOfficialCalculations &&
+      candidate.kind === "calculation" &&
+      candidate.official &&
+      (candidate.value == null || candidate.error)
+    );
+    if (invalidOfficialCalculation) {
+      throw new Error(
+        `Das offizielle Ergebnis „${invalidOfficialCalculation.label}“ konnte nicht berechnet werden${invalidOfficialCalculation.error ? `: ${invalidOfficialCalculation.error}` : "."}`
+      );
+    }
+
+    const knownKeys = new Set(candidates.keys());
     const activeKeys = new Set<string>();
 
-    for (const [key, raw] of Object.entries(values)) {
+    for (const candidate of candidates.values()) {
+      const { key, value: raw } = candidate;
       const isEmpty =
         raw == null ||
         raw === "" ||
         (Array.isArray(raw) && raw.length === 0);
       if (isEmpty) continue;
-      // Technischer Key bleibt Speicherschlüssel; Anzeige erfolgt über display_label.
-      const meta = resultMeta.get(key);
       const resultName = key;
       activeKeys.add(resultName);
 
       // Numeric single value → store in `value`; everything else → JSON in `remarks`.
       let payload: any = {
         result_name: resultName,
-        display_label: meta?.label ?? null,
-        is_official: !!meta?.official,
+        display_label: candidate.label,
+        is_official: candidate.official,
         measured_by: user?.id ?? null,
         measured_at: measuredAt,
         value: null,
@@ -229,9 +291,10 @@ function TaskExecutionPageInner() {
       }
     }
 
-    // Remove results whose field was cleared.
+    // Delete only values belonging to a currently known definition that was
+    // explicitly cleared. Unknown/historical official rows remain untouched.
     for (const r of existing) {
-      if (!activeKeys.has(r.result_name)) {
+      if (knownKeys.has(r.result_name) && !activeKeys.has(r.result_name)) {
         await api.measurementResults.delete(r.id);
       }
     }
@@ -252,7 +315,7 @@ function TaskExecutionPageInner() {
     }
     setSubmitting(true);
     try {
-      await persistResults();
+      await persistResults(true);
       await api.measurements.complete(measurementId, dur, deviationReason);
       toast.success("Messung abgeschlossen und Ergebnisse gespeichert");
       qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
