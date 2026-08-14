@@ -584,7 +584,7 @@ export default function GlobalModelTab() {
                     checked={fieldDraft.is_repeatable}
                     onChange={(e) => setFieldDraft({ ...fieldDraft, is_repeatable: e.target.checked })}
                   />
-                  Wiederholbar (mehrere Proben, Messungen, Rohstoffe, Bilder – ohne feste Zeilenanzahl)
+                  Wiederverwendbar (Feld darf mehrfach im selben Formular eingefügt werden – jede Instanz hat einen eigenen Wert)
                 </label>
               </div>
             )}

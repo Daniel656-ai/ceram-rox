@@ -165,6 +165,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
             validation_ids: gf.validation_ids ?? [],
             is_repeatable: isRepeater ? true : !!gf.is_repeatable,
             usage_index: usageIndex,
+            instance_key: fieldKey,
             ...(isRepeater
               ? {
                   repeater: {
@@ -297,7 +298,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                         </Badge>
                         {repeatable && (
                           <>
-                            <Badge variant="outline" className="text-[10px]">wiederholbar</Badge>
+                            <Badge variant="outline" className="text-[10px]">wiederverwendbar</Badge>
                             {(selected[f.id] ?? 0) > 0 && (
                               <span
                                 className="flex items-center gap-1"
@@ -322,7 +323,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                         )}
                         {uses > 0 && (
                           <Badge variant="secondary" className="text-[10px]">
-                            {repeatable ? `${uses}× im Formular` : "im Formular"}
+                            {repeatable ? `${uses}× im Formular` : "bereits verwendet"}
                           </Badge>
                         )}
                       </label>
