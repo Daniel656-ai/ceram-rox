@@ -122,21 +122,29 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
           options = items.map((i) => ({ label: i.label, value: i.item_value }));
         }
         const isRepeater = gf.data_type === "repeater";
+        const reusable = !!gf.is_repeatable || isRepeater;
 
-        // Mehrfachverwendung: eindeutiger technischer Key je Verwendung,
+        // Mehrfachverwendung: eindeutige Instanz je Verwendung,
         // die globale Definition (global_field_id / binding_path) bleibt identisch.
         const usageIndex = (runningUsage.get(gf.id) ?? 0) + 1;
         runningUsage.set(gf.id, usageIndex);
 
         let fieldKey = gf.field_key;
-        if (usedKeys.has(fieldKey)) {
+        let displayName = gf.display_name;
+        if (reusable) {
+          // Wiederverwendbare Felder erhalten immer eine eindeutige Instanz-ID.
+          let n = usageIndex;
+          while (usedKeys.has(`${gf.field_key}_${n}`)) n++;
+          fieldKey = `${gf.field_key}_${n}`;
+          displayName = `${gf.display_name} ${n}`;
+        } else if (usedKeys.has(fieldKey)) {
           let n = Math.max(usageIndex, 2);
           while (usedKeys.has(`${gf.field_key}_${n}`)) n++;
           fieldKey = `${gf.field_key}_${n}`;
+          displayName = `${gf.display_name} (Verwendung ${n})`;
         }
         usedKeys.add(fieldKey);
-        const displayName =
-          usageIndex > 1 ? `${gf.display_name} (Verwendung ${usageIndex})` : gf.display_name;
+
 
         const created = await api.formFields.create({
           form_id: formId,
