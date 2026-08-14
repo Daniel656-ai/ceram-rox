@@ -22,10 +22,12 @@ export interface RawResultRow {
 export interface RawMeasurementRow {
   id: string;
   sample_id: string | null;
+  original_sample_id?: string | null;
   service_id: string;
   status?: string | null;
   measurement_services?: { id: string; service_name: string } | null;
   samples?: { id: string; sample_number: string; sample_name: string } | null;
+  original_sample?: { id: string; sample_number: string; sample_name: string } | null;
   measurement_results?: RawResultRow[] | null;
 }
 
@@ -47,6 +49,9 @@ export interface SampleRow {
   sampleName: string;
   measurementId: string;
   status: string | null;
+  /** Ursprünglich vorgesehene Probe, falls mit Ersatzprobe gemessen wurde */
+  originalSampleNumber: string | null;
+  isReplacement: boolean;
   cells: Record<string, ResultCell>;
 }
 
@@ -109,6 +114,11 @@ export function buildOrderResultGroups(rows: RawMeasurementRow[]): ServiceResult
       sampleName: m.samples?.sample_name || "Ohne Probe",
       measurementId: m.id,
       status: m.status ?? null,
+      originalSampleNumber:
+        m.original_sample_id && m.original_sample_id !== m.sample_id
+          ? m.original_sample?.sample_number || "–"
+          : null,
+      isReplacement: !!(m.original_sample_id && m.original_sample_id !== m.sample_id),
       cells,
     });
   }
