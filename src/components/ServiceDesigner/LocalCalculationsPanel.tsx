@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X, Copy, Calculator, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Copy, Calculator, AlertTriangle, HelpCircle } from "lucide-react";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FormField } from "@/lib/api/formFields";
 import type {
