@@ -186,7 +186,21 @@ export default function OrderWorkflowTab({
         </CardContent>
       </Card>
 
+      {processSlot}
+
       {!isRequesterView && <WorkflowRuntimePanel order={order} />}
+
+      {!isRequesterView && role !== "durchfuehrer" && (
+        <Card>
+          <CardHeader className="py-3">
+            <CardTitle className="text-base">Arbeitszeiten</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ProjectTimeEntries projectId={order.project_id} orderId={order.id} />
+          </CardContent>
+        </Card>
+      )}
+
 
       <Card>
         <CardHeader className="py-3">
