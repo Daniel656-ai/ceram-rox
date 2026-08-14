@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Search, Boxes } from "lucide-react";
+import { Search, Boxes, Minus, Plus as PlusIcon } from "lucide-react";
 import {
   GLOBAL_FIELD_TYPES,
   bindingPathFor,
@@ -38,7 +38,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [objectId, setObjectId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [selected, setSelected] = useState<Record<string, number>>({});
 
   const { data: objects = [] } = useQuery({
     queryKey: ["global-objects"],
@@ -103,10 +103,14 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
 
   const insertMut = useMutation({
     mutationFn: async () => {
-      const ids = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
+      // Wiederholbare Felder können in einem Schritt mehrfach eingefügt werden.
+      const ids = Object.entries(selected)
+        .filter(([, n]) => (n ?? 0) > 0)
+        .flatMap(([k, n]) => Array.from({ length: n }, () => k));
       if (ids.length === 0) throw new Error("Keine Felder ausgewählt");
       let sort = (existing.at(-1)?.sort_order ?? -1) + 1;
       const usedKeys = new Set(takenKeys);
+      const runningUsage = new Map(usageCount);
       for (const id of ids) {
         const gf = allFields.find((f) => f.id === id);
         if (!gf) continue;
@@ -121,7 +125,9 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
 
         // Mehrfachverwendung: eindeutiger technischer Key je Verwendung,
         // die globale Definition (global_field_id / binding_path) bleibt identisch.
-        const usageIndex = (usageCount.get(gf.id) ?? 0) + 1;
+        const usageIndex = (runningUsage.get(gf.id) ?? 0) + 1;
+        runningUsage.set(gf.id, usageIndex);
+
         let fieldKey = gf.field_key;
         if (usedKeys.has(fieldKey)) {
           let n = Math.max(usageIndex, 2);
@@ -203,7 +209,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
     onError: (e: any) => toast.error(e.message || "Fehler beim Einfügen"),
   });
 
-  const selectedCount = Object.values(selected).filter(Boolean).length;
+  const selectedCount = Object.values(selected).reduce((a, b) => a + (b ?? 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -267,9 +273,9 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                         className={`flex items-center gap-2 border-b px-2 py-1.5 text-sm ${blocked ? "opacity-50" : "cursor-pointer hover:bg-muted/40"}`}
                       >
                         <Checkbox
-                          checked={!!selected[f.id]}
+                          checked={(selected[f.id] ?? 0) > 0}
                           disabled={blocked}
-                          onCheckedChange={(c) => setSelected((s) => ({ ...s, [f.id]: !!c }))}
+                          onCheckedChange={(c) => setSelected((s) => ({ ...s, [f.id]: c ? 1 : 0 }))}
                         />
                         <span className="flex-1 truncate">
                           {f.display_name}
@@ -282,7 +288,29 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                           {GLOBAL_FIELD_TYPES.find((t) => t.value === f.data_type)?.label ?? f.data_type}
                         </Badge>
                         {repeatable && (
-                          <Badge variant="outline" className="text-[10px]">wiederholbar</Badge>
+                          <>
+                            <Badge variant="outline" className="text-[10px]">wiederholbar</Badge>
+                            {(selected[f.id] ?? 0) > 0 && (
+                              <span
+                                className="flex items-center gap-1"
+                                onClick={(e) => e.preventDefault()}
+                              >
+                                <Button
+                                  type="button" size="icon" variant="outline" className="h-6 w-6"
+                                  onClick={() => setSelected((s) => ({ ...s, [f.id]: Math.max(1, (s[f.id] ?? 1) - 1) }))}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="w-5 text-center text-xs tabular-nums">{selected[f.id]}×</span>
+                                <Button
+                                  type="button" size="icon" variant="outline" className="h-6 w-6"
+                                  onClick={() => setSelected((s) => ({ ...s, [f.id]: (s[f.id] ?? 1) + 1 }))}
+                                >
+                                  <PlusIcon className="h-3 w-3" />
+                                </Button>
+                              </span>
+                            )}
+                          </>
                         )}
                         {uses > 0 && (
                           <Badge variant="secondary" className="text-[10px]">

@@ -102,11 +102,16 @@ function scalar(v: Val): number {
 }
 
 // -------- Tokenizer --------
-type Tok =
+type TokBase = { p: number };
+type Tok = TokBase & (
   | { t: "num"; v: number }
   | { t: "id"; v: string }
   | { t: "op"; v: string }
-  | { t: "lp" } | { t: "rp" } | { t: "comma" };
+  | { t: "lp" } | { t: "rp" } | { t: "comma" }
+);
+
+/** Menschenlesbare Position (1-basiert) für Fehlermeldungen. */
+const at = (p: number | undefined) => (p == null ? "" : ` (Position ${p + 1})`);
 
 function tokenize(src: string): Tok[] {
   const out: Tok[] = [];
@@ -114,15 +119,15 @@ function tokenize(src: string): Tok[] {
   while (i < src.length) {
     const c = src[i];
     if (/\s/.test(c)) { i++; continue; }
-    if (c === "(") { out.push({ t: "lp" }); i++; continue; }
-    if (c === ")") { out.push({ t: "rp" }); i++; continue; }
-    if (c === ",") { out.push({ t: "comma" }); i++; continue; }
-    if ("+-*/%".includes(c)) { out.push({ t: "op", v: c }); i++; continue; }
+    if (c === "(") { out.push({ t: "lp", p: i }); i++; continue; }
+    if (c === ")") { out.push({ t: "rp", p: i }); i++; continue; }
+    if (c === "," || c === ";") { out.push({ t: "comma", p: i }); i++; continue; }
+    if ("+-*/%".includes(c)) { out.push({ t: "op", v: c, p: i }); i++; continue; }
     if (/[0-9.]/.test(c)) {
       let j = i;
       while (j < src.length && /[0-9._]/.test(src[j])) j++;
       const raw = src.slice(i, j).replace(/_/g, "");
-      out.push({ t: "num", v: Number(raw) });
+      out.push({ t: "num", v: Number(raw), p: i });
       i = j; continue;
     }
     if (/[A-Za-z_ÄÖÜäöüß]/.test(c)) {
@@ -133,13 +138,14 @@ function tokenize(src: string): Tok[] {
         (/[A-Za-z0-9_ÄÖÜäöüß]/.test(src[j]) ||
           (src[j] === "." && /[A-Za-z_ÄÖÜäöüß]/.test(src[j + 1] ?? "")))
       ) j++;
-      out.push({ t: "id", v: src.slice(i, j) });
+      out.push({ t: "id", v: src.slice(i, j), p: i });
       i = j; continue;
     }
-    throw new Error(`Unerwartetes Zeichen: '${c}'`);
+    throw new Error(`Unerwartetes Zeichen: '${c}'${at(i)}`);
   }
   return out;
 }
+
 
 // -------- Parser (recursive descent) --------
 /** Signal: Referenz ist bekannt, aber (noch) ohne Wert – kein Fehler. */
@@ -162,7 +168,12 @@ class Parser {
 
   parse(): number {
     const v = this.expr();
-    if (this.pos < this.toks.length) throw new Error("Unerwartete Token nach dem Ausdruck");
+    if (this.pos < this.toks.length) {
+      const t = this.peek()!;
+      throw new Error(
+        `Unerwartete Eingabe nach dem Ausdruck${at(t.p)} – fehlt hier ein Operator (+, -, *, /) oder ein Komma?`
+      );
+    }
     return scalar(v);
   }
   expr(): Val { // +, -
@@ -194,11 +205,11 @@ class Parser {
   }
   primary(): Val {
     const t = this.eat();
-    if (!t) throw new Error("Unerwartetes Ende der Formel");
+    if (!t) throw new Error("Unerwartetes Ende der Formel – der Ausdruck ist unvollständig.");
     if (t.t === "num") return t.v;
     if (t.t === "lp") {
       const v = this.expr();
-      this.expect((x) => x.t === "rp", "')' erwartet");
+      this.expect((x) => x.t === "rp", `Schließende Klammer ')' fehlt${at(t.p)}`);
       return v;
     }
     if (t.t === "id") {
@@ -206,26 +217,43 @@ class Parser {
       const nxt = this.peek();
       if (nxt?.t === "lp") {
         this.eat(); // consume (
+        const fn = FUNCTIONS[name.toUpperCase()];
+        if (!fn) {
+          throw new Error(
+            `Unbekannte Funktion: ${name}${at(t.p)} – verfügbar: ${Object.keys(FUNCTIONS).join(", ")}`
+          );
+        }
         const args: Val[] = [];
         if (this.peek()?.t !== "rp") {
           args.push(this.arg());
-          while (this.peek()?.t === "comma") { this.eat(); args.push(this.arg()); }
+          for (;;) {
+            const n = this.peek();
+            if (!n) throw new Error(`Schließende Klammer ')' für ${name.toUpperCase()}( fehlt.`);
+            if (n.t === "rp") break;
+            if (n.t === "comma") { this.eat(); args.push(this.arg()); continue; }
+            // Häufigster Fehler: Parameter ohne Trennzeichen hintereinander.
+            throw new Error(
+              `Zwischen den Parametern von ${name.toUpperCase()}() fehlt ein Komma${at(n.p)} – ` +
+                `Schreibweise: ${name.toUpperCase()}(Feld1, Feld2, Feld3)`
+            );
+          }
         }
-        this.expect((x) => x.t === "rp", "')' erwartet");
-        const fn = FUNCTIONS[name.toUpperCase()];
-        if (!fn) throw new Error(`Unbekannte Funktion: ${name}`);
+        this.eat(); // consume )
         return fn(args);
       }
       // Variable / Feldschlüssel
       if (!(name in this.ctx)) {
         // Bekanntes Feld des Formulars, das (noch) keinen Wert hat -> kein Fehler.
         if (this.known.has(name)) throw new IncompleteSignal(name);
-        throw new Error(`Unbekanntes Feld: ${name}`);
+        throw new Error(`Unbekanntes Feld: ${name}${at(t.p)}`);
       }
       return toVal(this.ctx[name]);
     }
-    throw new Error("Ungültiger Ausdruck");
+    if (t.t === "comma") throw new Error(`Unerwartetes Komma${at(t.p)} – Kommas trennen nur Funktionsparameter.`);
+    if (t.t === "rp") throw new Error(`Unerwartete schließende Klammer ')'${at(t.p)}`);
+    throw new Error(`Ungültiger Ausdruck${at((t as any).p)}`);
   }
+
   /** Funktionsargument – Listen bleiben hier erhalten. */
   arg(): Val {
     const start = this.pos;
