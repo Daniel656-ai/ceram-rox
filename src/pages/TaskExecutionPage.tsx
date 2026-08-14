@@ -191,20 +191,22 @@ function TaskExecutionPageInner() {
         raw === "" ||
         (Array.isArray(raw) && raw.length === 0);
       if (isEmpty) continue;
-      // Nur als „offizielles Ergebnis" markierte Felder gelangen in die Ergebnisdatenbank.
-      if (resultKeys && !resultKeys.has(key)) continue;
-      const resultName = resultLabels.get(key) || key;
+      // Technischer Key bleibt Speicherschlüssel; Anzeige erfolgt über display_label.
+      const meta = resultMeta.get(key);
+      const resultName = key;
       activeKeys.add(resultName);
-
 
       // Numeric single value → store in `value`; everything else → JSON in `remarks`.
       let payload: any = {
         result_name: resultName,
+        display_label: meta?.label ?? null,
+        is_official: !!meta?.official,
         measured_by: user?.id ?? null,
         measured_at: measuredAt,
         value: null,
         remarks: null,
       };
+
       if (typeof raw === "string" || typeof raw === "number") {
         const num = typeof raw === "number" ? raw : parseFloat(raw);
         if (typeof raw === "number" || (!isNaN(num) && String(num) === String(raw).trim())) {
