@@ -102,11 +102,16 @@ function scalar(v: Val): number {
 }
 
 // -------- Tokenizer --------
-type Tok =
+type TokBase = { p: number };
+type Tok = TokBase & (
   | { t: "num"; v: number }
   | { t: "id"; v: string }
   | { t: "op"; v: string }
-  | { t: "lp" } | { t: "rp" } | { t: "comma" };
+  | { t: "lp" } | { t: "rp" } | { t: "comma" }
+);
+
+/** Menschenlesbare Position (1-basiert) für Fehlermeldungen. */
+const at = (p: number | undefined) => (p == null ? "" : ` (Position ${p + 1})`);
 
 function tokenize(src: string): Tok[] {
   const out: Tok[] = [];
@@ -114,15 +119,15 @@ function tokenize(src: string): Tok[] {
   while (i < src.length) {
     const c = src[i];
     if (/\s/.test(c)) { i++; continue; }
-    if (c === "(") { out.push({ t: "lp" }); i++; continue; }
-    if (c === ")") { out.push({ t: "rp" }); i++; continue; }
-    if (c === ",") { out.push({ t: "comma" }); i++; continue; }
-    if ("+-*/%".includes(c)) { out.push({ t: "op", v: c }); i++; continue; }
+    if (c === "(") { out.push({ t: "lp", p: i }); i++; continue; }
+    if (c === ")") { out.push({ t: "rp", p: i }); i++; continue; }
+    if (c === "," || c === ";") { out.push({ t: "comma", p: i }); i++; continue; }
+    if ("+-*/%".includes(c)) { out.push({ t: "op", v: c, p: i }); i++; continue; }
     if (/[0-9.]/.test(c)) {
       let j = i;
       while (j < src.length && /[0-9._]/.test(src[j])) j++;
       const raw = src.slice(i, j).replace(/_/g, "");
-      out.push({ t: "num", v: Number(raw) });
+      out.push({ t: "num", v: Number(raw), p: i });
       i = j; continue;
     }
     if (/[A-Za-z_ÄÖÜäöüß]/.test(c)) {
@@ -133,13 +138,14 @@ function tokenize(src: string): Tok[] {
         (/[A-Za-z0-9_ÄÖÜäöüß]/.test(src[j]) ||
           (src[j] === "." && /[A-Za-z_ÄÖÜäöüß]/.test(src[j + 1] ?? "")))
       ) j++;
-      out.push({ t: "id", v: src.slice(i, j) });
+      out.push({ t: "id", v: src.slice(i, j), p: i });
       i = j; continue;
     }
-    throw new Error(`Unerwartetes Zeichen: '${c}'`);
+    throw new Error(`Unerwartetes Zeichen: '${c}'${at(i)}`);
   }
   return out;
 }
+
 
 // -------- Parser (recursive descent) --------
 /** Signal: Referenz ist bekannt, aber (noch) ohne Wert – kein Fehler. */
