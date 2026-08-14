@@ -46,7 +46,10 @@ export function useResultsDatabase() {
   return useQuery({
     queryKey: ["results-database"],
     queryFn: async () => {
-      // Fetch completed measurements with all related data
+      // Nur ausdrücklich als „Offizielles Ergebnis" markierte Werte gehören in
+      // die Ergebnisdatenbank. Die Filterung erfolgt bereits in der Abfrage –
+      // nicht offizielle Werte werden gar nicht erst geladen. Normale
+      // Messwerte (measurement_parameters) sind bewusst nicht Teil dieser Sicht.
       const { data: measurements, error } = await api
         .from("order_measurements")
         .select(`
@@ -58,13 +61,14 @@ export function useResultsDatabase() {
             projects(project_number, project_name),
             samples!measurement_orders_sample_id_fkey(sample_number, sample_name)
           ),
-          measurement_parameters(parameter_name, parameter_value, unit),
           measurement_results(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official)
         `)
         .eq("status", "completed")
+        .eq("measurement_results.is_official", true)
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
+
 
       // Fetch all profiles for name resolution
       const { data: profiles } = await api
