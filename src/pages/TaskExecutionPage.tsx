@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ArrowLeft, CheckCircle2, ClipboardList } from "lucide-react";
 import OrderUploadedFiles from "@/components/OrderUploadedFiles";
-import ServiceLinkedForms from "@/components/ServiceLinkedForms";
+import ServiceLinkedForms, { linkedFormValueKey } from "@/components/ServiceLinkedForms";
 import { toast } from "sonner";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
 
@@ -99,10 +99,10 @@ function TaskExecutionPageInner() {
   const isCompleted = (measurement as any)?.status === "completed";
 
   /**
-   * Ergebnis-Definition: nur Felder/Berechnungen, die im Designer als
-   * „offizielles Ergebnis" markiert sind, werden in die Ergebnisdatenbank
-   * übernommen. Ist nichts markiert, bleibt das bisherige Verhalten (alles)
-   * erhalten, damit bestehende Dienstleistungen weiter funktionieren.
+   * Ergebnis-Definition: NUR Felder/Berechnungen, die im Designer als
+   * „offizielles Ergebnis" markiert sind, gelangen als Ergebnisspalte in die
+   * Ergebnisdatenbank. Alle übrigen Werte werden weiterhin gespeichert
+   * (Zwischenstand/Formularwerte), aber nicht als Ergebnis geführt.
    */
   const { data: serviceFields = [] } = useQuery({
     queryKey: ["service-data-fields", serviceId],
@@ -110,16 +110,56 @@ function TaskExecutionPageInner() {
     enabled: !!serviceId,
   });
 
-  const { resultKeys, resultLabels } = useMemo(() => {
-    const labels = new Map<string, string>();
-    const keys = new Set<string>();
+  const formIds = useMemo(
+    () => (linkedForms as any[]).map((l) => l.form_definition_id as string),
+    [linkedForms]
+  );
+
+  /** Felder + Berechnungen aller verknüpften Globalen Formulare. */
+  const { data: linkedMeta } = useQuery({
+    queryKey: ["task-result-meta", formIds],
+    enabled: formIds.length > 0,
+    queryFn: async () => {
+      const out: Array<{ key: string; label: string; official: boolean }> = [];
+      for (const fid of formIds) {
+        const [fields, calcs] = await Promise.all([
+          api.formFields.listForForm(fid),
+          api.formCalculations.listForForm(fid),
+        ]);
+        for (const f of fields as any[]) {
+          out.push({
+            key: linkedFormValueKey(fid, f.field_key),
+            label: (f.result_label || f.display_name || f.field_key) as string,
+            official: !!f.is_result,
+          });
+        }
+        for (const c of calcs as any[]) {
+          out.push({
+            key: linkedFormValueKey(fid, c.calc_key),
+            label: (c.result_label || c.display_name || c.calc_key) as string,
+            official: !!c.is_result,
+          });
+        }
+      }
+      return out;
+    },
+  });
+
+  /** key → { label, official } für alle bekannten Felder/Berechnungen. */
+  const resultMeta = useMemo(() => {
+    const map = new Map<string, { label: string; official: boolean }>();
     for (const f of serviceFields as any[]) {
-      if (!f.is_result) continue;
-      keys.add(f.field_key);
-      labels.set(f.field_key, (f.result_label || f.display_name || f.field_key) as string);
+      map.set(f.field_key, {
+        label: (f.result_label || f.display_name || f.field_key) as string,
+        official: !!f.is_result,
+      });
     }
-    return { resultKeys: keys.size ? keys : null, resultLabels: labels };
-  }, [serviceFields]);
+    for (const m of linkedMeta ?? []) {
+      map.set(m.key, { label: m.label, official: m.official });
+    }
+    return map;
+  }, [serviceFields, linkedMeta]);
+
 
 
   const [completeOpen, setCompleteOpen] = useState(false);
@@ -151,20 +191,22 @@ function TaskExecutionPageInner() {
         raw === "" ||
         (Array.isArray(raw) && raw.length === 0);
       if (isEmpty) continue;
-      // Nur als „offizielles Ergebnis" markierte Felder gelangen in die Ergebnisdatenbank.
-      if (resultKeys && !resultKeys.has(key)) continue;
-      const resultName = resultLabels.get(key) || key;
+      // Technischer Key bleibt Speicherschlüssel; Anzeige erfolgt über display_label.
+      const meta = resultMeta.get(key);
+      const resultName = key;
       activeKeys.add(resultName);
-
 
       // Numeric single value → store in `value`; everything else → JSON in `remarks`.
       let payload: any = {
         result_name: resultName,
+        display_label: meta?.label ?? null,
+        is_official: !!meta?.official,
         measured_by: user?.id ?? null,
         measured_at: measuredAt,
         value: null,
         remarks: null,
       };
+
       if (typeof raw === "string" || typeof raw === "number") {
         const num = typeof raw === "number" ? raw : parseFloat(raw);
         if (typeof raw === "number" || (!isNaN(num) && String(num) === String(raw).trim())) {

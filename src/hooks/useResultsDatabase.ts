@@ -34,6 +34,8 @@ export interface ResultRecord {
     temperature_unit: string | null;
     remarks: string | null;
     measured_at: string | null;
+    display_label: string | null;
+    is_official: boolean;
   }>;
   remarks: string;
 }
@@ -57,7 +59,7 @@ export function useResultsDatabase() {
             samples!measurement_orders_sample_id_fkey(sample_number, sample_name)
           ),
           measurement_parameters(parameter_name, parameter_value, unit),
-          measurement_results(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at)
+          measurement_results(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official)
         `)
         .eq("status", "completed")
         .order("updated_at", { ascending: false });
@@ -105,7 +107,9 @@ export function useResultsDatabase() {
           actualDurationHours: m.actual_duration_hours,
           standardDurationHours: service?.standard_duration_hours || 0,
           inputParameters,
-          outputResults: m.measurement_results || [],
+          // Nur ausdrücklich als „Offizielles Ergebnis" markierte Werte gehören
+          // in die Ergebnisdatenbank – alle anderen Formularwerte bleiben intern.
+          outputResults: (m.measurement_results || []).filter((r: any) => r.is_official),
           remarks: order?.notes || "",
         };
       });
@@ -116,6 +120,20 @@ export function useResultsDatabase() {
   });
 }
 
+/** Sichtbare, fachliche Bezeichnung eines Ergebnisses – niemals technische IDs. */
+export function resultLabel(r: { display_label?: string | null; result_name: string }): string {
+  if (r.display_label) return r.display_label;
+  // Fallback für Altdaten mit technischem Key (`form:<uuid>:<key>`).
+  const raw = r.result_name.startsWith("form:")
+    ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1)
+    : r.result_name;
+  return raw
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
 // Get all unique parameter names across all results
 export function getUniqueParameterNames(records: ResultRecord[]) {
   const inputNames = new Set<string>();
@@ -123,7 +141,7 @@ export function getUniqueParameterNames(records: ResultRecord[]) {
 
   records.forEach(r => {
     Object.keys(r.inputParameters).forEach(k => inputNames.add(k));
-    r.outputResults.forEach(o => outputNames.add(o.result_name));
+    r.outputResults.forEach(o => outputNames.add(resultLabel(o)));
   });
 
   return {
@@ -142,7 +160,7 @@ export function getParameterValue(record: ResultRecord, paramName: string): numb
   }
 
   // Check output results
-  const output = record.outputResults.find(r => r.result_name === paramName);
+  const output = record.outputResults.find(r => resultLabel(r) === paramName);
   if (output?.value != null) return output.value;
 
   return null;

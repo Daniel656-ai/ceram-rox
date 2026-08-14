@@ -122,21 +122,29 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
           options = items.map((i) => ({ label: i.label, value: i.item_value }));
         }
         const isRepeater = gf.data_type === "repeater";
+        const reusable = !!gf.is_repeatable || isRepeater;
 
-        // Mehrfachverwendung: eindeutiger technischer Key je Verwendung,
+        // Mehrfachverwendung: eindeutige Instanz je Verwendung,
         // die globale Definition (global_field_id / binding_path) bleibt identisch.
         const usageIndex = (runningUsage.get(gf.id) ?? 0) + 1;
         runningUsage.set(gf.id, usageIndex);
 
         let fieldKey = gf.field_key;
-        if (usedKeys.has(fieldKey)) {
+        let displayName = gf.display_name;
+        if (reusable) {
+          // Wiederverwendbare Felder erhalten immer eine eindeutige Instanz-ID.
+          let n = usageIndex;
+          while (usedKeys.has(`${gf.field_key}_${n}`)) n++;
+          fieldKey = `${gf.field_key}_${n}`;
+          displayName = `${gf.display_name} ${n}`;
+        } else if (usedKeys.has(fieldKey)) {
           let n = Math.max(usageIndex, 2);
           while (usedKeys.has(`${gf.field_key}_${n}`)) n++;
           fieldKey = `${gf.field_key}_${n}`;
+          displayName = `${gf.display_name} (Verwendung ${n})`;
         }
         usedKeys.add(fieldKey);
-        const displayName =
-          usageIndex > 1 ? `${gf.display_name} (Verwendung ${usageIndex})` : gf.display_name;
+
 
         const created = await api.formFields.create({
           form_id: formId,
@@ -157,6 +165,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
             validation_ids: gf.validation_ids ?? [],
             is_repeatable: isRepeater ? true : !!gf.is_repeatable,
             usage_index: usageIndex,
+            instance_key: fieldKey,
             ...(isRepeater
               ? {
                   repeater: {
@@ -289,7 +298,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                         </Badge>
                         {repeatable && (
                           <>
-                            <Badge variant="outline" className="text-[10px]">wiederholbar</Badge>
+                            <Badge variant="outline" className="text-[10px]">wiederverwendbar</Badge>
                             {(selected[f.id] ?? 0) > 0 && (
                               <span
                                 className="flex items-center gap-1"
@@ -314,7 +323,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                         )}
                         {uses > 0 && (
                           <Badge variant="secondary" className="text-[10px]">
-                            {repeatable ? `${uses}× im Formular` : "im Formular"}
+                            {repeatable ? `${uses}× im Formular` : "bereits verwendet"}
                           </Badge>
                         )}
                       </label>
