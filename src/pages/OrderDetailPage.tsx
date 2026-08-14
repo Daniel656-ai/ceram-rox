@@ -35,7 +35,7 @@ import OrderReportTab from "@/components/OrderReportTab";
 import { ProcessOrderTabs } from "@/components/workflow/ProcessOrderTabs";
 import CompletedResultForm from "@/components/CompletedResultForm";
 import OrderResultsOverview from "@/components/OrderResultsOverview";
-import OrderSamplesCard from "@/components/OrderSamplesCard";
+import OrderHeaderSummary from "@/components/order/OrderHeaderSummary";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
