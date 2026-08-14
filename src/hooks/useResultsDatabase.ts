@@ -111,15 +111,18 @@ export function useResultsDatabase() {
           actualDurationHours: m.actual_duration_hours,
           standardDurationHours: service?.standard_duration_hours || 0,
           inputParameters,
-          // Nur ausdrücklich als „Offizielles Ergebnis" markierte Werte gehören
-          // in die Ergebnisdatenbank – alle anderen Formularwerte bleiben intern.
-          outputResults: (m.measurement_results || []).filter((r: any) => r.is_official),
+          // Nur ausdrücklich als „Offizielles Ergebnis" freigegebene Werte
+          // gehören in die Ergebnisdatenbank – alle anderen Formularwerte und
+          // Messwerte bleiben ausschließlich in den Arbeitsansichten sichtbar.
+          outputResults: (m.measurement_results || []).filter((r: any) => r.is_official === true),
           remarks: order?.notes || "",
         };
       });
 
-      // Messungen ohne offizielles Ergebnis erscheinen gar nicht erst.
+      // Ohne freigegebenes offizielles Ergebnis entsteht kein Eintrag in der
+      // Ergebnisdatenbank – unabhängig vom Bearbeitungsstatus der Tätigkeit.
       return records.filter((r) => r.outputResults.length > 0);
+
 
     },
     enabled: !!user,
