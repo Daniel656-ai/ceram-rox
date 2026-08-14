@@ -1920,7 +1920,9 @@ export type Database = {
       measurement_results: {
         Row: {
           created_at: string
+          display_label: string | null
           id: string
+          is_official: boolean
           measured_at: string | null
           measured_by: string | null
           order_measurement_id: string
@@ -1935,7 +1937,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_label?: string | null
           id?: string
+          is_official?: boolean
           measured_at?: string | null
           measured_by?: string | null
           order_measurement_id: string
@@ -1950,7 +1954,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_label?: string | null
           id?: string
+          is_official?: boolean
           measured_at?: string | null
           measured_by?: string | null
           order_measurement_id?: string
