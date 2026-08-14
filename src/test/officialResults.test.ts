@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLinkedFormResultCandidates } from "@/lib/officialResults";
+import { buildLinkedFormResultCandidates, buildServiceResultCandidates } from "@/lib/officialResults";
 import type { FormField } from "@/lib/api/formFields";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 
@@ -78,5 +78,47 @@ describe("official result candidates", () => {
       error: null,
     });
     expect(candidates.filter((candidate) => candidate.kind === "field").every((candidate) => !candidate.official)).toBe(true);
+  });
+
+  it("evaluates chained classic computed fields before completion", () => {
+    const base = {
+      id: "",
+      service_id: "service-1",
+      description: null,
+      category: null,
+      unit: null,
+      is_required: false,
+      default_value: null,
+      min_value: null,
+      max_value: null,
+      decimal_places: 2,
+      readonly: false,
+      archived: false,
+      select_options: [],
+      ref_target: null,
+      parent_field_id: null,
+      sort_order: 0,
+      legacy_parameter_id: null,
+      result_label: null,
+      created_at: "",
+      updated_at: "",
+    };
+    const fields = [
+      { ...base, field_key: "m1", display_name: "Messung 1", field_type: "decimal" as const, validation: {}, is_result: false },
+      { ...base, field_key: "m2", display_name: "Messung 2", field_type: "decimal" as const, validation: {}, is_result: false },
+      { ...base, field_key: "m3", display_name: "Messung 3", field_type: "decimal" as const, validation: {}, is_result: false },
+      { ...base, field_key: "average", display_name: "Porenvolumen (Mittelwert)", field_type: "computed" as const, validation: { formula: "AVERAGE(m1, m2, m3)" }, is_result: true },
+    ];
+
+    const official = buildServiceResultCandidates(fields, { m1: 0.35, m2: 0.35, m3: 0.39 })
+      .filter((candidate) => candidate.official);
+
+    expect(official).toEqual([expect.objectContaining({
+      key: "average",
+      label: "Porenvolumen (Mittelwert)",
+      value: 0.36,
+      kind: "calculation",
+      error: null,
+    })]);
   });
 });

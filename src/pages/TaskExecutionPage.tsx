@@ -18,7 +18,11 @@ import OrderUploadedFiles from "@/components/OrderUploadedFiles";
 import ServiceLinkedForms, { linkedFormValueKey } from "@/components/ServiceLinkedForms";
 import { toast } from "sonner";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
-import { buildLinkedFormResultCandidates, type OfficialResultCandidate } from "@/lib/officialResults";
+import {
+  buildLinkedFormResultCandidates,
+  buildServiceResultCandidates,
+  type OfficialResultCandidate,
+} from "@/lib/officialResults";
 
 /**
  * Task-focused execution view for a measurement (Messdienstleister workflow).
@@ -199,14 +203,8 @@ function TaskExecutionPageInner() {
     ]);
 
     const candidates = new Map<string, OfficialResultCandidate>();
-    for (const field of freshServiceFields) {
-      candidates.set(field.field_key, {
-        key: field.field_key,
-        label: field.result_label || field.display_name || field.field_key,
-        value: values[field.field_key],
-        official: field.is_result === true,
-        kind: "field",
-      });
+    for (const candidate of buildServiceResultCandidates(freshServiceFields, values)) {
+      candidates.set(candidate.key, candidate);
     }
     for (const definition of linkedDefinitions) {
       for (const candidate of buildLinkedFormResultCandidates(
