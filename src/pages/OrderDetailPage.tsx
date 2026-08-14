@@ -598,7 +598,15 @@ function OrderDetailPageInner() {
       <OrderSamplesCard
         orderId={id!}
         projectId={(order as any).project_id}
-        canEdit={role === "master" || (order as any).created_by === user?.id}
+        canEdit={
+          role === "master" ||
+          ((order as any).created_by === user?.id && order.status === "open")
+        }
+        canBookReplacement={
+          role === "master" ||
+          role === "durchfuehrer" ||
+          ((order as any).order_measurements || []).some((m: any) => m.assigned_to === user?.id)
+        }
       />
 
       <Card>
