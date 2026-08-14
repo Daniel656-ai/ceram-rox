@@ -231,8 +231,14 @@ export default function ResultsDatabasePage() {
             Ergebnisdatenbank
           </h1>
           <p className="text-muted-foreground">
-            {filteredRecords.length} von {records.length} abgeschlossenen Aufgaben
+            {filteredRecords.length} von {records.length} Messungen mit offiziellem Ergebnis
           </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Die Ergebnisdatenbank zeigt ausschließlich Ergebnisse an, die ausdrücklich als
+            offizielles Ergebnis freigegeben wurden. Erledigte Tätigkeiten und nicht-offizielle
+            Messwerte bleiben in den Auftrags- und Arbeitsansichten sichtbar.
+          </p>
+
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={exportToCSV} disabled={filteredRecords.length === 0}>
