@@ -43,10 +43,13 @@ const serviceStatus = (tasks: any[]) => {
 export default function OrderWorkflowTab({
   order,
   isRequesterView,
+  processSlot,
 }: {
   order: any;
   isRequesterView: boolean;
+  processSlot?: React.ReactNode;
 }) {
+
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { data: users = [] } = useUsers();
