@@ -10,7 +10,18 @@ export const activityLog = {
         .order("created_at", { ascending: false })
         .limit(limit)
     ),
+
+  /** Vollständige Ereignishistorie eines Auftrags (nicht bearbeitbar). */
+  listForOrder: (orderId: string) =>
+    unwrap(
+      dbClient
+        .from("activity_log")
+        .select("*")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: false })
+    ),
 };
+
 
 export const notifications = {
   listForActivities: (userId: string, activityIds: string[]) =>
