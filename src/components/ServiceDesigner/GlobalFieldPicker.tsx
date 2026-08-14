@@ -103,10 +103,14 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
 
   const insertMut = useMutation({
     mutationFn: async () => {
-      const ids = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
+      // Wiederholbare Felder können in einem Schritt mehrfach eingefügt werden.
+      const ids = Object.entries(selected)
+        .filter(([, n]) => (n ?? 0) > 0)
+        .flatMap(([k, n]) => Array.from({ length: n }, () => k));
       if (ids.length === 0) throw new Error("Keine Felder ausgewählt");
       let sort = (existing.at(-1)?.sort_order ?? -1) + 1;
       const usedKeys = new Set(takenKeys);
+      const runningUsage = new Map(usageCount);
       for (const id of ids) {
         const gf = allFields.find((f) => f.id === id);
         if (!gf) continue;
@@ -121,7 +125,9 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
 
         // Mehrfachverwendung: eindeutiger technischer Key je Verwendung,
         // die globale Definition (global_field_id / binding_path) bleibt identisch.
-        const usageIndex = (usageCount.get(gf.id) ?? 0) + 1;
+        const usageIndex = (runningUsage.get(gf.id) ?? 0) + 1;
+        runningUsage.set(gf.id, usageIndex);
+
         let fieldKey = gf.field_key;
         if (usedKeys.has(fieldKey)) {
           let n = Math.max(usageIndex, 2);
