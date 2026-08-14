@@ -416,8 +416,21 @@ export default function LocalCalculationsPanel({
                 </div>
               ) : (
                 <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Formel</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">
+                          <HelpCircle className="h-3.5 w-3.5 mr-1" />Syntaxhilfe
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-96 max-h-[420px] overflow-y-auto text-xs space-y-3">
+                        <FormulaSyntaxHelp />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                   <Textarea rows={3} className="font-mono text-xs" value={draft.formula}
-                    placeholder="z. B. (m_nass - m_trocken) / m_trocken"
+                    placeholder="z. B. AVERAGE(messung_1, messung_2, messung_3)"
                     onChange={(e) => setDraft((d) => ({ ...d, formula: e.target.value }))} />
                   <div className="flex items-center gap-2">
                     <Popover>
@@ -429,8 +442,9 @@ export default function LocalCalculationsPanel({
                         {numericFields.map((f) => (
                           <button key={f.id} type="button"
                             className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted"
-                            onClick={() => setDraft((d) => ({ ...d, formula: `${d.formula}${d.formula && !d.formula.endsWith(" ") ? " " : ""}${f.field_key} ` }))}>
+                            onClick={() => setDraft((d) => ({ ...d, formula: appendRef(d.formula, f.field_key) }))}>
                             {f.display_name}
+                            <span className="ml-2 font-mono text-[10px] text-muted-foreground">{f.field_key}</span>
                           </button>
                         ))}
                         {(calcs as FormCalculation[]).length > 0 && (
@@ -439,7 +453,7 @@ export default function LocalCalculationsPanel({
                             {(calcs as FormCalculation[]).filter((c) => c.id !== draft.id).map((c) => (
                               <button key={c.id} type="button"
                                 className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted"
-                                onClick={() => setDraft((d) => ({ ...d, formula: `${d.formula}${d.formula && !d.formula.endsWith(" ") ? " " : ""}${c.calc_key} ` }))}>
+                                onClick={() => setDraft((d) => ({ ...d, formula: appendRef(d.formula, c.calc_key) }))}>
                                 {c.display_name}
                               </button>
                             ))}
@@ -447,12 +461,27 @@ export default function LocalCalculationsPanel({
                         )}
                       </PopoverContent>
                     </Popover>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button size="sm" variant="outline">Funktion</Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-2 max-h-72 overflow-y-auto">
+                        {FORMULA_FUNCTIONS.map((f) => (
+                          <button key={f} type="button"
+                            className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted font-mono"
+                            onClick={() => setDraft((d) => ({ ...d, formula: `${d.formula}${d.formula && !/[\s(]$/.test(d.formula) ? " " : ""}${f}(` }))}>
+                            {f}( … )
+                          </button>
+                        ))}
+                      </PopoverContent>
+                    </Popover>
                     <span className="text-[11px] text-muted-foreground">
-                      Funktionen: {FORMULA_FUNCTIONS.slice(0, 8).join(", ")} …
+                      Parameter mit Komma trennen: AVERAGE(a, b, c)
                     </span>
                   </div>
                 </div>
               )}
+
 
               <div className="text-xs text-muted-foreground">
                 Ergebnis ={" "}
