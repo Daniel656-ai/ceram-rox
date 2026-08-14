@@ -4,6 +4,11 @@ import { unwrap, run } from "./_helpers";
 const SAMPLE_FIELDS =
   "id, sample_number, sample_name, description, is_hazardous, status, project_id";
 
+/** Erweiterte Probenfelder für den Proben-Tab (Status, Lagerort, Entsorgung). */
+const SAMPLE_FIELDS_FULL = `${SAMPLE_FIELDS}, location_id, disposal_method, disposal_category,
+   post_measurement_action, updated_at, storage_locations:location_id(id, hall, room, shelf, position)`;
+
+
 /**
  * Zuordnung Auftrag ↔ Proben (n:m).
  *
@@ -18,11 +23,24 @@ export const orderSamples = {
         .select(
           `id, order_id, sample_id, created_at, is_replacement, replaces_order_sample_id,
            replaced_by_order_sample_id, replacement_reason, replacement_note, replaced_at, replaced_by,
-           samples(${SAMPLE_FIELDS})`
+           samples(${SAMPLE_FIELDS_FULL})`
         )
         .eq("order_id", orderId)
         .order("created_at", { ascending: true })
     ),
+
+  /** Probenhistorie (Status-/Lagerortwechsel) für mehrere Proben eines Auftrags. */
+  history: (sampleIds: string[]) =>
+    sampleIds.length === 0
+      ? Promise.resolve([] as any[])
+      : unwrap(
+          dbClient
+            .from("sample_history")
+            .select("id, sample_id, action, comment, metadata, user_id, created_at")
+            .in("sample_id", sampleIds)
+            .order("created_at", { ascending: false })
+        ),
+
 
   /**
    * Bucht eine Ersatzprobe für eine bereits zugeordnete Probe.
