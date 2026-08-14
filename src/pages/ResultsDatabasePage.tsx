@@ -106,7 +106,7 @@ export default function ResultsDatabasePage() {
       });
       // Add output results
       outputParameterNames.forEach(name => {
-        const res = r.outputResults.find(o => o.result_name === name);
+        const res = r.outputResults.find(o => resultLabel(o) === name);
         row[`[A] ${name}`] = res?.value ?? "";
       });
       row["Bemerkungen"] = r.remarks;
@@ -135,7 +135,7 @@ export default function ResultsDatabasePage() {
         row[name] = r.inputParameters[name]?.value ?? "";
       });
       outputParameterNames.forEach(name => {
-        const res = r.outputResults.find(o => o.result_name === name);
+        const res = r.outputResults.find(o => resultLabel(o) === name);
         row[name] = res?.value ?? "";
       });
       return row;
@@ -200,12 +200,12 @@ export default function ResultsDatabasePage() {
         type: "number",
         header: name,
         accessor: r => {
-          const res = r.outputResults.find(o => o.result_name === name);
+          const res = r.outputResults.find(o => resultLabel(o) === name);
           const v = res?.value;
           return v == null ? null : v;
         },
         cell: r => {
-          const res = r.outputResults.find(o => o.result_name === name);
+          const res = r.outputResults.find(o => resultLabel(o) === name);
           return <span className="font-mono text-sm">{res?.value != null ? String(res.value) : "-"}</span>;
         },
       });
