@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { api } from "@/lib/api";
 import type { FormField } from "@/lib/api/formFields";
 import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
-import { normalizeLayout, type FormLayoutTree } from "@/lib/api/formDefinitionLayout";
+import { normalizeLayout, walkNodes, type FormLayoutTree } from "@/lib/api/formDefinitionLayout";
 import type { FormViewContext } from "@/lib/api/formRoleViews";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import { autoLayout } from "@/components/OrderKindDynamicForm";
@@ -53,6 +53,11 @@ function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly }:
 
   const typedFields = fields as FormField[];
 
+  const { data: calculations = [] } = useQuery({
+    queryKey: ["form-calculations", formId],
+    queryFn: () => api.formCalculations.listForForm(formId),
+  });
+
   // Welche Rollenansicht gilt für diesen Kontext?
   const { data: viewKey, isLoading: viewLoading } = useQuery({
     queryKey: ["form-view-key", formId, context],
@@ -67,11 +72,49 @@ function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly }:
 
   const layout = useMemo<FormLayoutTree>(() => {
     const roleLayout = normalizeLayout(viewLayout?.layout);
-    if (roleLayout.nodes.length) return roleLayout;
     const base = normalizeLayout(form?.layout);
-    if (base.nodes.length) return base;
-    return autoLayout(typedFields);
-  }, [viewLayout?.layout, form?.layout, typedFields]);
+    const resolved = roleLayout.nodes.length
+      ? roleLayout
+      : base.nodes.length
+        ? base
+        : autoLayout(typedFields);
+
+    // The employee needs every calculation for plausibility checks and fault
+    // tracing. `is_result` deliberately has no influence on this visibility.
+    if (context !== "employee" || calculations.length === 0) return resolved;
+
+    const placed = new Set<string>();
+    walkNodes(resolved.nodes, (node) => {
+      if (node.type === "calculation" && node.scope === "local") placed.add(node.calc_key);
+    });
+    const missing = calculations.filter((calculation) => !placed.has(calculation.calc_key));
+    if (missing.length === 0) return resolved;
+
+    return {
+      ...resolved,
+      nodes: [
+        ...resolved.nodes,
+        {
+          id: `employee-calculations-${formId}`,
+          type: "section",
+          title: "Ergebnisse & Berechnungen",
+          description: "Berechnete Werte zur Kontrolle und Nachvollziehbarkeit.",
+          visible: true,
+          width: 12,
+          children: missing.map((calculation) => ({
+            id: `employee-calculation-${calculation.id}`,
+            type: "calculation" as const,
+            scope: "local" as const,
+            calc_key: calculation.calc_key,
+            calc_id: calculation.id,
+            visible: true,
+            width: 12 as const,
+            show_unit: true,
+          })),
+        },
+      ],
+    };
+  }, [viewLayout?.layout, form?.layout, typedFields, context, calculations, formId]);
 
   const { data: permissions } = useQuery({
     queryKey: ["form-field-permissions", formId, viewKey, typedFields.length],
