@@ -115,7 +115,9 @@ export function useResultsDatabase() {
         };
       });
 
-      return records;
+      // Messungen ohne offizielles Ergebnis erscheinen gar nicht erst.
+      return records.filter((r) => r.outputResults.length > 0);
+
     },
     enabled: !!user,
   });
