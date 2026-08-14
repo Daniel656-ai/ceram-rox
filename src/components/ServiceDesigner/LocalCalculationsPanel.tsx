@@ -36,6 +36,72 @@ const ROUNDINGS: { v: CalcRounding; l: string }[] = [
   { v: "none", l: "Nicht runden" },
 ];
 
+/**
+ * Fügt eine Referenz an die Formel an und ergänzt dabei das nötige Trennzeichen:
+ * innerhalb einer offenen Funktionsklammer ein Komma, sonst ein Leerzeichen.
+ */
+function appendRef(formula: string, ref: string): string {
+  const src = formula ?? "";
+  const trimmed = src.replace(/\s+$/, "");
+  if (!trimmed) return `${ref} `;
+  const last = trimmed[trimmed.length - 1];
+  const endsWithValue = /[A-Za-z0-9_ÄÖÜäöüß)\]]/.test(last);
+  if (!endsWithValue) return `${trimmed}${last === "(" || last === "," ? "" : " "}${ref} `;
+  // Offene Funktionsklammer? -> Parameter mit Komma trennen.
+  const opened = (trimmed.match(/\(/g) ?? []).length - (trimmed.match(/\)/g) ?? []).length;
+  return opened > 0 ? `${trimmed}, ${ref} ` : `${trimmed} ${ref} `;
+}
+
+/** Kompakte Syntaxhilfe für den erweiterten Formel-Editor. */
+function FormulaSyntaxHelp() {
+  const Code = ({ children }: { children: React.ReactNode }) => (
+    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">{children}</code>
+  );
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="font-medium">Grundsyntax</p>
+        <Code>FUNKTION(Parameter1, Parameter2, Parameter3)</Code>
+        <p className="text-muted-foreground mt-1">
+          Parameter werden immer mit Komma getrennt, jede Funktion braucht eine öffnende und
+          eine schließende Klammer.
+        </p>
+      </div>
+      <div>
+        <p className="font-medium">Funktionen</p>
+        <ul className="mt-1 space-y-0.5 text-muted-foreground">
+          <li><Code>SUM(Feld1, Feld2, Feld3)</Code> – Summe</li>
+          <li><Code>AVERAGE(Feld1, Feld2, Feld3)</Code> – Mittelwert</li>
+          <li><Code>MIN(Feld1, Feld2)</Code> / <Code>MAX(Feld1, Feld2)</Code></li>
+          <li><Code>COUNT(Feld1, Feld2)</Code> – Anzahl Werte</li>
+          <li><Code>MEDIAN(Feld1, Feld2, Feld3)</Code></li>
+          <li><Code>ROUND(Wert, Nachkommastellen)</Code>, <Code>CEIL(x)</Code>, <Code>FLOOR(x)</Code></li>
+          <li><Code>ABS(x)</Code>, <Code>SQRT(x)</Code>, <Code>POW(x, n)</Code>, <Code>IF(Bedingung, Dann, Sonst)</Code></li>
+        </ul>
+      </div>
+      <div>
+        <p className="font-medium">Operatoren</p>
+        <p className="text-muted-foreground">
+          <Code>+</Code> <Code>-</Code> <Code>*</Code> <Code>/</Code> <Code>%</Code> sowie Klammern
+          zur Gruppierung: <Code>(a - b) / b</Code>
+        </p>
+      </div>
+      <div>
+        <p className="font-medium">Feldreferenzen</p>
+        <p className="text-muted-foreground">
+          Verwendet wird der technische Feldschlüssel (z. B. <Code>porenvolumen_1</Code>), nicht
+          die Bezeichnung. Am einfachsten über „Feld einfügen“ – das Trennzeichen wird automatisch
+          gesetzt. Andere Berechnungen dieses Formulars sind über ihren Schlüssel nutzbar.
+        </p>
+      </div>
+      <div>
+        <p className="font-medium">Verschachtelung</p>
+        <Code>ROUND(AVERAGE(feld1, feld2, feld3), 2)</Code>
+      </div>
+    </div>
+  );
+}
+
 const slug = (s: string) =>
   s.toLowerCase()
     .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
