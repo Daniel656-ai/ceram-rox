@@ -150,6 +150,25 @@ export function LabelDesigner({ value, sampleData, onChange }: Props) {
             <div><Label className="text-xs">B (mm)</Label><Input type="number" className="h-8 w-20" value={value.width_mm} onChange={(e) => update({ width_mm: Number(e.target.value) })} /></div>
             <div><Label className="text-xs">H (mm)</Label><Input type="number" className="h-8 w-20" value={value.height_mm} onChange={(e) => update({ height_mm: Number(e.target.value) })} /></div>
           </div>
+          <div>
+            <Label className="text-xs">Hintergrund</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="color"
+                className="h-8 w-16 p-1"
+                value={layout.background || "#ffffff"}
+                onChange={(e) => updateLayout((l) => ({ ...l, background: e.target.value }))}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => updateLayout((l) => ({ ...l, background: "#ffffff" }))}
+              >
+                Weiß
+              </Button>
+            </div>
+          </div>
           <div className="flex items-end gap-2">
             <Switch id="def" checked={!!value.is_default} onCheckedChange={(v) => update({ is_default: v })} />
             <Label htmlFor="def" className="text-xs">Standardvorlage</Label>
@@ -157,10 +176,11 @@ export function LabelDesigner({ value, sampleData, onChange }: Props) {
         </div>
 
         <div
-          className="relative mx-auto bg-white border border-border shadow-sm"
+          className="relative mx-auto border border-border shadow-sm"
           style={{
             width: value.width_mm * LABEL_MM_TO_PX * previewScale,
             height: value.height_mm * LABEL_MM_TO_PX * previewScale,
+            background: layout.background || "#ffffff",
           }}
           onMouseDown={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}
         >

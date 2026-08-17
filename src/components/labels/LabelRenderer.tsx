@@ -128,14 +128,15 @@ export function LabelRenderer({ template, data, scale = 1, className, placeholde
   const layout: LabelLayout = template.layout ?? { elements: [] };
   const ghsMerged = useMergedSymbols("ghs");
   const psaMerged = useMergedSymbols("psa");
+  const norm = (v: string) => v.trim().toLowerCase();
   const ghsLookup = (k: string) => {
-    const m = ghsMerged.find((s) => s.key === k);
+    const m = ghsMerged.find((s) => norm(s.key) === norm(k));
     if (m) return { src: m.src, label: m.label };
     const b = ghsByKey(k);
     return b ? { src: b.src, label: b.label } : null;
   };
   const psaLookup = (k: string) => {
-    const m = psaMerged.find((s) => s.key === k);
+    const m = psaMerged.find((s) => norm(s.key) === norm(k));
     if (m) return { src: m.src, label: m.label };
     const b = psaByKey(k);
     return b ? { src: b.src, label: b.label } : null;
