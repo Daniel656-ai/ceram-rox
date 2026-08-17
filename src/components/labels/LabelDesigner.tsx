@@ -39,7 +39,20 @@ export function LabelDesigner({ value, sampleData, onChange }: Props) {
   };
 
   const patchEl = (id: string, patch: Partial<LabelElement>) =>
-    updateLayout((l) => ({ ...l, elements: l.elements.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
+    updateLayout((l) => ({
+      ...l,
+      elements: l.elements.map((e) => {
+        if (e.id !== id) return e;
+        const next = { ...e, ...patch } as LabelElement;
+        // QR-Codes bleiben quadratisch – die zuletzt geänderte Kante gewinnt.
+        if (next.type === "qrcode") {
+          if (patch.w !== undefined) next.h = patch.w;
+          else if (patch.h !== undefined) next.w = patch.h;
+        }
+        return next;
+      }),
+    }));
+
 
   const removeEl = (id: string) => {
     updateLayout((l) => ({ ...l, elements: l.elements.filter((e) => e.id !== id) }));
@@ -195,6 +208,8 @@ export function LabelDesigner({ value, sampleData, onChange }: Props) {
               <Rnd
                 key={el.id}
                 bounds="parent"
+                lockAspectRatio={el.type === "qrcode"}
+
                 size={{ width: el.w * px, height: el.h * px }}
                 position={{ x: el.x * px, y: el.y * px }}
                 onClick={() => setSelectedId(el.id)}
