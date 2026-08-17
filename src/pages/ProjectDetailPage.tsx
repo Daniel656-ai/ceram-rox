@@ -1023,6 +1023,16 @@ export default function ProjectDetailPage() {
                   )}
                 </div>
 
+                {/* Offizielle Ergebnisse (optionale Auswahl je Bericht) */}
+                <div>
+                  <h3 className="font-semibold mb-2">Offizielle Ergebnisse</h3>
+                  <ProjectReportResultsSection
+                    projectId={id!}
+                    rows={officialResultRows}
+                    canEdit={isMaster || isLeaderOrOwner || canEditByPermission}
+                  />
+                </div>
+
                 {/* Cost Summary */}
                 <div>
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
