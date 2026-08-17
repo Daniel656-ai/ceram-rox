@@ -42,9 +42,7 @@ export default function ResultsDatabasePage() {
   const { inputParameterNames, outputParameterNames } = useMemo(
     () => getUniqueParameterNames(records), [records]
   );
-  const allParamNames = useMemo(
-    () => [...inputParameterNames, ...outputParameterNames], [inputParameterNames, outputParameterNames]
-  );
+
 
   // Unique values for filters
   const uniqueServices = useMemo(() => [...new Set(records.map(r => r.serviceName))].sort(), [records]);
