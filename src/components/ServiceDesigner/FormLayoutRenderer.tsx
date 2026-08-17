@@ -470,7 +470,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     case "section": {
       const n = node;
       return (
-        <div className={cn("border rounded-lg p-4 bg-card", widthCls(n.width), n.className)}>
+        <div className={cn("border rounded-lg p-4 bg-card", widthCls(n.width), n.highlight && HIGHLIGHT_CLS, n.className)}>
           {n.title && <div className="font-semibold text-sm mb-1">{tr(n.title)}</div>}
           {n.description && <p className="text-xs text-muted-foreground mb-3">{tr(n.description)}</p>}
           <div className="grid grid-cols-12 gap-3">
@@ -483,7 +483,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     case "container": {
       const n = node;
       return (
-        <div className={cn("border rounded p-3", widthCls(n.width), n.className)}>
+        <div className={cn("border rounded p-3", widthCls(n.width), (n as any).highlight && HIGHLIGHT_CLS, n.className)}>
           {(n as any).title && <div className="font-medium text-sm mb-2">{tr((n as any).title)}</div>}
           <div className="grid grid-cols-12 gap-3">
             {(n as any).children.map((c: LayoutNode) => <RenderNode key={c.id} node={c} fields={fields} />)}
@@ -527,12 +527,12 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     case "heading": {
       const n = node;
       const H = (`h${n.level ?? 3}` as any);
-      return <H className={cn("col-span-12 font-semibold", n.level === 1 && "text-2xl", n.level === 2 && "text-xl", (!n.level || n.level >= 3) && "text-base", n.className)}>{tr(n.text)}</H>;
+      return <H className={cn("col-span-12 font-semibold", n.highlight && "text-primary", n.level === 1 && "text-2xl", n.level === 2 && "text-xl", (!n.level || n.level >= 3) && "text-base", n.className)}>{tr(n.text)}</H>;
     }
     case "note": {
       const n = node;
       const vc = n.variant === "warning" ? "bg-amber-50 border-amber-200 text-amber-900" : n.variant === "muted" ? "bg-muted text-muted-foreground" : "bg-primary/5 border-primary/20";
-      return <div className={cn("col-span-12 text-sm border rounded p-3", vc, n.className)}>{tr(n.text)}</div>;
+      return <div className={cn("col-span-12 text-sm border rounded p-3", vc, n.highlight && HIGHLIGHT_CLS, n.className)}>{tr(n.text)}</div>;
     }
     case "field": {
       const f = fields.find(x => x.id === node.field_id);
@@ -547,7 +547,9 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
       }
       return (
         <div className={cn(widthCls(node.width), node.className)}>
-          <FieldWithLabel field={f} node={node} allFields={fields} />
+          <div className={cn(node.highlight && cn("rounded-md border p-2", HIGHLIGHT_CLS))}>
+            <FieldWithLabel field={f} node={node} allFields={fields} />
+          </div>
         </div>
       );
     }
@@ -563,6 +565,12 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
       return null;
   }
 }
+
+/**
+ * Einheitliche Hervorhebungs-Darstellung (ursprünglich nur für Berechnungen).
+ * Reine Optik – ohne Einfluss auf Rollenrechte oder offizielle Ergebnisse.
+ */
+export const HIGHLIGHT_CLS = "border-primary/50 bg-primary/5 font-medium";
 
 function CalculationDisplay({ node }: { node: CalculationNode }) {
   const results = useContext(CalcResultsCtx);
@@ -581,7 +589,7 @@ function CalculationDisplay({ node }: { node: CalculationNode }) {
       </Label>
       <div className={cn(
         "flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/40 text-sm",
-        node.highlight && "border-primary/50 bg-primary/5 font-medium",
+        node.highlight && HIGHLIGHT_CLS,
       )}>
         {res
           ? <span className="truncate">{formatCalcResult(res.value, res.decimals, node.show_unit === false ? null : res.unit)}</span>
