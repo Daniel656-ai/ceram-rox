@@ -167,11 +167,9 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
               </div>
             </div>
 
-            <div ref={printAreaRef} className="rounded-md border bg-muted/30 p-3 flex items-center justify-center min-h-[260px] overflow-auto">
+            <div ref={printAreaRef} className="rounded-md border bg-muted/30 p-3 flex items-center justify-center h-[340px] overflow-hidden">
               {template ? (
-                <div data-label-print>
-                  <LabelRenderer template={template} data={data} scale={2} />
-                </div>
+                <LabelRenderer template={template} data={data} scale={previewScale} />
               ) : (
                 <p className="text-sm text-muted-foreground">Bitte Vorlage wählen.</p>
               )}
@@ -191,9 +189,10 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
 
             {template && (
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Größe: {template.width_mm} × {template.height_mm} mm · Vorschau 2× ({Math.round(template.width_mm * LABEL_MM_TO_PX * 2)}×{Math.round(template.height_mm * LABEL_MM_TO_PX * 2)} px)
+                Größe: {template.width_mm} × {template.height_mm} mm · Vorschau {Math.round(previewScale * 100)} %
               </p>
             )}
+
           </div>
 
           <div className="space-y-2">
