@@ -318,9 +318,9 @@ export function columnsGridStyle(node: Pick<ColumnsNode, "columnCount" | "ratios
   const mid = n <= 2 ? n : n <= 4 ? 2 : n <= 8 ? 3 : 4;
   return {
     ["--rox-cols-md" as string]: `repeat(${mid}, minmax(0, 1fr))`,
-    ["--rox-cols-lg" as string]: lg,
-    // Verhindert abgeschnittene Felder bei vielen Spalten: bei Platzmangel
-    // bricht das Raster um, statt horizontal zu scrollen.
-    ["--rox-cols-min" as string]: n >= 7 ? "7rem" : "0",
+    // Zwischenstufe für sehr breite Raster: erst ab xl das volle Raster,
+    // damit Felder nicht zu schmal werden (kein horizontales Scrollen).
+    ["--rox-cols-lg" as string]: n >= 9 ? `repeat(6, minmax(0, 1fr))` : lg,
+    ["--rox-cols-xl" as string]: lg,
   };
 }

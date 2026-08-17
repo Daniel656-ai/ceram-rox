@@ -208,4 +208,15 @@
       grid-template-columns: var(--rox-cols-lg, minmax(0, 1fr));
     }
   }
+  @media (min-width: 1280px) {
+    .rox-cols {
+      grid-template-columns: var(--rox-cols-xl, var(--rox-cols-lg, minmax(0, 1fr)));
+    }
+  }
+  /* Druck/PDF: konfigurierte Spaltenstruktur bleibt vollständig erhalten. */
+  @media print {
+    .rox-cols {
+      grid-template-columns: var(--rox-cols-xl, var(--rox-cols-lg, minmax(0, 1fr)));
+    }
+  }
 }
