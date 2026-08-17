@@ -15,6 +15,7 @@ import { LabelRenderer, LABEL_MM_TO_PX } from "./LabelRenderer";
 import { LabelDataContext } from "@/lib/labels/fields";
 import { ghsKeysFromHazardCategories } from "@/lib/labels/symbols";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { buildLabelPrintHtml, printHtmlDocument, serializeLabelNode } from "@/lib/labels/print";
 
 interface Props {
   open: boolean;
@@ -36,6 +37,7 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
   const [copies, setCopies] = useState(1);
   const [showHistory, setShowHistory] = useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
+  const printSourceRef = useRef<HTMLDivElement>(null);
 
   // Pick default template (category=rohstoff is_default) on first open
   useEffect(() => {
@@ -61,22 +63,19 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
 
   async function doPrint() {
     if (!template) return;
-    const wMM = template.width_mm;
-    const hMM = template.height_mm;
-    const labelHtml = printAreaRef.current?.querySelector("[data-label-print]")?.outerHTML || "";
-    const win = window.open("", "_blank", "width=600,height=600");
-    if (!win) return;
-    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etikett ${container?.container_code ?? ""}</title>
-<style>
-  @page { size: ${wMM}mm ${hMM}mm; margin: 0; }
-  html,body { margin:0; padding:0; }
-  .pg { width:${wMM}mm; height:${hMM}mm; page-break-after: always; overflow:hidden; }
-  .pg:last-child { page-break-after: auto; }
-</style></head><body>
-${Array.from({ length: copies }, () => `<div class="pg">${labelHtml}</div>`).join("")}
-<script>window.onload=()=>{setTimeout(()=>{window.print();},250);};</script>
-</body></html>`);
-    win.document.close();
+    const node = printSourceRef.current?.querySelector("[data-label-print]") as HTMLElement | null;
+    if (!node) {
+      toast.error("Etikett konnte nicht erzeugt werden");
+      return;
+    }
+    const html = buildLabelPrintHtml(serializeLabelNode(node), {
+      widthMm: template.width_mm,
+      heightMm: template.height_mm,
+      copies,
+      background: template.layout?.background || "#ffffff",
+      title: `Etikett ${container?.container_code ?? ""}`,
+    });
+    await printHtmlDocument(html);
 
     await logPrint.mutateAsync({
       template_id: template.id,
@@ -92,9 +91,14 @@ ${Array.from({ length: copies }, () => `<div class="pg">${labelHtml}</div>`).joi
 
   async function doPdf() {
     if (!template || !printAreaRef.current) return;
-    const node = printAreaRef.current.querySelector("[data-label-print]") as HTMLElement | null;
+    const node = (printSourceRef.current?.querySelector("[data-label-print]") ||
+      printAreaRef.current.querySelector("[data-label-print]")) as HTMLElement | null;
     if (!node) return;
-    const canvas = await html2canvas(node, { scale: 3, backgroundColor: "#ffffff", logging: false });
+    const canvas = await html2canvas(node, {
+      scale: 6,
+      backgroundColor: template.layout?.background || "#ffffff",
+      logging: false,
+    });
     const pdf = new jsPDF({ orientation: template.width_mm > template.height_mm ? "landscape" : "portrait", unit: "mm", format: [template.width_mm, template.height_mm] });
     const img = canvas.toDataURL("image/png");
     for (let i = 0; i < copies; i++) {
@@ -151,6 +155,19 @@ ${Array.from({ length: copies }, () => `<div class="pg">${labelHtml}</div>`).joi
                 <p className="text-sm text-muted-foreground">Bitte Vorlage wählen.</p>
               )}
             </div>
+            {/* Versteckte 1:1-Ausgabe als Druckquelle (mm-genau) */}
+            <div
+              ref={printSourceRef}
+              aria-hidden
+              style={{ position: "fixed", left: "-10000px", top: 0, pointerEvents: "none" }}
+            >
+              {template && (
+                <div data-label-print>
+                  <LabelRenderer template={template} data={data} scale={1} />
+                </div>
+              )}
+            </div>
+
             {template && (
               <p className="text-xs text-muted-foreground mt-2 text-center">
                 Größe: {template.width_mm} × {template.height_mm} mm · Vorschau 2× ({Math.round(template.width_mm * LABEL_MM_TO_PX * 2)}×{Math.round(template.height_mm * LABEL_MM_TO_PX * 2)} px)
