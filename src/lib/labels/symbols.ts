@@ -69,3 +69,27 @@ export function ghsKeysFromHazardCategories(cats: unknown): string[] {
     .map((c) => HAZARD_TO_GHS[c] ?? (c.startsWith("GHS") ? c : null))
     .filter((v): v is string => !!v);
 }
+
+/**
+ * Liest alle PSA-Zeichen eines Rohstoff-Datensatzes aus den Stammdaten.
+ * Primärquelle ist `psa_symbols` (text[]), Fallback `psa_categories` (jsonb).
+ * Werte können Strings oder Objekte ({ key | code | id }) sein.
+ */
+export function psaKeysFromMaterial(material: unknown): string[] {
+  const m = material as Record<string, unknown> | null | undefined;
+  if (!m) return [];
+  const raw = [m.psa_symbols, m.psa_categories].find((v) => Array.isArray(v) && (v as unknown[]).length > 0);
+  if (!Array.isArray(raw)) return [];
+  const keys = (raw as unknown[])
+    .map((v) => {
+      if (typeof v === "string") return v.trim();
+      if (v && typeof v === "object") {
+        const o = v as Record<string, unknown>;
+        const k = o.key ?? o.code ?? o.symbol ?? o.id;
+        return typeof k === "string" ? k.trim() : null;
+      }
+      return null;
+    })
+    .filter((v): v is string => !!v);
+  return Array.from(new Set(keys));
+}
