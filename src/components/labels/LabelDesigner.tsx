@@ -208,6 +208,8 @@ export function LabelDesigner({ value, sampleData, onChange }: Props) {
               <Rnd
                 key={el.id}
                 bounds="parent"
+                lockAspectRatio={el.type === "qrcode"}
+
                 size={{ width: el.w * px, height: el.h * px }}
                 position={{ x: el.x * px, y: el.y * px }}
                 onClick={() => setSelectedId(el.id)}
