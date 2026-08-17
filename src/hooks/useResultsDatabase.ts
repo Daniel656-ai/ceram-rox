@@ -154,6 +154,39 @@ export function resultLabel(r: { display_label?: string | null; result_name: str
     .replace(/^./, (c) => c.toUpperCase());
 }
 
+/**
+ * Anzeigename eines offiziellen Ergebnisses inklusive Einheit.
+ * Reine Darstellungslogik – der interne Parameter-Key bleibt die Bezeichnung ohne Einheit.
+ */
+export function resultLabelWithUnit(
+  r: { display_label?: string | null; result_name: string; unit?: string | null }
+): string {
+  const label = resultLabel(r);
+  const unit = (r.unit || "").trim();
+  return unit ? `${label} (${unit})` : label;
+}
+
+/** Einheiten je Ergebnisbezeichnung aus den Datensätzen ermitteln (Anzeige/Export). */
+export function buildResultUnitMap(records: ResultRecord[]): Map<string, string> {
+  const units = new Map<string, string>();
+  records.forEach((rec) =>
+    rec.outputResults.forEach((o) => {
+      const key = resultLabel(o);
+      const unit = (o.unit || "").trim();
+      if (unit && !units.has(key)) units.set(key, unit);
+    })
+  );
+  return units;
+}
+
+/** Bezeichnung + Einheit für einen bereits bekannten Parameternamen. */
+export function withUnit(name: string, units: Map<string, string>): string {
+  const u = units.get(name);
+  return u ? `${name} (${u})` : name;
+}
+
+
+
 // Get all unique parameter names across all results
 export function getUniqueParameterNames(records: ResultRecord[]) {
   const inputNames = new Set<string>();
