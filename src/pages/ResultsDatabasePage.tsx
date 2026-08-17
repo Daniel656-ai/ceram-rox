@@ -454,9 +454,17 @@ export default function ResultsDatabasePage() {
                         </Bar>
                       </BarChart>
                     ) : (
-                      <LineChart data={chartData.sort((a, b) => a.x - b.x)} margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
+                      <LineChart
+                        data={[...chartData].sort((a, b) =>
+                          typeof a.x === "number" && typeof b.x === "number"
+                            ? a.x - b.x
+                            : String(a.x).localeCompare(String(b.x), "de")
+                        )}
+                        margin={{ top: 10, right: 30, bottom: 20, left: 20 }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="x" fontSize={12} label={{ value: xAxis, position: "bottom", offset: 0 }} />
+                        <XAxis dataKey="x" type={isCategoryAxis(xAxis) ? "category" : "number"} domain={isCategoryAxis(xAxis) ? undefined : ["auto", "auto"]} fontSize={12} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} />
+
                         <YAxis fontSize={12} label={{ value: yAxis, angle: -90, position: "insideLeft" }} />
                         <Tooltip
                           content={({ active, payload }) => {
