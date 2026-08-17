@@ -5,12 +5,22 @@
 
 export type LayoutWidth = 12 | 9 | 8 | 6 | 4 | 3;
 
+/** Maximale Spaltenanzahl eines Spaltenlayouts – zentral, an einer Stelle. */
+export const MAX_COLUMNS = 12;
+/** Auswahlliste für die Spaltenanzahl (leitet sich aus MAX_COLUMNS ab). */
+export const COLUMN_COUNT_OPTIONS = Array.from({ length: MAX_COLUMNS }, (_, i) => i + 1);
+
 export interface LayoutNodeBase {
   id: string;
   type: LayoutNodeType;
   visible?: boolean;
   width?: LayoutWidth;
   className?: string;
+  /**
+   * Reine Darstellungsoption: Knoten wird optisch hervorgehoben.
+   * Unabhängig von „Offizielles Ergebnis" (is_result) und von Rollenrechten.
+   */
+  highlight?: boolean;
 }
 
 export type LayoutNodeType =
@@ -53,7 +63,7 @@ export interface TabNode extends LayoutNodeBase {
 
 export interface ColumnsNode extends LayoutNodeBase {
   type: "columns";
-  /** 1..6 Spalten. Historisch waren nur 1–3 möglich (abwärtskompatibel). */
+  /** 1..MAX_COLUMNS Spalten. Historisch waren nur 1–3 möglich (abwärtskompatibel). */
   columnCount: number;
   /**
    * Optionale Breitenverhältnisse je Spalte, z. B. [1,2,1] = 25/50/25 %.
@@ -111,7 +121,6 @@ export interface CalculationNode extends LayoutNodeBase {
   label_override?: string;
   description_override?: string;
   show_unit?: boolean;
-  highlight?: boolean;
 }
 
 export type LayoutNode =
@@ -154,7 +163,7 @@ export const createNode = (type: LayoutNodeType, extra: Partial<LayoutNode> = {}
     case "tab": return { ...base, type, title: "Neuer Tab", children: [] } as TabNode;
     case "columns": {
       const rawRatios = (extra as any).ratios as number[] | undefined;
-      const count = Math.max(1, Math.min(6, (extra as any).columnCount ?? rawRatios?.length ?? 2));
+      const count = Math.max(1, Math.min(MAX_COLUMNS, (extra as any).columnCount ?? rawRatios?.length ?? 2));
       return {
         ...base, type, columnCount: count,
         ...(rawRatios && rawRatios.length === count ? { ratios: rawRatios } : {}),
@@ -264,7 +273,7 @@ export function normalizeLayout(raw: unknown): FormLayoutTree {
  * Ohne gespeicherte `ratios` sind alle Spalten gleich breit (abwärtskompatibel).
  */
 export function columnRatios(node: Pick<ColumnsNode, "columnCount" | "ratios">): number[] {
-  const count = Math.max(1, Math.min(6, Math.round(node.columnCount || 1)));
+  const count = Math.max(1, Math.min(MAX_COLUMNS, Math.round(node.columnCount || 1)));
   const r = node.ratios;
   if (Array.isArray(r) && r.length === count && r.every(v => typeof v === "number" && v > 0)) {
     return r.map(v => Math.max(1, Math.min(12, Math.round(v))));
@@ -287,6 +296,14 @@ export const COLUMN_PRESETS: { label: string; ratios: number[] }[] = [
   { label: "4 × 25 %", ratios: [1, 1, 1, 1] },
   { label: "5 × 20 %", ratios: [1, 1, 1, 1, 1] },
   { label: "6 × 16,7 %", ratios: [1, 1, 1, 1, 1, 1] },
+  // Gleichmäßige Aufteilungen für 7–MAX_COLUMNS Spalten (automatisch abgeleitet).
+  ...Array.from({ length: Math.max(0, MAX_COLUMNS - 6) }, (_, i) => {
+    const n = i + 7;
+    return {
+      label: `${n} × ${(100 / n).toFixed(1).replace(".", ",")} %`,
+      ratios: Array.from({ length: n }, () => 1),
+    };
+  }),
 ];
 
 /**
@@ -296,9 +313,14 @@ export const COLUMN_PRESETS: { label: string; ratios: number[] }[] = [
 export function columnsGridStyle(node: Pick<ColumnsNode, "columnCount" | "ratios">): Record<string, string> {
   const ratios = columnRatios(node);
   const lg = ratios.map(v => `${v}fr`).join(" ");
-  const mid = ratios.length <= 2 ? ratios.length : ratios.length <= 4 ? 2 : 3;
+  // Responsiv: mobil 1 Spalte, ab sm reduzierte Anzahl, ab lg das volle Raster.
+  const n = ratios.length;
+  const mid = n <= 2 ? n : n <= 4 ? 2 : n <= 8 ? 3 : 4;
   return {
     ["--rox-cols-md" as string]: `repeat(${mid}, minmax(0, 1fr))`,
-    ["--rox-cols-lg" as string]: lg,
+    // Zwischenstufe für sehr breite Raster: erst ab xl das volle Raster,
+    // damit Felder nicht zu schmal werden (kein horizontales Scrollen).
+    ["--rox-cols-lg" as string]: n >= 9 ? `repeat(6, minmax(0, 1fr))` : lg,
+    ["--rox-cols-xl" as string]: lg,
   };
 }
