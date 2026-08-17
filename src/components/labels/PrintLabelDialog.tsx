@@ -13,7 +13,7 @@ import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { LabelRenderer, LABEL_MM_TO_PX } from "./LabelRenderer";
 import { LabelDataContext } from "@/lib/labels/fields";
-import { ghsKeysFromHazardCategories } from "@/lib/labels/symbols";
+import { ghsKeysFromHazardCategories, psaKeysFromMaterial } from "@/lib/labels/symbols";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { buildLabelPrintHtml, printHtmlDocument, serializeLabelNode } from "@/lib/labels/print";
 
@@ -58,7 +58,7 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
     location,
     company: { name: company?.company_name, address: null, logo_data_url: company?.logo_data_url },
     hazardGhsKeys: ghsKeysFromHazardCategories(material?.hazard_categories),
-    psaKeys: Array.isArray(material?.psa_categories) ? (material.psa_categories as string[]) : [],
+    psaKeys: psaKeysFromMaterial(material),
   }), [material, container, batch, location, company]);
 
   async function doPrint() {
