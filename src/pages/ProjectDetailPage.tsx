@@ -33,6 +33,7 @@ import { ProjectOrdersTab } from "@/components/project/ProjectOrdersTab";
 import { ProjectBookedServicesTab } from "@/components/project/ProjectBookedServicesTab";
 import { ProjectSamplesTab } from "@/components/project/ProjectSamplesTab";
 import { ProjectResultsTab, buildProjectResultRows } from "@/components/project/ProjectResultsTab";
+import { ProjectReportResultsSection } from "@/components/project/ProjectReportResultsSection";
 import { buildBookedServices, BOOKED_SERVICE_STATUS_LABEL } from "@/lib/projectServiceAggregation";
 
 
