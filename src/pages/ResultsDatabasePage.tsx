@@ -92,7 +92,7 @@ export default function ResultsDatabasePage() {
         "Messnummer": r.measurementNumber,
         "Auftragsnummer": r.orderNumber,
         "Projekt": r.projectName || r.projectNumber,
-        "Probe": r.sampleName || r.sampleNumber,
+        "Probe": r.sampleNumber || r.sampleName,
         "Messart": r.serviceName,
         "Auftraggeber": r.createdByName,
         "Messdienstleister": r.assignedToName,
@@ -125,7 +125,7 @@ export default function ResultsDatabasePage() {
         "Messnummer": r.measurementNumber,
         "Auftragsnummer": r.orderNumber,
         "Projekt": r.projectName || r.projectNumber,
-        "Probe": r.sampleName || r.sampleNumber,
+        "Probe": r.sampleNumber || r.sampleName,
         "Messart": r.serviceName,
         "Auftraggeber": r.createdByName,
         "Messdienstleister": r.assignedToName,
@@ -195,7 +195,16 @@ export default function ResultsDatabasePage() {
       { key: "orderNumber", header: "Auftragsnr.", accessor: r => r.orderNumber, cell: r => <span className="font-mono text-xs">{r.orderNumber}</span> },
       { key: "serviceName", type: "status", header: "Messart", accessor: r => r.serviceName, cell: r => <Badge variant="secondary" className="text-xs">{r.serviceName}</Badge> },
       { key: "projectName", header: "Projekt", accessor: r => r.projectName || r.projectNumber },
-      { key: "sampleName", header: "Probe", accessor: r => r.sampleName || r.sampleNumber },
+      { key: "sampleName", header: "Probe", accessor: r => r.sampleNumber || r.sampleName,
+        cell: r => (
+          <div className="leading-tight">
+            <span className="font-mono text-xs">{r.sampleNumber || "–"}</span>
+            {r.sampleName ? <div className="text-xs text-muted-foreground">{r.sampleName}</div> : null}
+            {r.originalSampleNumber ? (
+              <div className="text-[11px] text-muted-foreground">Ersatzprobe für {r.originalSampleNumber}</div>
+            ) : null}
+          </div>
+        ) },
       { key: "createdByName", type: "status", header: "Auftraggeber", accessor: r => r.createdByName },
       { key: "assignedToName", type: "status", header: "MDL", accessor: r => r.assignedToName },
       { key: "completedAt", type: "date", header: "Abgeschlossen", accessor: r => r.completedAt ?? null,

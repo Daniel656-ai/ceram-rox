@@ -72,7 +72,8 @@ export interface NumericParameterOption {
 export function buildChartSources(records: ResultRecord[]): ChartPointSource[] {
   const map = new Map<string, ChartPointSource>();
   for (const r of records) {
-    const key = r.sampleNumber || r.measurementId;
+    // Zusammenführung strikt über die konkrete Proben-ID des Messdatensatzes.
+    const key = r.sampleId || `measurement:${r.measurementId}`;
     let entry = map.get(key);
     if (!entry) {
       entry = {
