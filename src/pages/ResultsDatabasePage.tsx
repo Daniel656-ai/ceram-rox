@@ -13,6 +13,8 @@ import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { de } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, Legend, LineChart, Line } from "recharts";
+import { buildChartSources, collectNumericParameters, buildChartPoints, isCategoryAxis, CATEGORY_AXES } from "@/lib/resultsChartData";
+
 
 const CHART_COLORS = [
   "hsl(200, 60%, 32%)", "hsl(16, 75%, 48%)", "hsl(152, 55%, 36%)",
@@ -42,9 +44,7 @@ export default function ResultsDatabasePage() {
   const { inputParameterNames, outputParameterNames } = useMemo(
     () => getUniqueParameterNames(records), [records]
   );
-  const allParamNames = useMemo(
-    () => [...inputParameterNames, ...outputParameterNames], [inputParameterNames, outputParameterNames]
-  );
+
 
   // Unique values for filters
   const uniqueServices = useMemo(() => [...new Set(records.map(r => r.serviceName))].sort(), [records]);
@@ -151,23 +151,31 @@ export default function ResultsDatabasePage() {
     URL.revokeObjectURL(url);
   };
 
-  // Chart data
-  const chartData = useMemo(() => {
-    if (!xAxis || !yAxis) return [];
-    return filteredRecords
-      .map(r => {
-        const xVal = getParameterValue(r, xAxis);
-        const yVal = getParameterValue(r, yAxis);
-        if (xVal == null || yVal == null) return null;
-        return {
-          x: xVal,
-          y: yVal,
-          group: groupBy === "project" ? r.projectName : groupBy === "service" ? r.serviceName : groupBy === "creator" ? r.createdByName : "Alle",
-          label: r.measurementNumber,
-        };
-      })
-      .filter(Boolean) as Array<{ x: number; y: number; group: string; label: string }>;
-  }, [filteredRecords, xAxis, yAxis, groupBy]);
+  // Chart data – identische Datenbasis wie die Ergebnisdatenbank (nur offizielle Ergebnisse)
+  const chartSources = useMemo(() => buildChartSources(filteredRecords), [filteredRecords]);
+  const numericParams = useMemo(() => collectNumericParameters(filteredRecords), [filteredRecords]);
+  const numericKeys = useMemo(() => new Set(numericParams.map(p => p.key)), [numericParams]);
+
+  const chartData = useMemo(
+    () => buildChartPoints(chartSources, xAxis, yAxis, groupBy),
+    [chartSources, xAxis, yAxis, groupBy]
+  );
+
+  const missingAxes = [xAxis, yAxis].filter(
+    (a) => a && !isCategoryAxis(a) && !numericKeys.has(a)
+  );
+
+  const axisLabel = (key: string) =>
+    CATEGORY_AXES.find(c => c.key === key)?.label
+      ?? numericParams.find(p => p.key === key)?.label
+      ?? key;
+
+  const handleChartType = (v: "scatter" | "bar" | "line") => {
+    setChartType(v);
+    // Scatter benötigt eine numerische X-Achse
+    if (v === "scatter" && isCategoryAxis(xAxis)) setXAxis("");
+  };
+
 
   const chartGroups = useMemo(() => {
     if (groupBy === "none") return [{ name: "Alle", data: chartData }];
@@ -178,6 +186,7 @@ export default function ResultsDatabasePage() {
     });
     return Array.from(groups.entries()).map(([name, data]) => ({ name, data }));
   }, [chartData, groupBy]);
+
 
 
   const resultColumns = useMemo<DataTableColumn<ResultRecord>[]>(() => {
@@ -342,7 +351,7 @@ export default function ResultsDatabasePage() {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Diagrammtyp</label>
-                    <Select value={chartType} onValueChange={v => setChartType(v as any)}>
+                    <Select value={chartType} onValueChange={v => handleChartType(v as any)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="scatter">Scatter Plot</SelectItem>
@@ -356,7 +365,10 @@ export default function ResultsDatabasePage() {
                     <Select value={xAxis} onValueChange={setXAxis}>
                       <SelectTrigger><SelectValue placeholder="Parameter wählen" /></SelectTrigger>
                       <SelectContent>
-                        {allParamNames.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                        {chartType !== "scatter" && CATEGORY_AXES.map(c => (
+                          <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                        ))}
+                        {numericParams.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -365,10 +377,11 @@ export default function ResultsDatabasePage() {
                     <Select value={yAxis} onValueChange={setYAxis}>
                       <SelectTrigger><SelectValue placeholder="Parameter wählen" /></SelectTrigger>
                       <SelectContent>
-                        {allParamNames.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                        {numericParams.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Gruppierung</label>
                     <Select value={groupBy} onValueChange={setGroupBy}>
@@ -391,17 +404,23 @@ export default function ResultsDatabasePage() {
                   <div className="flex items-center justify-center h-[350px] text-muted-foreground">
                     Bitte X- und Y-Achse wählen
                   </div>
-                ) : chartData.length === 0 ? (
-                  <div className="flex items-center justify-center h-[350px] text-muted-foreground">
-                    Keine numerischen Daten für die gewählten Parameter vorhanden
+                ) : missingAxes.length > 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground text-sm gap-1">
+                    <p>Die Datenquelle „{missingAxes.join("“, „")}“ ist nicht mehr als offizielles numerisches Ergebnis verfügbar.</p>
+                    <p>Bitte eine andere Achse wählen.</p>
                   </div>
+                ) : chartData.length === 0 ? (
+                  <div className="flex items-center justify-center h-[350px] text-muted-foreground text-sm">
+                    Keine offiziellen numerischen Ergebnisse für die gewählte Kombination (Zusammenführung über die Probe).
+                  </div>
+
                 ) : (
                   <ResponsiveContainer width="100%" height={400}>
                     {chartType === "scatter" ? (
                       <ScatterChart margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name={xAxis} label={{ value: xAxis, position: "bottom", offset: 0 }} fontSize={12} />
-                        <YAxis type="number" dataKey="y" name={yAxis} label={{ value: yAxis, angle: -90, position: "insideLeft" }} fontSize={12} />
+                        <XAxis type="number" dataKey="x" name={xAxis} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} fontSize={12} />
+                        <YAxis type="number" dataKey="y" name={yAxis} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} fontSize={12} />
                         <Tooltip
                           cursor={{ strokeDasharray: "3 3" }}
                           content={({ active, payload }) => {
@@ -410,8 +429,8 @@ export default function ResultsDatabasePage() {
                             return (
                               <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
                                 <p className="font-medium">{d.label}</p>
-                                <p>{xAxis}: {d.x}</p>
-                                <p>{yAxis}: {d.y}</p>
+                                <p>{axisLabel(xAxis)}: {d.x}</p>
+                                <p>{axisLabel(yAxis)}: {d.y}</p>
                                 {groupBy !== "none" && <p className="text-muted-foreground">{d.group}</p>}
                               </div>
                             );
@@ -425,8 +444,8 @@ export default function ResultsDatabasePage() {
                     ) : chartType === "bar" ? (
                       <BarChart data={chartData} margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="x" name={xAxis} fontSize={12} label={{ value: xAxis, position: "bottom", offset: 0 }} />
-                        <YAxis fontSize={12} label={{ value: yAxis, angle: -90, position: "insideLeft" }} />
+                        <XAxis dataKey="x" name={xAxis} fontSize={12} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} />
+                        <YAxis fontSize={12} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} />
                         <Tooltip
                           content={({ active, payload }) => {
                             if (!active || !payload?.length) return null;
@@ -434,8 +453,8 @@ export default function ResultsDatabasePage() {
                             return (
                               <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
                                 <p className="font-medium">{d.label}</p>
-                                <p>{xAxis}: {d.x}</p>
-                                <p>{yAxis}: {d.y}</p>
+                                <p>{axisLabel(xAxis)}: {d.x}</p>
+                                <p>{axisLabel(yAxis)}: {d.y}</p>
                               </div>
                             );
                           }}
@@ -447,10 +466,18 @@ export default function ResultsDatabasePage() {
                         </Bar>
                       </BarChart>
                     ) : (
-                      <LineChart data={chartData.sort((a, b) => a.x - b.x)} margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
+                      <LineChart
+                        data={[...chartData].sort((a, b) =>
+                          typeof a.x === "number" && typeof b.x === "number"
+                            ? a.x - b.x
+                            : String(a.x).localeCompare(String(b.x), "de")
+                        )}
+                        margin={{ top: 10, right: 30, bottom: 20, left: 20 }}
+                      >
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="x" fontSize={12} label={{ value: xAxis, position: "bottom", offset: 0 }} />
-                        <YAxis fontSize={12} label={{ value: yAxis, angle: -90, position: "insideLeft" }} />
+                        <XAxis dataKey="x" type={isCategoryAxis(xAxis) ? "category" : "number"} domain={isCategoryAxis(xAxis) ? undefined : ["auto", "auto"]} fontSize={12} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} />
+
+                        <YAxis fontSize={12} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} />
                         <Tooltip
                           content={({ active, payload }) => {
                             if (!active || !payload?.length) return null;
@@ -458,8 +485,8 @@ export default function ResultsDatabasePage() {
                             return (
                               <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
                                 <p className="font-medium">{d.label}</p>
-                                <p>{xAxis}: {d.x}</p>
-                                <p>{yAxis}: {d.y}</p>
+                                <p>{axisLabel(xAxis)}: {d.x}</p>
+                                <p>{axisLabel(yAxis)}: {d.y}</p>
                               </div>
                             );
                           }}
