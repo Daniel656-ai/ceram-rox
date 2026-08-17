@@ -58,7 +58,7 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
     location,
     company: { name: company?.company_name, address: null, logo_data_url: company?.logo_data_url },
     hazardGhsKeys: ghsKeysFromHazardCategories(material?.hazard_categories),
-    psaKeys: Array.isArray(material?.psa_categories) ? (material.psa_categories as string[]) : [],
+    psaKeys: psaKeysFromMaterial(material),
   }), [material, container, batch, location, company]);
 
   async function doPrint() {
