@@ -53,6 +53,24 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
 
   const template = templates.find((t) => t.id === templateId);
 
+  // Vorschau proportional in den Container einpassen (kein Abschneiden, keine Scrollbalken)
+  useEffect(() => {
+    const el = printAreaRef.current;
+    if (!el || !open) return;
+    const update = () => setPreviewBox({ w: el.clientWidth - 24, h: el.clientHeight - 24 });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, templateId]);
+
+  const previewScale = useMemo(() => {
+    if (!template || !previewBox.w || !previewBox.h) return 1;
+    const w = template.width_mm * LABEL_MM_TO_PX;
+    const h = template.height_mm * LABEL_MM_TO_PX;
+    return Math.min(2, Math.max(0.2, Math.min(previewBox.w / w, previewBox.h / h)));
+  }, [template, previewBox]);
+
   const data: LabelDataContext = useMemo(() => ({
     material,
     container,
@@ -62,6 +80,7 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
     hazardGhsKeys: ghsKeysFromHazardCategories(material?.hazard_categories),
     psaKeys: psaKeysFromMaterial(material),
   }), [material, container, batch, location, company]);
+
 
   async function doPrint() {
     if (!template) return;
