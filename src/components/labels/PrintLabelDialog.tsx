@@ -13,7 +13,7 @@ import { useCompanySettings } from "@/hooks/useCompanySettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { LabelRenderer, LABEL_MM_TO_PX } from "./LabelRenderer";
 import { LabelDataContext } from "@/lib/labels/fields";
-import { ghsKeysFromHazardCategories } from "@/lib/labels/symbols";
+import { ghsKeysFromHazardCategories, psaKeysFromMaterial } from "@/lib/labels/symbols";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { buildLabelPrintHtml, printHtmlDocument, serializeLabelNode } from "@/lib/labels/print";
 
