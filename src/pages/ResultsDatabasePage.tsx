@@ -351,7 +351,7 @@ export default function ResultsDatabasePage() {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Diagrammtyp</label>
-                    <Select value={chartType} onValueChange={v => setChartType(v as any)}>
+                    <Select value={chartType} onValueChange={v => handleChartType(v as any)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="scatter">Scatter Plot</SelectItem>
@@ -419,8 +419,8 @@ export default function ResultsDatabasePage() {
                     {chartType === "scatter" ? (
                       <ScatterChart margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name={xAxis} label={{ value: xAxis, position: "bottom", offset: 0 }} fontSize={12} />
-                        <YAxis type="number" dataKey="y" name={yAxis} label={{ value: yAxis, angle: -90, position: "insideLeft" }} fontSize={12} />
+                        <XAxis type="number" dataKey="x" name={xAxis} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} fontSize={12} />
+                        <YAxis type="number" dataKey="y" name={yAxis} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} fontSize={12} />
                         <Tooltip
                           cursor={{ strokeDasharray: "3 3" }}
                           content={({ active, payload }) => {
@@ -429,8 +429,8 @@ export default function ResultsDatabasePage() {
                             return (
                               <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
                                 <p className="font-medium">{d.label}</p>
-                                <p>{xAxis}: {d.x}</p>
-                                <p>{yAxis}: {d.y}</p>
+                                <p>{axisLabel(xAxis)}: {d.x}</p>
+                                <p>{axisLabel(yAxis)}: {d.y}</p>
                                 {groupBy !== "none" && <p className="text-muted-foreground">{d.group}</p>}
                               </div>
                             );
@@ -444,8 +444,8 @@ export default function ResultsDatabasePage() {
                     ) : chartType === "bar" ? (
                       <BarChart data={chartData} margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="x" name={xAxis} fontSize={12} label={{ value: xAxis, position: "bottom", offset: 0 }} />
-                        <YAxis fontSize={12} label={{ value: yAxis, angle: -90, position: "insideLeft" }} />
+                        <XAxis dataKey="x" name={xAxis} fontSize={12} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} />
+                        <YAxis fontSize={12} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} />
                         <Tooltip
                           content={({ active, payload }) => {
                             if (!active || !payload?.length) return null;
@@ -453,8 +453,8 @@ export default function ResultsDatabasePage() {
                             return (
                               <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
                                 <p className="font-medium">{d.label}</p>
-                                <p>{xAxis}: {d.x}</p>
-                                <p>{yAxis}: {d.y}</p>
+                                <p>{axisLabel(xAxis)}: {d.x}</p>
+                                <p>{axisLabel(yAxis)}: {d.y}</p>
                               </div>
                             );
                           }}
@@ -477,7 +477,7 @@ export default function ResultsDatabasePage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="x" type={isCategoryAxis(xAxis) ? "category" : "number"} domain={isCategoryAxis(xAxis) ? undefined : ["auto", "auto"]} fontSize={12} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} />
 
-                        <YAxis fontSize={12} label={{ value: yAxis, angle: -90, position: "insideLeft" }} />
+                        <YAxis fontSize={12} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} />
                         <Tooltip
                           content={({ active, payload }) => {
                             if (!active || !payload?.length) return null;
@@ -485,8 +485,8 @@ export default function ResultsDatabasePage() {
                             return (
                               <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
                                 <p className="font-medium">{d.label}</p>
-                                <p>{xAxis}: {d.x}</p>
-                                <p>{yAxis}: {d.y}</p>
+                                <p>{axisLabel(xAxis)}: {d.x}</p>
+                                <p>{axisLabel(yAxis)}: {d.y}</p>
                               </div>
                             );
                           }}
