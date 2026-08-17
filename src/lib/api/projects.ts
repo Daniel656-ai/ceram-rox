@@ -3,7 +3,8 @@ import { unwrap, run } from "./_helpers";
 
 const PROJECT_DETAIL_ORDERS_SELECT = `
   *,
-  samples(sample_number, sample_name),
+  samples:samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name),
+  order_samples(id, sample_id, is_replacement, samples(id, sample_number, sample_name)),
   order_measurements(
     *,
     measurement_services(service_name, category, hourly_rate, standard_duration_hours),

@@ -33,6 +33,7 @@ import { ProjectOrdersTab } from "@/components/project/ProjectOrdersTab";
 import { ProjectBookedServicesTab } from "@/components/project/ProjectBookedServicesTab";
 import { ProjectSamplesTab } from "@/components/project/ProjectSamplesTab";
 import { ProjectResultsTab, buildProjectResultRows } from "@/components/project/ProjectResultsTab";
+import { ProjectReportResultsSection } from "@/components/project/ProjectReportResultsSection";
 import { buildBookedServices, BOOKED_SERVICE_STATUS_LABEL } from "@/lib/projectServiceAggregation";
 
 
@@ -109,7 +110,10 @@ export default function ProjectDetailPage() {
   const { data: history = [] } = useProjectSampleHistory(sampleIds);
 
   /** Gebuchte Dienstleistungen – aggregiert aus den Aufträgen des Projekts. */
-  const bookedServices = useMemo(() => buildBookedServices(orders as any[]), [orders]);
+  const bookedServices = useMemo(
+    () => buildBookedServices(orders as any[], timeEntries as any[]),
+    [orders, timeEntries]
+  );
 
 
   /** Nur offizielle Ergebnisse – Quelle ist die bestehende Ergebnislogik. */
@@ -125,8 +129,14 @@ export default function ProjectDetailPage() {
     return (orders as any[]).flatMap((o: any) =>
       (o.order_measurements || []).map((m: any) => ({
         ...m,
+        order_id: o.id,
         orderNumber: o.order_number,
-        sampleName: o.samples?.sample_name || o.samples?.sample_number || "–",
+        sampleName:
+          o.samples?.sample_name ||
+          o.samples?.sample_number ||
+          (o.order_samples || [])[0]?.samples?.sample_name ||
+          (o.order_samples || [])[0]?.samples?.sample_number ||
+          "–",
       }))
     );
   }, [orders]);
@@ -179,8 +189,6 @@ export default function ProjectDetailPage() {
     return conTotal + knTotal + totalExpensesCosts;
   }, [projectConsumables, projectKnetung, totalExpensesCosts]);
 
-  const totalCosts = costData.totalPersonnel + totalMaterialCosts;
-
   // Transparente Aufschlüsselung – nutzt exakt dieselben Quellen/Formeln wie oben,
   // erzeugt daher keine zusätzlichen oder doppelten Kosten.
   const costBreakdown = useMemo(
@@ -193,6 +201,10 @@ export default function ProjectDetailPage() {
     }),
     [allMeasurements, timeEntries, projectConsumables, projectKnetung, projectExpenses]
   );
+
+  /** Personalkosten inkl. der auf Aufträge gebuchten Zeiterfassung. */
+  const totalPersonnelCosts = costBreakdown.totals.personnel;
+  const totalCosts = totalPersonnelCosts + totalMaterialCosts;
 
 
   const timeEntryHours = useMemo(() => {
@@ -327,7 +339,7 @@ export default function ProjectDetailPage() {
     // Cost summary
     lines.push([t("csv_cost_summary")].join(sep));
     lines.push([t("csv_total_time"), `${(totalTimeMin / 60).toFixed(1)}h`].join(sep));
-    lines.push([t("csv_total_personnel"), `${costData.totalPersonnel.toFixed(2)}€`].join(sep));
+    lines.push([t("csv_total_personnel"), `${totalPersonnelCosts.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_consumables"), `${conTotal.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_knetung"), `${knTotal.toFixed(2)}€`].join(sep));
     lines.push(["Projektaufwendungen gesamt", `${expTotal.toFixed(2)}€`].join(sep));
@@ -344,7 +356,7 @@ export default function ProjectDetailPage() {
     a.download = `projektbericht_${safeName}_${dateStr}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [project, timeEntries, projectConsumables, projectKnetung, projectExpenses, costData, totalMaterialCosts, totalCosts, users, t]);
+  }, [project, timeEntries, projectConsumables, projectKnetung, projectExpenses, costData, totalPersonnelCosts, totalMaterialCosts, totalCosts, users, t]);
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -529,7 +541,7 @@ export default function ProjectDetailPage() {
               <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
               {canViewPersonnelCosts && totalMaterialCosts > 0 && (
                 <p className="text-[10px] text-muted-foreground">
-                  {t("personnel_short")}: {formatCurrency(costData.totalPersonnel)} {t("currency")} + {t("materials:material_short")}: {formatCurrency(totalMaterialCosts)} {t("currency")}
+                  {t("personnel_short")}: {formatCurrency(totalPersonnelCosts)} {t("currency")} + {t("materials:material_short")}: {formatCurrency(totalMaterialCosts)} {t("currency")}
                 </p>
               )}
             </div>
@@ -756,7 +768,7 @@ export default function ProjectDetailPage() {
                     <p className="text-xs text-muted-foreground">{t("total_hours")}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold">{formatCurrency(costData.totalPersonnel)} {t("currency")}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(totalPersonnelCosts)} {t("currency")}</p>
                     <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
                   </div>
                 </div>
@@ -1012,12 +1024,22 @@ export default function ProjectDetailPage() {
                   )}
                 </div>
 
+                {/* Offizielle Ergebnisse (optionale Auswahl je Bericht) */}
+                <div>
+                  <h3 className="font-semibold mb-2">Offizielle Ergebnisse</h3>
+                  <ProjectReportResultsSection
+                    projectId={id!}
+                    rows={officialResultRows}
+                    canEdit={isMaster || isLeaderOrOwner || canEditByPermission}
+                  />
+                </div>
+
                 {/* Cost Summary */}
                 <div>
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
                   <div className="rounded-lg border p-4 space-y-2 text-sm">
                     <div className="flex justify-between"><span>{t("csv_total_time")}:</span><span className="font-medium">{totalHours.toFixed(1)}{t("hours_unit")}</span></div>
-                    {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{formatCurrency(costData.totalPersonnel)} {t("currency")}</span></div>}
+                    {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{formatCurrency(totalPersonnelCosts)} {t("currency")}</span></div>}
                     <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{formatCurrency((projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0))} {t("currency")}</span></div>
                     <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{formatCurrency((projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0))} {t("currency")}</span></div>
                     <div className="flex justify-between"><span>Projektaufwendungen:</span><span className="font-medium">{formatCurrency(totalExpensesCosts)} {t("currency")}</span></div>

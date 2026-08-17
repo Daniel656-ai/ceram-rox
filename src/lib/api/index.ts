@@ -94,6 +94,7 @@ import { labelTemplates, labelPrintHistory } from "./labelTemplates";
 import { weeklyReviews } from "./weeklyReviews";
 import { customSymbols } from "./customSymbols";
 import { projectDocuments } from "./projectDocuments";
+import { projectReports } from "./projectReports";
 import {
   projectChangeRequests,
   projectDecisions,
@@ -256,6 +257,7 @@ export const api = {
   weeklyReviews,
   customSymbols,
   projectDocuments,
+  projectReports,
   projectChangeRequests,
   projectDecisions,
   projectStakeholders,

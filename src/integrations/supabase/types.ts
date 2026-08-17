@@ -5910,6 +5910,83 @@ export type Database = {
         }
         Relationships: []
       }
+      project_report_results: {
+        Row: {
+          created_at: string
+          id: string
+          measurement_result_id: string
+          report_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          measurement_result_id: string
+          report_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          measurement_result_id?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_report_results_measurement_result_id_fkey"
+            columns: ["measurement_result_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_report_results_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "project_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          project_id: string
+          report_kind: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          project_id: string
+          report_kind?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          project_id?: string
+          report_kind?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_services: {
         Row: {
           booked_at: string

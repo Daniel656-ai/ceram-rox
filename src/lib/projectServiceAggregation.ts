@@ -54,8 +54,14 @@ function maxDate(a: string | null, b: string | null | undefined): string | null 
   return new Date(b) > new Date(a) ? b : a;
 }
 
-/** orders: Ergebnis von api.projects.listOrdersWithDetails() */
-export function buildBookedServices(orders: any[]): BookedServiceRow[] {
+/**
+ * orders: Ergebnis von api.projects.listOrdersWithDetails()
+ * timeEntries: project_time_entries des Projekts. Einträge mit `order_id` werden
+ * dem jeweiligen Auftrag zugeordnet (Stunden + Kosten mit dem Stundensatz der
+ * Dienstleistung). Sie stammen aus einer anderen Quelle als die Arbeitszeit-
+ * protokolle (work_logs) und werden daher genau einmal gezählt.
+ */
+export function buildBookedServices(orders: any[], timeEntries: any[] = []): BookedServiceRow[] {
   const rows = new Map<string, BookedServiceRow>();
 
   for (const order of orders || []) {
@@ -143,11 +149,63 @@ export function buildBookedServices(orders: any[]): BookedServiceRow[] {
     }
   }
 
+  // Zeiterfassung, die direkt auf einen Auftrag gebucht wurde, fließt in die
+  // Dienstleistungszeilen dieses Auftrags ein (einmalig, keine Doppelzählung).
+  const orderIds = new Set((orders || []).map((o: any) => o.id));
+  const timeByOrder = new Map<string, number>();
+  for (const e of timeEntries || []) {
+    if (!e?.order_id || !orderIds.has(e.order_id)) continue;
+    timeByOrder.set(
+      e.order_id,
+      (timeByOrder.get(e.order_id) || 0) + Number(e.duration_minutes || 0) / 60
+    );
+  }
+
+  for (const [orderId, hours] of timeByOrder) {
+    if (hours <= 0) continue;
+    const order = (orders || []).find((o: any) => o.id === orderId);
+    const orderRows = Array.from(rows.values()).filter((r) => r.orderId === orderId);
+    if (orderRows.length === 1) {
+      const r = orderRows[0];
+      const rate = r.hours > 0 ? r.cost / r.hours : 0;
+      r.hours += hours;
+      r.cost += hours * rate;
+      if (r.status === "planned" || r.status === "open") r.status = "in_progress";
+      continue;
+    }
+    // Mehrere oder keine Dienstleistungen: transparente eigene Zeile je Auftrag.
+    const key = `${orderId}::__time__`;
+    rows.set(key, {
+      key,
+      orderId,
+      orderNumber: order?.order_number || "–",
+      serviceId: null,
+      serviceName: "Auftragszeiten (Zeiterfassung)",
+      sampleCount: 0,
+      measurementCount: 0,
+      completedCount: 0,
+      status: "in_progress",
+      startDate: null,
+      completedDate: null,
+      hours,
+      cost: 0,
+      measurementIds: [],
+    });
+  }
+
   return Array.from(rows.values()).sort(
     (a, b) =>
       a.orderNumber?.localeCompare(b.orderNumber || "") ||
       a.serviceName.localeCompare(b.serviceName)
   );
+}
+
+/** Stunden aus Zeiterfassung, die KEINEM Auftrag des Projekts zugeordnet sind. */
+export function unlinkedTimeEntryHours(orders: any[], timeEntries: any[]): number {
+  const orderIds = new Set((orders || []).map((o: any) => o.id));
+  return (timeEntries || [])
+    .filter((e: any) => !e?.order_id || !orderIds.has(e.order_id))
+    .reduce((s: number, e: any) => s + Number(e.duration_minutes || 0) / 60, 0);
 }
 
 export const BOOKED_SERVICE_STATUS_LABEL: Record<BookedServiceStatus, string> = {
