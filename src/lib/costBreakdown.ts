@@ -217,7 +217,43 @@ export function buildCostBreakdown(input: {
     });
   }
 
-  // Zeiteinträge: nur Stundentransparenz, keine Kosten (Vermeidung von Doppelerfassung)
+  // Zeiteinträge, die auf einen Auftrag gebucht wurden, sind Personalstunden
+  // dieses Auftrags. Sie stammen aus einer anderen Quelle als die Arbeitszeit-
+  // protokolle (work_logs) und werden daher genau einmal gezählt.
+  const timeByOrder = new Map<string, number>();
+  for (const e of timeEntries as any[]) {
+    if (!e?.order_id) continue;
+    timeByOrder.set(e.order_id, (timeByOrder.get(e.order_id) || 0) + Number(e.duration_minutes || 0) / 60);
+  }
+  for (const [orderId, hours] of timeByOrder) {
+    if (hours <= 0) continue;
+    const orderTasks = measurements.filter((m: any) => m.order_id === orderId);
+    if (orderTasks.length === 0) continue; // Auftrag gehört nicht zu diesem Projekt
+    const rate = orderTasks.length === 1 ? Number(orderTasks[0].measurement_services?.hourly_rate || 0) : 0;
+    const first = orderTasks[0];
+    const key = first.measurement_number || first.id;
+    const task = tasks.get(key);
+    const p: CostPosition = {
+      id: `te-${orderId}`,
+      kind: "personnel",
+      taskKey: orderTasks.length === 1 ? key : null,
+      taskLabel: orderTasks.length === 1 ? task?.measurementNumber || "–" : "–",
+      serviceName: orderTasks.length === 1 ? task?.serviceName || "–" : "Auftragszeiten (Zeiterfassung)",
+      personId: null,
+      hours,
+      rate,
+      amount: hours * rate,
+      note: "Zeiterfassung auf Auftrag",
+    };
+    positions.push(p);
+    if (orderTasks.length === 1 && task) {
+      task.positions.push(p);
+      task.hours += hours;
+      task.personnel += p.amount;
+      task.total = task.personnel + task.material + task.other;
+    }
+  }
+
   const unassignedTimeEntries = (timeEntries as any[]).filter((e) => !e.work_package_id && !e.order_id).length;
   if (unassignedTimeEntries > 0) {
     issues.push(`${unassignedTimeEntries} Zeiteintrag/Zeiteinträge ohne Zuordnung zu Auftrag oder Arbeitspaket.`);
