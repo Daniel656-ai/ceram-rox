@@ -338,7 +338,7 @@ export default function ProjectDetailPage() {
     // Cost summary
     lines.push([t("csv_cost_summary")].join(sep));
     lines.push([t("csv_total_time"), `${(totalTimeMin / 60).toFixed(1)}h`].join(sep));
-    lines.push([t("csv_total_personnel"), `${costData.totalPersonnel.toFixed(2)}€`].join(sep));
+    lines.push([t("csv_total_personnel"), `${totalPersonnelCosts.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_consumables"), `${conTotal.toFixed(2)}€`].join(sep));
     lines.push([t("materials:total_knetung"), `${knTotal.toFixed(2)}€`].join(sep));
     lines.push(["Projektaufwendungen gesamt", `${expTotal.toFixed(2)}€`].join(sep));
@@ -540,7 +540,7 @@ export default function ProjectDetailPage() {
               <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
               {canViewPersonnelCosts && totalMaterialCosts > 0 && (
                 <p className="text-[10px] text-muted-foreground">
-                  {t("personnel_short")}: {formatCurrency(costData.totalPersonnel)} {t("currency")} + {t("materials:material_short")}: {formatCurrency(totalMaterialCosts)} {t("currency")}
+                  {t("personnel_short")}: {formatCurrency(totalPersonnelCosts)} {t("currency")} + {t("materials:material_short")}: {formatCurrency(totalMaterialCosts)} {t("currency")}
                 </p>
               )}
             </div>
@@ -767,7 +767,7 @@ export default function ProjectDetailPage() {
                     <p className="text-xs text-muted-foreground">{t("total_hours")}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold">{formatCurrency(costData.totalPersonnel)} {t("currency")}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(totalPersonnelCosts)} {t("currency")}</p>
                     <p className="text-xs text-muted-foreground">{t("total_costs")}</p>
                   </div>
                 </div>
@@ -1028,7 +1028,7 @@ export default function ProjectDetailPage() {
                   <h3 className="font-semibold mb-2">{t("report_costs_section")}</h3>
                   <div className="rounded-lg border p-4 space-y-2 text-sm">
                     <div className="flex justify-between"><span>{t("csv_total_time")}:</span><span className="font-medium">{totalHours.toFixed(1)}{t("hours_unit")}</span></div>
-                    {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{formatCurrency(costData.totalPersonnel)} {t("currency")}</span></div>}
+                    {canViewPersonnelCosts && <div className="flex justify-between"><span>{t("csv_total_personnel")}:</span><span className="font-medium">{formatCurrency(totalPersonnelCosts)} {t("currency")}</span></div>}
                     <div className="flex justify-between"><span>{t("materials:total_consumables")}:</span><span className="font-medium">{formatCurrency((projectConsumables as any[]).reduce((s, c) => s + Number(c.total_cost || 0), 0))} {t("currency")}</span></div>
                     <div className="flex justify-between"><span>{t("materials:total_knetung")}:</span><span className="font-medium">{formatCurrency((projectKnetung as any[]).reduce((s, k) => s + Number(k.total_cost || 0), 0))} {t("currency")}</span></div>
                     <div className="flex justify-between"><span>Projektaufwendungen:</span><span className="font-medium">{formatCurrency(totalExpensesCosts)} {t("currency")}</span></div>
