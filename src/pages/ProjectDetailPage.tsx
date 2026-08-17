@@ -355,7 +355,7 @@ export default function ProjectDetailPage() {
     a.download = `projektbericht_${safeName}_${dateStr}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [project, timeEntries, projectConsumables, projectKnetung, projectExpenses, costData, totalMaterialCosts, totalCosts, users, t]);
+  }, [project, timeEntries, projectConsumables, projectKnetung, projectExpenses, costData, totalPersonnelCosts, totalMaterialCosts, totalCosts, users, t]);
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
