@@ -156,6 +156,39 @@
   /* Repeat header logo on each printed page via running element fallback:
      browsers that don't support `position: running()` will at least keep
      the in-flow .print-header on page 1. */
+
+  /* Druckvorschau = Ausdruck: keine Scrollcontainer, keine abgeschnittenen
+     Inhalte, keine fixen Höhen. Sonst druckt der Browser nur den sichtbaren
+     Ausschnitt eines Containers. */
+  * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  [data-radix-scroll-area-viewport],
+  .overflow-auto,
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  table {
+    width: 100% !important;
+    page-break-inside: auto;
+  }
+  tr,
+  img,
+  .rox-print-block {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  h1, h2, h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
 }
 
 /* Flexible Spaltenlayouts im Formulardesigner/-renderer.
