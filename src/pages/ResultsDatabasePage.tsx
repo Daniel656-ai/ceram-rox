@@ -13,6 +13,8 @@ import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { de } from "date-fns/locale";
 import * as XLSX from "xlsx";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, Legend, LineChart, Line } from "recharts";
+import { buildChartSources, collectNumericParameters, buildChartPoints, isCategoryAxis, CATEGORY_AXES } from "@/lib/resultsChartData";
+
 
 const CHART_COLORS = [
   "hsl(200, 60%, 32%)", "hsl(16, 75%, 48%)", "hsl(152, 55%, 36%)",
