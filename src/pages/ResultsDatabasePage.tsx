@@ -392,10 +392,16 @@ export default function ResultsDatabasePage() {
                   <div className="flex items-center justify-center h-[350px] text-muted-foreground">
                     Bitte X- und Y-Achse wählen
                   </div>
-                ) : chartData.length === 0 ? (
-                  <div className="flex items-center justify-center h-[350px] text-muted-foreground">
-                    Keine numerischen Daten für die gewählten Parameter vorhanden
+                ) : missingAxes.length > 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground text-sm gap-1">
+                    <p>Die Datenquelle „{missingAxes.join("“, „")}“ ist nicht mehr als offizielles numerisches Ergebnis verfügbar.</p>
+                    <p>Bitte eine andere Achse wählen.</p>
                   </div>
+                ) : chartData.length === 0 ? (
+                  <div className="flex items-center justify-center h-[350px] text-muted-foreground text-sm">
+                    Keine offiziellen numerischen Ergebnisse für die gewählte Kombination (Zusammenführung über die Probe).
+                  </div>
+
                 ) : (
                   <ResponsiveContainer width="100%" height={400}>
                     {chartType === "scatter" ? (
