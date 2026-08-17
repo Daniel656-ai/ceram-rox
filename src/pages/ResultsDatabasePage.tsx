@@ -165,6 +165,18 @@ export default function ResultsDatabasePage() {
     (a) => a && !isCategoryAxis(a) && !numericKeys.has(a)
   );
 
+  const axisLabel = (key: string) =>
+    CATEGORY_AXES.find(c => c.key === key)?.label
+      ?? numericParams.find(p => p.key === key)?.label
+      ?? key;
+
+  const handleChartType = (v: "scatter" | "bar" | "line") => {
+    setChartType(v);
+    // Scatter benötigt eine numerische X-Achse
+    if (v === "scatter" && isCategoryAxis(xAxis)) setXAxis("");
+  };
+
+
   const chartGroups = useMemo(() => {
     if (groupBy === "none") return [{ name: "Alle", data: chartData }];
     const groups = new Map<string, typeof chartData>();
