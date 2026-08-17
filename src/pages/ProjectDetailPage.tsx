@@ -188,8 +188,6 @@ export default function ProjectDetailPage() {
     return conTotal + knTotal + totalExpensesCosts;
   }, [projectConsumables, projectKnetung, totalExpensesCosts]);
 
-  const totalCosts = costData.totalPersonnel + totalMaterialCosts;
-
   // Transparente Aufschlüsselung – nutzt exakt dieselben Quellen/Formeln wie oben,
   // erzeugt daher keine zusätzlichen oder doppelten Kosten.
   const costBreakdown = useMemo(
@@ -202,6 +200,10 @@ export default function ProjectDetailPage() {
     }),
     [allMeasurements, timeEntries, projectConsumables, projectKnetung, projectExpenses]
   );
+
+  /** Personalkosten inkl. der auf Aufträge gebuchten Zeiterfassung. */
+  const totalPersonnelCosts = costBreakdown.totals.personnel;
+  const totalCosts = totalPersonnelCosts + totalMaterialCosts;
 
 
   const timeEntryHours = useMemo(() => {
