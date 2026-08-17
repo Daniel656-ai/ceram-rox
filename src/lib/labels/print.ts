@@ -9,7 +9,14 @@
 export function serializeLabelNode(node: HTMLElement): string {
   const clone = node.cloneNode(true) as HTMLElement;
 
-  // Canvas (QR-Codes) in statische Bilder umwandeln
+  // 1) Bilder zuerst: Indizes stimmen hier noch 1:1 mit dem Original überein.
+  const srcImgs = Array.from(node.querySelectorAll("img"));
+  Array.from(clone.querySelectorAll("img")).forEach((img, i) => {
+    const orig = srcImgs[i];
+    if (orig?.currentSrc || orig?.src) img.setAttribute("src", orig.currentSrc || orig.src);
+  });
+
+  // 2) Danach Canvas (QR-Codes) in statische Bilder umwandeln.
   const srcCanvases = Array.from(node.querySelectorAll("canvas"));
   const cloneCanvases = Array.from(clone.querySelectorAll("canvas"));
   cloneCanvases.forEach((c, i) => {
@@ -25,15 +32,9 @@ export function serializeLabelNode(node: HTMLElement): string {
     c.replaceWith(img);
   });
 
-  // Relative Bildpfade absolut machen
-  const srcImgs = Array.from(node.querySelectorAll("img"));
-  Array.from(clone.querySelectorAll("img")).forEach((img, i) => {
-    const orig = srcImgs[i];
-    if (orig?.src) img.setAttribute("src", orig.src);
-  });
-
   return clone.outerHTML;
 }
+
 
 interface PrintOptions {
   widthMm: number;

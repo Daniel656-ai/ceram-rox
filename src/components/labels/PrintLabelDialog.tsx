@@ -38,6 +38,8 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
   const [showHistory, setShowHistory] = useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
   const printSourceRef = useRef<HTMLDivElement>(null);
+  const [previewBox, setPreviewBox] = useState({ w: 0, h: 0 });
+
 
   // Pick default template (category=rohstoff is_default) on first open
   useEffect(() => {
@@ -51,6 +53,24 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
 
   const template = templates.find((t) => t.id === templateId);
 
+  // Vorschau proportional in den Container einpassen (kein Abschneiden, keine Scrollbalken)
+  useEffect(() => {
+    const el = printAreaRef.current;
+    if (!el || !open) return;
+    const update = () => setPreviewBox({ w: el.clientWidth - 24, h: el.clientHeight - 24 });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, templateId]);
+
+  const previewScale = useMemo(() => {
+    if (!template || !previewBox.w || !previewBox.h) return 1;
+    const w = template.width_mm * LABEL_MM_TO_PX;
+    const h = template.height_mm * LABEL_MM_TO_PX;
+    return Math.min(2, Math.max(0.2, Math.min(previewBox.w / w, previewBox.h / h)));
+  }, [template, previewBox]);
+
   const data: LabelDataContext = useMemo(() => ({
     material,
     container,
@@ -60,6 +80,7 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
     hazardGhsKeys: ghsKeysFromHazardCategories(material?.hazard_categories),
     psaKeys: psaKeysFromMaterial(material),
   }), [material, container, batch, location, company]);
+
 
   async function doPrint() {
     if (!template) return;
@@ -146,11 +167,9 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
               </div>
             </div>
 
-            <div ref={printAreaRef} className="rounded-md border bg-muted/30 p-3 flex items-center justify-center min-h-[260px] overflow-auto">
+            <div ref={printAreaRef} className="rounded-md border bg-muted/30 p-3 flex items-center justify-center h-[340px] overflow-hidden">
               {template ? (
-                <div data-label-print>
-                  <LabelRenderer template={template} data={data} scale={2} />
-                </div>
+                <LabelRenderer template={template} data={data} scale={previewScale} />
               ) : (
                 <p className="text-sm text-muted-foreground">Bitte Vorlage wählen.</p>
               )}
@@ -170,9 +189,10 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
 
             {template && (
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Größe: {template.width_mm} × {template.height_mm} mm · Vorschau 2× ({Math.round(template.width_mm * LABEL_MM_TO_PX * 2)}×{Math.round(template.height_mm * LABEL_MM_TO_PX * 2)} px)
+                Größe: {template.width_mm} × {template.height_mm} mm · Vorschau {Math.round(previewScale * 100)} %
               </p>
             )}
+
           </div>
 
           <div className="space-y-2">
