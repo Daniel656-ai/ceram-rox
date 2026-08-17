@@ -10,8 +10,11 @@ export interface ResultRecord {
   orderType: string;
   projectNumber: string;
   projectName: string;
+  sampleId: string | null;
   sampleNumber: string;
   sampleName: string;
+  /** Falls die Messung an einer Ersatzprobe durchgeführt wurde. */
+  originalSampleNumber: string | null;
   serviceName: string;
   serviceCategory: string;
   assignedToId: string | null;
@@ -57,7 +60,9 @@ export function useResultsDatabase() {
         .from("order_measurements")
         .select(`
           id, measurement_number, status, assigned_to, actual_duration_hours,
-          created_at, updated_at,
+          created_at, updated_at, sample_id, original_sample_id,
+          samples!order_measurements_sample_id_fkey(id, sample_number, sample_name),
+          original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
           measurement_services(service_name, category, standard_duration_hours),
           measurement_orders(
             id, order_number, order_type, created_by, notes,
@@ -85,6 +90,7 @@ export function useResultsDatabase() {
       const records: ResultRecord[] = (measurements || []).map((m: any) => {
         const order = m.measurement_orders;
         const service = m.measurement_services;
+        const sample = m.samples || order?.samples || null;
         // Eingabe-/Messparameter sind keine Ergebnisse und erscheinen hier nicht.
         const inputParameters: Record<string, { value: string | null; unit: string | null }> = {};
 
@@ -97,8 +103,13 @@ export function useResultsDatabase() {
           orderType: order?.order_type || "",
           projectNumber: order?.projects?.project_number || "",
           projectName: order?.projects?.project_name || "",
-          sampleNumber: order?.samples?.sample_number || "",
-          sampleName: order?.samples?.sample_name || "",
+          // Probe kommt ausschließlich aus dem konkreten Messdatensatz
+          // (order_measurements.sample_id). Nur wenn die Messung gar keine
+          // eigene Probe hat, greift die Auftragsprobe als Altdaten-Fallback.
+          sampleId: m.sample_id || order?.samples?.id || null,
+          sampleNumber: sample?.sample_number || "",
+          sampleName: sample?.sample_name || "",
+          originalSampleNumber: m.original_sample?.sample_number || null,
           serviceName: service?.service_name || "",
           serviceCategory: service?.category || "",
           assignedToId: m.assigned_to,
