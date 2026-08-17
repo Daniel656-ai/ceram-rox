@@ -12,7 +12,7 @@ import {
   type LayoutNode, type LayoutNodeType, type FormLayoutTree,
   type LayoutWidth, type FieldNode, type CalculationNode,
   createNode, normalizeLayout, findNode, updateNode,
-  removeNode, insertNode, collectUsedFieldIds, columnRatios, COLUMN_PRESETS,
+  removeNode, insertNode, collectUsedFieldIds, columnRatios, COLUMN_PRESETS, COLUMN_COUNT_OPTIONS, MAX_COLUMNS,
 } from "@/lib/api/formDefinitionLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ const PALETTE: { key: LayoutNodeType; label: string; icon: any; extra?: any }[] 
   { key: "columns", label: "4 Spalten", icon: Columns3, extra: { columnCount: 4 } },
   { key: "columns", label: "5 Spalten", icon: Columns3, extra: { columnCount: 5 } },
   { key: "columns", label: "6 Spalten", icon: Columns3, extra: { columnCount: 6 } },
+  { key: "columns", label: "8 Spalten", icon: Columns3, extra: { columnCount: 8 } },
+  { key: "columns", label: "12 Spalten", icon: Columns3, extra: { columnCount: 12 } },
   { key: "container", label: "Container", icon: Square },
   { key: "divider", label: "Trennlinie", icon: Minus },
   { key: "heading", label: "Überschrift", icon: Heading1 },
@@ -549,7 +551,7 @@ function ColumnsInspector({ node, onChange, disabled }: {
           applyRatios(Array.from({ length: count }, (_, i) => ratios[i] ?? 1));
         }} disabled={disabled}>
           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>{[1, 2, 3, 4, 5, 6].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
+          <SelectContent>{COLUMN_COUNT_OPTIONS.map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}</SelectContent>
         </Select>
       </div>
 
@@ -577,7 +579,7 @@ function ColumnsInspector({ node, onChange, disabled }: {
                 type="number" min={1} max={12} value={r} disabled={disabled}
                 className="h-8 w-14 text-xs"
                 onChange={(e) => {
-                  const v = Math.max(1, Math.min(12, parseInt(e.target.value, 10) || 1));
+                  const v = Math.max(1, Math.min(MAX_COLUMNS, parseInt(e.target.value, 10) || 1));
                   const next = ratios.slice(); next[i] = v;
                   onChange({ ratios: next, columnCount: next.length } as any);
                 }}
@@ -593,6 +595,14 @@ function ColumnsInspector({ node, onChange, disabled }: {
     </div>
   );
 }
+
+/**
+ * Knotentypen mit Darstellungsoption „Hervorheben“ (reine Optik, keine
+ * Auswirkung auf Rollenrechte oder offizielle Ergebnisse).
+ */
+const HIGHLIGHTABLE_TYPES: LayoutNode["type"][] = [
+  "field", "calculation", "section", "group", "container", "heading", "note",
+];
 
 // ---------- inspector ----------
 function Inspector({ node, fields, formId, onChange, onDelete, canManage }: {
@@ -612,6 +622,19 @@ function Inspector({ node, fields, formId, onChange, onDelete, canManage }: {
         <Label className="text-xs">Sichtbar</Label>
         <Switch checked={node.visible !== false} onCheckedChange={(v) => onChange({ visible: v } as any)} disabled={disabled} />
       </div>
+
+      {HIGHLIGHTABLE_TYPES.includes(node.type) && (
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-xs">Hervorheben</Label>
+            <p className="text-[10px] text-muted-foreground">
+              Nur Darstellung – unabhängig von „Offizielles Ergebnis".
+            </p>
+          </div>
+          <Switch checked={!!(node as any).highlight}
+            onCheckedChange={(v) => onChange({ highlight: v } as any)} disabled={disabled} />
+        </div>
+      )}
 
       <div>
         <Label className="text-xs">Breite</Label>
