@@ -109,7 +109,10 @@ export default function ProjectDetailPage() {
   const { data: history = [] } = useProjectSampleHistory(sampleIds);
 
   /** Gebuchte Dienstleistungen – aggregiert aus den Aufträgen des Projekts. */
-  const bookedServices = useMemo(() => buildBookedServices(orders as any[]), [orders]);
+  const bookedServices = useMemo(
+    () => buildBookedServices(orders as any[], timeEntries as any[]),
+    [orders, timeEntries]
+  );
 
 
   /** Nur offizielle Ergebnisse – Quelle ist die bestehende Ergebnislogik. */
