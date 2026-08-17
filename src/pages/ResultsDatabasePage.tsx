@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, buildResultUnitMap, withUnit, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,7 @@ export default function ResultsDatabasePage() {
   const [yAxis, setYAxis] = useState<string>("");
   const [groupBy, setGroupBy] = useState<string>("none");
 
+  const resultUnits = useMemo(() => buildResultUnitMap(records), [records]);
   const { inputParameterNames, outputParameterNames } = useMemo(
     () => getUniqueParameterNames(records), [records]
   );
@@ -107,7 +108,7 @@ export default function ResultsDatabasePage() {
       // Add output results
       outputParameterNames.forEach(name => {
         const res = r.outputResults.find(o => resultLabel(o) === name);
-        row[`[A] ${name}`] = res?.value ?? "";
+        row[`[A] ${withUnit(name, resultUnits)}`] = res?.value ?? "";
       });
       row["Bemerkungen"] = r.remarks;
       return row;
@@ -136,7 +137,7 @@ export default function ResultsDatabasePage() {
       });
       outputParameterNames.forEach(name => {
         const res = r.outputResults.find(o => resultLabel(o) === name);
-        row[name] = res?.value ?? "";
+        row[withUnit(name, resultUnits)] = res?.value ?? "";
       });
       return row;
     });
@@ -216,7 +217,7 @@ export default function ResultsDatabasePage() {
       base.push({
         key: `out_${name}`,
         type: "number",
-        header: name,
+        header: withUnit(name, resultUnits),
         accessor: r => {
           const res = r.outputResults.find(o => resultLabel(o) === name);
           const v = res?.value;
@@ -229,7 +230,7 @@ export default function ResultsDatabasePage() {
       });
     });
     return base;
-  }, [outputParameterNames]);
+  }, [outputParameterNames, resultUnits]);
 
   if (isLoading) {
     return (
