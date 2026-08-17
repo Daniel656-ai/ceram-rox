@@ -65,6 +65,7 @@ export function printHtmlDocument(html: string): Promise<void> {
     iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
     document.body.appendChild(iframe);
 
+    let started = false;
     const cleanup = () => {
       window.setTimeout(() => {
         iframe.remove();
@@ -72,7 +73,9 @@ export function printHtmlDocument(html: string): Promise<void> {
       }, 1000);
     };
 
-    iframe.onload = () => {
+    const start = () => {
+      if (started) return;
+      started = true;
       const win = iframe.contentWindow;
       if (!win) {
         cleanup();
@@ -103,6 +106,8 @@ export function printHtmlDocument(html: string): Promise<void> {
       });
     };
 
+    iframe.onload = start;
+
     const doc = iframe.contentWindow?.document;
     if (!doc) {
       iframe.remove();
@@ -113,6 +118,6 @@ export function printHtmlDocument(html: string): Promise<void> {
     doc.write(html);
     doc.close();
     // Falls onload nicht mehr feuert (document.write nach Erstellung)
-    if (doc.readyState === "complete") iframe.onload?.(new Event("load") as any);
+    if (doc.readyState === "complete") window.setTimeout(start, 50);
   });
 }
