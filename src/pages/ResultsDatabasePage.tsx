@@ -149,23 +149,19 @@ export default function ResultsDatabasePage() {
     URL.revokeObjectURL(url);
   };
 
-  // Chart data
-  const chartData = useMemo(() => {
-    if (!xAxis || !yAxis) return [];
-    return filteredRecords
-      .map(r => {
-        const xVal = getParameterValue(r, xAxis);
-        const yVal = getParameterValue(r, yAxis);
-        if (xVal == null || yVal == null) return null;
-        return {
-          x: xVal,
-          y: yVal,
-          group: groupBy === "project" ? r.projectName : groupBy === "service" ? r.serviceName : groupBy === "creator" ? r.createdByName : "Alle",
-          label: r.measurementNumber,
-        };
-      })
-      .filter(Boolean) as Array<{ x: number; y: number; group: string; label: string }>;
-  }, [filteredRecords, xAxis, yAxis, groupBy]);
+  // Chart data – identische Datenbasis wie die Ergebnisdatenbank (nur offizielle Ergebnisse)
+  const chartSources = useMemo(() => buildChartSources(filteredRecords), [filteredRecords]);
+  const numericParams = useMemo(() => collectNumericParameters(filteredRecords), [filteredRecords]);
+  const numericKeys = useMemo(() => new Set(numericParams.map(p => p.key)), [numericParams]);
+
+  const chartData = useMemo(
+    () => buildChartPoints(chartSources, xAxis, yAxis, groupBy),
+    [chartSources, xAxis, yAxis, groupBy]
+  );
+
+  const missingAxes = [xAxis, yAxis].filter(
+    (a) => a && !isCategoryAxis(a) && !numericKeys.has(a)
+  );
 
   const chartGroups = useMemo(() => {
     if (groupBy === "none") return [{ name: "Alle", data: chartData }];
@@ -176,6 +172,7 @@ export default function ResultsDatabasePage() {
     });
     return Array.from(groups.entries()).map(([name, data]) => ({ name, data }));
   }, [chartData, groupBy]);
+
 
 
   const resultColumns = useMemo<DataTableColumn<ResultRecord>[]>(() => {
