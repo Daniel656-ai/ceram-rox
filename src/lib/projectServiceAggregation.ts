@@ -54,8 +54,14 @@ function maxDate(a: string | null, b: string | null | undefined): string | null 
   return new Date(b) > new Date(a) ? b : a;
 }
 
-/** orders: Ergebnis von api.projects.listOrdersWithDetails() */
-export function buildBookedServices(orders: any[]): BookedServiceRow[] {
+/**
+ * orders: Ergebnis von api.projects.listOrdersWithDetails()
+ * timeEntries: project_time_entries des Projekts. Einträge mit `order_id` werden
+ * dem jeweiligen Auftrag zugeordnet (Stunden + Kosten mit dem Stundensatz der
+ * Dienstleistung). Sie stammen aus einer anderen Quelle als die Arbeitszeit-
+ * protokolle (work_logs) und werden daher genau einmal gezählt.
+ */
+export function buildBookedServices(orders: any[], timeEntries: any[] = []): BookedServiceRow[] {
   const rows = new Map<string, BookedServiceRow>();
 
   for (const order of orders || []) {
