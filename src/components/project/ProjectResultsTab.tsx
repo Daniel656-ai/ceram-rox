@@ -41,7 +41,7 @@ export function buildProjectResultRows(raw: any[], getUserName: (id: string) => 
         orderId: m.measurement_orders?.id,
         orderNumber: m.measurement_orders?.order_number || "–",
         serviceName: m.measurement_services?.service_name || "–",
-        parameter: r.display_label || r.result_name,
+        parameter: (r.display_label || r.result_name) + (r.unit ? ` (${r.unit})` : ""),
         value: r.value,
         unit: r.unit,
         measuredAt: r.measured_at,
