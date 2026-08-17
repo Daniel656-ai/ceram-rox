@@ -38,6 +38,8 @@ export function PrintLabelDialog({ open, onOpenChange, container, material, batc
   const [showHistory, setShowHistory] = useState(false);
   const printAreaRef = useRef<HTMLDivElement>(null);
   const printSourceRef = useRef<HTMLDivElement>(null);
+  const [previewBox, setPreviewBox] = useState({ w: 0, h: 0 });
+
 
   // Pick default template (category=rohstoff is_default) on first open
   useEffect(() => {
