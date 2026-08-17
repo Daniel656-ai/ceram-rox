@@ -11,13 +11,18 @@ const MM_TO_PX = 3.7795275591; // 96dpi
 interface Props {
   template: Pick<LabelTemplate, "width_mm" | "height_mm" | "layout">;
   data: LabelDataContext;
-  scale?: number; // multiplier on px (preview vs print)
+  /** Rein visueller Zoom. Ändert niemals die gespeicherten mm-Werte. */
+  scale?: number;
   className?: string;
   /** When true, render placeholders for empty values (designer/preview). */
   placeholder?: boolean;
 }
 
-function Barcode({ value, format, w, h }: { value: string; format: string; w: number; h: number }) {
+function mm(v: number) {
+  return `${v}mm`;
+}
+
+function Barcode({ value, format }: { value: string; format: string }) {
   const ref = useRef<SVGSVGElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -26,23 +31,38 @@ function Barcode({ value, format, w, h }: { value: string; format: string; w: nu
         format,
         displayValue: false,
         margin: 0,
-        width: Math.max(1, w / 60),
-        height: Math.max(10, h),
+        width: 2,
+        height: 100,
       });
+      // JsBarcode setzt feste width/height-Attribute – entfernen, damit das
+      // Element exakt die im Layout gespeicherte Größe einnimmt.
+      ref.current.removeAttribute("width");
+      ref.current.removeAttribute("height");
+      ref.current.setAttribute("preserveAspectRatio", "none");
+      ref.current.style.width = "100%";
+      ref.current.style.height = "100%";
     } catch {
       // invalid value for the format
     }
-  }, [value, format, w, h]);
-  return <svg ref={ref} style={{ width: "100%", height: "100%" }} />;
+  }, [value, format]);
+  return <svg ref={ref} preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 
 function QrCode({ value }: { value: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    if (!ref.current) return;
-    QRCode.toCanvas(ref.current, value || " ", { margin: 0, scale: 4 }).catch(() => {});
+    const el = ref.current;
+    if (!el) return;
+    QRCode.toCanvas(el, value || " ", { margin: 0, scale: 8 })
+      .then(() => {
+        // qrcode.js schreibt feste style.width/height in px auf das Canvas.
+        // Diese würden die im Layout gespeicherte Größe überschreiben.
+        el.style.width = "100%";
+        el.style.height = "100%";
+      })
+      .catch(() => {});
   }, [value]);
-  return <canvas ref={ref} style={{ width: "100%", height: "100%" }} />;
+  return <canvas ref={ref} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 
 function ElementView({ el, data, placeholder, ghsLookup, psaLookup }: { el: LabelElement; data: LabelDataContext; placeholder: boolean; ghsLookup: (k: string) => { src: string; label: string } | null; psaLookup: (k: string) => { src: string; label: string } | null }) {
@@ -71,7 +91,7 @@ function ElementView({ el, data, placeholder, ghsLookup, psaLookup }: { el: Labe
   }
   if (el.type === "barcode") {
     const v = el.source ? resolveField(el.source, data) : "";
-    return <Barcode value={v} format={el.barcodeFormat || "CODE128"} w={el.w} h={el.h} />;
+    return <Barcode value={v} format={el.barcodeFormat || "CODE128"} />;
   }
   if (el.type === "qrcode") {
     const v = el.source ? resolveField(el.source, data) : "";
@@ -79,26 +99,17 @@ function ElementView({ el, data, placeholder, ghsLookup, psaLookup }: { el: Labe
   }
   if (el.type === "logo") {
     const src = data.company?.logo_data_url;
-    if (!src) return placeholder ? <div style={{ ...common, border: "1px dashed #888", color: "#888", fontSize: "7pt", alignItems: "center", justifyContent: "center" }}>LOGO</div> : null;
+    if (!src) return placeholder ? <div style={{ ...common, border: "0.2mm dashed #888", color: "#888", fontSize: "5pt", alignItems: "center", justifyContent: "center" }}>LOGO</div> : null;
     return <img src={src} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />;
   }
-  if (el.type === "ghs") {
-    const keys = el.auto ? (data.hazardGhsKeys ?? []) : (el.symbols ?? (el.symbolKey ? [el.symbolKey] : []));
+  if (el.type === "ghs" || el.type === "psa") {
+    const lookup = el.type === "ghs" ? ghsLookup : psaLookup;
+    const autoKeys = el.type === "ghs" ? data.hazardGhsKeys : data.psaKeys;
+    const keys = el.auto ? (autoKeys ?? []) : (el.symbols ?? (el.symbolKey ? [el.symbolKey] : []));
     return (
-      <div style={{ display: "flex", gap: 2, flexWrap: "wrap", width: "100%", height: "100%", alignItems: "center", justifyContent: el.align === "center" ? "center" : "flex-start" }}>
+      <div style={{ display: "flex", gap: "0.5mm", flexWrap: "wrap", width: "100%", height: "100%", alignItems: "center", justifyContent: el.align === "center" ? "center" : "flex-start" }}>
         {keys.map((k) => {
-          const s = ghsLookup(k);
-          return s ? <img key={k} src={s.src} alt={s.label} style={{ height: "100%", maxWidth: "100%", objectFit: "contain" }} /> : null;
-        })}
-      </div>
-    );
-  }
-  if (el.type === "psa") {
-    const keys = el.auto ? (data.psaKeys ?? []) : (el.symbols ?? (el.symbolKey ? [el.symbolKey] : []));
-    return (
-      <div style={{ display: "flex", gap: 2, flexWrap: "wrap", width: "100%", height: "100%", alignItems: "center", justifyContent: el.align === "center" ? "center" : "flex-start" }}>
-        {keys.map((k) => {
-          const s = psaLookup(k);
+          const s = lookup(k);
           return s ? <img key={k} src={s.src} alt={s.label} style={{ height: "100%", maxWidth: "100%", objectFit: "contain" }} /> : null;
         })}
       </div>
@@ -111,7 +122,7 @@ function ElementView({ el, data, placeholder, ghsLookup, psaLookup }: { el: Labe
           width: "100%",
           height: "100%",
           background: el.bg || "transparent",
-          border: `${el.borderWidth ?? 1}px solid ${el.border || "#000"}`,
+          border: `${el.borderWidth ?? 0.3}mm solid ${el.border || "#000"}`,
         }}
       />
     );
@@ -141,16 +152,17 @@ export function LabelRenderer({ template, data, scale = 1, className, placeholde
     const b = psaByKey(k);
     return b ? { src: b.src, label: b.label } : null;
   };
-  return (
+
+  const label = (
     <div
-      className={className}
       style={{
         position: "relative",
-        width: `${widthPx}px`,
-        height: `${heightPx}px`,
+        width: mm(template.width_mm),
+        height: mm(template.height_mm),
         background: layout.background || "#fff",
-        boxShadow: placeholder ? "0 0 0 1px hsl(var(--border))" : undefined,
         overflow: "hidden",
+        transform: scale === 1 ? undefined : `scale(${scale})`,
+        transformOrigin: "top left",
       }}
     >
       {layout.elements.map((el) => (
@@ -158,15 +170,38 @@ export function LabelRenderer({ template, data, scale = 1, className, placeholde
           key={el.id}
           style={{
             position: "absolute",
-            left: `${el.x * MM_TO_PX * scale}px`,
-            top: `${el.y * MM_TO_PX * scale}px`,
-            width: `${el.w * MM_TO_PX * scale}px`,
-            height: `${el.h * MM_TO_PX * scale}px`,
+            left: mm(el.x),
+            top: mm(el.y),
+            width: mm(el.w),
+            height: mm(el.h),
           }}
         >
           <ElementView el={el} data={data} placeholder={placeholder} ghsLookup={ghsLookup} psaLookup={psaLookup} />
         </div>
       ))}
+    </div>
+  );
+
+  if (scale === 1) {
+    return (
+      <div className={className} style={{ boxShadow: placeholder ? "0 0 0 1px hsl(var(--border))" : undefined, width: mm(template.width_mm), height: mm(template.height_mm) }}>
+        {label}
+      </div>
+    );
+  }
+
+  // Zoom-Wrapper: rein visuell, verändert keine gespeicherten Werte.
+  return (
+    <div
+      className={className}
+      style={{
+        width: `${widthPx}px`,
+        height: `${heightPx}px`,
+        overflow: "hidden",
+        boxShadow: placeholder ? "0 0 0 1px hsl(var(--border))" : undefined,
+      }}
+    >
+      {label}
     </div>
   );
 }
