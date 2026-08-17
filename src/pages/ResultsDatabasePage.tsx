@@ -351,7 +351,10 @@ export default function ResultsDatabasePage() {
                     <Select value={xAxis} onValueChange={setXAxis}>
                       <SelectTrigger><SelectValue placeholder="Parameter wählen" /></SelectTrigger>
                       <SelectContent>
-                        {allParamNames.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                        {chartType !== "scatter" && CATEGORY_AXES.map(c => (
+                          <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                        ))}
+                        {numericParams.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -360,10 +363,11 @@ export default function ResultsDatabasePage() {
                     <Select value={yAxis} onValueChange={setYAxis}>
                       <SelectTrigger><SelectValue placeholder="Parameter wählen" /></SelectTrigger>
                       <SelectContent>
-                        {allParamNames.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                        {numericParams.map(p => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Gruppierung</label>
                     <Select value={groupBy} onValueChange={setGroupBy}>
