@@ -772,10 +772,6 @@ function CalculationInspector({
         <Label className="text-xs">Einheit anzeigen</Label>
         <Switch checked={node.show_unit !== false} onCheckedChange={(v) => onChange({ show_unit: v } as any)} disabled={disabled} />
       </div>
-      <div className="flex items-center justify-between">
-        <Label className="text-xs">Hervorheben</Label>
-        <Switch checked={!!node.highlight} onCheckedChange={(v) => onChange({ highlight: v } as any)} disabled={disabled} />
-      </div>
     </>
   );
 }
