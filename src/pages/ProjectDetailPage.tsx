@@ -128,8 +128,14 @@ export default function ProjectDetailPage() {
     return (orders as any[]).flatMap((o: any) =>
       (o.order_measurements || []).map((m: any) => ({
         ...m,
+        order_id: o.id,
         orderNumber: o.order_number,
-        sampleName: o.samples?.sample_name || o.samples?.sample_number || "–",
+        sampleName:
+          o.samples?.sample_name ||
+          o.samples?.sample_number ||
+          (o.order_samples || [])[0]?.samples?.sample_name ||
+          (o.order_samples || [])[0]?.samples?.sample_number ||
+          "–",
       }))
     );
   }, [orders]);
