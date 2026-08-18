@@ -147,6 +147,22 @@ function FormItemShell({
  * Field renderer (works for both top-level and inside-repeater)
  * ---------------------------------------------------------------- */
 
+/**
+ * Schreibzugriff auf beliebige Felder im aktuellen Scope (Formular-Root oder
+ * aktueller Repeater-Eintrag). Wird vom Messdaten-Import benötigt, der Werte
+ * in Geschwisterfelder schreibt.
+ */
+const useScopeWriter = () => {
+  const entry = useContext(EntryScopeCtx);
+  const root = useContext(ValuesCtx);
+  return useCallback(
+    (key: string, v: any) => (entry ? entry.set(key, v) : root?.set(key, v)),
+    [entry, root]
+  );
+};
+
+
+
 
 /**
  * Normalisiert gespeicherte Mehrfachauswahl-Werte auf ein String-Array.
