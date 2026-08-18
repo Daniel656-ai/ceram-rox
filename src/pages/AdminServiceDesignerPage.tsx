@@ -54,6 +54,7 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: 
     { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
   ]},
   { label: "Berechnung", types: [{ value: "computed", label: "Berechnetes Feld (Formel)" }]},
+  { label: "Messdaten", types: [{ value: "measurement_import", label: "Messdaten-Import (Copy & Paste)" }]},
   { label: "Rohstoffe", types: [{ value: "raw_material_recipe", label: "Rezeptur / Rohstoffliste (Auftraggeber)" }]},
   { label: "Wiederholbare Gruppen", types: [
     { value: "repeater", label: "Repeater (wiederholbare Einträge)" },

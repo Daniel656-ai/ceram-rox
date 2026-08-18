@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle } from "lucide-react";
+import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -24,6 +24,7 @@ import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalVali
 import { useSystemTextRenderer } from "@/context/ProcessContextProvider";
 import { containsSystemToken } from "@/lib/systemVariables";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
+import MeasurementImportDialog from "@/components/measurementImport/MeasurementImportDialog";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, formatCalcResult } from "@/lib/localCalculations";
 import type { FormCalculation } from "@/lib/api/formCalculations";
