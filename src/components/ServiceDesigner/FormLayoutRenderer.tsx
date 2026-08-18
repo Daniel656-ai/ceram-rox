@@ -605,17 +605,15 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
         );
       }
       return (
-        <div className={cn(widthCls(node.width), node.className)}>
-          <div className={cn(node.highlight && cn("rounded-md border p-2", HIGHLIGHT_CLS))}>
-            <FieldWithLabel field={f} node={node} allFields={fields} />
-          </div>
+        <div className={cn(widthCls(node.width), "min-w-0", node.className)}>
+          <FieldWithLabel field={f} node={node} allFields={fields} highlight={node.highlight} />
         </div>
       );
     }
     case "calculation": {
       const n = node as CalculationNode;
       return (
-        <div className={cn(widthCls(n.width), n.className)}>
+        <div className={cn(widthCls(n.width), "min-w-0", n.className)}>
           <CalculationDisplay node={n} />
         </div>
       );
@@ -628,8 +626,10 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
 /**
  * Einheitliche Hervorhebungs-Darstellung (ursprünglich nur für Berechnungen).
  * Reine Optik – ohne Einfluss auf Rollenrechte oder offizielle Ergebnisse.
+ * Bewusst ohne zusätzliches Padding/Border-Box, damit hervorgehobene Elemente
+ * exakt dieselbe Höhe und Ausrichtung behalten wie normale Elemente.
  */
-export const HIGHLIGHT_CLS = "border-primary/50 bg-primary/5 font-medium";
+export const HIGHLIGHT_CLS = "rounded-md ring-1 ring-inset ring-primary/50 bg-primary/5";
 
 function CalculationDisplay({ node }: { node: CalculationNode }) {
   const results = useContext(CalcResultsCtx);
@@ -638,28 +638,29 @@ function CalculationDisplay({ node }: { node: CalculationNode }) {
   const desc = node.description_override ?? res?.description ?? null;
 
   return (
-    <div className="space-y-1">
-      <Label className="text-xs flex items-center gap-1">
-        <Calculator className="h-3 w-3 text-muted-foreground" />
-        {label}
-        {node.show_unit !== false && res?.unit && (
-          <span className="text-muted-foreground font-normal ml-1">[{res.unit}]</span>
-        )}
-      </Label>
-      <div className={cn(
-        "flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/40 text-sm",
-        node.highlight && HIGHLIGHT_CLS,
-      )}>
-        {res
-          ? <span className="truncate">{formatCalcResult(res.value, res.decimals, node.show_unit === false ? null : res.unit)}</span>
-          : <span className="text-muted-foreground text-xs">Berechnung nicht gefunden</span>}
-        <Lock className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
-      </div>
-      {res?.error && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{res.error}</p>}
-      {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
-    </div>
+    <FormItemShell
+      label={label}
+      unit={node.show_unit !== false ? res?.unit ?? null : null}
+      icon={<Calculator className="h-3 w-3 text-muted-foreground shrink-0 mt-[1px]" />}
+      highlight={node.highlight}
+      control={
+        <div className="flex h-9 items-center gap-2 px-3 rounded-md border bg-muted/40 text-sm">
+          {res
+            ? <span className="truncate">{formatCalcResult(res.value, res.decimals, node.show_unit === false ? null : res.unit)}</span>
+            : <span className="text-muted-foreground text-xs">Berechnung nicht gefunden</span>}
+          <Lock className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
+        </div>
+      }
+      footer={
+        <>
+          {res?.error && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{res.error}</p>}
+          {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+        </>
+      }
+    />
   );
 }
+
 
 function TabsInner({ defaultTab, tabs, children }: { defaultTab: string; tabs: { id: string; title: string }[]; children: React.ReactNode }) {
   const [val, setVal] = useState(defaultTab);
