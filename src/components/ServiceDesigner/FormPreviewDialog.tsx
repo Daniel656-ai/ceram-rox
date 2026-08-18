@@ -88,7 +88,7 @@ export default function FormPreviewDialog({
   useLayoutEffect(() => {
     if (!open) return;
     recompute();
-  }, [open, recompute, layoutTick(fullscreen, viewKey)]);
+  }, [open, recompute, fullscreen, viewKey]);
 
   useEffect(() => {
     if (!open) return;
