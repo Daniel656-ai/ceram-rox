@@ -42,6 +42,13 @@ export default function ResultsDatabasePage() {
   const [xAxis, setXAxis] = useState<string>("");
   const [yAxis, setYAxis] = useState<string>("");
   const [groupBy, setGroupBy] = useState<string>("none");
+  const [hiddenGroups, setHiddenGroups] = useState<string[]>([]);
+  const [xAuto, setXAuto] = useState(true);
+  const [yAuto, setYAuto] = useState(true);
+  const [xManual, setXManual] = useState<ManualScale>({ min: "", max: "", step: "" });
+  const [yManual, setYManual] = useState<ManualScale>({ min: "", max: "", step: "" });
+  const [savedScale, setSavedScale] = useState<{ x: ManualScale; y: ManualScale } | null>(null);
+
 
   const resultUnits = useMemo(() => buildResultUnitMap(records), [records]);
   const { inputParameterNames, outputParameterNames } = useMemo(
