@@ -244,8 +244,9 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
   }
 }
 
-function FieldWithLabel({ field, node, allFields }: { field: FormField; node: FieldNode; allFields: FormField[] }) {
+function FieldWithLabel({ field, node, allFields, highlight }: { field: FormField; node: FieldNode; allFields: FormField[]; highlight?: boolean }) {
   const perm = usePerm(field.id);
+  const renderTokens = useSystemTextRenderer();
   if (perm.visibility === "hidden") return null;
 
   // Repeater special-case
@@ -253,7 +254,6 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
     return <RepeaterField field={field} node={node} allFields={allFields} />;
   }
 
-  const renderTokens = useSystemTextRenderer();
   const label = renderTokens(node.label_override || field.display_name);
   const desc = renderTokens(node.description_override ?? field.description ?? "") || null;
   const readonly = node.readonly || field.readonly || perm.visibility === "read" ||
@@ -261,18 +261,23 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
   const required = perm.required || field.is_required;
 
   return (
-    <div className="space-y-1">
-      <Label className="text-xs flex items-center gap-1">
-        {label} {required && <span className="text-destructive">*</span>}
-        {field.unit && <span className="text-muted-foreground font-normal ml-1">[{field.unit}]</span>}
-        {perm.locked && <Lock className="h-3 w-3 text-muted-foreground" aria-label="Nach Abschluss gesperrt" />}
-      </Label>
-      <FieldControl field={field} readonly={readonly} />
-      <GlobalValidationHint field={field} />
-      {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
-    </div>
+    <FormItemShell
+      label={label}
+      required={required}
+      unit={field.unit}
+      locked={perm.locked}
+      highlight={highlight}
+      control={<FieldControl field={field} readonly={readonly} />}
+      footer={
+        <>
+          <GlobalValidationHint field={field} />
+          {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+        </>
+      }
+    />
   );
 }
+
 
 /**
  * Zeigt Verstöße gegen zentral definierte globale Validierungen an.
