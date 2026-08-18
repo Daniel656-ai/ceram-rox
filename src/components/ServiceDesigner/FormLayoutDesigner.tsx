@@ -933,7 +933,7 @@ export function RepeaterConfigPanel({
             <Select value={newType} onValueChange={(v) => setNewType(v)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {["text","longtext","number","decimal","percent","date","time","datetime","boolean","select"].map(t => (
+                {["text","longtext","number","decimal","percent","date","time","datetime","boolean","select","measurement_import"].map(t => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
               </SelectContent>

@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
+import ImportProfileEditorDialog from "@/components/measurementImport/ImportProfileEditorDialog";
 import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle, LinkIcon, Settings, Eye, Calculator, ClipboardList, Boxes, Library } from "lucide-react";
 import type { ProcessKind, ProcessTemplate } from "@/lib/api/processTemplates";
 import type { ProcessStep } from "@/lib/api/processSteps";
@@ -54,6 +55,7 @@ const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: 
     { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
   ]},
   { label: "Berechnung", types: [{ value: "computed", label: "Berechnetes Feld (Formel)" }]},
+  { label: "Messdaten", types: [{ value: "measurement_import", label: "Messdaten-Import (Copy & Paste)" }]},
   { label: "Rohstoffe", types: [{ value: "raw_material_recipe", label: "Rezeptur / Rohstoffliste (Auftraggeber)" }]},
   { label: "Wiederholbare Gruppen", types: [
     { value: "repeater", label: "Repeater (wiederholbare Einträge)" },
@@ -835,6 +837,9 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
   const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
   const [fieldType, setFieldType] = useState<FormFieldType>(field.field_type);
   const [isResult, setIsResult] = useState(!!(field as any).is_result);
+  const [importProfileId, setImportProfileId] = useState<string>(
+    (((field.metadata ?? {}) as any)?.measurement_import?.profile_id as string) ?? ""
+  );
   const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
 
   const isNumeric = ["number", "decimal", "percent"].includes(fieldType);
@@ -842,6 +847,7 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
   const isSelect = ["select", "multiselect"].includes(fieldType);
   const isComputed = fieldType === "computed";
   const isRepeater = fieldType === "repeater";
+  const isImport = fieldType === "measurement_import";
   const typeChanged = fieldType !== field.field_type;
 
   const changeType = (next: FormFieldType) => {
@@ -890,6 +896,10 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
         max_value: isNumeric && maxV ? parseFloat(maxV) : null,
         is_result: isResult,
         result_label: isResult ? (resultLabel.trim() || null) : null,
+        metadata: {
+          ...((field.metadata ?? {}) as Record<string, unknown>),
+          measurement_import: isImport ? { profile_id: importProfileId || null } : undefined,
+        },
       } as any);
     },
     onSuccess: () => {
@@ -980,6 +990,7 @@ function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormFi
               <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
             </div>
           )}
+          {isImport && <ImportFieldConfig profileId={importProfileId} onChange={setImportProfileId} allFields={allFields} field={field} />}
           {isRepeater && (
             field.field_type === "repeater" ? (
               <RepeaterConfigPanel field={field} fields={allFields} disabled={isGlobalRef} />
@@ -1105,6 +1116,56 @@ function GlobalFormLibrary() {
           <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte ein Formular links auswählen oder anlegen.</CardContent></Card>
         )}
       </div>
+    </div>
+  );
+}
+
+
+// ---------------- Messdaten-Import: Feldkonfiguration ----------------
+function ImportFieldConfig({
+  profileId, onChange, allFields, field,
+}: { profileId: string; onChange: (v: string) => void; allFields: FormField[]; field: FormField }) {
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [createNew, setCreateNew] = useState(false);
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["measurement-import-profiles"],
+    queryFn: () => api.measurementImportProfiles.list(),
+  });
+  const selected = profiles.find(p => p.id === profileId) ?? null;
+  const targets = allFields
+    .filter(f => f.id !== field.id && f.parent_field_id === field.parent_field_id && !["repeater", "measurement_import"].includes(f.field_type))
+    .map(f => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type }));
+
+  return (
+    <div className="rounded border p-3 space-y-2 bg-muted/30">
+      <Label>Importprofil</Label>
+      <Select value={profileId || "__none__"} onValueChange={(v) => onChange(v === "__none__" ? "" : v)}>
+        <SelectTrigger><SelectValue placeholder="Profil wählen…" /></SelectTrigger>
+        <SelectContent className="max-h-72">
+          <SelectItem value="__none__">— beim Import wählen —</SelectItem>
+          {profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-muted-foreground">
+        Das Profil bestimmt Datenformat und die Zuordnung der Messparameter auf die Felder dieses
+        Formularabschnitts. Ohne Profil erfolgt ein reiner Namensabgleich; die Zuordnung kann beim Import
+        immer manuell korrigiert werden.
+      </p>
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" disabled={!selected} onClick={() => { setCreateNew(false); setEditorOpen(true); }}>
+          Profil bearbeiten
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => { setCreateNew(true); setEditorOpen(true); }}>
+          <Plus className="h-3.5 w-3.5 mr-1" />Neues Profil
+        </Button>
+      </div>
+      <ImportProfileEditorDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        profile={createNew ? null : selected}
+        targets={targets}
+        onSaved={(p) => onChange(p.id)}
+      />
     </div>
   );
 }

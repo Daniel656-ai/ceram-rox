@@ -161,6 +161,7 @@ import { formCalculations } from "./formCalculations";
 import { globalObjects, globalFields } from "./globalModel";
 import { globalLists, globalListItems, globalListAttributes, masterData, globalCalculations, globalValidations } from "./globalLibrary";
 import { formFields } from "./formFields";
+import { measurementImportProfiles } from "./measurementImportProfiles";
 import { formRoleViews } from "./formRoleViews";
 import { formFieldPermissions } from "./formFieldPermissions";
 import { serviceFormLinks } from "./serviceFormLinks";
@@ -329,6 +330,7 @@ export const api = {
   globalCalculations,
   globalValidations,
   formFields,
+  measurementImportProfiles,
   formCalculations,
   formRoleViews,
   formFieldPermissions,

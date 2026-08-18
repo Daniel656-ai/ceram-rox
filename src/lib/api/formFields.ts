@@ -8,7 +8,9 @@ export type FormFieldType =
   | "file" | "image" | "barcode" | "qrcode"
   | "ref_customer" | "ref_material" | "ref_product" | "ref_machine"
   | "ref_employee" | "ref_location" | "ref_batch" | "ref_serial"
-  | "repeater" | "handwriting" | "computed" | "raw_material_recipe";
+  | "repeater" | "handwriting" | "computed" | "raw_material_recipe"
+  /** Copy&Paste-Übernahme von Messdaten aus externer Messsoftware. */
+  | "measurement_import";
 
 export interface FormField {
   id: string;
