@@ -181,3 +181,44 @@ export function buildChartPoints(
   }
   return points;
 }
+
+/** Achsenskala für manuelle und automatische Skalierung. */
+export interface AxisScale {
+  min: number;
+  max: number;
+  step: number;
+}
+
+/** „Schöne“ Achsenskala (runde Schrittweiten) aus einem Datenbereich ableiten. */
+export function niceScale(min: number, max: number, targetTicks = 6): AxisScale {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: 0, max: 1, step: 0.25 };
+  if (min === max) {
+    const pad = Math.abs(min) > 0 ? Math.abs(min) * 0.1 : 1;
+    min -= pad;
+    max += pad;
+  }
+  const rawStep = (max - min) / Math.max(2, targetTicks - 1);
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const niceNorm = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+  const step = niceNorm * mag;
+  return {
+    min: Math.floor(min / step) * step,
+    max: Math.ceil(max / step) * step,
+    step,
+  };
+}
+
+/** Tick-Werte aus einer Skala erzeugen (begrenzt, um Überladung zu vermeiden). */
+export function buildTicks(scale: AxisScale, maxTicks = 40): number[] {
+  const { min, max, step } = scale;
+  if (!Number.isFinite(step) || step <= 0) return [];
+  const count = Math.floor((max - min) / step + 1e-9) + 1;
+  if (count > maxTicks) return [];
+  const ticks: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const v = min + i * step;
+    ticks.push(Number(v.toPrecision(12)));
+  }
+  return ticks;
+}
