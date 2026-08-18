@@ -1770,6 +1770,54 @@ export type Database = {
           },
         ]
       }
+      measurement_import_profiles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          decimal_separator: string
+          default_unit: string | null
+          description: string | null
+          format: string
+          id: string
+          is_active: boolean
+          mappings: Json
+          name: string
+          options: Json
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          decimal_separator?: string
+          default_unit?: string | null
+          description?: string | null
+          format?: string
+          id?: string
+          is_active?: boolean
+          mappings?: Json
+          name: string
+          options?: Json
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          decimal_separator?: string
+          default_unit?: string | null
+          description?: string | null
+          format?: string
+          id?: string
+          is_active?: boolean
+          mappings?: Json
+          name?: string
+          options?: Json
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       measurement_orders: {
         Row: {
           created_at: string
