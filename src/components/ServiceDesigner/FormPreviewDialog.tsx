@@ -59,6 +59,60 @@ export default function FormPreviewDialog({
   const [viewKey, setViewKey] = useState<string>(editingKey);
   const [fullscreen, setFullscreen] = useState(false);
   const [values, setValues] = useState<Record<string, any>>({});
+  const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
+  const [scale, setScale] = useState(1);
+
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const [sheetHeight, setSheetHeight] = useState(0);
+
+  const recompute = useCallback(() => {
+    const vp = viewportRef.current;
+    const sheet = sheetRef.current;
+    if (!vp) return;
+    const availW = vp.clientWidth - 48;
+    const availH = vp.clientHeight - 48;
+    const h = sheet?.scrollHeight ?? 0;
+    setSheetHeight(h);
+    const fitW = availW / SHEET_WIDTH;
+    if (zoomMode === "width") {
+      setScale(Math.min(fitW, 2));
+    } else if (zoomMode === "fit") {
+      const fitH = h > 0 ? availH / h : fitW;
+      setScale(Math.max(0.2, Math.min(fitW, fitH, 1)));
+    } else {
+      setScale(zoomMode);
+    }
+  }, [zoomMode]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    recompute();
+  }, [open, recompute, layoutTick(fullscreen, viewKey)]);
+
+  useEffect(() => {
+    if (!open) return;
+    const vp = viewportRef.current;
+    const sheet = sheetRef.current;
+    if (!vp) return;
+    const ro = new ResizeObserver(() => recompute());
+    ro.observe(vp);
+    if (sheet) ro.observe(sheet);
+    window.addEventListener("resize", recompute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", recompute);
+    };
+  }, [open, recompute]);
+
+  // Bei Öffnen und bei Vollbildwechsel immer auf "Ganzes Blatt" zurück.
+  useEffect(() => {
+    if (open) setZoomMode("fit");
+  }, [open]);
+  useEffect(() => {
+    setZoomMode("fit");
+  }, [fullscreen]);
+
 
   const { data: fields = [] } = useQuery({
     queryKey: ["form-fields", form.id],
