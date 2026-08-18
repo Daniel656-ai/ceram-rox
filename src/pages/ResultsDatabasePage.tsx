@@ -1,21 +1,27 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, buildResultUnitMap, withUnit, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Database, BarChart3, Filter, X, Search } from "lucide-react";
+import { Download, Database, BarChart3, Filter, X, Search, Image, FileCode2, Lightbulb, Save, Trash2 } from "lucide-react";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { de } from "date-fns/locale";
 import * as XLSX from "xlsx";
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from "recharts";
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, ReferenceLine, LabelList, Cell } from "recharts";
 import { buildChartSources, collectNumericParameters, buildChartPoints, isCategoryAxis, CATEGORY_AXES, niceScale, buildTicks, type AxisScale } from "@/lib/resultsChartData";
 import { AxisScaleControls, type ManualScale } from "@/components/results/AxisScaleControls";
+import { computeStats, isOutlier, linearRegression, formatNumber, buildInsights } from "@/lib/resultsStatistics";
+import { exportChartAsPng, exportChartAsSvg } from "@/lib/chartExport";
+import { loadSavedAnalyses, persistSavedAnalyses, type SavedAnalysis } from "@/lib/resultsAnalysisStorage";
 import { toast } from "sonner";
+
 
 
 const CHART_COLORS = [
@@ -48,6 +54,20 @@ export default function ResultsDatabasePage() {
   const [xManual, setXManual] = useState<ManualScale>({ min: "", max: "", step: "" });
   const [yManual, setYManual] = useState<ManualScale>({ min: "", max: "", step: "" });
   const [savedScale, setSavedScale] = useState<{ x: ManualScale; y: ManualScale } | null>(null);
+
+  // Darstellung & Analyse (Priorität 2/3)
+  const [showTrend, setShowTrend] = useState(false);
+  const [showMeanLines, setShowMeanLines] = useState(false);
+  const [showDataLabels, setShowDataLabels] = useState(false);
+  const [markOutliers, setMarkOutliers] = useState(false);
+  const [refLineY, setRefLineY] = useState("");
+  const [refLineX, setRefLineX] = useState("");
+  const [analysisName, setAnalysisName] = useState("");
+  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setSavedAnalyses(loadSavedAnalyses()), []);
+
 
 
   const resultUnits = useMemo(() => buildResultUnitMap(records), [records]);
