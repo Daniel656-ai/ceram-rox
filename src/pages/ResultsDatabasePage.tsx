@@ -976,24 +976,48 @@ export default function ResultsDatabasePage() {
               </CardContent>
             </Card>
 
-            {/* Summary stats */}
-            {xAxis && yAxis && visibleData.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-4">
+            {/* Erweiterte Statistik */}
+            {xAxis && yAxis && yStats && (
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
                 {[
-                  { label: "Datenpunkte", value: `${visibleData.length}${visibleData.length !== chartData.length ? ` von ${chartData.length}` : ""}` },
-                  { label: `Ø ${axisLabel(yAxis)}`, value: (visibleData.reduce((s, d) => s + d.y, 0) / visibleData.length).toFixed(2) },
-                  { label: `Min ${axisLabel(yAxis)}`, value: Math.min(...visibleData.map(d => d.y)).toFixed(2) },
-                  { label: `Max ${axisLabel(yAxis)}`, value: Math.max(...visibleData.map(d => d.y)).toFixed(2) },
+                  { label: "Datenpunkte", value: `${visibleData.length}${visibleData.length !== chartData.length ? ` / ${chartData.length}` : ""}` },
+                  { label: `Ø ${axisLabel(yAxis)}`, value: formatNumber(yStats.mean) },
+                  { label: "Median", value: formatNumber(yStats.median) },
+                  { label: "Standardabw.", value: formatNumber(yStats.sd) },
+                  { label: "Q1 / Q3", value: `${formatNumber(yStats.q1)} / ${formatNumber(yStats.q3)}` },
+                  { label: "Min / Max", value: `${formatNumber(yStats.min)} / ${formatNumber(yStats.max)}` },
                 ].map(stat => (
                   <Card key={stat.label}>
                     <CardContent className="pt-4 pb-3">
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
-                      <p className="text-xl font-bold font-mono">{stat.value}</p>
+                      <p className="text-lg font-bold font-mono">{stat.value}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
+
+            {/* Automatische Auswertung */}
+            {insights.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4" /> Automatische Auswertung
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1.5 text-sm">
+                  {regression && (
+                    <p className="text-xs text-muted-foreground">
+                      Regression: y = {formatNumber(regression.slope, 4)} · x + {formatNumber(regression.intercept, 4)} · R² = {formatNumber(regression.r2, 3)} (n = {regression.n})
+                    </p>
+                  )}
+                  <ul className="list-disc pl-5 space-y-1">
+                    {insights.map((i, idx) => <li key={idx}>{i}</li>)}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
 
           </div>
         </TabsContent>
