@@ -177,10 +177,11 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
       );
     case "boolean":
       return (
-        <div className="pt-1">
+        <div className="flex h-9 items-center">
           <Switch checked={!!value} disabled={disabled} onCheckedChange={(v) => setValue(v)} />
         </div>
       );
+
     case "select":
     case "multiselect":
       return (
