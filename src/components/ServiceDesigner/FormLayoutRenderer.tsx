@@ -104,8 +104,48 @@ const widthCls = (w?: LayoutWidth) => {
 };
 
 /* ----------------------------------------------------------------
+ * Einheitliche Hülle für ALLE Formularelemente (Feld, Berechnung, …)
+ *
+ * Ziel: gleiche Label-Zone, gleiche Kontrollhöhe, gleiche Abstände. Der
+ * Außenabstand kommt ausschließlich vom Grid (gap), nie vom Element selbst.
+ * ---------------------------------------------------------------- */
+
+/** Reservierte Höhe der Label-Zeile (max. 2 Zeilen) – hält Controls auf einer Linie. */
+const LABEL_ZONE = "text-xs leading-tight min-h-[1.75rem] flex items-start gap-1 [overflow-wrap:anywhere]";
+/** Einheitliche Mindesthöhe von Eingaben/Anzeigen. */
+export const CONTROL_H = "min-h-9";
+
+function FormItemShell({
+  label, required, unit, locked, icon, highlight, control, footer,
+}: {
+  label: React.ReactNode;
+  required?: boolean;
+  unit?: string | null;
+  locked?: boolean;
+  icon?: React.ReactNode;
+  highlight?: boolean;
+  control: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <div className={cn("flex h-full flex-col gap-1", highlight && HIGHLIGHT_CLS)}>
+      <Label className={LABEL_ZONE}>
+        {icon}
+        <span className="line-clamp-2">{label}</span>
+        {required && <span className="text-destructive">*</span>}
+        {unit && <span className="text-muted-foreground font-normal">[{unit}]</span>}
+        {locked && <Lock className="h-3 w-3 text-muted-foreground shrink-0" aria-label="Gesperrt" />}
+      </Label>
+      <div className={cn("min-w-0", CONTROL_H)}>{control}</div>
+      {footer}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------
  * Field renderer (works for both top-level and inside-repeater)
  * ---------------------------------------------------------------- */
+
 
 function FieldControl({ field, readonly }: { field: FormField; readonly: boolean }) {
   const { value, setValue, interactive } = useBinding(field.field_key);
