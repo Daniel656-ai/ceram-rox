@@ -260,7 +260,10 @@ export function mapReadings(
 
 /** Wert, der tatsächlich in das Formularfeld geschrieben wird. */
 export function outputValue(row: MappedRow): number | string | null {
-  if (row.value == null) return row.belowDetection ? row.raw : null;
+  // Werte unterhalb der Nachweisgrenze werden als Rohtext übernommen ("<0,01"),
+  // damit die fachliche Aussage erhalten bleibt.
+  if (row.belowDetection) return row.raw || null;
+  if (row.value == null) return null;
   const f = row.factor;
   return typeof f === "number" && Number.isFinite(f) && f !== 0 ? row.value * f : row.value;
 }
