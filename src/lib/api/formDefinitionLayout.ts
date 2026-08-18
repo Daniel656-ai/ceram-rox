@@ -3,7 +3,11 @@
  * Keeps data structure (form_fields) and presentation (layout tree) separate.
  */
 
-export type LayoutWidth = 12 | 9 | 8 | 6 | 4 | 3;
+/**
+ * Breite eines Knotens im 12-Spalten-Raster. Historisch waren nur
+ * 12/9/8/6/4/3 möglich – jetzt jede Breite von 1 bis 12 (abwärtskompatibel).
+ */
+export type LayoutWidth = 12 | 11 | 10 | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1;
 
 /** Maximale Spaltenanzahl eines Spaltenlayouts – zentral, an einer Stelle. */
 export const MAX_COLUMNS = 12;

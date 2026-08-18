@@ -79,20 +79,73 @@ const useBinding = (fieldKey: string) => {
  * Layout helpers
  * ---------------------------------------------------------------- */
 
+/**
+ * Einheitliche Breitenklassen für ALLE Knotentypen (Felder, Berechnungen,
+ * Container). Statische Tailwind-Klassen, damit jede Breite von 1/12 bis 12/12
+ * zur Verfügung steht – dadurch können Eingaben und Berechnungen in derselben
+ * Zeile liegen, ohne dass ein Element in eine eigene Zeile springt.
+ */
 const widthCls = (w?: LayoutWidth) => {
-  switch (w) {
-    case 3: return "col-span-12 md:col-span-3";
-    case 4: return "col-span-12 md:col-span-4";
+  switch (Math.max(1, Math.min(12, Math.round(Number(w ?? 12)))) as number) {
+    case 1: return "col-span-6 md:col-span-1";
+    case 2: return "col-span-6 md:col-span-2";
+    case 3: return "col-span-6 md:col-span-3";
+    case 4: return "col-span-6 md:col-span-4";
+    case 5: return "col-span-12 md:col-span-5";
     case 6: return "col-span-12 md:col-span-6";
+    case 7: return "col-span-12 md:col-span-7";
     case 8: return "col-span-12 md:col-span-8";
     case 9: return "col-span-12 md:col-span-9";
+    case 10: return "col-span-12 md:col-span-10";
+    case 11: return "col-span-12 md:col-span-11";
     default: return "col-span-12";
   }
+
 };
+
+/* ----------------------------------------------------------------
+ * Einheitliche Hülle für ALLE Formularelemente (Feld, Berechnung, …)
+ *
+ * Ziel: gleiche Label-Zone, gleiche Kontrollhöhe, gleiche Abstände. Der
+ * Außenabstand kommt ausschließlich vom Grid (gap), nie vom Element selbst.
+ * ---------------------------------------------------------------- */
+
+/** Reservierte Höhe der Label-Zeile (max. 2 Zeilen) – hält Controls auf einer Linie. */
+const LABEL_ZONE = "text-xs leading-tight min-h-[1.75rem] flex items-start gap-1 [overflow-wrap:anywhere]";
+/** Einheitliche Mindesthöhe von Eingaben/Anzeigen. */
+export const CONTROL_H = "min-h-9";
+
+function FormItemShell({
+  label, required, unit, locked, icon, highlight, control, footer,
+}: {
+  label: React.ReactNode;
+  required?: boolean;
+  unit?: string | null;
+  locked?: boolean;
+  icon?: React.ReactNode;
+  highlight?: boolean;
+  control: React.ReactNode;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <div className={cn("flex h-full flex-col gap-1", highlight && HIGHLIGHT_CLS)}>
+      <Label className={LABEL_ZONE}>
+        {icon}
+        <span className="line-clamp-2">{label}</span>
+        {required && <span className="text-destructive">*</span>}
+        {unit && <span className="text-muted-foreground font-normal">[{unit}]</span>}
+        {locked && <Lock className="h-3 w-3 text-muted-foreground shrink-0" aria-label="Gesperrt" />}
+      </Label>
+      <div className={cn("min-w-0", CONTROL_H)}>{control}</div>
+      {footer}
+    </div>
+  );
+}
 
 /* ----------------------------------------------------------------
  * Field renderer (works for both top-level and inside-repeater)
  * ---------------------------------------------------------------- */
+
 
 function FieldControl({ field, readonly }: { field: FormField; readonly: boolean }) {
   const { value, setValue, interactive } = useBinding(field.field_key);
@@ -124,10 +177,11 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
       );
     case "boolean":
       return (
-        <div className="pt-1">
+        <div className="flex h-9 items-center">
           <Switch checked={!!value} disabled={disabled} onCheckedChange={(v) => setValue(v)} />
         </div>
       );
+
     case "select":
     case "multiselect":
       return (
@@ -190,8 +244,9 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
   }
 }
 
-function FieldWithLabel({ field, node, allFields }: { field: FormField; node: FieldNode; allFields: FormField[] }) {
+function FieldWithLabel({ field, node, allFields, highlight }: { field: FormField; node: FieldNode; allFields: FormField[]; highlight?: boolean }) {
   const perm = usePerm(field.id);
+  const renderTokens = useSystemTextRenderer();
   if (perm.visibility === "hidden") return null;
 
   // Repeater special-case
@@ -199,7 +254,6 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
     return <RepeaterField field={field} node={node} allFields={allFields} />;
   }
 
-  const renderTokens = useSystemTextRenderer();
   const label = renderTokens(node.label_override || field.display_name);
   const desc = renderTokens(node.description_override ?? field.description ?? "") || null;
   const readonly = node.readonly || field.readonly || perm.visibility === "read" ||
@@ -207,18 +261,23 @@ function FieldWithLabel({ field, node, allFields }: { field: FormField; node: Fi
   const required = perm.required || field.is_required;
 
   return (
-    <div className="space-y-1">
-      <Label className="text-xs flex items-center gap-1">
-        {label} {required && <span className="text-destructive">*</span>}
-        {field.unit && <span className="text-muted-foreground font-normal ml-1">[{field.unit}]</span>}
-        {perm.locked && <Lock className="h-3 w-3 text-muted-foreground" aria-label="Nach Abschluss gesperrt" />}
-      </Label>
-      <FieldControl field={field} readonly={readonly} />
-      <GlobalValidationHint field={field} />
-      {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
-    </div>
+    <FormItemShell
+      label={label}
+      required={required}
+      unit={field.unit}
+      locked={perm.locked}
+      highlight={highlight}
+      control={<FieldControl field={field} readonly={readonly} />}
+      footer={
+        <>
+          <GlobalValidationHint field={field} />
+          {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+        </>
+      }
+    />
   );
 }
+
 
 /**
  * Zeigt Verstöße gegen zentral definierte globale Validierungen an.
@@ -546,17 +605,15 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
         );
       }
       return (
-        <div className={cn(widthCls(node.width), node.className)}>
-          <div className={cn(node.highlight && cn("rounded-md border p-2", HIGHLIGHT_CLS))}>
-            <FieldWithLabel field={f} node={node} allFields={fields} />
-          </div>
+        <div className={cn(widthCls(node.width), "min-w-0", node.className)}>
+          <FieldWithLabel field={f} node={node} allFields={fields} highlight={node.highlight} />
         </div>
       );
     }
     case "calculation": {
       const n = node as CalculationNode;
       return (
-        <div className={cn(widthCls(n.width), n.className)}>
+        <div className={cn(widthCls(n.width), "min-w-0", n.className)}>
           <CalculationDisplay node={n} />
         </div>
       );
@@ -569,8 +626,10 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
 /**
  * Einheitliche Hervorhebungs-Darstellung (ursprünglich nur für Berechnungen).
  * Reine Optik – ohne Einfluss auf Rollenrechte oder offizielle Ergebnisse.
+ * Bewusst ohne zusätzliches Padding/Border-Box, damit hervorgehobene Elemente
+ * exakt dieselbe Höhe und Ausrichtung behalten wie normale Elemente.
  */
-export const HIGHLIGHT_CLS = "border-primary/50 bg-primary/5 font-medium";
+export const HIGHLIGHT_CLS = "rounded-md ring-1 ring-inset ring-primary/50 bg-primary/5";
 
 function CalculationDisplay({ node }: { node: CalculationNode }) {
   const results = useContext(CalcResultsCtx);
@@ -579,28 +638,29 @@ function CalculationDisplay({ node }: { node: CalculationNode }) {
   const desc = node.description_override ?? res?.description ?? null;
 
   return (
-    <div className="space-y-1">
-      <Label className="text-xs flex items-center gap-1">
-        <Calculator className="h-3 w-3 text-muted-foreground" />
-        {label}
-        {node.show_unit !== false && res?.unit && (
-          <span className="text-muted-foreground font-normal ml-1">[{res.unit}]</span>
-        )}
-      </Label>
-      <div className={cn(
-        "flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/40 text-sm",
-        node.highlight && HIGHLIGHT_CLS,
-      )}>
-        {res
-          ? <span className="truncate">{formatCalcResult(res.value, res.decimals, node.show_unit === false ? null : res.unit)}</span>
-          : <span className="text-muted-foreground text-xs">Berechnung nicht gefunden</span>}
-        <Lock className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
-      </div>
-      {res?.error && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{res.error}</p>}
-      {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
-    </div>
+    <FormItemShell
+      label={label}
+      unit={node.show_unit !== false ? res?.unit ?? null : null}
+      icon={<Calculator className="h-3 w-3 text-muted-foreground shrink-0 mt-[1px]" />}
+      highlight={node.highlight}
+      control={
+        <div className="flex h-9 items-center gap-2 px-3 rounded-md border bg-muted/40 text-sm">
+          {res
+            ? <span className="truncate">{formatCalcResult(res.value, res.decimals, node.show_unit === false ? null : res.unit)}</span>
+            : <span className="text-muted-foreground text-xs">Berechnung nicht gefunden</span>}
+          <Lock className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
+        </div>
+      }
+      footer={
+        <>
+          {res?.error && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{res.error}</p>}
+          {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+        </>
+      }
+    />
   );
 }
+
 
 function TabsInner({ defaultTab, tabs, children }: { defaultTab: string; tabs: { id: string; title: string }[]; children: React.ReactNode }) {
   const [val, setVal] = useState(defaultTab);
