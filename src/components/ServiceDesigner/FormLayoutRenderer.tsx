@@ -79,15 +79,28 @@ const useBinding = (fieldKey: string) => {
  * Layout helpers
  * ---------------------------------------------------------------- */
 
+/**
+ * Einheitliche Breitenklassen für ALLE Knotentypen (Felder, Berechnungen,
+ * Container). Statische Tailwind-Klassen, damit jede Breite von 1/12 bis 12/12
+ * zur Verfügung steht – dadurch können Eingaben und Berechnungen in derselben
+ * Zeile liegen, ohne dass ein Element in eine eigene Zeile springt.
+ */
 const widthCls = (w?: LayoutWidth) => {
-  switch (w) {
-    case 3: return "col-span-12 md:col-span-3";
-    case 4: return "col-span-12 md:col-span-4";
+  switch (Math.max(1, Math.min(12, Math.round(Number(w ?? 12)))) as number) {
+    case 1: return "col-span-6 md:col-span-1";
+    case 2: return "col-span-6 md:col-span-2";
+    case 3: return "col-span-6 md:col-span-3";
+    case 4: return "col-span-6 md:col-span-4";
+    case 5: return "col-span-12 md:col-span-5";
     case 6: return "col-span-12 md:col-span-6";
+    case 7: return "col-span-12 md:col-span-7";
     case 8: return "col-span-12 md:col-span-8";
     case 9: return "col-span-12 md:col-span-9";
+    case 10: return "col-span-12 md:col-span-10";
+    case 11: return "col-span-12 md:col-span-11";
     default: return "col-span-12";
   }
+
 };
 
 /* ----------------------------------------------------------------
