@@ -310,6 +310,79 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
   }
 }
 
+/* ----------------------------------------------------------------
+ * Messdaten-Import (Copy & Paste aus externer Messsoftware)
+ * ---------------------------------------------------------------- */
+
+/** Lesbare Konfiguration des Import-Feldes aus metadata.measurement_import. */
+export const readImportMeta = (field: FormField): { profile_id: string | null; allow_manual_mapping: boolean } => {
+  const m = ((field.metadata ?? {}) as any).measurement_import ?? {};
+  return {
+    profile_id: typeof m.profile_id === "string" ? m.profile_id : null,
+    allow_manual_mapping: m.allow_manual_mapping !== false,
+  };
+};
+
+function MeasurementImportControl({ field, allFields, readonly }: { field: FormField; allFields: FormField[]; readonly: boolean }) {
+  const { value, setValue, interactive } = useBinding(field.field_key);
+  const write = useScopeWriter();
+  const [open, setOpen] = useState(false);
+  const cfg = readImportMeta(field);
+
+  const targets = useMemo(
+    () =>
+      allFields
+        .filter(
+          (f) =>
+            f.id !== field.id &&
+            f.parent_field_id === field.parent_field_id &&
+            !["repeater", "measurement_import"].includes(f.field_type)
+        )
+        .map((f) => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type })),
+    [allFields, field.id, field.parent_field_id]
+  );
+
+  let last: any = null;
+  try { last = typeof value === "string" && value.startsWith("{") ? JSON.parse(value) : value; } catch { last = null; }
+
+  return (
+    <div className="space-y-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={readonly || !interactive}
+        onClick={() => setOpen(true)}
+      >
+        <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Messdaten einfügen
+      </Button>
+      {last?.imported_at && (
+        <p className="text-[11px] text-muted-foreground">
+          Zuletzt importiert: {new Date(last.imported_at).toLocaleString("de-AT")} · {last.profile ?? "ohne Profil"}
+          {last.sample ? ` · ${last.sample}` : ""} · {last.count} Wert(e)
+        </p>
+      )}
+      {open && (
+        <MeasurementImportDialog
+          open={open}
+          onOpenChange={setOpen}
+          defaultProfileId={cfg.profile_id}
+          targets={targets}
+          onApply={(values, meta) => {
+            for (const [k, v] of Object.entries(values)) write(k, v);
+            setValue(JSON.stringify({
+              imported_at: new Date().toISOString(),
+              profile: meta.profileName,
+              sample: meta.sampleLabel,
+              count: meta.count,
+            }));
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 function FieldWithLabel({ field, node, allFields, highlight }: { field: FormField; node: FieldNode; allFields: FormField[]; highlight?: boolean }) {
   const perm = usePerm(field.id);
   const renderTokens = useSystemTextRenderer();
@@ -319,6 +392,26 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
   if (field.field_type === "repeater") {
     return <RepeaterField field={field} node={node} allFields={allFields} />;
   }
+
+  if (field.field_type === "measurement_import") {
+    const roDisabled = node.readonly || field.readonly || perm.visibility === "read";
+    return (
+      <FormItemShell
+        label={renderTokens(node.label_override || field.display_name)}
+        highlight={highlight}
+        icon={<ClipboardPaste className="h-3 w-3 text-primary" />}
+        control={<MeasurementImportControl field={field} allFields={allFields} readonly={roDisabled} />}
+        footer={
+          (node.description_override ?? field.description) ? (
+            <p className="text-xs text-muted-foreground">
+              {renderTokens(node.description_override ?? field.description ?? "")}
+            </p>
+          ) : null
+        }
+      />
+    );
+  }
+
 
   const label = renderTokens(node.label_override || field.display_name);
   const desc = renderTokens(node.description_override ?? field.description ?? "") || null;
