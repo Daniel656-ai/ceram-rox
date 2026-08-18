@@ -28,9 +28,10 @@ import { cn } from "@/lib/utils";
 import {
   LayoutGrid, Columns3, Columns2, Square, Minus, Heading1,
   StickyNote, Save, RotateCcw, Trash2, ChevronRight, ChevronDown,
-  GripVertical, FolderTree, Folders, Plus, Rows, Calculator,
+  GripVertical, FolderTree, Folders, Plus, Rows, Calculator, Eye,
 } from "lucide-react";
 import FormLayoutRenderer from "./FormLayoutRenderer";
+import FormPreviewDialog from "./FormPreviewDialog";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 import SystemVariablesPanel from "./SystemVariablesPanel";
 
@@ -54,10 +55,15 @@ const PALETTE: { key: LayoutNodeType; label: string; icon: any; extra?: any }[] 
   { key: "calculation", label: "Berechnung", icon: Calculator },
 ];
 
-const WIDTH_OPTS: { v: LayoutWidth; l: string }[] = [
-  { v: 12, l: "100%" }, { v: 9, l: "75%" }, { v: 8, l: "66%" },
-  { v: 6, l: "50%" }, { v: 4, l: "33%" }, { v: 3, l: "25%" },
-];
+/**
+ * Breiten im 12-Spalten-Raster – jede Spaltenzahl von 1 bis 12 ist wählbar,
+ * damit Felder und Berechnungen exakt nebeneinander passen.
+ */
+const WIDTH_OPTS: { v: LayoutWidth; l: string }[] =
+  ([12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1] as LayoutWidth[]).map((v) => ({
+    v,
+    l: `${v}/12 · ${Math.round((v / 12) * 100)} %`,
+  }));
 
 const TYPE_LABELS: Record<LayoutNodeType, string> = {
   section: "Abschnitt", group: "Gruppe", tabs: "Tabs", tab: "Tab",
@@ -89,6 +95,7 @@ export default function FormLayoutDesigner({
   onSaveLayout,
   saveLabel = "Speichern",
   headerTitle = "Formular-Aufbau",
+  roleKey,
 }: {
   form: FormDefinition;
   canManage: boolean;
@@ -98,6 +105,8 @@ export default function FormLayoutDesigner({
   onSaveLayout?: (layout: FormLayoutTree) => Promise<void>;
   saveLabel?: string;
   headerTitle?: string;
+  /** Rollenschlüssel der bearbeiteten Ansicht (für die Live-Vorschau). */
+  roleKey?: string | null;
 }) {
   const qc = useQueryClient();
   const { data: fields = [] } = useQuery({
@@ -110,6 +119,7 @@ export default function FormLayoutDesigner({
   const [dirty, setDirty] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<DragData | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     setLayout(normalizeLayout(initialLayout ?? (form as any).layout));
@@ -223,6 +233,9 @@ export default function FormLayoutDesigner({
               <CardTitle className="text-sm">{headerTitle}</CardTitle>
               <div className="flex gap-2">
                 {dirty && <Badge variant="secondary">Ungespeichert</Badge>}
+                <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)}>
+                  <Eye className="h-3 w-3 mr-1" />Live-Vorschau öffnen
+                </Button>
                 <Button size="sm" variant="ghost" onClick={() => { setLayout(normalizeLayout(initialLayout ?? (form as any).layout)); setDirty(false); setSelectedId(null); }} disabled={!dirty}>
                   <RotateCcw className="h-3 w-3 mr-1" />Zurücksetzen
                 </Button>
@@ -267,6 +280,14 @@ export default function FormLayoutDesigner({
           </Card>
         </div>
       </div>
+
+      <FormPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        form={form}
+        currentLayout={layout}
+        currentRoleKey={roleKey}
+      />
 
       <DragOverlay>
         {dragging && <div className="border rounded bg-background shadow px-2 py-1 text-xs">

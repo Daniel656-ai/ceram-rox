@@ -227,6 +227,7 @@ export default function RoleViewsDesigner({ form, canManage, fieldsSlot, calcula
                     form={form}
                     canManage={canManage}
                     initialLayout={normalizeLayout(activeView.layout)}
+                    roleKey={activeView.role_key}
                     headerTitle={`Layout — ${activeView.label}`}
                     saveLabel="Rollen-Layout gespeichert"
                     onSaveLayout={(layout) =>
