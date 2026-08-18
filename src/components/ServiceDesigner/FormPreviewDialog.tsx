@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
@@ -15,6 +15,23 @@ import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STANDARD = "__standard__";
+
+/** Feste Blattbreite der Vorschau (entspricht der realen Formularbreite). */
+const SHEET_WIDTH = 1120;
+const SHEET_PADDING = 40;
+
+type ZoomMode = "fit" | "width" | number;
+
+const ZOOM_OPTIONS: { value: string; label: string }[] = [
+  { value: "fit", label: "Ganzes Blatt" },
+  { value: "width", label: "Seitenbreite" },
+  { value: "0.5", label: "50 %" },
+  { value: "0.75", label: "75 %" },
+  { value: "1", label: "100 %" },
+  { value: "1.25", label: "125 %" },
+  { value: "1.5", label: "150 %" },
+];
+
 
 /**
  * Live-Vorschau eines Globalen Formulars in einem großen Dialog.
