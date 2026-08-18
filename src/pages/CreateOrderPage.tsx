@@ -472,7 +472,10 @@ export default function CreateOrderPage() {
             paramInserts.push({
               order_measurement_id: createdMeasurement.id,
               parameter_name: (f as any)?.display_name || key,
-              parameter_value: typeof v === "boolean" ? (v ? "true" : "false") : String(v),
+              parameter_value:
+                typeof v === "boolean" ? (v ? "true" : "false")
+                  : (Array.isArray(v) || (v && typeof v === "object")) ? JSON.stringify(v)
+                  : String(v),
               unit: (f as any)?.unit || null,
             });
           }

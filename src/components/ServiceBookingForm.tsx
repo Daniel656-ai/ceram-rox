@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toStringArray } from "@/components/ServiceDesigner/FormLayoutRenderer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -442,6 +444,32 @@ function renderInput(field: any, value: any, onChange: (v: any) => void, readonl
         </Select>
       );
     }
+    case "multiselect": {
+      const opts = (field.select_options || []).map((o: any) => typeof o === "string" ? { label: o, value: o } : o);
+      const selected = toStringArray(value);
+      return (
+        <div className="rounded-md border px-3 py-2 space-y-1.5">
+          {opts.length === 0 ? (
+            <span className="text-xs text-muted-foreground">Keine Optionen konfiguriert</span>
+          ) : opts.map((o: any) => (
+            <div key={o.value} className="flex items-center gap-2">
+              <Checkbox
+                id={`ms-${field.id}-${o.value}`}
+                checked={selected.includes(String(o.value))}
+                disabled={readonly}
+                onCheckedChange={(c) =>
+                  onChange(c === true
+                    ? [...selected.filter((s) => s !== String(o.value)), String(o.value)]
+                    : selected.filter((s) => s !== String(o.value)))
+                }
+              />
+              <Label htmlFor={`ms-${field.id}-${o.value}`} className="text-sm font-normal cursor-pointer">{o.label}</Label>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     case "ref_material":
       return <RawMaterialSelectField value={value} onChange={onChange} disabled={readonly} />;
     case "raw_material_recipe":

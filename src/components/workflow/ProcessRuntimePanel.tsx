@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toStringArray } from "@/components/ServiceDesigner/FormLayoutRenderer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CheckCircle2, Circle, Clock, Lock, PlayCircle, Loader2, Info, Factory } from "lucide-react";
@@ -392,6 +394,36 @@ function FieldInput({
           </Select>
         );
       }
+      case "multiselect": {
+        const opts = (field.select_options ?? []) as Array<any>;
+        const selected = toStringArray(value);
+        return (
+          <div className="rounded-md border px-3 py-2 space-y-1.5">
+            {opts.length === 0 ? (
+              <span className="text-xs text-muted-foreground">Keine Optionen konfiguriert</span>
+            ) : opts.map((o, i) => {
+              const v = String(typeof o === "string" ? o : o.value);
+              const l = typeof o === "string" ? o : o.label;
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`f-${field.id}-${i}`}
+                    checked={selected.includes(v)}
+                    disabled={isReadonly}
+                    onCheckedChange={(c) =>
+                      onChange(c === true
+                        ? [...selected.filter((s) => s !== v), v]
+                        : selected.filter((s) => s !== v))
+                    }
+                  />
+                  <Label htmlFor={`f-${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{l}</Label>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+
       case "ref_material":
         return <RawMaterialSelectField value={value} onChange={onChange} disabled={isReadonly} />;
       case "raw_material_recipe":

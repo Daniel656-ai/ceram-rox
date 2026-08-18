@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,6 +148,23 @@ function FormItemShell({
  * ---------------------------------------------------------------- */
 
 
+/**
+ * Normalisiert gespeicherte Mehrfachauswahl-Werte auf ein String-Array.
+ * Rückwärtskompatibel: Array, JSON-Array-String, Komma-Liste oder Einzelwert.
+ */
+export function toStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => String(x)).filter((s) => s !== "");
+  if (v == null || v === "") return [];
+  const s = String(v).trim();
+  if (s.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return parsed.map((x) => String(x)).filter(Boolean);
+    } catch { /* fällt auf Komma-Trennung zurück */ }
+  }
+  return s.split(",").map((x) => x.trim()).filter(Boolean);
+}
+
 function FieldControl({ field, readonly }: { field: FormField; readonly: boolean }) {
   const { value, setValue, interactive } = useBinding(field.field_key);
   const disabled = readonly || !interactive;
@@ -183,7 +201,6 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
       );
 
     case "select":
-    case "multiselect":
       return (
         <Select value={value ?? ""} onValueChange={(v) => setValue(v)} disabled={disabled}>
           <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
@@ -196,6 +213,39 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
           </SelectContent>
         </Select>
       );
+    case "multiselect": {
+      const selected = toStringArray(value);
+      const toggle = (v: string, on: boolean) => {
+        const next = on ? [...selected.filter((s) => s !== v), v] : selected.filter((s) => s !== v);
+        setValue(next);
+      };
+      const options = field.select_options ?? [];
+      return (
+        <div className="rounded-md border px-3 py-2 space-y-1.5 min-h-9">
+          {options.length === 0 ? (
+            <span className="text-xs text-muted-foreground">Keine Optionen konfiguriert</span>
+          ) : (
+            options.map((o, i) => {
+              const v = (typeof o === "string" ? o : o.value) || String(i);
+              const l = typeof o === "string" ? o : o.label;
+              const id = `${field.id}-ms-${i}`;
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <Checkbox
+                    id={id}
+                    checked={selected.includes(v)}
+                    disabled={disabled}
+                    onCheckedChange={(c) => toggle(v, c === true)}
+                  />
+                  <Label htmlFor={id} className="text-sm font-normal cursor-pointer">{l}</Label>
+                </div>
+              );
+            })
+          )}
+        </div>
+      );
+    }
+
     case "date":
     case "time":
     case "datetime":

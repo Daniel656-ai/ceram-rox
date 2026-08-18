@@ -699,12 +699,18 @@ function PreviewField({ field, readonly }: { field: ServiceDataField; readonly: 
     );
   } else if (t === "multiselect") {
     control = (
-      <div className="border rounded-md p-2 flex flex-wrap gap-1 min-h-9">
+      <div className="border rounded-md p-2 space-y-1.5 min-h-9">
         {opts.length === 0
           ? <span className="text-xs text-muted-foreground">Keine Optionen</span>
-          : opts.map((o) => <Badge key={o.value} variant="secondary" className="text-[10px]">{o.label}</Badge>)}
+          : opts.map((o) => (
+              <div key={o.value} className="flex items-center gap-2">
+                <span className="h-3.5 w-3.5 rounded-[3px] border border-input shrink-0" />
+                <span className="text-xs">{o.label}</span>
+              </div>
+            ))}
       </div>
     );
+
   } else if (t === "date" || t === "time" || t === "datetime") {
     const it = t === "date" ? "date" : t === "time" ? "time" : "datetime-local";
     control = <Input type={it} disabled={readonly} className={common} />;

@@ -554,7 +554,16 @@ function tryParseJSON(s: string): any {
 function formatScalar(v: any): string {
   if (v == null || v === "") return "–";
   if (typeof v === "boolean") return v ? "Ja" : "Nein";
-  return String(v);
+  if (Array.isArray(v)) return v.length ? v.map((x) => String(x)).join(", ") : "–";
+  // Mehrfachauswahl wird als JSON-Array gespeichert
+  const s = String(v);
+  if (s.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return parsed.length ? parsed.map((x) => String(x)).join(", ") : "–";
+    } catch { /* Rohwert anzeigen */ }
+  }
+  return s;
 }
 
 function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
