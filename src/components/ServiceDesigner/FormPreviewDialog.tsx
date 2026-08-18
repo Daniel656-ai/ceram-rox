@@ -161,7 +161,7 @@ export default function FormPreviewDialog({
             <div className="flex items-center gap-2">
               <Label className="text-xs text-muted-foreground">Ansicht</Label>
               <Select value={viewKey} onValueChange={setViewKey}>
-                <SelectTrigger className="h-8 w-56 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-48 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={STANDARD}>Standardformular</SelectItem>
                   {roleViews.map((v) => (
@@ -169,6 +169,21 @@ export default function FormPreviewDialog({
                   ))}
                 </SelectContent>
               </Select>
+              <Label className="text-xs text-muted-foreground">Zoom</Label>
+              <Select
+                value={typeof zoomMode === "number" ? String(zoomMode) : zoomMode}
+                onValueChange={(v) => setZoomMode(v === "fit" || v === "width" ? v : Number(v))}
+              >
+                <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ZOOM_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground tabular-nums w-10 text-right">
+                {Math.round(scale * 100)}%
+              </span>
               <Button size="sm" variant="ghost" onClick={() => setValues({})} title="Eingaben zurücksetzen">
                 <RotateCcw className="h-3 w-3" />
               </Button>
@@ -179,18 +194,36 @@ export default function FormPreviewDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4">
-          <div className="mx-auto w-full max-w-6xl">
-            <FormLayoutRenderer
-              layout={layout}
-              fields={typedFields}
-              permissions={permissions}
-              values={values}
-              onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
-              formId={form.id}
-            />
+        <div ref={viewportRef} className="flex-1 overflow-auto bg-muted/40 p-6">
+          {/* Platzhalter mit skalierten Maßen: verhindert falsche Scrollbereiche */}
+          <div
+            className="mx-auto"
+            style={{
+              width: SHEET_WIDTH * scale,
+              height: sheetHeight ? sheetHeight * scale : undefined,
+            }}
+          >
+            <div
+              ref={sheetRef}
+              className="bg-background border rounded-md shadow-sm origin-top-left"
+              style={{
+                width: SHEET_WIDTH,
+                padding: SHEET_PADDING,
+                transform: `scale(${scale})`,
+              }}
+            >
+              <FormLayoutRenderer
+                layout={layout}
+                fields={typedFields}
+                permissions={permissions}
+                values={values}
+                onChange={(k, v) => setValues((prev) => ({ ...prev, [k]: v }))}
+                formId={form.id}
+              />
+            </div>
           </div>
         </div>
+
       </DialogContent>
     </Dialog>
   );
