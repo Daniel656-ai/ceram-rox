@@ -719,6 +719,77 @@ export default function ResultsDatabasePage() {
                     Auto-Skalierung
                   </Button>
                 </div>
+
+                {/* Darstellung, Referenzlinien & Analyse */}
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs font-medium">Darstellung</p>
+                    {([
+                      { key: "labels", label: "Datenlabels anzeigen", checked: showDataLabels, set: setShowDataLabels, disabled: false },
+                      { key: "mean", label: "Mittelwert & ±1 SD einzeichnen", checked: showMeanLines, set: setShowMeanLines, disabled: false },
+                      { key: "outlier", label: "Ausreißer markieren (1,5 × IQR)", checked: markOutliers, set: setMarkOutliers, disabled: false },
+                      { key: "trend", label: "Trendlinie (lineare Regression)", checked: showTrend, set: setShowTrend, disabled: !xNumeric },
+                    ] as const).map(o => (
+                      <div key={o.key} className="flex items-center justify-between gap-2">
+                        <Label className={`text-xs ${o.disabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}>
+                          {o.label}{o.disabled ? " – nur bei numerischer X-Achse" : ""}
+                        </Label>
+                        <Switch checked={o.checked && !o.disabled} disabled={o.disabled} onCheckedChange={o.set} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs font-medium">Referenzlinien (Grenzwerte)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground">Y-Referenz</Label>
+                        <Input className="h-8" inputMode="decimal" placeholder="z. B. 25" value={refLineY} onChange={e => setRefLineY(e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground">X-Referenz</Label>
+                        <Input className="h-8" inputMode="decimal" placeholder={xNumeric ? "z. B. 1,8" : "nur numerisch"} disabled={!xNumeric} value={refLineX} onChange={e => setRefLineX(e.target.value)} />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Referenzlinien dienen dem Soll-Ist-Vergleich und verändern keine Daten.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Gespeicherte Analysen */}
+                <div className="mt-4 rounded-lg border p-3 space-y-2">
+                  <p className="text-xs font-medium">Gespeicherte Analysen</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      className="h-8 w-56"
+                      placeholder="Name der Analyse …"
+                      value={analysisName}
+                      onChange={e => setAnalysisName(e.target.value)}
+                    />
+                    <Button variant="outline" size="sm" onClick={saveAnalysis} disabled={!xAxis || !yAxis}>
+                      <Save className="h-4 w-4 mr-1" /> Speichern
+                    </Button>
+                  </div>
+                  {savedAnalyses.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Noch keine Analyse gespeichert. Gespeichert werden ausschließlich Ansichtseinstellungen.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {savedAnalyses.map(a => (
+                        <div key={a.id} className="flex items-center gap-1 rounded-full border pl-3 pr-1 py-0.5 text-xs">
+                          <button type="button" className="hover:underline" onClick={() => applyAnalysis(a)}>
+                            {a.name}
+                          </button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteAnalysis(a.id)} aria-label={`Analyse ${a.name} löschen`}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
               </CardContent>
             </Card>
 
