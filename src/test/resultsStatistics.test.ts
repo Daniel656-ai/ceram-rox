@@ -8,7 +8,7 @@ describe("computeStats", () => {
     expect(s.mean).toBe(5);
     expect(s.median).toBe(4.5);
     expect(s.sd).toBeCloseTo(2.138, 3);
-    expect(s.q1).toBeCloseTo(3.5, 6);
+    expect(s.q1).toBeCloseTo(4, 6);
     expect(s.q3).toBeCloseTo(5.5, 6);
   });
 
