@@ -94,17 +94,27 @@ function splitCells(line: string): string[] {
   if (line.includes("\t")) return line.split("\t").map((c) => c.trim());
   if (line.includes(";")) return line.split(";").map((c) => c.trim());
   if (/\s{2,}/.test(line)) return line.split(/\s{2,}/).map((c) => c.trim());
-  if (line.includes(",") && !looksNumeric(line)) return line.split(",").map((c) => c.trim());
+  // Komma nur als Spaltentrenner werten, wenn es sich sicher nicht um ein
+  // deutsches Dezimalkomma handelt (mehr als zwei Felder).
+  if (line.includes(",")) {
+    const parts = line.split(",").map((c) => c.trim());
+    if (parts.length > 2 && parts.filter((p) => looksNumeric(p)).length !== parts.length - 1) return parts;
+  }
   return [line.trim()];
 }
 
 function keyValueLine(line: string): [string, string] | null {
   const m = line.match(/^(.+?)\s*[:=]\s*(.+)$/);
   if (m) return [m[1].trim(), m[2].trim()];
+  if (line.includes("\t") || line.includes(";")) {
+    const cells = splitCells(line);
+    if (cells.length === 2) return [cells[0], cells[1]];
+  }
+  // "Fe2O3 <0,01" / "D50 12,5 µm" – Wert steht am Zeilenende.
+  const tail = line.trim().match(/^(.*?\S)\s+([<>≈~]?\s*[+-]?[\d.,]+(?:[eE][+-]?\d+)?\s*\S*)$/);
+  if (tail && !looksNumeric(tail[1])) return [tail[1], tail[2]];
   const cells = splitCells(line);
   if (cells.length === 2) return [cells[0], cells[1]];
-  const sp = line.trim().match(/^(\S+)\s+(\S.*)$/);
-  if (sp && !looksNumeric(sp[1])) return [sp[1], sp[2]];
   return null;
 }
 
