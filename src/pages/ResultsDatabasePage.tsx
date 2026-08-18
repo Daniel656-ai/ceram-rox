@@ -302,6 +302,123 @@ export default function ResultsDatabasePage() {
     toast.success("Gemerkte Skalierung übernommen");
   };
 
+  // ---------- Statistik (Priorität 2) ----------
+  const yStats = useMemo(() => computeStats(visibleData.map(d => d.y)), [visibleData]);
+  const xStats = useMemo(
+    () => (xNumeric ? computeStats(visibleData.map(d => Number(d.x))) : null),
+    [visibleData, xNumeric]
+  );
+  const regression = useMemo(
+    () => (xNumeric ? linearRegression(visibleData.map(d => ({ x: Number(d.x), y: d.y }))) : null),
+    [visibleData, xNumeric]
+  );
+  const outlierLabels = useMemo(() => {
+    if (!yStats) return [] as string[];
+    return visibleData.filter(d => isOutlier(d.y, yStats)).map(d => d.label || "–");
+  }, [visibleData, yStats]);
+  const pointIsOutlier = (y: number) => !!(markOutliers && yStats && isOutlier(y, yStats));
+
+  const insights = useMemo(
+    () =>
+      yStats
+        ? buildInsights({
+            yLabel: axisLabel(yAxis),
+            xLabel: axisLabel(xAxis),
+            stats: yStats,
+            regression,
+            outlierLabels,
+            totalPoints: chartData.length,
+            visiblePoints: visibleData.length,
+          })
+        : [],
+    [yStats, regression, outlierLabels, chartData.length, visibleData.length, xAxis, yAxis]
+  );
+
+  const numericRef = (s: string) => {
+    const v = Number(String(s).replace(",", "."));
+    return s.trim() !== "" && Number.isFinite(v) ? v : null;
+  };
+  const refY = numericRef(refLineY);
+  const refX = xNumeric ? numericRef(refLineX) : null;
+
+  /** Trendgerade als Segment über den sichtbaren X-Bereich. */
+  const trendSegment = useMemo(() => {
+    if (!showTrend || !regression || !xStats) return null;
+    const x1 = xScale?.min ?? xStats.min;
+    const x2 = xScale?.max ?? xStats.max;
+    return [
+      { x: x1, y: regression.intercept + regression.slope * x1 },
+      { x: x2, y: regression.intercept + regression.slope * x2 },
+    ];
+  }, [showTrend, regression, xStats, xScale]);
+
+  // ---------- Export & gespeicherte Analysen (Priorität 3) ----------
+  const exportBaseName = `Diagramm_${axisLabel(yAxis) || "Ergebnis"}_${format(new Date(), "yyyy-MM-dd")}`.replace(/[^\w\-]+/g, "_");
+
+  const handleExportPng = async () => {
+    try {
+      await exportChartAsPng(chartRef.current, exportBaseName);
+      toast.success("Diagramm als PNG exportiert");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export fehlgeschlagen");
+    }
+  };
+  const handleExportSvg = () => {
+    try {
+      exportChartAsSvg(chartRef.current, exportBaseName);
+      toast.success("Diagramm als SVG exportiert");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export fehlgeschlagen");
+    }
+  };
+
+  const saveAnalysis = () => {
+    const name = analysisName.trim();
+    if (!name) {
+      toast.error("Bitte einen Namen für die Analyse vergeben");
+      return;
+    }
+    const entry: SavedAnalysis = {
+      id: crypto.randomUUID(),
+      name,
+      createdAt: new Date().toISOString(),
+      chartType, xAxis, yAxis, groupBy,
+      xAuto, yAuto, xManual, yManual,
+      showTrend, showMeanLines, showDataLabels, markOutliers,
+      refLineY, refLineX,
+    };
+    const next = [entry, ...savedAnalyses.filter(a => a.name !== name)];
+    setSavedAnalyses(next);
+    persistSavedAnalyses(next);
+    setAnalysisName("");
+    toast.success(`Analyse „${name}" gespeichert`);
+  };
+
+  const applyAnalysis = (a: SavedAnalysis) => {
+    setChartType(a.chartType);
+    setXAxis(a.xAxis);
+    setYAxis(a.yAxis);
+    setGroupBy(a.groupBy);
+    setXAuto(a.xAuto);
+    setYAuto(a.yAuto);
+    setXManual(a.xManual);
+    setYManual(a.yManual);
+    setShowTrend(a.showTrend);
+    setShowMeanLines(a.showMeanLines);
+    setShowDataLabels(a.showDataLabels);
+    setMarkOutliers(a.markOutliers);
+    setRefLineY(a.refLineY);
+    setRefLineX(a.refLineX);
+    setHiddenGroups([]);
+    toast.success(`Analyse „${a.name}" geladen`);
+  };
+
+  const deleteAnalysis = (id: string) => {
+    const next = savedAnalyses.filter(a => a.id !== id);
+    setSavedAnalyses(next);
+    persistSavedAnalyses(next);
+  };
+
   const CHART_MARGIN = { top: 16, right: 24, bottom: 44, left: 56 };
   const xAxisLabelProps = (key: string) => ({
     value: axisLabel(key),
@@ -320,19 +437,32 @@ export default function ResultsDatabasePage() {
   const ChartTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
+    const meta = d?.meta;
     return (
-      <div className="rounded-lg border bg-background p-2 text-xs shadow-md space-y-0.5">
+      <div className="rounded-lg border bg-background p-2.5 text-xs shadow-md space-y-1 max-w-[280px]">
         {d.label && <p className="font-medium">{d.label}</p>}
         <p>{axisLabel(xAxis)}: {typeof d.x === "number" ? d.x.toLocaleString("de-DE") : d.x}</p>
         {payload.map((p: any) => (
           <p key={p.dataKey ?? p.name}>
             {axisLabel(yAxis)}{groupBy !== "none" && p.name ? ` · ${p.name}` : ""}:{" "}
             {typeof p.value === "number" ? p.value.toLocaleString("de-DE") : p.value}
+            {markOutliers && typeof p.value === "number" && yStats && isOutlier(p.value, yStats) ? " · Ausreißer" : ""}
           </p>
         ))}
+        {meta && (
+          <div className="border-t pt-1 space-y-0.5 text-muted-foreground">
+            {meta.sampleName && <p>Probe: {meta.sampleNumber} · {meta.sampleName}</p>}
+            {meta.orderNumber && <p>Auftrag: {meta.orderNumber}</p>}
+            {meta.serviceNames && <p>Messart: {meta.serviceNames}</p>}
+            {meta.projectName && <p>Projekt: {meta.projectName}</p>}
+            {meta.createdByName && <p>Auftraggeber: {meta.createdByName}</p>}
+            {meta.completedAt && <p>Datum: {format(parseISO(meta.completedAt), "dd.MM.yyyy", { locale: de })}</p>}
+          </div>
+        )}
       </div>
     );
   };
+
 
 
 
