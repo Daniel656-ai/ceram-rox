@@ -12,8 +12,10 @@ import { Download, Database, BarChart3, Filter, X, Search } from "lucide-react";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { de } from "date-fns/locale";
 import * as XLSX from "xlsx";
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, Legend, LineChart, Line } from "recharts";
-import { buildChartSources, collectNumericParameters, buildChartPoints, isCategoryAxis, CATEGORY_AXES } from "@/lib/resultsChartData";
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from "recharts";
+import { buildChartSources, collectNumericParameters, buildChartPoints, isCategoryAxis, CATEGORY_AXES, niceScale, buildTicks, type AxisScale } from "@/lib/resultsChartData";
+import { AxisScaleControls, type ManualScale } from "@/components/results/AxisScaleControls";
+import { toast } from "sonner";
 
 
 const CHART_COLORS = [
@@ -40,6 +42,13 @@ export default function ResultsDatabasePage() {
   const [xAxis, setXAxis] = useState<string>("");
   const [yAxis, setYAxis] = useState<string>("");
   const [groupBy, setGroupBy] = useState<string>("none");
+  const [hiddenGroups, setHiddenGroups] = useState<string[]>([]);
+  const [xAuto, setXAuto] = useState(true);
+  const [yAuto, setYAuto] = useState(true);
+  const [xManual, setXManual] = useState<ManualScale>({ min: "", max: "", step: "" });
+  const [yManual, setYManual] = useState<ManualScale>({ min: "", max: "", step: "" });
+  const [savedScale, setSavedScale] = useState<{ x: ManualScale; y: ManualScale } | null>(null);
+
 
   const resultUnits = useMemo(() => buildResultUnitMap(records), [records]);
   const { inputParameterNames, outputParameterNames } = useMemo(
@@ -178,15 +187,133 @@ export default function ResultsDatabasePage() {
   };
 
 
-  const chartGroups = useMemo(() => {
-    if (groupBy === "none") return [{ name: "Alle", data: chartData }];
-    const groups = new Map<string, typeof chartData>();
-    chartData.forEach(d => {
-      if (!groups.has(d.group)) groups.set(d.group, []);
-      groups.get(d.group)!.push(d);
-    });
-    return Array.from(groups.entries()).map(([name, data]) => ({ name, data }));
+  // Alle Serien (Legende) – unabhängig von der Sichtbarkeit
+  const allGroups = useMemo(() => {
+    if (groupBy === "none") return ["Alle"];
+    return Array.from(new Set(chartData.map(d => d.group))).sort((a, b) => a.localeCompare(b, "de"));
   }, [chartData, groupBy]);
+
+  const groupColor = (name: string) =>
+    CHART_COLORS[Math.max(0, allGroups.indexOf(name)) % CHART_COLORS.length];
+
+  const visibleData = useMemo(
+    () => chartData.filter(d => !hiddenGroups.includes(d.group)),
+    [chartData, hiddenGroups]
+  );
+
+  const chartGroups = useMemo(
+    () => allGroups
+      .filter(name => !hiddenGroups.includes(name))
+      .map(name => ({ name, data: visibleData.filter(d => d.group === name) })),
+    [allGroups, hiddenGroups, visibleData]
+  );
+
+  const toggleGroup = (name: string) =>
+    setHiddenGroups(prev => prev.includes(name) ? prev.filter(g => g !== name) : [...prev, name]);
+
+  // Balken/Linien: Serien nebeneinander über gemeinsame X-Kategorien
+  const pivotData = useMemo(() => {
+    const rows = new Map<string, Record<string, number | string>>();
+    const sums = new Map<string, { sum: number; n: number }>();
+    visibleData.forEach(d => {
+      const key = String(d.x);
+      if (!rows.has(key)) rows.set(key, { x: d.x });
+      const sk = `${key}||${d.group}`;
+      const agg = sums.get(sk) ?? { sum: 0, n: 0 };
+      agg.sum += d.y;
+      agg.n += 1;
+      sums.set(sk, agg);
+      rows.get(key)![d.group] = agg.sum / agg.n;
+    });
+    return Array.from(rows.values()).sort((a, b) =>
+      typeof a.x === "number" && typeof b.x === "number"
+        ? a.x - b.x
+        : String(a.x).localeCompare(String(b.x), "de")
+    );
+  }, [visibleData]);
+
+  // Achsenskalierung
+  const xNumeric = !!xAxis && !isCategoryAxis(xAxis);
+  const xAutoScale = useMemo<AxisScale | null>(() => {
+    if (!xNumeric || visibleData.length === 0) return null;
+    const vals = visibleData.map(d => Number(d.x)).filter(Number.isFinite);
+    return vals.length ? niceScale(Math.min(...vals), Math.max(...vals)) : null;
+  }, [visibleData, xNumeric]);
+
+  const yAutoScale = useMemo<AxisScale | null>(() => {
+    if (visibleData.length === 0) return null;
+    const vals = visibleData.map(d => d.y).filter(Number.isFinite);
+    return vals.length ? niceScale(Math.min(...vals), Math.max(...vals)) : null;
+  }, [visibleData]);
+
+  const resolveScale = (auto: boolean, manual: ManualScale, autoScale: AxisScale | null): AxisScale | null => {
+    if (auto || !autoScale) return autoScale;
+    const num = (s: string, fb: number) => {
+      const v = Number(String(s).replace(",", "."));
+      return s.trim() !== "" && Number.isFinite(v) ? v : fb;
+    };
+    const min = num(manual.min, autoScale.min);
+    const max = num(manual.max, autoScale.max);
+    const step = num(manual.step, autoScale.step);
+    if (max <= min) return autoScale;
+    return { min, max, step: step > 0 ? step : autoScale.step };
+  };
+
+  const xScale = resolveScale(xAuto, xManual, xAutoScale);
+  const yScale = resolveScale(yAuto, yManual, yAutoScale);
+  const xTicks = xScale && !xAuto ? buildTicks(xScale) : [];
+  const yTicks = yScale && !yAuto ? buildTicks(yScale) : [];
+  const xDomain: [number, number] | undefined = xScale ? [xScale.min, xScale.max] : undefined;
+  const yDomain: [number, number] | undefined = yScale ? [yScale.min, yScale.max] : undefined;
+
+  const saveScalePreset = () => {
+    const toManual = (s: AxisScale | null): ManualScale =>
+      s ? { min: String(s.min), max: String(s.max), step: String(s.step) } : { min: "", max: "", step: "" };
+    setSavedScale({ x: toManual(xScale), y: toManual(yScale) });
+    toast.success("Skalierung gemerkt – für Vergleiche übernehmbar");
+  };
+
+  const applyScalePreset = () => {
+    if (!savedScale) return;
+    setXManual(savedScale.x);
+    setYManual(savedScale.y);
+    if (xNumeric) setXAuto(false);
+    setYAuto(false);
+    toast.success("Gemerkte Skalierung übernommen");
+  };
+
+  const CHART_MARGIN = { top: 16, right: 24, bottom: 44, left: 56 };
+  const xAxisLabelProps = (key: string) => ({
+    value: axisLabel(key),
+    position: "insideBottom" as const,
+    offset: -12,
+    style: { textAnchor: "middle" as const, fontSize: 12 },
+  });
+  const yAxisLabelProps = (key: string) => ({
+    value: axisLabel(key),
+    angle: -90 as const,
+    position: "insideLeft" as const,
+    offset: -8,
+    style: { textAnchor: "middle" as const, fontSize: 12 },
+  });
+
+  const ChartTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0].payload;
+    return (
+      <div className="rounded-lg border bg-background p-2 text-xs shadow-md space-y-0.5">
+        {d.label && <p className="font-medium">{d.label}</p>}
+        <p>{axisLabel(xAxis)}: {typeof d.x === "number" ? d.x.toLocaleString("de-DE") : d.x}</p>
+        {payload.map((p: any) => (
+          <p key={p.dataKey ?? p.name}>
+            {axisLabel(yAxis)}{groupBy !== "none" && p.name ? ` · ${p.name}` : ""}:{" "}
+            {typeof p.value === "number" ? p.value.toLocaleString("de-DE") : p.value}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
 
 
 
@@ -405,6 +532,43 @@ export default function ResultsDatabasePage() {
                     </Select>
                   </div>
                 </div>
+
+                {/* Skalierung */}
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  <AxisScaleControls
+                    title={`Skalierung X-Achse${xAxis ? ` – ${axisLabel(xAxis)}` : ""}`}
+                    auto={xAuto}
+                    onAutoChange={setXAuto}
+                    manual={xManual}
+                    onManualChange={setXManual}
+                    autoScale={xAutoScale}
+                    disabled={!xNumeric}
+                    disabledHint="Kategorie-Achse – Skalierung nicht anwendbar"
+                  />
+                  <AxisScaleControls
+                    title={`Skalierung Y-Achse${yAxis ? ` – ${axisLabel(yAxis)}` : ""}`}
+                    auto={yAuto}
+                    onAutoChange={setYAuto}
+                    manual={yManual}
+                    onManualChange={setYManual}
+                    autoScale={yAutoScale}
+                  />
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={saveScalePreset} disabled={!yScale}>
+                    Skalierung merken
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={applyScalePreset} disabled={!savedScale}>
+                    Gemerkte Skalierung übernehmen
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setXAuto(true); setYAuto(true); }}
+                  >
+                    Auto-Skalierung
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -423,100 +587,111 @@ export default function ResultsDatabasePage() {
                   <div className="flex items-center justify-center h-[350px] text-muted-foreground text-sm">
                     Keine offiziellen numerischen Ergebnisse für die gewählte Kombination (Zusammenführung über die Probe).
                   </div>
-
                 ) : (
-                  <ResponsiveContainer width="100%" height={400}>
-                    {chartType === "scatter" ? (
-                      <ScatterChart margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" dataKey="x" name={xAxis} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} fontSize={12} />
-                        <YAxis type="number" dataKey="y" name={yAxis} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} fontSize={12} />
-                        <Tooltip
-                          cursor={{ strokeDasharray: "3 3" }}
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            const d = payload[0].payload;
-                            return (
-                              <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
-                                <p className="font-medium">{d.label}</p>
-                                <p>{axisLabel(xAxis)}: {d.x}</p>
-                                <p>{axisLabel(yAxis)}: {d.y}</p>
-                                {groupBy !== "none" && <p className="text-muted-foreground">{d.group}</p>}
-                              </div>
-                            );
-                          }}
-                        />
-                        <Legend />
-                        {chartGroups.map((g, i) => (
-                          <Scatter key={g.name} name={g.name} data={g.data} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                        ))}
-                      </ScatterChart>
-                    ) : chartType === "bar" ? (
-                      <BarChart data={chartData} margin={{ top: 10, right: 30, bottom: 20, left: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="x" name={xAxis} fontSize={12} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} />
-                        <YAxis fontSize={12} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            const d = payload[0].payload;
-                            return (
-                              <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
-                                <p className="font-medium">{d.label}</p>
-                                <p>{axisLabel(xAxis)}: {d.x}</p>
-                                <p>{axisLabel(yAxis)}: {d.y}</p>
-                              </div>
-                            );
-                          }}
-                        />
-                        <Bar dataKey="y" name={yAxis} radius={[4, 4, 0, 0]}>
-                          {chartData.map((d, i) => (
-                            <Cell key={i} fill={CHART_COLORS[chartGroups.findIndex(g => g.name === d.group) % CHART_COLORS.length] || CHART_COLORS[0]} />
+                  <div className="space-y-3">
+                    <ResponsiveContainer width="100%" height={420}>
+                      {chartType === "scatter" ? (
+                        <ScatterChart margin={CHART_MARGIN}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            type="number" dataKey="x" name={xAxis} fontSize={12}
+                            domain={xDomain} ticks={xTicks.length ? xTicks : undefined} allowDataOverflow={!xAuto}
+                            label={xAxisLabelProps(xAxis)}
+                          />
+                          <YAxis
+                            type="number" dataKey="y" name={yAxis} fontSize={12}
+                            domain={yDomain} ticks={yTicks.length ? yTicks : undefined} allowDataOverflow={!yAuto}
+                            label={yAxisLabelProps(yAxis)}
+                          />
+                          <Tooltip cursor={{ strokeDasharray: "3 3" }} content={<ChartTooltip />} />
+                          {chartGroups.map(g => (
+                            <Scatter key={g.name} name={g.name} data={g.data} fill={groupColor(g.name)} />
                           ))}
-                        </Bar>
-                      </BarChart>
-                    ) : (
-                      <LineChart
-                        data={[...chartData].sort((a, b) =>
-                          typeof a.x === "number" && typeof b.x === "number"
-                            ? a.x - b.x
-                            : String(a.x).localeCompare(String(b.x), "de")
-                        )}
-                        margin={{ top: 10, right: 30, bottom: 20, left: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="x" type={isCategoryAxis(xAxis) ? "category" : "number"} domain={isCategoryAxis(xAxis) ? undefined : ["auto", "auto"]} fontSize={12} label={{ value: axisLabel(xAxis), position: "bottom", offset: 0 }} />
+                        </ScatterChart>
+                      ) : chartType === "bar" ? (
+                        <BarChart data={pivotData} margin={CHART_MARGIN}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="x" fontSize={12}
+                            type={xNumeric ? "number" : "category"}
+                            domain={xNumeric ? xDomain : undefined}
+                            ticks={xNumeric && xTicks.length ? xTicks : undefined}
+                            label={xAxisLabelProps(xAxis)}
+                          />
+                          <YAxis
+                            fontSize={12} domain={yDomain}
+                            ticks={yTicks.length ? yTicks : undefined} allowDataOverflow={!yAuto}
+                            label={yAxisLabelProps(yAxis)}
+                          />
+                          <Tooltip content={<ChartTooltip />} />
+                          {chartGroups.map(g => (
+                            <Bar key={g.name} dataKey={g.name} name={g.name} fill={groupColor(g.name)} radius={[4, 4, 0, 0]} />
+                          ))}
+                        </BarChart>
+                      ) : (
+                        <LineChart data={pivotData} margin={CHART_MARGIN}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="x" fontSize={12}
+                            type={xNumeric ? "number" : "category"}
+                            domain={xNumeric ? xDomain : undefined}
+                            ticks={xNumeric && xTicks.length ? xTicks : undefined}
+                            label={xAxisLabelProps(xAxis)}
+                          />
+                          <YAxis
+                            fontSize={12} domain={yDomain}
+                            ticks={yTicks.length ? yTicks : undefined} allowDataOverflow={!yAuto}
+                            label={yAxisLabelProps(yAxis)}
+                          />
+                          <Tooltip content={<ChartTooltip />} />
+                          {chartGroups.map(g => (
+                            <Line
+                              key={g.name} type="monotone" dataKey={g.name} name={g.name}
+                              stroke={groupColor(g.name)} strokeWidth={2} dot={{ r: 3 }} connectNulls
+                            />
+                          ))}
+                        </LineChart>
+                      )}
+                    </ResponsiveContainer>
 
-                        <YAxis fontSize={12} label={{ value: axisLabel(yAxis), angle: -90, position: "insideLeft" }} />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            const d = payload[0].payload;
-                            return (
-                              <div className="rounded-lg border bg-background p-2 text-xs shadow-md">
-                                <p className="font-medium">{d.label}</p>
-                                <p>{axisLabel(xAxis)}: {d.x}</p>
-                                <p>{axisLabel(yAxis)}: {d.y}</p>
-                              </div>
-                            );
-                          }}
-                        />
-                        <Line type="monotone" dataKey="y" stroke={CHART_COLORS[0]} strokeWidth={2} dot={{ r: 4 }} name={yAxis} />
-                      </LineChart>
-                    )}
-                  </ResponsiveContainer>
+                    {/* Externe, klickbare Legende – verdeckt keine Datenpunkte */}
+                    <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                      {allGroups.map(name => {
+                        const hidden = hiddenGroups.includes(name);
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => toggleGroup(name)}
+                            className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition-colors ${hidden ? "opacity-40" : "hover:bg-muted"}`}
+                          >
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: groupColor(name) }}
+                            />
+                            <span className={hidden ? "line-through" : ""}>{name}</span>
+                          </button>
+                        );
+                      })}
+                      {hiddenGroups.length > 0 && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setHiddenGroups([])}>
+                          Alle anzeigen
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
             {/* Summary stats */}
-            {xAxis && yAxis && chartData.length > 0 && (
+            {xAxis && yAxis && visibleData.length > 0 && (
               <div className="grid gap-4 sm:grid-cols-4">
                 {[
-                  { label: "Datenpunkte", value: chartData.length },
-                  { label: `Ø ${yAxis}`, value: (chartData.reduce((s, d) => s + d.y, 0) / chartData.length).toFixed(2) },
-                  { label: `Min ${yAxis}`, value: Math.min(...chartData.map(d => d.y)).toFixed(2) },
-                  { label: `Max ${yAxis}`, value: Math.max(...chartData.map(d => d.y)).toFixed(2) },
+                  { label: "Datenpunkte", value: `${visibleData.length}${visibleData.length !== chartData.length ? ` von ${chartData.length}` : ""}` },
+                  { label: `Ø ${axisLabel(yAxis)}`, value: (visibleData.reduce((s, d) => s + d.y, 0) / visibleData.length).toFixed(2) },
+                  { label: `Min ${axisLabel(yAxis)}`, value: Math.min(...visibleData.map(d => d.y)).toFixed(2) },
+                  { label: `Max ${axisLabel(yAxis)}`, value: Math.max(...visibleData.map(d => d.y)).toFixed(2) },
                 ].map(stat => (
                   <Card key={stat.label}>
                     <CardContent className="pt-4 pb-3">
@@ -527,6 +702,7 @@ export default function ResultsDatabasePage() {
                 ))}
               </div>
             )}
+
           </div>
         </TabsContent>
       </Tabs>
