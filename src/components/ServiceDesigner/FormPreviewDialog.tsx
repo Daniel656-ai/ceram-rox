@@ -77,7 +77,7 @@ export default function FormPreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-w-[95vw] p-0 gap-0 overflow-hidden",
+          "max-w-[95vw] p-0 gap-0 overflow-hidden flex flex-col",
           fullscreen ? "w-screen h-screen max-h-screen rounded-none" : "w-[95vw] h-[90vh]"
         )}
       >
