@@ -810,6 +810,21 @@ export default function ResultsDatabasePage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        {visibleData.length} von {chartData.length} Datenpunkten sichtbar
+                        {markOutliers && outlierLabels.length > 0 ? ` · ${outlierLabels.length} Ausreißer markiert` : ""}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={handleExportPng}>
+                          <Image className="h-4 w-4 mr-1" /> PNG
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleExportSvg}>
+                          <FileCode2 className="h-4 w-4 mr-1" /> SVG
+                        </Button>
+                      </div>
+                    </div>
+                    <div ref={chartRef}>
                     <ResponsiveContainer width="100%" height={420}>
                       {chartType === "scatter" ? (
                         <ScatterChart margin={CHART_MARGIN}>
@@ -825,8 +840,38 @@ export default function ResultsDatabasePage() {
                             label={yAxisLabelProps(yAxis)}
                           />
                           <Tooltip cursor={{ strokeDasharray: "3 3" }} content={<ChartTooltip />} />
+                          {showMeanLines && yStats && (
+                            <ReferenceLine y={yStats.mean} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4"
+                              label={{ value: `Ø ${formatNumber(yStats.mean)}`, position: "right", fontSize: 10 }} />
+                          )}
+                          {showMeanLines && yStats && yStats.sd > 0 && [yStats.mean - yStats.sd, yStats.mean + yStats.sd].map((v, i) => (
+                            <ReferenceLine key={i} y={v} stroke="hsl(var(--muted-foreground))" strokeDasharray="2 4" strokeOpacity={0.6} />
+                          ))}
+                          {refY != null && (
+                            <ReferenceLine y={refY} stroke="hsl(16, 75%, 48%)" strokeWidth={1.5}
+                              label={{ value: `Grenzwert ${formatNumber(refY)}`, position: "insideTopRight", fontSize: 10 }} />
+                          )}
+                          {refX != null && (
+                            <ReferenceLine x={refX} stroke="hsl(16, 75%, 48%)" strokeWidth={1.5} strokeDasharray="4 4" />
+                          )}
+                          {trendSegment && (
+                            <ReferenceLine
+                              segment={trendSegment as any}
+                              stroke="hsl(200, 60%, 32%)"
+                              strokeWidth={2}
+                              strokeDasharray="5 3"
+                              ifOverflow="extendDomain"
+                            />
+                          )}
                           {chartGroups.map(g => (
-                            <Scatter key={g.name} name={g.name} data={g.data} fill={groupColor(g.name)} />
+                            <Scatter key={g.name} name={g.name} data={g.data} fill={groupColor(g.name)}>
+                              {g.data.map((p, i) => (
+                                <Cell key={i} fill={pointIsOutlier(p.y) ? "hsl(0, 72%, 50%)" : groupColor(g.name)} />
+                              ))}
+                              {showDataLabels && (
+                                <LabelList dataKey="y" position="top" fontSize={10} formatter={(v: any) => formatNumber(Number(v))} />
+                              )}
+                            </Scatter>
                           ))}
                         </ScatterChart>
                       ) : chartType === "bar" ? (
@@ -845,8 +890,20 @@ export default function ResultsDatabasePage() {
                             label={yAxisLabelProps(yAxis)}
                           />
                           <Tooltip content={<ChartTooltip />} />
+                          {showMeanLines && yStats && (
+                            <ReferenceLine y={yStats.mean} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4"
+                              label={{ value: `Ø ${formatNumber(yStats.mean)}`, position: "right", fontSize: 10 }} />
+                          )}
+                          {refY != null && (
+                            <ReferenceLine y={refY} stroke="hsl(16, 75%, 48%)" strokeWidth={1.5}
+                              label={{ value: `Grenzwert ${formatNumber(refY)}`, position: "insideTopRight", fontSize: 10 }} />
+                          )}
                           {chartGroups.map(g => (
-                            <Bar key={g.name} dataKey={g.name} name={g.name} fill={groupColor(g.name)} radius={[4, 4, 0, 0]} />
+                            <Bar key={g.name} dataKey={g.name} name={g.name} fill={groupColor(g.name)} radius={[4, 4, 0, 0]}>
+                              {showDataLabels && (
+                                <LabelList dataKey={g.name} position="top" fontSize={10} formatter={(v: any) => formatNumber(Number(v))} />
+                              )}
+                            </Bar>
                           ))}
                         </BarChart>
                       ) : (
@@ -865,15 +922,29 @@ export default function ResultsDatabasePage() {
                             label={yAxisLabelProps(yAxis)}
                           />
                           <Tooltip content={<ChartTooltip />} />
+                          {showMeanLines && yStats && (
+                            <ReferenceLine y={yStats.mean} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4"
+                              label={{ value: `Ø ${formatNumber(yStats.mean)}`, position: "right", fontSize: 10 }} />
+                          )}
+                          {refY != null && (
+                            <ReferenceLine y={refY} stroke="hsl(16, 75%, 48%)" strokeWidth={1.5}
+                              label={{ value: `Grenzwert ${formatNumber(refY)}`, position: "insideTopRight", fontSize: 10 }} />
+                          )}
                           {chartGroups.map(g => (
                             <Line
                               key={g.name} type="monotone" dataKey={g.name} name={g.name}
                               stroke={groupColor(g.name)} strokeWidth={2} dot={{ r: 3 }} connectNulls
-                            />
+                            >
+                              {showDataLabels && (
+                                <LabelList dataKey={g.name} position="top" fontSize={10} formatter={(v: any) => formatNumber(Number(v))} />
+                              )}
+                            </Line>
                           ))}
                         </LineChart>
                       )}
                     </ResponsiveContainer>
+                    </div>
+
 
                     {/* Externe, klickbare Legende – verdeckt keine Datenpunkte */}
                     <div className="flex flex-wrap items-center gap-2 border-t pt-3">
