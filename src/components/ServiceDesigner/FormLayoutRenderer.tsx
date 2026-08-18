@@ -183,7 +183,6 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
       );
 
     case "select":
-    case "multiselect":
       return (
         <Select value={value ?? ""} onValueChange={(v) => setValue(v)} disabled={disabled}>
           <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
@@ -196,6 +195,39 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
           </SelectContent>
         </Select>
       );
+    case "multiselect": {
+      const selected = toStringArray(value);
+      const toggle = (v: string, on: boolean) => {
+        const next = on ? [...selected.filter((s) => s !== v), v] : selected.filter((s) => s !== v);
+        setValue(next);
+      };
+      const options = field.select_options ?? [];
+      return (
+        <div className="rounded-md border px-3 py-2 space-y-1.5 min-h-9">
+          {options.length === 0 ? (
+            <span className="text-xs text-muted-foreground">Keine Optionen konfiguriert</span>
+          ) : (
+            options.map((o, i) => {
+              const v = (typeof o === "string" ? o : o.value) || String(i);
+              const l = typeof o === "string" ? o : o.label;
+              const id = `${field.id}-ms-${i}`;
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <Checkbox
+                    id={id}
+                    checked={selected.includes(v)}
+                    disabled={disabled}
+                    onCheckedChange={(c) => toggle(v, c === true)}
+                  />
+                  <Label htmlFor={id} className="text-sm font-normal cursor-pointer">{l}</Label>
+                </div>
+              );
+            })
+          )}
+        </div>
+      );
+    }
+
     case "date":
     case "time":
     case "datetime":
