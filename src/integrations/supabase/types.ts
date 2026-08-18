@@ -9138,6 +9138,10 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      measurement_has_official_result: {
+        Args: { _measurement_id: string }
+        Returns: boolean
+      }
       mixture_recipe_availability: {
         Args: { _scale?: number; _version_id: string }
         Returns: {
@@ -9156,6 +9160,10 @@ export type Database = {
           p_reference_type: Database["public"]["Enums"]["reference_type"]
         }
         Returns: string
+      }
+      order_has_official_result: {
+        Args: { _order_id: string }
+        Returns: boolean
       }
       pp_complete_block: {
         Args: { _block_id: string; _data?: Json; _notes?: string }
@@ -9194,6 +9202,10 @@ export type Database = {
           _unit: string
         }
         Returns: string
+      }
+      project_has_official_result: {
+        Args: { _project_id: string }
+        Returns: boolean
       }
       recompute_order_workflow_status: {
         Args: { _order_id: string }
