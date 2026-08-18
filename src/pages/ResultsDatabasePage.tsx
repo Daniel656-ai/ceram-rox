@@ -187,15 +187,133 @@ export default function ResultsDatabasePage() {
   };
 
 
-  const chartGroups = useMemo(() => {
-    if (groupBy === "none") return [{ name: "Alle", data: chartData }];
-    const groups = new Map<string, typeof chartData>();
-    chartData.forEach(d => {
-      if (!groups.has(d.group)) groups.set(d.group, []);
-      groups.get(d.group)!.push(d);
-    });
-    return Array.from(groups.entries()).map(([name, data]) => ({ name, data }));
+  // Alle Serien (Legende) – unabhängig von der Sichtbarkeit
+  const allGroups = useMemo(() => {
+    if (groupBy === "none") return ["Alle"];
+    return Array.from(new Set(chartData.map(d => d.group))).sort((a, b) => a.localeCompare(b, "de"));
   }, [chartData, groupBy]);
+
+  const groupColor = (name: string) =>
+    CHART_COLORS[Math.max(0, allGroups.indexOf(name)) % CHART_COLORS.length];
+
+  const visibleData = useMemo(
+    () => chartData.filter(d => !hiddenGroups.includes(d.group)),
+    [chartData, hiddenGroups]
+  );
+
+  const chartGroups = useMemo(
+    () => allGroups
+      .filter(name => !hiddenGroups.includes(name))
+      .map(name => ({ name, data: visibleData.filter(d => d.group === name) })),
+    [allGroups, hiddenGroups, visibleData]
+  );
+
+  const toggleGroup = (name: string) =>
+    setHiddenGroups(prev => prev.includes(name) ? prev.filter(g => g !== name) : [...prev, name]);
+
+  // Balken/Linien: Serien nebeneinander über gemeinsame X-Kategorien
+  const pivotData = useMemo(() => {
+    const rows = new Map<string, Record<string, number | string>>();
+    const sums = new Map<string, { sum: number; n: number }>();
+    visibleData.forEach(d => {
+      const key = String(d.x);
+      if (!rows.has(key)) rows.set(key, { x: d.x });
+      const sk = `${key}||${d.group}`;
+      const agg = sums.get(sk) ?? { sum: 0, n: 0 };
+      agg.sum += d.y;
+      agg.n += 1;
+      sums.set(sk, agg);
+      rows.get(key)![d.group] = agg.sum / agg.n;
+    });
+    return Array.from(rows.values()).sort((a, b) =>
+      typeof a.x === "number" && typeof b.x === "number"
+        ? a.x - b.x
+        : String(a.x).localeCompare(String(b.x), "de")
+    );
+  }, [visibleData]);
+
+  // Achsenskalierung
+  const xNumeric = !!xAxis && !isCategoryAxis(xAxis);
+  const xAutoScale = useMemo<AxisScale | null>(() => {
+    if (!xNumeric || visibleData.length === 0) return null;
+    const vals = visibleData.map(d => Number(d.x)).filter(Number.isFinite);
+    return vals.length ? niceScale(Math.min(...vals), Math.max(...vals)) : null;
+  }, [visibleData, xNumeric]);
+
+  const yAutoScale = useMemo<AxisScale | null>(() => {
+    if (visibleData.length === 0) return null;
+    const vals = visibleData.map(d => d.y).filter(Number.isFinite);
+    return vals.length ? niceScale(Math.min(...vals), Math.max(...vals)) : null;
+  }, [visibleData]);
+
+  const resolveScale = (auto: boolean, manual: ManualScale, autoScale: AxisScale | null): AxisScale | null => {
+    if (auto || !autoScale) return autoScale;
+    const num = (s: string, fb: number) => {
+      const v = Number(String(s).replace(",", "."));
+      return s.trim() !== "" && Number.isFinite(v) ? v : fb;
+    };
+    const min = num(manual.min, autoScale.min);
+    const max = num(manual.max, autoScale.max);
+    const step = num(manual.step, autoScale.step);
+    if (max <= min) return autoScale;
+    return { min, max, step: step > 0 ? step : autoScale.step };
+  };
+
+  const xScale = resolveScale(xAuto, xManual, xAutoScale);
+  const yScale = resolveScale(yAuto, yManual, yAutoScale);
+  const xTicks = xScale && !xAuto ? buildTicks(xScale) : [];
+  const yTicks = yScale && !yAuto ? buildTicks(yScale) : [];
+  const xDomain: [number, number] | undefined = xScale ? [xScale.min, xScale.max] : undefined;
+  const yDomain: [number, number] | undefined = yScale ? [yScale.min, yScale.max] : undefined;
+
+  const saveScalePreset = () => {
+    const toManual = (s: AxisScale | null): ManualScale =>
+      s ? { min: String(s.min), max: String(s.max), step: String(s.step) } : { min: "", max: "", step: "" };
+    setSavedScale({ x: toManual(xScale), y: toManual(yScale) });
+    toast.success("Skalierung gemerkt – für Vergleiche übernehmbar");
+  };
+
+  const applyScalePreset = () => {
+    if (!savedScale) return;
+    setXManual(savedScale.x);
+    setYManual(savedScale.y);
+    if (xNumeric) setXAuto(false);
+    setYAuto(false);
+    toast.success("Gemerkte Skalierung übernommen");
+  };
+
+  const CHART_MARGIN = { top: 16, right: 24, bottom: 44, left: 56 };
+  const xAxisLabelProps = (key: string) => ({
+    value: axisLabel(key),
+    position: "insideBottom" as const,
+    offset: -12,
+    style: { textAnchor: "middle" as const, fontSize: 12 },
+  });
+  const yAxisLabelProps = (key: string) => ({
+    value: axisLabel(key),
+    angle: -90 as const,
+    position: "insideLeft" as const,
+    offset: -8,
+    style: { textAnchor: "middle" as const, fontSize: 12 },
+  });
+
+  const ChartTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    const d = payload[0].payload;
+    return (
+      <div className="rounded-lg border bg-background p-2 text-xs shadow-md space-y-0.5">
+        {d.label && <p className="font-medium">{d.label}</p>}
+        <p>{axisLabel(xAxis)}: {typeof d.x === "number" ? d.x.toLocaleString("de-DE") : d.x}</p>
+        {payload.map((p: any) => (
+          <p key={p.dataKey ?? p.name}>
+            {axisLabel(yAxis)}{groupBy !== "none" && p.name ? ` · ${p.name}` : ""}:{" "}
+            {typeof p.value === "number" ? p.value.toLocaleString("de-DE") : p.value}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
 
 
 
