@@ -148,6 +148,23 @@ function FormItemShell({
  * ---------------------------------------------------------------- */
 
 
+/**
+ * Normalisiert gespeicherte Mehrfachauswahl-Werte auf ein String-Array.
+ * Rückwärtskompatibel: Array, JSON-Array-String, Komma-Liste oder Einzelwert.
+ */
+export function toStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => String(x)).filter((s) => s !== "");
+  if (v == null || v === "") return [];
+  const s = String(v).trim();
+  if (s.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return parsed.map((x) => String(x)).filter(Boolean);
+    } catch { /* fällt auf Komma-Trennung zurück */ }
+  }
+  return s.split(",").map((x) => x.trim()).filter(Boolean);
+}
+
 function FieldControl({ field, readonly }: { field: FormField; readonly: boolean }) {
   const { value, setValue, interactive } = useBinding(field.field_key);
   const disabled = readonly || !interactive;
