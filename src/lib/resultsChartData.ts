@@ -153,6 +153,16 @@ export interface ChartPoint {
   y: number;
   group: string;
   label: string;
+  /** Zusatzinformationen für Tooltips – rein darstellend. */
+  meta: {
+    sampleNumber: string;
+    sampleName: string;
+    orderNumber: string;
+    projectName: string;
+    serviceNames: string;
+    createdByName: string;
+    completedAt: string | null;
+  };
 }
 
 export function buildChartPoints(
@@ -177,10 +187,20 @@ export function buildChartPoints(
         : groupBy === "creator" ? s.createdByName || "–"
         : "Alle",
       label: s.sampleNumber,
+      meta: {
+        sampleNumber: s.sampleNumber,
+        sampleName: s.sampleName,
+        orderNumber: s.orderNumber,
+        projectName: s.projectName,
+        serviceNames: s.serviceNames.join(", "),
+        createdByName: s.createdByName,
+        completedAt: s.completedAt,
+      },
     });
   }
   return points;
 }
+
 
 /** Achsenskala für manuelle und automatische Skalierung. */
 export interface AxisScale {

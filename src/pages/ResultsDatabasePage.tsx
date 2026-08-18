@@ -1,21 +1,27 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, buildResultUnitMap, withUnit, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Database, BarChart3, Filter, X, Search } from "lucide-react";
+import { Download, Database, BarChart3, Filter, X, Search, Image, FileCode2, Lightbulb, Save, Trash2 } from "lucide-react";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { de } from "date-fns/locale";
 import * as XLSX from "xlsx";
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line } from "recharts";
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, ReferenceLine, LabelList, Cell } from "recharts";
 import { buildChartSources, collectNumericParameters, buildChartPoints, isCategoryAxis, CATEGORY_AXES, niceScale, buildTicks, type AxisScale } from "@/lib/resultsChartData";
 import { AxisScaleControls, type ManualScale } from "@/components/results/AxisScaleControls";
+import { computeStats, isOutlier, linearRegression, formatNumber, buildInsights } from "@/lib/resultsStatistics";
+import { exportChartAsPng, exportChartAsSvg } from "@/lib/chartExport";
+import { loadSavedAnalyses, persistSavedAnalyses, type SavedAnalysis } from "@/lib/resultsAnalysisStorage";
 import { toast } from "sonner";
+
 
 
 const CHART_COLORS = [
@@ -48,6 +54,20 @@ export default function ResultsDatabasePage() {
   const [xManual, setXManual] = useState<ManualScale>({ min: "", max: "", step: "" });
   const [yManual, setYManual] = useState<ManualScale>({ min: "", max: "", step: "" });
   const [savedScale, setSavedScale] = useState<{ x: ManualScale; y: ManualScale } | null>(null);
+
+  // Darstellung & Analyse (Priorität 2/3)
+  const [showTrend, setShowTrend] = useState(false);
+  const [showMeanLines, setShowMeanLines] = useState(false);
+  const [showDataLabels, setShowDataLabels] = useState(false);
+  const [markOutliers, setMarkOutliers] = useState(false);
+  const [refLineY, setRefLineY] = useState("");
+  const [refLineX, setRefLineX] = useState("");
+  const [analysisName, setAnalysisName] = useState("");
+  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>([]);
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setSavedAnalyses(loadSavedAnalyses()), []);
+
 
 
   const resultUnits = useMemo(() => buildResultUnitMap(records), [records]);
@@ -282,6 +302,123 @@ export default function ResultsDatabasePage() {
     toast.success("Gemerkte Skalierung übernommen");
   };
 
+  // ---------- Statistik (Priorität 2) ----------
+  const yStats = useMemo(() => computeStats(visibleData.map(d => d.y)), [visibleData]);
+  const xStats = useMemo(
+    () => (xNumeric ? computeStats(visibleData.map(d => Number(d.x))) : null),
+    [visibleData, xNumeric]
+  );
+  const regression = useMemo(
+    () => (xNumeric ? linearRegression(visibleData.map(d => ({ x: Number(d.x), y: d.y }))) : null),
+    [visibleData, xNumeric]
+  );
+  const outlierLabels = useMemo(() => {
+    if (!yStats) return [] as string[];
+    return visibleData.filter(d => isOutlier(d.y, yStats)).map(d => d.label || "–");
+  }, [visibleData, yStats]);
+  const pointIsOutlier = (y: number) => !!(markOutliers && yStats && isOutlier(y, yStats));
+
+  const insights = useMemo(
+    () =>
+      yStats
+        ? buildInsights({
+            yLabel: axisLabel(yAxis),
+            xLabel: axisLabel(xAxis),
+            stats: yStats,
+            regression,
+            outlierLabels,
+            totalPoints: chartData.length,
+            visiblePoints: visibleData.length,
+          })
+        : [],
+    [yStats, regression, outlierLabels, chartData.length, visibleData.length, xAxis, yAxis]
+  );
+
+  const numericRef = (s: string) => {
+    const v = Number(String(s).replace(",", "."));
+    return s.trim() !== "" && Number.isFinite(v) ? v : null;
+  };
+  const refY = numericRef(refLineY);
+  const refX = xNumeric ? numericRef(refLineX) : null;
+
+  /** Trendgerade als Segment über den sichtbaren X-Bereich. */
+  const trendSegment = useMemo(() => {
+    if (!showTrend || !regression || !xStats) return null;
+    const x1 = xScale?.min ?? xStats.min;
+    const x2 = xScale?.max ?? xStats.max;
+    return [
+      { x: x1, y: regression.intercept + regression.slope * x1 },
+      { x: x2, y: regression.intercept + regression.slope * x2 },
+    ];
+  }, [showTrend, regression, xStats, xScale]);
+
+  // ---------- Export & gespeicherte Analysen (Priorität 3) ----------
+  const exportBaseName = `Diagramm_${axisLabel(yAxis) || "Ergebnis"}_${format(new Date(), "yyyy-MM-dd")}`.replace(/[^\w\-]+/g, "_");
+
+  const handleExportPng = async () => {
+    try {
+      await exportChartAsPng(chartRef.current, exportBaseName);
+      toast.success("Diagramm als PNG exportiert");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export fehlgeschlagen");
+    }
+  };
+  const handleExportSvg = () => {
+    try {
+      exportChartAsSvg(chartRef.current, exportBaseName);
+      toast.success("Diagramm als SVG exportiert");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export fehlgeschlagen");
+    }
+  };
+
+  const saveAnalysis = () => {
+    const name = analysisName.trim();
+    if (!name) {
+      toast.error("Bitte einen Namen für die Analyse vergeben");
+      return;
+    }
+    const entry: SavedAnalysis = {
+      id: crypto.randomUUID(),
+      name,
+      createdAt: new Date().toISOString(),
+      chartType, xAxis, yAxis, groupBy,
+      xAuto, yAuto, xManual, yManual,
+      showTrend, showMeanLines, showDataLabels, markOutliers,
+      refLineY, refLineX,
+    };
+    const next = [entry, ...savedAnalyses.filter(a => a.name !== name)];
+    setSavedAnalyses(next);
+    persistSavedAnalyses(next);
+    setAnalysisName("");
+    toast.success(`Analyse „${name}" gespeichert`);
+  };
+
+  const applyAnalysis = (a: SavedAnalysis) => {
+    setChartType(a.chartType);
+    setXAxis(a.xAxis);
+    setYAxis(a.yAxis);
+    setGroupBy(a.groupBy);
+    setXAuto(a.xAuto);
+    setYAuto(a.yAuto);
+    setXManual(a.xManual);
+    setYManual(a.yManual);
+    setShowTrend(a.showTrend);
+    setShowMeanLines(a.showMeanLines);
+    setShowDataLabels(a.showDataLabels);
+    setMarkOutliers(a.markOutliers);
+    setRefLineY(a.refLineY);
+    setRefLineX(a.refLineX);
+    setHiddenGroups([]);
+    toast.success(`Analyse „${a.name}" geladen`);
+  };
+
+  const deleteAnalysis = (id: string) => {
+    const next = savedAnalyses.filter(a => a.id !== id);
+    setSavedAnalyses(next);
+    persistSavedAnalyses(next);
+  };
+
   const CHART_MARGIN = { top: 16, right: 24, bottom: 44, left: 56 };
   const xAxisLabelProps = (key: string) => ({
     value: axisLabel(key),
@@ -300,19 +437,32 @@ export default function ResultsDatabasePage() {
   const ChartTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
+    const meta = d?.meta;
     return (
-      <div className="rounded-lg border bg-background p-2 text-xs shadow-md space-y-0.5">
+      <div className="rounded-lg border bg-background p-2.5 text-xs shadow-md space-y-1 max-w-[280px]">
         {d.label && <p className="font-medium">{d.label}</p>}
         <p>{axisLabel(xAxis)}: {typeof d.x === "number" ? d.x.toLocaleString("de-DE") : d.x}</p>
         {payload.map((p: any) => (
           <p key={p.dataKey ?? p.name}>
             {axisLabel(yAxis)}{groupBy !== "none" && p.name ? ` · ${p.name}` : ""}:{" "}
             {typeof p.value === "number" ? p.value.toLocaleString("de-DE") : p.value}
+            {markOutliers && typeof p.value === "number" && yStats && isOutlier(p.value, yStats) ? " · Ausreißer" : ""}
           </p>
         ))}
+        {meta && (
+          <div className="border-t pt-1 space-y-0.5 text-muted-foreground">
+            {meta.sampleName && <p>Probe: {meta.sampleNumber} · {meta.sampleName}</p>}
+            {meta.orderNumber && <p>Auftrag: {meta.orderNumber}</p>}
+            {meta.serviceNames && <p>Messart: {meta.serviceNames}</p>}
+            {meta.projectName && <p>Projekt: {meta.projectName}</p>}
+            {meta.createdByName && <p>Auftraggeber: {meta.createdByName}</p>}
+            {meta.completedAt && <p>Datum: {format(parseISO(meta.completedAt), "dd.MM.yyyy", { locale: de })}</p>}
+          </div>
+        )}
       </div>
     );
   };
+
 
 
 
@@ -569,6 +719,77 @@ export default function ResultsDatabasePage() {
                     Auto-Skalierung
                   </Button>
                 </div>
+
+                {/* Darstellung, Referenzlinien & Analyse */}
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs font-medium">Darstellung</p>
+                    {([
+                      { key: "labels", label: "Datenlabels anzeigen", checked: showDataLabels, set: setShowDataLabels, disabled: false },
+                      { key: "mean", label: "Mittelwert & ±1 SD einzeichnen", checked: showMeanLines, set: setShowMeanLines, disabled: false },
+                      { key: "outlier", label: "Ausreißer markieren (1,5 × IQR)", checked: markOutliers, set: setMarkOutliers, disabled: false },
+                      { key: "trend", label: "Trendlinie (lineare Regression)", checked: showTrend, set: setShowTrend, disabled: !xNumeric },
+                    ] as const).map(o => (
+                      <div key={o.key} className="flex items-center justify-between gap-2">
+                        <Label className={`text-xs ${o.disabled ? "text-muted-foreground/60" : "text-muted-foreground"}`}>
+                          {o.label}{o.disabled ? " – nur bei numerischer X-Achse" : ""}
+                        </Label>
+                        <Switch checked={o.checked && !o.disabled} disabled={o.disabled} onCheckedChange={o.set} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs font-medium">Referenzlinien (Grenzwerte)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground">Y-Referenz</Label>
+                        <Input className="h-8" inputMode="decimal" placeholder="z. B. 25" value={refLineY} onChange={e => setRefLineY(e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground">X-Referenz</Label>
+                        <Input className="h-8" inputMode="decimal" placeholder={xNumeric ? "z. B. 1,8" : "nur numerisch"} disabled={!xNumeric} value={refLineX} onChange={e => setRefLineX(e.target.value)} />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Referenzlinien dienen dem Soll-Ist-Vergleich und verändern keine Daten.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Gespeicherte Analysen */}
+                <div className="mt-4 rounded-lg border p-3 space-y-2">
+                  <p className="text-xs font-medium">Gespeicherte Analysen</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      className="h-8 w-56"
+                      placeholder="Name der Analyse …"
+                      value={analysisName}
+                      onChange={e => setAnalysisName(e.target.value)}
+                    />
+                    <Button variant="outline" size="sm" onClick={saveAnalysis} disabled={!xAxis || !yAxis}>
+                      <Save className="h-4 w-4 mr-1" /> Speichern
+                    </Button>
+                  </div>
+                  {savedAnalyses.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Noch keine Analyse gespeichert. Gespeichert werden ausschließlich Ansichtseinstellungen.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {savedAnalyses.map(a => (
+                        <div key={a.id} className="flex items-center gap-1 rounded-full border pl-3 pr-1 py-0.5 text-xs">
+                          <button type="button" className="hover:underline" onClick={() => applyAnalysis(a)}>
+                            {a.name}
+                          </button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteAnalysis(a.id)} aria-label={`Analyse ${a.name} löschen`}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
               </CardContent>
             </Card>
 
@@ -589,6 +810,21 @@ export default function ResultsDatabasePage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        {visibleData.length} von {chartData.length} Datenpunkten sichtbar
+                        {markOutliers && outlierLabels.length > 0 ? ` · ${outlierLabels.length} Ausreißer markiert` : ""}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={handleExportPng}>
+                          <Image className="h-4 w-4 mr-1" /> PNG
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleExportSvg}>
+                          <FileCode2 className="h-4 w-4 mr-1" /> SVG
+                        </Button>
+                      </div>
+                    </div>
+                    <div ref={chartRef}>
                     <ResponsiveContainer width="100%" height={420}>
                       {chartType === "scatter" ? (
                         <ScatterChart margin={CHART_MARGIN}>
@@ -604,8 +840,38 @@ export default function ResultsDatabasePage() {
                             label={yAxisLabelProps(yAxis)}
                           />
                           <Tooltip cursor={{ strokeDasharray: "3 3" }} content={<ChartTooltip />} />
+                          {showMeanLines && yStats && (
+                            <ReferenceLine y={yStats.mean} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4"
+                              label={{ value: `Ø ${formatNumber(yStats.mean)}`, position: "right", fontSize: 10 }} />
+                          )}
+                          {showMeanLines && yStats && yStats.sd > 0 && [yStats.mean - yStats.sd, yStats.mean + yStats.sd].map((v, i) => (
+                            <ReferenceLine key={i} y={v} stroke="hsl(var(--muted-foreground))" strokeDasharray="2 4" strokeOpacity={0.6} />
+                          ))}
+                          {refY != null && (
+                            <ReferenceLine y={refY} stroke="hsl(16, 75%, 48%)" strokeWidth={1.5}
+                              label={{ value: `Grenzwert ${formatNumber(refY)}`, position: "insideTopRight", fontSize: 10 }} />
+                          )}
+                          {refX != null && (
+                            <ReferenceLine x={refX} stroke="hsl(16, 75%, 48%)" strokeWidth={1.5} strokeDasharray="4 4" />
+                          )}
+                          {trendSegment && (
+                            <ReferenceLine
+                              segment={trendSegment as any}
+                              stroke="hsl(200, 60%, 32%)"
+                              strokeWidth={2}
+                              strokeDasharray="5 3"
+                              ifOverflow="extendDomain"
+                            />
+                          )}
                           {chartGroups.map(g => (
-                            <Scatter key={g.name} name={g.name} data={g.data} fill={groupColor(g.name)} />
+                            <Scatter key={g.name} name={g.name} data={g.data} fill={groupColor(g.name)}>
+                              {g.data.map((p, i) => (
+                                <Cell key={i} fill={pointIsOutlier(p.y) ? "hsl(0, 72%, 50%)" : groupColor(g.name)} />
+                              ))}
+                              {showDataLabels && (
+                                <LabelList dataKey="y" position="top" fontSize={10} formatter={(v: any) => formatNumber(Number(v))} />
+                              )}
+                            </Scatter>
                           ))}
                         </ScatterChart>
                       ) : chartType === "bar" ? (
@@ -624,8 +890,20 @@ export default function ResultsDatabasePage() {
                             label={yAxisLabelProps(yAxis)}
                           />
                           <Tooltip content={<ChartTooltip />} />
+                          {showMeanLines && yStats && (
+                            <ReferenceLine y={yStats.mean} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4"
+                              label={{ value: `Ø ${formatNumber(yStats.mean)}`, position: "right", fontSize: 10 }} />
+                          )}
+                          {refY != null && (
+                            <ReferenceLine y={refY} stroke="hsl(16, 75%, 48%)" strokeWidth={1.5}
+                              label={{ value: `Grenzwert ${formatNumber(refY)}`, position: "insideTopRight", fontSize: 10 }} />
+                          )}
                           {chartGroups.map(g => (
-                            <Bar key={g.name} dataKey={g.name} name={g.name} fill={groupColor(g.name)} radius={[4, 4, 0, 0]} />
+                            <Bar key={g.name} dataKey={g.name} name={g.name} fill={groupColor(g.name)} radius={[4, 4, 0, 0]}>
+                              {showDataLabels && (
+                                <LabelList dataKey={g.name} position="top" fontSize={10} formatter={(v: any) => formatNumber(Number(v))} />
+                              )}
+                            </Bar>
                           ))}
                         </BarChart>
                       ) : (
@@ -644,15 +922,29 @@ export default function ResultsDatabasePage() {
                             label={yAxisLabelProps(yAxis)}
                           />
                           <Tooltip content={<ChartTooltip />} />
+                          {showMeanLines && yStats && (
+                            <ReferenceLine y={yStats.mean} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4"
+                              label={{ value: `Ø ${formatNumber(yStats.mean)}`, position: "right", fontSize: 10 }} />
+                          )}
+                          {refY != null && (
+                            <ReferenceLine y={refY} stroke="hsl(16, 75%, 48%)" strokeWidth={1.5}
+                              label={{ value: `Grenzwert ${formatNumber(refY)}`, position: "insideTopRight", fontSize: 10 }} />
+                          )}
                           {chartGroups.map(g => (
                             <Line
                               key={g.name} type="monotone" dataKey={g.name} name={g.name}
                               stroke={groupColor(g.name)} strokeWidth={2} dot={{ r: 3 }} connectNulls
-                            />
+                            >
+                              {showDataLabels && (
+                                <LabelList dataKey={g.name} position="top" fontSize={10} formatter={(v: any) => formatNumber(Number(v))} />
+                              )}
+                            </Line>
                           ))}
                         </LineChart>
                       )}
                     </ResponsiveContainer>
+                    </div>
+
 
                     {/* Externe, klickbare Legende – verdeckt keine Datenpunkte */}
                     <div className="flex flex-wrap items-center gap-2 border-t pt-3">
@@ -684,24 +976,48 @@ export default function ResultsDatabasePage() {
               </CardContent>
             </Card>
 
-            {/* Summary stats */}
-            {xAxis && yAxis && visibleData.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-4">
+            {/* Erweiterte Statistik */}
+            {xAxis && yAxis && yStats && (
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
                 {[
-                  { label: "Datenpunkte", value: `${visibleData.length}${visibleData.length !== chartData.length ? ` von ${chartData.length}` : ""}` },
-                  { label: `Ø ${axisLabel(yAxis)}`, value: (visibleData.reduce((s, d) => s + d.y, 0) / visibleData.length).toFixed(2) },
-                  { label: `Min ${axisLabel(yAxis)}`, value: Math.min(...visibleData.map(d => d.y)).toFixed(2) },
-                  { label: `Max ${axisLabel(yAxis)}`, value: Math.max(...visibleData.map(d => d.y)).toFixed(2) },
+                  { label: "Datenpunkte", value: `${visibleData.length}${visibleData.length !== chartData.length ? ` / ${chartData.length}` : ""}` },
+                  { label: `Ø ${axisLabel(yAxis)}`, value: formatNumber(yStats.mean) },
+                  { label: "Median", value: formatNumber(yStats.median) },
+                  { label: "Standardabw.", value: formatNumber(yStats.sd) },
+                  { label: "Q1 / Q3", value: `${formatNumber(yStats.q1)} / ${formatNumber(yStats.q3)}` },
+                  { label: "Min / Max", value: `${formatNumber(yStats.min)} / ${formatNumber(yStats.max)}` },
                 ].map(stat => (
                   <Card key={stat.label}>
                     <CardContent className="pt-4 pb-3">
                       <p className="text-xs text-muted-foreground">{stat.label}</p>
-                      <p className="text-xl font-bold font-mono">{stat.value}</p>
+                      <p className="text-lg font-bold font-mono">{stat.value}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
+
+            {/* Automatische Auswertung */}
+            {insights.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4" /> Automatische Auswertung
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1.5 text-sm">
+                  {regression && (
+                    <p className="text-xs text-muted-foreground">
+                      Regression: y = {formatNumber(regression.slope, 4)} · x + {formatNumber(regression.intercept, 4)} · R² = {formatNumber(regression.r2, 3)} (n = {regression.n})
+                    </p>
+                  )}
+                  <ul className="list-disc pl-5 space-y-1">
+                    {insights.map((i, idx) => <li key={idx}>{i}</li>)}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
 
           </div>
         </TabsContent>
