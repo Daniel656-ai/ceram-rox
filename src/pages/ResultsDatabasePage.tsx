@@ -475,47 +475,7 @@ export default function ResultsDatabasePage() {
 
 
 
-  const resultColumns = useMemo<DataTableColumn<ResultRecord>[]>(() => {
-    const base: DataTableColumn<ResultRecord>[] = [
-      { key: "measurementNumber", header: "Messnr.", accessor: r => r.measurementNumber, cell: r => <span className="font-mono text-xs">{r.measurementNumber}</span> },
-      { key: "orderNumber", header: "Auftragsnr.", accessor: r => r.orderNumber, cell: r => <span className="font-mono text-xs">{r.orderNumber}</span> },
-      { key: "serviceName", type: "status", header: "Messart", accessor: r => r.serviceName, cell: r => <Badge variant="secondary" className="text-xs">{r.serviceName}</Badge> },
-      { key: "projectName", header: "Projekt", accessor: r => r.projectName || r.projectNumber },
-      { key: "sampleName", header: "Probe", accessor: r => r.sampleNumber || r.sampleName,
-        cell: r => (
-          <div className="leading-tight">
-            <span className="font-mono text-xs">{r.sampleNumber || "–"}</span>
-            {r.sampleName ? <div className="text-xs text-muted-foreground">{r.sampleName}</div> : null}
-            {r.originalSampleNumber ? (
-              <div className="text-[11px] text-muted-foreground">Ersatzprobe für {r.originalSampleNumber}</div>
-            ) : null}
-          </div>
-        ) },
-      { key: "createdByName", type: "status", header: "Auftraggeber", accessor: r => r.createdByName },
-      { key: "assignedToName", type: "status", header: "MDL", accessor: r => r.assignedToName },
-      { key: "completedAt", type: "date", header: "Abgeschlossen", accessor: r => r.completedAt ?? null,
-        cell: r => r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yy", { locale: de }) : "-" },
-      { key: "duration", type: "number", header: "Dauer (h)", accessor: r => r.actualDurationHours ?? r.standardDurationHours ?? null,
-        cell: r => <span className="font-mono text-sm">{r.actualDurationHours ?? r.standardDurationHours ?? "-"}</span> },
-    ];
-    outputParameterNames.slice(0, 5).forEach(name => {
-      base.push({
-        key: `out_${name}`,
-        type: "number",
-        header: withUnit(name, resultUnits),
-        accessor: r => {
-          const res = r.outputResults.find(o => resultLabel(o) === name);
-          const v = res?.value;
-          return v == null ? null : v;
-        },
-        cell: r => {
-          const res = r.outputResults.find(o => resultLabel(o) === name);
-          return <span className="font-mono text-sm">{res?.value != null ? String(res.value) : "-"}</span>;
-        },
-      });
-    });
-    return base;
-  }, [outputParameterNames, resultUnits]);
+
 
   if (isLoading) {
     return (
@@ -550,6 +510,9 @@ export default function ResultsDatabasePage() {
           </Button>
           <Button variant="outline" size="sm" onClick={exportToExcel} disabled={filteredRecords.length === 0}>
             <Download className="h-4 w-4 mr-1" /> Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportAllToExcel} disabled={records.length === 0}>
+            <Download className="h-4 w-4 mr-1" /> Alle Ergebnisse
           </Button>
         </div>
       </div>
@@ -618,16 +581,51 @@ export default function ResultsDatabasePage() {
         {/* Table View */}
         <TabsContent value="table">
           <Card>
-            <CardContent className="p-4">
-              <DataTable
-                tableId="results-database"
-                columns={resultColumns}
-                rows={filteredRecords}
-                rowKey={(r) => r.measurementId}
-                searchPlaceholder="Tabelle durchsuchen …"
-                emptyMessage="Keine abgeschlossenen Aufgaben gefunden"
-                defaultSort={{ key: "completedAt", dir: "desc" }}
-              />
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base">
+                  Ergebnismatrix
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte
+                  </span>
+                </CardTitle>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Angezeigte Parameter ({visibleParamColumns.length}/{allParamColumns.length})
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 max-h-80 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium">Parameter anzeigen</span>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setHiddenParams([])}>
+                        Alle
+                      </Button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {allParamColumns.map((col) => (
+                        <label key={col.key} className="flex items-center gap-2 text-xs">
+                          <Checkbox
+                            checked={!hiddenParams.includes(col.key)}
+                            onCheckedChange={() => toggleParam(col.key)}
+                          />
+                          {columnHeader(col)}
+                        </label>
+                      ))}
+                      {allParamColumns.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Keine Ergebnisparameter vorhanden.</p>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Die Spaltenstruktur bleibt unabhängig von Filtern stabil. Fehlende Ergebnisse bleiben
+                leer – ein tatsächlich gemessener Wert 0 wird als 0 angezeigt.
+              </p>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <ResultsMatrixTable records={filteredRecords} columns={visibleParamColumns} />
             </CardContent>
           </Card>
         </TabsContent>
