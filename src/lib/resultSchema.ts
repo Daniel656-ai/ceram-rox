@@ -145,7 +145,13 @@ export function exportCell(record: ResultRecord, key: string): number | string {
   return c.value !== null ? c.value : c.text ?? "";
 }
 
-/** Spaltenbeschriftung inkl. Einheit. */
+/**
+ * Spaltenbeschriftung inkl. automatisch übernommener Einheit.
+ * Die Einheit stammt aus der Ergebnisdefinition bzw. dem offiziellen Ergebnis
+ * und wird als `Name [Einheit]` angezeigt. Ohne Einheit bleibt der reine Name
+ * stehen – niemals leere Klammern.
+ */
 export function columnHeader(col: ResultParamColumn): string {
-  return col.unit ? `${col.label} (${col.unit})` : col.label;
+  const unit = (col.unit || "").trim();
+  return unit ? `${col.label} [${unit}]` : col.label;
 }
