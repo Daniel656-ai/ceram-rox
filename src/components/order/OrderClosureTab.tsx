@@ -78,7 +78,7 @@ export default function OrderClosureTab({ order }: { order: any }) {
           </p>
         </CardHeader>
         <CardContent>
-          <OrderResultsDetail orderId={order.id} />
+          <OrderResultsDetail orderId={order.id} orderNumber={order.order_number} />
         </CardContent>
       </Card>
 

@@ -27,6 +27,7 @@ import {
 import { samples, sampleHistory, sampleDocuments } from "./samples";
 import { consumables } from "./consumables";
 import { measurementResults } from "./measurementResults";
+import { resultCorrections } from "./resultCorrections";
 import { projectMilestones } from "./projectMilestones";
 import { projectTimeEntries } from "./projectTimeEntries";
 import {
@@ -193,6 +194,7 @@ export const api = {
   sampleDocuments,
   consumables,
   measurementResults,
+  resultCorrections,
   projectMilestones,
   projectTimeEntries,
   projectConsumables,

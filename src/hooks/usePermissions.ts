@@ -11,6 +11,8 @@ export const ALL_PERMISSIONS = [
   // Measurements / tasks
   "measurements.enter",
   "measurements.view",
+  // Ergebniskorrekturen (nachträgliche Änderung gespeicherter Messergebnisse)
+  "results.correct",
   // General editorial
   "priorities.edit",
   "locations.edit",
@@ -155,6 +157,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "samples.edit": { de: "Proben bearbeiten", en: "Edit samples" },
   "measurements.enter": { de: "Aufgaben eintragen", en: "Enter tasks" },
   "measurements.view": { de: "Aufgaben ansehen", en: "View tasks" },
+  "results.correct": { de: "Messergebnisse korrigieren", en: "Correct measurement results" },
   "priorities.edit": { de: "Prioritäten ändern", en: "Edit priorities" },
   "locations.edit": { de: "Lagerort ändern", en: "Edit locations" },
   "projects.assign": { de: "Projektzuordnung", en: "Assign projects" },
@@ -206,7 +209,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
   { key: "samples", labelDe: "Proben", labelEn: "Samples", permissions: ["samples.create", "samples.view", "samples.edit"] },
-  { key: "measurements", labelDe: "Aufgaben", labelEn: "Tasks", permissions: ["measurements.enter", "measurements.view"] },
+  { key: "measurements", labelDe: "Aufgaben", labelEn: "Tasks", permissions: ["measurements.enter", "measurements.view", "results.correct"] },
   { key: "orders", labelDe: "Aufträge", labelEn: "Orders", permissions: ["orders.create", "orders.view", "orders.edit", "orders.delete"] },
   { key: "projects", labelDe: "Projekte", labelEn: "Projects", permissions: ["projects.create", "projects.view", "projects.edit", "projects.assign", "weekly_reviews.manage_all"] },
   { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel", "costs.view_hourly_rates", "costs.edit_hourly_rates"] },
