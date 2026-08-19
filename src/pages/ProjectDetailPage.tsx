@@ -22,6 +22,9 @@ import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import { ProjectTeamTab } from "@/components/ProjectTeamTab";
 import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
 import { WeeklyReviewsTab } from "@/components/WeeklyReviewsTab";
+import { ProjectHistoryTab } from "@/components/project/ProjectHistoryTab";
+import { WeekDateInput } from "@/components/WeekDateInput";
+import { formatDateWithWeek } from "@/lib/isoWeek";
 import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
 import { ProjectGovernanceTab } from "@/components/ProjectGovernanceTab";
 import { ProjectClosureTab } from "@/components/ProjectClosureTab";
@@ -465,7 +468,7 @@ export default function ProjectDetailPage() {
                   onChange={(e) => handleUpdateProject({ start_date: e.target.value || null })}
                 />
               ) : (
-                <span className="text-sm">{(project as any).start_date ? new Date((project as any).start_date).toLocaleDateString("de-DE") : "–"}</span>
+                <span className="text-sm">{formatDateWithWeek((project as any).start_date)}</span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -479,7 +482,7 @@ export default function ProjectDetailPage() {
                   onChange={(e) => handleUpdateProject({ end_date: e.target.value || null })}
                 />
               ) : (
-                <span className="text-sm">{(project as any).end_date ? new Date((project as any).end_date).toLocaleDateString("de-DE") : "–"}</span>
+                <span className="text-sm">{formatDateWithWeek((project as any).end_date)}</span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -559,6 +562,7 @@ export default function ProjectDetailPage() {
             { value: "team", label: t("tab_team"), icon: <Users className="h-3.5 w-3.5 mr-1" /> },
             { value: "planning", label: t("tab_planning") },
             { value: "weekly_reviews", label: "Weekly Reviews", icon: <ClipboardList className="h-3.5 w-3.5 mr-1" /> },
+            { value: "history", label: "Projektverlauf", icon: <CalendarClock className="h-3.5 w-3.5 mr-1" /> },
             { value: "material_costs", label: t("materials:tab_material_costs") },
           ]}
           advancedTabs={[
@@ -604,6 +608,10 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
 
+
+        <TabsContent value="history">
+          <ProjectHistoryTab projectId={id!} />
+        </TabsContent>
 
         <TabsContent value="weekly_reviews">
           <WeeklyReviewsTab projectId={id!} />
