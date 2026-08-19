@@ -223,7 +223,28 @@ function ComparisonView({ analyses }: { analyses: AnalysisEntry[] }) {
  * Probe → Dienstleistung/Analyse → alle Ergebnisparameter (vertikal),
  * inklusive Vergleichsansicht bei mehreren Analysen derselben Dienstleistung.
  */
-export default function OrderResultsDetail({ orderId }: { orderId: string }) {
+export default function OrderResultsDetail({
+  orderId,
+  orderNumber,
+}: {
+  orderId: string;
+  orderNumber?: string;
+}) {
+  const canCorrect = useCanCorrectResults();
+  const { data: corrections = [] } = useOrderCorrections(orderId);
+  const [correctCtx, setCorrectCtx] = useState<CorrectionContext | null>(null);
+  const [reassignCtx, setReassignCtx] = useState<ReassignContext | null>(null);
+  const [historyCtx, setHistoryCtx] = useState<{ measurementId: string; measurementNumber?: string; resultId?: string } | null>(null);
+
+  const correctedResultIds = useMemo(
+    () => new Set(corrections.filter((c) => c.measurement_result_id).map((c) => c.measurement_result_id as string)),
+    [corrections]
+  );
+  const correctedMeasurementIds = useMemo(
+    () => new Set(corrections.map((c) => c.order_measurement_id)),
+    [corrections]
+  );
+
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["order-results-overview", orderId],
     queryFn: () => api.orderSamples.resultsOverview(orderId) as Promise<RawMeasurementRow[]>,
@@ -304,7 +325,19 @@ export default function OrderResultsDetail({ orderId }: { orderId: string }) {
                     </TabsList>
                     <TabsContent value="single" className="space-y-3 pt-3">
                       {svc.analyses.map((a) => (
-                        <AnalysisBlock key={a.measurementId} analysis={a} />
+                        <AnalysisBlock
+                          key={a.measurementId}
+                          analysis={a}
+                          sample={s}
+                          orderId={orderId}
+                          orderNumber={orderNumber}
+                          canCorrect={canCorrect}
+                          hasHistory={correctedMeasurementIds.has(a.measurementId)}
+                          correctedResultIds={correctedResultIds}
+                          onCorrect={setCorrectCtx}
+                          onReassign={setReassignCtx}
+                          onHistory={setHistoryCtx}
+                        />
                       ))}
                     </TabsContent>
                     <TabsContent value="compare" className="pt-3">
@@ -312,18 +345,72 @@ export default function OrderResultsDetail({ orderId }: { orderId: string }) {
                     </TabsContent>
                   </Tabs>
                 ) : (
-                  svc.analyses.map((a) => <AnalysisBlock key={a.measurementId} analysis={a} />)
+                  svc.analyses.map((a) => (
+                    <AnalysisBlock
+                      key={a.measurementId}
+                      analysis={a}
+                      sample={s}
+                      orderId={orderId}
+                      orderNumber={orderNumber}
+                      canCorrect={canCorrect}
+                      hasHistory={correctedMeasurementIds.has(a.measurementId)}
+                      correctedResultIds={correctedResultIds}
+                      onCorrect={setCorrectCtx}
+                      onReassign={setReassignCtx}
+                      onHistory={setHistoryCtx}
+                    />
+                  ))
                 )}
               </div>
             ))}
           </CardContent>
         </Card>
       ))}
+
+      <ResultCorrectionDialog
+        open={!!correctCtx}
+        onOpenChange={(v) => !v && setCorrectCtx(null)}
+        context={correctCtx}
+      />
+      <SampleReassignDialog
+        open={!!reassignCtx}
+        onOpenChange={(v) => !v && setReassignCtx(null)}
+        context={reassignCtx}
+      />
+      <CorrectionHistoryDialog
+        open={!!historyCtx}
+        onOpenChange={(v) => !v && setHistoryCtx(null)}
+        measurementId={historyCtx?.measurementId ?? ""}
+        measurementNumber={historyCtx?.measurementNumber}
+        resultId={historyCtx?.resultId}
+      />
     </div>
   );
 }
 
-function AnalysisBlock({ analysis }: { analysis: AnalysisEntry }) {
+function AnalysisBlock({
+  analysis,
+  sample,
+  orderId,
+  orderNumber,
+  canCorrect,
+  hasHistory,
+  correctedResultIds,
+  onCorrect,
+  onReassign,
+  onHistory,
+}: {
+  analysis: AnalysisEntry;
+  sample: { sampleId: string | null; sampleNumber: string; sampleName: string };
+  orderId: string;
+  orderNumber?: string;
+  canCorrect: boolean;
+  hasHistory: boolean;
+  correctedResultIds: Set<string>;
+  onCorrect: (ctx: CorrectionContext) => void;
+  onReassign: (ctx: ReassignContext) => void;
+  onHistory: (ctx: { measurementId: string; measurementNumber?: string; resultId?: string }) => void;
+}) {
   return (
     <div className="border rounded-md p-3 space-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -336,8 +423,78 @@ function AnalysisBlock({ analysis }: { analysis: AnalysisEntry }) {
         <Badge variant="outline" className="text-[10px]">
           {analysis.values.length} Ergebnisse
         </Badge>
+        {hasHistory && (
+          <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-700">
+            Korrigiert
+          </Badge>
+        )}
+
+        <div className="ml-auto flex items-center gap-1">
+          {hasHistory && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() =>
+                onHistory({
+                  measurementId: analysis.measurementId,
+                  measurementNumber: analysis.measurementNumber,
+                })
+              }
+            >
+              <History className="h-3.5 w-3.5 mr-1" /> Historie
+            </Button>
+          )}
+          {canCorrect && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() =>
+                onReassign({
+                  measurementId: analysis.measurementId,
+                  measurementNumber: analysis.measurementNumber,
+                  orderId,
+                  orderNumber,
+                  serviceName: analysis.serviceName,
+                  analysisLabel: `Analyse ${analysis.index}`,
+                  currentSampleId: sample.sampleId,
+                  currentSampleNumber: sample.sampleNumber,
+                  resultCount: analysis.values.length,
+                })
+              }
+            >
+              <FlaskConical className="h-3.5 w-3.5 mr-1" /> Probenzuordnung korrigieren
+            </Button>
+          )}
+        </div>
       </div>
-      <AnalysisTable analysis={analysis} />
+      <AnalysisTable
+        analysis={analysis}
+        actions={{
+          canEdit: canCorrect,
+          correctedResultIds,
+          onCorrect: (v) =>
+            onCorrect({
+              resultId: v.resultId,
+              parameterLabel: v.label,
+              unit: v.unit,
+              currentValue: v.value,
+              currentText: v.text,
+              sampleNumber: sample.sampleNumber,
+              sampleName: sample.sampleName,
+              orderNumber,
+              serviceName: analysis.serviceName,
+              analysisLabel: `Analyse ${analysis.index}`,
+            }),
+          onHistory: (resultId) =>
+            onHistory({
+              measurementId: analysis.measurementId,
+              measurementNumber: analysis.measurementNumber,
+              resultId,
+            }),
+        }}
+      />
     </div>
   );
 }
