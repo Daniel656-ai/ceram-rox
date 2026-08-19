@@ -8,12 +8,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, FlaskConical } from "lucide-react";
+import { ChevronDown, FlaskConical, PencilLine, History, AlertCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import ResultCorrectionDialog, { type CorrectionContext } from "@/components/results/ResultCorrectionDialog";
+import SampleReassignDialog, { type ReassignContext } from "@/components/results/SampleReassignDialog";
+import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
+import { useCanCorrectResults, useOrderCorrections } from "@/hooks/useResultCorrections";
 import {
   buildOrderResultStructure,
   buildComparison,
   groupByResultGroup,
   type AnalysisEntry,
+  type AnalysisValue,
 } from "@/lib/orderResultsStructure";
 import type { RawMeasurementRow } from "@/lib/orderResultsAggregation";
 import { buildServiceSchemas, type ResultParamColumn } from "@/lib/resultSchema";
@@ -29,8 +35,15 @@ function fmtDate(iso: string | null) {
   return Number.isNaN(d.getTime()) ? "–" : d.toLocaleDateString("de-AT");
 }
 
+interface RowActions {
+  canEdit: boolean;
+  correctedResultIds: Set<string>;
+  onCorrect: (v: AnalysisValue) => void;
+  onHistory: (resultId: string) => void;
+}
+
 /** Vertikale Detailtabelle: Parameter | Ergebnis | Einheit (vollständig, scrollbar). */
-function AnalysisTable({ analysis }: { analysis: AnalysisEntry }) {
+function AnalysisTable({ analysis, actions }: { analysis: AnalysisEntry; actions: RowActions }) {
   const groups = groupByResultGroup(analysis.values);
   return (
     <div className="space-y-2">
@@ -42,18 +55,56 @@ function AnalysisTable({ analysis }: { analysis: AnalysisEntry }) {
                 <TableHead className="w-1/2">Parameter</TableHead>
                 <TableHead className="text-right">Ergebnis</TableHead>
                 <TableHead className="w-24">Einheit</TableHead>
+                <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {g.rows.map((v) => (
-                <TableRow key={v.key}>
-                  <TableCell>{v.label}</TableCell>
-                  <TableCell className="text-right tabular-nums font-mono">
-                    {v.value !== null ? fmt(v.value) : v.text ?? ""}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{v.unit ?? ""}</TableCell>
-                </TableRow>
-              ))}
+              {g.rows.map((v) => {
+                const corrected = actions.correctedResultIds.has((v as AnalysisValue).resultId);
+                return (
+                  <TableRow key={v.key}>
+                    <TableCell>{v.label}</TableCell>
+                    <TableCell className="text-right tabular-nums font-mono">
+                      <span className="inline-flex items-center gap-1 justify-end">
+                        {v.value !== null ? fmt(v.value) : v.text ?? ""}
+                        {corrected && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={() => actions.onHistory((v as AnalysisValue).resultId)}
+                                  className="text-amber-600"
+                                  aria-label="Korrigiert – Änderungshistorie anzeigen"
+                                >
+                                  <AlertCircle className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Dieses Ergebnis wurde nachträglich geändert. Änderungshistorie anzeigen.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{v.unit ?? ""}</TableCell>
+                    <TableCell className="text-right">
+                      {actions.canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Ergebnis korrigieren"
+                          onClick={() => actions.onCorrect(v as AnalysisValue)}
+                        >
+                          <PencilLine className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </ParamGroup>
