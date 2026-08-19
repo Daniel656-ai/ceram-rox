@@ -1965,6 +1965,78 @@ export type Database = {
           },
         ]
       }
+      measurement_result_corrections: {
+        Row: {
+          affected_result_count: number | null
+          change_type: string
+          changed_at: string
+          changed_by: string
+          id: string
+          measurement_result_id: string | null
+          new_sample_id: string | null
+          new_sample_number: string | null
+          new_text: string | null
+          new_value: number | null
+          old_sample_id: string | null
+          old_sample_number: string | null
+          old_text: string | null
+          old_value: number | null
+          order_id: string | null
+          order_measurement_id: string
+          parameter_label: string | null
+          parameter_name: string | null
+          reason: string
+          service_id: string | null
+          unit: string | null
+        }
+        Insert: {
+          affected_result_count?: number | null
+          change_type: string
+          changed_at?: string
+          changed_by: string
+          id?: string
+          measurement_result_id?: string | null
+          new_sample_id?: string | null
+          new_sample_number?: string | null
+          new_text?: string | null
+          new_value?: number | null
+          old_sample_id?: string | null
+          old_sample_number?: string | null
+          old_text?: string | null
+          old_value?: number | null
+          order_id?: string | null
+          order_measurement_id: string
+          parameter_label?: string | null
+          parameter_name?: string | null
+          reason: string
+          service_id?: string | null
+          unit?: string | null
+        }
+        Update: {
+          affected_result_count?: number | null
+          change_type?: string
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          measurement_result_id?: string | null
+          new_sample_id?: string | null
+          new_sample_number?: string | null
+          new_text?: string | null
+          new_value?: number | null
+          old_sample_id?: string | null
+          old_sample_number?: string | null
+          old_text?: string | null
+          old_value?: number | null
+          order_id?: string | null
+          order_measurement_id?: string
+          parameter_label?: string | null
+          parameter_name?: string | null
+          reason?: string
+          service_id?: string | null
+          unit?: string | null
+        }
+        Relationships: []
+      }
       measurement_results: {
         Row: {
           created_at: string
@@ -8821,6 +8893,7 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      can_correct_results: { Args: { _user_id: string }; Returns: boolean }
       can_edit_project_governance: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -8870,6 +8943,10 @@ export type Database = {
           _new_number?: string
           _source_id: string
         }
+        Returns: string
+      }
+      correct_measurement_result: {
+        Args: { p_new_value: number; p_reason: string; p_result_id: string }
         Returns: string
       }
       correct_mixture_batch_quantity: {
@@ -9269,6 +9346,14 @@ export type Database = {
       project_has_official_result: {
         Args: { _project_id: string }
         Returns: boolean
+      }
+      reassign_measurement_sample: {
+        Args: {
+          p_measurement_id: string
+          p_new_sample_id: string
+          p_reason: string
+        }
+        Returns: string
       }
       recompute_order_workflow_status: {
         Args: { _order_id: string }
