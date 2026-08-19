@@ -461,11 +461,9 @@ export default function ProjectDetailPage() {
               <CalendarClock className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">{t("project_start_date")}:</span>
               {canManagePlanning && !isProjectCompleted ? (
-                <Input
-                  type="date"
-                  className="w-40 h-8"
+                <WeekDateInput
                   value={(project as any).start_date || ""}
-                  onChange={(e) => handleUpdateProject({ start_date: e.target.value || null })}
+                  onChange={(v) => handleUpdateProject({ start_date: v || null })}
                 />
               ) : (
                 <span className="text-sm">{formatDateWithWeek((project as any).start_date)}</span>
@@ -475,11 +473,10 @@ export default function ProjectDetailPage() {
               <CalendarClock className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">{t("project_end_date")}:</span>
               {canManagePlanning && !isProjectCompleted ? (
-                <Input
-                  type="date"
-                  className="w-40 h-8"
+                <WeekDateInput
                   value={(project as any).end_date || ""}
-                  onChange={(e) => handleUpdateProject({ end_date: e.target.value || null })}
+                  weekday={5}
+                  onChange={(v) => handleUpdateProject({ end_date: v || null })}
                 />
               ) : (
                 <span className="text-sm">{formatDateWithWeek((project as any).end_date)}</span>
@@ -759,6 +756,12 @@ export default function ProjectDetailPage() {
                     <div><span className="text-muted-foreground">{t("created_at")}:</span> {new Date(project.created_at).toLocaleDateString("de-DE")}</div>
                     <div className="col-span-2"><span className="text-muted-foreground">{t("description")}:</span> {project.description || "–"}</div>
                   </div>
+                </div>
+
+                {/* Projektverlauf */}
+                <div className="break-inside-avoid">
+                  <h3 className="font-semibold mb-2">Projektverlauf (Status &amp; Änderungen)</h3>
+                  <ProjectHistoryReportSection projectId={id!} />
                 </div>
 
                 {/* Summary */}
