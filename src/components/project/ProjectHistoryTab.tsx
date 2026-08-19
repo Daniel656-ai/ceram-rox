@@ -185,3 +185,28 @@ export function ProjectHistoryTab({ projectId }: { projectId: string }) {
     </Card>
   );
 }
+
+/** Kompakte Darstellung des Projektverlaufs für den Projektbericht (Druck). */
+export function ProjectHistoryReportSection({ projectId }: { projectId: string }) {
+  const entries = useProjectHistory(projectId);
+  if (entries.length === 0) {
+    return <p className="text-sm text-muted-foreground">Keine Änderungen protokolliert</p>;
+  }
+  return (
+    <div className="space-y-1 text-sm">
+      {entries.map((e) => (
+        <div key={e.id} className="flex flex-wrap gap-x-2 border-b py-1 break-inside-avoid">
+          <span className="text-muted-foreground w-32 shrink-0">
+            {e.at ? new Date(e.at).toLocaleDateString("de-DE") : ""}
+            {e.isoWeek != null ? ` · KW ${e.isoWeek}` : ""}
+          </span>
+          <span className="font-medium">{TYPE_META[e.type].label}:</span>
+          <span>{e.title}</span>
+          {e.detail?.trim() && <span className="text-muted-foreground">— {e.detail.replace(/\n/g, " / ")}</span>}
+          {e.reason && <span className="italic">(Begründung: {e.reason})</span>}
+          {e.actor && <span className="text-muted-foreground">· {e.actor}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}

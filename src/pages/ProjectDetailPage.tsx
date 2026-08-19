@@ -22,7 +22,7 @@ import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
 import { ProjectTeamTab } from "@/components/ProjectTeamTab";
 import { ProjectPlanningTab } from "@/components/ProjectPlanningTab";
 import { WeeklyReviewsTab } from "@/components/WeeklyReviewsTab";
-import { ProjectHistoryTab } from "@/components/project/ProjectHistoryTab";
+import { ProjectHistoryTab, ProjectHistoryReportSection } from "@/components/project/ProjectHistoryTab";
 import { WeekDateInput } from "@/components/WeekDateInput";
 import { formatDateWithWeek } from "@/lib/isoWeek";
 import { ProjectDocumentsTab } from "@/components/ProjectDocumentsTab";
