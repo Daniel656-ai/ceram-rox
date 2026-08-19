@@ -15,6 +15,7 @@ export interface ResultRecord {
   sampleName: string;
   /** Falls die Messung an einer Ersatzprobe durchgeführt wurde. */
   originalSampleNumber: string | null;
+  serviceId?: string | null;
   serviceName: string;
   serviceCategory: string;
   assignedToId: string | null;
@@ -59,7 +60,7 @@ export function useResultsDatabase() {
       const { data: measurements, error } = await api
         .from("order_measurements")
         .select(`
-          id, measurement_number, status, assigned_to, actual_duration_hours,
+          id, measurement_number, status, assigned_to, actual_duration_hours, service_id,
           created_at, updated_at, sample_id, original_sample_id,
           samples!order_measurements_sample_id_fkey(id, sample_number, sample_name),
           original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
@@ -110,6 +111,7 @@ export function useResultsDatabase() {
           sampleNumber: sample?.sample_number || "",
           sampleName: sample?.sample_name || "",
           originalSampleNumber: m.original_sample?.sample_number || null,
+          serviceId: m.service_id || null,
           serviceName: service?.service_name || "",
           serviceCategory: service?.category || "",
           assignedToId: m.assigned_to,

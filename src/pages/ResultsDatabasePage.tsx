@@ -1,12 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, buildResultUnitMap, withUnit, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +19,11 @@ import { AxisScaleControls, type ManualScale } from "@/components/results/AxisSc
 import { computeStats, isOutlier, linearRegression, formatNumber, buildInsights } from "@/lib/resultsStatistics";
 import { exportChartAsPng, exportChartAsSvg } from "@/lib/chartExport";
 import { loadSavedAnalyses, persistSavedAnalyses, type SavedAnalysis } from "@/lib/resultsAnalysisStorage";
+import { useAllServiceParameterDefs } from "@/hooks/useServiceParameters";
+import { buildServiceSchemas, flattenSchemas, exportCell, columnHeader } from "@/lib/resultSchema";
+import ResultsMatrixTable from "@/components/results/ResultsMatrixTable";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 
@@ -32,6 +36,26 @@ const CHART_COLORS = [
 
 export default function ResultsDatabasePage() {
   const { data: records = [], isLoading } = useResultsDatabase();
+  const { data: paramDefs = [] } = useAllServiceParameterDefs();
+
+  /**
+   * Stabile Ergebnisstruktur: aus den definierten Ergebnisparametern je
+   * Dienstleistung plus allen tatsächlich vorhandenen Ergebnissen der
+   * gesamten Datenbasis (bewusst ungefiltert). Filter verändern daher nie
+   * die Spaltenstruktur – fehlende Werte bleiben leere Zellen.
+   */
+  const serviceSchemas = useMemo(
+    () => buildServiceSchemas(records, paramDefs as any),
+    [records, paramDefs]
+  );
+  const allParamColumns = useMemo(() => flattenSchemas(serviceSchemas), [serviceSchemas]);
+  const [hiddenParams, setHiddenParams] = useState<string[]>([]);
+  const visibleParamColumns = useMemo(
+    () => allParamColumns.filter((c) => !hiddenParams.includes(c.key)),
+    [allParamColumns, hiddenParams]
+  );
+  const toggleParam = (key: string) =>
+    setHiddenParams((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
   // Filters
   const [serviceFilter, setServiceFilter] = useState<string>("all");
@@ -70,7 +94,6 @@ export default function ResultsDatabasePage() {
 
 
 
-  const resultUnits = useMemo(() => buildResultUnitMap(records), [records]);
   const { inputParameterNames, outputParameterNames } = useMemo(
     () => getUniqueParameterNames(records), [records]
   );
@@ -115,71 +138,54 @@ export default function ResultsDatabasePage() {
 
   const hasActiveFilters = serviceFilter !== "all" || projectFilter !== "all" || creatorFilter !== "all" || technicianFilter !== "all" || sampleFilter || dateFrom || dateTo || searchText;
 
-  // Export functions
-  const exportToExcel = () => {
-    const rows = filteredRecords.map(r => {
+  // ==========================================================
+  // Export – die Spaltenstruktur ist immer identisch (stabile
+  // Ergebnisdefinition), unabhängig von Filtern, Datensatzanzahl oder
+  // gerade sichtbaren Spalten. Fehlende Werte bleiben leer, 0 bleibt 0.
+  // ==========================================================
+  const buildExportRows = (source: ResultRecord[]) =>
+    source.map((r) => {
       const row: Record<string, any> = {
-        "Messnummer": r.measurementNumber,
-        "Auftragsnummer": r.orderNumber,
-        "Projekt": r.projectName || r.projectNumber,
+        "Auftrag": r.orderNumber,
         "Probe": r.sampleNumber || r.sampleName,
-        "Messart": r.serviceName,
+        "Probenbezeichnung": r.sampleName,
+        "Dienstleistung": r.serviceName,
+        "Analyse": r.measurementNumber,
+        "Datum": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
+        "Projekt": r.projectName || r.projectNumber,
         "Auftraggeber": r.createdByName,
         "Messdienstleister": r.assignedToName,
-        "Abgeschlossen": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
-        "Ist-Dauer (h)": r.actualDurationHours ?? r.standardDurationHours,
       };
-      // Add input params
-      inputParameterNames.forEach(name => {
-        const p = r.inputParameters[name];
-        row[`[E] ${name}`] = p?.value ?? "";
+      allParamColumns.forEach((col) => {
+        row[columnHeader(col)] = exportCell(r, col.key);
       });
-      // Add output results
-      outputParameterNames.forEach(name => {
-        const res = r.outputResults.find(o => resultLabel(o) === name);
-        row[`[A] ${withUnit(name, resultUnits)}`] = res?.value ?? "";
-      });
-      row["Bemerkungen"] = r.remarks;
       return row;
     });
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Ergebnisse");
-    XLSX.writeFile(wb, `Ergebnisdatenbank_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
-  };
-
-  const exportToCSV = () => {
-    const rows = filteredRecords.map(r => {
-      const row: Record<string, any> = {
-        "Messnummer": r.measurementNumber,
-        "Auftragsnummer": r.orderNumber,
-        "Projekt": r.projectName || r.projectNumber,
-        "Probe": r.sampleNumber || r.sampleName,
-        "Messart": r.serviceName,
-        "Auftraggeber": r.createdByName,
-        "Messdienstleister": r.assignedToName,
-        "Abgeschlossen": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
-      };
-      inputParameterNames.forEach(name => {
-        row[name] = r.inputParameters[name]?.value ?? "";
-      });
-      outputParameterNames.forEach(name => {
-        const res = r.outputResults.find(o => resultLabel(o) === name);
-        row[withUnit(name, resultUnits)] = res?.value ?? "";
-      });
-      return row;
-    });
-    const ws = XLSX.utils.json_to_sheet(rows);
+  const downloadWorkbook = (source: ResultRecord[], kind: "xlsx" | "csv", suffix: string) => {
+    const rows = buildExportRows(source);
+    const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+    const stamp = format(new Date(), "yyyy-MM-dd");
+    if (kind === "xlsx") {
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Ergebnisse");
+      XLSX.writeFile(wb, `Ergebnisdatenbank_${suffix}_${stamp}.xlsx`);
+      return;
+    }
     const csv = XLSX.utils.sheet_to_csv(ws, { FS: ";" });
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Ergebnisdatenbank_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `Ergebnisdatenbank_${suffix}_${stamp}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const exportToCSV = () => downloadWorkbook(filteredRecords, "csv", "gefiltert");
+  const exportToExcel = () => downloadWorkbook(filteredRecords, "xlsx", "gefiltert");
+  const exportAllToExcel = () => downloadWorkbook(records, "xlsx", "alle");
 
   // Chart data – identische Datenbasis wie die Ergebnisdatenbank (nur offizielle Ergebnisse)
   const chartSources = useMemo(() => buildChartSources(filteredRecords), [filteredRecords]);
@@ -467,47 +473,7 @@ export default function ResultsDatabasePage() {
 
 
 
-  const resultColumns = useMemo<DataTableColumn<ResultRecord>[]>(() => {
-    const base: DataTableColumn<ResultRecord>[] = [
-      { key: "measurementNumber", header: "Messnr.", accessor: r => r.measurementNumber, cell: r => <span className="font-mono text-xs">{r.measurementNumber}</span> },
-      { key: "orderNumber", header: "Auftragsnr.", accessor: r => r.orderNumber, cell: r => <span className="font-mono text-xs">{r.orderNumber}</span> },
-      { key: "serviceName", type: "status", header: "Messart", accessor: r => r.serviceName, cell: r => <Badge variant="secondary" className="text-xs">{r.serviceName}</Badge> },
-      { key: "projectName", header: "Projekt", accessor: r => r.projectName || r.projectNumber },
-      { key: "sampleName", header: "Probe", accessor: r => r.sampleNumber || r.sampleName,
-        cell: r => (
-          <div className="leading-tight">
-            <span className="font-mono text-xs">{r.sampleNumber || "–"}</span>
-            {r.sampleName ? <div className="text-xs text-muted-foreground">{r.sampleName}</div> : null}
-            {r.originalSampleNumber ? (
-              <div className="text-[11px] text-muted-foreground">Ersatzprobe für {r.originalSampleNumber}</div>
-            ) : null}
-          </div>
-        ) },
-      { key: "createdByName", type: "status", header: "Auftraggeber", accessor: r => r.createdByName },
-      { key: "assignedToName", type: "status", header: "MDL", accessor: r => r.assignedToName },
-      { key: "completedAt", type: "date", header: "Abgeschlossen", accessor: r => r.completedAt ?? null,
-        cell: r => r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yy", { locale: de }) : "-" },
-      { key: "duration", type: "number", header: "Dauer (h)", accessor: r => r.actualDurationHours ?? r.standardDurationHours ?? null,
-        cell: r => <span className="font-mono text-sm">{r.actualDurationHours ?? r.standardDurationHours ?? "-"}</span> },
-    ];
-    outputParameterNames.slice(0, 5).forEach(name => {
-      base.push({
-        key: `out_${name}`,
-        type: "number",
-        header: withUnit(name, resultUnits),
-        accessor: r => {
-          const res = r.outputResults.find(o => resultLabel(o) === name);
-          const v = res?.value;
-          return v == null ? null : v;
-        },
-        cell: r => {
-          const res = r.outputResults.find(o => resultLabel(o) === name);
-          return <span className="font-mono text-sm">{res?.value != null ? String(res.value) : "-"}</span>;
-        },
-      });
-    });
-    return base;
-  }, [outputParameterNames, resultUnits]);
+
 
   if (isLoading) {
     return (
@@ -542,6 +508,9 @@ export default function ResultsDatabasePage() {
           </Button>
           <Button variant="outline" size="sm" onClick={exportToExcel} disabled={filteredRecords.length === 0}>
             <Download className="h-4 w-4 mr-1" /> Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportAllToExcel} disabled={records.length === 0}>
+            <Download className="h-4 w-4 mr-1" /> Alle Ergebnisse
           </Button>
         </div>
       </div>
@@ -610,16 +579,51 @@ export default function ResultsDatabasePage() {
         {/* Table View */}
         <TabsContent value="table">
           <Card>
-            <CardContent className="p-4">
-              <DataTable
-                tableId="results-database"
-                columns={resultColumns}
-                rows={filteredRecords}
-                rowKey={(r) => r.measurementId}
-                searchPlaceholder="Tabelle durchsuchen …"
-                emptyMessage="Keine abgeschlossenen Aufgaben gefunden"
-                defaultSort={{ key: "completedAt", dir: "desc" }}
-              />
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base">
+                  Ergebnismatrix
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte
+                  </span>
+                </CardTitle>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Angezeigte Parameter ({visibleParamColumns.length}/{allParamColumns.length})
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 max-h-80 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium">Parameter anzeigen</span>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setHiddenParams([])}>
+                        Alle
+                      </Button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {allParamColumns.map((col) => (
+                        <label key={col.key} className="flex items-center gap-2 text-xs">
+                          <Checkbox
+                            checked={!hiddenParams.includes(col.key)}
+                            onCheckedChange={() => toggleParam(col.key)}
+                          />
+                          {columnHeader(col)}
+                        </label>
+                      ))}
+                      {allParamColumns.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Keine Ergebnisparameter vorhanden.</p>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Die Spaltenstruktur bleibt unabhängig von Filtern stabil. Fehlende Ergebnisse bleiben
+                leer – ein tatsächlich gemessener Wert 0 wird als 0 angezeigt.
+              </p>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <ResultsMatrixTable records={filteredRecords} columns={visibleParamColumns} />
             </CardContent>
           </Card>
         </TabsContent>

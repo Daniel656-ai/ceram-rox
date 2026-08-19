@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import OrderResultsOverview from "@/components/OrderResultsOverview";
+import OrderResultsDetail from "@/components/order/OrderResultsDetail";
 import CompletedResultForm from "@/components/CompletedResultForm";
 import OrderReportTab from "@/components/OrderReportTab";
 import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
@@ -78,7 +78,7 @@ export default function OrderClosureTab({ order }: { order: any }) {
           </p>
         </CardHeader>
         <CardContent>
-          <OrderResultsOverview orderId={order.id} />
+          <OrderResultsDetail orderId={order.id} />
         </CardContent>
       </Card>
 
