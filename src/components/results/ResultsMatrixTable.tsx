@@ -66,8 +66,8 @@ export default function ResultsMatrixTable({
             {columns.map((col) => (
               <th
                 key={col.key}
-                className="bg-muted text-right font-medium px-3 py-2 border-b whitespace-nowrap"
-                style={{ minWidth: 110 }}
+                className="bg-muted text-right font-medium px-3 py-2 border-b align-bottom whitespace-normal break-words leading-tight"
+                style={{ minWidth: 130, maxWidth: 220 }}
                 title={columnHeader(col)}
               >
                 {columnHeader(col)}
