@@ -51,7 +51,7 @@ export default function ResultsMatrixTable({
 
   return (
     <div className="relative w-full overflow-auto max-h-[70vh] border rounded-md">
-      <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 110 }}>
+      <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 140 }}>
         <thead className="sticky top-0 z-30">
           <tr className="bg-muted">
             {IDENT_COLUMNS.map((c, i) => (
@@ -66,8 +66,8 @@ export default function ResultsMatrixTable({
             {columns.map((col) => (
               <th
                 key={col.key}
-                className="bg-muted text-right font-medium px-3 py-2 border-b whitespace-nowrap"
-                style={{ minWidth: 110 }}
+                className="bg-muted text-right font-medium px-3 py-2 border-b align-bottom whitespace-normal break-words leading-tight"
+                style={{ minWidth: 130, maxWidth: 220 }}
                 title={columnHeader(col)}
               >
                 {columnHeader(col)}
