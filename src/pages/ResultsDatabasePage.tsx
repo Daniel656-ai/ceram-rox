@@ -20,6 +20,11 @@ import { AxisScaleControls, type ManualScale } from "@/components/results/AxisSc
 import { computeStats, isOutlier, linearRegression, formatNumber, buildInsights } from "@/lib/resultsStatistics";
 import { exportChartAsPng, exportChartAsSvg } from "@/lib/chartExport";
 import { loadSavedAnalyses, persistSavedAnalyses, type SavedAnalysis } from "@/lib/resultsAnalysisStorage";
+import { useAllServiceParameterDefs } from "@/hooks/useServiceParameters";
+import { buildServiceSchemas, flattenSchemas, exportCell, columnHeader } from "@/lib/resultSchema";
+import ResultsMatrixTable from "@/components/results/ResultsMatrixTable";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 
@@ -32,6 +37,26 @@ const CHART_COLORS = [
 
 export default function ResultsDatabasePage() {
   const { data: records = [], isLoading } = useResultsDatabase();
+  const { data: paramDefs = [] } = useAllServiceParameterDefs();
+
+  /**
+   * Stabile Ergebnisstruktur: aus den definierten Ergebnisparametern je
+   * Dienstleistung plus allen tatsächlich vorhandenen Ergebnissen der
+   * gesamten Datenbasis (bewusst ungefiltert). Filter verändern daher nie
+   * die Spaltenstruktur – fehlende Werte bleiben leere Zellen.
+   */
+  const serviceSchemas = useMemo(
+    () => buildServiceSchemas(records, paramDefs as any),
+    [records, paramDefs]
+  );
+  const allParamColumns = useMemo(() => flattenSchemas(serviceSchemas), [serviceSchemas]);
+  const [hiddenParams, setHiddenParams] = useState<string[]>([]);
+  const visibleParamColumns = useMemo(
+    () => allParamColumns.filter((c) => !hiddenParams.includes(c.key)),
+    [allParamColumns, hiddenParams]
+  );
+  const toggleParam = (key: string) =>
+    setHiddenParams((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
   // Filters
   const [serviceFilter, setServiceFilter] = useState<string>("all");
@@ -115,71 +140,54 @@ export default function ResultsDatabasePage() {
 
   const hasActiveFilters = serviceFilter !== "all" || projectFilter !== "all" || creatorFilter !== "all" || technicianFilter !== "all" || sampleFilter || dateFrom || dateTo || searchText;
 
-  // Export functions
-  const exportToExcel = () => {
-    const rows = filteredRecords.map(r => {
+  // ==========================================================
+  // Export – die Spaltenstruktur ist immer identisch (stabile
+  // Ergebnisdefinition), unabhängig von Filtern, Datensatzanzahl oder
+  // gerade sichtbaren Spalten. Fehlende Werte bleiben leer, 0 bleibt 0.
+  // ==========================================================
+  const buildExportRows = (source: ResultRecord[]) =>
+    source.map((r) => {
       const row: Record<string, any> = {
-        "Messnummer": r.measurementNumber,
-        "Auftragsnummer": r.orderNumber,
-        "Projekt": r.projectName || r.projectNumber,
+        "Auftrag": r.orderNumber,
         "Probe": r.sampleNumber || r.sampleName,
-        "Messart": r.serviceName,
+        "Probenbezeichnung": r.sampleName,
+        "Dienstleistung": r.serviceName,
+        "Analyse": r.measurementNumber,
+        "Datum": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
+        "Projekt": r.projectName || r.projectNumber,
         "Auftraggeber": r.createdByName,
         "Messdienstleister": r.assignedToName,
-        "Abgeschlossen": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
-        "Ist-Dauer (h)": r.actualDurationHours ?? r.standardDurationHours,
       };
-      // Add input params
-      inputParameterNames.forEach(name => {
-        const p = r.inputParameters[name];
-        row[`[E] ${name}`] = p?.value ?? "";
+      allParamColumns.forEach((col) => {
+        row[columnHeader(col)] = exportCell(r, col.key);
       });
-      // Add output results
-      outputParameterNames.forEach(name => {
-        const res = r.outputResults.find(o => resultLabel(o) === name);
-        row[`[A] ${withUnit(name, resultUnits)}`] = res?.value ?? "";
-      });
-      row["Bemerkungen"] = r.remarks;
       return row;
     });
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Ergebnisse");
-    XLSX.writeFile(wb, `Ergebnisdatenbank_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
-  };
-
-  const exportToCSV = () => {
-    const rows = filteredRecords.map(r => {
-      const row: Record<string, any> = {
-        "Messnummer": r.measurementNumber,
-        "Auftragsnummer": r.orderNumber,
-        "Projekt": r.projectName || r.projectNumber,
-        "Probe": r.sampleNumber || r.sampleName,
-        "Messart": r.serviceName,
-        "Auftraggeber": r.createdByName,
-        "Messdienstleister": r.assignedToName,
-        "Abgeschlossen": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
-      };
-      inputParameterNames.forEach(name => {
-        row[name] = r.inputParameters[name]?.value ?? "";
-      });
-      outputParameterNames.forEach(name => {
-        const res = r.outputResults.find(o => resultLabel(o) === name);
-        row[withUnit(name, resultUnits)] = res?.value ?? "";
-      });
-      return row;
-    });
-    const ws = XLSX.utils.json_to_sheet(rows);
+  const downloadWorkbook = (source: ResultRecord[], kind: "xlsx" | "csv", suffix: string) => {
+    const rows = buildExportRows(source);
+    const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+    const stamp = format(new Date(), "yyyy-MM-dd");
+    if (kind === "xlsx") {
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Ergebnisse");
+      XLSX.writeFile(wb, `Ergebnisdatenbank_${suffix}_${stamp}.xlsx`);
+      return;
+    }
     const csv = XLSX.utils.sheet_to_csv(ws, { FS: ";" });
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Ergebnisdatenbank_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `Ergebnisdatenbank_${suffix}_${stamp}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const exportToCSV = () => downloadWorkbook(filteredRecords, "csv", "gefiltert");
+  const exportToExcel = () => downloadWorkbook(filteredRecords, "xlsx", "gefiltert");
+  const exportAllToExcel = () => downloadWorkbook(records, "xlsx", "alle");
 
   // Chart data – identische Datenbasis wie die Ergebnisdatenbank (nur offizielle Ergebnisse)
   const chartSources = useMemo(() => buildChartSources(filteredRecords), [filteredRecords]);
