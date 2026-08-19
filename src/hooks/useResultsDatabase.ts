@@ -15,7 +15,7 @@ export interface ResultRecord {
   sampleName: string;
   /** Falls die Messung an einer Ersatzprobe durchgeführt wurde. */
   originalSampleNumber: string | null;
-  serviceId: string | null;
+  serviceId?: string | null;
   serviceName: string;
   serviceCategory: string;
   assignedToId: string | null;
