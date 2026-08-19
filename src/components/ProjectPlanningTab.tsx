@@ -20,6 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { WeekDateInput } from "@/components/WeekDateInput";
+import { formatDateWithWeek } from "@/lib/isoWeek";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -326,11 +328,11 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>{t("wp_start_date")}</Label>
-                      <Input type="date" value={wpForm.start_date} onChange={(e) => setWpForm((f) => ({ ...f, start_date: e.target.value }))} />
+                      <WeekDateInput value={wpForm.start_date} onChange={(v) => setWpForm((f) => ({ ...f, start_date: v }))} />
                     </div>
                     <div className="space-y-2">
                       <Label>{t("wp_end_date")}</Label>
-                      <Input type="date" value={wpForm.end_date} onChange={(e) => setWpForm((f) => ({ ...f, end_date: e.target.value }))} />
+                      <WeekDateInput value={wpForm.end_date} onChange={(v) => setWpForm((f) => ({ ...f, end_date: v }))} weekday={5} />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -419,8 +421,8 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                         </div>
                         {wp.description && <div className="text-xs text-muted-foreground truncate max-w-xs">{wp.description}</div>}
                       </TableCell>
-                      <TableCell>{wp.start_date ? new Date(wp.start_date).toLocaleDateString(locale) : "–"}</TableCell>
-                      <TableCell>{wp.end_date ? new Date(wp.end_date).toLocaleDateString(locale) : "–"}</TableCell>
+                      <TableCell>{wp.start_date ? formatDateWithWeek(wp.start_date) : "–"}</TableCell>
+                      <TableCell>{wp.end_date ? formatDateWithWeek(wp.end_date) : "–"}</TableCell>
                       <TableCell>
                         {wp.assignees.length === 0 ? (
                           <span className="text-muted-foreground text-xs">–</span>
@@ -526,7 +528,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                   </div>
                   <div className="space-y-2">
                     <Label>{t("milestone_date")} *</Label>
-                    <Input type="date" value={msForm.milestone_date} onChange={(e) => setMsForm((f) => ({ ...f, milestone_date: e.target.value }))} />
+                    <WeekDateInput value={msForm.milestone_date} onChange={(v) => setMsForm((f) => ({ ...f, milestone_date: v }))} />
                   </div>
                   <div className="space-y-2">
                     <Label>{t("milestone_status")}</Label>
@@ -570,7 +572,7 @@ export function ProjectPlanningTab({ projectId, canManage, projectStart, project
                     <TableRow key={m.id}>
                       <TableCell className="font-medium">{m.title}</TableCell>
                       <TableCell className="max-w-xs truncate text-muted-foreground">{m.description || "–"}</TableCell>
-                      <TableCell>{m.milestone_date ? new Date(m.milestone_date).toLocaleDateString(locale) : "–"}</TableCell>
+                      <TableCell>{m.milestone_date ? formatDateWithWeek(m.milestone_date) : "–"}</TableCell>
                       <TableCell>
                         {canManage ? (
                           <Select value={m.status} onValueChange={(v) => updateMilestone.mutate({ id: m.id, projectId, status: v })}>

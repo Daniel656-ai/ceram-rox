@@ -4919,29 +4919,41 @@ export type Database = {
         Row: {
           changed_by: string | null
           created_at: string
+          entity_id: string | null
+          entity_label: string | null
+          entity_type: string
           field_name: string
           id: string
           new_value: string | null
           old_value: string | null
           project_id: string
+          reason: string | null
         }
         Insert: {
           changed_by?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type?: string
           field_name: string
           id?: string
           new_value?: string | null
           old_value?: string | null
           project_id: string
+          reason?: string | null
         }
         Update: {
           changed_by?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type?: string
           field_name?: string
           id?: string
           new_value?: string | null
           old_value?: string | null
           project_id?: string
+          reason?: string | null
         }
         Relationships: [
           {
@@ -6268,6 +6280,7 @@ export type Database = {
           other_comments: string
           overall_rating: number
           project_id: string
+          rating_reason: string
           review_date: string
           risks: string
         }
@@ -6288,6 +6301,7 @@ export type Database = {
           other_comments?: string
           overall_rating: number
           project_id: string
+          rating_reason?: string
           review_date?: string
           risks?: string
         }
@@ -6308,6 +6322,7 @@ export type Database = {
           other_comments?: string
           overall_rating?: number
           project_id?: string
+          rating_reason?: string
           review_date?: string
           risks?: string
         }

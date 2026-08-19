@@ -15,7 +15,10 @@ export interface WeeklyReviewInput {
   risks: string;
   other_comments: string;
   overall_rating: 1 | 2 | 3;
+  /** Pflicht bei Bewertung "Mittel" (2) und "Schlecht" (1). */
+  rating_reason?: string;
 }
+
 
 export const weeklyReviews = {
   list: (projectId: string) =>
