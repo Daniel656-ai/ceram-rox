@@ -13,6 +13,8 @@ import { computeStats } from "./resultsStatistics";
 import type { ResultParamColumn } from "./resultSchema";
 
 export interface AnalysisValue {
+  /** ID des zugrunde liegenden Ergebnisdatensatzes (für Korrekturen/Historie). */
+  resultId: string;
   key: string;
   label: string;
   unit: string | null;
@@ -111,6 +113,7 @@ export function buildOrderResultStructure(
     const values: AnalysisValue[] = official.map((r) => {
       const num = toNumber(r.value as any);
       return {
+        resultId: (r as any).id,
         key: r.display_label || r.result_name,
         label: r.display_label || r.result_name,
         unit: r.unit || null,
