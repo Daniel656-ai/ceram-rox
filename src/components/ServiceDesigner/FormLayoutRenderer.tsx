@@ -785,7 +785,7 @@ function MeasurementBlockField({
   }
 
   return (
-    <div className={cn("border rounded-md bg-card", widthCls(node.width))}>
+    <div className="border rounded-md bg-card">
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
         <div className="flex items-center gap-2">
           <ClipboardPaste className="h-3.5 w-3.5 text-primary" />
