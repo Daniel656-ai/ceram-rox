@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, createContext, useContext, useCallback } from "react";
+import { useMemo, useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
 import { columnsGridStyle } from "@/lib/api/formDefinitionLayout";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree, CalculationNode } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
@@ -419,6 +419,10 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
     return <RepeaterField field={field} node={node} allFields={allFields} />;
   }
 
+  if (field.field_type === "measurement_block") {
+    return <MeasurementBlockField field={field} node={node} allFields={allFields} />;
+  }
+
   if (field.field_type === "measurement_import") {
     const roDisabled = node.readonly || field.readonly || perm.visibility === "read";
     return (
@@ -619,7 +623,7 @@ function RepeaterEntry({
   canReorder: boolean;
   itemLabel: string;
   /** Zusätzlicher Kopfbereich (z. B. Messkontext eines Messdatenblocks). */
-  header?: React.ReactNode;
+  header?: ReactNode;
   onChange: (next: Record<string, any>) => void;
   onRemove: () => void;
   onMoveUp: () => void;
