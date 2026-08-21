@@ -3,6 +3,11 @@ import type { FormField } from "@/lib/api/formFields";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import { evaluateLocalCalculations } from "@/lib/localCalculations";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import {
+  readInstances,
+  readMeasurementBlockMeta,
+  instanceResultKey,
+} from "@/lib/measurementBlocks";
 
 export interface OfficialResultCandidate {
   key: string;
@@ -11,6 +16,12 @@ export interface OfficialResultCandidate {
   official: boolean;
   kind: "field" | "calculation";
   error?: string | null;
+  /** Kennung der konkreten Messung (Messdatenblock), sonst null. */
+  instanceKey?: string | null;
+  /** Fachliche Bezeichnung der Messung (z. B. „Kalibriert“). */
+  instanceLabel?: string | null;
+  /** Messkontext (Präparation, Analyseart …). */
+  instanceContext?: Record<string, string> | null;
 }
 
 /**
@@ -31,20 +42,54 @@ export function buildLinkedFormResultCandidates(
     if (key.startsWith(prefix)) localValues[key.slice(prefix.length)] = value;
   }
 
+  const blocks = fields.filter((f) => f.field_type === "measurement_block");
+  const blockChildIds = new Set(
+    fields
+      .filter((f) => f.parent_field_id && blocks.some((b) => b.id === f.parent_field_id))
+      .map((f) => f.id)
+  );
+
   const calculated = evaluateLocalCalculations(
     calculations,
     localValues,
     fields.map((field) => field.field_key),
   );
 
+  // Messdatenblöcke: jede Messung erzeugt eigenständige, eindeutig
+  // zugeordnete Ergebnisse (SiO2 in Messung 1 ≠ SiO2 in Messung 2).
+  const instanceCandidates: OfficialResultCandidate[] = [];
+  for (const block of blocks) {
+    const meta = readMeasurementBlockMeta(block);
+    const storageKey = meta.storage_key || block.field_key;
+    const children = fields.filter((f) => f.parent_field_id === block.id);
+    for (const instance of readInstances(localValues[storageKey], meta)) {
+      for (const child of children) {
+        if (child.field_type === "measurement_import" || child.field_type === "repeater") continue;
+        instanceCandidates.push({
+          key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
+          label: child.result_label || child.display_name || child.field_key,
+          value: instance.values[child.field_key],
+          official: child.is_result === true,
+          kind: "field",
+          instanceKey: instance.instanceId,
+          instanceLabel: instance.label,
+          instanceContext: instance.context,
+        });
+      }
+    }
+  }
+
   return [
-    ...fields.map((field) => ({
-      key: `${prefix}${field.field_key}`,
-      label: field.result_label || field.display_name || field.field_key,
-      value: localValues[field.field_key],
-      official: field.is_result === true,
-      kind: "field" as const,
-    })),
+    ...fields
+      .filter((field) => !blockChildIds.has(field.id) && field.field_type !== "measurement_block")
+      .map((field) => ({
+        key: `${prefix}${field.field_key}`,
+        label: field.result_label || field.display_name || field.field_key,
+        value: localValues[field.field_key],
+        official: field.is_result === true,
+        kind: "field" as const,
+      })),
+    ...instanceCandidates,
     ...calculations.map((calculation) => ({
       key: `${prefix}${calculation.calc_key}`,
       label: calculation.result_label || calculation.display_name || calculation.calc_key,
@@ -55,6 +100,7 @@ export function buildLinkedFormResultCandidates(
     })),
   ];
 }
+
 
 /**
  * Builds the snapshot for the classic service form. Computed fields can depend
