@@ -40,8 +40,50 @@ export interface ResultRecord {
     measured_at: string | null;
     display_label: string | null;
     is_official: boolean;
+    /** Zuordnung zu einer konkreten Messung (Messdatenblock). */
+    instance_key?: string | null;
+    instance_label?: string | null;
+    instance_context?: Record<string, string> | null;
   }>;
   remarks: string;
+  /** Gesetzt, wenn der Datensatz eine einzelne Messung eines Blocks darstellt. */
+  instanceKey?: string | null;
+  instanceLabel?: string | null;
+  instanceContext?: Record<string, string> | null;
+}
+
+/**
+ * Zerlegt Datensätze in einzelne Messungen: Enthält eine Tätigkeit mehrere
+ * eigenständige Messungen (Messdatenblock), entsteht je Messung eine eigene,
+ * vergleichbare Zeile. Datensätze ohne Messdatenblock bleiben unverändert.
+ */
+export function expandByMeasurementInstance(records: ResultRecord[]): ResultRecord[] {
+  const out: ResultRecord[] = [];
+  for (const rec of records) {
+    const groups = new Map<string, ResultRecord["outputResults"]>();
+    for (const r of rec.outputResults) {
+      const key = r.instance_key || "";
+      const list = groups.get(key) ?? [];
+      list.push(r);
+      groups.set(key, list);
+    }
+    if (groups.size === 0) { out.push(rec); continue; }
+    if (groups.size === 1 && [...groups.keys()][0] === "") {
+      out.push(rec);
+      continue;
+    }
+    for (const [key, list] of groups) {
+      const label = key ? list.find((r) => r.instance_label)?.instance_label || "Messung" : "";
+      out.push({
+        ...rec,
+        outputResults: list,
+        instanceKey: key || null,
+        instanceLabel: key ? label : null,
+        instanceContext: key ? list.find((r) => r.instance_context)?.instance_context ?? {} : null,
+      });
+    }
+  }
+  return out;
 }
 
 export function useResultsDatabase() {
@@ -70,7 +112,7 @@ export function useResultsDatabase() {
             projects(project_number, project_name),
             samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
           ),
-          measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official)
+          measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
         `)
         .eq("measurement_results.is_official", true)
         .order("updated_at", { ascending: false });

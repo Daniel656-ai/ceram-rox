@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,13 +144,17 @@ export default function ResultsDatabasePage() {
   // gerade sichtbaren Spalten. Fehlende Werte bleiben leer, 0 bleibt 0.
   // ==========================================================
   const buildExportRows = (source: ResultRecord[]) =>
-    source.map((r) => {
+    // Mehrere eigenständige Messungen einer Tätigkeit werden als eigene
+    // Zeilen exportiert – die Spaltenstruktur bleibt identisch.
+    expandByMeasurementInstance(source).map((r) => {
       const row: Record<string, any> = {
         "Auftrag": r.orderNumber,
         "Probe": r.sampleNumber || r.sampleName,
         "Probenbezeichnung": r.sampleName,
         "Dienstleistung": r.serviceName,
         "Analyse": r.measurementNumber,
+        "Messung": r.instanceLabel ?? "",
+        "Messkontext": r.instanceContext ? Object.values(r.instanceContext).filter(Boolean).join(" · ") : "",
         "Datum": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
         "Projekt": r.projectName || r.projectNumber,
         "Auftraggeber": r.createdByName,

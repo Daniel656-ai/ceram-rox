@@ -274,7 +274,13 @@ function TaskExecutionPageInner() {
         measured_at: measuredAt,
         value: null,
         remarks: null,
+        // Zuordnung zur konkreten Messung (Messdatenblock). Ohne Block bleibt
+        // die Zuordnung leer – bestehende Ergebnisse ändern sich dadurch nicht.
+        instance_key: candidate.instanceKey ?? null,
+        instance_label: candidate.instanceLabel ?? null,
+        instance_context: candidate.instanceContext ?? {},
       };
+
 
       if (typeof raw === "string" || typeof raw === "number") {
         const num = typeof raw === "number" ? raw : parseFloat(raw);

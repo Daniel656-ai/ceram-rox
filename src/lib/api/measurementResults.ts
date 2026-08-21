@@ -26,9 +26,15 @@ export const measurementResults = {
     is_official?: boolean;
     /** Fachliche Bezeichnung für die Anzeige (nie technische IDs). */
     display_label?: string | null;
+    /** Kennung der konkreten Messung innerhalb eines Messdatenblocks. */
+    instance_key?: string | null;
+    /** Fachliche Bezeichnung der Messung (z. B. „Kalibriert“). */
+    instance_label?: string | null;
+    /** Messkontext (Präparation, Analyseart …). */
+    instance_context?: Record<string, string> | null;
   }) =>
     unwrap(
-      dbClient.from("measurement_results").insert(result).select().single()
+      dbClient.from("measurement_results").insert(result as any).select().single()
     ),
 
   update: (
@@ -45,8 +51,12 @@ export const measurementResults = {
       measured_by?: string;
       is_official?: boolean;
       display_label?: string | null;
+      instance_key?: string | null;
+      instance_label?: string | null;
+      instance_context?: Record<string, string> | null;
     }
-  ) => run(dbClient.from("measurement_results").update(updates).eq("id", id)),
+  ) => run(dbClient.from("measurement_results").update(updates as any).eq("id", id)),
+
 
   delete: (id: string) =>
     run(dbClient.from("measurement_results").delete().eq("id", id)),

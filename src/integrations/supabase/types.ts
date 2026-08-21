@@ -2042,6 +2042,9 @@ export type Database = {
           created_at: string
           display_label: string | null
           id: string
+          instance_context: Json
+          instance_key: string | null
+          instance_label: string | null
           is_official: boolean
           measured_at: string | null
           measured_by: string | null
@@ -2059,6 +2062,9 @@ export type Database = {
           created_at?: string
           display_label?: string | null
           id?: string
+          instance_context?: Json
+          instance_key?: string | null
+          instance_label?: string | null
           is_official?: boolean
           measured_at?: string | null
           measured_by?: string | null
@@ -2076,6 +2082,9 @@ export type Database = {
           created_at?: string
           display_label?: string | null
           id?: string
+          instance_context?: Json
+          instance_key?: string | null
+          instance_label?: string | null
           is_official?: boolean
           measured_at?: string | null
           measured_by?: string | null

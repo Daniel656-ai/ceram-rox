@@ -1,7 +1,11 @@
-import { useMemo, useState, useEffect, createContext, useContext, useCallback } from "react";
+import { useMemo, useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
 import { columnsGridStyle } from "@/lib/api/formDefinitionLayout";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree, CalculationNode } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
+import {
+  readMeasurementBlockMeta, instanceLabel, newInstanceId,
+  INSTANCE_ID_KEY, INSTANCE_LABEL_KEY, INSTANCE_CONTEXT_KEY,
+} from "@/lib/measurementBlocks";
 import {
   normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass,
   type RepeaterLayoutItem,
@@ -419,6 +423,10 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
     return <RepeaterField field={field} node={node} allFields={allFields} />;
   }
 
+  if (field.field_type === "measurement_block") {
+    return <MeasurementBlockField field={field} node={node} allFields={allFields} />;
+  }
+
   if (field.field_type === "measurement_import") {
     const roDisabled = node.readonly || field.readonly || perm.visibility === "read";
     return (
@@ -606,7 +614,7 @@ function RepeaterField({
 
 function RepeaterEntry({
   index, entry, children, allFields, readonly, layout,
-  canRemove, canReorder, itemLabel,
+  canRemove, canReorder, itemLabel, header,
   onChange, onRemove, onMoveUp, onMoveDown, onDuplicate,
 }: {
   index: number;
@@ -618,12 +626,15 @@ function RepeaterEntry({
   canRemove: boolean;
   canReorder: boolean;
   itemLabel: string;
+  /** Zusätzlicher Kopfbereich (z. B. Messkontext eines Messdatenblocks). */
+  header?: ReactNode;
   onChange: (next: Record<string, any>) => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDuplicate: () => void;
 }) {
+
   const scope = useMemo<{ get: (k: string) => any; set: (k: string, v: any) => void }>(() => ({
     get: (k) => entry?.[k],
     set: (k, v) => onChange({ ...(entry ?? {}), [k]: v }),
@@ -689,7 +700,9 @@ function RepeaterEntry({
             )}
           </div>
         </div>
+        {header}
         <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
+
           {tree.items.map(renderItem)}
           {children.length === 0 && (
             <p className="col-span-12 text-xs text-muted-foreground">
@@ -699,6 +712,183 @@ function RepeaterEntry({
         </div>
       </div>
     </EntryScopeCtx.Provider>
+  );
+}
+
+/* ----------------------------------------------------------------
+ * Messdatenblock: wiederholbare Messung inkl. Messkontext
+ * ---------------------------------------------------------------- */
+
+function MeasurementBlockField({
+  field, node, allFields,
+}: { field: FormField; node: FieldNode; allFields: FormField[] }) {
+  const perm = usePerm(field.id);
+  const meta = readMeasurementBlockMeta(field);
+  const children = useMemo(() => repeaterChildren(allFields, field.id), [allFields, field.id]);
+
+  const storageKey = meta.storage_key || field.field_key;
+  const root = useContext(ValuesCtx);
+  const rawList = root?.get(storageKey);
+  const entries: Array<Record<string, any>> = Array.isArray(rawList) ? rawList : [];
+
+  const interactive = !!root?.interactive;
+  const readonly = node.readonly || field.readonly || perm.visibility === "read";
+  const canAdd = interactive && !readonly && (perm.can_add ?? true) &&
+    (meta.max_entries == null || entries.length < meta.max_entries);
+  const canRemove = interactive && !readonly && (perm.can_remove ?? true);
+
+  const label = node.label_override || field.display_name;
+  const desc = node.description_override ?? field.description;
+
+  const updateEntries = (next: Array<Record<string, any>>) => root?.set(storageKey, next);
+
+  const makeEntry = (): Record<string, any> => ({
+    [INSTANCE_ID_KEY]: newInstanceId(),
+    [INSTANCE_LABEL_KEY]: "",
+    [INSTANCE_CONTEXT_KEY]: {},
+  });
+
+  const add = () => updateEntries([...entries, makeEntry()]);
+  const removeAt = (i: number) => {
+    if (meta.min_entries && entries.length <= meta.min_entries) return;
+    updateEntries(entries.filter((_, idx) => idx !== i));
+  };
+  const moveAt = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= entries.length) return;
+    const next = entries.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    updateEntries(next);
+  };
+  // Duplizieren erzeugt IMMER eine neue Messkennung – Ergebnisse dürfen sich
+  // niemals zwei Messungen teilen.
+  const duplicateAt = (i: number) => {
+    if (meta.max_entries != null && entries.length >= meta.max_entries) return;
+    const copy = JSON.parse(JSON.stringify(entries[i] ?? {}));
+    copy[INSTANCE_ID_KEY] = newInstanceId();
+    const next = entries.slice();
+    next.splice(i + 1, 0, copy);
+    updateEntries(next);
+  };
+
+  // Fehlende Kennungen (Altdaten) und Mindestanzahl ergänzen.
+  if (interactive && !readonly) {
+    const needsId = entries.some((e) => typeof e?.[INSTANCE_ID_KEY] !== "string");
+    const needsSeed = !!meta.min_entries && entries.length < meta.min_entries;
+    if (needsId || needsSeed) {
+      const seeded = entries.map((e) =>
+        typeof e?.[INSTANCE_ID_KEY] === "string" ? e : { ...(e ?? {}), [INSTANCE_ID_KEY]: newInstanceId() }
+      );
+      while (seeded.length < (meta.min_entries ?? 0)) seeded.push(makeEntry());
+      queueMicrotask(() => updateEntries(seeded));
+    }
+  }
+
+  return (
+    <div className="border rounded-md bg-card">
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
+        <div className="flex items-center gap-2">
+          <ClipboardPaste className="h-3.5 w-3.5 text-primary" />
+          <span className="text-sm font-medium">{label}</span>
+          <Badge variant="outline">
+            {entries.length}{meta.max_entries ? ` / ${meta.max_entries}` : ""} {entries.length === 1 ? "Messung" : "Messungen"}
+          </Badge>
+          {perm.locked && <Lock className="h-3 w-3 text-muted-foreground" />}
+        </div>
+        {canAdd && (
+          <Button size="sm" variant="outline" onClick={add} type="button">
+            <Plus className="h-3 w-3 mr-1" />{meta.add_label}
+          </Button>
+        )}
+      </div>
+      {desc && <p className="text-xs text-muted-foreground px-3 pt-2">{desc}</p>}
+      <div className="p-3 space-y-3">
+        {entries.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-4">Noch keine Messung angelegt.</p>
+        )}
+        {entries.map((entry, i) => {
+          const context = (entry?.[INSTANCE_CONTEXT_KEY] ?? {}) as Record<string, string>;
+          const title = instanceLabel(entry?.[INSTANCE_LABEL_KEY] ?? "", context, meta, i);
+          const patch = (next: Record<string, any>) => {
+            const arr = entries.slice();
+            arr[i] = next;
+            updateEntries(arr);
+          };
+          const header = (
+            <div className="mb-3 grid grid-cols-12 gap-3 rounded border bg-muted/20 p-2">
+              <div className="col-span-12 md:col-span-4">
+                <Label className="text-xs">Bezeichnung der Messung</Label>
+                <Input
+                  className="h-9"
+                  value={entry?.[INSTANCE_LABEL_KEY] ?? ""}
+                  placeholder={`${meta.item_label} ${i + 1}`}
+                  disabled={readonly || !interactive}
+                  onChange={(e) => patch({ ...(entry ?? {}), [INSTANCE_LABEL_KEY]: e.target.value })}
+                />
+              </div>
+              {meta.context_fields.map((cf) => (
+                <div key={cf.key} className="col-span-12 md:col-span-4">
+                  <Label className="text-xs">{cf.label}</Label>
+                  {cf.type === "select" && (cf.options?.length ?? 0) > 0 ? (
+                    <Select
+                      value={context[cf.key] ?? "__none__"}
+                      disabled={readonly || !interactive}
+                      onValueChange={(v) =>
+                        patch({
+                          ...(entry ?? {}),
+                          [INSTANCE_CONTEXT_KEY]: { ...context, [cf.key]: v === "__none__" ? "" : v },
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-9"><SelectValue placeholder="–" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">–</SelectItem>
+                        {(cf.options ?? []).map((o) => (
+                          <SelectItem key={o} value={o}>{o}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      className="h-9"
+                      value={context[cf.key] ?? ""}
+                      disabled={readonly || !interactive}
+                      onChange={(e) =>
+                        patch({
+                          ...(entry ?? {}),
+                          [INSTANCE_CONTEXT_KEY]: { ...context, [cf.key]: e.target.value },
+                        })
+                      }
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+
+          return (
+            <RepeaterEntry
+              key={entry?.[INSTANCE_ID_KEY] ?? i}
+              index={i}
+              entry={entry}
+              children={children}
+              allFields={allFields}
+              readonly={readonly}
+              layout={meta.layout}
+              header={header}
+              canRemove={canRemove && (!meta.min_entries || entries.length > meta.min_entries)}
+              canReorder={interactive && !readonly}
+              itemLabel={title}
+              onChange={patch}
+              onRemove={() => removeAt(i)}
+              onMoveUp={() => moveAt(i, -1)}
+              onMoveDown={() => moveAt(i, 1)}
+              onDuplicate={() => duplicateAt(i)}
+            />
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

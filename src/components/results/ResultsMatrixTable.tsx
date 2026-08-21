@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-import type { ResultRecord } from "@/hooks/useResultsDatabase";
+import { expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { columnHeader, resultCell, type ResultParamColumn } from "@/lib/resultSchema";
 
 const IDENT_COLUMNS = [
@@ -9,6 +9,7 @@ const IDENT_COLUMNS = [
   { key: "order", label: "Auftrag", width: 130 },
   { key: "service", label: "Dienstleistung", width: 160 },
   { key: "analysis", label: "Analyse", width: 130 },
+  { key: "instance", label: "Messung", width: 150 },
   { key: "date", label: "Datum", width: 100 },
 ] as const;
 
@@ -41,7 +42,11 @@ export default function ResultsMatrixTable({
     []
   );
 
-  if (records.length === 0) {
+  // Mehrere eigenständige Messungen derselben Tätigkeit (Messdatenblock)
+  // erscheinen als eigene, direkt vergleichbare Zeilen.
+  const rows = useMemo(() => expandByMeasurementInstance(records), [records]);
+
+  if (rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-6 text-center">
         Keine Ergebnisdatensätze gefunden.
@@ -76,8 +81,8 @@ export default function ResultsMatrixTable({
           </tr>
         </thead>
         <tbody>
-          {records.map((r) => (
-            <tr key={r.measurementId} className="odd:bg-background even:bg-muted/20 hover:bg-accent/30">
+          {rows.map((r) => (
+            <tr key={`${r.measurementId}:${r.instanceKey ?? ""}`} className="odd:bg-background even:bg-muted/20 hover:bg-accent/30">
               <td
                 className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top z-10"
                 style={{ left: OFFSETS[0], width: IDENT_COLUMNS[0].width }}
@@ -111,8 +116,25 @@ export default function ResultsMatrixTable({
                 {r.measurementNumber}
               </td>
               <td
-                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top whitespace-nowrap z-10"
+                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top z-10"
                 style={{ left: OFFSETS[4], width: IDENT_COLUMNS[4].width }}
+              >
+                {r.instanceLabel ? (
+                  <>
+                    <span>{r.instanceLabel}</span>
+                    {r.instanceContext && Object.keys(r.instanceContext).length > 0 && (
+                      <div className="text-[11px] text-muted-foreground">
+                        {Object.values(r.instanceContext).filter(Boolean).join(" · ")}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">–</span>
+                )}
+              </td>
+              <td
+                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top whitespace-nowrap z-10"
+                style={{ left: OFFSETS[5], width: IDENT_COLUMNS[5].width }}
               >
                 {r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "–"}
               </td>

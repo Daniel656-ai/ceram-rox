@@ -10,7 +10,10 @@ export type FormFieldType =
   | "ref_employee" | "ref_location" | "ref_batch" | "ref_serial"
   | "repeater" | "handwriting" | "computed" | "raw_material_recipe"
   /** Copy&Paste-Übernahme von Messdaten aus externer Messsoftware. */
-  | "measurement_import";
+  | "measurement_import"
+  /** Wiederholbarer Messdatenblock: eigenständige Messung inkl. Messkontext. */
+  | "measurement_block";
+
 
 export interface FormField {
   id: string;
