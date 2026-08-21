@@ -606,7 +606,7 @@ function RepeaterField({
 
 function RepeaterEntry({
   index, entry, children, allFields, readonly, layout,
-  canRemove, canReorder, itemLabel,
+  canRemove, canReorder, itemLabel, header,
   onChange, onRemove, onMoveUp, onMoveDown, onDuplicate,
 }: {
   index: number;
@@ -618,12 +618,15 @@ function RepeaterEntry({
   canRemove: boolean;
   canReorder: boolean;
   itemLabel: string;
+  /** Zusätzlicher Kopfbereich (z. B. Messkontext eines Messdatenblocks). */
+  header?: React.ReactNode;
   onChange: (next: Record<string, any>) => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDuplicate: () => void;
 }) {
+
   const scope = useMemo<{ get: (k: string) => any; set: (k: string, v: any) => void }>(() => ({
     get: (k) => entry?.[k],
     set: (k, v) => onChange({ ...(entry ?? {}), [k]: v }),
