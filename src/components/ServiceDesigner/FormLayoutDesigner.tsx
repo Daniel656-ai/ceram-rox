@@ -9,6 +9,10 @@ import { api } from "@/lib/api";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import { type FormField, readRepeaterMeta, writeRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import {
+  readMeasurementBlockMeta, writeMeasurementBlockMeta,
+  type MeasurementContextFieldDef,
+} from "@/lib/measurementBlocks";
+import {
   type LayoutNode, type LayoutNodeType, type FormLayoutTree,
   type LayoutWidth, type FieldNode, type CalculationNode,
   createNode, normalizeLayout, findNode, updateNode,
@@ -807,6 +811,7 @@ function FieldInspector({
 }) {
   const field = fields.find((f) => f.id === node.field_id);
   const isRepeater = field?.field_type === "repeater";
+  const isBlock = field?.field_type === "measurement_block";
   return (
     <>
       <div>
@@ -816,7 +821,9 @@ function FieldInspector({
           <SelectContent>
             {fields.filter((f) => f.parent_field_id == null).map(f => (
               <SelectItem key={f.id} value={f.id}>
-                {f.display_name} ({f.field_key}){f.field_type === "repeater" ? " · Repeater" : ""}
+                {f.display_name} ({f.field_key})
+                {f.field_type === "repeater" ? " · Repeater" : ""}
+                {f.field_type === "measurement_block" ? " · Messdatenblock" : ""}
               </SelectItem>
             ))}
           </SelectContent>
@@ -834,18 +841,24 @@ function FieldInspector({
         <Label className="text-xs">Nur lesend</Label>
         <Switch checked={!!node.readonly} onCheckedChange={(v) => onChange({ readonly: v } as any)} disabled={disabled} />
       </div>
-      {isRepeater && field && (
-        <RepeaterConfigPanel field={field} fields={fields} disabled={disabled} />
+      {(isRepeater || isBlock) && field && (
+        <RepeaterConfigPanel
+          field={field}
+          fields={fields}
+          disabled={disabled}
+          mode={isBlock ? "measurement_block" : "repeater"}
+        />
       )}
     </>
   );
 }
 
 export function RepeaterConfigPanel({
-  field, fields, disabled,
-}: { field: FormField; fields: FormField[]; disabled: boolean }) {
+  field, fields, disabled, mode = "repeater",
+}: { field: FormField; fields: FormField[]; disabled: boolean; mode?: "repeater" | "measurement_block" }) {
   const qc = useQueryClient();
-  const meta = readRepeaterMeta(field);
+  const isBlock = mode === "measurement_block";
+  const meta: any = isBlock ? readMeasurementBlockMeta(field) : readRepeaterMeta(field);
   const children = repeaterChildren(fields, field.id);
 
   const [newKey, setNewKey] = useState("");
@@ -855,7 +868,10 @@ export function RepeaterConfigPanel({
   const invalidate = () => qc.invalidateQueries({ queryKey: ["form-fields", field.form_id] });
 
   const saveMeta = async (patch: any) => {
-    await api.formFields.update(field.id, { metadata: writeRepeaterMeta(field, patch) as any });
+    const metadata = isBlock
+      ? writeMeasurementBlockMeta(field, patch)
+      : writeRepeaterMeta(field, patch);
+    await api.formFields.update(field.id, { metadata: metadata as any });
     invalidate();
   };
   const addChild = async () => {
@@ -880,7 +896,15 @@ export function RepeaterConfigPanel({
 
   return (
     <div className="border-t pt-3 mt-3 space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Repeater-Einstellungen</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {isBlock ? "Messdatenblock-Einstellungen" : "Repeater-Einstellungen"}
+      </p>
+      {isBlock && (
+        <p className="text-[10px] text-muted-foreground">
+          Jede Messung erhält eine eigene Kennung. Ergebnisse werden dadurch eindeutig
+          der jeweiligen Messung zugeordnet.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label className="text-xs">Min.</Label>
@@ -912,8 +936,18 @@ export function RepeaterConfigPanel({
         </p>
       </div>
 
+      {isBlock && (
+        <MeasurementContextFieldsEditor
+          value={meta.context_fields ?? []}
+          disabled={disabled}
+          onChange={(context_fields) => saveMeta({ context_fields })}
+        />
+      )}
+
       <div className="pt-2 border-t">
-        <p className="text-xs font-semibold mb-2">Unterfelder ({children.length})</p>
+        <p className="text-xs font-semibold mb-2">
+          {isBlock ? `Messwerte-Felder (${children.length})` : `Unterfelder (${children.length})`}
+        </p>
         <div className="space-y-1 mb-2">
           {children.map((c) => (
             <div key={c.id} className="flex items-center gap-2 border rounded px-2 py-1">
@@ -954,6 +988,65 @@ export function RepeaterConfigPanel({
             onChange={(layout) => saveMeta({ layout })}
           />
         </div>
+      )}
+    </div>
+  );
+}
+
+
+/**
+ * Konfiguration des Messkontexts (z. B. Präparation, Analyseart).
+ * Der Kontext beschreibt die Messung, ist aber selbst kein Ergebniswert.
+ */
+function MeasurementContextFieldsEditor({
+  value, disabled, onChange,
+}: {
+  value: MeasurementContextFieldDef[];
+  disabled: boolean;
+  onChange: (next: MeasurementContextFieldDef[]) => void;
+}) {
+  const patch = (i: number, p: Partial<MeasurementContextFieldDef>) => {
+    const next = value.slice();
+    next[i] = { ...next[i], ...p };
+    onChange(next);
+  };
+  return (
+    <div className="pt-2 border-t space-y-2">
+      <p className="text-xs font-semibold">Messkontext ({value.length})</p>
+      {value.map((c, i) => (
+        <div key={i} className="border rounded p-2 space-y-1">
+          <div className="flex gap-1">
+            <Input className="h-8 text-xs" placeholder="key" value={c.key}
+              onChange={(e) => patch(i, { key: e.target.value })} disabled={disabled} />
+            <Input className="h-8 text-xs" placeholder="Bezeichnung" value={c.label}
+              onChange={(e) => patch(i, { label: e.target.value })} disabled={disabled} />
+            <Button size="icon" variant="ghost" className="h-8 w-8" disabled={disabled}
+              onClick={() => onChange(value.filter((_, idx) => idx !== i))}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="flex gap-1">
+            <Select value={c.type} onValueChange={(v) => patch(i, { type: v as any })} disabled={disabled}>
+              <SelectTrigger className="h-8 text-xs w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="text">Text</SelectItem>
+                <SelectItem value="select">Auswahl</SelectItem>
+              </SelectContent>
+            </Select>
+            {c.type === "select" && (
+              <Input className="h-8 text-xs flex-1" placeholder="Optionen, kommagetrennt"
+                value={(c.options ?? []).join(", ")}
+                onChange={(e) => patch(i, { options: e.target.value.split(",").map((o) => o.trim()).filter(Boolean) })}
+                disabled={disabled} />
+            )}
+          </div>
+        </div>
+      ))}
+      {!disabled && (
+        <Button size="sm" variant="outline" className="w-full"
+          onClick={() => onChange([...value, { key: "", label: "", type: "text" }])}>
+          <Plus className="h-3 w-3 mr-1" />Kontextfeld
+        </Button>
       )}
     </div>
   );
