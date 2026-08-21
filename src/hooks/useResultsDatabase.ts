@@ -67,9 +67,7 @@ export function expandByMeasurementInstance(records: ResultRecord[]): ResultReco
       list.push(r);
       groups.set(key, list);
     }
-    if (groups.size <= 1 && !groups.has("") === false) {
-      // nur Ergebnisse ohne Messdatenblock
-    }
+    if (groups.size === 0) { out.push(rec); continue; }
     if (groups.size === 1 && [...groups.keys()][0] === "") {
       out.push(rec);
       continue;
