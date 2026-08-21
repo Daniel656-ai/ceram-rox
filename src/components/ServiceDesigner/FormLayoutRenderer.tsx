@@ -689,7 +689,9 @@ function RepeaterEntry({
             )}
           </div>
         </div>
+        {header}
         <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
+
           {tree.items.map(renderItem)}
           {children.length === 0 && (
             <p className="col-span-12 text-xs text-muted-foreground">
