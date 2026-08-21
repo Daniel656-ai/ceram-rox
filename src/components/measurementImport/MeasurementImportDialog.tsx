@@ -12,8 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, ClipboardPaste, Settings2, Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertTriangle, ClipboardPaste, Settings2, Plus, FileUp } from "lucide-react";
 import ImportProfileEditorDialog from "./ImportProfileEditorDialog";
+import MeasurementFileImportPanel from "./MeasurementFileImportPanel";
 import { toast } from "sonner";
 
 interface Props {
@@ -23,14 +25,20 @@ interface Props {
   defaultProfileId?: string | null;
   /** Zielfelder, in die geschrieben werden darf (Geschwisterfelder im selben Scope). */
   targets: TargetCandidate[];
+  /** Aktuelle Werte der Zielfelder – für Konflikterkennung beim Dateiimport. */
+  currentValues?: Record<string, unknown>;
+  /** Zulässige Datei-Importer (leer = alle registrierten). */
+  allowedImporters?: string[] | null;
   /** Übernahme der geprüften Werte. */
-  onApply: (values: Record<string, number | string | null>, meta: { profileName: string; sampleLabel: string; count: number }) => void;
+  onApply: (values: Record<string, number | string | null>, meta: { profileName: string; sampleLabel: string; count: number; source?: string }) => void;
   /** Darf der Anwender Profile anlegen/bearbeiten? */
   canManageProfiles?: boolean;
 }
 
+
 export default function MeasurementImportDialog({
-  open, onOpenChange, defaultProfileId, targets, onApply, canManageProfiles = true,
+  open, onOpenChange, defaultProfileId, targets, currentValues, allowedImporters,
+  onApply, canManageProfiles = true,
 }: Props) {
   const [profileId, setProfileId] = useState<string>(defaultProfileId ?? "");
   const [text, setText] = useState("");
@@ -132,7 +140,37 @@ export default function MeasurementImportDialog({
             </div>
             {profile?.description && <p className="text-xs text-muted-foreground">{profile.description}</p>}
 
+            <Tabs defaultValue="paste">
+              <TabsList>
+                <TabsTrigger value="paste" className="gap-1">
+                  <ClipboardPaste className="h-3.5 w-3.5" />Einfügen
+                </TabsTrigger>
+                <TabsTrigger value="file" className="gap-1">
+                  <FileUp className="h-3.5 w-3.5" />Messdatei
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="file" className="pt-3">
+                <MeasurementFileImportPanel
+                  profile={profile}
+                  targets={targets}
+                  currentValues={currentValues}
+                  allowedImporters={allowedImporters}
+                  onApply={(values, meta) => {
+                    onApply(values, {
+                      profileName: meta.importerLabel,
+                      sampleLabel: meta.fileName,
+                      count: meta.count,
+                      source: `${meta.importerLabel} · ${meta.fileName} · Parser ${meta.parserVersion}`,
+                    });
+                    onOpenChange(false);
+                  }}
+                />
+              </TabsContent>
+
+              <TabsContent value="paste" className="pt-3 space-y-3">
             <div>
+
               <Label className="text-xs">Messdaten einfügen (Strg+V)</Label>
               <Textarea
                 rows={7}
@@ -228,14 +266,17 @@ export default function MeasurementImportDialog({
                 ))}
               </div>
             )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
+              <Button onClick={apply} disabled={assigned.length === 0}>
+                {assigned.length} Wert(e) übernehmen
+              </Button>
+            </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-            <Button onClick={apply} disabled={assigned.length === 0}>
-              {assigned.length} Wert(e) übernehmen
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

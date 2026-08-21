@@ -162,6 +162,17 @@ const useScopeWriter = () => {
   );
 };
 
+/** Liest Werte im selben Scope – für Konflikterkennung beim Messdatenimport. */
+const useScopeReader = () => {
+  const entry = useContext(EntryScopeCtx);
+  const root = useContext(ValuesCtx);
+  return useCallback(
+    (key: string) => (entry ? entry.get(key) : root?.get(key)),
+    [entry, root]
+  );
+};
+
+
 
 
 
@@ -316,17 +327,21 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
  * ---------------------------------------------------------------- */
 
 /** Lesbare Konfiguration des Import-Feldes aus metadata.measurement_import. */
-export const readImportMeta = (field: FormField): { profile_id: string | null; allow_manual_mapping: boolean } => {
+export const readImportMeta = (
+  field: FormField
+): { profile_id: string | null; allow_manual_mapping: boolean; importers: string[] | null } => {
   const m = ((field.metadata ?? {}) as any).measurement_import ?? {};
   return {
     profile_id: typeof m.profile_id === "string" ? m.profile_id : null,
     allow_manual_mapping: m.allow_manual_mapping !== false,
+    importers: Array.isArray(m.importers) ? (m.importers as string[]) : null,
   };
 };
 
 function MeasurementImportControl({ field, allFields, readonly }: { field: FormField; allFields: FormField[]; readonly: boolean }) {
   const { value, setValue, interactive } = useBinding(field.field_key);
   const write = useScopeWriter();
+  const read = useScopeReader();
   const [open, setOpen] = useState(false);
   const cfg = readImportMeta(field);
 
@@ -343,6 +358,12 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
     [allFields, field.id, field.parent_field_id]
   );
 
+  const currentValues = useMemo(() => {
+    const out: Record<string, unknown> = {};
+    for (const t of targets) out[t.field_key] = read(t.field_key);
+    return out;
+  }, [targets, read, open]);
+
   let last: any = null;
   try { last = typeof value === "string" && value.startsWith("{") ? JSON.parse(value) : value; } catch { last = null; }
 
@@ -355,12 +376,13 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
         disabled={readonly || !interactive}
         onClick={() => setOpen(true)}
       >
-        <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Messdaten einfügen
+        <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Messdaten übernehmen
       </Button>
       {last?.imported_at && (
         <p className="text-[11px] text-muted-foreground">
           Zuletzt importiert: {new Date(last.imported_at).toLocaleString("de-AT")} · {last.profile ?? "ohne Profil"}
           {last.sample ? ` · ${last.sample}` : ""} · {last.count} Wert(e)
+          {last.source ? ` · ${last.source}` : ""}
         </p>
       )}
       {open && (
@@ -369,6 +391,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           onOpenChange={setOpen}
           defaultProfileId={cfg.profile_id}
           targets={targets}
+          currentValues={currentValues}
+          allowedImporters={cfg.importers}
           onApply={(values, meta) => {
             for (const [k, v] of Object.entries(values)) write(k, v);
             setValue(JSON.stringify({
@@ -376,6 +400,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
               profile: meta.profileName,
               sample: meta.sampleLabel,
               count: meta.count,
+              source: meta.source ?? null,
             }));
           }}
         />
