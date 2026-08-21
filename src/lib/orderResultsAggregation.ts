@@ -17,6 +17,10 @@ export interface RawResultRow {
   value: number | string | null;
   unit: string | null;
   is_official: boolean | null;
+  /** Zuordnung zu einer konkreten Messung (Messdatenblock). */
+  instance_key?: string | null;
+  instance_label?: string | null;
+  instance_context?: Record<string, string> | null;
 }
 
 export interface RawMeasurementRow {

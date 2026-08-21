@@ -110,33 +110,56 @@ export function buildOrderResultStructure(
       sample.services.push(service);
     }
 
-    const values: AnalysisValue[] = official.map((r) => {
-      const num = toNumber(r.value as any);
-      return {
-        resultId: (r as any).id,
-        key: r.display_label || r.result_name,
-        label: r.display_label || r.result_name,
-        unit: r.unit || null,
-        group: null,
-        value: num,
-        text: num === null && r.value != null && r.value !== "" ? String(r.value) : null,
-      };
-    });
+    // Mehrere eigenständige Messungen einer Tätigkeit (Messdatenblock)
+    // erzeugen je Messung eine eigene Analyse – Werte werden nie vermischt.
+    const byInstance = new Map<string, typeof official>();
+    for (const r of official) {
+      const key = (r as any).instance_key || "";
+      const list = byInstance.get(key) ?? [];
+      list.push(r);
+      byInstance.set(key, list);
+    }
 
-    const index = service.analyses.length + 1;
-    service.analyses.push({
-      measurementId: m.id,
-      measurementNumber: (m as any).measurement_number || "",
-      serviceId: m.service_id,
-      serviceName: service.serviceName,
-      index,
-      label: index === 1 ? `${service.serviceName} – Analyse 1` : `${service.serviceName} – Analyse ${index}`,
-      status: m.status ?? null,
-      date:
-        official.map((r) => (r as any).measured_at as string | null).filter(Boolean)[0] ?? null,
-      values: orderValues(values, columnsByService?.get(m.service_id)),
-    });
-    sample.analysisCount += 1;
+    for (const [instanceKey, group] of byInstance) {
+      const values: AnalysisValue[] = group.map((r) => {
+        const num = toNumber(r.value as any);
+        return {
+          resultId: (r as any).id,
+          key: r.display_label || r.result_name,
+          label: r.display_label || r.result_name,
+          unit: r.unit || null,
+          group: null,
+          value: num,
+          text: num === null && r.value != null && r.value !== "" ? String(r.value) : null,
+        };
+      });
+
+      const instanceLabel = instanceKey
+        ? group.map((r) => (r as any).instance_label as string | null).filter(Boolean)[0] || "Messung"
+        : null;
+      const context = instanceKey
+        ? (group.map((r) => (r as any).instance_context).find((c) => c && Object.keys(c).length > 0) as
+            | Record<string, string>
+            | undefined)
+        : undefined;
+      const contextText = context ? Object.values(context).filter(Boolean).join(" · ") : "";
+
+      const index = service.analyses.length + 1;
+      service.analyses.push({
+        measurementId: m.id,
+        measurementNumber: (m as any).measurement_number || "",
+        serviceId: m.service_id,
+        serviceName: service.serviceName,
+        index,
+        label: instanceLabel
+          ? `${service.serviceName} – ${instanceLabel}${contextText ? ` (${contextText})` : ""}`
+          : `${service.serviceName} – Analyse ${index}`,
+        status: m.status ?? null,
+        date: group.map((r) => (r as any).measured_at as string | null).filter(Boolean)[0] ?? null,
+        values: orderValues(values, columnsByService?.get(m.service_id)),
+      });
+      sample.analysisCount += 1;
+    }
   }
 
   return [...samples.values()].sort((a, b) =>
