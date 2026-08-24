@@ -24,7 +24,9 @@ import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FormField, FormFieldType } from "@/lib/api/formFields";
 import { ProcessStepRawMaterials } from "@/components/ProcessStepRawMaterials";
-import FormLayoutDesigner, { RepeaterConfigPanel } from "@/components/ServiceDesigner/FormLayoutDesigner";
+import FormLayoutDesigner from "@/components/ServiceDesigner/FormLayoutDesigner";
+import FieldEditDialog from "@/components/ServiceDesigner/FieldEditDialog";
+import { FIELD_TYPE_GROUPS, ALL_FIELD_TYPES as ALL_TYPES, slugify } from "@/lib/formFieldTypes";
 import LocalCalculationsPanel from "@/components/ServiceDesigner/LocalCalculationsPanel";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
@@ -38,44 +40,6 @@ import GlobalModelTab from "@/components/ServiceDesigner/GlobalModelTab";
 import GlobalLibraryTab from "@/components/ServiceDesigner/GlobalLibraryTab";
 import GlobalFieldPicker from "@/components/ServiceDesigner/GlobalFieldPicker";
 
-
-const FIELD_TYPE_GROUPS: { label: string; types: { value: FormFieldType; label: string }[] }[] = [
-  { label: "Standard", types: [
-    { value: "text", label: "Text" }, { value: "longtext", label: "Mehrzeiliger Text" },
-    { value: "number", label: "Zahl" }, { value: "decimal", label: "Dezimalzahl" },
-    { value: "percent", label: "Prozent" }, { value: "boolean", label: "Ja / Nein" },
-  ]},
-  { label: "Datum & Zeit", types: [
-    { value: "date", label: "Datum" }, { value: "time", label: "Uhrzeit" }, { value: "datetime", label: "Datum & Uhrzeit" },
-  ]},
-  { label: "Auswahl", types: [{ value: "select", label: "Dropdown" }, { value: "multiselect", label: "Mehrfachauswahl" }]},
-  { label: "Dateien & Codes", types: [
-    { value: "file", label: "Datei" }, { value: "image", label: "Bild" },
-    { value: "barcode", label: "Barcode" }, { value: "qrcode", label: "QR-Code" },
-    { value: "handwriting", label: "Handschrift (Stift/Tablet)" },
-  ]},
-  { label: "Berechnung", types: [{ value: "computed", label: "Berechnetes Feld (Formel)" }]},
-  { label: "Messdaten", types: [
-    { value: "measurement_import", label: "Messdaten-Import (Copy & Paste)" },
-    { value: "measurement_block", label: "Messdatenblock (wiederholbare Messung)" },
-  ]},
-  { label: "Rohstoffe", types: [{ value: "raw_material_recipe", label: "Rezeptur / Rohstoffliste (Auftraggeber)" }]},
-  { label: "Wiederholbare Gruppen", types: [
-    { value: "repeater", label: "Repeater (wiederholbare Einträge)" },
-  ]},
-  { label: "Beziehungen", types: [
-    { value: "ref_customer", label: "Kunde" }, { value: "ref_material", label: "Rohstoff (aus Rohstoffverwaltung)" },
-    { value: "ref_product", label: "Produkt" }, { value: "ref_machine", label: "Maschine" },
-    { value: "ref_employee", label: "Mitarbeiter" }, { value: "ref_location", label: "Standort" },
-    { value: "ref_batch", label: "Chargennummer" }, { value: "ref_serial", label: "Seriennummer" },
-  ]},
-];
-const ALL_TYPES = FIELD_TYPE_GROUPS.flatMap(g => g.types);
-
-function slugify(s: string) {
-  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60);
-}
 
 export default function AdminServiceDesignerPage() {
   const { templateId } = useParams<{ templateId?: string }>();
@@ -824,196 +788,6 @@ function FormFieldsEditor({ form }: { form: FormDefinition }) {
   );
 }
 
-// ---------------- Field Detail Editor ----------------
-function FieldEditDialog({ field, allFields, onClose, onSaved }: { field: FormField; allFields: FormField[]; onClose: () => void; onSaved: () => void }) {
-  const [label, setLabel] = useState(field.display_name);
-  const [key, setKey] = useState(field.field_key);
-  const [desc, setDesc] = useState(field.description ?? "");
-  const [unit, setUnit] = useState(field.unit ?? "");
-  const [required, setRequired] = useState(field.is_required);
-  const [readonly, setReadonly] = useState(field.readonly);
-  const [defaultValue, setDefaultValue] = useState(field.default_value ?? "");
-  const [formula, setFormula] = useState(field.formula ?? "");
-  const [selectOptions, setSelectOptions] = useState((field.select_options ?? []).map(o => typeof o === "string" ? o : o.label).join("\n"));
-  const [decimalPlaces, setDecimalPlaces] = useState(field.decimal_places?.toString() ?? "");
-  const [minV, setMinV] = useState(field.min_value?.toString() ?? "");
-  const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
-  const [fieldType, setFieldType] = useState<FormFieldType>(field.field_type);
-  const [isResult, setIsResult] = useState(!!(field as any).is_result);
-  const [importProfileId, setImportProfileId] = useState<string>(
-    (((field.metadata ?? {}) as any)?.measurement_import?.profile_id as string) ?? ""
-  );
-  const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
-
-  const isNumeric = ["number", "decimal", "percent"].includes(fieldType);
-  const isGlobalRef = !!field.global_field_id;
-  const isSelect = ["select", "multiselect"].includes(fieldType);
-  const isComputed = fieldType === "computed";
-  const isRepeater = fieldType === "repeater";
-  const isImport = fieldType === "measurement_import";
-  const typeChanged = fieldType !== field.field_type;
-
-  const changeType = (next: FormFieldType) => {
-    if (next === fieldType) return;
-    const hadSpecifics =
-      (["select", "multiselect"].includes(fieldType) && selectOptions.trim() !== "") ||
-      (fieldType === "computed" && formula.trim() !== "") ||
-      (["number", "decimal", "percent"].includes(fieldType) && (minV || maxV || decimalPlaces)) ||
-      (fieldType === "repeater" && allFields.some(f => f.parent_field_id === field.id));
-    const nextKeepsSpecifics =
-      (["select", "multiselect"].includes(fieldType) && ["select", "multiselect"].includes(next)) ||
-      (["number", "decimal", "percent"].includes(fieldType) && ["number", "decimal", "percent"].includes(next));
-    if (hadSpecifics && !nextKeepsSpecifics) {
-      const ok = confirm(
-        "Beim Wechsel des Feldtyps werden die typspezifischen Einstellungen (Optionen, Formel, Grenzwerte bzw. Repeater-Unterfelder) zurückgesetzt.\n\nAllgemeine Eigenschaften bleiben erhalten. Fortfahren?"
-      );
-      if (!ok) return;
-      if (!["select", "multiselect"].includes(next)) setSelectOptions("");
-      if (next !== "computed") setFormula("");
-      if (!["number", "decimal", "percent"].includes(next)) { setMinV(""); setMaxV(""); setDecimalPlaces(""); }
-    }
-    setFieldType(next);
-  };
-
-
-  const saveMut = useMutation({
-    mutationFn: async () => {
-      if (typeChanged && field.field_type === "repeater") {
-        for (const c of allFields.filter(f => f.parent_field_id === field.id)) {
-          await api.formFields.remove(c.id);
-        }
-      }
-      return api.formFields.update(field.id, {
-        display_name: label.trim(),
-        field_key: key.trim() || slugify(label),
-        field_type: fieldType,
-        description: desc.trim() || null,
-        unit: unit.trim() || null,
-        is_required: required,
-        readonly,
-        default_value: defaultValue.trim() || null,
-        formula: isComputed ? (formula.trim() || null) : null,
-        select_options: isSelect ? selectOptions.split("\n").map(l => l.trim()).filter(Boolean) : [],
-        decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
-        min_value: isNumeric && minV ? parseFloat(minV) : null,
-        max_value: isNumeric && maxV ? parseFloat(maxV) : null,
-        is_result: isResult,
-        result_label: isResult ? (resultLabel.trim() || null) : null,
-        metadata: {
-          ...((field.metadata ?? {}) as Record<string, unknown>),
-          measurement_import: isImport ? { profile_id: importProfileId || null } : undefined,
-        },
-      } as any);
-    },
-    onSuccess: () => {
-      toast.success("Gespeichert");
-      onSaved();
-      // Beim Wechsel auf Repeater geöffnet lassen, damit die Repeater-Einstellungen direkt konfiguriert werden können.
-      if (!(typeChanged && fieldType === "repeater")) onClose();
-    },
-    onError: (e: any) => toast.error(e.message || "Fehler"),
-  });
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>{isGlobalRef ? "Feld-Ansicht (globales Feld)" : "Feld bearbeiten"}</DialogTitle></DialogHeader>
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-          {isGlobalRef && (
-            <div className="rounded border bg-muted/40 p-2 text-xs text-muted-foreground">
-              Dieses Feld referenziert das globale Feld{" "}
-              <span className="font-mono text-foreground">{field.binding_path ?? field.field_key}</span>.
-              Die Definition wird zentral in der Feldbibliothek gepflegt — hier werden nur Ansicht und
-              Verhalten im Formular (Pflicht, Read-only, Standardwert) festgelegt.
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Bezeichnung</Label><Input value={label} disabled={isGlobalRef} onChange={e => setLabel(e.target.value)} /></div>
-            <div><Label>Schlüssel</Label><Input value={key} disabled={isGlobalRef} onChange={e => setKey(e.target.value)} /></div>
-          </div>
-          <div>
-            <Label>Feldtyp</Label>
-            <Select value={fieldType} onValueChange={(v: FormFieldType) => changeType(v)} disabled={isGlobalRef}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent className="max-h-96">
-                {FIELD_TYPE_GROUPS.map(g => (
-                  <div key={g.label}>
-                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">{g.label}</div>
-                    {g.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                  </div>
-                ))}
-              </SelectContent>
-            </Select>
-            {typeChanged && (
-              <p className="text-xs text-amber-600 mt-1">
-                Typänderung wird beim Speichern übernommen. Allgemeine Eigenschaften bleiben erhalten.
-              </p>
-            )}
-          </div>
-          <div><Label>Beschreibung</Label><Textarea value={desc} disabled={isGlobalRef} onChange={e => setDesc(e.target.value)} rows={2} /></div>
-          <div className="grid grid-cols-3 gap-3">
-            <div><Label>Einheit</Label><Input value={unit} disabled={isGlobalRef} onChange={e => setUnit(e.target.value)} placeholder="z.B. mm, °C" /></div>
-
-            <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
-            <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
-          </div>
-          <div className="rounded border p-3 space-y-2 bg-muted/30">
-            <div className="flex items-center gap-2">
-              <Switch checked={isResult} onCheckedChange={setIsResult} />
-              <Label>Offizielles Ergebnis</Label>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Nur so markierte Felder werden beim Abschluss der Aufgabe in die Ergebnisdatenbank übernommen.
-            </p>
-            {isResult && (
-              <div>
-                <Label className="text-xs">Ergebnis-Bezeichnung (optional)</Label>
-                <Input value={resultLabel} onChange={e => setResultLabel(e.target.value)} placeholder={label} />
-              </div>
-            )}
-          </div>
-          {!isComputed && <div><Label>Standardwert</Label><Input value={defaultValue} onChange={e => setDefaultValue(e.target.value)} /></div>}
-          {isNumeric && (
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label>Min</Label><Input value={minV} onChange={e => setMinV(e.target.value)} type="number" /></div>
-              <div><Label>Max</Label><Input value={maxV} onChange={e => setMaxV(e.target.value)} type="number" /></div>
-              <div><Label>Nachkommast.</Label><Input value={decimalPlaces} onChange={e => setDecimalPlaces(e.target.value)} type="number" /></div>
-            </div>
-          )}
-          {isSelect && (
-            <div>
-              <Label>Optionen (eine je Zeile)</Label>
-              <Textarea value={selectOptions} disabled={isGlobalRef} onChange={e => setSelectOptions(e.target.value)} rows={5} />
-            </div>
-          )}
-          {isComputed && (
-            <div>
-              <Label>Formel</Label>
-              <Textarea value={formula} disabled={isGlobalRef} onChange={e => setFormula(e.target.value)} rows={3} placeholder="z.B. ROUND((laenge * breite) / 100, 2)" className="font-mono text-sm" />
-              <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
-            </div>
-          )}
-          {isImport && <ImportFieldConfig profileId={importProfileId} onChange={setImportProfileId} allFields={allFields} field={field} />}
-          {isRepeater && (
-            field.field_type === "repeater" ? (
-              <RepeaterConfigPanel field={field} fields={allFields} disabled={isGlobalRef} />
-            ) : (
-              <p className="text-xs text-muted-foreground border-t pt-3">
-                Nach dem Speichern erscheinen hier die Repeater-Einstellungen (Min./Max., Eintrag-Label,
-                Button-Text, Storage-Key und Unterfelder).
-              </p>
-            )
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
-          <Button onClick={() => saveMut.mutate()}>Speichern</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ---------------- Global Form Library ----------------
 function FormPreviewTab({ form }: { form: FormDefinition }) {
   const { data: fields = [] } = useQuery({
@@ -1119,56 +893,6 @@ function GlobalFormLibrary() {
           <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte ein Formular links auswählen oder anlegen.</CardContent></Card>
         )}
       </div>
-    </div>
-  );
-}
-
-
-// ---------------- Messdaten-Import: Feldkonfiguration ----------------
-function ImportFieldConfig({
-  profileId, onChange, allFields, field,
-}: { profileId: string; onChange: (v: string) => void; allFields: FormField[]; field: FormField }) {
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [createNew, setCreateNew] = useState(false);
-  const { data: profiles = [] } = useQuery({
-    queryKey: ["measurement-import-profiles"],
-    queryFn: () => api.measurementImportProfiles.list(),
-  });
-  const selected = profiles.find(p => p.id === profileId) ?? null;
-  const targets = allFields
-    .filter(f => f.id !== field.id && f.parent_field_id === field.parent_field_id && !["repeater", "measurement_import"].includes(f.field_type))
-    .map(f => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type }));
-
-  return (
-    <div className="rounded border p-3 space-y-2 bg-muted/30">
-      <Label>Importprofil</Label>
-      <Select value={profileId || "__none__"} onValueChange={(v) => onChange(v === "__none__" ? "" : v)}>
-        <SelectTrigger><SelectValue placeholder="Profil wählen…" /></SelectTrigger>
-        <SelectContent className="max-h-72">
-          <SelectItem value="__none__">— beim Import wählen —</SelectItem>
-          {profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <p className="text-xs text-muted-foreground">
-        Das Profil bestimmt Datenformat und die Zuordnung der Messparameter auf die Felder dieses
-        Formularabschnitts. Ohne Profil erfolgt ein reiner Namensabgleich; die Zuordnung kann beim Import
-        immer manuell korrigiert werden.
-      </p>
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" disabled={!selected} onClick={() => { setCreateNew(false); setEditorOpen(true); }}>
-          Profil bearbeiten
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => { setCreateNew(true); setEditorOpen(true); }}>
-          <Plus className="h-3.5 w-3.5 mr-1" />Neues Profil
-        </Button>
-      </div>
-      <ImportProfileEditorDialog
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
-        profile={createNew ? null : selected}
-        targets={targets}
-        onSaved={(p) => onChange(p.id)}
-      />
     </div>
   );
 }
