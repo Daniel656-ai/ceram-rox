@@ -5,15 +5,15 @@
  * damit automatisch im bestehenden Messdatenimport der Formulare zur Verfügung.
  */
 import type { FileImporter, ImportedMeasurement, ImportedResult } from "./types";
-import { tristarImporter } from "./micromeritics/tristar";
+import { gasSorptionImporter } from "./gasSorption";
 import { normalizeName, type MappedRow, type TargetCandidate } from "@/lib/measurementImport";
 import { mapReadings } from "@/lib/measurementImport";
 import type { MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 
 export * from "./types";
-export { TRISTAR_PARSER_VERSION } from "./micromeritics/tristar";
+export { GAS_SORPTION_PARSER_VERSION, GAS_SORPTION_IMPORTER_ID } from "./gasSorption";
 
-export const fileImporters: FileImporter[] = [tristarImporter];
+export const fileImporters: FileImporter[] = [gasSorptionImporter];
 
 export const importerById = (id: string | null | undefined) =>
   fileImporters.find((i) => i.id === id) ?? null;
@@ -86,6 +86,8 @@ export const analysisLabel = (t: ImportedResult["analysis"]) => {
     case "BET": return "BET";
     case "BJH_ADSORPTION": return "BJH Adsorption";
     case "BJH_DESORPTION": return "BJH Desorption";
+    case "LANGMUIR": return "Langmuir";
+    case "T_PLOT": return "t-Plot";
     case "NLDFT": return "NLDFT / DFT";
     case "ISOTHERM": return "Isotherme";
     default: return "Unbekannt";
