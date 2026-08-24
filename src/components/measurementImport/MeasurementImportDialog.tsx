@@ -215,6 +215,8 @@ export default function MeasurementImportDialog({
                       sampleLabel: meta.fileName,
                       count: meta.count,
                       source: `${meta.importerLabel} · ${meta.fileName} · Parser ${meta.parserVersion}`,
+                      unassigned: meta.unassignedValues,
+                      metadata: meta.metadata,
                     });
                     onOpenChange(false);
                   }}
