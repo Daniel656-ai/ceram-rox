@@ -3,7 +3,7 @@ import { columnsGridStyle } from "@/lib/api/formDefinitionLayout";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree, CalculationNode } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import {
-  readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs,
+  readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs, readBlockChildRole,
   INSTANCE_ID_KEY, INSTANCE_LABEL_KEY, INSTANCE_CONTEXT_KEY,
 } from "@/lib/measurementBlocks";
 
@@ -350,6 +350,12 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   const [open, setOpen] = useState(false);
   const cfg = readImportMeta(field);
 
+  /**
+   * Zielfelder sind ausschließlich die Messwertfelder desselben Scopes
+   * (Formularabschnitt oder aktuelle Messblock-Instanz). Kontext-/
+   * Bezeichnungsfelder eines Messblocks beschreiben die Messung und dürfen
+   * durch den Import niemals überschrieben werden.
+   */
   const targets = useMemo(
     () =>
       allFields
@@ -357,7 +363,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           (f) =>
             f.id !== field.id &&
             f.parent_field_id === field.parent_field_id &&
-            !["repeater", "measurement_import"].includes(f.field_type)
+            !["repeater", "measurement_block", "measurement_import"].includes(f.field_type) &&
+            readBlockChildRole(f) === "value"
         )
         .map((f) => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type })),
     [allFields, field.id, field.parent_field_id]
@@ -372,6 +379,16 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   let last: any = null;
   try { last = typeof value === "string" && value.startsWith("{") ? JSON.parse(value) : value; } catch { last = null; }
 
+  /** Übersicht der zuletzt in DIESEN Scope übernommenen Messwerte. */
+  const importedKeys: string[] = Array.isArray(last?.keys) ? last.keys : [];
+  const importedRows = importedKeys
+    .map((k) => {
+      const t = targets.find((x) => x.field_key === k);
+      const v = read(k);
+      return t && v != null && v !== "" ? { label: t.display_name, unit: t.unit, value: v } : null;
+    })
+    .filter(Boolean) as Array<{ label: string; unit?: string | null; value: unknown }>;
+
   return (
     <div className="space-y-1">
       <Button
@@ -385,10 +402,24 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
       </Button>
       {last?.imported_at && (
         <p className="text-[11px] text-muted-foreground">
-          Zuletzt importiert: {new Date(last.imported_at).toLocaleString("de-AT")} · {last.profile ?? "ohne Profil"}
+          ✓ Importiert: {new Date(last.imported_at).toLocaleString("de-AT")} · {last.profile ?? "ohne Profil"}
           {last.sample ? ` · ${last.sample}` : ""} · {last.count} Wert(e)
           {last.source ? ` · ${last.source}` : ""}
         </p>
+      )}
+      {importedRows.length > 0 && (
+        <div className="rounded border bg-muted/20 p-2">
+          <table className="w-full text-[11px]">
+            <tbody>
+              {importedRows.map((r, i) => (
+                <tr key={i}>
+                  <td className="pr-2 text-muted-foreground">{r.label}{r.unit ? ` [${r.unit}]` : ""}</td>
+                  <td className="text-right font-mono">{String(r.value)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {open && (
         <MeasurementImportDialog
@@ -406,6 +437,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
               sample: meta.sampleLabel,
               count: meta.count,
               source: meta.source ?? null,
+              keys: Object.keys(values),
             }));
           }}
         />
