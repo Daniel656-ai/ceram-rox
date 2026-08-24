@@ -277,7 +277,7 @@ export default function MeasurementFileImportPanel({
         <div>
           <Label className="text-xs text-muted-foreground">
             Unterstützte Geräte: {fileImporters.map((i) => i.label).join(", ")}
-            {importerById("micromeritics_tristar") ? " – primäres Format .SMP, optional .REP" : ""}
+            {importerById("gasadsorption") ? " – u. a. .SMP, .REP, .TXT, .CSV, .XLS/.XLSX" : ""}
           </Label>
         </div>
       )}
