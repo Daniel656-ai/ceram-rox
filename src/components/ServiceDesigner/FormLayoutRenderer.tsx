@@ -5,7 +5,10 @@ import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/fo
 import {
   readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs, readBlockChildRole,
   INSTANCE_ID_KEY, INSTANCE_LABEL_KEY, INSTANCE_CONTEXT_KEY,
+  readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
+  CASE_ID_KEY, IMPORT_PROFILE_KEY, type CaseTemplate,
 } from "@/lib/measurementBlocks";
+
 
 import {
   normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass,
@@ -351,6 +354,16 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   const cfg = readImportMeta(field);
 
   /**
+   * Messfall-Steuerung: Wurde die Messung aus einem Messfall erzeugt, gilt das
+   * dort hinterlegte Importprofil dieser Messung – jede Messung importiert
+   * eigenständig und überschreibt niemals eine andere Messung.
+   */
+  const instanceProfile = read(IMPORT_PROFILE_KEY);
+  const effectiveProfileId =
+    (typeof instanceProfile === "string" && instanceProfile) || cfg.profile_id;
+
+
+  /**
    * Zielfelder sind ausschließlich die Messwertfelder desselben Scopes
    * (Formularabschnitt oder aktuelle Messblock-Instanz). Kontext-/
    * Bezeichnungsfelder eines Messblocks beschreiben die Messung und dürfen
@@ -493,7 +506,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
         <MeasurementImportDialog
           open={open}
           onOpenChange={setOpen}
-          defaultProfileId={cfg.profile_id}
+          defaultProfileId={effectiveProfileId}
           targets={targets}
           currentValues={currentValues}
           allowedImporters={cfg.importers}
@@ -831,6 +844,23 @@ function MeasurementBlockField({
   const childDefs = useMemo(() => toBlockChildDefs(children), [children]);
   const hasLabelChild = childDefs.some((c) => c.role === "label");
 
+  /* ---- Messfall / Analyseschema ---------------------------------- */
+  const caseCfg = readMeasurementCaseConfig(field);
+  const { data: allCases = [] } = useQuery({
+    queryKey: ["measurement-cases"],
+    queryFn: () => api.measurementCases.list(),
+    enabled: caseCfg.enabled,
+  });
+  const cases: CaseTemplate[] = useMemo(
+    () =>
+      (allCases as any[])
+        .filter((c) => c.is_active !== false)
+        .filter(
+          (c) => caseCfg.allowed_case_ids.length === 0 || caseCfg.allowed_case_ids.includes(c.id)
+        )
+        .map((c) => ({ id: c.id, name: c.name, instances: c.instances ?? [] })),
+    [allCases, caseCfg.allowed_case_ids]
+  );
 
   const storageKey = meta.storage_key || field.field_key;
   const root = useContext(ValuesCtx);
@@ -839,9 +869,11 @@ function MeasurementBlockField({
 
   const interactive = !!root?.interactive;
   const readonly = node.readonly || field.readonly || perm.visibility === "read";
-  const canAdd = interactive && !readonly && (perm.can_add ?? true) &&
+  const caseLocked = caseCfg.enabled && caseCfg.lock_instances;
+  const canAdd = interactive && !readonly && !caseLocked && (perm.can_add ?? true) &&
     (meta.max_entries == null || entries.length < meta.max_entries);
-  const canRemove = interactive && !readonly && (perm.can_remove ?? true);
+  const canRemove = interactive && !readonly && !caseLocked && (perm.can_remove ?? true);
+
 
   const label = node.label_override || field.display_name;
   const desc = node.description_override ?? field.description;
@@ -877,8 +909,41 @@ function MeasurementBlockField({
     updateEntries(next);
   };
 
+  /* ---- Messungen aus dem Messfall erzeugen ------------------------ */
+  const activeCaseId =
+    (entries.find((e) => typeof e?.[CASE_ID_KEY] === "string")?.[CASE_ID_KEY] as string | undefined) ??
+    caseCfg.default_case_id ??
+    (cases.length === 1 ? cases[0].id : null);
+  const activeCase = cases.find((c) => c.id === activeCaseId) ?? null;
+  /** Im Messfall-Modus sind Bezeichnung/Kontext vorgegeben – nur Messwerte und Import anzeigen. */
+  const caseChildren = useMemo(
+    () => children.filter((c) => readBlockChildRole(c) === "value"),
+    [children]
+  );
+  const importFieldKeys = useMemo(
+    () => children.filter((c) => c.field_type === "measurement_import").map((c) => c.field_key),
+    [children]
+  );
+  const applyCase = useCallback(
+    (c: CaseTemplate | null) => {
+      if (!c) return;
+      updateEntries(buildEntriesFromCase(c, childDefs));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [childDefs, root, storageKey]
+  );
+  const caseNeedsSetup = !!activeCase && !entriesMatchCase(entries, activeCase);
+
+  // Vorgegebener Messfall: Messungen automatisch anlegen, solange nichts erfasst ist.
+  useEffect(() => {
+    if (!caseCfg.enabled || !interactive || readonly) return;
+    if (!activeCase || entries.length > 0) return;
+    applyCase(activeCase);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseCfg.enabled, interactive, readonly, activeCase?.id, entries.length]);
+
   // Fehlende Kennungen (Altdaten) und Mindestanzahl ergänzen.
-  if (interactive && !readonly) {
+  if (interactive && !readonly && !caseCfg.enabled) {
     const needsId = entries.some((e) => typeof e?.[INSTANCE_ID_KEY] !== "string");
     const needsSeed = !!meta.min_entries && entries.length < meta.min_entries;
     if (needsId || needsSeed) {
@@ -889,6 +954,7 @@ function MeasurementBlockField({
       queueMicrotask(() => updateEntries(seeded));
     }
   }
+
 
   return (
     <div className="border rounded-md bg-card">
@@ -908,10 +974,48 @@ function MeasurementBlockField({
         )}
       </div>
       {desc && <p className="text-xs text-muted-foreground px-3 pt-2">{desc}</p>}
+
+      {caseCfg.enabled && (
+        <div className="px-3 pt-3 space-y-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-56">
+              <Label className="text-xs">Messfall</Label>
+              <Select
+                value={activeCaseId ?? "__none__"}
+                disabled={!interactive || readonly || cases.length <= 1}
+                onValueChange={(v) => applyCase(cases.find((c) => c.id === v) ?? null)}
+              >
+                <SelectTrigger className="h-9"><SelectValue placeholder="Messfall wählen…" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">– Messfall wählen –</SelectItem>
+                  {cases.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {activeCase && caseNeedsSetup && interactive && !readonly && (
+              <Button size="sm" variant="outline" type="button" onClick={() => applyCase(activeCase)}>
+                Messungen erzeugen
+              </Button>
+            )}
+          </div>
+          {activeCase && (
+            <p className="text-xs text-muted-foreground">
+              Für diese Probe sind {activeCase.instances.length} Messung(en) erforderlich – bitte jeweils
+              die Messdatei importieren.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="p-3 space-y-3">
         {entries.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-4">Noch keine Messung angelegt.</p>
+          <p className="text-xs text-muted-foreground text-center py-4">
+            {caseCfg.enabled ? "Bitte einen Messfall wählen." : "Noch keine Messung angelegt."}
+          </p>
         )}
+
         {entries.map((entry, i) => {
           const legacyContext = (entry?.[INSTANCE_CONTEXT_KEY] ?? {}) as Record<string, string>;
           // Bezeichnung und Kontext ergeben sich aus den frei konfigurierten
@@ -935,7 +1039,24 @@ function MeasurementBlockField({
             arr[i] = next;
             updateEntries(arr);
           };
-          const header = (hasLabelChild && meta.context_fields.length === 0) ? null : (
+          // Aus einem Messfall erzeugte Messungen: Kontext ist vorgegeben und
+          // wird nur noch angezeigt – die technische Konfiguration bleibt
+          // für den Messdienstleister unsichtbar.
+          const fromCase = caseCfg.enabled && typeof entry?.[CASE_ID_KEY] === "string";
+          const done = instanceImportDone(entry, importFieldKeys);
+          const caseHeader = (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded border bg-muted/20 px-2 py-1.5">
+              <span className="text-sm font-medium">{i + 1}. {title}</span>
+              {Object.entries(context).map(([k, v]) => (
+                <Badge key={k} variant="secondary" className="text-[10px]">{v}</Badge>
+              ))}
+              <Badge variant={done ? "default" : "outline"} className="ml-auto text-[10px]">
+                {done ? "✓ Import abgeschlossen" : "Noch nicht importiert"}
+              </Badge>
+            </div>
+          );
+          const header = fromCase ? caseHeader : (hasLabelChild && meta.context_fields.length === 0) ? null : (
+
             <div className="mb-3 grid grid-cols-12 gap-3 rounded border bg-muted/20 p-2">
               {!hasLabelChild && (
                 <div className="col-span-12 md:col-span-4">
@@ -995,7 +1116,7 @@ function MeasurementBlockField({
               key={entry?.[INSTANCE_ID_KEY] ?? i}
               index={i}
               entry={entry}
-              children={children}
+              children={fromCase ? caseChildren : children}
               allFields={allFields}
               readonly={readonly}
               layout={meta.layout}

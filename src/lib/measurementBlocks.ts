@@ -198,3 +198,113 @@ export const instanceResultKey = (
   instanceId: string,
   fieldKey: string
 ) => `${prefix}${storageKey}[${instanceId}].${fieldKey}`;
+
+/* ================================================================
+ * Messfall / Analyseschema
+ *
+ * Ein Messfall (z. B. „Unbekannte Probe“) legt fest, welche Messungen
+ * für eine Probe erforderlich sind. ROX erzeugt daraus automatisch die
+ * Messungsinstanzen des Messblocks – inkl. Bezeichnung, Messkontext und
+ * eigenem Messdatenimport-Profil je Messung.
+ * ================================================================ */
+
+export const CASE_ID_KEY = "__case_id";
+export const CASE_INSTANCE_KEY = "__case_instance_id";
+export const IMPORT_PROFILE_KEY = "__import_profile_id";
+
+export interface MeasurementCaseConfig {
+  /** Messfall-Steuerung für diesen Messblock aktiv? */
+  enabled: boolean;
+  /** Auswählbare Messfälle (leer = alle). */
+  allowed_case_ids: string[];
+  /** Vorgegebener Messfall – wird beim Öffnen automatisch angewendet. */
+  default_case_id: string | null;
+  /** Messungen dürfen vom Messdienstleister nicht verändert werden. */
+  lock_instances: boolean;
+}
+
+export const readMeasurementCaseConfig = (field: {
+  metadata?: unknown;
+}): MeasurementCaseConfig => {
+  const m = (field?.metadata ?? {}) as Record<string, any>;
+  const c = (m.measurement_block?.case_config ?? {}) as Partial<MeasurementCaseConfig>;
+  return {
+    enabled: c.enabled === true,
+    allowed_case_ids: Array.isArray(c.allowed_case_ids)
+      ? c.allowed_case_ids.filter((x): x is string => typeof x === "string")
+      : [],
+    default_case_id: typeof c.default_case_id === "string" ? c.default_case_id : null,
+    lock_instances: c.lock_instances !== false,
+  };
+};
+
+/** Minimale Sicht auf einen Messfall – hält diese Datei frei von API-Typen. */
+export interface CaseTemplate {
+  id: string;
+  name: string;
+  instances: Array<{
+    id: string;
+    label: string;
+    method?: string | null;
+    import_profile_id?: string | null;
+    context?: Record<string, string> | null;
+  }>;
+}
+
+/**
+ * Erzeugt die Einträge des Messblocks aus einem Messfall. Kontextwerte werden
+ * – wo vorhanden – in echte Kontext-Unterfelder geschrieben, sonst in den
+ * generischen Kontextspeicher der Instanz.
+ */
+export function buildEntriesFromCase(
+  caseDef: CaseTemplate,
+  children: BlockChildDef[] = []
+): Array<Record<string, unknown>> {
+  const contextKeys = new Set(children.filter((c) => c.role === "context").map((c) => c.field_key));
+  const labelKeys = children.filter((c) => c.role === "label").map((c) => c.field_key);
+
+  return caseDef.instances.map((inst) => {
+    const entry: Record<string, unknown> = {
+      [INSTANCE_ID_KEY]: newInstanceId(),
+      [INSTANCE_LABEL_KEY]: inst.label,
+      [INSTANCE_CONTEXT_KEY]: {} as Record<string, string>,
+      [CASE_ID_KEY]: caseDef.id,
+      [CASE_INSTANCE_KEY]: inst.id,
+      [IMPORT_PROFILE_KEY]: inst.import_profile_id ?? null,
+    };
+    for (const k of labelKeys) entry[k] = inst.label;
+    const legacy: Record<string, string> = {};
+    for (const [k, v] of Object.entries(inst.context ?? {})) {
+      if (v == null || String(v).trim() === "") continue;
+      if (contextKeys.has(k)) entry[k] = v;
+      else legacy[k] = String(v);
+    }
+    if (inst.method) legacy.messmethode = legacy.messmethode ?? inst.method;
+    entry[INSTANCE_CONTEXT_KEY] = legacy;
+    return entry;
+  });
+}
+
+/** Sind die Einträge bereits aus genau diesem Messfall erzeugt worden? */
+export const entriesMatchCase = (
+  entries: Array<Record<string, unknown>>,
+  caseDef: CaseTemplate
+): boolean => {
+  if (entries.length !== caseDef.instances.length) return false;
+  return caseDef.instances.every((inst, i) => entries[i]?.[CASE_INSTANCE_KEY] === inst.id);
+};
+
+/** Enthält die Instanz bereits einen abgeschlossenen Messdatenimport? */
+export const instanceImportDone = (
+  entry: Record<string, unknown> | undefined,
+  importFieldKeys: string[]
+): boolean =>
+  importFieldKeys.some((k) => {
+    const raw = entry?.[k];
+    if (typeof raw !== "string" || !raw.startsWith("{")) return false;
+    try {
+      return !!JSON.parse(raw)?.imported_at;
+    } catch {
+      return false;
+    }
+  });
