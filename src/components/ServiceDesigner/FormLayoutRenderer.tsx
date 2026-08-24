@@ -726,6 +726,9 @@ function MeasurementBlockField({
   const perm = usePerm(field.id);
   const meta = readMeasurementBlockMeta(field);
   const children = useMemo(() => repeaterChildren(allFields, field.id), [allFields, field.id]);
+  const childDefs = useMemo(() => toBlockChildDefs(children), [children]);
+  const hasLabelChild = childDefs.some((c) => c.role === "label");
+
 
   const storageKey = meta.storage_key || field.field_key;
   const root = useContext(ValuesCtx);
