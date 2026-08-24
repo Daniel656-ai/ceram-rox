@@ -506,7 +506,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
         <MeasurementImportDialog
           open={open}
           onOpenChange={setOpen}
-          defaultProfileId={cfg.profile_id}
+          defaultProfileId={effectiveProfileId}
           targets={targets}
           currentValues={currentValues}
           allowedImporters={cfg.importers}
