@@ -91,15 +91,37 @@ export default function MeasurementImportDialog({
 
   const sample = parsed.samples[Math.min(sampleIdx, Math.max(parsed.samples.length - 1, 0))];
 
+  // Trennung: echte Mess-/Ergebnisparameter vs. technische Metadaten.
+  const classified = useMemo(
+    () => (sample?.readings ?? []).map((r) => ({ reading: r, cls: classifyReading(r) })),
+    [sample]
+  );
+
+  const metadataRows: ImportMetadataEntry[] = useMemo(
+    () =>
+      classified
+        .filter((c) => c.cls.category === "metadata")
+        .map((c) => ({ label: c.cls.parameter, value: c.reading.raw, kind: c.cls.metadataKind ?? "other" })),
+    [classified]
+  );
+
+  const measurementReadings = useMemo(
+    () => classified.filter((c) => c.cls.category === "measurement"),
+    [classified]
+  );
+
   const rows: MappedRow[] = useMemo(() => {
-    if (!sample) return [];
-    const base = mapReadings(sample.readings, profile, targets);
+    const base = mapReadings(
+      measurementReadings.map((c) => ({ ...c.reading, sourceName: c.cls.parameter, unit: c.reading.unit ?? c.cls.unit })),
+      profile,
+      targets
+    );
     return base.map((r, i) => {
       const o = overrides[i];
       if (o === undefined) return r;
       return { ...r, targetFieldKey: o === "__none__" ? null : o, origin: "manual" as const };
     });
-  }, [sample, profile, targets, overrides]);
+  }, [measurementReadings, profile, targets, overrides]);
 
   const assigned = rows.filter((r) => r.targetFieldKey);
   const unassigned = rows.filter((r) => !r.targetFieldKey);
@@ -112,11 +134,25 @@ export default function MeasurementImportDialog({
       if (v == null) continue;
       values[r.targetFieldKey as string] = v;
     }
-    if (Object.keys(values).length === 0) { toast.error("Keine übernehmbaren Werte gefunden."); return; }
+    // Echte Messwerte ohne Zielfeld gehen nicht verloren – sie werden als
+    // „nicht zugeordnet“ mitgeführt und können später zugeordnet werden.
+    const keep: UnassignedMeasurementValue[] = unassigned.map((r) => ({
+      parameter: r.sourceName,
+      normalized: r.sourceName,
+      raw: r.raw,
+      value: outputValue(r),
+      unit: r.unit ?? null,
+    }));
+    if (Object.keys(values).length === 0 && keep.length === 0) {
+      toast.error("Keine übernehmbaren Messwerte gefunden.");
+      return;
+    }
     onApply(values, {
       profileName: profile?.name ?? "Ohne Profil",
       sampleLabel: sample?.label ?? "",
       count: Object.keys(values).length,
+      unassigned: keep,
+      metadata: metadataRows,
     });
     onOpenChange(false);
   };
