@@ -5,6 +5,8 @@ import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import MeasurementCasesSection from "@/components/measurementImport/MeasurementCasesSection";
+import { FlaskConical } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,7 +135,12 @@ function TemplateList({ navigate }: { navigate: (p: string) => void }) {
           <TabsTrigger value="mapping"><LinkIcon className="h-4 w-4 mr-1" />Auftragsart-Zuordnung</TabsTrigger>
           <TabsTrigger value="global"><Boxes className="h-4 w-4 mr-1" />Globale Objekte & Felder</TabsTrigger>
           <TabsTrigger value="library-global"><Library className="h-4 w-4 mr-1" />Stammdaten, Berechnungen & Validierungen</TabsTrigger>
+          <TabsTrigger value="cases"><FlaskConical className="h-4 w-4 mr-1" />Messfälle</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="cases" className="mt-4">
+          <MeasurementCasesSection />
+        </TabsContent>
 
         <TabsContent value="library-global" className="mt-4">
           <GlobalLibraryTab />
