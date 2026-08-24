@@ -92,11 +92,15 @@ export type MetadataKind =
   | "date" | "time" | "method" | "instrument" | "operator"
   | "file" | "software" | "identifier" | "comment" | "status" | "other";
 
+/** Endungen, die auf technische Kennungen statt Messwerte hindeuten. */
+const META_SUFFIXES = /(id|nummer|nr|version|name|datum|zeit|pfad|datei)$/;
+const META_PREFIXES = /^(gerat|instrument|device|serial|serien|operator|bediener|datei|file|software|report|kommentar|status|lauf|run|method|methode|mess?method)/;
+
 const META_PATTERNS: Array<{ kind: MetadataKind; re: RegExp }> = [
   { kind: "date", re: /^(datum|mess?datum|analysendatum|analysedatum|pruefdatum|date|analysisdate|measurementdate|reportdate|startdate|enddate|erstelltam|createdat)$/ },
   { kind: "time", re: /^(uhrzeit|messzeit|zeit|time|analysistime|starttime|endtime|dauer|duration)$/ },
   { kind: "method", re: /^(methode|messmethode|analysemethode|pruefmethode|verfahren|method|methodname|measurementmethod|analysismethod|application|applikation|programm|program)$/ },
-  { kind: "instrument", re: /^(geraet|geraetid|geraetenummer|instrument|instrumentid|instrumentname|device|deviceid|seriennummer|serialnumber|serialno|spektrometer|analyzer|detektor|detector|channel|kanal)$/ },
+  { kind: "instrument", re: /^(gerat|geratid|geratenummer|geratenr|instrument|instrumentid|instrumentname|device|deviceid|seriennummer|serialnumber|serialno|spektrometer|analyzer|detektor|detector|channel|kanal)$/ },
   { kind: "operator", re: /^(operator|bediener|benutzer|user|username|anwender|bearbeiter|pruefer|analyst|laborant)$/ },
   { kind: "file", re: /^(datei|dateiname|dateipfad|filename|filepath|file|pfad|path|quelldatei|sourcefile|export|exportdatei)$/ },
   { kind: "software", re: /^(software|softwareversion|version|parserversion|firmware|build|applikationsversion)$/ },
@@ -149,6 +153,11 @@ export function classifyReading(r: ClassifiableReading): Classification {
   }
   if (TIME_VALUE.test(raw)) {
     return { category: "metadata", parameter: name, unit: null, metadataKind: "time", reason: "Zeitwert" };
+  }
+
+  // Technische Kennungen (Geräte-ID, Laufnummer, Softwareversion …).
+  if (META_PREFIXES.test(key) && META_SUFFIXES.test(key)) {
+    return { category: "metadata", parameter: name, unit: null, metadataKind: "identifier", reason: "Technische Kennung" };
   }
 
   // Einheit ist ein starkes Indiz für einen Messwert.
