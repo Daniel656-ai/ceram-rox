@@ -5,7 +5,10 @@ import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/fo
 import {
   readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs, readBlockChildRole,
   INSTANCE_ID_KEY, INSTANCE_LABEL_KEY, INSTANCE_CONTEXT_KEY,
+  readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
+  CASE_ID_KEY, IMPORT_PROFILE_KEY, type CaseTemplate,
 } from "@/lib/measurementBlocks";
+
 
 import {
   normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass,
