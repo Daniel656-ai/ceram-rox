@@ -969,10 +969,48 @@ function MeasurementBlockField({
         )}
       </div>
       {desc && <p className="text-xs text-muted-foreground px-3 pt-2">{desc}</p>}
+
+      {caseCfg.enabled && (
+        <div className="px-3 pt-3 space-y-2">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-56">
+              <Label className="text-xs">Messfall</Label>
+              <Select
+                value={activeCaseId ?? "__none__"}
+                disabled={!interactive || readonly || cases.length <= 1}
+                onValueChange={(v) => applyCase(cases.find((c) => c.id === v) ?? null)}
+              >
+                <SelectTrigger className="h-9"><SelectValue placeholder="Messfall wählen…" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">– Messfall wählen –</SelectItem>
+                  {cases.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {activeCase && caseNeedsSetup && interactive && !readonly && (
+              <Button size="sm" variant="outline" type="button" onClick={() => applyCase(activeCase)}>
+                Messungen erzeugen
+              </Button>
+            )}
+          </div>
+          {activeCase && (
+            <p className="text-xs text-muted-foreground">
+              Für diese Probe sind {activeCase.instances.length} Messung(en) erforderlich – bitte jeweils
+              die Messdatei importieren.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="p-3 space-y-3">
         {entries.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-4">Noch keine Messung angelegt.</p>
+          <p className="text-xs text-muted-foreground text-center py-4">
+            {caseCfg.enabled ? "Bitte einen Messfall wählen." : "Noch keine Messung angelegt."}
+          </p>
         )}
+
         {entries.map((entry, i) => {
           const legacyContext = (entry?.[INSTANCE_CONTEXT_KEY] ?? {}) as Record<string, string>;
           // Bezeichnung und Kontext ergeben sich aus den frei konfigurierten
