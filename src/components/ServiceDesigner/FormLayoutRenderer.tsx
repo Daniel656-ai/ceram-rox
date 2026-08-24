@@ -909,8 +909,36 @@ function MeasurementBlockField({
     updateEntries(next);
   };
 
+  /* ---- Messungen aus dem Messfall erzeugen ------------------------ */
+  const activeCaseId =
+    (entries.find((e) => typeof e?.[CASE_ID_KEY] === "string")?.[CASE_ID_KEY] as string | undefined) ??
+    caseCfg.default_case_id ??
+    (cases.length === 1 ? cases[0].id : null);
+  const activeCase = cases.find((c) => c.id === activeCaseId) ?? null;
+  const importFieldKeys = useMemo(
+    () => children.filter((c) => c.field_type === "measurement_import").map((c) => c.field_key),
+    [children]
+  );
+  const applyCase = useCallback(
+    (c: CaseTemplate | null) => {
+      if (!c) return;
+      updateEntries(buildEntriesFromCase(c, childDefs));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [childDefs, root, storageKey]
+  );
+  const caseNeedsSetup = !!activeCase && !entriesMatchCase(entries, activeCase);
+
+  // Vorgegebener Messfall: Messungen automatisch anlegen, solange nichts erfasst ist.
+  useEffect(() => {
+    if (!caseCfg.enabled || !interactive || readonly) return;
+    if (!activeCase || entries.length > 0) return;
+    applyCase(activeCase);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseCfg.enabled, interactive, readonly, activeCase?.id, entries.length]);
+
   // Fehlende Kennungen (Altdaten) und Mindestanzahl ergänzen.
-  if (interactive && !readonly) {
+  if (interactive && !readonly && !caseCfg.enabled) {
     const needsId = entries.some((e) => typeof e?.[INSTANCE_ID_KEY] !== "string");
     const needsSeed = !!meta.min_entries && entries.length < meta.min_entries;
     if (needsId || needsSeed) {
@@ -921,6 +949,7 @@ function MeasurementBlockField({
       queueMicrotask(() => updateEntries(seeded));
     }
   }
+
 
   return (
     <div className="border rounded-md bg-card">
