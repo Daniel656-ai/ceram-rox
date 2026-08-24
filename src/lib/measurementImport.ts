@@ -220,8 +220,8 @@ export function allSourceNames(profile: MeasurementImportProfile | null | undefi
 }
 
 function findMapping(name: string, mappings: ImportMapping[]): ImportMapping | null {
-  const n = normalizeName(name);
-  return mappings.find((m) => (m.source_names ?? []).some((s) => normalizeName(s) === n)) ?? null;
+  const n = canonicalParameter(name);
+  return mappings.find((m) => (m.source_names ?? []).some((s) => canonicalParameter(s) === n)) ?? null;
 }
 
 /** Ordnet gelesene Werte den Formularfeldern zu (Profil zuerst, dann Namensähnlichkeit). */
@@ -232,8 +232,15 @@ export function mapReadings(
 ): MappedRow[] {
   const mappings = profile?.mappings ?? [];
   const byKey = new Map(targets.map((t) => [t.field_key, t]));
-  const byNormKey = new Map(targets.map((t) => [normalizeName(t.field_key), t]));
-  const byNormLabel = new Map(targets.map((t) => [normalizeName(t.display_name), t]));
+  // Kanonischer Abgleich: Einheiten im Namen ("As (PPM)"), Groß-/Kleinschreibung
+  // und bekannte Aliasnamen ("Arsenic") dürfen die Zuordnung nicht verhindern.
+  const canon = new Map<string, TargetCandidate>();
+  for (const t of targets) {
+    for (const cand of [t.field_key, t.display_name]) {
+      const c = canonicalParameter(cand);
+      if (c && !canon.has(c)) canon.set(c, t);
+    }
+  }
 
   return readings.map((r) => {
     const m = findMapping(r.sourceName, mappings);
@@ -246,15 +253,16 @@ export function mapReadings(
       origin = "profile";
       factor = m.factor ?? null;
     } else {
-      const n = normalizeName(r.sourceName);
-      const t = byNormKey.get(n) ?? byNormLabel.get(n);
+      const t = canon.get(canonicalParameter(r.sourceName));
       if (t) { targetFieldKey = t.field_key; origin = "auto"; }
     }
 
     const target = targetFieldKey ? byKey.get(targetFieldKey) : undefined;
     const targetUnit = target?.unit ?? m?.unit ?? null;
-    const unitMismatch = !!(r.unit && targetUnit && normalizeName(r.unit) !== normalizeName(targetUnit));
-    return { ...r, targetFieldKey, origin, targetUnit, factor, unitMismatch };
+    // Einheit kann im Namen stecken ("As (PPM)") – Parametername bleibt sauber.
+    const unit = r.unit ?? splitNameUnit(r.sourceName).unit ?? null;
+    const unitMismatch = !!(unit && targetUnit && normalizeName(unit) !== normalizeName(targetUnit));
+    return { ...r, unit, targetFieldKey, origin, targetUnit, factor, unitMismatch };
   });
 }
 
