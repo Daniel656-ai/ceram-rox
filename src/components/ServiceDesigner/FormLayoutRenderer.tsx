@@ -389,6 +389,27 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
     })
     .filter(Boolean) as Array<{ label: string; unit?: string | null; value: unknown }>;
 
+  /** Echte Messwerte ohne Zielfeld – bleiben dieser Messung erhalten. */
+  const unassigned: any[] = Array.isArray(last?.unassigned) ? last.unassigned : [];
+  /** Technische Metadaten – niemals Ergebniswerte. */
+  const metadata: any[] = Array.isArray(last?.metadata) ? last.metadata : [];
+
+  const persist = (next: any) => setValue(JSON.stringify(next));
+
+  /** Nachträgliche Zuordnung eines gespeicherten Messwerts zu einem Ergebnisfeld. */
+  const assignLater = (idx: number, fieldKey: string) => {
+    const row = unassigned[idx];
+    if (!row) return;
+    write(fieldKey, row.value ?? row.raw ?? null);
+    const rest = unassigned.filter((_, i) => i !== idx);
+    persist({
+      ...last,
+      unassigned: rest,
+      keys: [...new Set([...(importedKeys ?? []), fieldKey])],
+      count: (last?.count ?? 0) + 1,
+    });
+  };
+
   return (
     <div className="space-y-1">
       <Button
@@ -409,6 +430,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
       )}
       {importedRows.length > 0 && (
         <div className="rounded border bg-muted/20 p-2">
+          <p className="text-[11px] font-medium mb-1">Zugeordnete Ergebnisse</p>
           <table className="w-full text-[11px]">
             <tbody>
               {importedRows.map((r, i) => (
@@ -421,6 +443,52 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           </table>
         </div>
       )}
+
+      {unassigned.length > 0 && (
+        <div className="rounded border border-amber-300 bg-amber-50/50 p-2 space-y-1">
+          <p className="text-[11px] font-medium text-amber-700">
+            Zusätzliche / nicht zugeordnete Messwerte ({unassigned.length})
+          </p>
+          {unassigned.map((r, i) => (
+            <div key={i} className="flex items-center gap-2 text-[11px]">
+              <span className="flex-1">⚠ {r.parameter}</span>
+              <span className="font-mono">{String(r.value ?? r.raw ?? "")}{r.unit ? ` ${r.unit}` : ""}</span>
+              <Select
+                value="__none__"
+                disabled={readonly || !interactive}
+                onValueChange={(v) => { if (v !== "__none__") assignLater(i, v); }}
+              >
+                <SelectTrigger className="h-7 w-48 text-[11px]"><SelectValue placeholder="Zuordnen…" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="__none__">Zuordnen…</SelectItem>
+                  {targets.map((t) => (
+                    <SelectItem key={t.field_key} value={t.field_key}>
+                      {t.display_name}{t.unit ? ` [${t.unit}]` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {metadata.length > 0 && (
+        <div className="rounded border bg-muted/10 p-2">
+          <p className="text-[11px] font-medium mb-1">Importinformationen</p>
+          <table className="w-full text-[11px]">
+            <tbody>
+              {metadata.map((m, i) => (
+                <tr key={i}>
+                  <td className="pr-2 text-muted-foreground">{m.label}</td>
+                  <td className="text-right">{String(m.value)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {open && (
         <MeasurementImportDialog
           open={open}
@@ -438,6 +506,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
               count: meta.count,
               source: meta.source ?? null,
               keys: Object.keys(values),
+              unassigned: meta.unassigned ?? [],
+              metadata: meta.metadata ?? [],
             }));
           }}
         />

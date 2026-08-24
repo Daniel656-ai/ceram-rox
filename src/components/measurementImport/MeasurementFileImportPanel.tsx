@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, FileUp, Info } from "lucide-react";
+import type { ImportMetadataEntry, UnassignedMeasurementValue } from "@/lib/measurementClassification";
 import { toast } from "sonner";
 
 export interface FileImportMeta {
@@ -21,6 +22,10 @@ export interface FileImportMeta {
   analyses: string[];
   count: number;
   unmapped: string[];
+  /** Echte Messwerte ohne Zielfeld – bleiben vollständig erhalten. */
+  unassignedValues: UnassignedMeasurementValue[];
+  /** Technische Metadaten der Messdatei (Gerät, Datum, Probe …). */
+  metadata: ImportMetadataEntry[];
 }
 
 interface Props {
@@ -93,13 +98,37 @@ export default function MeasurementFileImportPanel({
   const apply = () => {
     const values: Record<string, number | string> = {};
     const unmapped: string[] = [];
+    const unassignedValues: UnassignedMeasurementValue[] = [];
     for (const r of rows) {
-      if (!r.targetFieldKey) { unmapped.push(r.sourceName); continue; }
+      if (!r.targetFieldKey) {
+        unmapped.push(r.sourceName);
+        // Erkannter Messwert ohne Feld: speichern statt verwerfen.
+        unassignedValues.push({
+          parameter: r.sourceName,
+          normalized: r.normalizedName,
+          raw: r.raw,
+          value: r.value ?? r.raw ?? null,
+          unit: r.unit ?? null,
+          source: measurement?.sourceFileName ?? null,
+        });
+        continue;
+      }
       if (!selected[r.normalizedName]) continue;
       if (r.value == null) continue;
       values[r.targetFieldKey] = r.value;
     }
-    if (Object.keys(values).length === 0) { toast.error("Keine Werte ausgewählt."); return; }
+    const info = measurement?.sampleInformation;
+    const metadata: ImportMetadataEntry[] = [
+      measurement?.sourceFileName ? { label: "Quelldatei", value: measurement.sourceFileName, kind: "file" as const } : null,
+      importerLabel ? { label: "Gerät / Importer", value: importerLabel, kind: "instrument" as const } : null,
+      measurement?.parserVersion ? { label: "Parserversion", value: measurement.parserVersion, kind: "software" as const } : null,
+      info?.analysisDate ? { label: "Messdatum", value: info.analysisDate, kind: "date" as const } : null,
+      info?.sampleName ? { label: "Probe laut Gerät", value: info.sampleName, kind: "comment" as const } : null,
+    ].filter(Boolean) as ImportMetadataEntry[];
+    if (Object.keys(values).length === 0 && unassignedValues.length === 0) {
+      toast.error("Keine Werte ausgewählt.");
+      return;
+    }
     onApply(values, {
       importerId,
       importerLabel,
@@ -108,6 +137,8 @@ export default function MeasurementFileImportPanel({
       analyses: (measurement?.analyses ?? []).map((a) => analysisLabel(a.type)),
       count: Object.keys(values).length,
       unmapped,
+      unassignedValues,
+      metadata,
     });
   };
 
@@ -210,7 +241,7 @@ export default function MeasurementFileImportPanel({
                       <td className="p-2 space-y-1">
                         {confBadge(r.confidence)}
                         {!r.targetFieldKey && (
-                          <p className="text-muted-foreground">erkannt, keinem Feld zugeordnet</p>
+                          <p className="text-amber-600">⚠ nicht zugeordnet – Messwert bleibt erhalten</p>
                         )}
                         {conflict && (
                           <p className="text-amber-600">
