@@ -844,6 +844,23 @@ function MeasurementBlockField({
   const childDefs = useMemo(() => toBlockChildDefs(children), [children]);
   const hasLabelChild = childDefs.some((c) => c.role === "label");
 
+  /* ---- Messfall / Analyseschema ---------------------------------- */
+  const caseCfg = readMeasurementCaseConfig(field);
+  const { data: allCases = [] } = useQuery({
+    queryKey: ["measurement-cases"],
+    queryFn: () => api.measurementCases.list(),
+    enabled: caseCfg.enabled,
+  });
+  const cases: CaseTemplate[] = useMemo(
+    () =>
+      (allCases as any[])
+        .filter((c) => c.is_active !== false)
+        .filter(
+          (c) => caseCfg.allowed_case_ids.length === 0 || caseCfg.allowed_case_ids.includes(c.id)
+        )
+        .map((c) => ({ id: c.id, name: c.name, instances: c.instances ?? [] })),
+    [allCases, caseCfg.allowed_case_ids]
+  );
 
   const storageKey = meta.storage_key || field.field_key;
   const root = useContext(ValuesCtx);
@@ -852,9 +869,11 @@ function MeasurementBlockField({
 
   const interactive = !!root?.interactive;
   const readonly = node.readonly || field.readonly || perm.visibility === "read";
-  const canAdd = interactive && !readonly && (perm.can_add ?? true) &&
+  const caseLocked = caseCfg.enabled && caseCfg.lock_instances;
+  const canAdd = interactive && !readonly && !caseLocked && (perm.can_add ?? true) &&
     (meta.max_entries == null || entries.length < meta.max_entries);
-  const canRemove = interactive && !readonly && (perm.can_remove ?? true);
+  const canRemove = interactive && !readonly && !caseLocked && (perm.can_remove ?? true);
+
 
   const label = node.label_override || field.display_name;
   const desc = node.description_override ?? field.description;
