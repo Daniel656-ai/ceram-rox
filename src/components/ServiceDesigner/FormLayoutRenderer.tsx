@@ -808,36 +808,53 @@ function MeasurementBlockField({
           <p className="text-xs text-muted-foreground text-center py-4">Noch keine Messung angelegt.</p>
         )}
         {entries.map((entry, i) => {
-          const context = (entry?.[INSTANCE_CONTEXT_KEY] ?? {}) as Record<string, string>;
-          const title = instanceLabel(entry?.[INSTANCE_LABEL_KEY] ?? "", context, meta, i);
+          const legacyContext = (entry?.[INSTANCE_CONTEXT_KEY] ?? {}) as Record<string, string>;
+          // Bezeichnung und Kontext ergeben sich aus den frei konfigurierten
+          // Unterfeldern – es gibt keine fest codierten Felder.
+          const context: Record<string, string> = { ...legacyContext };
+          for (const c of childDefs) {
+            if (c.role !== "context") continue;
+            const v = entry?.[c.field_key];
+            if (v != null && String(v).trim() !== "") context[c.field_key] = String(v);
+          }
+          const explicit =
+            (entry?.[INSTANCE_LABEL_KEY] as string) ||
+            childDefs
+              .filter((c) => c.role === "label")
+              .map((c) => entry?.[c.field_key])
+              .find((v) => v != null && String(v).trim() !== "")?.toString() ||
+            "";
+          const title = instanceLabel(explicit, context, meta, i);
           const patch = (next: Record<string, any>) => {
             const arr = entries.slice();
             arr[i] = next;
             updateEntries(arr);
           };
-          const header = (
+          const header = (hasLabelChild && meta.context_fields.length === 0) ? null : (
             <div className="mb-3 grid grid-cols-12 gap-3 rounded border bg-muted/20 p-2">
-              <div className="col-span-12 md:col-span-4">
-                <Label className="text-xs">Bezeichnung der Messung</Label>
-                <Input
-                  className="h-9"
-                  value={entry?.[INSTANCE_LABEL_KEY] ?? ""}
-                  placeholder={`${meta.item_label} ${i + 1}`}
-                  disabled={readonly || !interactive}
-                  onChange={(e) => patch({ ...(entry ?? {}), [INSTANCE_LABEL_KEY]: e.target.value })}
-                />
-              </div>
+              {!hasLabelChild && (
+                <div className="col-span-12 md:col-span-4">
+                  <Label className="text-xs">Bezeichnung der Messung</Label>
+                  <Input
+                    className="h-9"
+                    value={entry?.[INSTANCE_LABEL_KEY] ?? ""}
+                    placeholder={`${meta.item_label} ${i + 1}`}
+                    disabled={readonly || !interactive}
+                    onChange={(e) => patch({ ...(entry ?? {}), [INSTANCE_LABEL_KEY]: e.target.value })}
+                  />
+                </div>
+              )}
               {meta.context_fields.map((cf) => (
                 <div key={cf.key} className="col-span-12 md:col-span-4">
                   <Label className="text-xs">{cf.label}</Label>
                   {cf.type === "select" && (cf.options?.length ?? 0) > 0 ? (
                     <Select
-                      value={context[cf.key] ?? "__none__"}
+                      value={legacyContext[cf.key] || "__none__"}
                       disabled={readonly || !interactive}
                       onValueChange={(v) =>
                         patch({
                           ...(entry ?? {}),
-                          [INSTANCE_CONTEXT_KEY]: { ...context, [cf.key]: v === "__none__" ? "" : v },
+                          [INSTANCE_CONTEXT_KEY]: { ...legacyContext, [cf.key]: v === "__none__" ? "" : v },
                         })
                       }
                     >
@@ -852,12 +869,12 @@ function MeasurementBlockField({
                   ) : (
                     <Input
                       className="h-9"
-                      value={context[cf.key] ?? ""}
+                      value={legacyContext[cf.key] ?? ""}
                       disabled={readonly || !interactive}
                       onChange={(e) =>
                         patch({
                           ...(entry ?? {}),
-                          [INSTANCE_CONTEXT_KEY]: { ...context, [cf.key]: e.target.value },
+                          [INSTANCE_CONTEXT_KEY]: { ...legacyContext, [cf.key]: e.target.value },
                         })
                       }
                     />
@@ -866,6 +883,7 @@ function MeasurementBlockField({
               ))}
             </div>
           );
+
 
           return (
             <RepeaterEntry
