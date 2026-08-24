@@ -30,7 +30,7 @@ interface Props {
   /** Zulässige Datei-Importer (leer = alle registrierten). */
   allowedImporters?: string[] | null;
   /** Übernahme der geprüften Werte. */
-  onApply: (values: Record<string, number | string | null>, meta: { profileName: string; sampleLabel: string; count: number; source?: string }) => void;
+  onApply: (values: Record<string, number | string | null>, meta: ImportApplyMeta) => void;
   /** Darf der Anwender Profile anlegen/bearbeiten? */
   canManageProfiles?: boolean;
 }
