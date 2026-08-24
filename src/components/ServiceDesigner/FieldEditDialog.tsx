@@ -335,6 +335,10 @@ export function RepeaterConfigPanel({
         </p>
       </div>
 
+      {isBlock && (
+        <MeasurementCaseConfigEditor field={field} disabled={disabled} onSave={saveMeta} />
+      )}
+
       {isBlock && legacyContext.length > 0 && (
         <LegacyContextFieldsEditor
           value={legacyContext}
@@ -342,6 +346,7 @@ export function RepeaterConfigPanel({
           onChange={(context_fields) => saveMeta({ context_fields })}
         />
       )}
+
 
       <SubfieldManager field={field} fields={fields} disabled={disabled} isBlock={isBlock} />
 
