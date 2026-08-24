@@ -1034,7 +1034,24 @@ function MeasurementBlockField({
             arr[i] = next;
             updateEntries(arr);
           };
-          const header = (hasLabelChild && meta.context_fields.length === 0) ? null : (
+          // Aus einem Messfall erzeugte Messungen: Kontext ist vorgegeben und
+          // wird nur noch angezeigt – die technische Konfiguration bleibt
+          // für den Messdienstleister unsichtbar.
+          const fromCase = caseCfg.enabled && typeof entry?.[CASE_ID_KEY] === "string";
+          const done = instanceImportDone(entry, importFieldKeys);
+          const caseHeader = (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded border bg-muted/20 px-2 py-1.5">
+              <span className="text-sm font-medium">{i + 1}. {title}</span>
+              {Object.entries(context).map(([k, v]) => (
+                <Badge key={k} variant="secondary" className="text-[10px]">{v}</Badge>
+              ))}
+              <Badge variant={done ? "default" : "outline"} className="ml-auto text-[10px]">
+                {done ? "✓ Import abgeschlossen" : "Noch nicht importiert"}
+              </Badge>
+            </div>
+          );
+          const header = fromCase ? caseHeader : (hasLabelChild && meta.context_fields.length === 0) ? null : (
+
             <div className="mb-3 grid grid-cols-12 gap-3 rounded border bg-muted/20 p-2">
               {!hasLabelChild && (
                 <div className="col-span-12 md:col-span-4">
