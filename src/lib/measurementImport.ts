@@ -6,6 +6,7 @@
  * Zielfelder, Einheiten) steckt ausschließlich im Importprofil.
  */
 import type { ImportMapping, MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
+import { canonicalParameter, splitNameUnit } from "@/lib/measurementClassification";
 
 export type DecimalSeparator = "auto" | "," | ".";
 
