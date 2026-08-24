@@ -259,7 +259,12 @@ export default function MeasurementImportDialog({
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Badge variant="outline">Format: {formatLabel(parsed.detectedFormat)}</Badge>
                   <Badge variant="secondary">{assigned.length} zugeordnet</Badge>
-                  {unassigned.length > 0 && <Badge variant="outline">{unassigned.length} ohne Zielfeld</Badge>}
+                  {unassigned.length > 0 && (
+                    <Badge variant="outline" className="gap-1">
+                      <AlertTriangle className="h-3 w-3" />{unassigned.length} nicht zugeordnet (werden gespeichert)
+                    </Badge>
+                  )}
+                  {metadataRows.length > 0 && <Badge variant="outline">{metadataRows.length} Metadaten</Badge>}
                   {invalid.length > 0 && (
                     <Badge variant="destructive" className="gap-1">
                       <AlertTriangle className="h-3 w-3" />{invalid.length} nicht lesbar
@@ -271,10 +276,11 @@ export default function MeasurementImportDialog({
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="text-left p-2">Parameter</th>
-                        <th className="text-left p-2">Rohwert</th>
+                        <th className="text-left p-2">Datenname</th>
                         <th className="text-left p-2">Wert</th>
-                        <th className="text-left p-2">Zielfeld</th>
+                        <th className="text-left p-2">Einheit</th>
+                        <th className="text-left p-2">Kategorie</th>
+                        <th className="text-left p-2">Zuordnung</th>
                         <th className="text-left p-2">Status</th>
                       </tr>
                     </thead>
@@ -282,8 +288,9 @@ export default function MeasurementImportDialog({
                       {rows.map((r, i) => (
                         <tr key={i} className="border-t">
                           <td className="p-2 font-medium">{r.sourceName}</td>
-                          <td className="p-2 font-mono text-muted-foreground">{r.raw}</td>
-                          <td className="p-2 font-mono">{r.value ?? (r.belowDetection ? r.raw : "—")}</td>
+                          <td className="p-2 font-mono">{r.value ?? (r.belowDetection ? r.raw : r.raw)}</td>
+                          <td className="p-2 text-muted-foreground">{r.unit ?? r.targetUnit ?? "—"}</td>
+                          <td className="p-2"><Badge variant="secondary">Messwert</Badge></td>
                           <td className="p-2">
                             <Select
                               value={r.targetFieldKey ?? "__none__"}
@@ -291,7 +298,7 @@ export default function MeasurementImportDialog({
                             >
                               <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                               <SelectContent className="max-h-72">
-                                <SelectItem value="__none__">— nicht übernehmen —</SelectItem>
+                                <SelectItem value="__none__">— kein Feld (nicht zugeordnet speichern) —</SelectItem>
                                 {targets.map((t) => (
                                   <SelectItem key={t.field_key} value={t.field_key}>
                                     {t.display_name}{t.unit ? ` [${t.unit}]` : ""}
@@ -301,18 +308,34 @@ export default function MeasurementImportDialog({
                             </Select>
                           </td>
                           <td className="p-2">
-                            {!r.targetFieldKey ? <span className="text-muted-foreground">ignoriert</span>
+                            {!r.targetFieldKey ? <span className="text-amber-600">⚠ nicht zugeordnet – bleibt erhalten</span>
                               : r.value == null && !r.belowDetection ? <span className="text-destructive">nicht lesbar</span>
                               : r.unitMismatch ? <span className="text-amber-600">Einheit {r.unit} ≠ {r.targetUnit}</span>
-                              : r.origin === "profile" ? <span className="text-muted-foreground">Profil</span>
-                              : r.origin === "auto" ? <span className="text-muted-foreground">Namensabgleich</span>
-                              : <span className="text-muted-foreground">manuell</span>}
+                              : r.origin === "profile" ? <span className="text-muted-foreground">✓ Profil</span>
+                              : r.origin === "auto" ? <span className="text-muted-foreground">✓ Namensabgleich</span>
+                              : <span className="text-muted-foreground">✓ manuell</span>}
                           </td>
+                        </tr>
+                      ))}
+                      {metadataRows.map((m, i) => (
+                        <tr key={`meta-${i}`} className="border-t bg-muted/20">
+                          <td className="p-2">{m.label}</td>
+                          <td className="p-2 font-mono text-muted-foreground">{m.value}</td>
+                          <td className="p-2 text-muted-foreground">—</td>
+                          <td className="p-2"><Badge variant="outline">Metadaten</Badge></td>
+                          <td className="p-2 text-muted-foreground">–</td>
+                          <td className="p-2 text-muted-foreground">Importinformation</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                {metadataRows.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Metadaten werden ausschließlich als Importinformation gespeichert und niemals als Ergebniswert übernommen.
+                  </p>
+                )}
 
                 {parsed.warnings.map((w, i) => (
                   <p key={i} className="text-[11px] text-amber-600">{w}</p>
