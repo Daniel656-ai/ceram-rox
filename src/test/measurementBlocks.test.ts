@@ -50,6 +50,9 @@ describe("Messdatenblock", () => {
     expect(new Set(official.map((c) => c.key)).size).toBe(2);
     expect(official.map((c) => c.value)).toEqual([12, 13]);
     expect(official.map((c) => c.instanceLabel)).toEqual(["Messung 1", "Messung 2"]);
+  });
+
+
 
   it("leitet Bezeichnung und Kontext generisch aus frei angelegten Unterfeldern ab", () => {
     const genericBlock = field({
