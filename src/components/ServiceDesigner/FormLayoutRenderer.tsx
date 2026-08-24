@@ -3,7 +3,7 @@ import { columnsGridStyle } from "@/lib/api/formDefinitionLayout";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree, CalculationNode } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import {
-  readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs,
+  readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs, readBlockChildRole,
   INSTANCE_ID_KEY, INSTANCE_LABEL_KEY, INSTANCE_CONTEXT_KEY,
 } from "@/lib/measurementBlocks";
 
