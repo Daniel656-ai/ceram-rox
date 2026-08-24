@@ -17,6 +17,23 @@ import { AlertTriangle, ClipboardPaste, Settings2, Plus, FileUp } from "lucide-r
 import ImportProfileEditorDialog from "./ImportProfileEditorDialog";
 import MeasurementFileImportPanel from "./MeasurementFileImportPanel";
 import { toast } from "sonner";
+import {
+  classifyReading,
+  type ImportMetadataEntry,
+  type UnassignedMeasurementValue,
+} from "@/lib/measurementClassification";
+
+/** Ergebnis einer Übernahme: Werte + erhaltene Messwerte ohne Feld + Importinformationen. */
+export interface ImportApplyMeta {
+  profileName: string;
+  sampleLabel: string;
+  count: number;
+  source?: string;
+  /** Echte Messwerte ohne Zielfeld – dürfen nie verloren gehen. */
+  unassigned?: UnassignedMeasurementValue[];
+  /** Technische Metadaten – nie Ergebniswerte. */
+  metadata?: ImportMetadataEntry[];
+}
 
 interface Props {
   open: boolean;
