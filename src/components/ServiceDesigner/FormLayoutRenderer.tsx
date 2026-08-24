@@ -354,6 +354,16 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   const cfg = readImportMeta(field);
 
   /**
+   * Messfall-Steuerung: Wurde die Messung aus einem Messfall erzeugt, gilt das
+   * dort hinterlegte Importprofil dieser Messung – jede Messung importiert
+   * eigenständig und überschreibt niemals eine andere Messung.
+   */
+  const instanceProfile = read(IMPORT_PROFILE_KEY);
+  const effectiveProfileId =
+    (typeof instanceProfile === "string" && instanceProfile) || cfg.profile_id;
+
+
+  /**
    * Zielfelder sind ausschließlich die Messwertfelder desselben Scopes
    * (Formularabschnitt oder aktuelle Messblock-Instanz). Kontext-/
    * Bezeichnungsfelder eines Messblocks beschreiben die Messung und dürfen
