@@ -6,6 +6,7 @@ import { readRepeaterMeta, writeRepeaterMeta, repeaterChildren } from "@/lib/api
 import {
   readMeasurementBlockMeta, writeMeasurementBlockMeta,
   readBlockChildRole, writeBlockChildRole,
+  readMeasurementCaseConfig,
   type MeasurementContextFieldDef, type BlockChildRole,
 } from "@/lib/measurementBlocks";
 import { FIELD_TYPE_GROUPS, SUBFIELD_TYPE_GROUPS, fieldTypeLabel, slugify } from "@/lib/formFieldTypes";
@@ -656,6 +657,86 @@ export function ImportFieldConfig({
         targets={targets}
         onSaved={(p) => onChange(p.id)}
       />
+    </div>
+  );
+}
+
+/* ==============================================================
+ * Messfall / Analyseschema – Konfiguration je Messblock
+ * ============================================================== */
+function MeasurementCaseConfigEditor({
+  field, disabled, onSave,
+}: { field: FormField; disabled: boolean; onSave: (patch: any) => void | Promise<void> }) {
+  const cfg = readMeasurementCaseConfig(field);
+  const { data: cases = [] } = useQuery({
+    queryKey: ["measurement-cases"],
+    queryFn: () => api.measurementCases.list(),
+  });
+  const patch = (p: Partial<typeof cfg>) => onSave({ case_config: { ...cfg, ...p } });
+
+  return (
+    <div className="rounded border p-2 space-y-2 bg-muted/20">
+      <div className="flex items-center justify-between">
+        <div>
+          <Label className="text-xs">Messfall-Steuerung</Label>
+          <p className="text-[10px] text-muted-foreground">
+            ROX erzeugt die erforderlichen Messungen automatisch aus dem gewählten Messfall.
+          </p>
+        </div>
+        <Switch checked={cfg.enabled} disabled={disabled} onCheckedChange={(v) => patch({ enabled: v })} />
+      </div>
+      {cfg.enabled && (
+        <>
+          <div>
+            <Label className="text-[11px]">Vorgegebener Messfall</Label>
+            <Select
+              value={cfg.default_case_id ?? "__none__"}
+              disabled={disabled}
+              onValueChange={(v) => patch({ default_case_id: v === "__none__" ? null : v })}
+            >
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Messfall wählen…" /></SelectTrigger>
+              <SelectContent className="max-h-72">
+                <SelectItem value="__none__">— Auswahl durch Benutzer —</SelectItem>
+                {cases.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px]">Auswählbare Messfälle (keiner markiert = alle)</Label>
+            <div className="flex flex-wrap gap-1">
+              {cases.map((c: any) => {
+                const on = cfg.allowed_case_ids.includes(c.id);
+                return (
+                  <Button
+                    key={c.id}
+                    type="button"
+                    size="sm"
+                    variant={on ? "default" : "outline"}
+                    disabled={disabled}
+                    className="h-7 text-[11px]"
+                    onClick={() =>
+                      patch({
+                        allowed_case_ids: on
+                          ? cfg.allowed_case_ids.filter((x) => x !== c.id)
+                          : [...cfg.allowed_case_ids, c.id],
+                      })
+                    }
+                  >
+                    {c.name}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <Label className="text-[11px]">Messungen gegen Änderung sperren</Label>
+            <Switch checked={cfg.lock_instances} disabled={disabled}
+              onCheckedChange={(v) => patch({ lock_instances: v })} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
