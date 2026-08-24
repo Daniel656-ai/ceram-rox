@@ -13,6 +13,8 @@ export type AnalysisType =
   | "BET"
   | "BJH_ADSORPTION"
   | "BJH_DESORPTION"
+  | "LANGMUIR"
+  | "T_PLOT"
   | "NLDFT"
   | "ISOTHERM"
   | "UNKNOWN";
