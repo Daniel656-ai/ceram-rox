@@ -915,6 +915,11 @@ function MeasurementBlockField({
     caseCfg.default_case_id ??
     (cases.length === 1 ? cases[0].id : null);
   const activeCase = cases.find((c) => c.id === activeCaseId) ?? null;
+  /** Im Messfall-Modus sind Bezeichnung/Kontext vorgegeben – nur Messwerte und Import anzeigen. */
+  const caseChildren = useMemo(
+    () => children.filter((c) => readBlockChildRole(c) === "value"),
+    [children]
+  );
   const importFieldKeys = useMemo(
     () => children.filter((c) => c.field_type === "measurement_import").map((c) => c.field_key),
     [children]
@@ -1111,7 +1116,7 @@ function MeasurementBlockField({
               key={entry?.[INSTANCE_ID_KEY] ?? i}
               index={i}
               entry={entry}
-              children={children}
+              children={fromCase ? caseChildren : children}
               allFields={allFields}
               readonly={readonly}
               layout={meta.layout}
