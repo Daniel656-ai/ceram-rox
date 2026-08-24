@@ -1770,6 +1770,93 @@ export type Database = {
           },
         ]
       }
+      measurement_case_instances: {
+        Row: {
+          case_id: string
+          context: Json
+          created_at: string
+          id: string
+          import_profile_id: string | null
+          label: string
+          method: string | null
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          context?: Json
+          created_at?: string
+          id?: string
+          import_profile_id?: string | null
+          label: string
+          method?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          context?: Json
+          created_at?: string
+          id?: string
+          import_profile_id?: string | null
+          label?: string
+          method?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_case_instances_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_case_instances_import_profile_id_fkey"
+            columns: ["import_profile_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_import_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_cases: {
+        Row: {
+          case_key: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          method: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          case_key: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          method?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          case_key?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          method?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       measurement_import_profiles: {
         Row: {
           created_at: string
