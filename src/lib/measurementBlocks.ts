@@ -32,21 +32,58 @@ export interface MeasurementBlockMeta {
   item_label: string;
   add_label: string;
   storage_key?: string;
-  /** Frei definierbare Kontextfelder je Messung. */
+  /**
+   * LEGACY: früher fest im Block gepflegte Kontextfelder. Neue Blöcke nutzen
+   * ausschließlich echte Unterfelder (form_fields mit parent_field_id).
+   */
   context_fields: MeasurementContextFieldDef[];
-  /** Freies Layout der Ergebnisfelder (identisch zum Repeater). */
+  /** Freies Layout der Unterfelder (identisch zum Repeater). */
   layout?: unknown;
 }
 
-const DEFAULT_CONTEXT_FIELDS: MeasurementContextFieldDef[] = [
-  { key: "preparation", label: "Präparation", type: "text" },
-  { key: "analysis_type", label: "Analyseart", type: "text" },
-];
+/**
+ * Rolle eines Unterfeldes innerhalb eines Messblocks.
+ * - "label"   → liefert die Bezeichnung der Messung
+ * - "context" → beschreibt den Messkontext (Präparation, Analyseart, …)
+ * - "value"   → normales Feld / Messwert (Standard)
+ *
+ * Die Rollen sind frei konfigurierbar; es gibt KEINE fest codierten Unterfelder.
+ */
+export type BlockChildRole = "label" | "context" | "value";
+
+export interface BlockChildDef {
+  field_key: string;
+  display_name?: string | null;
+  role: BlockChildRole;
+}
+
+export const readBlockChildRole = (field: { metadata?: unknown }): BlockChildRole => {
+  const m = (field?.metadata ?? {}) as Record<string, unknown>;
+  const r = (m.block_role ?? (m.measurement_block_child as any)?.role) as string | undefined;
+  return r === "label" || r === "context" ? r : "value";
+};
+
+export const writeBlockChildRole = (
+  field: { metadata?: unknown },
+  role: BlockChildRole
+): Record<string, unknown> => ({
+  ...((field?.metadata ?? {}) as Record<string, unknown>),
+  block_role: role,
+});
+
+export const toBlockChildDefs = (
+  children: Array<{ field_key: string; display_name?: string | null; metadata?: unknown }>
+): BlockChildDef[] =>
+  children.map((c) => ({
+    field_key: c.field_key,
+    display_name: c.display_name ?? null,
+    role: readBlockChildRole(c),
+  }));
 
 export const readMeasurementBlockMeta = (field: FormField): MeasurementBlockMeta => {
   const m = (field.metadata ?? {}) as Record<string, unknown>;
   const b = (m.measurement_block ?? {}) as Partial<MeasurementBlockMeta>;
-  const ctx = Array.isArray(b.context_fields) ? b.context_fields : DEFAULT_CONTEXT_FIELDS;
+  const ctx = Array.isArray(b.context_fields) ? b.context_fields : [];
   return {
     min_entries: typeof b.min_entries === "number" ? b.min_entries : 1,
     max_entries: typeof b.max_entries === "number" ? b.max_entries : undefined,
@@ -65,6 +102,7 @@ export const readMeasurementBlockMeta = (field: FormField): MeasurementBlockMeta
     layout: (b as any).layout ?? null,
   };
 };
+
 
 export const writeMeasurementBlockMeta = (
   field: FormField,
@@ -92,30 +130,45 @@ export interface MeasurementInstance {
 
 const isMetaKey = (k: string) => k.startsWith("__");
 
-/** Liest die Messungen eines Blocks aus dem gespeicherten Eintrags-Array. */
+/**
+ * Liest die Messungen eines Blocks aus dem gespeicherten Eintrags-Array.
+ * Die Struktur ergibt sich vollständig aus den übergebenen Unterfeldern –
+ * es werden keine Unterfelder vorausgesetzt.
+ */
 export function readInstances(
   raw: unknown,
-  meta: MeasurementBlockMeta
+  meta: MeasurementBlockMeta,
+  children: BlockChildDef[] = []
 ): MeasurementInstance[] {
   const list = Array.isArray(raw) ? raw : [];
+  const contextKeys = children.filter((c) => c.role === "context");
+  const labelKeys = children.filter((c) => c.role === "label");
+
   return list.map((entry, index) => {
     const e = (entry ?? {}) as Record<string, unknown>;
     const ctxRaw = (e[INSTANCE_CONTEXT_KEY] ?? {}) as Record<string, unknown>;
     const context: Record<string, string> = {};
+    // Legacy-Kontext (fest im Block gepflegt)
     for (const cf of meta.context_fields) {
       const v = ctxRaw[cf.key];
       if (v != null && String(v).trim() !== "") context[cf.key] = String(v);
     }
+    // Kontext aus echten Unterfeldern
+    for (const c of contextKeys) {
+      const v = e[c.field_key];
+      if (v != null && String(v).trim() !== "") context[c.field_key] = String(v);
+    }
     const values: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(e)) if (!isMetaKey(k)) values[k] = v;
+
+    const explicit =
+      (typeof e[INSTANCE_LABEL_KEY] === "string" ? (e[INSTANCE_LABEL_KEY] as string) : "") ||
+      labelKeys.map((c) => e[c.field_key]).find((v) => v != null && String(v).trim() !== "")?.toString() ||
+      "";
+
     return {
       instanceId: typeof e[INSTANCE_ID_KEY] === "string" ? (e[INSTANCE_ID_KEY] as string) : `idx_${index + 1}`,
-      label: instanceLabel(
-        typeof e[INSTANCE_LABEL_KEY] === "string" ? (e[INSTANCE_LABEL_KEY] as string) : "",
-        context,
-        meta,
-        index
-      ),
+      label: instanceLabel(explicit, context, meta, index),
       context,
       values,
       index,
@@ -132,12 +185,11 @@ export function instanceLabel(
 ): string {
   const name = (explicit || "").trim();
   if (name) return name;
-  const parts = meta.context_fields
-    .map((c) => context[c.key])
-    .filter((v) => v && v.trim() !== "");
+  const parts = Object.values(context).filter((v) => v && v.trim() !== "");
   if (parts.length) return parts.join(" · ");
   return `${meta.item_label} ${index + 1}`;
 }
+
 
 /** Eindeutiger Ergebnisschlüssel je Messung – verhindert Kollisionen. */
 export const instanceResultKey = (

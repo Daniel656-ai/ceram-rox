@@ -7,11 +7,8 @@ import {
 } from "@dnd-kit/core";
 import { api } from "@/lib/api";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
-import { type FormField, readRepeaterMeta, writeRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
-import {
-  readMeasurementBlockMeta, writeMeasurementBlockMeta,
-  type MeasurementContextFieldDef,
-} from "@/lib/measurementBlocks";
+import { type FormField } from "@/lib/api/formFields";
+
 import {
   type LayoutNode, type LayoutNodeType, type FormLayoutTree,
   type LayoutWidth, type FieldNode, type CalculationNode,
@@ -36,7 +33,7 @@ import {
 } from "lucide-react";
 import FormLayoutRenderer from "./FormLayoutRenderer";
 import FormPreviewDialog from "./FormPreviewDialog";
-import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
+import { RepeaterConfigPanel } from "./FieldEditDialog";
 import SystemVariablesPanel from "./SystemVariablesPanel";
 
 // ---------- palette ----------
@@ -472,9 +469,43 @@ function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canMana
           )}
         </div>
       )}
+
+      {node.type === "field" && <ContainerFieldPreview node={node as FieldNode} fields={fields} />}
     </div>
   );
 }
+
+/**
+ * Zeigt bereits im Designer, welche Unterfelder ein Container-Feld
+ * (Messblock/Repeater) enthält. Die Struktur stammt ausschließlich aus den
+ * angelegten Unterfeldern.
+ */
+function ContainerFieldPreview({ node, fields }: { node: FieldNode; fields: FormField[] }) {
+  const field = fields.find((f) => f.id === node.field_id);
+  if (!field || !["measurement_block", "repeater"].includes(field.field_type)) return null;
+  const children = fields
+    .filter((f) => f.parent_field_id === field.id)
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const isBlock = field.field_type === "measurement_block";
+  return (
+    <div className={cn("m-2 rounded border-l-2 pl-2 py-1", isBlock ? "border-l-primary bg-primary/5" : "border-l-muted-foreground/40 bg-muted/20")}>
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+        {isBlock ? "Messblock" : "Repeater"} · {children.length} Unterfelder
+      </p>
+      {children.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">Noch keine Unterfelder – über „Feld bearbeiten“ anlegen.</p>
+      )}
+      {children.map((c) => (
+        <div key={c.id} className="flex items-center gap-1 text-[11px]">
+          <span className="text-muted-foreground">└─</span>
+          <span className="truncate">{c.display_name}</span>
+          <Badge variant="outline" className="text-[9px]">{c.field_type}</Badge>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 function ContainerChildren({ parentId, children, depth, fields, selectedId, onSelect, onMutate, canManage }: {
   parentId: string; children: LayoutNode[]; depth: number; fields: FormField[];
@@ -850,204 +881,5 @@ function FieldInspector({
         />
       )}
     </>
-  );
-}
-
-export function RepeaterConfigPanel({
-  field, fields, disabled, mode = "repeater",
-}: { field: FormField; fields: FormField[]; disabled: boolean; mode?: "repeater" | "measurement_block" }) {
-  const qc = useQueryClient();
-  const isBlock = mode === "measurement_block";
-  const meta: any = isBlock ? readMeasurementBlockMeta(field) : readRepeaterMeta(field);
-  const children = repeaterChildren(fields, field.id);
-
-  const [newKey, setNewKey] = useState("");
-  const [newLabel, setNewLabel] = useState("");
-  const [newType, setNewType] = useState<any>("text");
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["form-fields", field.form_id] });
-
-  const saveMeta = async (patch: any) => {
-    const metadata = isBlock
-      ? writeMeasurementBlockMeta(field, patch)
-      : writeRepeaterMeta(field, patch);
-    await api.formFields.update(field.id, { metadata: metadata as any });
-    invalidate();
-  };
-  const addChild = async () => {
-    if (!newKey.trim() || !newLabel.trim()) return;
-    await api.formFields.create({
-      form_id: field.form_id,
-      field_key: newKey.trim(),
-      display_name: newLabel.trim(),
-      field_type: newType,
-      parent_field_id: field.id,
-      sort_order: children.length,
-    } as any);
-    setNewKey(""); setNewLabel("");
-    invalidate();
-    toast.success("Unterfeld hinzugefügt");
-  };
-  const removeChild = async (id: string) => {
-    if (!confirm("Unterfeld wirklich entfernen?")) return;
-    await api.formFields.remove(id);
-    invalidate();
-  };
-
-  return (
-    <div className="border-t pt-3 mt-3 space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {isBlock ? "Messdatenblock-Einstellungen" : "Repeater-Einstellungen"}
-      </p>
-      {isBlock && (
-        <p className="text-[10px] text-muted-foreground">
-          Jede Messung erhält eine eigene Kennung. Ergebnisse werden dadurch eindeutig
-          der jeweiligen Messung zugeordnet.
-        </p>
-      )}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label className="text-xs">Min.</Label>
-          <Input type="number" className="h-8 text-xs" value={meta.min_entries ?? 0}
-            onChange={(e) => saveMeta({ min_entries: e.target.value === "" ? 0 : Number(e.target.value) })}
-            disabled={disabled} />
-        </div>
-        <div>
-          <Label className="text-xs">Max.</Label>
-          <Input type="number" className="h-8 text-xs" value={meta.max_entries ?? ""}
-            onChange={(e) => saveMeta({ max_entries: e.target.value === "" ? undefined : Number(e.target.value) })}
-            disabled={disabled} />
-        </div>
-      </div>
-      <div>
-        <Label className="text-xs">Eintrag-Label</Label>
-        <Input className="h-8 text-xs" value={meta.item_label ?? ""} onChange={(e) => saveMeta({ item_label: e.target.value })} disabled={disabled} />
-      </div>
-      <div>
-        <Label className="text-xs">Button-Text "Hinzufügen"</Label>
-        <Input className="h-8 text-xs" value={meta.add_label ?? ""} onChange={(e) => saveMeta({ add_label: e.target.value })} disabled={disabled} />
-      </div>
-      <div>
-        <Label className="text-xs">Storage-Key (optional)</Label>
-        <Input className="h-8 text-xs" value={meta.storage_key ?? ""} placeholder={field.field_key}
-          onChange={(e) => saveMeta({ storage_key: e.target.value || undefined })} disabled={disabled} />
-        <p className="text-[10px] text-muted-foreground mt-1">
-          Gleicher Storage-Key in mehreren Formularen → Daten werden zwischen Schritten übernommen.
-        </p>
-      </div>
-
-      {isBlock && (
-        <MeasurementContextFieldsEditor
-          value={meta.context_fields ?? []}
-          disabled={disabled}
-          onChange={(context_fields) => saveMeta({ context_fields })}
-        />
-      )}
-
-      <div className="pt-2 border-t">
-        <p className="text-xs font-semibold mb-2">
-          {isBlock ? `Messwerte-Felder (${children.length})` : `Unterfelder (${children.length})`}
-        </p>
-        <div className="space-y-1 mb-2">
-          {children.map((c) => (
-            <div key={c.id} className="flex items-center gap-2 border rounded px-2 py-1">
-              <span className="flex-1 text-xs truncate">{c.display_name}</span>
-              <Badge variant="outline" className="text-[10px]">{c.field_type}</Badge>
-              <Button size="icon" variant="ghost" className="h-6 w-6" disabled={disabled} onClick={() => removeChild(c.id)}>
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
-          {children.length === 0 && <p className="text-xs text-muted-foreground">Noch keine Unterfelder.</p>}
-        </div>
-        {!disabled && (
-          <div className="space-y-1">
-            <Input placeholder="field_key" className="h-8 text-xs" value={newKey} onChange={(e) => setNewKey(e.target.value)} />
-            <Input placeholder="Anzeigename" className="h-8 text-xs" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
-            <Select value={newType} onValueChange={(v) => setNewType(v)}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {["text","longtext","number","decimal","percent","date","time","datetime","boolean","select","measurement_import"].map(t => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button size="sm" className="w-full" onClick={addChild} disabled={!newKey || !newLabel}>
-              <Plus className="h-3 w-3 mr-1" />Unterfeld anlegen
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {children.length > 0 && (
-        <div className="pt-2 border-t">
-          <RepeaterLayoutDesigner
-            subfields={children.map((c) => ({ key: c.field_key, label: c.display_name, type: c.field_type, unit: c.unit }))}
-            value={meta.layout}
-            disabled={disabled}
-            onChange={(layout) => saveMeta({ layout })}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-
-/**
- * Konfiguration des Messkontexts (z. B. Präparation, Analyseart).
- * Der Kontext beschreibt die Messung, ist aber selbst kein Ergebniswert.
- */
-function MeasurementContextFieldsEditor({
-  value, disabled, onChange,
-}: {
-  value: MeasurementContextFieldDef[];
-  disabled: boolean;
-  onChange: (next: MeasurementContextFieldDef[]) => void;
-}) {
-  const patch = (i: number, p: Partial<MeasurementContextFieldDef>) => {
-    const next = value.slice();
-    next[i] = { ...next[i], ...p };
-    onChange(next);
-  };
-  return (
-    <div className="pt-2 border-t space-y-2">
-      <p className="text-xs font-semibold">Messkontext ({value.length})</p>
-      {value.map((c, i) => (
-        <div key={i} className="border rounded p-2 space-y-1">
-          <div className="flex gap-1">
-            <Input className="h-8 text-xs" placeholder="key" value={c.key}
-              onChange={(e) => patch(i, { key: e.target.value })} disabled={disabled} />
-            <Input className="h-8 text-xs" placeholder="Bezeichnung" value={c.label}
-              onChange={(e) => patch(i, { label: e.target.value })} disabled={disabled} />
-            <Button size="icon" variant="ghost" className="h-8 w-8" disabled={disabled}
-              onClick={() => onChange(value.filter((_, idx) => idx !== i))}>
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-          <div className="flex gap-1">
-            <Select value={c.type} onValueChange={(v) => patch(i, { type: v as any })} disabled={disabled}>
-              <SelectTrigger className="h-8 text-xs w-32"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="text">Text</SelectItem>
-                <SelectItem value="select">Auswahl</SelectItem>
-              </SelectContent>
-            </Select>
-            {c.type === "select" && (
-              <Input className="h-8 text-xs flex-1" placeholder="Optionen, kommagetrennt"
-                value={(c.options ?? []).join(", ")}
-                onChange={(e) => patch(i, { options: e.target.value.split(",").map((o) => o.trim()).filter(Boolean) })}
-                disabled={disabled} />
-            )}
-          </div>
-        </div>
-      ))}
-      {!disabled && (
-        <Button size="sm" variant="outline" className="w-full"
-          onClick={() => onChange([...value, { key: "", label: "", type: "text" }])}>
-          <Plus className="h-3 w-3 mr-1" />Kontextfeld
-        </Button>
-      )}
-    </div>
   );
 }

@@ -51,4 +51,39 @@ describe("Messdatenblock", () => {
     expect(official.map((c) => c.value)).toEqual([12, 13]);
     expect(official.map((c) => c.instanceLabel)).toEqual(["Messung 1", "Messung 2"]);
   });
+
+
+
+  it("leitet Bezeichnung und Kontext generisch aus frei angelegten Unterfeldern ab", () => {
+    const genericBlock = field({
+      id: "b2", field_key: "rfa", display_name: "RFA Messung", field_type: "measurement_block",
+      metadata: {},
+    });
+    const nameChild = field({
+      id: "n1", field_key: "bezeichnung", display_name: "Bezeichnung", field_type: "text",
+      parent_field_id: "b2", metadata: { block_role: "label" },
+    });
+    const prepChild = field({
+      id: "n2", field_key: "praeparation", display_name: "Präparation", field_type: "select",
+      parent_field_id: "b2", metadata: { block_role: "context" },
+    });
+    const value = field({ id: "n3", field_key: "sio2", display_name: "SiO2", parent_field_id: "b2", is_result: true });
+
+    const candidates = buildLinkedFormResultCandidates(
+      "f1",
+      [genericBlock, nameChild, prepChild, value],
+      [],
+      {
+        "form:f1:rfa": [
+          { __instance_id: "a", bezeichnung: "Kalibriert", praeparation: "Pressling", sio2: 52.3 },
+          { __instance_id: "b", praeparation: "Oberfläche", sio2: 51.9 },
+        ],
+      }
+    );
+    const official = candidates.filter((c) => c.official);
+    expect(official).toHaveLength(2);
+    expect(official.map((c) => c.instanceLabel)).toEqual(["Kalibriert", "Oberfläche"]);
+    expect(official[0].instanceContext).toEqual({ praeparation: "Pressling" });
+  });
 });
+

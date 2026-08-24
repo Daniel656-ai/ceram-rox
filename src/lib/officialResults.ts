@@ -7,6 +7,8 @@ import {
   readInstances,
   readMeasurementBlockMeta,
   instanceResultKey,
+  toBlockChildDefs,
+  readBlockChildRole,
 } from "@/lib/measurementBlocks";
 
 export interface OfficialResultCandidate {
@@ -62,9 +64,10 @@ export function buildLinkedFormResultCandidates(
     const meta = readMeasurementBlockMeta(block);
     const storageKey = meta.storage_key || block.field_key;
     const children = fields.filter((f) => f.parent_field_id === block.id);
-    for (const instance of readInstances(localValues[storageKey], meta)) {
+    for (const instance of readInstances(localValues[storageKey], meta, toBlockChildDefs(children))) {
       for (const child of children) {
         if (child.field_type === "measurement_import" || child.field_type === "repeater") continue;
+        if (readBlockChildRole(child) !== "value") continue;
         instanceCandidates.push({
           key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
           label: child.result_label || child.display_name || child.field_key,
