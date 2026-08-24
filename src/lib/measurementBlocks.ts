@@ -130,30 +130,45 @@ export interface MeasurementInstance {
 
 const isMetaKey = (k: string) => k.startsWith("__");
 
-/** Liest die Messungen eines Blocks aus dem gespeicherten Eintrags-Array. */
+/**
+ * Liest die Messungen eines Blocks aus dem gespeicherten Eintrags-Array.
+ * Die Struktur ergibt sich vollständig aus den übergebenen Unterfeldern –
+ * es werden keine Unterfelder vorausgesetzt.
+ */
 export function readInstances(
   raw: unknown,
-  meta: MeasurementBlockMeta
+  meta: MeasurementBlockMeta,
+  children: BlockChildDef[] = []
 ): MeasurementInstance[] {
   const list = Array.isArray(raw) ? raw : [];
+  const contextKeys = children.filter((c) => c.role === "context");
+  const labelKeys = children.filter((c) => c.role === "label");
+
   return list.map((entry, index) => {
     const e = (entry ?? {}) as Record<string, unknown>;
     const ctxRaw = (e[INSTANCE_CONTEXT_KEY] ?? {}) as Record<string, unknown>;
     const context: Record<string, string> = {};
+    // Legacy-Kontext (fest im Block gepflegt)
     for (const cf of meta.context_fields) {
       const v = ctxRaw[cf.key];
       if (v != null && String(v).trim() !== "") context[cf.key] = String(v);
     }
+    // Kontext aus echten Unterfeldern
+    for (const c of contextKeys) {
+      const v = e[c.field_key];
+      if (v != null && String(v).trim() !== "") context[c.field_key] = String(v);
+    }
     const values: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(e)) if (!isMetaKey(k)) values[k] = v;
+
+    const explicit =
+      (typeof e[INSTANCE_LABEL_KEY] === "string" ? (e[INSTANCE_LABEL_KEY] as string) : "") ||
+      labelKeys.map((c) => e[c.field_key]).find((v) => v != null && String(v).trim() !== "")?.toString() ||
+      "";
+
     return {
       instanceId: typeof e[INSTANCE_ID_KEY] === "string" ? (e[INSTANCE_ID_KEY] as string) : `idx_${index + 1}`,
-      label: instanceLabel(
-        typeof e[INSTANCE_LABEL_KEY] === "string" ? (e[INSTANCE_LABEL_KEY] as string) : "",
-        context,
-        meta,
-        index
-      ),
+      label: instanceLabel(explicit, context, meta, index),
       context,
       values,
       index,
@@ -170,12 +185,11 @@ export function instanceLabel(
 ): string {
   const name = (explicit || "").trim();
   if (name) return name;
-  const parts = meta.context_fields
-    .map((c) => context[c.key])
-    .filter((v) => v && v.trim() !== "");
+  const parts = Object.values(context).filter((v) => v && v.trim() !== "");
   if (parts.length) return parts.join(" · ");
   return `${meta.item_label} ${index + 1}`;
 }
+
 
 /** Eindeutiger Ergebnisschlüssel je Messung – verhindert Kollisionen. */
 export const instanceResultKey = (
