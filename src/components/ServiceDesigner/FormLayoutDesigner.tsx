@@ -469,9 +469,43 @@ function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canMana
           )}
         </div>
       )}
+
+      {node.type === "field" && <ContainerFieldPreview node={node as FieldNode} fields={fields} />}
     </div>
   );
 }
+
+/**
+ * Zeigt bereits im Designer, welche Unterfelder ein Container-Feld
+ * (Messblock/Repeater) enthält. Die Struktur stammt ausschließlich aus den
+ * angelegten Unterfeldern.
+ */
+function ContainerFieldPreview({ node, fields }: { node: FieldNode; fields: FormField[] }) {
+  const field = fields.find((f) => f.id === node.field_id);
+  if (!field || !["measurement_block", "repeater"].includes(field.field_type)) return null;
+  const children = fields
+    .filter((f) => f.parent_field_id === field.id)
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const isBlock = field.field_type === "measurement_block";
+  return (
+    <div className={cn("m-2 rounded border-l-2 pl-2 py-1", isBlock ? "border-l-primary bg-primary/5" : "border-l-muted-foreground/40 bg-muted/20")}>
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+        {isBlock ? "Messblock" : "Repeater"} · {children.length} Unterfelder
+      </p>
+      {children.length === 0 && (
+        <p className="text-[11px] text-muted-foreground">Noch keine Unterfelder – über „Feld bearbeiten“ anlegen.</p>
+      )}
+      {children.map((c) => (
+        <div key={c.id} className="flex items-center gap-1 text-[11px]">
+          <span className="text-muted-foreground">└─</span>
+          <span className="truncate">{c.display_name}</span>
+          <Badge variant="outline" className="text-[9px]">{c.field_type}</Badge>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 function ContainerChildren({ parentId, children, depth, fields, selectedId, onSelect, onMutate, canManage }: {
   parentId: string; children: LayoutNode[]; depth: number; fields: FormField[];
