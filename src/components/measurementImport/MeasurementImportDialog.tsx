@@ -345,8 +345,9 @@ export default function MeasurementImportDialog({
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-              <Button onClick={apply} disabled={assigned.length === 0}>
+              <Button onClick={apply} disabled={assigned.length === 0 && unassigned.length === 0}>
                 {assigned.length} Wert(e) übernehmen
+                {unassigned.length > 0 ? ` (+${unassigned.length} nicht zugeordnet)` : ""}
               </Button>
             </div>
               </TabsContent>
