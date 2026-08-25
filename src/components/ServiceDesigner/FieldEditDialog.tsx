@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { Plus, Trash2, ArrowUp, ArrowDown, Copy, Pencil } from "lucide-react";
 import ImportProfileEditorDialog from "@/components/measurementImport/ImportProfileEditorDialog";
+import MeasurementCaseEditorDialog from "@/components/measurementImport/MeasurementCaseEditorDialog";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 
 /* ==============================================================
