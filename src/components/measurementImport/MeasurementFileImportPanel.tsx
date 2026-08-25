@@ -13,6 +13,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, FileUp, Info } from "lucide-react";
 import type { ImportMetadataEntry, UnassignedMeasurementValue } from "@/lib/measurementClassification";
 import { toast } from "sonner";
+import CurveViewer, { type CurveSelection } from "@/components/curves/CurveViewer";
+import CurveEvaluationPanel, { type CurveEvaluationProvenance } from "@/components/curves/CurveEvaluationPanel";
+import { api } from "@/lib/api";
+
+/**
+ * Zuordnungskontext für die dauerhafte Speicherung der Rohdaten.
+ * Fehlt er (z. B. reine Vorschau im Designer), bleiben Kurve und Auswertung
+ * rein lokal – es wird nichts gespeichert.
+ */
+export interface CurvePersistContext {
+  orderMeasurementId: string;
+  sampleId?: string | null;
+  serviceId?: string | null;
+  instanceKey?: string | null;
+  instanceLabel?: string | null;
+  caseInstanceId?: string | null;
+  sourceFileId?: string | null;
+  userId?: string | null;
+}
 
 export interface FileImportMeta {
   importerId: string;
@@ -34,6 +53,12 @@ interface Props {
   currentValues?: Record<string, unknown>;
   /** Zulässige Importer für dieses Formularfeld (leer = alle). */
   allowedImporters?: string[] | null;
+  /** Zuordnung für die dauerhafte Rohdatenspeicherung (optional). */
+  curveContext?: CurvePersistContext | null;
+  /** Vom Messfall vorgegebene Standardachsen. */
+  curveDefaults?: { xKey?: string; yKeys?: string[]; y2Key?: string | null } | null;
+  /** Vom Messfall erlaubte Auswertungen (leer = alle). */
+  allowedEvaluations?: string[] | null;
   onApply: (values: Record<string, number | string>, meta: FileImportMeta) => void;
 }
 
@@ -43,7 +68,8 @@ const confBadge = (c: FileMappedRow["confidence"]) =>
       : <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />unsicher</Badge>;
 
 export default function MeasurementFileImportPanel({
-  profile, targets, currentValues, allowedImporters, onApply,
+  profile, targets, currentValues, allowedImporters, curveContext, curveDefaults,
+  allowedEvaluations, onApply,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [measurement, setMeasurement] = useState<ImportedMeasurement | null>(null);
@@ -52,6 +78,9 @@ export default function MeasurementFileImportPanel({
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
+  const [selection, setSelection] = useState<CurveSelection | null>(null);
+  /** Id des bereits gespeicherten Rohdatensatzes (nur mit Kontext). */
+  const [datasetId, setDatasetId] = useState<string | null>(null);
 
   const pool = allowedImporters?.length
     ? fileImporters.filter((i) => allowedImporters.includes(i.id))
@@ -87,12 +116,85 @@ export default function MeasurementFileImportPanel({
         pre[r.normalizedName] = !!r.targetFieldKey && r.confidence !== "low" && r.existingValue == null;
       }
       setSelected(pre);
+      setSelection(null);
+      setDatasetId(null);
       if (allResults(parsed).length === 0) toast.warning("Keine bekannten Messwerte in der Datei erkannt.");
     } catch (e) {
       toast.error(`Datei konnte nicht gelesen werden: ${(e as Error).message}`);
     } finally {
       setBusy(false);
     }
+  };
+
+  /** Speichert die Rohdaten einmalig und liefert die Datensatz-Id. */
+  const ensureDataset = async (parsed: ImportedMeasurement): Promise<string | null> => {
+    if (!curveContext?.orderMeasurementId || !parsed.dataset) return null;
+    if (datasetId) return datasetId;
+    const saved = await api.measurementRawData.save({
+      order_measurement_id: curveContext.orderMeasurementId,
+      sample_id: curveContext.sampleId ?? null,
+      service_id: curveContext.serviceId ?? null,
+      instance_key: curveContext.instanceKey ?? null,
+      instance_label: curveContext.instanceLabel ?? null,
+      case_instance_id: curveContext.caseInstanceId ?? null,
+      source_file_id: curveContext.sourceFileId ?? null,
+      source_file_name: parsed.sourceFileName,
+      importer_id: importerId,
+      parser_version: parsed.parserVersion,
+      measurement_type: parsed.measurementType ?? null,
+      instrument: parsed.headerMap?.["INSTRUMENT"] ?? null,
+      metadata: { header: parsed.headerMap ?? {}, sample: parsed.sampleInformation },
+      created_by: curveContext.userId ?? null,
+      dataset: parsed.dataset,
+    });
+    setDatasetId(saved.id);
+    return saved.id;
+  };
+
+  /** Übernahme einer Kurvenauswertung als offizielles Messergebnis. */
+  const adoptOfficial = async (p: CurveEvaluationProvenance) => {
+    if (!measurement) return;
+    if (!curveContext?.orderMeasurementId) {
+      toast.error("Ohne Messungskontext kann kein offizielles Ergebnis gespeichert werden.");
+      return;
+    }
+    const dsId = await ensureDataset(measurement);
+    const result: any = await api.measurementResults.create({
+      order_measurement_id: curveContext.orderMeasurementId,
+      result_name: p.resultLabel,
+      display_label: p.resultLabel,
+      unit: p.unit ?? undefined,
+      value: p.value,
+      temperature_range_from: p.xUnit === "°C" ? p.from : undefined,
+      temperature_range_to: p.xUnit === "°C" ? p.to : undefined,
+      temperature_unit: p.xUnit === "°C" ? "°C" : undefined,
+      remarks: `${p.methodLabel} · ${p.yChannel} · Bereich ${p.from}–${p.to}${p.xUnit ? ` ${p.xUnit}` : ""} · ${p.formula}`,
+      is_official: true,
+      instance_key: curveContext.instanceKey ?? undefined,
+      instance_label: curveContext.instanceLabel ?? undefined,
+    });
+    if (dsId) {
+      const evaluation = await api.measurementRawData.createEvaluation({
+        dataset_id: dsId,
+        measurement_result_id: result?.id ?? null,
+        method: p.method,
+        method_label: p.methodLabel,
+        x_channel: p.xChannel,
+        x_unit: p.xUnit,
+        y_channel: p.yChannel,
+        y_unit: p.yUnit,
+        x_from: p.from,
+        x_to: p.to,
+        value: p.value,
+        unit: p.unit,
+        formula: p.formula,
+        details: p.details,
+        result_label: p.resultLabel,
+        created_by: curveContext.userId ?? null,
+      } as any);
+      void evaluation;
+    }
+    toast.success("Auswertung als offizielles Ergebnis übernommen.");
   };
 
   const apply = () => {
@@ -128,6 +230,10 @@ export default function MeasurementFileImportPanel({
     if (Object.keys(values).length === 0 && unassignedValues.length === 0) {
       toast.error("Keine Werte ausgewählt.");
       return;
+    }
+    if (curveContext?.orderMeasurementId && measurement?.dataset?.rows.length) {
+      void ensureDataset(measurement).catch((e) =>
+        toast.error(`Rohdaten konnten nicht gespeichert werden: ${(e as Error).message}`));
     }
     onApply(values, {
       importerId,
@@ -259,6 +365,34 @@ export default function MeasurementFileImportPanel({
             </table>
           </div>
 
+          {measurement.dataset && measurement.dataset.rows.length > 0 && (
+            <div className="rounded border p-3 space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">Messkurven</Badge>
+                <span className="text-xs text-muted-foreground">
+                  {measurement.dataset.channels.length} Kanäle · {measurement.dataset.rows.length} Messpunkte
+                  {measurement.measurementType ? ` · Messdatentyp ${measurement.measurementType}` : ""}
+                </span>
+                {!curveContext?.orderMeasurementId && (
+                  <span className="text-[11px] text-amber-600">
+                    Vorschau – ohne Messungskontext werden keine Rohdaten gespeichert.
+                  </span>
+                )}
+              </div>
+              <CurveViewer
+                dataset={measurement.dataset}
+                defaults={curveDefaults ?? undefined}
+                onSelectionChange={setSelection}
+              />
+              <CurveEvaluationPanel
+                dataset={measurement.dataset}
+                selection={selection}
+                allowedEvaluations={allowedEvaluations ?? null}
+                onAdoptOfficial={curveContext?.orderMeasurementId ? adoptOfficial : undefined}
+              />
+            </div>
+          )}
+
           {measurement.warnings.map((w, i) => (
             <p key={i} className="text-[11px] text-amber-600 flex items-start gap-1">
               <Info className="h-3 w-3 mt-0.5 shrink-0" />{w}
@@ -266,8 +400,8 @@ export default function MeasurementFileImportPanel({
           ))}
 
           <div className="flex justify-end">
-            <Button type="button" onClick={apply} disabled={selectedCount === 0}>
-              {selectedCount} Wert(e) übernehmen
+            <Button type="button" onClick={apply} disabled={selectedCount === 0 && !measurement.dataset}>
+              {selectedCount > 0 ? `${selectedCount} Wert(e) übernehmen` : "Messdaten übernehmen"}
             </Button>
           </div>
         </div>
