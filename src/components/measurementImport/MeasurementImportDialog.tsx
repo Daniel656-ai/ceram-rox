@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, ClipboardPaste, Settings2, Plus, FileUp } from "lucide-react";
 import ImportProfileEditorDialog from "./ImportProfileEditorDialog";
-import MeasurementFileImportPanel from "./MeasurementFileImportPanel";
+import MeasurementFileImportPanel, { type CurvePersistContext } from "./MeasurementFileImportPanel";
 import { toast } from "sonner";
 import {
   classifyReading,
@@ -46,6 +46,12 @@ interface Props {
   currentValues?: Record<string, unknown>;
   /** Zulässige Datei-Importer (leer = alle registrierten). */
   allowedImporters?: string[] | null;
+  /** Zuordnung für die dauerhafte Speicherung importierter Messkurven. */
+  curveContext?: CurvePersistContext | null;
+  /** Vom Messfall vorgegebene Standardachsen der Kurvenansicht. */
+  curveDefaults?: { xKey?: string; yKeys?: string[]; y2Key?: string | null } | null;
+  /** Vom Messfall erlaubte Kurvenauswertungen (leer = alle). */
+  allowedEvaluations?: string[] | null;
   /** Übernahme der geprüften Werte. */
   onApply: (values: Record<string, number | string | null>, meta: ImportApplyMeta) => void;
   /** Darf der Anwender Profile anlegen/bearbeiten? */
@@ -55,7 +61,7 @@ interface Props {
 
 export default function MeasurementImportDialog({
   open, onOpenChange, defaultProfileId, targets, currentValues, allowedImporters,
-  onApply, canManageProfiles = true,
+  curveContext, curveDefaults, allowedEvaluations, onApply, canManageProfiles = true,
 }: Props) {
   const [profileId, setProfileId] = useState<string>(defaultProfileId ?? "");
   const [text, setText] = useState("");
@@ -209,6 +215,9 @@ export default function MeasurementImportDialog({
                   targets={targets}
                   currentValues={currentValues}
                   allowedImporters={allowedImporters}
+                  curveContext={curveContext ?? null}
+                  curveDefaults={curveDefaults ?? null}
+                  allowedEvaluations={allowedEvaluations ?? null}
                   onApply={(values, meta) => {
                     onApply(values, {
                       profileName: meta.importerLabel,

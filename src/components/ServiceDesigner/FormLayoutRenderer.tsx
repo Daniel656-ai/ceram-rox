@@ -33,6 +33,7 @@ import { useSystemTextRenderer } from "@/context/ProcessContextProvider";
 import { containsSystemToken } from "@/lib/systemVariables";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 import MeasurementImportDialog from "@/components/measurementImport/MeasurementImportDialog";
+import { useRuntimeMeasurementContext } from "@/components/curves/measurementContext";
 import MeasurementCaseEditorDialog from "@/components/measurementImport/MeasurementCaseEditorDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -356,6 +357,9 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   const read = useScopeReader();
   const [open, setOpen] = useState(false);
   const cfg = readImportMeta(field);
+  /** Laufzeitkontext der Messung – nur dort werden Rohdaten dauerhaft gespeichert. */
+  const runtime = useRuntimeMeasurementContext();
+  const instanceKey = read(INSTANCE_KEY_FIELD) ?? null;
 
   /**
    * Messfall-Steuerung: Wurde die Messung aus einem Messfall erzeugt, gilt das
@@ -514,6 +518,17 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           targets={targets}
           currentValues={currentValues}
           allowedImporters={cfg.importers}
+          curveContext={
+            runtime
+              ? {
+                  orderMeasurementId: runtime.orderMeasurementId,
+                  sampleId: runtime.sampleId ?? null,
+                  serviceId: runtime.serviceId ?? null,
+                  instanceKey: typeof instanceKey === "string" ? instanceKey : null,
+                  userId: runtime.userId ?? null,
+                }
+              : null
+          }
           onApply={(values, meta) => {
             for (const [k, v] of Object.entries(values)) write(k, v);
             setValue(JSON.stringify({
