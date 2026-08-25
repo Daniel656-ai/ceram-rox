@@ -67,7 +67,7 @@ Keine zweite Ergebnisdatenbank. Eine bestätigte Auswertung wird als Zeile in `m
 ## G. Empfohlene Architektur
 
 ```text
-Datei (.dl4/.txt/.csv, ASCII NETZSCH5)
+Datei (.txt/.csv/.asc, ANSI, NETZSCH5-Export)
   -> FileImporter "netzsch5"  (detect: Inhalt "#FORMAT:NETZSCH5", mtype aus "#MTYPE:")
   -> ImportedMeasurement { sampleInformation, results (Kopfwerte), analyses[].series (Kanaele) }
   -> Rohdaten-Persistenz: measurement_raw_datasets + measurement_raw_series
@@ -103,9 +103,9 @@ Messfall-Integration: `measurement_case_instances.context` bzw. Konfiguration am
 
 ## H. Testfälle (Vitest, mit echten Referenzdateien)
 
-DIL: Erkennung `#MTYPE:DIL`, Kanal-/Einheitenerkennung, Punktanzahl, Temp vs. dL/Lo, Temp vs. Alpha, Bereich 30–800 °C, technischer Ausdehnungskoeffizient, Übernahme als offizielles Ergebnis inkl. Provenienz.
+DIL (`M062_26_…-NC2867.txt`): Erkennung `#MTYPE:DIL`, ANSI-Umlaute korrekt („Fürpaß“), drei Kanäle mit Einheiten, 84 Messpunkte 30–840 °C, Probenlänge 24.948 mm, Temp vs. dL/Lo, abgeleitetes Alpha, Bereich 30–800 °C, technischer Ausdehnungskoeffizient, Übernahme als offizielles Ergebnis inkl. Provenienz.
 
-STA: Erkennung `#MTYPE:DSC`, Kanäle DSC/Mass/Gas Flow, Bereichsauswahl, Massenverlust absolut und in %, Peak-Temperatur/-Fläche, Übernahme als offizielles Ergebnis.
+STA (`M027-25-MRS-440-…-N2O2.txt`): Erkennung `#MTYPE:DSC`, sieben Kanäle inkl. `Gas Flow(purge1)/(ml/min)`, Einwaage 22.160 mg, `#EXO:-1` als Vorzeichenkonvention, Bereich 100–500 °C, Massenverlust (99.96 % → 68.28 %) absolut und relativ, Peak-Temperatur/-Fläche, Übernahme als offizielles Ergebnis.
 
 Querschnitt: Datei ohne NETZSCH-Header wird nicht erkannt; bestehende Gasadsorptions-Tests bleiben grün.
 
@@ -117,4 +117,8 @@ Querschnitt: Datei ohne NETZSCH-Header wird nicht erkannt; bestehende Gasadsorpt
 
 ## Nächster Schritt
 
-Echte NETZSCH-Dateien (je eine DIL- und eine DSC-Messung) bereitstellen; danach Umsetzung in Etappen: (1) Parser + Tests, (2) Rohdaten-Persistenz, (3) Kurvenviewer, (4) Auswertungen + Ergebnisübernahme.
+Umsetzung in Etappen, jede für sich lauffähig und ohne Eingriff in bestehende Importer:
+1. Parser `netzsch5` + Unit-Tests gegen die beiden Realdateien (DIL 402C, STA 449F3).
+2. Rohdaten-Persistenz (Migration + API-Layer).
+3. Kurvenviewer mit Achsenwahl und Bereichsmarkierung.
+4. Auswertungs-Registry und Übernahme als offizielles Ergebnis inkl. Provenienz.
