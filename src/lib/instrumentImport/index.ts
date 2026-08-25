@@ -6,14 +6,17 @@
  */
 import type { FileImporter, ImportedMeasurement, ImportedResult } from "./types";
 import { gasSorptionImporter } from "./gasSorption";
+import { netzschImporter } from "./netzsch";
 import { normalizeName, type MappedRow, type TargetCandidate } from "@/lib/measurementImport";
 import { mapReadings } from "@/lib/measurementImport";
 import type { MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 
 export * from "./types";
 export { GAS_SORPTION_PARSER_VERSION, GAS_SORPTION_IMPORTER_ID } from "./gasSorption";
+export { NETZSCH5_PARSER_VERSION, NETZSCH5_IMPORTER_ID, measurementTypeLabel } from "./netzsch";
 
-export const fileImporters: FileImporter[] = [gasSorptionImporter];
+export const fileImporters: FileImporter[] = [gasSorptionImporter, netzschImporter];
+
 
 export const importerById = (id: string | null | undefined) =>
   fileImporters.find((i) => i.id === id) ?? null;
