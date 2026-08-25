@@ -126,13 +126,16 @@ export function reverseLabelPairs(records: MicromeriticsRecord[]): Micromeritics
     let end = i;
     while (end + 1 < texts.length && isLabel(texts[end + 1])) end++;
     const n = end - i + 1;
-    const start = i - n;
-    if (start >= 0 && texts.slice(start, i).every((t) => t !== "" && !isLabel(t))) {
-      for (let k = 0; k < n; k++) {
-        pairs.push({ label: texts[i + k].replace(/:\s*$/, ""), value: texts[start + k] });
-      }
+
+    // Vorangehenden Wertblock bestimmen (leere Werte am Ende können fehlen).
+    let start = i;
+    while (start > 0 && !isLabel(texts[start - 1]) && texts[start - 1] !== "" && i - start < n) start--;
+    const m = i - start;
+    for (let k = 0; k < m; k++) {
+      pairs.push({ label: texts[i + k].replace(/:\s*$/, ""), value: texts[start + k] });
     }
     i = end + 1;
+
   }
   return pairs;
 }
