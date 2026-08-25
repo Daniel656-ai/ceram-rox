@@ -329,10 +329,14 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
   const warnings: string[] = [];
   if (found.length === 0) {
     warnings.push(
-      "In dieser Datei konnten keine Gasadsorptions-Ergebnisparameter erkannt werden. " +
-      "Bitte prüfen, ob es sich um eine Mess- oder Reportdatei einer Gasadsorptionsmessung handelt."
+      ext(file.name) === ".smp"
+        ? "Diese Messdatei (.SMP) enthält nur die Mess- und Geräteeinstellungen, keine ausgewerteten Ergebnisse. " +
+          "Bitte zusätzlich die zugehörige Reportdatei (.REP) importieren – dort stehen z. B. die BET-Oberfläche und die Analysebedingungen."
+        : "In dieser Datei konnten keine Gasadsorptions-Ergebnisparameter erkannt werden. " +
+          "Bitte prüfen, ob es sich um eine Mess- oder Reportdatei einer Gasadsorptionsmessung handelt."
     );
   }
+
   if (found.some((f) => f.confidence === "low")) {
     warnings.push("Einzelne Werte konnten nur unsicher gelesen werden und sind nicht vorausgewählt.");
   }
