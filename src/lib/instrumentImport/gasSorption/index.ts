@@ -15,6 +15,8 @@
  */
 import * as XLSX from "xlsx";
 import { extractStrings, scanDoubles } from "../binaryText";
+import { micromeriticsPairLines } from "./micromeriticsRecords";
+
 import type {
   AnalysisType, Confidence, FileImporter, ImportedAnalysis,
   ImportedMeasurement, ImportedResult,
@@ -72,7 +74,13 @@ export function extractLines(file: { name: string; buffer: ArrayBuffer }): strin
     }
   }
   const buf = new Uint8Array(file.buffer);
-  if (looksBinary(buf)) return extractStrings(file.buffer, 3).map((s) => s.text);
+  if (looksBinary(buf)) {
+    // Strukturierte Label/Wert-Paare haben Vorrang vor dem reinen Zeichenketten-Scan.
+    const pairs = micromeriticsPairLines(file.buffer);
+    const raw = extractStrings(file.buffer, 3).map((s) => s.text);
+    return pairs.length >= 3 ? [...pairs, ...raw] : raw;
+  }
+
   return new TextDecoder("utf-8", { fatal: false })
     .decode(buf)
     .split(/\r?\n/)
@@ -162,7 +170,10 @@ function sampleInfo(lines: string[]) {
 
 /** Gerät/Hersteller nur als Import-Metadatum – nie als Ergebnisparameter. */
 export function detectInstrument(lines: string[]): { vendor: string | null; instrument: string | null } {
+  // Dateipfade enthalten oft den Gerätenamen – sie sind aber keine Gerätebezeichnung.
+  const isPath = (l: string) => /[\\/]/.test(l) || /\.(smp|rep|emf|txt|xlsx?)\b/i.test(l);
   for (const l of lines) {
+    if (isPath(l)) continue;
     const low = l.toLowerCase();
     const hint = VENDOR_HINTS.find((v) => low.includes(v));
     if (hint) {
@@ -171,6 +182,7 @@ export function detectInstrument(lines: string[]): { vendor: string | null; inst
         instrument: l.trim().slice(0, 80),
       };
     }
+
     const m = l.match(/^\s*(instrument|ger[aä]t|analyzer)\s*[:=]\s*(.+)$/i);
     if (m) return { vendor: null, instrument: m[2].trim().slice(0, 80) };
   }
@@ -301,9 +313,17 @@ function findResults(
 
 export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }): ImportedMeasurement {
   const binary = looksBinary(new Uint8Array(file.buffer)) && !SPREADSHEET.includes(ext(file.name));
-  const extracted = binary ? extractStrings(file.buffer, 3) : null;
-  const lines = extracted ? extracted.map((s) => s.text) : extractLines(file);
+  const pairLines = binary ? micromeriticsPairLines(file.buffer) : [];
+  const structured = pairLines.length >= 3;
+  const extracted = binary && !structured ? extractStrings(file.buffer, 3) : null;
+  const lines = structured
+    ? [...pairLines, ...extractStrings(file.buffer, 3).map((s) => s.text)]
+    : extracted
+      ? extracted.map((s) => s.text)
+      : extractLines(file);
+  // Der spekulative Double-Scan entfällt, sobald echte Label/Wert-Paare vorliegen.
   const offsets = extracted ? extracted.map((s) => s.offset) : null;
+
 
   const { found, unrecognized } = findResults(lines, file.buffer, offsets);
   const warnings: string[] = [];

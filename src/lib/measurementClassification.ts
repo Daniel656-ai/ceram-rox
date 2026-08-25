@@ -107,6 +107,9 @@ const META_PATTERNS: Array<{ kind: MetadataKind; re: RegExp }> = [
   { kind: "identifier", re: /^(id|internalid|interneid|laufnummer|runnumber|run|sequenz|sequence|nummer|nr|no|index|position|pos|jobid|auftragsnummer|probennummer|samplied|sampleid|messnummer|messid|barcode)$/ },
   { kind: "comment", re: /^(kommentar|bemerkung|bemerkungen|comment|comments|notes|notiz|beschreibung|description|report|reportinfo|reportinformation|titel|title|header|kopfzeile)$/ },
   { kind: "status", re: /^(status|zustand|state|result?status|freigabe|flag|fehler|error|warnung|warning|qualitaet|quality)$/ },
+  // Analyse-/Messbedingungen: beschreiben die Durchführung, nicht das Ergebnis.
+  { kind: "other", re: /^(samplemass|sampleweight|einwaage|probeneinwaage|sampledensity|probendichte|equilibrationinterval|equilibrationtime|aequilibrierzeit|analysisbathtemp|bathtemperature|badtemperatur|analysistemperature|analysisfreespace|ambientfreespace|freespace|warmfreespace|coldfreespace|lowpressuredose|automaticdegas|degasconditions|degastemperature|thermalcorrection|analysisadsorptive|adsorptive|systemvolume|sampletube|reporttime|started|completed|submitter|einreicher)$/ },
+
 ];
 
 const DATE_VALUE = /^\d{1,4}[.\-/]\d{1,2}[.\-/]\d{1,4}([ T]\d{1,2}:\d{2}(:\d{2})?)?$/;
