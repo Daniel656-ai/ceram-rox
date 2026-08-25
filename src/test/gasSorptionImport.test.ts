@@ -128,3 +128,56 @@ describe("Importprofil Gasadsorption", () => {
     expect(rows.some((r) => r.targetFieldKey === null)).toBe(true);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/* Reale Gerätedateien (Micromeritics TriStar II Plus)                 */
+/* ------------------------------------------------------------------ */
+
+/** Baut eine .REP-Datenstruktur: Gruppenkopf + längenpräfigierte UTF-16LE-Records. */
+function repFile(groups: string[][]): ArrayBuffer {
+  const bytes: number[] = [];
+  const u32 = (n: number) => { bytes.push(n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255); };
+  for (const group of groups) {
+    group.forEach((text, idx) => {
+      if (idx === 0) { u32(0); u32(1); u32(group.length); }
+      bytes.push(0xe0, 0x01, 0x00);
+      u32(text.length * 2);
+      for (const ch of text) { const c = ch.charCodeAt(0); bytes.push(c & 255, (c >> 8) & 255); }
+    });
+    bytes.push(0, 0, 0, 0, 0, 0);
+  }
+  return new Uint8Array(bytes).buffer;
+}
+
+describe("Micromeritics Reportdatei (.REP)", () => {
+  const REP = {
+    name: "0000-8579.REP",
+    buffer: repFile([
+      ["BET Surface Area:", "  "],
+      ["264,7311 m²/g", "  "],
+      ["TriStar II Plus Version 3.03"],
+      ["Sample:", "Operator:", "Submitter:", "File:"],
+      ["MRS-525", "Berger Christian", "Ceram Austria GmbH", "C:\\TriStar II Plus\\data\\0000-8579.SMP"],
+      ["Started:", "Completed:", "Sample mass:", "Analysis bath temp.:"],
+      ["04.08.2026 09:03:49", "04.08.2026 10:02:34", "0,1959 g", "77,300 K"],
+    ]),
+  };
+
+  it("liest die BET-Oberfläche exakt aus der Gruppenstruktur", () => {
+    const m = parseGasSorptionFile(REP);
+    const bet = allResults(m).find((r) => r.normalizedName === "bet_surface_area");
+    expect(bet?.value).toBeCloseTo(264.7311, 4);
+    expect(bet?.unit).toBe("m²/g");
+    expect(bet?.confidence).toBe("high");
+  });
+
+  it("übernimmt Probenangaben und behandelt Analysebedingungen als Metadaten", () => {
+    const m = parseGasSorptionFile(REP);
+    expect(m.sampleInformation.sampleName).toBe("MRS-525");
+    expect(m.sampleInformation.sampleMass).toBeCloseTo(0.1959, 4);
+    const names = allResults(m).map((r) => r.sourceName.toLowerCase());
+    expect(names.some((n) => n.includes("bath temp"))).toBe(false);
+    expect(names.some((n) => n.includes("sample mass"))).toBe(false);
+    expect(m.instrumentFamily).not.toMatch(/\\/);
+  });
+});
