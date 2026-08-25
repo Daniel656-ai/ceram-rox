@@ -11,6 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { curveEvaluations } from "@/lib/curves/evaluations";
+import { emptyCurveConfig, readCaseCurveConfig, type CaseCurveConfig } from "@/lib/measurementBlocks";
 import { toast } from "sonner";
 
 /**
@@ -30,6 +33,8 @@ interface DraftInstance {
   method: string | null;
   import_profile_id: string | null;
   context: Record<string, string>;
+  /** Messkurven-Vorgaben dieser Messung (Standardachsen, erlaubte Auswertungen). */
+  curve: CaseCurveConfig;
 }
 
 interface Props {
@@ -46,6 +51,7 @@ const emptyInstance = (n: number): DraftInstance => ({
   method: null,
   import_profile_id: null,
   context: {},
+  curve: emptyCurveConfig(),
 });
 
 export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDef, onSaved }: Props) {
@@ -74,6 +80,7 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
         method: i.method ?? null,
         import_profile_id: i.import_profile_id ?? null,
         context: { ...(i.context ?? {}) },
+        curve: readCaseCurveConfig((i as any).curve_config),
       }))
     );
   }, [open, caseDef]);
@@ -124,6 +131,7 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
           method: inst.method?.trim() || null,
           import_profile_id: inst.import_profile_id,
           context: inst.context,
+          curve_config: inst.curve,
         };
         if (inst.id) await api.measurementCases.updateInstance(inst.id, payload as any);
         else await api.measurementCases.addInstance({ case_id: target.id, ...payload } as any);
@@ -255,6 +263,10 @@ function InstanceEditor({
           </Select>
         </div>
       </div>
+      <CurveConfigEditor
+        value={instance.curve}
+        onChange={(curve) => onPatch({ curve })}
+      />
       <div className="space-y-1">
         <Label className="text-[11px]">Vorgabewerte / Messkontext</Label>
         {Object.entries(ctx).map(([k, v]) => (
@@ -279,6 +291,74 @@ function InstanceEditor({
             onClick={() => { setCtx(newKey.trim(), ""); setNewKey(""); }}>
             <Plus className="h-3.5 w-3.5 mr-1" />Eigenschaft
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Messkurven-Vorgaben eines Messfalls – verfahrensunabhängig.
+ * Die Kanalschlüssel stammen aus den importierten Messdaten (z. B. `temp`,
+ * `dl_lo`, `alpha`, `dsc`, `mass`); leer = keine Vorgabe, frei wählbar.
+ */
+function CurveConfigEditor({
+  value, onChange,
+}: {
+  value: CaseCurveConfig;
+  onChange: (v: CaseCurveConfig) => void;
+}) {
+  const patch = (p: Partial<CaseCurveConfig>) => onChange({ ...value, ...p });
+  const toggleEval = (id: string, on: boolean) =>
+    patch({
+      allowed_evaluations: on
+        ? [...new Set([...value.allowed_evaluations, id])]
+        : value.allowed_evaluations.filter((x) => x !== id),
+    });
+
+  return (
+    <div className="space-y-2 rounded border bg-background/60 p-2">
+      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+        Messkurve (optional)
+      </Label>
+      <div className="grid gap-2 md:grid-cols-4">
+        <div>
+          <Label className="text-[11px]">Erwarteter Messdatentyp</Label>
+          <Input className="h-8 text-xs" placeholder="z.B. DIL, DSC" value={value.measurement_type ?? ""}
+            onChange={(e) => patch({ measurement_type: e.target.value || null })} />
+        </div>
+        <div>
+          <Label className="text-[11px]">Standard X-Achse</Label>
+          <Input className="h-8 text-xs" placeholder="z.B. temp" value={value.x_key ?? ""}
+            onChange={(e) => patch({ x_key: e.target.value || null })} />
+        </div>
+        <div>
+          <Label className="text-[11px]">Standard Y-Achse(n)</Label>
+          <Input className="h-8 text-xs" placeholder="z.B. alpha, dl_lo" value={value.y_keys.join(", ")}
+            onChange={(e) =>
+              patch({ y_keys: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+            } />
+        </div>
+        <div>
+          <Label className="text-[11px]">Zweite Y-Achse</Label>
+          <Input className="h-8 text-xs" placeholder="z.B. mass" value={value.y2_key ?? ""}
+            onChange={(e) => patch({ y2_key: e.target.value || null })} />
+        </div>
+      </div>
+      <div>
+        <Label className="text-[11px]">
+          Erlaubte Auswertungen (keine Auswahl = alle passenden)
+        </Label>
+        <div className="mt-1 grid gap-1 md:grid-cols-2">
+          {curveEvaluations.map((ev) => (
+            <label key={ev.id} className="flex items-center gap-2 text-[11px]">
+              <Checkbox
+                checked={value.allowed_evaluations.includes(ev.id)}
+                onCheckedChange={(c) => toggleEval(ev.id, c === true)}
+              />
+              <span>{ev.label}</span>
+            </label>
+          ))}
         </div>
       </div>
     </div>

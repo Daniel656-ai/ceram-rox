@@ -6,7 +6,8 @@ import {
   readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs, readBlockChildRole,
   INSTANCE_ID_KEY, INSTANCE_LABEL_KEY, INSTANCE_CONTEXT_KEY,
   readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
-  CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, type CaseTemplate,
+  CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, CASE_CURVE_KEY,
+  readCaseCurveConfig, hasCurveConfig, type CaseTemplate,
 } from "@/lib/measurementBlocks";
 
 
@@ -372,6 +373,17 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   const effectiveProfileId =
     (typeof instanceProfile === "string" && instanceProfile) || cfg.profile_id;
 
+  /**
+   * Messfall-Steuerung für Messkurven: Standardachsen und erlaubte
+   * Auswertungen dieser Messung. Ohne Konfiguration bleibt alles frei wählbar.
+   */
+  const curveCfg = useMemo(() => {
+    const c = readCaseCurveConfig(read(CASE_CURVE_KEY));
+    return hasCurveConfig(c) ? c : null;
+  }, [read]);
+
+
+
 
   /**
    * Zielfelder sind ausschließlich die Messwertfelder desselben Scopes
@@ -533,6 +545,12 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                 }
               : null
           }
+          curveDefaults={
+            curveCfg
+              ? { xKey: curveCfg.x_key ?? undefined, yKeys: curveCfg.y_keys, y2Key: curveCfg.y2_key }
+              : null
+          }
+          allowedEvaluations={curveCfg?.allowed_evaluations.length ? curveCfg.allowed_evaluations : null}
           onApply={(values, meta) => {
             for (const [k, v] of Object.entries(values)) write(k, v);
             setValue(JSON.stringify({

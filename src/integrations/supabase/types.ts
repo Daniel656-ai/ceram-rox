@@ -1775,6 +1775,7 @@ export type Database = {
           case_id: string
           context: Json
           created_at: string
+          curve_config: Json
           id: string
           import_profile_id: string | null
           label: string
@@ -1786,6 +1787,7 @@ export type Database = {
           case_id: string
           context?: Json
           created_at?: string
+          curve_config?: Json
           id?: string
           import_profile_id?: string | null
           label: string
@@ -1797,6 +1799,7 @@ export type Database = {
           case_id?: string
           context?: Json
           created_at?: string
+          curve_config?: Json
           id?: string
           import_profile_id?: string | null
           label?: string
