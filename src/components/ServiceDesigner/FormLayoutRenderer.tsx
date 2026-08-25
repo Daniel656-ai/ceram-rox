@@ -6,7 +6,7 @@ import {
   readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs, readBlockChildRole,
   INSTANCE_ID_KEY, INSTANCE_LABEL_KEY, INSTANCE_CONTEXT_KEY,
   readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
-  CASE_ID_KEY, IMPORT_PROFILE_KEY, type CaseTemplate,
+  CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, type CaseTemplate,
 } from "@/lib/measurementBlocks";
 
 
@@ -359,7 +359,9 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   const cfg = readImportMeta(field);
   /** Laufzeitkontext der Messung – nur dort werden Rohdaten dauerhaft gespeichert. */
   const runtime = useRuntimeMeasurementContext();
-  const instanceKey = read(INSTANCE_KEY_FIELD) ?? null;
+  const instanceKey = read(INSTANCE_ID_KEY) ?? null;
+  const instanceLabel = read(INSTANCE_LABEL_KEY) ?? null;
+  const caseInstanceId = read(CASE_INSTANCE_KEY) ?? null;
 
   /**
    * Messfall-Steuerung: Wurde die Messung aus einem Messfall erzeugt, gilt das
@@ -525,6 +527,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                   sampleId: runtime.sampleId ?? null,
                   serviceId: runtime.serviceId ?? null,
                   instanceKey: typeof instanceKey === "string" ? instanceKey : null,
+                  instanceLabel: typeof instanceLabel === "string" ? instanceLabel : null,
+                  caseInstanceId: typeof caseInstanceId === "string" ? caseInstanceId : null,
                   userId: runtime.userId ?? null,
                 }
               : null
