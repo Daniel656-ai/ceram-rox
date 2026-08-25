@@ -89,7 +89,9 @@ const isLabel = (t: string) => /:\s*$/.test(t.trim()) && /[A-Za-zÄÖÜäöü]/.
  * sofern die erste Gruppe überwiegend aus Beschriftungen besteht.
  */
 export function extractMicromeriticsPairs(buffer: ArrayBuffer): MicromeriticsPair[] {
-  const groups = toGroups(extractMicromeriticsRecords(buffer));
+  const records = extractMicromeriticsRecords(buffer);
+  const groups = toGroups(records);
+
   const pairs: MicromeriticsPair[] = [];
 
   for (let i = 0; i < groups.length - 1; i++) {
