@@ -110,7 +110,7 @@ export function extractMicromeriticsPairs(buffer: ArrayBuffer): MicromeriticsPai
     }
     i++; // Wertgruppe ist verbraucht
   }
-  return pairs.length > 0 ? pairs : reverseLabelPairs(extractMicromeriticsRecords(records => records)(buffer));
+  return pairs.length > 0 ? pairs : reverseLabelPairs(records);
 }
 
 /**
