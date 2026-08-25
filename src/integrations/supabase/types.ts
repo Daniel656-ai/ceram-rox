@@ -1857,6 +1857,91 @@ export type Database = {
         }
         Relationships: []
       }
+      measurement_curve_evaluations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dataset_id: string
+          details: Json
+          formula: string | null
+          id: string
+          measurement_result_id: string | null
+          method: string
+          method_label: string | null
+          result_label: string | null
+          unit: string | null
+          value: number | null
+          x_channel: string
+          x_from: number
+          x_to: number
+          x_unit: string | null
+          y_channel: string
+          y_unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dataset_id: string
+          details?: Json
+          formula?: string | null
+          id?: string
+          measurement_result_id?: string | null
+          method: string
+          method_label?: string | null
+          result_label?: string | null
+          unit?: string | null
+          value?: number | null
+          x_channel: string
+          x_from: number
+          x_to: number
+          x_unit?: string | null
+          y_channel: string
+          y_unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dataset_id?: string
+          details?: Json
+          formula?: string | null
+          id?: string
+          measurement_result_id?: string | null
+          method?: string
+          method_label?: string | null
+          result_label?: string | null
+          unit?: string | null
+          value?: number | null
+          x_channel?: string
+          x_from?: number
+          x_to?: number
+          x_unit?: string | null
+          y_channel?: string
+          y_unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_curve_evaluations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_curve_evaluations_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_raw_datasets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_curve_evaluations_measurement_result_id_fkey"
+            columns: ["measurement_result_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurement_import_profiles: {
         Row: {
           created_at: string
@@ -2048,6 +2133,147 @@ export type Database = {
             columns: ["order_measurement_id"]
             isOneToOne: false
             referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_raw_datasets: {
+        Row: {
+          case_instance_id: string | null
+          channels: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          importer_id: string
+          instance_key: string | null
+          instance_label: string | null
+          instrument: string | null
+          measurement_type: string | null
+          metadata: Json
+          order_measurement_id: string
+          parser_version: string | null
+          point_count: number
+          sample_id: string | null
+          service_id: string | null
+          source_file_id: string | null
+          source_file_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          case_instance_id?: string | null
+          channels?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          importer_id: string
+          instance_key?: string | null
+          instance_label?: string | null
+          instrument?: string | null
+          measurement_type?: string | null
+          metadata?: Json
+          order_measurement_id: string
+          parser_version?: string | null
+          point_count?: number
+          sample_id?: string | null
+          service_id?: string | null
+          source_file_id?: string | null
+          source_file_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          case_instance_id?: string | null
+          channels?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          importer_id?: string
+          instance_key?: string | null
+          instance_label?: string | null
+          instrument?: string | null
+          measurement_type?: string | null
+          metadata?: Json
+          order_measurement_id?: string
+          parser_version?: string | null
+          point_count?: number
+          sample_id?: string | null
+          service_id?: string | null
+          source_file_id?: string | null
+          source_file_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_raw_datasets_case_instance_id_fkey"
+            columns: ["case_instance_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_case_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_raw_datasets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_raw_datasets_order_measurement_id_fkey"
+            columns: ["order_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_raw_datasets_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_raw_datasets_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_raw_datasets_source_file_id_fkey"
+            columns: ["source_file_id"]
+            isOneToOne: false
+            referencedRelation: "order_upload_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_raw_series: {
+        Row: {
+          chunk_index: number
+          created_at: string
+          dataset_id: string
+          id: string
+          rows: Json
+        }
+        Insert: {
+          chunk_index?: number
+          created_at?: string
+          dataset_id: string
+          id?: string
+          rows?: Json
+        }
+        Update: {
+          chunk_index?: number
+          created_at?: string
+          dataset_id?: string
+          id?: string
+          rows?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_raw_series_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_raw_datasets"
             referencedColumns: ["id"]
           },
         ]
