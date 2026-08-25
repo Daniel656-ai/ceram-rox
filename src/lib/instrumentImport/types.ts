@@ -5,7 +5,8 @@
  * Geräte) liefern dieses Modell. Die Weiterverarbeitung (Feld-Mapping,
  * Vorschau, Übernahme in das Formular) ist geräteunabhängig und nutzt
  * ausschließlich die bestehende Messdatenimport-Architektur.
- */
+import type { MeasurementDataset } from "@/lib/curves/dataset";
+
 
 export type Confidence = "high" | "medium" | "low";
 
