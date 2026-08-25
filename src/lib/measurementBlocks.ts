@@ -238,6 +238,48 @@ export const readMeasurementCaseConfig = (field: {
   };
 };
 
+/**
+ * Kurvenkonfiguration einer Messfall-Messung: erwarteter Messdatentyp,
+ * Standardachsen des Kurvenviewers und erlaubte Auswertungen. Rein
+ * verfahrensunabhängig – die Kanalschlüssel stammen aus den importierten Daten.
+ */
+export interface CaseCurveConfig {
+  measurement_type: string | null;
+  x_key: string | null;
+  y_keys: string[];
+  y2_key: string | null;
+  allowed_evaluations: string[];
+}
+
+export const emptyCurveConfig = (): CaseCurveConfig => ({
+  measurement_type: null,
+  x_key: null,
+  y_keys: [],
+  y2_key: null,
+  allowed_evaluations: [],
+});
+
+export const readCaseCurveConfig = (raw: unknown): CaseCurveConfig => {
+  const c = (raw ?? {}) as Record<string, any>;
+  const list = (v: unknown) =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "") : [];
+  const str = (v: unknown) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null);
+  return {
+    measurement_type: str(c.measurement_type),
+    x_key: str(c.x_key),
+    y_keys: list(c.y_keys),
+    y2_key: str(c.y2_key),
+    allowed_evaluations: list(c.allowed_evaluations),
+  };
+};
+
+/** Ist überhaupt etwas konfiguriert? (leere Konfiguration = keine Vorgabe) */
+export const hasCurveConfig = (c: CaseCurveConfig) =>
+  !!(c.measurement_type || c.x_key || c.y_keys.length || c.y2_key || c.allowed_evaluations.length);
+
+/** Schlüssel der Kurvenkonfiguration im Messblock-Eintrag. */
+export const CASE_CURVE_KEY = "__curve_config";
+
 /** Minimale Sicht auf einen Messfall – hält diese Datei frei von API-Typen. */
 export interface CaseTemplate {
   id: string;
@@ -248,6 +290,7 @@ export interface CaseTemplate {
     method?: string | null;
     import_profile_id?: string | null;
     context?: Record<string, string> | null;
+    curve_config?: unknown;
   }>;
 }
 
