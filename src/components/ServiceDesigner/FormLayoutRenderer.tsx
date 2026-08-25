@@ -545,6 +545,12 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                 }
               : null
           }
+          curveDefaults={
+            curveCfg
+              ? { xKey: curveCfg.x_key ?? undefined, yKeys: curveCfg.y_keys, y2Key: curveCfg.y2_key }
+              : null
+          }
+          allowedEvaluations={curveCfg?.allowed_evaluations.length ? curveCfg.allowed_evaluations : null}
           onApply={(values, meta) => {
             for (const [k, v] of Object.entries(values)) write(k, v);
             setValue(JSON.stringify({
