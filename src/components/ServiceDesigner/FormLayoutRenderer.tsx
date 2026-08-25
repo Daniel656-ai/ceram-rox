@@ -33,6 +33,10 @@ import { useSystemTextRenderer } from "@/context/ProcessContextProvider";
 import { containsSystemToken } from "@/lib/systemVariables";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 import MeasurementImportDialog from "@/components/measurementImport/MeasurementImportDialog";
+import MeasurementCaseEditorDialog from "@/components/measurementImport/MeasurementCaseEditorDialog";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/contexts/AuthContext";
+import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, formatCalcResult } from "@/lib/localCalculations";
 import type { FormCalculation } from "@/lib/api/formCalculations";
@@ -846,6 +850,13 @@ function MeasurementBlockField({
 
   /* ---- Messfall / Analyseschema ---------------------------------- */
   const caseCfg = readMeasurementCaseConfig(field);
+  const { hasPermission } = usePermissions();
+  const { role } = useAuth();
+  const canManageCases = role === "master" || hasPermission("services.manage" as any);
+  const [caseEditorOpen, setCaseEditorOpen] = useState(false);
+  const [caseEditorTarget, setCaseEditorTarget] = useState<any | null>(null);
+  /** Direkt am Messblock neu angelegte Messfälle sind sofort auswählbar. */
+  const [extraCaseIds, setExtraCaseIds] = useState<string[]>([]);
   const { data: allCases = [] } = useQuery({
     queryKey: ["measurement-cases"],
     queryFn: () => api.measurementCases.list(),
@@ -856,11 +867,15 @@ function MeasurementBlockField({
       (allCases as any[])
         .filter((c) => c.is_active !== false)
         .filter(
-          (c) => caseCfg.allowed_case_ids.length === 0 || caseCfg.allowed_case_ids.includes(c.id)
+          (c) =>
+            caseCfg.allowed_case_ids.length === 0 ||
+            caseCfg.allowed_case_ids.includes(c.id) ||
+            extraCaseIds.includes(c.id)
         )
         .map((c) => ({ id: c.id, name: c.name, instances: c.instances ?? [] })),
-    [allCases, caseCfg.allowed_case_ids]
+    [allCases, caseCfg.allowed_case_ids, extraCaseIds]
   );
+
 
   const storageKey = meta.storage_key || field.field_key;
   const root = useContext(ValuesCtx);
@@ -910,11 +925,19 @@ function MeasurementBlockField({
   };
 
   /* ---- Messungen aus dem Messfall erzeugen ------------------------ */
+  /** Nach dem Anlegen eines Messfalls direkt am Messblock: sofort anwenden. */
+  const [pendingCaseId, setPendingCaseId] = useState<string | null>(null);
   const activeCaseId =
     (entries.find((e) => typeof e?.[CASE_ID_KEY] === "string")?.[CASE_ID_KEY] as string | undefined) ??
     caseCfg.default_case_id ??
     (cases.length === 1 ? cases[0].id : null);
   const activeCase = cases.find((c) => c.id === activeCaseId) ?? null;
+  /** Vollständiger Datensatz des gewählten Messfalls (für „Bearbeiten“). */
+  const activeCaseRecord = (allCases as any[]).find((c) => c.id === activeCaseId) ?? null;
+  /** Historisch verwendeter, inzwischen inaktiver Messfall bleibt anzeigbar. */
+  const historicCase =
+    activeCaseId && !activeCase && activeCaseRecord ? activeCaseRecord : null;
+
   /** Im Messfall-Modus sind Bezeichnung/Kontext vorgegeben – nur Messwerte und Import anzeigen. */
   const caseChildren = useMemo(
     () => children.filter((c) => readBlockChildRole(c) === "value"),
@@ -941,6 +964,16 @@ function MeasurementBlockField({
     applyCase(activeCase);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseCfg.enabled, interactive, readonly, activeCase?.id, entries.length]);
+
+  // Direkt am Messblock neu angelegter Messfall: sobald geladen, auswählen.
+  useEffect(() => {
+    if (!pendingCaseId) return;
+    const c = cases.find((x) => x.id === pendingCaseId);
+    if (!c) return;
+    if (interactive && !readonly) applyCase(c);
+    setPendingCaseId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingCaseId, cases]);
 
   // Fehlende Kennungen (Altdaten) und Mindestanzahl ergänzen.
   if (interactive && !readonly && !caseCfg.enabled) {
@@ -980,19 +1013,39 @@ function MeasurementBlockField({
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-56">
               <Label className="text-xs">Messfall</Label>
-              <Select
-                value={activeCaseId ?? "__none__"}
-                disabled={!interactive || readonly || cases.length <= 1}
-                onValueChange={(v) => applyCase(cases.find((c) => c.id === v) ?? null)}
-              >
-                <SelectTrigger className="h-9"><SelectValue placeholder="Messfall wählen…" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">– Messfall wählen –</SelectItem>
-                  {cases.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Select
+                  value={activeCaseId ?? "__none__"}
+                  disabled={!interactive || readonly}
+                  onValueChange={(v) => applyCase(cases.find((c) => c.id === v) ?? null)}
+                >
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Messfall wählen…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">– Messfall wählen –</SelectItem>
+                    {cases.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                    {/* Historisch verwendeter (inaktiver) Messfall bleibt sichtbar */}
+                    {historicCase && (
+                      <SelectItem value={historicCase.id}>{historicCase.name} (inaktiv)</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {canManageCases && activeCaseRecord && (
+                  <Button size="icon" variant="outline" type="button" className="h-9 w-9"
+                    title="Messfall bearbeiten"
+                    onClick={() => { setCaseEditorTarget(activeCaseRecord); setCaseEditorOpen(true); }}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                {canManageCases && (
+                  <Button size="icon" variant="outline" type="button" className="h-9 w-9"
+                    title="Neuen Messfall erstellen"
+                    onClick={() => { setCaseEditorTarget(null); setCaseEditorOpen(true); }}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
             {activeCase && caseNeedsSetup && interactive && !readonly && (
               <Button size="sm" variant="outline" type="button" onClick={() => applyCase(activeCase)}>
@@ -1006,8 +1059,22 @@ function MeasurementBlockField({
               die Messdatei importieren.
             </p>
           )}
+          <MeasurementCaseEditorDialog
+            open={caseEditorOpen}
+            onOpenChange={setCaseEditorOpen}
+            caseDef={caseEditorTarget}
+            onSaved={(saved) => {
+              // Neu angelegter Messfall: sofort verfügbar und auswählbar.
+              // Bearbeiteter Messfall: bestehende (historische) Messungen bleiben unverändert.
+              if (!caseEditorTarget) {
+                setExtraCaseIds((p) => (p.includes(saved.id) ? p : [...p, saved.id]));
+                setPendingCaseId(saved.id);
+              }
+            }}
+          />
         </div>
       )}
+
 
       <div className="p-3 space-y-3">
         {entries.length === 0 && (

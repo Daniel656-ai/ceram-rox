@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "sonner";
 import { Plus, Trash2, ArrowUp, ArrowDown, Copy, Pencil } from "lucide-react";
 import ImportProfileEditorDialog from "@/components/measurementImport/ImportProfileEditorDialog";
+import MeasurementCaseEditorDialog from "@/components/measurementImport/MeasurementCaseEditorDialog";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 
 /* ==============================================================
@@ -673,6 +674,9 @@ function MeasurementCaseConfigEditor({
     queryFn: () => api.measurementCases.list(),
   });
   const patch = (p: Partial<typeof cfg>) => onSave({ case_config: { ...cfg, ...p } });
+  const [caseEditorOpen, setCaseEditorOpen] = useState(false);
+  const [caseEditorTarget, setCaseEditorTarget] = useState<any | null>(null);
+  const selectedCase = (cases as any[]).find((c) => c.id === cfg.default_case_id) ?? null;
 
   return (
     <div className="rounded border p-2 space-y-2 bg-muted/20">
@@ -689,20 +693,45 @@ function MeasurementCaseConfigEditor({
         <>
           <div>
             <Label className="text-[11px]">Vorgegebener Messfall</Label>
-            <Select
-              value={cfg.default_case_id ?? "__none__"}
-              disabled={disabled}
-              onValueChange={(v) => patch({ default_case_id: v === "__none__" ? null : v })}
-            >
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Messfall wählen…" /></SelectTrigger>
-              <SelectContent className="max-h-72">
-                <SelectItem value="__none__">— Auswahl durch Benutzer —</SelectItem>
-                {cases.map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-1">
+              <Select
+                value={cfg.default_case_id ?? "__none__"}
+                disabled={disabled}
+                onValueChange={(v) => patch({ default_case_id: v === "__none__" ? null : v })}
+              >
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Messfall wählen…" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="__none__">— Auswahl durch Benutzer —</SelectItem>
+                  {(cases as any[])
+                    .filter((c) => c.is_active !== false || c.id === cfg.default_case_id)
+                    .map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}{c.is_active === false ? " (inaktiv)" : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {selectedCase && (
+                <Button type="button" size="icon" variant="outline" className="h-8 w-8" disabled={disabled}
+                  title="Messfall bearbeiten"
+                  onClick={() => { setCaseEditorTarget(selectedCase); setCaseEditorOpen(true); }}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <Button type="button" size="icon" variant="outline" className="h-8 w-8" disabled={disabled}
+                title="Neuen Messfall erstellen"
+                onClick={() => { setCaseEditorTarget(null); setCaseEditorOpen(true); }}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
+          <MeasurementCaseEditorDialog
+            open={caseEditorOpen}
+            onOpenChange={setCaseEditorOpen}
+            caseDef={caseEditorTarget}
+            onSaved={(saved) => { if (!caseEditorTarget) patch({ default_case_id: saved.id }); }}
+          />
+
           <div className="space-y-1">
             <Label className="text-[11px]">Auswählbare Messfälle (keiner markiert = alle)</Label>
             <div className="flex flex-wrap gap-1">
