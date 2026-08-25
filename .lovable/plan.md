@@ -1,6 +1,24 @@
 # NETZSCH DIL / STA-DSC – Bestandsaufnahme und Architekturvorschlag
 
-Hinweis: In den bereitgestellten Uploads liegen aktuell **nur Micromeritics-Dateien** (`0000-8579/8689/8702` als `.REP`/`.SMP`). Es sind **keine NETZSCH-Dateien** (`#FORMAT:NETZSCH5`) vorhanden. Die Formatanalyse unten beruht daher auf dem dokumentierten NETZSCH5-ASCII-Aufbau und muss vor der Umsetzung an echten Dateien verifiziert werden.
+Grundlage: zwei echte NETZSCH5-Exportdateien (DIL 402C und STA 449F3), binär geprüft.
+
+## Formatbefund (verifiziert an den Realdateien)
+
+Beide Dateien sind reine ASCII-Exporte („DATA ALL“) mit CRLF, Codierung **ISO-8859-1/ANSI** (`#FTYPE:ANSI`) – nicht UTF-8, sonst brechen `°C`, `µm`, „Fürpaß“. Aufbau: Kopfzeilen `#SCHLÜSSEL:Wert`, eine Leerzeile, dann eine Spaltenkopfzeile mit `##`-Präfix, dann der Datenblock.
+
+Selbstbeschreibende Steuerzeilen, die der Parser auswerten muss statt zu raten:
+- `#FORMAT:NETZSCH5` (Erkennungsmerkmal), `#MTYPE:DIL` bzw. `#MTYPE:DSC`
+- `#DECIMAL:POINT` (Dezimaltrennzeichen), `#SEPARATOR:SEMICOLON` (Spaltentrenner)
+
+Achtung: In den Kopfzeilen selbst wird trotzdem Komma verwendet (`#RANGE:30,0°C/5,0(K/min)/1520,0°C`) – Kopf und Datenblock brauchen unterschiedliche Zahlenbehandlung.
+
+DIL-Datei (112 Zeilen): `#INSTRUMENT:NETZSCH DIL 402C`, `#IDENTITY`, `#DATE/TIME`, `#CORR. FILE`, `#TEMPCAL`, `#LABORATORY`, `#OPERATOR`, `#SAMPLE`, `#SAMPLE LENGTH /mm:24.948`, `#MEASMODE`, `#PURGE GAS 1`, `#FLOW RATE 1`, `#M.RANGE /µm`, `#CORR. CODE`, `#RANGE`, `#SEGMENT`, `#SEG. 1`.
+Spaltenkopf: `##Temp./°C;Time/min;dL/Lo` — **nur drei Kanäle**. `T. Alpha` und `Alpha` sind in diesem Export **nicht enthalten** und müssen von ROX aus `dL/Lo` und `#SAMPLE LENGTH` berechnet werden (technischer/physikalischer Ausdehnungskoeffizient). Sind sie in anderen Exporten vorhanden, werden sie dynamisch übernommen.
+
+STA/DSC-Datei (225 Zeilen): `#INSTRUMENT:NETZSCH STA 449F3`, zusätzlich `#SENSITIVITY`, `#SAMPLE MASS /mg:22.160`, `#REFERENCE`, `#REFERENCE MASS`, `#TYPE OF CRUCIBLE`, `#SAMPLE CRUCIBLE MASS`, `#DSC RANGE /µV`, `#TG RANGE /mg`, `#TAU-R`, `#EXO:-1` (Vorzeichenkonvention der DSC-Kurve!), `#RANGE`, `#SEGMENT`.
+Spaltenkopf: `##Temp./°C;Time/min;DSC/(mW/mg);Mass/%;Gas Flow(purge1)/(ml/min);Gas Flow(protective)/(ml/min);Sensit./(uV/mW)` — sieben Kanäle, Einheit steht nach dem letzten `/`, Klammerzusätze gehören zum Kanalnamen.
+
+Fazit: Die Typerkennung über `#FORMAT`/`#MTYPE` ist zuverlässig und rein inhaltsbasiert – die Endung `.txt` ist unbrauchbar und wird nicht verwendet.
 
 ## A. Bestehender Messdatenimport — vorhanden
 
@@ -15,18 +33,20 @@ Hinweis: In den bereitgestellten Uploads liegen aktuell **nur Micromeritics-Date
 
 ## B. NETZSCH DIL
 
-Bereits möglich: nichts spezifisch — als ASCII-Datei könnte der generische Copy-&-Paste-Parser einzelne Kopfzeilen als Key/Value lesen, aber keine Messkurven.
+Bereits möglich: nichts spezifisch — der Copy-&-Paste-Parser könnte einzelne Kopfzeilen als Key/Value lesen, aber keine Messkurven.
 
 Fehlt:
-- Importer `netzsch5` (Header `#FORMAT:NETZSCH5`, `#MTYPE:DIL`, `#IDENTITY`, `#SAMPLE`, `#DATE/TIME`, `#RANGE`, `#RATE`, `#SAMPLE LENGTH`, `#CORR.`, `##` Spaltenkopf, danach CSV-Datenblock).
-- Dynamische Kanalerkennung aus dem Spaltenkopf (`Temp./°C`, `Time/min`, `dL/Lo`, `T. Alpha/(1/K)`, `Alpha/(1/K)`) inkl. Trennung Name/Einheit.
+- Importer `netzsch5` (ANSI-Dekodierung, Kopfzeilen, `#DECIMAL`/`#SEPARATOR`, `##`-Spaltenkopf, Datenblock).
+- Dynamische Kanalerkennung inkl. Trennung Name/Einheit (`Temp./°C` → „Temp.“ + „°C“).
+- Ableitung von `T. Alpha` und `Alpha` aus `dL/Lo` + Probenlänge, wenn nicht exportiert.
 - Persistenz der Messpunkte.
 
 ## C. NETZSCH STA / DSC
 
 Bereits möglich: nichts spezifisch.
 
-Fehlt: identischer Importer-Pfad, `#MTYPE:DSC`, zusätzliche Kopffelder (Gase, Tiegel, Einwaage) und Kanäle `DSC/(mW/mg)`, `Mass/%`, `Gas Flow`, `DTG` usw. — ebenfalls rein dynamisch aus dem Spaltenkopf.
+Fehlt: derselbe Importer-Pfad plus DSC-spezifische Kopffelder (Einwaage, Tiegel, Gase, `#EXO`) und die sieben Kanäle – alles dynamisch aus dem Spaltenkopf, ohne feste Spaltenliste im Frontend.
+
 
 ## D. Grafische Darstellung
 
@@ -47,7 +67,7 @@ Keine zweite Ergebnisdatenbank. Eine bestätigte Auswertung wird als Zeile in `m
 ## G. Empfohlene Architektur
 
 ```text
-Datei (.dl4/.txt/.csv, ASCII NETZSCH5)
+Datei (.txt/.csv/.asc, ANSI, NETZSCH5-Export)
   -> FileImporter "netzsch5"  (detect: Inhalt "#FORMAT:NETZSCH5", mtype aus "#MTYPE:")
   -> ImportedMeasurement { sampleInformation, results (Kopfwerte), analyses[].series (Kanaele) }
   -> Rohdaten-Persistenz: measurement_raw_datasets + measurement_raw_series
@@ -83,9 +103,9 @@ Messfall-Integration: `measurement_case_instances.context` bzw. Konfiguration am
 
 ## H. Testfälle (Vitest, mit echten Referenzdateien)
 
-DIL: Erkennung `#MTYPE:DIL`, Kanal-/Einheitenerkennung, Punktanzahl, Temp vs. dL/Lo, Temp vs. Alpha, Bereich 30–800 °C, technischer Ausdehnungskoeffizient, Übernahme als offizielles Ergebnis inkl. Provenienz.
+DIL (`M062_26_…-NC2867.txt`): Erkennung `#MTYPE:DIL`, ANSI-Umlaute korrekt („Fürpaß“), drei Kanäle mit Einheiten, 84 Messpunkte 30–840 °C, Probenlänge 24.948 mm, Temp vs. dL/Lo, abgeleitetes Alpha, Bereich 30–800 °C, technischer Ausdehnungskoeffizient, Übernahme als offizielles Ergebnis inkl. Provenienz.
 
-STA: Erkennung `#MTYPE:DSC`, Kanäle DSC/Mass/Gas Flow, Bereichsauswahl, Massenverlust absolut und in %, Peak-Temperatur/-Fläche, Übernahme als offizielles Ergebnis.
+STA (`M027-25-MRS-440-…-N2O2.txt`): Erkennung `#MTYPE:DSC`, sieben Kanäle inkl. `Gas Flow(purge1)/(ml/min)`, Einwaage 22.160 mg, `#EXO:-1` als Vorzeichenkonvention, Bereich 100–500 °C, Massenverlust (99.96 % → 68.28 %) absolut und relativ, Peak-Temperatur/-Fläche, Übernahme als offizielles Ergebnis.
 
 Querschnitt: Datei ohne NETZSCH-Header wird nicht erkannt; bestehende Gasadsorptions-Tests bleiben grün.
 
@@ -97,4 +117,8 @@ Querschnitt: Datei ohne NETZSCH-Header wird nicht erkannt; bestehende Gasadsorpt
 
 ## Nächster Schritt
 
-Echte NETZSCH-Dateien (je eine DIL- und eine DSC-Messung) bereitstellen; danach Umsetzung in Etappen: (1) Parser + Tests, (2) Rohdaten-Persistenz, (3) Kurvenviewer, (4) Auswertungen + Ergebnisübernahme.
+Umsetzung in Etappen, jede für sich lauffähig und ohne Eingriff in bestehende Importer:
+1. Parser `netzsch5` + Unit-Tests gegen die beiden Realdateien (DIL 402C, STA 449F3).
+2. Rohdaten-Persistenz (Migration + API-Layer).
+3. Kurvenviewer mit Achsenwahl und Bereichsmarkierung.
+4. Auswertungs-Registry und Übernahme als offizielles Ergebnis inkl. Provenienz.
