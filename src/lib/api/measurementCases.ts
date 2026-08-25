@@ -84,6 +84,7 @@ export const measurementCases = {
     method?: string | null;
     import_profile_id?: string | null;
     context?: Record<string, string>;
+    curve_config?: MeasurementCaseInstance["curve_config"];
   }) =>
     unwrap(
       dbClient.from(INSTANCES).insert(input as any).select().single()
