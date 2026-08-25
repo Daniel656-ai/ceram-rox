@@ -925,11 +925,19 @@ function MeasurementBlockField({
   };
 
   /* ---- Messungen aus dem Messfall erzeugen ------------------------ */
+  /** Nach dem Anlegen eines Messfalls direkt am Messblock: sofort anwenden. */
+  const [pendingCaseId, setPendingCaseId] = useState<string | null>(null);
   const activeCaseId =
     (entries.find((e) => typeof e?.[CASE_ID_KEY] === "string")?.[CASE_ID_KEY] as string | undefined) ??
     caseCfg.default_case_id ??
     (cases.length === 1 ? cases[0].id : null);
   const activeCase = cases.find((c) => c.id === activeCaseId) ?? null;
+  /** Vollständiger Datensatz des gewählten Messfalls (für „Bearbeiten“). */
+  const activeCaseRecord = (allCases as any[]).find((c) => c.id === activeCaseId) ?? null;
+  /** Historisch verwendeter, inzwischen inaktiver Messfall bleibt anzeigbar. */
+  const historicCase =
+    activeCaseId && !activeCase && activeCaseRecord ? activeCaseRecord : null;
+
   /** Im Messfall-Modus sind Bezeichnung/Kontext vorgegeben – nur Messwerte und Import anzeigen. */
   const caseChildren = useMemo(
     () => children.filter((c) => readBlockChildRole(c) === "value"),
