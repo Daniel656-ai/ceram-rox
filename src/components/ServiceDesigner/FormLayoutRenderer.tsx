@@ -850,6 +850,13 @@ function MeasurementBlockField({
 
   /* ---- Messfall / Analyseschema ---------------------------------- */
   const caseCfg = readMeasurementCaseConfig(field);
+  const { hasPermission } = usePermissions();
+  const { role } = useAuth();
+  const canManageCases = role === "master" || hasPermission("services.manage" as any);
+  const [caseEditorOpen, setCaseEditorOpen] = useState(false);
+  const [caseEditorTarget, setCaseEditorTarget] = useState<any | null>(null);
+  /** Direkt am Messblock neu angelegte Messfälle sind sofort auswählbar. */
+  const [extraCaseIds, setExtraCaseIds] = useState<string[]>([]);
   const { data: allCases = [] } = useQuery({
     queryKey: ["measurement-cases"],
     queryFn: () => api.measurementCases.list(),
@@ -860,11 +867,15 @@ function MeasurementBlockField({
       (allCases as any[])
         .filter((c) => c.is_active !== false)
         .filter(
-          (c) => caseCfg.allowed_case_ids.length === 0 || caseCfg.allowed_case_ids.includes(c.id)
+          (c) =>
+            caseCfg.allowed_case_ids.length === 0 ||
+            caseCfg.allowed_case_ids.includes(c.id) ||
+            extraCaseIds.includes(c.id)
         )
         .map((c) => ({ id: c.id, name: c.name, instances: c.instances ?? [] })),
-    [allCases, caseCfg.allowed_case_ids]
+    [allCases, caseCfg.allowed_case_ids, extraCaseIds]
   );
+
 
   const storageKey = meta.storage_key || field.field_key;
   const root = useContext(ValuesCtx);
