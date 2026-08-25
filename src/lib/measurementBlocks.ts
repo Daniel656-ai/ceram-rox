@@ -314,6 +314,9 @@ export function buildEntriesFromCase(
       [CASE_ID_KEY]: caseDef.id,
       [CASE_INSTANCE_KEY]: inst.id,
       [IMPORT_PROFILE_KEY]: inst.import_profile_id ?? null,
+      [CASE_CURVE_KEY]: hasCurveConfig(readCaseCurveConfig(inst.curve_config))
+        ? readCaseCurveConfig(inst.curve_config)
+        : null,
     };
     for (const k of labelKeys) entry[k] = inst.label;
     const legacy: Record<string, string> = {};
