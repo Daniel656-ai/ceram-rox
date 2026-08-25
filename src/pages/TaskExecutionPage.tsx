@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { MeasurementContextProvider } from "@/components/curves/measurementContext";
+import MeasurementCurvesCard from "@/components/curves/MeasurementCurvesCard";
 import ServiceBookingForm from "@/components/ServiceBookingForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -493,6 +494,8 @@ function TaskExecutionPageInner() {
           </MeasurementContextProvider>
         </CardContent>
       </Card>
+
+      <MeasurementCurvesCard measurementId={m.id} readOnly={!canEdit || isCompleted} />
 
       {canEdit && hasForm && !isCompleted && (
         <div className="flex items-center justify-end gap-2 sticky bottom-0 bg-background/95 border-t py-3">
