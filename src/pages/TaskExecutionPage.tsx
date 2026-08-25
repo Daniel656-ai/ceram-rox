@@ -4,6 +4,7 @@ import { ProcessContextProvider } from "@/context/ProcessContextProvider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { MeasurementContextProvider } from "@/components/curves/measurementContext";
 import ServiceBookingForm from "@/components/ServiceBookingForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -451,6 +452,18 @@ function TaskExecutionPageInner() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <MeasurementContextProvider
+            value={
+              m?.id
+                ? {
+                    orderMeasurementId: m.id,
+                    sampleId: sample?.id ?? null,
+                    serviceId: serviceId ?? null,
+                    userId: user?.id ?? null,
+                  }
+                : null
+            }
+          >
           {!serviceId ? (
             <p className="text-sm text-muted-foreground">Keine Dienstleistung verknüpft.</p>
           ) : !hasForm ? (
@@ -477,6 +490,7 @@ function TaskExecutionPageInner() {
               />
             </>
           )}
+          </MeasurementContextProvider>
         </CardContent>
       </Card>
 
