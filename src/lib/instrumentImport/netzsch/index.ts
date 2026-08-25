@@ -24,10 +24,12 @@ const SAMPLE_KEYS = ["SAMPLE", "IDENTITY", "MATERIAL"];
 export const measurementTypeLabel = (t: NetzschMeasurementType) =>
   t === "DIL" ? "Dilatometer" : t === "DSC" ? "STA / DSC" : t === "TG" ? "Thermogravimetrie" : t === "DTA" ? "DTA" : "Unbekannt";
 
-function parseGermanNumber(raw: string): number | null {
+/** Kopfzeilen-Zahl im Dezimalformat der Datei (#DECIMAL). */
+function parseHeaderNumber(raw: string, decimal: "." | ","): number | null {
   const m = String(raw ?? "").match(/^[+-]?[\d.,]+/);
   if (!m) return null;
-  const n = Number(m[0].replace(/\./g, "").replace(",", "."));
+  const cleaned = decimal === "," ? m[0].replace(/\./g, "").replace(",", ".") : m[0].replace(/,/g, "");
+  const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -72,7 +74,7 @@ export function parseNetzschMeasurement(file: { name: string; buffer: ArrayBuffe
   for (const { key, value } of parsed.header) {
     const m = key.match(/^(.*?)\s*\/(.+)$/);
     if (!m || !value) continue;
-    const num = parseGermanNumber(value);
+    const num = parseHeaderNumber(value, parsed.decimal);
     if (num == null) continue;
     results.push({
       sourceName: m[1].trim(),
@@ -95,7 +97,7 @@ export function parseNetzschMeasurement(file: { name: string; buffer: ArrayBuffe
     parserVersion: NETZSCH5_PARSER_VERSION,
     sampleInformation: {
       sampleName,
-      sampleMass: massRaw ? parseGermanNumber(massRaw) ?? undefined : undefined,
+      sampleMass: massRaw ? parseHeaderNumber(massRaw, parsed.decimal) ?? undefined : undefined,
       sampleMassUnit: massRaw ? "mg" : undefined,
       analysisDate: parseDate(headerMap["DATE/TIME"]),
     },

@@ -92,7 +92,7 @@ describe("NETZSCH STA 449F3 (DSC)", () => {
     const parsed = parseNetzsch5(decodeNetzschText(staFile().buffer));
     const ch = parsed.dataset.channels;
     expect(ch.map((c) => c.key)).toEqual([
-      "temp", "time", "dsc", "mass", "gas_flow_purge1_", "gas_flow_protective_", "sensit",
+      "temp", "time", "dsc", "mass", "gas_flow_purge1", "gas_flow_protective", "sensit",
     ]);
     expect(ch.find((c) => c.key === "dsc")?.unit).toBe("mW/mg");
     expect(ch.find((c) => c.key === "mass")?.unit).toBe("%");
