@@ -21,6 +21,17 @@ export interface MeasurementCaseInstance {
   import_profile_id: string | null;
   /** Kontexteigenschaften: `{ "probenvorbereitung": "Pressling", ... }` */
   context: Record<string, string>;
+  /**
+   * Kurvenkonfiguration dieser Messung (Messfall-Steuerung für Messkurven):
+   * erwarteter Messdatentyp, Standardachsen und erlaubte Auswertungen.
+   */
+  curve_config?: {
+    measurement_type?: string | null;
+    x_key?: string | null;
+    y_keys?: string[];
+    y2_key?: string | null;
+    allowed_evaluations?: string[];
+  } | null;
   created_at: string;
   updated_at: string;
 }
