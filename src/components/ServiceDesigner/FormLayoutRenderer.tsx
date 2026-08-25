@@ -965,6 +965,16 @@ function MeasurementBlockField({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseCfg.enabled, interactive, readonly, activeCase?.id, entries.length]);
 
+  // Direkt am Messblock neu angelegter Messfall: sobald geladen, auswählen.
+  useEffect(() => {
+    if (!pendingCaseId) return;
+    const c = cases.find((x) => x.id === pendingCaseId);
+    if (!c) return;
+    if (interactive && !readonly) applyCase(c);
+    setPendingCaseId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingCaseId, cases]);
+
   // Fehlende Kennungen (Altdaten) und Mindestanzahl ergänzen.
   if (interactive && !readonly && !caseCfg.enabled) {
     const needsId = entries.some((e) => typeof e?.[INSTANCE_ID_KEY] !== "string");
