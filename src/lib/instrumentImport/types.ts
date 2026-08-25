@@ -67,7 +67,14 @@ export interface ImportedMeasurement {
   warnings: string[];
   /** Nicht interpretierte Datenblöcke – nur für spätere Erweiterungen. */
   unrecognized: string[];
+  /** Messdatentyp laut Datei (z. B. NETZSCH #MTYPE: DIL / DSC). */
+  measurementType?: string;
+  /** Vollständige Rohdaten (Kanäle + Messpunkte), falls das Format sie liefert. */
+  dataset?: MeasurementDataset;
+  /** Rohe Kopfzeilen der Datei (Schlüssel -> Wert). */
+  headerMap?: Record<string, string>;
 }
+
 
 /** Gemeinsame Schnittstelle aller Datei-Importer. */
 export interface FileImporter {
