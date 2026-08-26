@@ -13,7 +13,8 @@ export interface RuntimeMeasurementContext {
   orderMeasurementId: string;
   sampleId?: string | null;
   serviceId?: string | null;
-  userId?: string | null;
+  /** public.profiles.id – nicht die Auth-Benutzer-ID. */
+  profileId?: string | null;
 }
 
 const Ctx = createContext<RuntimeMeasurementContext | null>(null);

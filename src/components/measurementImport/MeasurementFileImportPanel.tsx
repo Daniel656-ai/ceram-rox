@@ -32,7 +32,8 @@ export interface CurvePersistContext {
   instanceLabel?: string | null;
   caseInstanceId?: string | null;
   sourceFileId?: string | null;
-  userId?: string | null;
+  /** public.profiles.id; created_by verweist ausdrücklich auf diese Spalte. */
+  profileId?: string | null;
 }
 
 export interface FileImportMeta {
@@ -164,7 +165,7 @@ export default function MeasurementFileImportPanel({
       y2_key: selection?.y2Key ?? null,
       labels,
       units,
-      assigned_by: curveContext?.userId ?? null,
+      assigned_by: curveContext?.profileId ?? null,
       assigned_at: new Date().toISOString(),
     };
   };
@@ -172,6 +173,9 @@ export default function MeasurementFileImportPanel({
   /** Speichert die Rohdaten einmalig und liefert die Datensatz-Id. */
   const ensureDataset = async (parsed: ImportedMeasurement): Promise<string | null> => {
     if (!curveContext?.orderMeasurementId || !parsed.dataset) return null;
+    if (!curveContext.profileId) {
+      throw new Error("Für den angemeldeten Benutzer wurde kein gültiges Benutzerprofil geladen.");
+    }
     const mapping = buildSignalMapping(parsed);
     if (datasetId) {
       await api.measurementRawData.updateSignalMapping(datasetId, mapping);
@@ -192,7 +196,7 @@ export default function MeasurementFileImportPanel({
       instrument: parsed.headerMap?.["INSTRUMENT"] ?? null,
       metadata: { header: parsed.headerMap ?? {}, sample: parsed.sampleInformation },
       signal_mapping: mapping,
-      created_by: curveContext.userId ?? null,
+      created_by: curveContext.profileId,
       dataset: parsed.dataset,
     });
     setDatasetId(saved.id);
@@ -239,7 +243,7 @@ export default function MeasurementFileImportPanel({
         formula: p.formula,
         details: p.details,
         result_label: p.resultLabel,
-        created_by: curveContext.userId ?? null,
+        created_by: curveContext.profileId ?? null,
       } as any);
       void evaluation;
     }
@@ -292,14 +296,19 @@ export default function MeasurementFileImportPanel({
         savedDatasetId = await ensureDataset(measurement);
       } catch (e) {
         rawDataError = (e as Error).message;
+        console.error("Rohdaten wurden geparst, konnten aber nicht persistent gespeichert werden", e);
       } finally {
         setBusy(false);
       }
       if (rawDataError || !savedDatasetId) {
-        toast.error("Die Rohdaten konnten nicht gespeichert werden.", {
-          description:
-            "Die Messung kann erst abgeschlossen werden, wenn die Rohdaten erfolgreich importiert wurden." +
-            (rawDataError ? ` (${rawDataError})` : ""),
+        const isUserAssignmentError = !!rawDataError && (
+          rawDataError.includes("measurement_raw_datasets_created_by_fkey") ||
+          rawDataError.includes("Benutzerprofil")
+        );
+        toast.error("Die Rohdaten wurden erfolgreich importiert, konnten aber nicht dauerhaft gespeichert werden.", {
+          description: isUserAssignmentError
+            ? "Ursache ist ein Problem mit der Benutzerzuordnung. Die eingelesenen Daten bleiben im Dialog erhalten."
+            : "Die eingelesenen Daten bleiben im Dialog erhalten. Bitte prüfen Sie die Verbindung und versuchen Sie das Speichern erneut.",
         });
         return;
       }

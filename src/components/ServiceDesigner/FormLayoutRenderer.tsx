@@ -541,7 +541,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                   instanceKey: typeof instanceKey === "string" ? instanceKey : null,
                   instanceLabel: typeof instanceLabel === "string" ? instanceLabel : null,
                   caseInstanceId: typeof caseInstanceId === "string" ? caseInstanceId : null,
-                  userId: runtime.userId ?? null,
+                  profileId: runtime.profileId ?? null,
                 }
               : null
           }
