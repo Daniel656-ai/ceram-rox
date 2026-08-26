@@ -173,9 +173,6 @@ export default function MeasurementFileImportPanel({
   /** Speichert die Rohdaten einmalig und liefert die Datensatz-Id. */
   const ensureDataset = async (parsed: ImportedMeasurement): Promise<string | null> => {
     if (!curveContext?.orderMeasurementId || !parsed.dataset) return null;
-    if (!curveContext.profileId) {
-      throw new Error("Für den angemeldeten Benutzer wurde kein gültiges Benutzerprofil geladen.");
-    }
     const mapping = buildSignalMapping(parsed);
     if (datasetId) {
       await api.measurementRawData.updateSignalMapping(datasetId, mapping);
@@ -196,7 +193,7 @@ export default function MeasurementFileImportPanel({
       instrument: parsed.headerMap?.["INSTRUMENT"] ?? null,
       metadata: { header: parsed.headerMap ?? {}, sample: parsed.sampleInformation },
       signal_mapping: mapping,
-      created_by: curveContext.profileId,
+      created_by: curveContext.profileId ?? null,
       dataset: parsed.dataset,
     });
     setDatasetId(saved.id);

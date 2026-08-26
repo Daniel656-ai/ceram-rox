@@ -73,6 +73,29 @@ const DATASETS = "measurement_raw_datasets" as any;
 const SERIES = "measurement_raw_series" as any;
 const EVALUATIONS = "measurement_curve_evaluations" as any;
 
+/**
+ * `created_by` der Kurventabellen verweist auf `public.profiles.id`, während
+ * die Sitzung `auth.users.id` liefert. Die Übersetzung bleibt deshalb zentral
+ * in der Domain-API und kann nicht versehentlich mit einer Auth-ID umgangen
+ * werden.
+ */
+const currentProfileId = async (): Promise<string> => {
+  const { data: authData, error: authError } = await dbClient.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error("Für die Rohdatenspeicherung ist eine Anmeldung erforderlich.");
+
+  const { data: profile, error: profileError } = await dbClient
+    .from("profiles")
+    .select("id")
+    .eq("user_id", authData.user.id)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  if (!profile?.id) {
+    throw new Error("Für den angemeldeten Benutzer wurde kein gültiges Benutzerprofil gefunden.");
+  }
+  return profile.id;
+};
+
 export const measurementRawData = {
   /** Alle Rohdatensätze einer Messung (ohne Messpunkte). */
   listByMeasurement: (measurementId: string) =>
@@ -140,15 +163,21 @@ export const measurementRawData = {
     if (!dataset || dataset.rows.length === 0) {
       throw new Error("Die Rohdaten enthalten keine Messpunkte und können nicht gespeichert werden.");
     }
+    const profileId = await currentProfileId();
+    const signalMapping = {
+      ...(head.signal_mapping ?? {}),
+      assigned_by: profileId,
+    };
     const created = (await unwrap(
       dbClient
         .from(DATASETS)
         .insert({
           ...head,
+          created_by: profileId,
           channels: dataset.channels as any,
           point_count: dataset.rows.length,
           metadata: head.metadata ?? {},
-          signal_mapping: (head.signal_mapping ?? {}) as any,
+          signal_mapping: signalMapping as any,
         } as any)
         .select()
         .single()
@@ -173,12 +202,14 @@ export const measurementRawData = {
   },
 
   /** Speichert die Signal-/Achsenzuordnung erneut (Rohdaten bleiben unverändert). */
-  updateSignalMapping: (id: string, mapping: CurveSignalMapping) =>
-    run(
+  updateSignalMapping: async (id: string, mapping: CurveSignalMapping) => {
+    const profileId = await currentProfileId();
+    await run(
       dbClient.from(DATASETS)
-        .update({ signal_mapping: mapping as any } as any)
+        .update({ signal_mapping: { ...mapping, assigned_by: profileId } as any } as any)
         .eq("id", id)
-    ),
+    );
+  },
 
 
 
