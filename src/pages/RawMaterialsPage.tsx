@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation, useDeleteRawMaterial } from "@/hooks/useRawMaterials";
+import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation, useDeleteRawMaterial, useAllContainers } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
 import { PersonSelect } from "@/components/PersonSelect";
 import { formatQuantity } from "@/lib/formatQuantity";
+import { aggregateContainerLocations, formatLocationList, isActiveContainer } from "@/lib/storageLocations";
 
 
 
@@ -45,6 +46,7 @@ export default function RawMaterialsPage() {
   const { data: materials, isLoading } = useRawMaterials();
   const { data: locations } = useStorageLocations();
   const { data: allMovements } = useInventoryMovements();
+  const { data: allContainers } = useAllContainers();
   const addMaterial = useAddRawMaterial();
   const addLocation = useAddStorageLocation();
 
@@ -95,13 +97,29 @@ export default function RawMaterialsPage() {
     stockMap.set(m.raw_material_id, m.movement_type === "eingang" ? cur + Number(m.quantity) : cur - Number(m.quantity));
   });
 
+  // Lagerorte werden dynamisch aus den aktuell vorhandenen Gebinden abgeleitet.
+  const containersByMaterial = new Map<string, any[]>();
+  (allContainers as any[])?.forEach((c) => {
+    const list = containersByMaterial.get(c.raw_material_id) || [];
+    list.push(c);
+    containersByMaterial.set(c.raw_material_id, list);
+  });
+  const locationsByMaterial = new Map<string, string[]>();
+  containersByMaterial.forEach((list, matId) => {
+    locationsByMaterial.set(matId, aggregateContainerLocations(list));
+  });
+
   const suppliers = [...new Set(materials?.map((m) => m.supplier).filter(Boolean) || [])];
 
   const filtered = materials?.filter((m) => {
     const q = search.toLowerCase();
     const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || ((m as any).cas_number || "").toLowerCase().includes(q) || ((m as any).mrs_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
     const matchSupplier = !filterSupplier || m.supplier === filterSupplier;
-    const matchLocation = !filterLocation || m.default_location_id === filterLocation;
+    const matContainers = containersByMaterial.get(m.id) || [];
+    const matchLocation =
+      !filterLocation ||
+      matContainers.some((c) => isActiveContainer(c) && c.location_id === filterLocation) ||
+      (matContainers.filter(isActiveContainer).length === 0 && m.default_location_id === filterLocation);
     const isHaz = !!(m as any).is_hazardous || (((m as any).hazard_categories as string[] | null)?.length ?? 0) > 0;
     const matchHazard = filterHazard === "all" || (filterHazard === "hazardous" ? isHaz : !isHaz);
     return matchSearch && matchSupplier && matchLocation && matchHazard;
@@ -206,7 +224,7 @@ export default function RawMaterialsPage() {
                       </div>
                     </div>
                     <div>
-                      <Label>{t("raw_materials:location")}</Label>
+                      <Label>{t("raw_materials:location")} (Standard für neue Gebinde)</Label>
                       <Select value={locationId} onValueChange={setLocationId}>
                         <SelectTrigger><SelectValue placeholder={t("raw_materials:select_location")} /></SelectTrigger>
                         <SelectContent>{locations?.map((l) => <SelectItem key={l.id} value={l.id}>{formatLocation(l)}</SelectItem>)}</SelectContent>
@@ -314,7 +332,14 @@ export default function RawMaterialsPage() {
                       <TableCell className="font-mono text-xs"><Link to={`/rohstoffe/${m.id}`} className="text-primary hover:underline">{m.material_number || "—"}</Link></TableCell>
                       <TableCell className="font-medium"><Link to={`/rohstoffe/${m.id}`} className="hover:underline">{m.material_name}</Link></TableCell>
                       <TableCell>{m.supplier || "–"}</TableCell>
-                      <TableCell className="text-xs">{formatLocation(m.storage_locations)}</TableCell>
+                      <TableCell className="text-xs">
+                        {(() => {
+                          const locs = locationsByMaterial.get(m.id) || [];
+                          if (locs.length) return <span title={locs.join(" · ")}>{formatLocationList(locs)}</span>;
+                          const fallback = formatLocation(m.storage_locations);
+                          return fallback === "–" ? "–" : <span className="text-muted-foreground">{fallback} (Standard)</span>;
+                        })()}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           {hazards.length > 0 ? (
