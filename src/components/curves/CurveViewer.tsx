@@ -82,10 +82,26 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
 
   useEffect(() => { setFrom(xMin); setTo(xMax); }, [xMin, xMax]);
 
+  /**
+   * Gespeicherte Signalzuordnung übernehmen, sobald sie (z. B. nach dem Laden
+   * der Rohdaten) verfügbar wird. Danach entscheidet allein der Benutzer.
+   */
+  const defaultsKey = `${defaults?.xKey ?? ""}|${(defaults?.yKeys ?? []).join(",")}|${defaults?.y2Key ?? ""}`;
+  useEffect(() => {
+    if (!defaults) return;
+    const keys = channels.map((c) => c.key);
+    if (defaults.xKey && keys.includes(defaults.xKey)) setXKey(defaults.xKey);
+    const wantedY = (defaults.yKeys ?? []).filter((k) => keys.includes(k));
+    if (wantedY.length) setYKeys(wantedY);
+    setY2Key(defaults.y2Key && keys.includes(defaults.y2Key) ? defaults.y2Key : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultsKey, channels.length]);
+
   useEffect(() => {
     onSelectionChange?.({ xKey, yKeys, y2Key, from, to });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xKey, yKeys.join("|"), y2Key, from, to]);
+
 
   /** Alle gewählten Kurven auf gemeinsame X-Werte gelegt. */
   const chartData = useMemo(() => {
