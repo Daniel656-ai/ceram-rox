@@ -33,6 +33,12 @@ export interface ImportApplyMeta {
   unassigned?: UnassignedMeasurementValue[];
   /** Technische Metadaten – nie Ergebniswerte. */
   metadata?: ImportMetadataEntry[];
+  /** Id des gespeicherten Rohdatensatzes (Messkurven). */
+  datasetId?: string | null;
+  /** true, wenn Rohdaten (Messkurven) enthalten waren. */
+  hasCurves?: boolean;
+  /** Signal-/Achsenzuordnung des Messtechnikers. */
+  signalMapping?: Record<string, unknown> | null;
 }
 
 interface Props {
@@ -52,6 +58,8 @@ interface Props {
   curveDefaults?: { xKey?: string; yKeys?: string[]; y2Key?: string | null } | null;
   /** Vom Messfall erlaubte Kurvenauswertungen (leer = alle). */
   allowedEvaluations?: string[] | null;
+  /** Auswertung bereits beim Import erlauben (Standard: nein). */
+  enableEvaluation?: boolean;
   /** Übernahme der geprüften Werte. */
   onApply: (values: Record<string, number | string | null>, meta: ImportApplyMeta) => void;
   /** Darf der Anwender Profile anlegen/bearbeiten? */
@@ -61,7 +69,8 @@ interface Props {
 
 export default function MeasurementImportDialog({
   open, onOpenChange, defaultProfileId, targets, currentValues, allowedImporters,
-  curveContext, curveDefaults, allowedEvaluations, onApply, canManageProfiles = true,
+  curveContext, curveDefaults, allowedEvaluations, enableEvaluation = false,
+  onApply, canManageProfiles = true,
 }: Props) {
   const [profileId, setProfileId] = useState<string>(defaultProfileId ?? "");
   const [text, setText] = useState("");
@@ -218,6 +227,7 @@ export default function MeasurementImportDialog({
                   curveContext={curveContext ?? null}
                   curveDefaults={curveDefaults ?? null}
                   allowedEvaluations={allowedEvaluations ?? null}
+                  enableEvaluation={enableEvaluation}
                   onApply={(values, meta) => {
                     onApply(values, {
                       profileName: meta.importerLabel,
@@ -226,6 +236,9 @@ export default function MeasurementImportDialog({
                       source: `${meta.importerLabel} · ${meta.fileName} · Parser ${meta.parserVersion}`,
                       unassigned: meta.unassignedValues,
                       metadata: meta.metadata,
+                      datasetId: meta.datasetId ?? null,
+                      hasCurves: meta.hasCurves ?? false,
+                      signalMapping: (meta.signalMapping ?? null) as any,
                     });
                     onOpenChange(false);
                   }}

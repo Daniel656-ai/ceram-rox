@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import CurveViewer, { type CurveSelection } from "@/components/curves/CurveViewer";
 import CurveEvaluationPanel, { type CurveEvaluationProvenance } from "@/components/curves/CurveEvaluationPanel";
 import { api } from "@/lib/api";
+import type { CurveSignalMapping } from "@/lib/api/measurementRawData";
+
 
 /**
  * Zuordnungskontext für die dauerhafte Speicherung der Rohdaten.
@@ -45,6 +47,13 @@ export interface FileImportMeta {
   unassignedValues: UnassignedMeasurementValue[];
   /** Technische Metadaten der Messdatei (Gerät, Datum, Probe …). */
   metadata: ImportMetadataEntry[];
+  /** Id des gespeicherten Rohdatensatzes (nur mit Messungskontext). */
+  datasetId?: string | null;
+  /** true, wenn die Datei Messkurven (Rohdaten) enthält. */
+  hasCurves?: boolean;
+  /** Gespeicherte Signal-/Achsenzuordnung des Messtechnikers. */
+  signalMapping?: CurveSignalMapping | null;
+
 }
 
 interface Props {
@@ -59,6 +68,12 @@ interface Props {
   curveDefaults?: { xKey?: string; yKeys?: string[]; y2Key?: string | null } | null;
   /** Vom Messfall erlaubte Auswertungen (leer = alle). */
   allowedEvaluations?: string[] | null;
+  /**
+   * Auswertung direkt beim Import zulassen. Im Messablauf bewusst aus:
+   * Der Messtechniker legt nur die Signalzuordnung fest, die fachliche
+   * Auswertung erfolgt später im Auftrag durch den Auftragsersteller.
+   */
+  enableEvaluation?: boolean;
   onApply: (values: Record<string, number | string>, meta: FileImportMeta) => void;
 }
 
@@ -69,8 +84,9 @@ const confBadge = (c: FileMappedRow["confidence"]) =>
 
 export default function MeasurementFileImportPanel({
   profile, targets, currentValues, allowedImporters, curveContext, curveDefaults,
-  allowedEvaluations, onApply,
+  allowedEvaluations, enableEvaluation = false, onApply,
 }: Props) {
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [measurement, setMeasurement] = useState<ImportedMeasurement | null>(null);
   const [importerLabel, setImporterLabel] = useState<string>("");
@@ -126,10 +142,41 @@ export default function MeasurementFileImportPanel({
     }
   };
 
+  /** Aktuelle Signalzuordnung aus der Kanalauswahl (keine Diagrammdefinition). */
+  const buildSignalMapping = (parsed: ImportedMeasurement): CurveSignalMapping => {
+    const channels = parsed.dataset?.channels ?? [];
+    const keys = [
+      selection?.xKey,
+      ...(selection?.yKeys ?? []),
+      selection?.y2Key ?? null,
+    ].filter(Boolean) as string[];
+    const labels: Record<string, string> = {};
+    const units: Record<string, string | null> = {};
+    for (const k of keys) {
+      const ch = channels.find((c) => c.key === k);
+      if (!ch) continue;
+      labels[k] = ch.label;
+      units[k] = ch.unit;
+    }
+    return {
+      x_key: selection?.xKey ?? null,
+      y_keys: selection?.yKeys ?? [],
+      y2_key: selection?.y2Key ?? null,
+      labels,
+      units,
+      assigned_by: curveContext?.userId ?? null,
+      assigned_at: new Date().toISOString(),
+    };
+  };
+
   /** Speichert die Rohdaten einmalig und liefert die Datensatz-Id. */
   const ensureDataset = async (parsed: ImportedMeasurement): Promise<string | null> => {
     if (!curveContext?.orderMeasurementId || !parsed.dataset) return null;
-    if (datasetId) return datasetId;
+    const mapping = buildSignalMapping(parsed);
+    if (datasetId) {
+      await api.measurementRawData.updateSignalMapping(datasetId, mapping);
+      return datasetId;
+    }
     const saved = await api.measurementRawData.save({
       order_measurement_id: curveContext.orderMeasurementId,
       sample_id: curveContext.sampleId ?? null,
@@ -144,12 +191,14 @@ export default function MeasurementFileImportPanel({
       measurement_type: parsed.measurementType ?? null,
       instrument: parsed.headerMap?.["INSTRUMENT"] ?? null,
       metadata: { header: parsed.headerMap ?? {}, sample: parsed.sampleInformation },
+      signal_mapping: mapping,
       created_by: curveContext.userId ?? null,
       dataset: parsed.dataset,
     });
     setDatasetId(saved.id);
     return saved.id;
   };
+
 
   /** Übernahme einer Kurvenauswertung als offizielles Messergebnis. */
   const adoptOfficial = async (p: CurveEvaluationProvenance) => {
@@ -197,7 +246,7 @@ export default function MeasurementFileImportPanel({
     toast.success("Auswertung als offizielles Ergebnis übernommen.");
   };
 
-  const apply = () => {
+  const apply = async () => {
     const values: Record<string, number | string> = {};
     const unmapped: string[] = [];
     const unassignedValues: UnassignedMeasurementValue[] = [];
@@ -227,14 +276,36 @@ export default function MeasurementFileImportPanel({
       info?.analysisDate ? { label: "Messdatum", value: info.analysisDate, kind: "date" as const } : null,
       info?.sampleName ? { label: "Probe laut Gerät", value: info.sampleName, kind: "comment" as const } : null,
     ].filter(Boolean) as ImportMetadataEntry[];
-    if (Object.keys(values).length === 0 && unassignedValues.length === 0) {
+    const hasCurves = !!measurement?.dataset?.rows.length;
+    if (Object.keys(values).length === 0 && unassignedValues.length === 0 && !hasCurves) {
       toast.error("Keine Werte ausgewählt.");
       return;
     }
-    if (curveContext?.orderMeasurementId && measurement?.dataset?.rows.length) {
-      void ensureDataset(measurement).catch((e) =>
-        toast.error(`Rohdaten konnten nicht gespeichert werden: ${(e as Error).message}`));
+
+    // Fall A/B: Rohdaten müssen erfolgreich gespeichert sein, sonst wird die
+    // Übernahme abgebrochen – keine leere oder ungültige Rohdatenreferenz.
+    let savedDatasetId: string | null = null;
+    let rawDataError: string | null = null;
+    if (curveContext?.orderMeasurementId && hasCurves && measurement) {
+      setBusy(true);
+      try {
+        savedDatasetId = await ensureDataset(measurement);
+      } catch (e) {
+        rawDataError = (e as Error).message;
+      } finally {
+        setBusy(false);
+      }
+      if (rawDataError || !savedDatasetId) {
+        toast.error("Die Rohdaten konnten nicht gespeichert werden.", {
+          description:
+            "Die Messung kann erst abgeschlossen werden, wenn die Rohdaten erfolgreich importiert wurden." +
+            (rawDataError ? ` (${rawDataError})` : ""),
+        });
+        return;
+      }
+      toast.success("Rohdaten und Signalzuordnung gespeichert.");
     }
+
     onApply(values, {
       importerId,
       importerLabel,
@@ -245,8 +316,12 @@ export default function MeasurementFileImportPanel({
       unmapped,
       unassignedValues,
       metadata,
+      datasetId: savedDatasetId,
+      hasCurves,
+      signalMapping: hasCurves && measurement ? buildSignalMapping(measurement) : null,
     });
   };
+
 
   const selectedCount = rows.filter((r) => r.targetFieldKey && selected[r.normalizedName]).length;
 
@@ -368,7 +443,7 @@ export default function MeasurementFileImportPanel({
           {measurement.dataset && measurement.dataset.rows.length > 0 && (
             <div className="rounded border p-3 space-y-4">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">Messkurven</Badge>
+                <Badge variant="secondary">Rohdaten &amp; Signalzuordnung</Badge>
                 <span className="text-xs text-muted-foreground">
                   {measurement.dataset.channels.length} Kanäle · {measurement.dataset.rows.length} Messpunkte
                   {measurement.measurementType ? ` · Messdatentyp ${measurement.measurementType}` : ""}
@@ -379,19 +454,27 @@ export default function MeasurementFileImportPanel({
                   </span>
                 )}
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Rohdaten prüfen und festlegen, welches Signal auf welcher Achse liegt. Diese
+                Zuordnung wird mit den Rohdaten gespeichert. Ein fertiges Diagramm oder eine
+                Auswertung ist hier nicht erforderlich – das erfolgt später im Auftrag.
+              </p>
               <CurveViewer
                 dataset={measurement.dataset}
                 defaults={curveDefaults ?? undefined}
                 onSelectionChange={setSelection}
               />
-              <CurveEvaluationPanel
-                dataset={measurement.dataset}
-                selection={selection}
-                allowedEvaluations={allowedEvaluations ?? null}
-                onAdoptOfficial={curveContext?.orderMeasurementId ? adoptOfficial : undefined}
-              />
+              {enableEvaluation && (
+                <CurveEvaluationPanel
+                  dataset={measurement.dataset}
+                  selection={selection}
+                  allowedEvaluations={allowedEvaluations ?? null}
+                  onAdoptOfficial={curveContext?.orderMeasurementId ? adoptOfficial : undefined}
+                />
+              )}
             </div>
           )}
+
 
           {measurement.warnings.map((w, i) => (
             <p key={i} className="text-[11px] text-amber-600 flex items-start gap-1">
@@ -400,10 +483,19 @@ export default function MeasurementFileImportPanel({
           ))}
 
           <div className="flex justify-end">
-            <Button type="button" onClick={apply} disabled={selectedCount === 0 && !measurement.dataset}>
-              {selectedCount > 0 ? `${selectedCount} Wert(e) übernehmen` : "Messdaten übernehmen"}
+            <Button
+              type="button"
+              onClick={() => void apply()}
+              disabled={busy || (selectedCount === 0 && !measurement.dataset)}
+            >
+              {selectedCount > 0
+                ? `${selectedCount} Wert(e) übernehmen`
+                : measurement.dataset?.rows.length
+                  ? "Rohdaten & Signalzuordnung speichern"
+                  : "Messdaten übernehmen"}
             </Button>
           </div>
+
         </div>
       )}
 

@@ -5,6 +5,24 @@ import type { MeasurementChannel, MeasurementDataset } from "@/lib/curves/datase
 /** Messpunkte werden blockweise gespeichert, damit auch lange Messreihen performant bleiben. */
 const CHUNK_SIZE = 2000;
 
+/**
+ * Signal-/Achsenzuordnung des Messtechnikers.
+ *
+ * Sie dokumentiert, wie die Rohdatensignale ursprünglich interpretiert werden
+ * sollten – sie ist ausdrücklich **kein** fertiges Diagramm und keine
+ * Auswertung. Die Rohdaten bleiben davon unberührt.
+ */
+export interface CurveSignalMapping {
+  x_key?: string | null;
+  y_keys?: string[];
+  y2_key?: string | null;
+  /** Anzeigenamen und Einheiten zum Zeitpunkt der Zuordnung (Nachvollziehbarkeit). */
+  labels?: Record<string, string>;
+  units?: Record<string, string | null>;
+  assigned_by?: string | null;
+  assigned_at?: string | null;
+}
+
 export interface MeasurementRawDataset {
   id: string;
   order_measurement_id: string;
@@ -22,10 +40,13 @@ export interface MeasurementRawDataset {
   channels: MeasurementChannel[];
   point_count: number;
   metadata: Record<string, unknown>;
+  /** Gespeicherte Signalzuordnung (Ausgangspunkt späterer Diagramme). */
+  signal_mapping: CurveSignalMapping;
   created_by: string | null;
   created_at: string;
   updated_at: string;
 }
+
 
 export interface CurveEvaluationRecord {
   id: string;
@@ -60,12 +81,26 @@ export const measurementRawData = {
         .order("created_at", { ascending: false })
     ) as unknown as Promise<MeasurementRawDataset[]>,
 
+  /** Alle Rohdatensätze eines Auftrags – Grundlage der Auswertung durch den Auftragsersteller. */
+  listByOrder: (orderId: string) =>
+    unwrap(
+      dbClient
+        .from(DATASETS)
+        .select("*, order_measurements!inner(id, measurement_number, order_id, service_id)")
+        .eq("order_measurements.order_id", orderId)
+        .order("created_at", { ascending: false })
+    ) as unknown as Promise<(MeasurementRawDataset & { order_measurements: any })[]>,
+
   get: async (id: string) =>
     (await unwrap(
       dbClient.from(DATASETS).select("*").eq("id", id).maybeSingle()
     )) as unknown as MeasurementRawDataset | null,
 
-  /** Lädt die Messpunkte eines Datensatzes und setzt sie wieder zum Dataset zusammen. */
+  /**
+   * Lädt die Messpunkte eines Datensatzes und setzt sie wieder zum Dataset
+   * zusammen. Fehlen die Messpunkte, obwohl der Kopf welche ausweist, wird ein
+   * Fehler geworfen – ein unvollständiger Datensatz darf nicht als gültig gelten.
+   */
   loadDataset: async (datasetId: string): Promise<MeasurementDataset | null> => {
     const head = (await unwrap(
       dbClient.from(DATASETS).select("*").eq("id", datasetId).maybeSingle()
@@ -75,10 +110,11 @@ export const measurementRawData = {
       dbClient.from(SERIES).select("rows,chunk_index").eq("dataset_id", datasetId)
         .order("chunk_index", { ascending: true })
     )) as unknown as { rows: number[][]; chunk_index: number }[];
-    return {
-      channels: head.channels ?? [],
-      rows: chunks.flatMap((c) => c.rows ?? []),
-    };
+    const rows = chunks.flatMap((c) => c.rows ?? []);
+    if (head.point_count > 0 && rows.length === 0) {
+      throw new Error("Die Rohdaten konnten nicht geladen werden (keine Messpunkte gespeichert).");
+    }
+    return { channels: head.channels ?? [], rows };
   },
 
   /** Speichert einen importierten Datensatz samt Messpunkten. */
@@ -96,10 +132,14 @@ export const measurementRawData = {
     measurement_type?: string | null;
     instrument?: string | null;
     metadata?: Record<string, unknown>;
+    signal_mapping?: CurveSignalMapping;
     created_by?: string | null;
     dataset: MeasurementDataset;
   }): Promise<MeasurementRawDataset> => {
     const { dataset, ...head } = input;
+    if (!dataset || dataset.rows.length === 0) {
+      throw new Error("Die Rohdaten enthalten keine Messpunkte und können nicht gespeichert werden.");
+    }
     const created = (await unwrap(
       dbClient
         .from(DATASETS)
@@ -108,6 +148,7 @@ export const measurementRawData = {
           channels: dataset.channels as any,
           point_count: dataset.rows.length,
           metadata: head.metadata ?? {},
+          signal_mapping: (head.signal_mapping ?? {}) as any,
         } as any)
         .select()
         .single()
@@ -121,11 +162,25 @@ export const measurementRawData = {
         rows: dataset.rows.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE),
       });
     }
-    if (chunks.length > 0) {
+    try {
       await run(dbClient.from(SERIES).insert(chunks as any));
+    } catch (e) {
+      // Keine leere/ungültige Rohdatenreferenz zurücklassen.
+      await run(dbClient.from(DATASETS).delete().eq("id", created.id)).catch(() => undefined);
+      throw e;
     }
     return created;
   },
+
+  /** Speichert die Signal-/Achsenzuordnung erneut (Rohdaten bleiben unverändert). */
+  updateSignalMapping: (id: string, mapping: CurveSignalMapping) =>
+    run(
+      dbClient.from(DATASETS)
+        .update({ signal_mapping: mapping as any } as any)
+        .eq("id", id)
+    ),
+
+
 
   remove: (id: string) => run(dbClient.from(DATASETS).delete().eq("id", id)),
 

@@ -315,6 +315,22 @@ function TaskExecutionPageInner() {
     }
   };
 
+  /**
+   * Ein Messabschluss ist nur zulässig, wenn alle Rohdatenimporte tatsächlich
+   * gespeichert wurden. Fehlgeschlagene Rohdaten dürfen nie als erfolgreich
+   * abgeschlossene Messung erscheinen.
+   */
+  const rawDataIncomplete = (): boolean =>
+    Object.values(values).some((v) => {
+      if (typeof v !== "string" || !v.startsWith("{")) return false;
+      try {
+        const j = JSON.parse(v);
+        return !!j?.has_curves && !j?.raw_dataset_id;
+      } catch {
+        return false;
+      }
+    });
+
   const handleCompleteSubmit = async () => {
     if (!measurementId) return;
     const dur = parseFloat(actualDuration);
@@ -328,7 +344,15 @@ function TaskExecutionPageInner() {
       toast.error("Bei Abweichung von der Standarddauer ist eine Begründung erforderlich");
       return;
     }
+    if (rawDataIncomplete()) {
+      toast.error("Rohdaten unvollständig", {
+        description:
+          "Der Rohdatenimport wurde nicht erfolgreich gespeichert. Bitte die Messdatei erneut importieren, bevor die Messung abgeschlossen wird.",
+      });
+      return;
+    }
     setSubmitting(true);
+
     try {
       await persistResults(true);
       await api.measurements.complete(measurementId, dur, deviationReason);

@@ -82,10 +82,26 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
 
   useEffect(() => { setFrom(xMin); setTo(xMax); }, [xMin, xMax]);
 
+  /**
+   * Gespeicherte Signalzuordnung übernehmen, sobald sie (z. B. nach dem Laden
+   * der Rohdaten) verfügbar wird. Danach entscheidet allein der Benutzer.
+   */
+  const defaultsKey = `${defaults?.xKey ?? ""}|${(defaults?.yKeys ?? []).join(",")}|${defaults?.y2Key ?? ""}`;
+  useEffect(() => {
+    if (!defaults) return;
+    const keys = channels.map((c) => c.key);
+    if (defaults.xKey && keys.includes(defaults.xKey)) setXKey(defaults.xKey);
+    const wantedY = (defaults.yKeys ?? []).filter((k) => keys.includes(k));
+    if (wantedY.length) setYKeys(wantedY);
+    setY2Key(defaults.y2Key && keys.includes(defaults.y2Key) ? defaults.y2Key : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultsKey, channels.length]);
+
   useEffect(() => {
     onSelectionChange?.({ xKey, yKeys, y2Key, from, to });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xKey, yKeys.join("|"), y2Key, from, to]);
+
 
   /** Alle gewählten Kurven auf gemeinsame X-Werte gelegt. */
   const chartData = useMemo(() => {
@@ -115,6 +131,15 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
 
   const leftUnits = [...new Set(yKeys.map((k) => channels.find((c) => c.key === k)?.unit ?? "").filter(Boolean))];
   const y2Channel = y2Key ? channels.find((c) => c.key === y2Key) ?? null : null;
+
+  /**
+   * Die Legende steht über der Zeichenfläche und darf Achsenbeschriftungen nie
+   * überdecken: die Diagrammhöhe wächst mit der Anzahl der Legendenzeilen.
+   */
+  const seriesCount = yKeys.length + (y2Channel ? 1 : 0);
+  const legendRows = Math.max(1, Math.ceil(seriesCount / 3));
+  const chartHeight = height + legendRows * 22;
+
 
   if (channels.length === 0) {
     return <p className="text-xs text-muted-foreground">Keine Messkanäle vorhanden.</p>;
@@ -161,11 +186,12 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
         </div>
       </div>
 
-      <div className="rounded border p-2" style={{ height }}>
+      <div className="rounded border p-2" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={{ top: 8, right: 24, bottom: 24, left: 8 }}
+            margin={{ top: 8, right: y2Channel ? 40 : 24, bottom: 40, left: 24 }}
+
             onMouseDown={(e: any) => e?.activeLabel != null && setDragStart(Number(e.activeLabel))}
             onMouseMove={(e: any) => dragStart != null && e?.activeLabel != null && setDragEnd(Number(e.activeLabel))}
             onMouseUp={commitDrag}
@@ -179,19 +205,21 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
               tick={{ fontSize: 11 }}
               label={{
                 value: axisLabel(xChannel?.label ?? "", xChannel?.unit ?? null),
-                position: "insideBottom", offset: -12, fontSize: 11,
+                position: "insideBottom", offset: -24, fontSize: 11,
               }}
             />
             <YAxis
               yAxisId="left"
               tickFormatter={fmt}
               tick={{ fontSize: 11 }}
-              label={{ value: leftUnits.join(" / "), angle: -90, position: "insideLeft", fontSize: 11 }}
+              width={72}
+              label={{ value: leftUnits.join(" / "), angle: -90, position: "insideLeft", offset: -8, fontSize: 11 }}
             />
             {y2Channel && (
               <YAxis
                 yAxisId="right" orientation="right" tickFormatter={fmt} tick={{ fontSize: 11 }}
-                label={{ value: y2Channel.unit ?? "", angle: 90, position: "insideRight", fontSize: 11 }}
+                width={72}
+                label={{ value: y2Channel.unit ?? "", angle: 90, position: "insideRight", offset: -8, fontSize: 11 }}
               />
             )}
             <Tooltip
@@ -201,7 +229,17 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
               }}
               labelFormatter={(l) => `${axisLabel(xChannel?.label ?? "", xChannel?.unit ?? null)}: ${fmt(Number(l))}`}
             />
-            <Legend formatter={(name) => channels.find((c) => c.key === name)?.label ?? name} />
+            <Legend
+              verticalAlign="top"
+              align="center"
+              height={legendRows * 22}
+              wrapperStyle={{ fontSize: 11, lineHeight: "18px", paddingBottom: 4 }}
+              formatter={(name) => {
+                const ch = channels.find((c) => c.key === name);
+                return ch ? axisLabel(ch.label, ch.unit) : String(name);
+              }}
+            />
+
             {yKeys.map((k, i) => (
               <Line key={k} yAxisId="left" type="monotone" dataKey={k} dot={false} strokeWidth={2}
                 stroke={COLORS[i % COLORS.length]} isAnimationActive={false} connectNulls />
