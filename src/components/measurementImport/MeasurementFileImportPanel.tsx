@@ -133,10 +133,41 @@ export default function MeasurementFileImportPanel({
     }
   };
 
+  /** Aktuelle Signalzuordnung aus der Kanalauswahl (keine Diagrammdefinition). */
+  const buildSignalMapping = (parsed: ImportedMeasurement): CurveSignalMapping => {
+    const channels = parsed.dataset?.channels ?? [];
+    const keys = [
+      selection?.xKey,
+      ...(selection?.yKeys ?? []),
+      selection?.y2Key ?? null,
+    ].filter(Boolean) as string[];
+    const labels: Record<string, string> = {};
+    const units: Record<string, string | null> = {};
+    for (const k of keys) {
+      const ch = channels.find((c) => c.key === k);
+      if (!ch) continue;
+      labels[k] = ch.label;
+      units[k] = ch.unit;
+    }
+    return {
+      x_key: selection?.xKey ?? null,
+      y_keys: selection?.yKeys ?? [],
+      y2_key: selection?.y2Key ?? null,
+      labels,
+      units,
+      assigned_by: curveContext?.userId ?? null,
+      assigned_at: new Date().toISOString(),
+    };
+  };
+
   /** Speichert die Rohdaten einmalig und liefert die Datensatz-Id. */
   const ensureDataset = async (parsed: ImportedMeasurement): Promise<string | null> => {
     if (!curveContext?.orderMeasurementId || !parsed.dataset) return null;
-    if (datasetId) return datasetId;
+    const mapping = buildSignalMapping(parsed);
+    if (datasetId) {
+      await api.measurementRawData.updateSignalMapping(datasetId, mapping);
+      return datasetId;
+    }
     const saved = await api.measurementRawData.save({
       order_measurement_id: curveContext.orderMeasurementId,
       sample_id: curveContext.sampleId ?? null,
@@ -151,12 +182,14 @@ export default function MeasurementFileImportPanel({
       measurement_type: parsed.measurementType ?? null,
       instrument: parsed.headerMap?.["INSTRUMENT"] ?? null,
       metadata: { header: parsed.headerMap ?? {}, sample: parsed.sampleInformation },
+      signal_mapping: mapping,
       created_by: curveContext.userId ?? null,
       dataset: parsed.dataset,
     });
     setDatasetId(saved.id);
     return saved.id;
   };
+
 
   /** Übernahme einer Kurvenauswertung als offizielles Messergebnis. */
   const adoptOfficial = async (p: CurveEvaluationProvenance) => {
