@@ -188,7 +188,7 @@ export function useAddBatchToContainer() {
       return api.rawMaterialContainers.addBatch(rest);
     },
     onSuccess: (_, v) => {
-      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material_containers"] });
       qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
       qc.invalidateQueries({ queryKey: ["container_positions", v.container_id] });
     },
@@ -229,7 +229,7 @@ export function useRecordContainerMovement() {
       qc.invalidateQueries({ queryKey: ["container_movements", v.container_id] });
       qc.invalidateQueries({ queryKey: ["container_location_history", v.container_id] });
       qc.invalidateQueries({ queryKey: ["container_audit", v.container_id] });
-      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material_containers"] });
       qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
       qc.invalidateQueries({ queryKey: ["inventory_movements", v.raw_material_id] });
     },
@@ -292,7 +292,7 @@ export function useBookContainerConsumption() {
       }),
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["inventory_movements", v.raw_material_id] });
-      qc.invalidateQueries({ queryKey: ["raw_material_containers", v.raw_material_id] });
+      qc.invalidateQueries({ queryKey: ["raw_material_containers"] });
       qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
       qc.invalidateQueries({ queryKey: ["raw_materials"] });
       qc.invalidateQueries({ queryKey: ["container_movements", v.container_id] });
