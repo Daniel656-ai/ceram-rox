@@ -114,9 +114,17 @@ export const rawMaterialContainers = {
   delete: (id: string) =>
     run(db.from("raw_material_containers").delete().eq("id", id)),
 
-  /** List the LOT positions (batches) currently held inside a container. */
-  positions: (containerId: string) =>
-    unwrap<any[]>(db.rpc("get_container_positions", { _container_id: containerId })),
+  /**
+   * List the LOT positions inside a container, in FIFO order (oldest entry first).
+   * `includeDepleted` also returns lots with 0 quantity (status "aufgebraucht") for the history.
+   */
+  positions: (containerId: string, includeDepleted = true) =>
+    unwrap<any[]>(
+      db.rpc("get_container_positions", {
+        _container_id: containerId,
+        _include_depleted: includeDepleted,
+      })
+    ),
 
   /** Add a further LOT (batch) into an existing container. Same raw material only. */
   addBatch: (args: {

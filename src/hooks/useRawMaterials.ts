@@ -172,10 +172,10 @@ export function useDeleteContainer() {
 
 
 // ---- Container Positions (mehrere LOTs pro Gebinde) ----
-export function useContainerPositions(containerId?: string) {
+export function useContainerPositions(containerId?: string, includeDepleted = true) {
   return useQuery({
-    queryKey: ["container_positions", containerId],
-    queryFn: () => api.rawMaterialContainers.positions(containerId!),
+    queryKey: ["container_positions", containerId, includeDepleted],
+    queryFn: () => api.rawMaterialContainers.positions(containerId!, includeDepleted),
     enabled: !!containerId,
   });
 }
@@ -190,7 +190,7 @@ export function useAddBatchToContainer() {
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["raw_material_containers"] });
       qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
-      qc.invalidateQueries({ queryKey: ["container_positions", v.container_id] });
+      qc.invalidateQueries({ queryKey: ["container_positions"] });
     },
   });
 }
@@ -296,6 +296,7 @@ export function useBookContainerConsumption() {
       qc.invalidateQueries({ queryKey: ["raw_material", v.raw_material_id] });
       qc.invalidateQueries({ queryKey: ["raw_materials"] });
       qc.invalidateQueries({ queryKey: ["container_movements", v.container_id] });
+      qc.invalidateQueries({ queryKey: ["container_positions"] });
       qc.invalidateQueries({ queryKey: ["container_audit_log", v.container_id] });
       if (v.project_id) {
         qc.invalidateQueries({ queryKey: ["project_knetung_materials", v.project_id] });
