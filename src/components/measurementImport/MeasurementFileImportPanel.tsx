@@ -47,6 +47,13 @@ export interface FileImportMeta {
   unassignedValues: UnassignedMeasurementValue[];
   /** Technische Metadaten der Messdatei (Gerät, Datum, Probe …). */
   metadata: ImportMetadataEntry[];
+  /** Id des gespeicherten Rohdatensatzes (nur mit Messungskontext). */
+  datasetId?: string | null;
+  /** true, wenn die Datei Messkurven (Rohdaten) enthält. */
+  hasCurves?: boolean;
+  /** Gespeicherte Signal-/Achsenzuordnung des Messtechnikers. */
+  signalMapping?: CurveSignalMapping | null;
+
 }
 
 interface Props {
