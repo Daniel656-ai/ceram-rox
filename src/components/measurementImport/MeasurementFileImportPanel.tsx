@@ -59,6 +59,12 @@ interface Props {
   curveDefaults?: { xKey?: string; yKeys?: string[]; y2Key?: string | null } | null;
   /** Vom Messfall erlaubte Auswertungen (leer = alle). */
   allowedEvaluations?: string[] | null;
+  /**
+   * Auswertung direkt beim Import zulassen. Im Messablauf bewusst aus:
+   * Der Messtechniker legt nur die Signalzuordnung fest, die fachliche
+   * Auswertung erfolgt später im Auftrag durch den Auftragsersteller.
+   */
+  enableEvaluation?: boolean;
   onApply: (values: Record<string, number | string>, meta: FileImportMeta) => void;
 }
 
@@ -69,8 +75,9 @@ const confBadge = (c: FileMappedRow["confidence"]) =>
 
 export default function MeasurementFileImportPanel({
   profile, targets, currentValues, allowedImporters, curveContext, curveDefaults,
-  allowedEvaluations, onApply,
+  allowedEvaluations, enableEvaluation = false, onApply,
 }: Props) {
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [measurement, setMeasurement] = useState<ImportedMeasurement | null>(null);
   const [importerLabel, setImporterLabel] = useState<string>("");
