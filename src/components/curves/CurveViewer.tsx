@@ -205,19 +205,21 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
               tick={{ fontSize: 11 }}
               label={{
                 value: axisLabel(xChannel?.label ?? "", xChannel?.unit ?? null),
-                position: "insideBottom", offset: -12, fontSize: 11,
+                position: "insideBottom", offset: -24, fontSize: 11,
               }}
             />
             <YAxis
               yAxisId="left"
               tickFormatter={fmt}
               tick={{ fontSize: 11 }}
-              label={{ value: leftUnits.join(" / "), angle: -90, position: "insideLeft", fontSize: 11 }}
+              width={72}
+              label={{ value: leftUnits.join(" / "), angle: -90, position: "insideLeft", offset: -8, fontSize: 11 }}
             />
             {y2Channel && (
               <YAxis
                 yAxisId="right" orientation="right" tickFormatter={fmt} tick={{ fontSize: 11 }}
-                label={{ value: y2Channel.unit ?? "", angle: 90, position: "insideRight", fontSize: 11 }}
+                width={72}
+                label={{ value: y2Channel.unit ?? "", angle: 90, position: "insideRight", offset: -8, fontSize: 11 }}
               />
             )}
             <Tooltip
@@ -227,7 +229,17 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
               }}
               labelFormatter={(l) => `${axisLabel(xChannel?.label ?? "", xChannel?.unit ?? null)}: ${fmt(Number(l))}`}
             />
-            <Legend formatter={(name) => channels.find((c) => c.key === name)?.label ?? name} />
+            <Legend
+              verticalAlign="top"
+              align="center"
+              height={legendRows * 22}
+              wrapperStyle={{ fontSize: 11, lineHeight: "18px", paddingBottom: 4 }}
+              formatter={(name) => {
+                const ch = channels.find((c) => c.key === name);
+                return ch ? axisLabel(ch.label, ch.unit) : String(name);
+              }}
+            />
+
             {yKeys.map((k, i) => (
               <Line key={k} yAxisId="left" type="monotone" dataKey={k} dot={false} strokeWidth={2}
                 stroke={COLORS[i % COLORS.length]} isAnimationActive={false} connectNulls />
