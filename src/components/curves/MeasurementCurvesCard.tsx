@@ -5,23 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart } from "lucide-react";
-import CurveViewer, { type CurveSelection } from "./CurveViewer";
-import CurveEvaluationPanel from "./CurveEvaluationPanel";
+import CurveViewer from "./CurveViewer";
 
 interface Props {
   measurementId: string;
-  /** Ohne Bearbeitungsrecht sind nur Ansicht und Berechnung möglich. */
+  /** Wird beibehalten, hat in der Messtechnik-Ansicht keine Wirkung mehr. */
   readOnly?: boolean;
 }
 
 /**
- * Zeigt die zu einer Messung gespeicherten Rohdaten (Messkurven) wieder an und
- * erlaubt erneute Auswertungen. Es entsteht keine zweite Datenhaltung – die
- * Daten stammen aus den beim Import gespeicherten Datensätzen.
+ * Kontrollansicht der gespeicherten Rohdaten einer Messung.
+ *
+ * Der Messtechniker prüft hier nur, ob die Rohdaten vollständig übernommen und
+ * die Signale richtig zugeordnet sind. Diagrammerstellung und Auswertung
+ * erfolgen später durch den Auftragsersteller im Auftrag.
  */
-export default function MeasurementCurvesCard({ measurementId, readOnly }: Props) {
+export default function MeasurementCurvesCard({ measurementId }: Props) {
   const [activeId, setActiveId] = useState<string>("");
-  const [selection, setSelection] = useState<CurveSelection | null>(null);
 
   const { data: datasets = [] } = useQuery({
     queryKey: ["measurement-raw-datasets", measurementId],
@@ -32,11 +32,17 @@ export default function MeasurementCurvesCard({ measurementId, readOnly }: Props
   const currentId = activeId || datasets[0]?.id || "";
   const head = datasets.find((d) => d.id === currentId) ?? null;
 
-  const { data: dataset } = useQuery({
+  const { data: dataset, error } = useQuery({
     queryKey: ["measurement-raw-dataset", currentId],
     queryFn: () => api.measurementRawData.loadDataset(currentId),
     enabled: !!currentId,
+    retry: false,
   });
+
+  /** Gespeicherte Signalzuordnung wieder herstellen. */
+  const defaults = head?.signal_mapping
+    ? { xKey: head.signal_mapping.x_key ?? undefined, yKeys: head.signal_mapping.y_keys ?? [], y2Key: head.signal_mapping.y2_key ?? null }
+    : undefined;
 
   const { data: evaluations = [] } = useQuery({
     queryKey: ["measurement-curve-evaluations", currentId],
@@ -55,7 +61,7 @@ export default function MeasurementCurvesCard({ measurementId, readOnly }: Props
       </CardHeader>
       <CardContent className="space-y-4">
         {datasets.length > 1 && (
-          <Select value={currentId} onValueChange={(v) => { setActiveId(v); setSelection(null); }}>
+          <Select value={currentId} onValueChange={(v) => setActiveId(v)}>
             <SelectTrigger className="h-8 max-w-lg"><SelectValue /></SelectTrigger>
             <SelectContent>
               {datasets.map((d) => (
@@ -78,10 +84,17 @@ export default function MeasurementCurvesCard({ measurementId, readOnly }: Props
           </div>
         )}
 
+        {error && (
+          <p className="text-xs text-destructive">{(error as Error).message}</p>
+        )}
+
         {dataset && dataset.rows.length > 0 && (
           <>
-            <CurveViewer dataset={dataset} onSelectionChange={setSelection} />
-            {!readOnly && <CurveEvaluationPanel dataset={dataset} selection={selection} />}
+            <p className="text-[11px] text-muted-foreground">
+              Kontrolle der gespeicherten Rohdaten und Signalzuordnung. Die Auswertung
+              erfolgt später im Auftrag durch den Auftragsersteller.
+            </p>
+            <CurveViewer dataset={dataset} defaults={defaults} />
           </>
         )}
 
