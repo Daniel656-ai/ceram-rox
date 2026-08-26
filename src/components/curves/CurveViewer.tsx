@@ -177,11 +177,12 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
         </div>
       </div>
 
-      <div className="rounded border p-2" style={{ height }}>
+      <div className="rounded border p-2" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={{ top: 8, right: 24, bottom: 24, left: 8 }}
+            margin={{ top: 8, right: y2Channel ? 40 : 24, bottom: 40, left: 24 }}
+
             onMouseDown={(e: any) => e?.activeLabel != null && setDragStart(Number(e.activeLabel))}
             onMouseMove={(e: any) => dragStart != null && e?.activeLabel != null && setDragEnd(Number(e.activeLabel))}
             onMouseUp={commitDrag}
