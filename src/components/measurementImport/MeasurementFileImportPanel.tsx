@@ -239,7 +239,7 @@ export default function MeasurementFileImportPanel({
     toast.success("Auswertung als offizielles Ergebnis übernommen.");
   };
 
-  const apply = () => {
+  const apply = async () => {
     const values: Record<string, number | string> = {};
     const unmapped: string[] = [];
     const unassignedValues: UnassignedMeasurementValue[] = [];
@@ -269,14 +269,36 @@ export default function MeasurementFileImportPanel({
       info?.analysisDate ? { label: "Messdatum", value: info.analysisDate, kind: "date" as const } : null,
       info?.sampleName ? { label: "Probe laut Gerät", value: info.sampleName, kind: "comment" as const } : null,
     ].filter(Boolean) as ImportMetadataEntry[];
-    if (Object.keys(values).length === 0 && unassignedValues.length === 0) {
+    const hasCurves = !!measurement?.dataset?.rows.length;
+    if (Object.keys(values).length === 0 && unassignedValues.length === 0 && !hasCurves) {
       toast.error("Keine Werte ausgewählt.");
       return;
     }
-    if (curveContext?.orderMeasurementId && measurement?.dataset?.rows.length) {
-      void ensureDataset(measurement).catch((e) =>
-        toast.error(`Rohdaten konnten nicht gespeichert werden: ${(e as Error).message}`));
+
+    // Fall A/B: Rohdaten müssen erfolgreich gespeichert sein, sonst wird die
+    // Übernahme abgebrochen – keine leere oder ungültige Rohdatenreferenz.
+    let savedDatasetId: string | null = null;
+    let rawDataError: string | null = null;
+    if (curveContext?.orderMeasurementId && hasCurves && measurement) {
+      setBusy(true);
+      try {
+        savedDatasetId = await ensureDataset(measurement);
+      } catch (e) {
+        rawDataError = (e as Error).message;
+      } finally {
+        setBusy(false);
+      }
+      if (rawDataError || !savedDatasetId) {
+        toast.error("Die Rohdaten konnten nicht gespeichert werden.", {
+          description:
+            "Die Messung kann erst abgeschlossen werden, wenn die Rohdaten erfolgreich importiert wurden." +
+            (rawDataError ? ` (${rawDataError})` : ""),
+        });
+        return;
+      }
+      toast.success("Rohdaten und Signalzuordnung gespeichert.");
     }
+
     onApply(values, {
       importerId,
       importerLabel,
@@ -287,8 +309,12 @@ export default function MeasurementFileImportPanel({
       unmapped,
       unassignedValues,
       metadata,
+      datasetId: savedDatasetId,
+      hasCurves,
+      signalMapping: hasCurves && measurement ? buildSignalMapping(measurement) : null,
     });
   };
+
 
   const selectedCount = rows.filter((r) => r.targetFieldKey && selected[r.normalizedName]).length;
 
