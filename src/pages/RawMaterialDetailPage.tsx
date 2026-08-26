@@ -35,16 +35,13 @@ import { PrintLabelDialog } from "@/components/labels/PrintLabelDialog";
 import { History as HistoryIcon, Tag } from "lucide-react";
 import { PersonSelect } from "@/components/PersonSelect";
 import { ContainerPositions } from "@/components/ContainerPositions";
-import { aggregateContainerLocations, formatLocationList } from "@/lib/storageLocations";
+import { aggregateContainerLocations, formatLocationList, formatStorageLocation } from "@/lib/storageLocations";
 
 
 
 
 
-function formatLocation(loc: any) {
-  if (!loc) return "–";
-  return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" › ");
-}
+const formatLocation = formatStorageLocation;
 
 export default function RawMaterialDetailPage() {
   const { id } = useParams<{ id: string }>();

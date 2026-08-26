@@ -27,17 +27,13 @@ import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
 import { PersonSelect } from "@/components/PersonSelect";
 import { formatQuantity } from "@/lib/formatQuantity";
-import { aggregateContainerLocations, formatLocationList, isActiveContainer } from "@/lib/storageLocations";
+import { aggregateContainerLocations, formatLocationList, isActiveContainer, formatStorageLocation } from "@/lib/storageLocations";
 
 
 
 
 
-function formatLocation(loc: any) {
-  if (!loc) return "–";
-  if (loc.name) return loc.name;
-  return [loc.hall, loc.room, loc.shelf, loc.position].filter(Boolean).join(" › ") || "–";
-}
+const formatLocation = formatStorageLocation;
 
 
 export default function RawMaterialsPage() {
