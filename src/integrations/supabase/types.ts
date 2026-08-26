@@ -184,27 +184,39 @@ export type Database = {
       }
       container_batch_positions: {
         Row: {
+          added_at: string
           batch_id: string
           container_id: string
           created_at: string
           id: string
+          initial_quantity: number
+          position_no: number | null
           quantity: number
+          status: string
           updated_at: string
         }
         Insert: {
+          added_at?: string
           batch_id: string
           container_id: string
           created_at?: string
           id?: string
+          initial_quantity?: number
+          position_no?: number | null
           quantity?: number
+          status?: string
           updated_at?: string
         }
         Update: {
+          added_at?: string
           batch_id?: string
           container_id?: string
           created_at?: string
           id?: string
+          initial_quantity?: number
+          position_no?: number | null
           quantity?: number
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -9330,15 +9342,19 @@ export type Database = {
         Returns: undefined
       }
       get_container_positions: {
-        Args: { _container_id: string }
+        Args: { _container_id: string; _include_depleted?: boolean }
         Returns: {
+          added_at: string
           batch_id: string
           batch_number: string
           created_at: string
           delivery_date: string
+          initial_quantity: number
           manufacturer_batch: string
           position_id: string
+          position_no: number
           quantity: number
+          status: string
         }[]
       }
       get_portfolio_controlling_report: {
