@@ -2158,6 +2158,7 @@ export type Database = {
           point_count: number
           sample_id: string | null
           service_id: string | null
+          signal_mapping: Json
           source_file_id: string | null
           source_file_name: string | null
           updated_at: string
@@ -2179,6 +2180,7 @@ export type Database = {
           point_count?: number
           sample_id?: string | null
           service_id?: string | null
+          signal_mapping?: Json
           source_file_id?: string | null
           source_file_name?: string | null
           updated_at?: string
@@ -2200,6 +2202,7 @@ export type Database = {
           point_count?: number
           sample_id?: string | null
           service_id?: string | null
+          signal_mapping?: Json
           source_file_id?: string | null
           source_file_name?: string | null
           updated_at?: string
