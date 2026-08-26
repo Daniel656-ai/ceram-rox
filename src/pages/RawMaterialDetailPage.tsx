@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useBookContainerConsumption, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer, useAddBatchToContainer } from "@/hooks/useRawMaterials";
 import { useUsers } from "@/hooks/useUsers";
@@ -32,7 +32,7 @@ import { DerivedSamples } from "@/components/DerivedSamples";
 import { formatQuantity } from "@/lib/formatQuantity";
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import { PrintLabelDialog } from "@/components/labels/PrintLabelDialog";
-import { History as HistoryIcon, Tag } from "lucide-react";
+import { History as HistoryIcon, Tag, ChevronDown, ChevronRight } from "lucide-react";
 import { PersonSelect } from "@/components/PersonSelect";
 import { ContainerPositions, ContainerPositionDetails } from "@/components/ContainerPositions";
 import { aggregateContainerLocations, formatLocationList, formatStorageLocation } from "@/lib/storageLocations";
@@ -814,8 +814,8 @@ export default function RawMaterialDetailPage() {
                     const statusVariant = c.status === "verfuegbar" ? "default" : c.status === "leer" || c.status === "entsorgt" ? "secondary" : c.status === "gesperrt" ? "destructive" : "outline";
                     const expanded = expandedContainers.has(c.id);
                     return (
-                      <>
-                      <TableRow key={c.id}>
+                      <Fragment key={c.id}>
+                      <TableRow>
                         <TableCell className="font-mono text-xs">
                           <button
                             type="button"
@@ -843,7 +843,7 @@ export default function RawMaterialDetailPage() {
                         )}
                       </TableRow>
                       {expanded && (
-                        <TableRow key={`${c.id}-lots`}>
+                        <TableRow>
                           <TableCell colSpan={canManage || canManageBatches ? 8 : 7} className="p-2">
                             <ContainerPositionDetails
                               containerId={c.id}
@@ -853,7 +853,7 @@ export default function RawMaterialDetailPage() {
                           </TableCell>
                         </TableRow>
                       )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </TableBody>
