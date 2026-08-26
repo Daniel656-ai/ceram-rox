@@ -562,8 +562,14 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
               keys: Object.keys(values),
               unassigned: meta.unassigned ?? [],
               metadata: meta.metadata ?? [],
+              // Rohdaten bleiben getrennt von Ergebnissen; hier nur der Nachweis,
+              // dass der Import erfolgreich gespeichert wurde.
+              raw_dataset_id: meta.datasetId ?? null,
+              has_curves: meta.hasCurves ?? false,
+              signal_mapping: meta.signalMapping ?? null,
             }));
           }}
+
         />
       )}
     </div>
