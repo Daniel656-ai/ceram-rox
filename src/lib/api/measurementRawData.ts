@@ -222,10 +222,15 @@ export const measurementRawData = {
         .order("created_at", { ascending: false })
     ) as unknown as Promise<CurveEvaluationRecord[]>,
 
-  createEvaluation: (input: Omit<CurveEvaluationRecord, "id" | "created_at">) =>
-    unwrap(
-      dbClient.from(EVALUATIONS).insert(input as any).select().single()
-    ) as unknown as Promise<CurveEvaluationRecord>,
+  createEvaluation: async (input: Omit<CurveEvaluationRecord, "id" | "created_at">) => {
+    const profileId = await currentProfileId();
+    return (await unwrap(
+      dbClient.from(EVALUATIONS)
+        .insert({ ...input, created_by: profileId } as any)
+        .select()
+        .single()
+    )) as unknown as CurveEvaluationRecord;
+  },
 
   /** Verknüpft eine Auswertung mit dem daraus erzeugten offiziellen Ergebnis. */
   linkResult: (evaluationId: string, measurementResultId: string) =>
