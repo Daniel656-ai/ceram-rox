@@ -38,7 +38,7 @@ function TaskExecutionPageInner() {
   const { measurementId } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { user, role } = useAuth();
+  const { user, profile, role } = useAuth();
 
   const { data: measurement, isLoading } = useQuery({
     queryKey: ["measurement-task", measurementId],
@@ -484,7 +484,7 @@ function TaskExecutionPageInner() {
                     orderMeasurementId: m.id,
                     sampleId: sample?.id ?? null,
                     serviceId: serviceId ?? null,
-                    userId: user?.id ?? null,
+                    profileId: profile?.id ?? null,
                   }
                 : null
             }
