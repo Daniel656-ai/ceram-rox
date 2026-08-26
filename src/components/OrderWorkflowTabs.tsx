@@ -6,6 +6,7 @@ import { PilotPlantProcessPanel } from "@/components/pilotplant/PilotPlantProces
 import OrderSamplesTab from "@/components/order/OrderSamplesTab";
 import OrderWorkflowTab from "@/components/order/OrderWorkflowTab";
 import OrderClosureTab from "@/components/order/OrderClosureTab";
+import OrderRawDataTab from "@/components/order/OrderRawDataTab";
 
 /**
  * Einheitliche Auftragsansicht für Auftraggeber und Messdienstleister.
@@ -40,6 +41,7 @@ export function OrderWorkflowTabs({
           <TabsList className="flex flex-wrap h-auto">
             <TabsTrigger value="samples">{t("orders:tabs.samples")}</TabsTrigger>
             <TabsTrigger value="workflow">Workflow</TabsTrigger>
+            <TabsTrigger value="rawdata">Rohdaten &amp; Auswertung</TabsTrigger>
             <TabsTrigger value="closure">{t("orders:tabs.closure")}</TabsTrigger>
             {showPP && <TabsTrigger value="pilot_plant">{t("orders:tabs.pilot_plant")}</TabsTrigger>}
           </TabsList>
@@ -59,6 +61,10 @@ export function OrderWorkflowTabs({
               isRequesterView={isRequesterView}
               processSlot={processSlot}
             />
+          </TabsContent>
+
+          <TabsContent value="rawdata">
+            <OrderRawDataTab orderId={order.id} canEvaluate={true} />
           </TabsContent>
 
           <TabsContent value="closure">
