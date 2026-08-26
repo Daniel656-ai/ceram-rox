@@ -5,6 +5,24 @@ import type { MeasurementChannel, MeasurementDataset } from "@/lib/curves/datase
 /** Messpunkte werden blockweise gespeichert, damit auch lange Messreihen performant bleiben. */
 const CHUNK_SIZE = 2000;
 
+/**
+ * Signal-/Achsenzuordnung des Messtechnikers.
+ *
+ * Sie dokumentiert, wie die Rohdatensignale ursprünglich interpretiert werden
+ * sollten – sie ist ausdrücklich **kein** fertiges Diagramm und keine
+ * Auswertung. Die Rohdaten bleiben davon unberührt.
+ */
+export interface CurveSignalMapping {
+  x_key?: string | null;
+  y_keys?: string[];
+  y2_key?: string | null;
+  /** Anzeigenamen und Einheiten zum Zeitpunkt der Zuordnung (Nachvollziehbarkeit). */
+  labels?: Record<string, string>;
+  units?: Record<string, string | null>;
+  assigned_by?: string | null;
+  assigned_at?: string | null;
+}
+
 export interface MeasurementRawDataset {
   id: string;
   order_measurement_id: string;
@@ -22,10 +40,13 @@ export interface MeasurementRawDataset {
   channels: MeasurementChannel[];
   point_count: number;
   metadata: Record<string, unknown>;
+  /** Gespeicherte Signalzuordnung (Ausgangspunkt späterer Diagramme). */
+  signal_mapping: CurveSignalMapping;
   created_by: string | null;
   created_at: string;
   updated_at: string;
 }
+
 
 export interface CurveEvaluationRecord {
   id: string;
