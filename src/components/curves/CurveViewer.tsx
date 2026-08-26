@@ -132,6 +132,15 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
   const leftUnits = [...new Set(yKeys.map((k) => channels.find((c) => c.key === k)?.unit ?? "").filter(Boolean))];
   const y2Channel = y2Key ? channels.find((c) => c.key === y2Key) ?? null : null;
 
+  /**
+   * Die Legende steht über der Zeichenfläche und darf Achsenbeschriftungen nie
+   * überdecken: die Diagrammhöhe wächst mit der Anzahl der Legendenzeilen.
+   */
+  const seriesCount = yKeys.length + (y2Channel ? 1 : 0);
+  const legendRows = Math.max(1, Math.ceil(seriesCount / 3));
+  const chartHeight = height + legendRows * 22;
+
+
   if (channels.length === 0) {
     return <p className="text-xs text-muted-foreground">Keine Messkanäle vorhanden.</p>;
   }
