@@ -483,10 +483,19 @@ export default function MeasurementFileImportPanel({
           ))}
 
           <div className="flex justify-end">
-            <Button type="button" onClick={apply} disabled={selectedCount === 0 && !measurement.dataset}>
-              {selectedCount > 0 ? `${selectedCount} Wert(e) übernehmen` : "Messdaten übernehmen"}
+            <Button
+              type="button"
+              onClick={() => void apply()}
+              disabled={busy || (selectedCount === 0 && !measurement.dataset)}
+            >
+              {selectedCount > 0
+                ? `${selectedCount} Wert(e) übernehmen`
+                : measurement.dataset?.rows.length
+                  ? "Rohdaten & Signalzuordnung speichern"
+                  : "Messdaten übernehmen"}
             </Button>
           </div>
+
         </div>
       )}
 
