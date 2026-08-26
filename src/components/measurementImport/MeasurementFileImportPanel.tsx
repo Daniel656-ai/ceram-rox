@@ -368,7 +368,7 @@ export default function MeasurementFileImportPanel({
           {measurement.dataset && measurement.dataset.rows.length > 0 && (
             <div className="rounded border p-3 space-y-4">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">Messkurven</Badge>
+                <Badge variant="secondary">Rohdaten &amp; Signalzuordnung</Badge>
                 <span className="text-xs text-muted-foreground">
                   {measurement.dataset.channels.length} Kanäle · {measurement.dataset.rows.length} Messpunkte
                   {measurement.measurementType ? ` · Messdatentyp ${measurement.measurementType}` : ""}
@@ -379,19 +379,27 @@ export default function MeasurementFileImportPanel({
                   </span>
                 )}
               </div>
+              <p className="text-[11px] text-muted-foreground">
+                Rohdaten prüfen und festlegen, welches Signal auf welcher Achse liegt. Diese
+                Zuordnung wird mit den Rohdaten gespeichert. Ein fertiges Diagramm oder eine
+                Auswertung ist hier nicht erforderlich – das erfolgt später im Auftrag.
+              </p>
               <CurveViewer
                 dataset={measurement.dataset}
                 defaults={curveDefaults ?? undefined}
                 onSelectionChange={setSelection}
               />
-              <CurveEvaluationPanel
-                dataset={measurement.dataset}
-                selection={selection}
-                allowedEvaluations={allowedEvaluations ?? null}
-                onAdoptOfficial={curveContext?.orderMeasurementId ? adoptOfficial : undefined}
-              />
+              {enableEvaluation && (
+                <CurveEvaluationPanel
+                  dataset={measurement.dataset}
+                  selection={selection}
+                  allowedEvaluations={allowedEvaluations ?? null}
+                  onAdoptOfficial={curveContext?.orderMeasurementId ? adoptOfficial : undefined}
+                />
+              )}
             </div>
           )}
+
 
           {measurement.warnings.map((w, i) => (
             <p key={i} className="text-[11px] text-amber-600 flex items-start gap-1">
