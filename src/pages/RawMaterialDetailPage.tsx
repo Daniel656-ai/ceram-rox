@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { Fragment, useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useRawMaterialDetail, useRawMaterials, useAddBatch, useDeleteBatch, useUpdateBatch, useAddAnalysis, useDeleteAnalysis, useInventoryMovements, useAddMovement, useBookContainerConsumption, useAddRawMaterialDocument, useUpdateRawMaterial, useDeleteRawMaterial, useStorageLocations, calculateStock, useContainers, useAddContainer, useUpdateContainer, useDeleteContainer, useAddBatchToContainer } from "@/hooks/useRawMaterials";
 import { useUsers } from "@/hooks/useUsers";
@@ -32,9 +32,9 @@ import { DerivedSamples } from "@/components/DerivedSamples";
 import { formatQuantity } from "@/lib/formatQuantity";
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import { PrintLabelDialog } from "@/components/labels/PrintLabelDialog";
-import { History as HistoryIcon, Tag } from "lucide-react";
+import { History as HistoryIcon, Tag, ChevronDown, ChevronRight } from "lucide-react";
 import { PersonSelect } from "@/components/PersonSelect";
-import { ContainerPositions } from "@/components/ContainerPositions";
+import { ContainerPositions, ContainerPositionDetails } from "@/components/ContainerPositions";
 import { aggregateContainerLocations, formatLocationList, formatStorageLocation } from "@/lib/storageLocations";
 
 
@@ -181,6 +181,13 @@ export default function RawMaterialDetailPage() {
   const [bMergeIntoExisting, setBMergeIntoExisting] = useState(false);
   const [bTargetContainerId, setBTargetContainerId] = useState("");
   const addBatchToContainer = useAddBatchToContainer();
+  const [expandedContainers, setExpandedContainers] = useState<Set<string>>(new Set());
+  const toggleContainerLots = (cid: string) =>
+    setExpandedContainers((prev) => {
+      const next = new Set(prev);
+      next.has(cid) ? next.delete(cid) : next.add(cid);
+      return next;
+    });
 
 
   // Container (Gebinde) form
@@ -805,9 +812,21 @@ export default function RawMaterialDetailPage() {
                     const kindLabel: Record<string, string> = { fass: "Fass", kanister: "Kanister", sack: "Sack", big_bag: "Big Bag", ibc: "IBC", tank: "Tank", flasche: "Flasche", kiste: "Kiste", sonstige: "Sonstige" };
                     const statusLabel: Record<string, string> = { verfuegbar: "Verfügbar", reserviert: "Reserviert", in_verwendung: "In Verwendung", leer: "Leer", gesperrt: "Gesperrt", entsorgt: "Entsorgt" };
                     const statusVariant = c.status === "verfuegbar" ? "default" : c.status === "leer" || c.status === "entsorgt" ? "secondary" : c.status === "gesperrt" ? "destructive" : "outline";
+                    const expanded = expandedContainers.has(c.id);
                     return (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-mono text-xs">{c.container_code}</TableCell>
+                      <Fragment key={c.id}>
+                      <TableRow>
+                        <TableCell className="font-mono text-xs">
+                          <button
+                            type="button"
+                            className="mr-1 align-middle text-muted-foreground hover:text-foreground"
+                            aria-label={expanded ? "LOTs ausblenden" : "LOTs anzeigen"}
+                            onClick={() => toggleContainerLots(c.id)}
+                          >
+                            {expanded ? <ChevronDown className="h-3.5 w-3.5 inline" /> : <ChevronRight className="h-3.5 w-3.5 inline" />}
+                          </button>
+                          {c.container_code}
+                        </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">{c.barcode || "–"}</TableCell>
                         <TableCell className="text-xs"><ContainerPositions containerId={c.id} unit={c.unit} fallbackBatchNumber={c.raw_material_batches?.batch_number} /></TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{kindLabel[c.kind] || c.kind}</Badge></TableCell>
@@ -823,6 +842,18 @@ export default function RawMaterialDetailPage() {
                           </TableCell>
                         )}
                       </TableRow>
+                      {expanded && (
+                        <TableRow>
+                          <TableCell colSpan={canManage || canManageBatches ? 8 : 7} className="p-2">
+                            <ContainerPositionDetails
+                              containerId={c.id}
+                              unit={c.unit}
+                              fallbackBatchNumber={c.raw_material_batches?.batch_number}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </TableBody>
