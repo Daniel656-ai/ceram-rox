@@ -98,6 +98,10 @@ export default function MeasurementFileImportPanel({
   const [selection, setSelection] = useState<CurveSelection | null>(null);
   /** Id des bereits gespeicherten Rohdatensatzes (nur mit Kontext). */
   const [datasetId, setDatasetId] = useState<string | null>(null);
+  /** Vom Benutzer gewählter Importtyp ("__auto__" = automatische Erkennung). */
+  const [chosenImporterId, setChosenImporterId] = useState<string>("__auto__");
+  /** Zuletzt gewählte Datei – erlaubt Neuparsen bei Wechsel des Importtyps. */
+  const [lastFile, setLastFile] = useState<{ name: string; buffer: ArrayBuffer } | null>(null);
 
   const pool = allowedImporters?.length
     ? fileImporters.filter((i) => allowedImporters.includes(i.id))
@@ -114,16 +118,22 @@ export default function MeasurementFileImportPanel({
     });
   }, [measurement, profile, targets, currentValues, overrides]);
 
-  const handleFile = async (file: File) => {
+  /** Parst eine Datei mit dem gewählten bzw. automatisch erkannten Importer. */
+  const parseWith = (
+    file: { name: string; buffer: ArrayBuffer },
+    importerChoice: string
+  ) => {
     setBusy(true);
     try {
-      const buffer = await file.arrayBuffer();
-      const importer = detectImporter({ name: file.name, buffer }, allowedImporters);
+      const importer =
+        importerChoice !== "__auto__"
+          ? importerById(importerChoice)
+          : detectImporter(file, allowedImporters);
       if (!importer) {
         toast.error("Dateiformat wird von den freigegebenen Importern nicht unterstützt.");
         return;
       }
-      const parsed = importer.parse({ name: file.name, buffer });
+      const parsed = importer.parse(file);
       setMeasurement(parsed);
       setImporterLabel(importer.label);
       setImporterId(importer.id);
@@ -142,6 +152,15 @@ export default function MeasurementFileImportPanel({
       setBusy(false);
     }
   };
+
+  const handleFile = async (file: File) => {
+    const buffer = await file.arrayBuffer();
+    const entry = { name: file.name, buffer };
+    setLastFile(entry);
+    parseWith(entry, chosenImporterId);
+  };
+
+
 
   /** Aktuelle Signalzuordnung aus der Kanalauswahl (keine Diagrammdefinition). */
   const buildSignalMapping = (parsed: ImportedMeasurement): CurveSignalMapping => {
