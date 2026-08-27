@@ -251,10 +251,10 @@ export function parseGeometryMeasurement(file: { name: string; buffer: ArrayBuff
     sampleInformation: {
       sampleName: header["Prüfling"] ?? header["Bauteil"] ?? header["Probe"] ?? undefined,
     },
-    analyses: [
-      { type: "GEOMETRY_MEAN", results: meanResults, series: [] },
-      { type: "GEOMETRY_SINGLE", results: singleResults, series: [] },
-    ].filter((a) => a.results.length > 0),
+    analyses: ([
+      { type: "GEOMETRY_MEAN" as const, results: meanResults, series: [] },
+      { type: "GEOMETRY_SINGLE" as const, results: singleResults, series: [] },
+    ]).filter((a) => a.results.length > 0),
     warnings,
     unrecognized: [],
     measurementType: "GEOMETRY",
