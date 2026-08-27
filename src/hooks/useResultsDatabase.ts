@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatResultLabel } from "@/lib/resultLabels";
+
 
 export interface ResultRecord {
   measurementId: string;
