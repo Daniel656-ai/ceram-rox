@@ -174,7 +174,20 @@ export function mapImportedResults(
       existingValue,
     };
   });
+
+  // Nur Geometrievermessung: Ausgabe in der Reihenfolge der Ergebnisfelder des
+  // Formulars (targets sind bereits in Formularreihenfolge). Andere Profile
+  // behalten die bisherige Reihenfolge der Datei unverändert.
+  if (!mapped.some((r) => isGeometry(r.analysis))) return mapped;
+  const order = new Map(targets.map((t, i) => [t.field_key, i]));
+  const rank = (r: FileMappedRow) =>
+    r.targetFieldKey != null ? (order.get(r.targetFieldKey) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+  return mapped
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i)
+    .map((x) => x.r);
 }
+
 
 
 export const analysisLabel = (t: ImportedResult["analysis"]) => {
