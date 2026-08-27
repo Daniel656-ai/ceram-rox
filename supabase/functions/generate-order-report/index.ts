@@ -827,3 +827,58 @@ async function downloadAsDataUrl(admin: any, path: string): Promise<string | nul
     return null;
   }
 }
+
+/**
+ * Fotodokumentation in das PDF zeichnen: großes Bild + zugehöriger Kommentar,
+ * gruppiert nach Feld/Probe/Dienstleistung, in gespeicherter Reihenfolge.
+ */
+function drawPhotoDocumentation(
+  doc: any, snapshot: any, startY: number,
+  marginX: number, pageWidth: number, pageHeight: number,
+  nextPage?: () => void,
+): number {
+  const groups = (snapshot?.photo_documentation ?? []) as Array<{
+    title: string; context: string; images: Array<{ dataUrl: string; comment: string }>;
+  }>;
+  if (!groups.length) return startY;
+
+  let y = startY;
+  const breakPage = () => {
+    if (nextPage) { nextPage(); y = 60; }
+    else { doc.addPage(); y = 60; }
+  };
+  const need = (h: number) => { if (y + h > pageHeight - 50) breakPage(); };
+
+  y += 12; need(40);
+  doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(20);
+  doc.text("Fotodokumentation", marginX, y);
+  y += 18;
+
+  const maxW = pageWidth - 2 * marginX;
+  for (const g of groups) {
+    need(30);
+    doc.setFontSize(11).setFont("helvetica", "bold").setTextColor(40);
+    doc.text(String(g.title ?? ""), marginX, y); y += 13;
+    if (g.context) {
+      doc.setFontSize(8).setFont("helvetica", "normal").setTextColor(130);
+      doc.text(String(g.context), marginX, y); y += 12;
+    }
+    for (const img of g.images ?? []) {
+      const w = maxW * 0.75;
+      const h = w * 0.62;
+      need(h + 30);
+      try {
+        doc.addImage(img.dataUrl, marginX, y, w, h, undefined, "FAST");
+        y += h + 6;
+      } catch { /* defektes Bild überspringen */ }
+      if (img.comment) {
+        doc.setFontSize(9).setFont("helvetica", "normal").setTextColor(60);
+        const lines = doc.splitTextToSize(img.comment, maxW);
+        for (const line of lines) { need(12); doc.text(line, marginX, y); y += 11; }
+      }
+      y += 8;
+    }
+    y += 6;
+  }
+  return y;
+}
