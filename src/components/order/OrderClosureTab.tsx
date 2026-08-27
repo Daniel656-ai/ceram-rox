@@ -82,6 +82,9 @@ export default function OrderClosureTab({ order }: { order: any }) {
         </CardContent>
       </Card>
 
+      <PhotoDocumentationCard orderId={order.id} />
+
+
       {completed.map((m) => (
         <CompletedResultForm
           key={m.id}
