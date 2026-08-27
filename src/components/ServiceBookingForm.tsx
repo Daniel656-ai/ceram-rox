@@ -367,7 +367,28 @@ function SectionFieldGrid({
         const help = ref.description_override?.trim() || f.description;
         return (
           <div key={ref.id} className={colCls}>
-            {f.field_type === "file" || f.field_type === "image" ? (
+            {f.field_type === "image" ? (
+              <div className="space-y-2">
+                <Label className="text-xs flex items-center gap-1">
+                  {label}
+                  {isRequired && <span className="text-destructive">*</span>}
+                </Label>
+                {help && !compact && <p className="text-[10px] text-muted-foreground">{help}</p>}
+                <ImageGalleryField
+                  fieldKey={f.field_key}
+                  mode={
+                    (f.metadata as any)?.image?.mode
+                      ? readImageMeta(f).mode
+                      : (f.validation as any)?.upload?.multiple === false
+                        ? "single"
+                        : "multi"
+                  }
+                  value={val}
+                  onChange={(entries) => onValueChange(f.field_key, entries)}
+                  disabled={readonly}
+                />
+              </div>
+            ) : f.field_type === "file" ? (
               <UploadField
                 fieldId={f.id}
                 fieldKey={f.field_key}
