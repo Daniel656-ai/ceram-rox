@@ -32,7 +32,10 @@ describe("imageGallery", () => {
   });
 
   it("nutzt Einzelbild als Standardmodus", () => {
-    expect(readImageMeta({ metadata: {} }).mode).toBe("single");
+    expect(readImageMeta({ metadata: {} }).mode).toBe("multi");
+    expect(readImageMeta({ validation: { upload: { multiple: false } } }).mode).toBe("single");
+    expect(readImageMeta({ metadata: writeImageMeta({}, { mode: "single" }) }).mode).toBe("single");
     expect(readImageMeta({ metadata: writeImageMeta({}, { mode: "multi" }) }).mode).toBe("multi");
+
   });
 });
