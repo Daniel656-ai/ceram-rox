@@ -768,7 +768,11 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
       }
     }
   }
+
+  // Fotodokumentation immer am Ende ausgeben (Reihenfolge und Kommentare bleiben erhalten).
+  y = drawPhotoDocumentation(doc, snapshot, y, marginX, pageWidth, pageHeight, nextPage);
   return doc;
+
 }
 
 // ============= Fotodokumentation =============
