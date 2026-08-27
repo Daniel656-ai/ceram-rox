@@ -327,13 +327,22 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
 
   const { found, unrecognized } = findResults(lines, file.buffer, offsets);
   const warnings: string[] = [];
+
+  // Messdatei (.SMP) ist die primäre Quelle: Bedingungen, Einwaage und – sofern
+  // vorhanden – Isothermen-Rohdaten werden immer aus ihr gelesen.
+  const smp = binary || ext(file.name) === ".smp" ? extractSmp(file.buffer, lines) : null;
+  const isotherm = smp?.isotherm.length ? smp.isotherm : readIsothermPoints(lines);
+  const dataset = isothermDataset(isotherm);
+
   if (found.length === 0) {
     warnings.push(
       ext(file.name) === ".smp"
-        ? "Diese Messdatei (.SMP) enthält nur die Mess- und Geräteeinstellungen, keine ausgewerteten Ergebnisse. " +
-          "Bitte zusätzlich die zugehörige Reportdatei (.REP) importieren – dort stehen z. B. die BET-Oberfläche und die Analysebedingungen."
+        ? "In dieser Messdatei (.SMP) sind keine bereits ausgewerteten Kennwerte (z. B. BET-Oberfläche, Porenvolumen) enthalten – " +
+          "übernommen wurden Probenangaben und Analysebedingungen" +
+          (dataset ? " sowie die Isothermen-Rohdaten" : "") +
+          ". Ausgewertete Kennwerte können optional aus einer zugehörigen Reportdatei (.REP) ergänzt werden."
         : "In dieser Datei konnten keine Gasadsorptions-Ergebnisparameter erkannt werden. " +
-          "Bitte prüfen, ob es sich um eine Mess- oder Reportdatei einer Gasadsorptionsmessung handelt."
+          "Bitte prüfen, ob es sich um eine gültige Datei einer Gasadsorptionsmessung handelt."
     );
   }
 
