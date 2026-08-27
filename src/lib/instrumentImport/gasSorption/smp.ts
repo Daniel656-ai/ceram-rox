@@ -107,8 +107,8 @@ export function isothermDataset(points: { x: number; y: number }[]): Measurement
       { key: "relative_pressure", label: "Relativdruck p/p₀", unit: null },
       { key: "quantity_adsorbed", label: "Adsorbierte Menge", unit: "cm³/g STP" },
     ],
-    rows: points.map((p) => ({ relative_pressure: p.x, quantity_adsorbed: p.y })),
-  } as MeasurementDataset;
+    rows: points.map((p) => [p.x, p.y]),
+  };
 }
 
 /** Vollständige Auswertung der Messdatei. */
