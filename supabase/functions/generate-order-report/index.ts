@@ -111,7 +111,10 @@ Deno.serve(async (req: Request) => {
     ] = await Promise.all([
       admin.from("order_workflow_tasks").select("*").eq("order_id", orderId),
       admin.from("order_step_runs").select("*").eq("order_id", orderId),
-      admin.from("order_upload_files").select("*").eq("order_id", orderId),
+      measurementIds.length
+        ? admin.from("order_upload_files").select("*").in("measurement_id", measurementIds)
+        : Promise.resolve({ data: [] as any[] }),
+
       measurementIds.length
         ? admin.from("documents").select("*").in("measurement_id", measurementIds)
         : Promise.resolve({ data: [] as any[] }),
