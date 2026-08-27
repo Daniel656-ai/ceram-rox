@@ -265,6 +265,7 @@ Deno.serve(async (req: Request) => {
 
     // ================= PDF rendern =================
     // Bevorzugt: Block-basierte Berichtsvorlage aus Prozess-Template
+    await loadUnicodeFont();
     const pdf = reportTemplate?.blocks?.length
       ? renderBlockTemplate(snapshot, reportTemplate)
       : renderPdf(snapshot, layout);
@@ -345,10 +346,64 @@ function formatValue(v: unknown): string {
   return String(v);
 }
 
+
+// ============= Unicode-Schrift (griechische & wissenschaftliche Zeichen) =============
+// jsPDF-Standardschriften (helvetica) unterstützen nur WinAnsi und können z.B. α, Δ, µ
+// oder ⁻⁶ nicht darstellen. Daher wird eine echte Unicode-TTF eingebettet.
+// Schlägt das Laden fehl, bleibt das bisherige Verhalten (helvetica) unverändert.
+const UNICODE_FONT_URLS = {
+  normal: "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf",
+  bold: "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf",
+};
+let FONT_CACHE: { normal: string; bold: string } | null = null;
+let PDF_FONT = "helvetica";
+
+function toBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+async function loadUnicodeFont(): Promise<void> {
+  if (FONT_CACHE) return;
+  try {
+    const [n, b] = await Promise.all([
+      fetch(UNICODE_FONT_URLS.normal),
+      fetch(UNICODE_FONT_URLS.bold),
+    ]);
+    if (!n.ok || !b.ok) return;
+    FONT_CACHE = {
+      normal: toBase64(await n.arrayBuffer()),
+      bold: toBase64(await b.arrayBuffer()),
+    };
+  } catch (_e) {
+    FONT_CACHE = null;
+  }
+}
+
+function applyUnicodeFont(doc: any): void {
+  if (!FONT_CACHE) { PDF_FONT = "helvetica"; return; }
+  try {
+    doc.addFileToVFS("ROXSans.ttf", FONT_CACHE.normal);
+    doc.addFont("ROXSans.ttf", "ROXSans", "normal");
+    doc.addFileToVFS("ROXSans-Bold.ttf", FONT_CACHE.bold);
+    doc.addFont("ROXSans-Bold.ttf", "ROXSans", "bold");
+    doc.setFont("ROXSans", "normal");
+    PDF_FONT = "ROXSans";
+  } catch (_e) {
+    PDF_FONT = "helvetica";
+  }
+}
+
 // ============= PDF Renderer =============
 
 function renderPdf(snapshot: any, layout: any) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
+  applyUnicodeFont(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 40;
   let y = 50;
@@ -378,20 +433,20 @@ function renderPdf(snapshot: any, layout: any) {
   if (sections.length) {
     for (const section of sections) {
       y = ensureSpace(doc, y, 60);
-      doc.setFontSize(12).setFont("helvetica", "bold").setTextColor(20);
+      doc.setFontSize(12).setFont(PDF_FONT, "bold").setTextColor(20);
       doc.text(section.title ?? "Abschnitt", marginX, y);
       y += 14;
 
       const fields = Array.isArray(section.fields) ? section.fields : [];
-      doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(40);
+      doc.setFont(PDF_FONT, "normal").setFontSize(10).setTextColor(40);
       for (const f of fields) {
         const binding = f.binding;
         const label = f.label_override ?? binding?.path ?? "Feld";
         const value = resolveBinding(binding, snapshot);
         y = ensureSpace(doc, y);
-        doc.setFont("helvetica", "bold");
+        doc.setFont(PDF_FONT, "bold");
         doc.text(`${label}:`, marginX, y);
-        doc.setFont("helvetica", "normal");
+        doc.setFont(PDF_FONT, "normal");
         const txt = formatValue(value);
         const lines = doc.splitTextToSize(txt, pageWidth - marginX - 130);
         doc.text(lines, marginX + 130, y);
@@ -402,7 +457,7 @@ function renderPdf(snapshot: any, layout: any) {
     // Standard-Anhang: Datenübersicht
     y = ensureSpace(doc, y, 60);
     doc.setDrawColor(220); doc.line(marginX, y, pageWidth - marginX, y); y += 14;
-    doc.setFontSize(11).setFont("helvetica", "bold").setTextColor(40);
+    doc.setFontSize(11).setFont(PDF_FONT, "bold").setTextColor(40);
     doc.text("Datenübersicht", marginX, y); y += 16;
   }
 
@@ -422,8 +477,8 @@ function renderPdf(snapshot: any, layout: any) {
   doc.setFontSize(10).setTextColor(40);
   for (const [k, v] of meta) {
     y = ensureSpace(doc, y);
-    doc.setFont("helvetica", "bold"); doc.text(`${k}:`, marginX, y);
-    doc.setFont("helvetica", "normal");
+    doc.setFont(PDF_FONT, "bold"); doc.text(`${k}:`, marginX, y);
+    doc.setFont(PDF_FONT, "normal");
     doc.text(String(v), marginX + 110, y, { maxWidth: pageWidth - marginX - 110 });
     y += 14;
   }
@@ -433,13 +488,13 @@ function renderPdf(snapshot: any, layout: any) {
   const cfEntries = Object.entries(cf);
   if (cfEntries.length) {
     y += 6; y = ensureSpace(doc, y, 40);
-    doc.setFontSize(11).setFont("helvetica", "bold").setTextColor(30);
+    doc.setFontSize(11).setFont(PDF_FONT, "bold").setTextColor(30);
     doc.text("Auftraggeberformular", marginX, y); y += 14;
-    doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(40);
+    doc.setFontSize(10).setFont(PDF_FONT, "normal").setTextColor(40);
     for (const [k, v] of cfEntries) {
       y = ensureSpace(doc, y);
-      doc.setFont("helvetica", "bold"); doc.text(`${k}:`, marginX, y);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "bold"); doc.text(`${k}:`, marginX, y);
+      doc.setFont(PDF_FONT, "normal");
       const lines = doc.splitTextToSize(formatValue(v), pageWidth - marginX - 160);
       doc.text(lines, marginX + 160, y);
       y += Math.max(14, lines.length * 12);
@@ -450,10 +505,10 @@ function renderPdf(snapshot: any, layout: any) {
   for (const m of measurements) {
     y += 10; y = ensureSpace(doc, y, 60);
     doc.setDrawColor(220); doc.line(marginX, y, pageWidth - marginX, y); y += 14;
-    doc.setFontSize(12).setFont("helvetica", "bold").setTextColor(20);
+    doc.setFontSize(12).setFont(PDF_FONT, "bold").setTextColor(20);
     doc.text(`${m.measurement_number ?? ""} · ${m.measurement_services?.service_name ?? "Aufgabe"}`, marginX, y);
     y += 14;
-    doc.setFontSize(9).setFont("helvetica", "normal").setTextColor(90);
+    doc.setFontSize(9).setFont(PDF_FONT, "normal").setTextColor(90);
     doc.text(`Kategorie: ${m.measurement_services?.category ?? "—"} · Status: ${m.status ?? "—"} · Ist-Dauer: ${m.actual_duration_hours ?? "—"} h`,
       marginX, y);
     y += 14;
@@ -475,9 +530,9 @@ function renderPdf(snapshot: any, layout: any) {
   const atts = snapshot.attachment?.all ?? [];
   if (atts.length) {
     y += 10; y = ensureSpace(doc, y, 40);
-    doc.setFontSize(11).setFont("helvetica", "bold").setTextColor(30);
+    doc.setFontSize(11).setFont(PDF_FONT, "bold").setTextColor(30);
     doc.text(`Anhänge (${atts.length})`, marginX, y); y += 14;
-    doc.setFontSize(9).setFont("helvetica", "normal").setTextColor(60);
+    doc.setFontSize(9).setFont(PDF_FONT, "normal").setTextColor(60);
     for (const a of atts) {
       y = ensureSpace(doc, y);
       doc.text(`• ${a.name ?? a.path}`, marginX + 8, y);
@@ -631,6 +686,7 @@ function replaceTokens(text: string, snapshot: any): string {
 function renderBlockTemplate(snapshot: any, tpl: any) {
   const orientation = tpl.orientation === "landscape" ? "landscape" : "portrait";
   const doc = new jsPDF({ unit: "pt", format: "a4", orientation });
+  applyUnicodeFont(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const marginX = 40;
@@ -638,7 +694,7 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
 
   const drawHeaderFooter = () => {
     if (tpl.header) {
-      doc.setFontSize(9).setTextColor(120).setFont("helvetica", "normal");
+      doc.setFontSize(9).setTextColor(120).setFont(PDF_FONT, "normal");
       doc.text(replaceTokens(tpl.header, snapshot), marginX, 30);
       doc.setDrawColor(220); doc.line(marginX, 40, pageWidth - marginX, 40);
     }
@@ -657,13 +713,13 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
       case "heading": {
         ensure(30);
         const size = b.level === 1 ? 18 : b.level === 2 ? 14 : 12;
-        doc.setFontSize(size).setFont("helvetica", "bold").setTextColor(20);
+        doc.setFontSize(size).setFont(PDF_FONT, "bold").setTextColor(20);
         doc.text(replaceTokens(b.text ?? "", snapshot), marginX, y);
         y += size + 6;
         break;
       }
       case "text": {
-        doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(40);
+        doc.setFontSize(10).setFont(PDF_FONT, "normal").setTextColor(40);
         const lines = doc.splitTextToSize(replaceTokens(b.content ?? "", snapshot), pageWidth - 2 * marginX);
         for (const line of lines) { ensure(14); doc.text(line, marginX, y); y += 12; }
         y += 4;
@@ -675,11 +731,11 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
         const text = fmtReportValue(value, { format: b.format, unit: b.unit, showUnit: b.showUnit !== false });
         if (b.hideIfEmpty && !text) break;
         ensure(16);
-        doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(110);
+        doc.setFontSize(10).setFont(PDF_FONT, "normal").setTextColor(110);
         const label = `${b.label ?? b.path}:`;
         doc.text(label, marginX, y);
         const labelW = doc.getTextWidth(label) + 6;
-        doc.setFont("helvetica", "bold").setTextColor(30);
+        doc.setFont(PDF_FONT, "bold").setTextColor(30);
         const lines = doc.splitTextToSize(text || "—", pageWidth - 2 * marginX - labelW);
         doc.text(lines, marginX + labelW, y);
         y += 12 * Math.max(1, lines.length) + 2;
@@ -687,16 +743,16 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
       }
 
       case "table": {
-        if (b.title) { ensure(20); doc.setFontSize(11).setFont("helvetica", "bold"); doc.text(b.title, marginX, y); y += 14; }
+        if (b.title) { ensure(20); doc.setFontSize(11).setFont(PDF_FONT, "bold"); doc.text(b.title, marginX, y); y += 14; }
         const cols = b.columns ?? [];
         const colW = (pageWidth - 2 * marginX) / Math.max(1, cols.length);
         ensure(18);
         doc.setFillColor(240).setDrawColor(200);
         doc.rect(marginX, y - 10, pageWidth - 2 * marginX, 16, "FD");
-        doc.setFontSize(9).setFont("helvetica", "bold").setTextColor(40);
+        doc.setFontSize(9).setFont(PDF_FONT, "bold").setTextColor(40);
         cols.forEach((c: any, i: number) => doc.text(String(c.header ?? ""), marginX + 4 + i * colW, y));
         y += 10;
-        doc.setFont("helvetica", "normal");
+        doc.setFont(PDF_FONT, "normal");
         for (const row of (b.rows ?? [])) {
           ensure(14);
           row.forEach((cell: any, i: number) => {
@@ -710,17 +766,17 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
         break;
       }
       case "repeater": {
-        if (b.title) { ensure(20); doc.setFontSize(11).setFont("helvetica", "bold"); doc.text(b.title, marginX, y); y += 14; }
+        if (b.title) { ensure(20); doc.setFontSize(11).setFont(PDF_FONT, "bold"); doc.text(b.title, marginX, y); y += 14; }
         const rows = (resolveSnapshotPath(snapshot, b.sourcePath) as any[]) ?? [];
         const cols = b.columns ?? [];
         const colW = (pageWidth - 2 * marginX) / Math.max(1, cols.length);
         ensure(18);
         doc.setFillColor(240).setDrawColor(200);
         doc.rect(marginX, y - 10, pageWidth - 2 * marginX, 16, "FD");
-        doc.setFontSize(9).setFont("helvetica", "bold").setTextColor(40);
+        doc.setFontSize(9).setFont(PDF_FONT, "bold").setTextColor(40);
         cols.forEach((c: any, i: number) => doc.text(String(c.header ?? ""), marginX + 4 + i * colW, y));
         y += 10;
-        doc.setFont("helvetica", "normal");
+        doc.setFont(PDF_FONT, "normal");
         if (!rows.length) { ensure(14); doc.setTextColor(150).text("— keine Daten —", marginX + 4, y); y += 14; doc.setTextColor(40); }
         for (const row of rows) {
           ensure(14);
@@ -756,7 +812,7 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
       case "qr":
       case "barcode": {
         ensure(30);
-        doc.setFontSize(9).setFont("helvetica", "italic").setTextColor(80);
+        doc.setFontSize(9).setFont(PDF_FONT, "italic").setTextColor(80);
         doc.text(`[${b.type === "qr" ? "QR" : "Barcode"}: ${replaceTokens(b.content ?? "", snapshot)}]`, marginX, y);
         y += 12;
         if (b.label) { doc.text(b.label, marginX, y); y += 12; }
@@ -850,17 +906,17 @@ function drawPhotoDocumentation(
   const need = (h: number) => { if (y + h > pageHeight - 50) breakPage(); };
 
   y += 12; need(40);
-  doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(20);
+  doc.setFontSize(13).setFont(PDF_FONT, "bold").setTextColor(20);
   doc.text("Fotodokumentation", marginX, y);
   y += 18;
 
   const maxW = pageWidth - 2 * marginX;
   for (const g of groups) {
     need(30);
-    doc.setFontSize(11).setFont("helvetica", "bold").setTextColor(40);
+    doc.setFontSize(11).setFont(PDF_FONT, "bold").setTextColor(40);
     doc.text(String(g.title ?? ""), marginX, y); y += 13;
     if (g.context) {
-      doc.setFontSize(8).setFont("helvetica", "normal").setTextColor(130);
+      doc.setFontSize(8).setFont(PDF_FONT, "normal").setTextColor(130);
       doc.text(String(g.context), marginX, y); y += 12;
     }
     for (const img of g.images ?? []) {
@@ -872,7 +928,7 @@ function drawPhotoDocumentation(
         y += h + 6;
       } catch { /* defektes Bild überspringen */ }
       if (img.comment) {
-        doc.setFontSize(9).setFont("helvetica", "normal").setTextColor(60);
+        doc.setFontSize(9).setFont(PDF_FONT, "normal").setTextColor(60);
         const lines = doc.splitTextToSize(img.comment, maxW);
         for (const line of lines) { need(12); doc.text(line, marginX, y); y += 11; }
       }
