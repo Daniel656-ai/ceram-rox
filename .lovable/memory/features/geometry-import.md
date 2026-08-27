@@ -11,3 +11,4 @@ type: feature
 - Ergebnisse: Mittelwerte je Messart (`GEOMETRY_MEAN`) plus alle Einzelmesswerte (`GEOMETRY_SINGLE`, bleiben über die bestehende „nicht zugeordnet“-Logik erhalten).
 - Einheit kommt aus der Spalte „Einheit“ und bleibt separates Attribut (Anzeige zentral via `formatResultLabel`). Keine Rundung beim Einlesen.
 - Nachvollziehbarkeit in `headerMap`: „Mittelwert X“ = gültige Werte, nicht erkannte Werte, Mittelwert, Einzelwerte.
+- Zuordnung zu Ergebnisfeldern ist NUR für Geometrievermessung case-sensitive (`mapImportedResults` in `src/lib/instrumentImport/index.ts`): Priorität 1 exakte Schreibweise (Profilmapping/field_key/display_name, Einheitensuffix wird ignoriert), Priorität 2 normalisierte Zuordnung – aber niemals, wenn im Import mehrere Schreibweisen desselben Namens (D/d) vorkommen oder die Zuordnung mehrdeutig wäre. Andere Importprofile (RFA, DIL, STA, Gasadsorption) behalten die globale normalisierte Logik.

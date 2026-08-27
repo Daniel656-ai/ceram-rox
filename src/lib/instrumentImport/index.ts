@@ -41,9 +41,60 @@ export interface FileMappedRow extends MappedRow {
 }
 
 /**
- * Ordnet die erkannten Geräte-Ergebnisse den Feldern des aktuellen Formulars zu.
- * Es werden ausschließlich vorhandene Felder befüllt – nie neue erzeugt.
+ * Geometrievermessung: „D“ und „d“ sind fachlich verschiedene Messgrößen.
+ * Deshalb gilt hier ausschließlich eine case-sensitive Zuordnung – die globale
+ * (normalisierte) Zuordnungslogik der übrigen Importprofile bleibt unverändert.
  */
+const isGeometry = (a: ImportedResult["analysis"]) => a === "GEOMETRY_MEAN" || a === "GEOMETRY_SINGLE";
+
+/** Entfernt eine angehängte Einheit („D [mm]“, „D (mm)“) – ohne die Schreibweise zu ändern. */
+const stripUnitSuffix = (s: string) => String(s ?? "").replace(/\s*[[(][^\])]*[\])]\s*$/, "").trim();
+
+/** Exakte (case-sensitive) Übereinstimmung mit field_key oder Anzeigename. */
+function exactTarget(name: string, targets: TargetCandidate[]): TargetCandidate | null {
+  const n = stripUnitSuffix(name);
+  return (
+    targets.find((t) => t.field_key === n) ??
+    targets.find((t) => stripUnitSuffix(t.display_name) === n) ??
+    null
+  );
+}
+
+function mapGeometryResult(
+  r: ImportedResult,
+  targets: TargetCandidate[],
+  profile: MeasurementImportProfile | null | undefined,
+  /** Kleinbuchstaben-Name -> Anzahl unterschiedlicher Schreibweisen im Import. */
+  caseConflicts: Set<string>
+): { targetFieldKey: string | null; origin: MappedRow["origin"]; factor: number | null } {
+  // Priorität 0: Profilzuordnung, aber nur bei exakter Schreibweise.
+  const mapping = (profile?.mappings ?? []).find((m) =>
+    (m.source_names ?? []).some((s) => stripUnitSuffix(s) === stripUnitSuffix(r.sourceName))
+  );
+  if (mapping && targets.some((t) => t.field_key === mapping.target_field_key)) {
+    return { targetFieldKey: mapping.target_field_key, origin: "profile", factor: mapping.factor ?? null };
+  }
+
+  // Priorität 1: exakte Schreibweise (Quellname oder Alias).
+  for (const cand of [r.sourceName, ...r.aliases]) {
+    const t = exactTarget(cand, targets);
+    if (t) return { targetFieldKey: t.field_key, origin: "auto", factor: null };
+  }
+
+  // Priorität 2: normalisierte Zuordnung – nur wenn dadurch keine Verwechslung
+  // von „D“/„d“ (bzw. „to“/„To“ …) entstehen kann.
+  const lower = stripUnitSuffix(r.sourceName).toLowerCase();
+  if (caseConflicts.has(lower)) return { targetFieldKey: null, origin: "none", factor: null };
+  const ciMatches = targets.filter((t) =>
+    [t.field_key, t.display_name].some((n) => stripUnitSuffix(n ?? "").toLowerCase() === lower)
+  );
+  const unique = [...new Set(ciMatches.map((t) => t.field_key))];
+  if (unique.length === 1 && ciMatches.length >= 1) {
+    return { targetFieldKey: unique[0], origin: "auto", factor: null };
+  }
+  return { targetFieldKey: null, origin: "none", factor: null };
+}
+
 export function mapImportedResults(
   results: ImportedResult[],
   profile: MeasurementImportProfile | null | undefined,
@@ -52,8 +103,44 @@ export function mapImportedResults(
 ): FileMappedRow[] {
   const byNormKey = new Map(targets.map((t) => [normalizeName(t.field_key), t]));
   const byNormLabel = new Map(targets.map((t) => [normalizeName(t.display_name), t]));
+  const byKey = new Map(targets.map((t) => [t.field_key, t]));
+
+  // Schreibweisen, die sich nur durch Groß-/Kleinschreibung unterscheiden.
+  const spellings = new Map<string, Set<string>>();
+  for (const r of results.filter((x) => isGeometry(x.analysis))) {
+    const n = stripUnitSuffix(r.sourceName);
+    const set = spellings.get(n.toLowerCase()) ?? new Set<string>();
+    set.add(n);
+    spellings.set(n.toLowerCase(), set);
+  }
+  const caseConflicts = new Set([...spellings].filter(([, v]) => v.size > 1).map(([k]) => k));
 
   return results.map((r) => {
+    if (isGeometry(r.analysis)) {
+      const { targetFieldKey, origin, factor } = mapGeometryResult(r, targets, profile, caseConflicts);
+      const target = targetFieldKey ? byKey.get(targetFieldKey) : undefined;
+      const existingRaw = targetFieldKey ? currentValues?.[targetFieldKey] : undefined;
+      return {
+        sourceName: r.sourceName,
+        raw: String(r.value),
+        value: typeof r.value === "number" ? r.value : null,
+        unit: r.unit ?? null,
+        belowDetection: false,
+        targetFieldKey,
+        origin,
+        factor,
+        targetUnit: target?.unit ?? r.unit ?? null,
+        unitMismatch: false,
+        normalizedName: r.normalizedName,
+        confidence: r.confidence,
+        analysis: r.analysis,
+        existingValue:
+          existingRaw === undefined || existingRaw === null || existingRaw === ""
+            ? null
+            : (existingRaw as string | number),
+      };
+    }
+
     const base = mapReadings(
       [{ sourceName: r.sourceName, raw: String(r.value), value: typeof r.value === "number" ? r.value : null, unit: r.unit ?? null, belowDetection: false }],
       profile,
@@ -85,6 +172,7 @@ export function mapImportedResults(
     };
   });
 }
+
 
 export const analysisLabel = (t: ImportedResult["analysis"]) => {
   switch (t) {
