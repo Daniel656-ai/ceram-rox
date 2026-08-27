@@ -71,7 +71,7 @@ describe("Diagramm-Datenbasis", () => {
   it("listet nur numerische offizielle Ergebnisse mit Einheit", () => {
     const params = collectNumericParameters(records);
     expect(params.map(p => p.key)).toEqual(["Dichte", "Druckfestigkeit"]);
-    expect(params[0].label).toBe("Dichte – g/cm³");
+    expect(params[0].label).toBe("Dichte [g/cm³]");
   });
 
   it("führt Werte über die Probe zusammen, ohne Kreuzkombination", () => {
