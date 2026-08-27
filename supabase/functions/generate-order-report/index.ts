@@ -770,3 +770,51 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
   }
   return doc;
 }
+
+// ============= Fotodokumentation =============
+
+interface ReportImageEntry { storage_path: string | null; data_url: string | null; comment: string; sort_order: number }
+
+/** JSON-Wert eines Bildfeldes in eine sortierte Bildliste überführen. */
+function parseImageCollection(raw: unknown): ReportImageEntry[] {
+  if (raw == null || raw === "") return [];
+  let v: any = raw;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!(s.startsWith("[") || s.startsWith("{"))) return [];
+    try { v = JSON.parse(s); } catch { return []; }
+  }
+  const list = Array.isArray(v) ? v : Array.isArray(v?.images) ? v.images : [v];
+  const out: ReportImageEntry[] = [];
+  list.forEach((o: any, i: number) => {
+    if (!o || typeof o !== "object") return;
+    const path = o.storage_path ?? o.storagePath ?? null;
+    const dataUrl = o.data_url ?? o.dataUrl ?? null;
+    if (!path && !dataUrl) return;
+    out.push({
+      storage_path: path,
+      data_url: dataUrl,
+      comment: typeof o.comment === "string" ? o.comment : "",
+      sort_order: typeof o.sort_order === "number" ? o.sort_order : i,
+    });
+  });
+  return out.sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/** Bild aus dem Upload-Bucket als Data-URL laden (für die PDF-Einbettung). */
+async function downloadAsDataUrl(admin: any, path: string): Promise<string | null> {
+  try {
+    const { data, error } = await admin.storage.from("order-uploads").download(path);
+    if (error || !data) return null;
+    const bytes = new Uint8Array(await data.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    const ext = (path.split(".").pop() ?? "").toLowerCase();
+    const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+    return `data:${mime};base64,${btoa(bin)}`;
+  } catch {
+    return null;
+  }
+}
