@@ -121,3 +121,84 @@ describe("Geometrievermessung – Zuordnung ist case-sensitive", () => {
     expect(rows.find((r) => r.sourceName === "D")?.targetFieldKey).toBe("durchmesser");
   });
 });
+
+describe("Geometrievermessung – Nachkommastellen und Reihenfolge", () => {
+  // Formularreihenfolge (sort_order): D, ti, to, d – bewusst nicht alphabetisch.
+  const targets = [
+    { field_key: "D", display_name: "D", unit: "mm", decimal_places: 4 },
+    { field_key: "ti", display_name: "ti", unit: "mm", decimal_places: 4 },
+    { field_key: "to", display_name: "to", unit: "mm", decimal_places: 4 },
+    { field_key: "d", display_name: "d", unit: "mm", decimal_places: 4 },
+  ];
+  const res = (name: string, value: number) => ({
+    sourceName: name,
+    normalizedName: `geom_${name}`,
+    aliases: [name],
+    value,
+    unit: "mm",
+    confidence: "high" as const,
+    analysis: "GEOMETRY_MEAN" as const,
+  });
+
+  it("Test 1 – rundet auf die im Ergebnisfeld hinterlegten 4 Nachkommastellen", () => {
+    const rows = mapImportedResults([res("D", 25.12345678)], null, targets);
+    expect(rows[0].value).toBe(25.1235);
+    expect(mapImportedResults([res("D", 25.42364)], null, targets)[0].value).toBe(25.4236);
+    expect(mapImportedResults([res("D", 25.42365)], null, targets)[0].value).toBe(25.4237);
+  });
+
+  it("Test 2/5 – gibt die Ergebnisse in Formularreihenfolge D → ti → to → d aus", () => {
+    const rows = mapImportedResults(
+      [res("d", 24.8765), res("to", 15.9877), res("D", 25.4236), res("ti", 10.1235)],
+      null,
+      targets
+    );
+    expect(rows.map((r) => r.targetFieldKey)).toEqual(["D", "ti", "to", "d"]);
+  });
+
+  it("Test 5 – folgt einer geänderten Formularreihenfolge", () => {
+    const reordered = [targets[2], targets[0], targets[3], targets[1]];
+    const rows = mapImportedResults([res("D", 1), res("ti", 2), res("to", 3), res("d", 4)], null, reordered);
+    expect(rows.map((r) => r.targetFieldKey)).toEqual(["to", "D", "d", "ti"]);
+  });
+
+  it("Test 3 – D und d bleiben auch mit Rundung getrennt", () => {
+    const rows = mapImportedResults([res("D", 25.4), res("d", 24.9)], null, targets);
+    expect(rows.map((r) => [r.targetFieldKey, r.value])).toEqual([["D", 25.4], ["d", 24.9]]);
+  });
+
+  it("Test 4 – Mittelwerte werden gerundet ausgegeben", () => {
+    const mean = (a: number, b: number) => (a + b) / 2;
+    const rows = mapImportedResults(
+      [res("D", mean(25.4235, 25.4237)), res("d", mean(24.8765, 24.8767))],
+      null,
+      targets
+    );
+    expect(rows.map((r) => r.value)).toEqual([25.4236, 24.8766]);
+  });
+
+  it("Test 8 – fehlende Messwerte werden nicht ergänzt", () => {
+    const rows = mapImportedResults([res("D", 25.4235)], null, targets);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].targetFieldKey).toBe("D");
+  });
+
+  it("ändert die Reihenfolge anderer Importprofile nicht", () => {
+    const other = (name: string) => ({
+      sourceName: name,
+      normalizedName: name.toLowerCase(),
+      aliases: [name],
+      value: 1.23456789,
+      unit: "%",
+      confidence: "high" as const,
+      analysis: "BET" as const,
+    });
+    const t = [
+      { field_key: "b", display_name: "b", unit: "%", decimal_places: 2 },
+      { field_key: "a", display_name: "a", unit: "%", decimal_places: 2 },
+    ];
+    const rows = mapImportedResults([other("a"), other("b")], null, t);
+    expect(rows.map((r) => r.sourceName)).toEqual(["a", "b"]);
+    expect(rows[0].value).toBe(1.23456789);
+  });
+});
