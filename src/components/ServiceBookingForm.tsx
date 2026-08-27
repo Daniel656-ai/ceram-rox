@@ -376,13 +376,8 @@ function SectionFieldGrid({
                 {help && !compact && <p className="text-[10px] text-muted-foreground">{help}</p>}
                 <ImageGalleryField
                   fieldKey={f.field_key}
-                  mode={
-                    (f.metadata as any)?.image?.mode
-                      ? readImageMeta(f).mode
-                      : (f.validation as any)?.upload?.multiple === false
-                        ? "single"
-                        : "multi"
-                  }
+                  mode={readImageMeta(f).mode}
+
                   value={val}
                   onChange={(entries) => onValueChange(f.field_key, entries)}
                   disabled={readonly}

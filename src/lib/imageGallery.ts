@@ -37,11 +37,24 @@ export interface ImageFieldMeta {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-/** Konfiguration aus `form_fields.metadata.image` lesen (Default: Einzelbild). */
-export function readImageMeta(field: { metadata?: unknown } | null | undefined): ImageFieldMeta {
+/**
+ * Konfiguration lesen. Vorrang hat `metadata.image.mode` (Formulardesigner).
+ * Fehlt sie, entscheidet die Upload-Konfiguration (`validation.upload`):
+ * `multiple !== false` bzw. `max_files > 1` bedeutet Fotodokumentation.
+ */
+export function readImageMeta(
+  field: { metadata?: unknown; validation?: unknown } | null | undefined
+): ImageFieldMeta {
   const m = ((field?.metadata ?? {}) as any)?.image ?? {};
-  return { mode: m.mode === "multi" ? "multi" : "single" };
+  if (m.mode === "multi" || m.mode === "single") return { mode: m.mode };
+  const up = ((field?.validation ?? {}) as any)?.upload ?? {};
+  if (up.multiple === false) return { mode: "single" };
+  if (up.multiple === true || (typeof up.max_files === "number" && up.max_files > 1)) {
+    return { mode: "multi" };
+  }
+  return { mode: "multi" };
 }
+
 
 /** Konfiguration additiv in bestehende Metadaten schreiben. */
 export function writeImageMeta(
