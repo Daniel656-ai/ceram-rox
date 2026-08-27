@@ -354,12 +354,31 @@ export default function MeasurementFileImportPanel({
     <div className="space-y-3">
       <div className="rounded border border-dashed p-4 text-center space-y-2">
         <FileUp className="h-5 w-5 mx-auto text-muted-foreground" />
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
+          <Label className="text-xs">Importtyp</Label>
+          <Select
+            value={chosenImporterId}
+            onValueChange={(v) => {
+              setChosenImporterId(v);
+              if (lastFile) parseWith(lastFile, v);
+            }}
+          >
+            <SelectTrigger className="h-8 w-64"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="__auto__">Automatisch erkennen</SelectItem>
+              {pool.map((i) => (
+                <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <p className="text-xs text-muted-foreground">
-          Originale Messdatei auswählen – der passende Importer wird automatisch erkannt.
+          Originale Messdatei auswählen – bei „Automatisch erkennen“ wird der passende Importer ermittelt.
         </p>
         <p className="text-[11px] text-muted-foreground">
           Verfügbar: {pool.map((i) => `${i.label} (${i.extensions.join(", ")})`).join(" · ")}
         </p>
+
         <input
           ref={inputRef}
           type="file"
