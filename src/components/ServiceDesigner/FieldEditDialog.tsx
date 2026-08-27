@@ -113,7 +113,10 @@ export default function FieldEditDialog({
         ...((field.metadata ?? {}) as Record<string, unknown>),
         measurement_import: isImport ? { profile_id: importProfileId || null } : undefined,
       };
+      // Darstellungsart des Bildfeldes (Einzelbild bleibt Standard).
+      if (isImage) Object.assign(metadata, writeImageMeta(metadata, { mode: imageMode }));
       if (isBlockChild) metadata.block_role = blockRole;
+
 
       return api.formFields.update(field.id, {
         display_name: label.trim(),
