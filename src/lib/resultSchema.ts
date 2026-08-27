@@ -13,6 +13,8 @@
  */
 
 import { resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { formatResultLabel } from "@/lib/resultLabels";
+
 
 export interface ResultParamColumn {
   /** Stabiler Anzeige-/Zuordnungsschlüssel (fachliche Bezeichnung ohne Einheit). */
@@ -152,6 +154,6 @@ export function exportCell(record: ResultRecord, key: string): number | string {
  * stehen – niemals leere Klammern.
  */
 export function columnHeader(col: ResultParamColumn): string {
-  const unit = (col.unit || "").trim();
-  return unit ? `${col.label} [${unit}]` : col.label;
+  return formatResultLabel(col.label, col.unit);
 }
+
