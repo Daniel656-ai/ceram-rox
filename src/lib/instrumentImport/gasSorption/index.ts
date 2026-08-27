@@ -16,6 +16,7 @@
 import * as XLSX from "xlsx";
 import { extractStrings, scanDoubles } from "../binaryText";
 import { micromeriticsPairLines } from "./micromeriticsRecords";
+import { extractSmp, isothermDataset, readIsothermPoints } from "./smp";
 
 import type {
   AnalysisType, Confidence, FileImporter, ImportedAnalysis,
