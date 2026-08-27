@@ -56,7 +56,7 @@ export const orderUploads = {
     const { error: upErr } = await dbClient.storage
       .from(ORDER_UPLOADS_BUCKET)
       .upload(path, args.file, { upsert: false, contentType: args.file.type });
-    if (upErr) throw upErr;
+    if (upErr) throw storageError(upErr as any);
     const row = await unwrap(
       dbClient
         .from("order_upload_files" as any)
@@ -125,7 +125,7 @@ export const orderUploads = {
 
   async download(storagePath: string): Promise<Blob> {
     const { data, error } = await dbClient.storage.from(ORDER_UPLOADS_BUCKET).download(storagePath);
-    if (error) throw error;
+    if (error) throw storageError(error as any);
     return data;
   },
 };
