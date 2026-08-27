@@ -16,6 +16,23 @@ export interface OrderUploadFile {
   created_at: string;
 }
 
+/**
+ * Übersetzt Storage-Fehler in eine verständliche, ursachennahe Meldung.
+ * Der Fehler wird NICHT unterdrückt – er benennt lediglich den betroffenen
+ * Bucket, damit ein fehlendes Storage-Setup in einer Umgebung sofort
+ * erkennbar ist (siehe `supabase/storage/bootstrap-buckets.sql`).
+ */
+function storageError(err: { message?: string } & Record<string, unknown>): Error {
+  const msg = String(err?.message ?? err);
+  if (/bucket not found/i.test(msg)) {
+    return new Error(
+      `Storage-Bucket "${ORDER_UPLOADS_BUCKET}" existiert in dieser Umgebung nicht. ` +
+        `Bitte das Storage-Setup ausführen (supabase/storage/bootstrap-buckets.sql).`
+    );
+  }
+  return err instanceof Error ? err : new Error(msg);
+}
+
 export const orderUploads = {
   listForMeasurement: (measurementId: string) =>
     unwrap(
