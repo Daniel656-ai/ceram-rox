@@ -25,6 +25,7 @@ import { Plus, Trash2, ArrowUp, ArrowDown, Copy, Pencil } from "lucide-react";
 import ImportProfileEditorDialog from "@/components/measurementImport/ImportProfileEditorDialog";
 import MeasurementCaseEditorDialog from "@/components/measurementImport/MeasurementCaseEditorDialog";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
+import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
 
 /* ==============================================================
  * Feld bearbeiten – zentraler Feldeditor des Formulardesigners.
@@ -171,7 +172,7 @@ export default function FieldEditDialog({
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Bezeichnung</Label><Input value={label} disabled={isGlobalRef} onChange={e => setLabel(e.target.value)} /></div>
+            <div><Label>Bezeichnung</Label><SymbolInput value={label} disabled={isGlobalRef} onChange={setLabel} /></div>
             <div><Label>Schlüssel</Label><Input value={key} disabled={isGlobalRef} onChange={e => setKey(e.target.value)} /></div>
           </div>
           <div>
@@ -210,9 +211,9 @@ export default function FieldEditDialog({
               </p>
             </div>
           )}
-          <div><Label>Beschreibung</Label><Textarea value={desc} disabled={isGlobalRef} onChange={e => setDesc(e.target.value)} rows={2} /></div>
-          <div className="grid grid-cols-3 gap-3">
-            <div><Label>Einheit</Label><Input value={unit} disabled={isGlobalRef} onChange={e => setUnit(e.target.value)} placeholder="z.B. mm, °C" /></div>
+          <div><Label>Beschreibung</Label><SymbolTextarea value={desc} disabled={isGlobalRef} onChange={setDesc} rows={2} /></div>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="col-span-2"><Label>Einheit</Label><SymbolInput value={unit} disabled={isGlobalRef} onChange={setUnit} placeholder="z.B. mm, °C, 10⁻⁶/K" /></div>
             <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
             <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
           </div>
@@ -228,7 +229,7 @@ export default function FieldEditDialog({
               {isResult && (
                 <div>
                   <Label className="text-xs">Ergebnis-Bezeichnung (optional)</Label>
-                  <Input value={resultLabel} onChange={e => setResultLabel(e.target.value)} placeholder={label} />
+                  <SymbolInput value={resultLabel} onChange={setResultLabel} placeholder={label} />
                 </div>
               )}
             </div>
@@ -529,7 +530,7 @@ function SubfieldManager({
           <div className="space-y-3">
             <div>
               <Label>Bezeichnung</Label>
-              <Input value={newLabel} onChange={e => setNewLabel(e.target.value)} autoFocus placeholder="z.B. Präparation" />
+              <SymbolInput value={newLabel} onChange={setNewLabel} placeholder="z.B. Präparation" />
             </div>
             <div>
               <Label>Feldtyp</Label>
