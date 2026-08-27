@@ -95,6 +95,8 @@ export const analysisLabel = (t: ImportedResult["analysis"]) => {
     case "T_PLOT": return "t-Plot";
     case "NLDFT": return "NLDFT / DFT";
     case "ISOTHERM": return "Isotherme";
+    case "GEOMETRY_MEAN": return "Geometrie – Mittelwert";
+    case "GEOMETRY_SINGLE": return "Geometrie – Einzelmessung";
     default: return "Unbekannt";
   }
 };
