@@ -71,6 +71,8 @@ export default function FieldEditDialog({
   const isRepeater = fieldType === "repeater";
   const isBlock = fieldType === "measurement_block";
   const isImport = fieldType === "measurement_import";
+  const isImage = fieldType === "image";
+
   const typeChanged = fieldType !== field.field_type;
   const typeGroups = field.parent_field_id ? SUBFIELD_TYPE_GROUPS : FIELD_TYPE_GROUPS;
 
