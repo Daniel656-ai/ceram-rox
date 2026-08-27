@@ -367,16 +367,29 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
   }
 
   const instrument = detectInstrument(lines);
+  const info = sampleInfo(lines);
+  if (info.sampleMass == null && smp?.sampleMass != null) {
+    info.sampleMass = smp.sampleMass;
+    info.sampleMassUnit = info.sampleMassUnit ?? "g";
+  }
+
+  const header: Record<string, string> = { ...(smp?.header ?? {}) };
+  if (instrument.instrument) header["Gerät"] = instrument.instrument;
+  if (instrument.vendor) header["Hersteller"] = instrument.vendor;
+  if (info.sampleName) header["Probe"] = info.sampleName;
+  if (info.analysisDate) header["Analysedatum"] = info.analysisDate;
 
   return {
     source: instrument.vendor ?? "Gasadsorption",
     instrumentFamily: instrument.instrument ?? "",
     sourceFileName: file.name,
     parserVersion: GAS_SORPTION_PARSER_VERSION,
-    sampleInformation: sampleInfo(lines),
+    sampleInformation: info,
     analyses: [...byAnalysis.values()],
     warnings,
     unrecognized: unrecognized.slice(0, 50),
+    dataset,
+    headerMap: Object.keys(header).length > 0 ? header : undefined,
   };
 }
 
