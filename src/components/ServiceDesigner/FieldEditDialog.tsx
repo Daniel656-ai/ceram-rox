@@ -10,6 +10,8 @@ import {
   type MeasurementContextFieldDef, type BlockChildRole,
 } from "@/lib/measurementBlocks";
 import { FIELD_TYPE_GROUPS, SUBFIELD_TYPE_GROUPS, fieldTypeLabel, slugify } from "@/lib/formFieldTypes";
+import { readImageMeta, writeImageMeta, type ImageFieldMode } from "@/lib/imageGallery";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +58,9 @@ export default function FieldEditDialog({
     (((field.metadata ?? {}) as any)?.measurement_import?.profile_id as string) ?? ""
   );
   const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
+  const [imageMode, setImageMode] = useState<ImageFieldMode>(readImageMeta(field).mode);
   const [blockRole, setBlockRole] = useState<BlockChildRole>(readBlockChildRole(field));
+
 
   const parent = field.parent_field_id ? allFields.find(f => f.id === field.parent_field_id) ?? null : null;
   const isBlockChild = parent?.field_type === "measurement_block";
@@ -67,6 +71,8 @@ export default function FieldEditDialog({
   const isRepeater = fieldType === "repeater";
   const isBlock = fieldType === "measurement_block";
   const isImport = fieldType === "measurement_import";
+  const isImage = fieldType === "image";
+
   const typeChanged = fieldType !== field.field_type;
   const typeGroups = field.parent_field_id ? SUBFIELD_TYPE_GROUPS : FIELD_TYPE_GROUPS;
 
@@ -107,7 +113,10 @@ export default function FieldEditDialog({
         ...((field.metadata ?? {}) as Record<string, unknown>),
         measurement_import: isImport ? { profile_id: importProfileId || null } : undefined,
       };
+      // Darstellungsart des Bildfeldes (Einzelbild bleibt Standard).
+      if (isImage) Object.assign(metadata, writeImageMeta(metadata, { mode: imageMode }));
       if (isBlockChild) metadata.block_role = blockRole;
+
 
       return api.formFields.update(field.id, {
         display_name: label.trim(),
@@ -245,7 +254,24 @@ export default function FieldEditDialog({
               <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
             </div>
           )}
+          {isImage && (
+            <div>
+              <Label>Darstellungsart</Label>
+              <Select value={imageMode} onValueChange={(v) => setImageMode(v as ImageFieldMode)} disabled={isGlobalRef}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single">Einzelbild</SelectItem>
+                  <SelectItem value="multi">Mehrere Bilder (Fotodokumentation)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                „Mehrere Bilder“ erlaubt beliebig viele Fotos mit je einem optionalen Kommentar
+                und frei wählbarer Reihenfolge. Bestehende Einzelbildfelder bleiben unverändert.
+              </p>
+            </div>
+          )}
           {isImport && <ImportFieldConfig profileId={importProfileId} onChange={setImportProfileId} allFields={allFields} field={field} />}
+
           {(isRepeater || isBlock) && (
             ["repeater", "measurement_block"].includes(field.field_type) ? (
               <RepeaterConfigPanel

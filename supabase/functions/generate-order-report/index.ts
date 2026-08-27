@@ -111,7 +111,10 @@ Deno.serve(async (req: Request) => {
     ] = await Promise.all([
       admin.from("order_workflow_tasks").select("*").eq("order_id", orderId),
       admin.from("order_step_runs").select("*").eq("order_id", orderId),
-      admin.from("order_upload_files").select("*").eq("order_id", orderId),
+      measurementIds.length
+        ? admin.from("order_upload_files").select("*").in("measurement_id", measurementIds)
+        : Promise.resolve({ data: [] as any[] }),
+
       measurementIds.length
         ? admin.from("documents").select("*").in("measurement_id", measurementIds)
         : Promise.resolve({ data: [] as any[] }),
@@ -145,6 +148,42 @@ Deno.serve(async (req: Request) => {
     const uploadRows = (uploads.data ?? []) as any[];
     const docRows = (docs.data ?? []) as any[];
     const isImage = (name: string) => /\.(png|jpe?g|gif|webp|svg|heic)$/i.test(name || "");
+
+    // ---- Fotodokumentation: Bildsammlungen aus Ergebniswerten (JSON in remarks)
+    const photoGroups: Array<{ title: string; context: string; images: Array<{ dataUrl: string; comment: string }> }> = [];
+    try {
+      if (measurementIds.length) {
+        const { data: photoRows } = await admin
+          .from("order_measurements")
+          .select(`id, measurement_number,
+                   measurement_services(service_name),
+                   samples:samples!order_measurements_sample_id_fkey(sample_number),
+                   measurement_results(id, result_name, display_label, remarks)`)
+          .in("id", measurementIds);
+        for (const m of (photoRows ?? []) as any[]) {
+          for (const r of m.measurement_results ?? []) {
+            const entries = parseImageCollection(r.remarks);
+            if (!entries.length) continue;
+            const images: Array<{ dataUrl: string; comment: string }> = [];
+            for (const e of entries) {
+              const dataUrl = e.data_url ?? (e.storage_path ? await downloadAsDataUrl(admin, e.storage_path) : null);
+              if (dataUrl) images.push({ dataUrl, comment: e.comment ?? "" });
+            }
+            if (images.length) {
+              photoGroups.push({
+                title: r.display_label || r.result_name,
+                context: [m.samples?.sample_number, m.measurement_services?.service_name, m.measurement_number]
+                  .filter(Boolean).join(" · "),
+                images,
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Fotodokumentation konnte nicht geladen werden", e);
+    }
+
 
     const snapshot: any = {
       order: {
@@ -206,7 +245,9 @@ Deno.serve(async (req: Request) => {
           }, {})
         ).map(([user, hours]) => ({ user, hours })),
       },
+      photo_documentation: photoGroups,
       attachment: {
+
         all: [...uploadRows, ...docRows].map((a: any) => ({
           name: a.file_name ?? a.name, path: a.storage_path ?? a.file_path,
           uploaded_at: a.created_at,
@@ -443,6 +484,11 @@ function renderPdf(snapshot: any, layout: any) {
       y += 11;
     }
   }
+
+  // Fotodokumentation (alle Bilder mit Kommentaren, in gespeicherter Reihenfolge)
+  y = drawPhotoDocumentation(doc, snapshot, y, marginX, pageWidth, doc.internal.pageSize.getHeight());
+
+
 
   // Footer
   const pages = (doc.internal as any).getNumberOfPages();
@@ -727,5 +773,112 @@ function renderBlockTemplate(snapshot: any, tpl: any) {
       }
     }
   }
+
+  // Fotodokumentation immer am Ende ausgeben (Reihenfolge und Kommentare bleiben erhalten).
+  y = drawPhotoDocumentation(doc, snapshot, y, marginX, pageWidth, pageHeight, nextPage);
   return doc;
+
+}
+
+// ============= Fotodokumentation =============
+
+interface ReportImageEntry { storage_path: string | null; data_url: string | null; comment: string; sort_order: number }
+
+/** JSON-Wert eines Bildfeldes in eine sortierte Bildliste überführen. */
+function parseImageCollection(raw: unknown): ReportImageEntry[] {
+  if (raw == null || raw === "") return [];
+  let v: any = raw;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!(s.startsWith("[") || s.startsWith("{"))) return [];
+    try { v = JSON.parse(s); } catch { return []; }
+  }
+  const list = Array.isArray(v) ? v : Array.isArray(v?.images) ? v.images : [v];
+  const out: ReportImageEntry[] = [];
+  list.forEach((o: any, i: number) => {
+    if (!o || typeof o !== "object") return;
+    const path = o.storage_path ?? o.storagePath ?? null;
+    const dataUrl = o.data_url ?? o.dataUrl ?? null;
+    if (!path && !dataUrl) return;
+    out.push({
+      storage_path: path,
+      data_url: dataUrl,
+      comment: typeof o.comment === "string" ? o.comment : "",
+      sort_order: typeof o.sort_order === "number" ? o.sort_order : i,
+    });
+  });
+  return out.sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/** Bild aus dem Upload-Bucket als Data-URL laden (für die PDF-Einbettung). */
+async function downloadAsDataUrl(admin: any, path: string): Promise<string | null> {
+  try {
+    const { data, error } = await admin.storage.from("order-uploads").download(path);
+    if (error || !data) return null;
+    const bytes = new Uint8Array(await data.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
+    const ext = (path.split(".").pop() ?? "").toLowerCase();
+    const mime = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+    return `data:${mime};base64,${btoa(bin)}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fotodokumentation in das PDF zeichnen: großes Bild + zugehöriger Kommentar,
+ * gruppiert nach Feld/Probe/Dienstleistung, in gespeicherter Reihenfolge.
+ */
+function drawPhotoDocumentation(
+  doc: any, snapshot: any, startY: number,
+  marginX: number, pageWidth: number, pageHeight: number,
+  nextPage?: () => void,
+): number {
+  const groups = (snapshot?.photo_documentation ?? []) as Array<{
+    title: string; context: string; images: Array<{ dataUrl: string; comment: string }>;
+  }>;
+  if (!groups.length) return startY;
+
+  let y = startY;
+  const breakPage = () => {
+    if (nextPage) { nextPage(); y = 60; }
+    else { doc.addPage(); y = 60; }
+  };
+  const need = (h: number) => { if (y + h > pageHeight - 50) breakPage(); };
+
+  y += 12; need(40);
+  doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(20);
+  doc.text("Fotodokumentation", marginX, y);
+  y += 18;
+
+  const maxW = pageWidth - 2 * marginX;
+  for (const g of groups) {
+    need(30);
+    doc.setFontSize(11).setFont("helvetica", "bold").setTextColor(40);
+    doc.text(String(g.title ?? ""), marginX, y); y += 13;
+    if (g.context) {
+      doc.setFontSize(8).setFont("helvetica", "normal").setTextColor(130);
+      doc.text(String(g.context), marginX, y); y += 12;
+    }
+    for (const img of g.images ?? []) {
+      const w = maxW * 0.75;
+      const h = w * 0.62;
+      need(h + 30);
+      try {
+        doc.addImage(img.dataUrl, marginX, y, w, h, undefined, "FAST");
+        y += h + 6;
+      } catch { /* defektes Bild überspringen */ }
+      if (img.comment) {
+        doc.setFontSize(9).setFont("helvetica", "normal").setTextColor(60);
+        const lines = doc.splitTextToSize(img.comment, maxW);
+        for (const line of lines) { need(12); doc.text(line, marginX, y); y += 11; }
+      }
+      y += 8;
+    }
+    y += 6;
+  }
+  return y;
 }

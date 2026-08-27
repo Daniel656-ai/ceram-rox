@@ -35,6 +35,9 @@ import { containsSystemToken } from "@/lib/systemVariables";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 import MeasurementImportDialog from "@/components/measurementImport/MeasurementImportDialog";
 import { useRuntimeMeasurementContext } from "@/components/curves/measurementContext";
+import ImageGalleryField from "@/components/forms/ImageGalleryField";
+import { readImageMeta } from "@/lib/imageGallery";
+
 import MeasurementCaseEditorDialog from "@/components/measurementImport/MeasurementCaseEditorDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -320,9 +323,19 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
           onChange={(v) => setValue(v)}
         />
       );
-    case "file":
     case "image":
+      return (
+        <ImageGalleryField
+          fieldKey={field.field_key}
+          mode={readImageMeta(field).mode}
+          value={value}
+          disabled={disabled}
+          onChange={(entries) => setValue(entries)}
+        />
+      );
+    case "file":
       return <Input type="file" disabled={disabled} />;
+
     default:
       return (
         <Input
