@@ -35,6 +35,9 @@ import { containsSystemToken } from "@/lib/systemVariables";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 import MeasurementImportDialog from "@/components/measurementImport/MeasurementImportDialog";
 import { useRuntimeMeasurementContext } from "@/components/curves/measurementContext";
+import ImageGalleryField from "@/components/forms/ImageGalleryField";
+import { readImageMeta } from "@/lib/imageGallery";
+
 import MeasurementCaseEditorDialog from "@/components/measurementImport/MeasurementCaseEditorDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
