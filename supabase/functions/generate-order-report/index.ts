@@ -149,6 +149,42 @@ Deno.serve(async (req: Request) => {
     const docRows = (docs.data ?? []) as any[];
     const isImage = (name: string) => /\.(png|jpe?g|gif|webp|svg|heic)$/i.test(name || "");
 
+    // ---- Fotodokumentation: Bildsammlungen aus Ergebniswerten (JSON in remarks)
+    const photoGroups: Array<{ title: string; context: string; images: Array<{ dataUrl: string; comment: string }> }> = [];
+    try {
+      if (measurementIds.length) {
+        const { data: photoRows } = await admin
+          .from("order_measurements")
+          .select(`id, measurement_number,
+                   measurement_services(service_name),
+                   samples:samples!order_measurements_sample_id_fkey(sample_number),
+                   measurement_results(id, result_name, display_label, remarks)`)
+          .in("id", measurementIds);
+        for (const m of (photoRows ?? []) as any[]) {
+          for (const r of m.measurement_results ?? []) {
+            const entries = parseImageCollection(r.remarks);
+            if (!entries.length) continue;
+            const images: Array<{ dataUrl: string; comment: string }> = [];
+            for (const e of entries) {
+              const dataUrl = e.data_url ?? (e.storage_path ? await downloadAsDataUrl(admin, e.storage_path) : null);
+              if (dataUrl) images.push({ dataUrl, comment: e.comment ?? "" });
+            }
+            if (images.length) {
+              photoGroups.push({
+                title: r.display_label || r.result_name,
+                context: [m.samples?.sample_number, m.measurement_services?.service_name, m.measurement_number]
+                  .filter(Boolean).join(" · "),
+                images,
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Fotodokumentation konnte nicht geladen werden", e);
+    }
+
+
     const snapshot: any = {
       order: {
         ...order,
