@@ -58,6 +58,25 @@ export const measurementResults = {
   ) => run(dbClient.from("measurement_results").update(updates as any).eq("id", id)),
 
 
+  /**
+   * Alle Ergebniswerte eines Auftrags inkl. `remarks` (JSON-Werte komplexer
+   * Feldtypen, z. B. Bildsammlungen der Fotodokumentation).
+   */
+  listForOrder: (orderId: string) =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(
+          `id, measurement_number,
+           measurement_services(service_name),
+           samples:samples!order_measurements_sample_id_fkey(sample_number, sample_name),
+           measurement_results(id, result_name, display_label, remarks, measured_at)`
+        )
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: true })
+    ),
+
   delete: (id: string) =>
     run(dbClient.from("measurement_results").delete().eq("id", id)),
 };
+
