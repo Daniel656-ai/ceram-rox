@@ -115,15 +115,18 @@ export function mapImportedResults(
   }
   const caseConflicts = new Set([...spellings].filter(([, v]) => v.size > 1).map(([k]) => k));
 
-  return results.map((r) => {
+  const mapped = results.map((r) => {
     if (isGeometry(r.analysis)) {
       const { targetFieldKey, origin, factor } = mapGeometryResult(r, targets, profile, caseConflicts);
       const target = targetFieldKey ? byKey.get(targetFieldKey) : undefined;
       const existingRaw = targetFieldKey ? currentValues?.[targetFieldKey] : undefined;
+      // Maßgeblich ist die im Ergebnisfeld hinterlegte Genauigkeit, nicht die Rohdatei.
+      const rounded = typeof r.value === "number" ? roundToField(r.value, target?.decimal_places) : null;
       return {
         sourceName: r.sourceName,
-        raw: String(r.value),
-        value: typeof r.value === "number" ? r.value : null,
+        raw: rounded != null ? String(rounded) : String(r.value),
+        value: rounded,
+
         unit: r.unit ?? null,
         belowDetection: false,
         targetFieldKey,
