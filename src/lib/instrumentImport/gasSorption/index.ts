@@ -16,6 +16,7 @@
 import * as XLSX from "xlsx";
 import { extractStrings, scanDoubles } from "../binaryText";
 import { micromeriticsPairLines } from "./micromeriticsRecords";
+import { extractSmp, isothermDataset, readIsothermPoints } from "./smp";
 
 import type {
   AnalysisType, Confidence, FileImporter, ImportedAnalysis,
@@ -327,13 +328,22 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
 
   const { found, unrecognized } = findResults(lines, file.buffer, offsets);
   const warnings: string[] = [];
+
+  // Messdatei (.SMP) ist die primäre Quelle: Bedingungen, Einwaage und – sofern
+  // vorhanden – Isothermen-Rohdaten werden immer aus ihr gelesen.
+  const smp = binary || ext(file.name) === ".smp" ? extractSmp(file.buffer, lines) : null;
+  const isotherm = smp?.isotherm.length ? smp.isotherm : readIsothermPoints(lines);
+  const dataset = isothermDataset(isotherm);
+
   if (found.length === 0) {
     warnings.push(
       ext(file.name) === ".smp"
-        ? "Diese Messdatei (.SMP) enthält nur die Mess- und Geräteeinstellungen, keine ausgewerteten Ergebnisse. " +
-          "Bitte zusätzlich die zugehörige Reportdatei (.REP) importieren – dort stehen z. B. die BET-Oberfläche und die Analysebedingungen."
+        ? "In dieser Messdatei (.SMP) sind keine bereits ausgewerteten Kennwerte (z. B. BET-Oberfläche, Porenvolumen) enthalten – " +
+          "übernommen wurden Probenangaben und Analysebedingungen" +
+          (dataset ? " sowie die Isothermen-Rohdaten" : "") +
+          ". Ausgewertete Kennwerte können optional aus einer zugehörigen Reportdatei (.REP) ergänzt werden."
         : "In dieser Datei konnten keine Gasadsorptions-Ergebnisparameter erkannt werden. " +
-          "Bitte prüfen, ob es sich um eine Mess- oder Reportdatei einer Gasadsorptionsmessung handelt."
+          "Bitte prüfen, ob es sich um eine gültige Datei einer Gasadsorptionsmessung handelt."
     );
   }
 
@@ -358,16 +368,29 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
   }
 
   const instrument = detectInstrument(lines);
+  const info = sampleInfo(lines);
+  if (info.sampleMass == null && smp?.sampleMass != null) {
+    info.sampleMass = smp.sampleMass;
+    info.sampleMassUnit = info.sampleMassUnit ?? "g";
+  }
+
+  const header: Record<string, string> = { ...(smp?.header ?? {}) };
+  if (instrument.instrument) header["Gerät"] = instrument.instrument;
+  if (instrument.vendor) header["Hersteller"] = instrument.vendor;
+  if (info.sampleName) header["Probe"] = info.sampleName;
+  if (info.analysisDate) header["Analysedatum"] = info.analysisDate;
 
   return {
     source: instrument.vendor ?? "Gasadsorption",
     instrumentFamily: instrument.instrument ?? "",
     sourceFileName: file.name,
     parserVersion: GAS_SORPTION_PARSER_VERSION,
-    sampleInformation: sampleInfo(lines),
+    sampleInformation: info,
     analyses: [...byAnalysis.values()],
     warnings,
     unrecognized: unrecognized.slice(0, 50),
+    dataset,
+    headerMap: Object.keys(header).length > 0 ? header : undefined,
   };
 }
 

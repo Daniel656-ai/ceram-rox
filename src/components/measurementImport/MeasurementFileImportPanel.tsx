@@ -376,6 +376,24 @@ export default function MeasurementFileImportPanel({
             </p>
           )}
 
+          {measurement.headerMap && Object.keys(measurement.headerMap).length > 0 && (
+            <details className="rounded border p-2">
+              <summary className="text-xs cursor-pointer">
+                Importinformationen (Analysebedingungen, keine Ergebniswerte)
+              </summary>
+              <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                {Object.entries(measurement.headerMap).map(([k, v]) => (
+                  <div key={k} className="flex gap-1">
+                    <dt className="font-medium">{k}:</dt>
+                    <dd>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          )}
+
+
+
           <div className="border rounded overflow-hidden">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
@@ -509,7 +527,9 @@ export default function MeasurementFileImportPanel({
         <div>
           <Label className="text-xs text-muted-foreground">
             Unterstützte Geräte: {fileImporters.map((i) => i.label).join(", ")}
-            {importerById("gasadsorption") ? " – u. a. .SMP, .REP, .TXT, .CSV, .XLS/.XLSX" : ""}
+            {importerById("gasadsorption")
+              ? " – Gasadsorption: die Messdatei (.SMP) genügt; .REP, .TXT, .CSV, .XLS/.XLSX sind optional zusätzlich möglich."
+              : ""}
           </Label>
         </div>
       )}
