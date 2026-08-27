@@ -485,6 +485,11 @@ function renderPdf(snapshot: any, layout: any) {
     }
   }
 
+  // Fotodokumentation (alle Bilder mit Kommentaren, in gespeicherter Reihenfolge)
+  y = drawPhotoDocumentation(doc, snapshot, y, marginX, pageWidth, doc.internal.pageSize.getHeight());
+
+
+
   // Footer
   const pages = (doc.internal as any).getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
