@@ -16,6 +16,23 @@ export interface OrderUploadFile {
   created_at: string;
 }
 
+/**
+ * Übersetzt Storage-Fehler in eine verständliche, ursachennahe Meldung.
+ * Der Fehler wird NICHT unterdrückt – er benennt lediglich den betroffenen
+ * Bucket, damit ein fehlendes Storage-Setup in einer Umgebung sofort
+ * erkennbar ist (siehe `supabase/storage/bootstrap-buckets.sql`).
+ */
+function storageError(err: { message?: string } & Record<string, unknown>): Error {
+  const msg = String(err?.message ?? err);
+  if (/bucket not found/i.test(msg)) {
+    return new Error(
+      `Storage-Bucket "${ORDER_UPLOADS_BUCKET}" existiert in dieser Umgebung nicht. ` +
+        `Bitte das Storage-Setup ausführen (supabase/storage/bootstrap-buckets.sql).`
+    );
+  }
+  return err instanceof Error ? err : new Error(msg);
+}
+
 export const orderUploads = {
   listForMeasurement: (measurementId: string) =>
     unwrap(
@@ -39,7 +56,7 @@ export const orderUploads = {
     const { error: upErr } = await dbClient.storage
       .from(ORDER_UPLOADS_BUCKET)
       .upload(path, args.file, { upsert: false, contentType: args.file.type });
-    if (upErr) throw upErr;
+    if (upErr) throw storageError(upErr as any);
     const row = await unwrap(
       dbClient
         .from("order_upload_files" as any)
@@ -108,7 +125,7 @@ export const orderUploads = {
 
   async download(storagePath: string): Promise<Blob> {
     const { data, error } = await dbClient.storage.from(ORDER_UPLOADS_BUCKET).download(storagePath);
-    if (error) throw error;
+    if (error) throw storageError(error as any);
     return data;
   },
 };
