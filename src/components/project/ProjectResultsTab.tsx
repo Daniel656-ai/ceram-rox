@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2 } from "lucide-react";
+import { formatResultLabel } from "@/lib/resultLabels";
+
 
 export interface ProjectResultRow {
   id: string;
@@ -41,7 +43,7 @@ export function buildProjectResultRows(raw: any[], getUserName: (id: string) => 
         orderId: m.measurement_orders?.id,
         orderNumber: m.measurement_orders?.order_number || "–",
         serviceName: m.measurement_services?.service_name || "–",
-        parameter: (r.display_label || r.result_name) + (r.unit ? ` (${r.unit})` : ""),
+        parameter: formatResultLabel(r.display_label || r.result_name, r.unit),
         value: r.value,
         unit: r.unit,
         measuredAt: r.measured_at,
