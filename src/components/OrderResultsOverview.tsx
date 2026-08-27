@@ -3,6 +3,8 @@ import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { buildOrderResultGroups, type RawMeasurementRow } from "@/lib/orderResultsAggregation";
+import { formatResultLabel } from "@/lib/resultLabels";
+
 
 function fmt(n: number | null) {
   if (n === null) return "–";
@@ -52,9 +54,10 @@ export default function OrderResultsOverview({ orderId }: { orderId: string }) {
                   <TableHead>Gemessene Probe</TableHead>
                   {g.columns.map((c) => (
                     <TableHead key={c.key} className="text-right">
-                      {c.label}{c.unit ? ` (${c.unit})` : ""}
+                      {formatResultLabel(c.label, c.unit)}
                     </TableHead>
                   ))}
+
                 </TableRow>
               </TableHeader>
               <TableBody>
