@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Plus, Trash2, Copy, ArrowUp, ArrowDown, Repeat, Calculator } from "lucide-react";
 import UploadField from "@/components/upload/UploadField";
+import ImageGalleryField from "@/components/forms/ImageGalleryField";
+import { readImageMeta } from "@/lib/imageGallery";
 import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 import { evaluateFormula } from "@/lib/formulaEngine";
