@@ -10,6 +10,8 @@ import {
   type MeasurementContextFieldDef, type BlockChildRole,
 } from "@/lib/measurementBlocks";
 import { FIELD_TYPE_GROUPS, SUBFIELD_TYPE_GROUPS, fieldTypeLabel, slugify } from "@/lib/formFieldTypes";
+import { readImageMeta, writeImageMeta, type ImageFieldMode } from "@/lib/imageGallery";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
