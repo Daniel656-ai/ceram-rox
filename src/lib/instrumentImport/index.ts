@@ -95,6 +95,21 @@ function mapGeometryResult(
   return { targetFieldKey: null, origin: "none", factor: null };
 }
 
+/**
+ * Rundet mathematisch korrekt (kaufmännisch) auf die im Ergebnisfeld
+ * hinterlegte Anzahl Nachkommastellen. Ohne Angabe bleibt der Wert unverändert.
+ */
+export function roundToField(value: number, decimals?: number | null): number {
+  if (decimals == null || !Number.isFinite(decimals) || decimals < 0) return value;
+  if (!Number.isFinite(value)) return value;
+  const f = 10 ** decimals;
+  const scaled = value * f;
+  // Korrigiert Binärdarstellungsfehler (25,42365 * 10000 = 25423,649999…).
+  const corrected = Number(scaled.toPrecision(12));
+  return Math.sign(corrected) * Math.round(Math.abs(corrected)) / f;
+}
+
+
 export function mapImportedResults(
   results: ImportedResult[],
   profile: MeasurementImportProfile | null | undefined,
@@ -115,15 +130,18 @@ export function mapImportedResults(
   }
   const caseConflicts = new Set([...spellings].filter(([, v]) => v.size > 1).map(([k]) => k));
 
-  return results.map((r) => {
+  const mapped = results.map((r) => {
     if (isGeometry(r.analysis)) {
       const { targetFieldKey, origin, factor } = mapGeometryResult(r, targets, profile, caseConflicts);
       const target = targetFieldKey ? byKey.get(targetFieldKey) : undefined;
       const existingRaw = targetFieldKey ? currentValues?.[targetFieldKey] : undefined;
+      // Maßgeblich ist die im Ergebnisfeld hinterlegte Genauigkeit, nicht die Rohdatei.
+      const rounded = typeof r.value === "number" ? roundToField(r.value, target?.decimal_places) : null;
       return {
         sourceName: r.sourceName,
-        raw: String(r.value),
-        value: typeof r.value === "number" ? r.value : null,
+        raw: rounded != null ? String(rounded) : String(r.value),
+        value: rounded,
+
         unit: r.unit ?? null,
         belowDetection: false,
         targetFieldKey,
@@ -171,7 +189,20 @@ export function mapImportedResults(
       existingValue,
     };
   });
+
+  // Nur Geometrievermessung: Ausgabe in der Reihenfolge der Ergebnisfelder des
+  // Formulars (targets sind bereits in Formularreihenfolge). Andere Profile
+  // behalten die bisherige Reihenfolge der Datei unverändert.
+  if (!mapped.some((r) => isGeometry(r.analysis))) return mapped;
+  const order = new Map(targets.map((t, i) => [t.field_key, i]));
+  const rank = (r: FileMappedRow) =>
+    r.targetFieldKey != null ? (order.get(r.targetFieldKey) ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+  return mapped
+    .map((r, i) => ({ r, i }))
+    .sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i)
+    .map((x) => x.r);
 }
+
 
 
 export const analysisLabel = (t: ImportedResult["analysis"]) => {

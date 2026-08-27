@@ -204,6 +204,8 @@ export interface TargetCandidate {
   display_name: string;
   unit?: string | null;
   field_type?: string;
+  /** Im Formular hinterlegte Nachkommastellen (maßgeblich für Ergebniswerte). */
+  decimal_places?: number | null;
 }
 
 export interface MappedRow extends ParsedReading {

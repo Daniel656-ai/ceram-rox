@@ -652,7 +652,7 @@ export function ImportFieldConfig({
     .filter(f => f.id !== field.id && f.parent_field_id === field.parent_field_id
       && !["repeater", "measurement_block", "measurement_import"].includes(f.field_type)
       && readBlockChildRole(f) === "value")
-    .map(f => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type }));
+    .map(f => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type, decimal_places: (f as any).decimal_places ?? null }));
 
   return (
     <div className="rounded border p-3 space-y-2 bg-muted/30">
