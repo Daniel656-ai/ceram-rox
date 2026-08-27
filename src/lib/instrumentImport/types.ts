@@ -21,6 +21,10 @@ export type AnalysisType =
   | "T_PLOT"
   | "NLDFT"
   | "ISOTHERM"
+  /** Geometrievermessung: Mittelwert einer Messart (D, to, ti, d …). */
+  | "GEOMETRY_MEAN"
+  /** Geometrievermessung: einzelne Messung (D1, ti3 Innen …). */
+  | "GEOMETRY_SINGLE"
   | "UNKNOWN";
 
 export interface ImportedResult {
