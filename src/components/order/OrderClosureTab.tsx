@@ -3,6 +3,8 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import OrderResultsDetail from "@/components/order/OrderResultsDetail";
+import PhotoDocumentationCard from "@/components/order/PhotoDocumentationCard";
+
 import CompletedResultForm from "@/components/CompletedResultForm";
 import OrderReportTab from "@/components/OrderReportTab";
 import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
