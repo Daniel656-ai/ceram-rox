@@ -35,32 +35,33 @@ const put = (h: Record<string, string>, key: string, value: string) => {
  * Liest die im Analyseprotokoll der Messdatei enthaltenen Bedingungen.
  * Es werden ausschließlich vorhandene Angaben übernommen – nichts geraten.
  */
+/** Einheit ohne anhängende Satzzeichen. */
+const unit = (u: string) => u.replace(/[.,;]+$/, "");
+
 export function readSmpConditions(lines: string[]): Record<string, string> {
   const h: Record<string, string> = {};
   for (const line of lines) {
     let m: RegExpMatchArray | null;
 
-    if ((m = line.match(/System volume:\s*([\d.,]+)\s*(\S+)/i))) put(h, "Systemvolumen", `${m[1]} ${m[2]}`);
+    if ((m = line.match(/System volume:\s*([\d.,]+)\s*(\S+)/i))) put(h, "Systemvolumen", `${m[1]} ${unit(m[2])}`);
 
     if ((m = line.match(/free space on port\s*(\d+)\.\s*Warm:\s*([\d.,]+)\s*(\S+),\s*Cold:\s*([\d.,]+)\s*(\S+)/i))) {
       put(h, "Messport", m[1]);
-      put(h, "Free Space (warm)", `${m[2]} ${m[3]}`);
-      put(h, "Free Space (kalt)", `${m[4]} ${m[5]}`);
+      put(h, "Free Space (warm)", `${m[2]} ${unit(m[3])}`);
+      put(h, "Free Space (kalt)", `${m[4]} ${unit(m[5])}`);
     }
 
-    if ((m = line.match(/Tman\s*=\s*([\d.,]+)\s*(°?\w+)/i))) put(h, "Manifold-Temperatur", `${m[1]} ${m[2]}`);
+    if ((m = line.match(/Tman\s*=\s*([\d.,]+)\s*(°?\w+)/i))) put(h, "Manifold-Temperatur", `${m[1]} ${unit(m[2])}`);
 
     if ((m = line.match(/^(.+?)\s*@\s*([\d.,]+)\s*K$/))) {
       put(h, "Adsorptiv", m[1].trim());
       put(h, "Badtemperatur", `${m[2]} K`);
     }
 
-    if ((m = line.match(/analysis\s*\(Serial #\s*([\w-]+)\)/i))) put(h, "Seriennummer", m[1]);
-    if ((m = line.match(/^(.*\b(?:Version)\s+[\d.]+)\s*$/i))) put(h, "Software", m[1].trim());
+    if ((m = line.match(/Serial\s*#\s*(\S+)/i))) put(h, "Seriennummer", m[1].replace(/[).]+$/, ""));
+    if ((m = line.match(/^(.*\bVersion\s+[\d.]+)\s*$/i))) put(h, "Software", m[1].trim());
     if ((m = line.match(/([A-Za-z]:\\[^\s]+\.SMP)/i))) put(h, "Quelldatei (Gerät)", m[1]);
-    if ((m = line.match(/^Sample Tube\b(.*)$/i))) put(h, "Probenröhrchen", `Sample Tube${m[1]}`);
     if (/inch Sample Tube/i.test(line)) put(h, "Probenröhrchen", line.trim());
-    if (/Degas Conditions/i.test(line)) put(h, "Entgasung", line.trim());
   }
   return h;
 }
