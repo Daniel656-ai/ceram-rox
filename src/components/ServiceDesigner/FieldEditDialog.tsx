@@ -56,7 +56,9 @@ export default function FieldEditDialog({
     (((field.metadata ?? {}) as any)?.measurement_import?.profile_id as string) ?? ""
   );
   const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
+  const [imageMode, setImageMode] = useState<ImageFieldMode>(readImageMeta(field).mode);
   const [blockRole, setBlockRole] = useState<BlockChildRole>(readBlockChildRole(field));
+
 
   const parent = field.parent_field_id ? allFields.find(f => f.id === field.parent_field_id) ?? null : null;
   const isBlockChild = parent?.field_type === "measurement_block";
