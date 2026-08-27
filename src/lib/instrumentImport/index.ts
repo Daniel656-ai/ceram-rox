@@ -95,6 +95,21 @@ function mapGeometryResult(
   return { targetFieldKey: null, origin: "none", factor: null };
 }
 
+/**
+ * Rundet mathematisch korrekt (kaufmännisch) auf die im Ergebnisfeld
+ * hinterlegte Anzahl Nachkommastellen. Ohne Angabe bleibt der Wert unverändert.
+ */
+export function roundToField(value: number, decimals?: number | null): number {
+  if (decimals == null || !Number.isFinite(decimals) || decimals < 0) return value;
+  if (!Number.isFinite(value)) return value;
+  const f = 10 ** decimals;
+  const scaled = value * f;
+  // Korrigiert Binärdarstellungsfehler (25,42365 * 10000 = 25423,649999…).
+  const corrected = Number(scaled.toPrecision(12));
+  return Math.sign(corrected) * Math.round(Math.abs(corrected)) / f;
+}
+
+
 export function mapImportedResults(
   results: ImportedResult[],
   profile: MeasurementImportProfile | null | undefined,
