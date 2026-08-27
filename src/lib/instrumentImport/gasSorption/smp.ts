@@ -66,17 +66,25 @@ export function readSmpConditions(lines: string[]): Record<string, string> {
 }
 
 /**
- * Einwaage: in der Messdatei steht sie als IEEE-754-Wert unmittelbar im
- * Probendatenblock (direkt hinter den Beschriftungen Sample/Operator/Bar Code).
- * Es wird nur ein Wert übernommen, wenn er physikalisch plausibel ist.
+ * Einwaage: in der Messdatei folgt sie als IEEE-754-Wert dem Probendatenblock
+ * unmittelbar nach der Beschriftung „Bar Code:“ (fester Satzaufbau, an realen
+ * Gerätedateien verifiziert). Übernommen wird nur ein plausibler Wert in g.
  */
 export function readSmpSampleMass(buffer: ArrayBuffer, lines: { text: string; offset: number }[]): number | null {
-  const anchor = lines.find((l) => /^bar code:?$/i.test(l.text)) ?? lines.find((l) => /^submitter:?$/i.test(l.text));
+  const anchor = lines.find((l) => /^bar code:?$/i.test(l.text));
   if (!anchor) return null;
-  // Der Wertblock liegt im Probendatensatz direkt vor bzw. nach den Beschriftungen.
-  const cands = scanDoubles(buffer, Math.max(0, anchor.offset - 512), anchor.offset + 512)
+  const view = new DataView(buffer);
+  const at = anchor.offset + 32;
+  const plausible = (v: number) => Number.isFinite(v) && v > 0.0005 && v < 50 && Math.abs(v - Math.round(v)) > 1e-9;
+
+  if (at + 8 <= buffer.byteLength) {
+    const v = view.getFloat64(at, true);
+    if (plausible(v)) return v;
+  }
+  // Rückfallebene: erster plausibler Wert im Probendatensatz.
+  const cands = scanDoubles(buffer, anchor.offset + 24, anchor.offset + 64)
     .map((d) => d.value)
-    .filter((v) => v > 0.0005 && v < 100 && Math.abs(v - Math.round(v)) > 1e-9);
+    .filter(plausible);
   return cands.length ? cands[0] : null;
 }
 
