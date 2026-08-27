@@ -254,7 +254,24 @@ export default function FieldEditDialog({
               <p className="text-xs text-muted-foreground mt-1">Verfügbare Funktionen: SUM, AVERAGE, MIN, MAX, ROUND, ABS, IF. Referenzen: `feld_key`.</p>
             </div>
           )}
+          {isImage && (
+            <div>
+              <Label>Darstellungsart</Label>
+              <Select value={imageMode} onValueChange={(v) => setImageMode(v as ImageFieldMode)} disabled={isGlobalRef}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single">Einzelbild</SelectItem>
+                  <SelectItem value="multi">Mehrere Bilder (Fotodokumentation)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                „Mehrere Bilder“ erlaubt beliebig viele Fotos mit je einem optionalen Kommentar
+                und frei wählbarer Reihenfolge. Bestehende Einzelbildfelder bleiben unverändert.
+              </p>
+            </div>
+          )}
           {isImport && <ImportFieldConfig profileId={importProfileId} onChange={setImportProfileId} allFields={allFields} field={field} />}
+
           {(isRepeater || isBlock) && (
             ["repeater", "measurement_block"].includes(field.field_type) ? (
               <RepeaterConfigPanel
