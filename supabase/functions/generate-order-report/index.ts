@@ -245,7 +245,9 @@ Deno.serve(async (req: Request) => {
           }, {})
         ).map(([user, hours]) => ({ user, hours })),
       },
+      photo_documentation: photoGroups,
       attachment: {
+
         all: [...uploadRows, ...docRows].map((a: any) => ({
           name: a.file_name ?? a.name, path: a.storage_path ?? a.file_path,
           uploaded_at: a.created_at,
