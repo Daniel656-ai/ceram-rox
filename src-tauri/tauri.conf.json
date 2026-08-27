@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "CeramRox",
-  "version": "0.1.268",
+  "version": "0.1.269",
   "identifier": "com.ceramrox.app",
   "build": {
     "frontendDist": "../dist",
