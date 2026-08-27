@@ -245,6 +245,10 @@ function TaskExecutionPageInner() {
       );
     }
 
+    /** Bereits gespeicherte Einheit erhalten, wenn die Definition keine liefert. */
+    const prevUnit = (map: Map<string, any>, name: string): string | null =>
+      ((map.get(name)?.unit as string | null) || "").trim() || null;
+
     const knownKeys = new Set(candidates.keys());
     const activeKeys = new Set<string>();
 
@@ -271,6 +275,8 @@ function TaskExecutionPageInner() {
       const payload: any = {
         result_name: resultName,
         display_label: candidate.label,
+        // Einheit stammt aus der Felddefinition und bleibt ein eigenes Attribut.
+        unit: (candidate.unit ?? "").trim() || prevUnit(existingByName, resultName),
         is_official: candidate.official,
         measured_by: user?.id ?? null,
         measured_at: measuredAt,

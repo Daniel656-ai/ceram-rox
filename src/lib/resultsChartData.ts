@@ -1,5 +1,7 @@
 import type { ResultRecord } from "@/hooks/useResultsDatabase";
 import { resultLabel } from "@/hooks/useResultsDatabase";
+import { formatResultLabel } from "@/lib/resultLabels";
+
 
 /**
  * Robuste Konvertierung eines Ergebniswertes in eine Zahl.
@@ -121,7 +123,7 @@ export function collectNumericParameters(records: ResultRecord[]): NumericParame
     }
   }
   return Array.from(map.values())
-    .map((o) => ({ ...o, label: o.unit ? `${o.key} – ${o.unit}` : o.key }))
+    .map((o) => ({ ...o, label: formatResultLabel(o.key, o.unit) }))
     .sort((a, b) => a.key.localeCompare(b.key, "de"));
 }
 

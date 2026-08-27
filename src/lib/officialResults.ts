@@ -17,6 +17,8 @@ export interface OfficialResultCandidate {
   value: unknown;
   official: boolean;
   kind: "field" | "calculation";
+  /** Einheit des Ergebnisfeldes – eigenes Attribut, nie Teil des Feldnamens. */
+  unit?: string | null;
   error?: string | null;
   /** Kennung der konkreten Messung (Messdatenblock), sonst null. */
   instanceKey?: string | null;
@@ -71,6 +73,7 @@ export function buildLinkedFormResultCandidates(
         instanceCandidates.push({
           key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
           label: child.result_label || child.display_name || child.field_key,
+          unit: (child as any).unit ?? null,
           value: instance.values[child.field_key],
           official: child.is_result === true,
           kind: "field",
@@ -88,6 +91,7 @@ export function buildLinkedFormResultCandidates(
       .map((field) => ({
         key: `${prefix}${field.field_key}`,
         label: field.result_label || field.display_name || field.field_key,
+        unit: field.unit ?? null,
         value: localValues[field.field_key],
         official: field.is_result === true,
         kind: "field" as const,
@@ -96,6 +100,7 @@ export function buildLinkedFormResultCandidates(
     ...calculations.map((calculation) => ({
       key: `${prefix}${calculation.calc_key}`,
       label: calculation.result_label || calculation.display_name || calculation.calc_key,
+      unit: calculation.unit ?? null,
       value: calculated[calculation.calc_key]?.value ?? null,
       official: calculation.is_result === true,
       kind: "calculation" as const,
@@ -145,6 +150,7 @@ export function buildServiceResultCandidates(
     .map((field) => ({
       key: field.field_key,
       label: field.result_label || field.display_name || field.field_key,
+      unit: field.unit ?? null,
       value: resolved[field.field_key],
       official: field.is_result === true,
       kind: field.field_type === "computed" ? "calculation" as const : "field" as const,
