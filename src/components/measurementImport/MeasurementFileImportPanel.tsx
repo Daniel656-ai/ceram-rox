@@ -527,7 +527,9 @@ export default function MeasurementFileImportPanel({
         <div>
           <Label className="text-xs text-muted-foreground">
             Unterstützte Geräte: {fileImporters.map((i) => i.label).join(", ")}
-            {importerById("gasadsorption") ? " – u. a. .SMP, .REP, .TXT, .CSV, .XLS/.XLSX" : ""}
+            {importerById("gasadsorption")
+              ? " – Gasadsorption: die Messdatei (.SMP) genügt; .REP, .TXT, .CSV, .XLS/.XLSX sind optional zusätzlich möglich."
+              : ""}
           </Label>
         </div>
       )}
