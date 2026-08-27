@@ -320,9 +320,19 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
           onChange={(v) => setValue(v)}
         />
       );
-    case "file":
     case "image":
+      return (
+        <ImageGalleryField
+          fieldKey={field.field_key}
+          mode={readImageMeta(field).mode}
+          value={value}
+          disabled={disabled}
+          onChange={(entries) => setValue(entries)}
+        />
+      );
+    case "file":
       return <Input type="file" disabled={disabled} />;
+
     default:
       return (
         <Input
