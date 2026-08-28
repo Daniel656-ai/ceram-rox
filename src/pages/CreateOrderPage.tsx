@@ -616,15 +616,44 @@ export default function CreateOrderPage() {
     hoechste: t("common:priority_highest"),
   };
 
+  const saveIndicator =
+    autosave.state === "saving" ? (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Speichere Änderungen …
+      </span>
+    ) : autosave.state === "saved" ? (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Alle Änderungen gespeichert
+      </span>
+    ) : autosave.state === "error" ? (
+      <span className="flex items-center gap-1.5 text-xs text-destructive">
+        <CloudOff className="h-3.5 w-3.5" /> Änderungen konnten nicht gespeichert werden
+      </span>
+    ) : null;
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{t("orders:create_title")}</h1>
           <p className="text-muted-foreground">{t("orders:create_subtitle")}</p>
         </div>
+        {mode === "single" && draftsEnabled && saveIndicator}
       </div>
+
+      {mode === "single" && <OrderDraftsPanel activeDraftId={draftId} />}
+
+      {mode === "single" && loadedDraft?.source_label && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+          <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+          <p className="text-sm">
+            Dieser Auftrag wurde aus einer Vorlage erstellt (<strong>{loadedDraft.source_label}</strong>).
+            Bitte prüfen Sie die übernommenen Angaben. Alle Inhalte sind vollständig editierbar.
+          </p>
+        </div>
+      )}
+
 
       {/* Mode toggle */}
       <div className="flex gap-2">
