@@ -26,6 +26,9 @@ import ImportProfileEditorDialog from "@/components/measurementImport/ImportProf
 import MeasurementCaseEditorDialog from "@/components/measurementImport/MeasurementCaseEditorDialog";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
+import { readValueSource, readResultConditions, writeResultConditions } from "@/lib/fieldLinks";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Link2 } from "lucide-react";
 
 /* ==============================================================
  * Feld bearbeiten – zentraler Feldeditor des Formulardesigners.
@@ -73,6 +76,22 @@ export default function FieldEditDialog({
     enabled: !!field.form_id,
   });
 
+
+  // Datenfunktion: Wertquelle „Feld aus demselben Formular“ (echte Verknüpfung,
+  // keine Kopie). Layout-Eigenschaften bleiben davon unberührt.
+  const initialLink = readValueSource(field as any);
+  const [linkKey, setLinkKey] = useState<string>(
+    initialLink?.source.kind === "form_field" ? initialLink.source.field_key : "__none__"
+  );
+  // Ergebnisbedingungen (z. B. Temperatur) für dynamische Ergebnisbezeichnungen.
+  const [conditionKeys, setConditionKeys] = useState<string[]>(readResultConditions(field));
+
+  /** Mögliche Quellfelder: Geschwisterfelder desselben Formulars/Containers. */
+  const linkCandidates = allFields.filter(f =>
+    f.id !== field.id &&
+    (f.parent_field_id ?? null) === (field.parent_field_id ?? null) &&
+    !["repeater", "measurement_block", "measurement_import"].includes(f.field_type)
+  );
 
   const parent = field.parent_field_id ? allFields.find(f => f.id === field.parent_field_id) ?? null : null;
   const isBlockChild = parent?.field_type === "measurement_block";
@@ -128,6 +147,8 @@ export default function FieldEditDialog({
       // Darstellungsart des Bildfeldes (Einzelbild bleibt Standard).
       if (isImage) Object.assign(metadata, writeImageMeta(metadata, { mode: imageMode }));
       if (isBlockChild) metadata.block_role = blockRole;
+      Object.assign(metadata, writeResultConditions(metadata, isResult ? conditionKeys : []));
+      if (!isResult || !conditionKeys.length) delete (metadata as any).result_conditions;
 
 
       return api.formFields.update(field.id, {
@@ -147,6 +168,18 @@ export default function FieldEditDialog({
         is_result: isResult,
         result_label: isResult ? (resultLabel.trim() || null) : null,
         data_source: (() => {
+          // Verknüpfung innerhalb desselben Formulars hat Vorrang.
+          if (linkKey !== "__none__") {
+            const src = allFields.find(f => f.field_key === linkKey);
+            return {
+              mode: "copy",
+              source: {
+                kind: "form_field",
+                field_key: linkKey,
+                label: src?.display_name ?? linkKey,
+              },
+            };
+          }
           if (dsKey === "__none__") return {};
           const opt = (dsOptions as any[]).find(o => `${o.step_key}.${o.field_key}` === dsKey);
           if (!opt) return {};
@@ -226,6 +259,29 @@ export default function FieldEditDialog({
               </p>
             </div>
           )}
+          {!isBlock && !isRepeater && (
+            <div className="rounded border p-3 space-y-2">
+              <Label className="text-sm flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-primary" /> Wertquelle
+              </Label>
+              <Select value={linkKey} onValueChange={setLinkKey}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Eigene Eingabe</SelectItem>
+                  {linkCandidates.map(f => (
+                    <SelectItem key={f.id} value={f.field_key}>
+                      Feld aus diesem Formular: {f.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Ein verknüpftes Feld zeigt „🔗 Wert aus …“ und übernimmt den zentralen Wert.
+                Es entsteht keine zweite, unabhängige Kopie; Änderungen der Quelle wirken sofort.
+                Berechnungen verwenden den rein numerischen Wert, die Einheit bleibt Metainformation.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Bezeichnung</Label><SymbolInput value={label} disabled={isGlobalRef} onChange={setLabel} /></div>
             <div><Label>Schlüssel</Label><Input value={key} disabled={isGlobalRef} onChange={e => setKey(e.target.value)} /></div>
@@ -285,6 +341,28 @@ export default function FieldEditDialog({
                 <div>
                   <Label className="text-xs">Ergebnis-Bezeichnung (optional)</Label>
                   <SymbolInput value={resultLabel} onChange={setResultLabel} placeholder={label} />
+                </div>
+              )}
+              {isResult && linkCandidates.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Messbedingungen in der Bezeichnung</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {linkCandidates.map(f => (
+                      <label key={f.id} className="flex items-center gap-1.5 text-xs">
+                        <Checkbox
+                          checked={conditionKeys.includes(f.field_key)}
+                          onCheckedChange={(v) => setConditionKeys(
+                            v ? [...conditionKeys, f.field_key] : conditionKeys.filter(k => k !== f.field_key)
+                          )}
+                        />
+                        {f.display_name}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Erzeugt eine dynamische Anzeige wie η-NO_{"{x}"}_{"{(300 °C)}"} – die Bedingung bleibt
+                    zusätzlich als strukturierter Wert (Wert + Einheit) im Ergebnis erhalten.
+                  </p>
                 </div>
               )}
             </div>

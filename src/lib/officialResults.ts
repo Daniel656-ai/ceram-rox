@@ -4,6 +4,9 @@ import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import { evaluateLocalCalculations } from "@/lib/localCalculations";
 import { evaluateFormula } from "@/lib/formulaEngine";
 import {
+  readResultConditions, collectResultConditions, buildConditionLabel, conditionsToContext,
+} from "@/lib/fieldLinks";
+import {
   readInstances,
   readMeasurementBlockMeta,
   instanceResultKey,
@@ -24,7 +27,7 @@ export interface OfficialResultCandidate {
   instanceKey?: string | null;
   /** Fachliche Bezeichnung der Messung (z. B. „Kalibriert“). */
   instanceLabel?: string | null;
-  /** Messkontext (Präparation, Analyseart …). */
+  /** Messkontext (Präparation, Analyseart …) inkl. strukturierter Messbedingungen. */
   instanceContext?: Record<string, string> | null;
 }
 
@@ -88,14 +91,24 @@ export function buildLinkedFormResultCandidates(
   return [
     ...fields
       .filter((field) => !blockChildIds.has(field.id) && field.field_type !== "measurement_block")
-      .map((field) => ({
-        key: `${prefix}${field.field_key}`,
-        label: field.result_label || field.display_name || field.field_key,
-        unit: field.unit ?? null,
-        value: localValues[field.field_key],
-        official: field.is_result === true,
-        kind: "field" as const,
-      })),
+      .map((field) => {
+        // Dynamische Ergebnisbezeichnung: Basisname + verknüpfte Messbedingungen.
+        // Die Bedingungen bleiben zusätzlich strukturiert erhalten und werden
+        // niemals aus dem Anzeigetext zurückgelesen.
+        const base = field.result_label || field.display_name || field.field_key;
+        const conditions = collectResultConditions(
+          readResultConditions(field), fields, localValues,
+        );
+        return {
+          key: `${prefix}${field.field_key}`,
+          label: buildConditionLabel(base, conditions),
+          unit: field.unit ?? null,
+          value: localValues[field.field_key],
+          official: field.is_result === true,
+          kind: "field" as const,
+          instanceContext: conditions.length ? conditionsToContext(conditions) : null,
+        };
+      }),
     ...instanceCandidates,
     ...calculations.map((calculation) => ({
       key: `${prefix}${calculation.calc_key}`,

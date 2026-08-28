@@ -14,11 +14,24 @@ export const MAX_COLUMNS = 12;
 /** Auswahlliste für die Spaltenanzahl (leitet sich aus MAX_COLUMNS ab). */
 export const COLUMN_COUNT_OPTIONS = Array.from({ length: MAX_COLUMNS }, (_, i) => i + 1);
 
+/** Vertikale Ausrichtung eines Knotens innerhalb seiner Rasterzeile(n). */
+export type LayoutVAlign = "top" | "middle" | "bottom";
+/** Maximale Anzahl gespannter Rasterzeilen. */
+export const MAX_ROW_SPAN = 6;
+
 export interface LayoutNodeBase {
   id: string;
   type: LayoutNodeType;
   visible?: boolean;
   width?: LayoutWidth;
+  /**
+   * Reine Layout-Eigenschaft: Anzahl der Rasterzeilen, über die der Knoten
+   * gespannt wird (1 = Standard, unverändertes Verhalten).
+   * Unabhängig von jeder Datenverknüpfung.
+   */
+  rowSpan?: number;
+  /** Vertikale Ausrichtung; Standard für mehrzeilige Knoten ist „middle“. */
+  vAlign?: LayoutVAlign;
   className?: string;
   /**
    * Reine Darstellungsoption: Knoten wird optisch hervorgehoben.
@@ -26,6 +39,7 @@ export interface LayoutNodeBase {
    */
   highlight?: boolean;
 }
+
 
 export type LayoutNodeType =
   | "section"

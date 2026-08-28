@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste } from "lucide-react";
+import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -48,6 +48,7 @@ import { evaluateLocalCalculations, formatCalcResult } from "@/lib/localCalculat
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
 import { walkNodes } from "@/lib/api/formDefinitionLayout";
+import { readValueSource, isSameFormLink } from "@/lib/fieldLinks";
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -122,6 +123,31 @@ const widthCls = (w?: LayoutWidth) => {
   }
 
 };
+
+/**
+ * Reine Layout-Erweiterung: Ein Knoten kann über mehrere Rasterzeilen gespannt
+ * und darin vertikal ausgerichtet werden. Ohne `rowSpan` ändert sich nichts am
+ * bisherigen Layout (Standard = 1 Zeile, oben ausgerichtet).
+ */
+const ROW_SPAN_CLS: Record<number, string> = {
+  2: "md:row-span-2", 3: "md:row-span-3", 4: "md:row-span-4",
+  5: "md:row-span-5", 6: "md:row-span-6",
+};
+
+const spanCls = (n: { rowSpan?: number; vAlign?: "top" | "middle" | "bottom" }) => {
+  const rs = Math.max(1, Math.min(6, Math.round(Number(n.rowSpan ?? 1))));
+  if (rs <= 1 && !n.vAlign) return undefined;
+  // Standard für mehrzeilige Elemente: mittig.
+  const align = n.vAlign ?? (rs > 1 ? "middle" : "top");
+  return cn(
+    ROW_SPAN_CLS[rs],
+    "flex flex-col",
+    align === "middle" && "justify-center",
+    align === "bottom" && "justify-end",
+    align !== "top" && "[&>*]:h-auto",
+  );
+};
+
 
 /* ----------------------------------------------------------------
  * Einheitliche Hülle für ALLE Formularelemente (Feld, Berechnung, …)
@@ -634,6 +660,32 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
     containsSystemToken(field.default_value);
   const required = perm.required || field.is_required;
 
+  // Datenfunktion: Feld bezieht seinen Wert aus einem anderen Feld desselben
+  // Formulars. Es entsteht KEINE zweite unabhängige Kopie – der Wert wird bei
+  // jeder Änderung der Quelle nachgeführt.
+  const vs = readValueSource(field as any);
+  if (isSameFormLink(vs)) {
+    const src = allFields.find((f) => f.field_key === vs!.source.field_key) ?? null;
+    return (
+      <FormItemShell
+        label={label}
+        required={required}
+        unit={field.unit || src?.unit || null}
+        highlight={highlight}
+        icon={<Link2 className="h-3 w-3 text-primary shrink-0 mt-[1px]" />}
+        control={<LinkedFieldControl field={field} sourceKey={vs!.source.field_key} />}
+        footer={
+          <>
+            <p className="text-[10px] text-muted-foreground">
+              🔗 Wert aus {src?.display_name || vs!.source.label || vs!.source.field_key}
+            </p>
+            {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+          </>
+        }
+      />
+    );
+  }
+
   return (
     <FormItemShell
       label={label}
@@ -651,6 +703,33 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
     />
   );
 }
+
+/**
+ * Anzeige eines verknüpften Wertes. Der Wert wird zusätzlich in den eigenen
+ * Feldschlüssel gespiegelt, damit Berechnungen, Ergebnisdefinitionen und die
+ * Ergebnisdatenbank unverändert mit dem bestehenden Schlüssel arbeiten können.
+ */
+function LinkedFieldControl({ field, sourceKey }: { field: FormField; sourceKey: string }) {
+  const { setValue, interactive } = useBinding(field.field_key);
+  const read = useScopeReader();
+  const srcRaw = read(sourceKey);
+  const ownRaw = read(field.field_key);
+
+  useEffect(() => {
+    if (!interactive) return;
+    const next = srcRaw ?? "";
+    if ((ownRaw ?? "") !== next) setValue(next);
+  }, [srcRaw, ownRaw, interactive, setValue]);
+
+  const shown = srcRaw == null || srcRaw === "" ? "" : String(srcRaw);
+  return (
+    <div className="flex h-9 items-center gap-2 px-3 rounded-md border bg-muted/40 text-sm">
+      <Link2 className="h-3 w-3 text-primary shrink-0" />
+      <span className="truncate">{shown || "—"}</span>
+    </div>
+  );
+}
+
 
 
 /**
@@ -1353,7 +1432,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
         );
       }
       return (
-        <div className={cn(widthCls(node.width), "min-w-0", node.className)}>
+        <div className={cn(widthCls(node.width), spanCls(node), "min-w-0", node.className)}>
           <FieldWithLabel field={f} node={node} allFields={fields} highlight={node.highlight} />
         </div>
       );
@@ -1361,11 +1440,12 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     case "calculation": {
       const n = node as CalculationNode;
       return (
-        <div className={cn(widthCls(n.width), "min-w-0", n.className)}>
+        <div className={cn(widthCls(n.width), spanCls(n), "min-w-0", n.className)}>
           <CalculationDisplay node={n} />
         </div>
       );
     }
+
     default:
       return null;
   }
