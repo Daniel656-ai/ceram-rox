@@ -176,6 +176,8 @@ import { orderStepRuns, orderStepPositions } from "./orderStepRuns";
 import { workflowEngine } from "./workflowEngine";
 import { orderKindFormTemplates } from "./orderKindFormTemplates";
 import { systemContext } from "./systemContext";
+import { workflowContext } from "./workflowContext";
+import { orderPreparation } from "./orderPreparation";
 
 
 
@@ -356,6 +358,10 @@ export const api = {
 
   // ---- Prozessmanager: globale Systemvariablen (Context Variables) ----
   systemContext,
+
+  // ---- Workflow-Datenkontext & Probenvorbereitung ----
+  workflowContext,
+  orderPreparation,
 
 
 

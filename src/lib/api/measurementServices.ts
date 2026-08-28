@@ -62,6 +62,8 @@ export const measurementServices = {
       price?: number | null;
       work_instructions?: string | null;
       archived_at?: string | null;
+      /** Prozessvorlage, die beim Buchen dieser Dienstleistung ausgeführt wird. */
+      process_template_id?: string | null;
     }
   ) =>
     run(
