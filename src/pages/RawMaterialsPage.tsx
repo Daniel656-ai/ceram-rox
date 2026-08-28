@@ -27,7 +27,8 @@ import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
 import { PersonSelect } from "@/components/PersonSelect";
 import { formatQuantity } from "@/lib/formatQuantity";
-import { aggregateContainerLocations, formatLocationList, isActiveContainer, formatStorageLocation } from "@/lib/storageLocations";
+import { aggregateContainerLocations, isActiveContainer, formatStorageLocation } from "@/lib/storageLocations";
+import { LocationChips } from "@/components/LocationChips";
 
 
 
