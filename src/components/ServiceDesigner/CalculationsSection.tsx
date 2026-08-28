@@ -13,7 +13,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, X, Copy } from "lucide-react";
 import type { GlobalCalculation } from "@/lib/api/globalLibrary";
-import { FORMULA_FUNCTIONS } from "@/lib/formulaEngine";
+import { FORMULA_FUNCTIONS, formulaFunctionLabel } from "@/lib/formulaEngine";
 import {
   CALC_INPUT_SOURCES,
   CALC_OUTPUT_TARGETS,
@@ -288,7 +288,7 @@ export default function CalculationsSection() {
               <Textarea rows={2} className="mt-1 font-mono text-sm" value={draft.formula} onChange={(e) => setDraft((d) => ({ ...d, formula: e.target.value }))} placeholder="CEIL((COUNT(Brenntemperaturen)+1)/2)" />
               <div className="mt-2 flex flex-wrap gap-1">
                 {FORMULA_FUNCTIONS.map((f) => (
-                  <Badge key={f} variant="outline" className="cursor-pointer text-[10px]" onClick={() => setDraft((d) => ({ ...d, formula: `${d.formula}${f}()` }))}>{f}</Badge>
+                  <Badge key={f} variant="outline" title={formulaFunctionLabel(f)} className="cursor-pointer text-[10px]" onClick={() => setDraft((d) => ({ ...d, formula: `${d.formula}${f}()` }))}>{f}</Badge>
                 ))}
               </div>
               {draft.inputs.length > 0 && (

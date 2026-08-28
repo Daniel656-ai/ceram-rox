@@ -23,7 +23,7 @@ import {
   buildFormulaFromTokens, isCalcInputField, wouldCreateCycle,
   evaluateLocalCalculations, formatCalcResult,
 } from "@/lib/localCalculations";
-import { extractReferences, FORMULA_FUNCTIONS } from "@/lib/formulaEngine";
+import { extractReferences, FORMULA_FUNCTIONS, formulaFunctionLabel } from "@/lib/formulaEngine";
 
 const OPERATORS: { v: CalcOperator; l: string }[] = [
   { v: "+", l: "+" }, { v: "-", l: "−" }, { v: "*", l: "×" }, { v: "/", l: "÷" },
@@ -536,7 +536,7 @@ export default function LocalCalculationsPanel({
                           <button key={f} type="button"
                             className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted font-mono"
                             onClick={() => setDraft((d) => ({ ...d, formula: `${d.formula}${d.formula && !/[\s(]$/.test(d.formula) ? " " : ""}${f}(` }))}>
-                            {f}( … )
+                            {formulaFunctionLabel(f)}
                           </button>
                         ))}
                       </PopoverContent>

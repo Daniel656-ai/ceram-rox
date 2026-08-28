@@ -112,10 +112,18 @@ export const FORMULA_FUNCTION_INFO: Record<string, string> = {
   IF: "Bedingung (Prüfung, dann, sonst)",
 };
 
+/** Parameter-Hinweis je Funktion (Standard: einstellig). */
+const FORMULA_FUNCTION_ARGS: Record<string, string> = {
+  SUM: "a, b, …", AVERAGE: "a, b, …", AVG: "a, b, …", MIN: "a, b, …",
+  MAX: "a, b, …", COUNT: "a, b, …", MEDIAN: "a, b, …",
+  ROUND: "x, n", POW: "x, n", IF: "Prüfung, dann, sonst",
+};
+
 /** Anzeigetext für Funktionslisten, z. B. „LN(x) – Natürlicher Logarithmus“. */
 export function formulaFunctionLabel(name: string): string {
+  const args = FORMULA_FUNCTION_ARGS[name] ?? "x";
   const info = FORMULA_FUNCTION_INFO[name];
-  return info ? `${name}(x) – ${info}` : `${name}( … )`;
+  return info ? `${name}(${args}) – ${info}` : `${name}(${args})`;
 }
 
 
