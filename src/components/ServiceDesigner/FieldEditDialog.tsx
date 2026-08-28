@@ -61,6 +61,17 @@ export default function FieldEditDialog({
   const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
   const [imageMode, setImageMode] = useState<ImageFieldMode>(readImageMeta(field).mode);
   const [blockRole, setBlockRole] = useState<BlockChildRole>(readBlockChildRole(field));
+  // Workflow-Datenquelle: Wert aus einem vorherigen Workflow-Schritt beziehen.
+  const initialDs = ((field as any).data_source ?? {}) as any;
+  const [dsKey, setDsKey] = useState<string>(
+    initialDs?.source?.step_key ? `${initialDs.source.step_key}.${initialDs.source.field_key}` : "__none__"
+  );
+  const [dsMode, setDsMode] = useState<"display" | "copy" | "calc">(initialDs?.mode ?? "display");
+  const { data: dsOptions = [] } = useQuery({
+    queryKey: ["workflow-sources", field.form_id],
+    queryFn: () => api.workflowContext.listSourcesForForm(field.form_id),
+    enabled: !!field.form_id,
+  });
 
 
   const parent = field.parent_field_id ? allFields.find(f => f.id === field.parent_field_id) ?? null : null;
@@ -135,6 +146,21 @@ export default function FieldEditDialog({
         max_value: isNumeric && maxV ? parseFloat(maxV) : null,
         is_result: isResult,
         result_label: isResult ? (resultLabel.trim() || null) : null,
+        data_source: (() => {
+          if (dsKey === "__none__") return {};
+          const opt = (dsOptions as any[]).find(o => `${o.step_key}.${o.field_key}` === dsKey);
+          if (!opt) return {};
+          return {
+            mode: dsMode,
+            source: {
+              kind: "workflow_step",
+              step_key: opt.step_key,
+              field_key: opt.field_key,
+              service_id: opt.service_id,
+              label: `${opt.service_name ?? opt.step_name} → ${opt.field_label}`,
+            },
+          };
+        })(),
         metadata: metadata as any,
       } as any);
     },
@@ -169,6 +195,35 @@ export default function FieldEditDialog({
             <div className="rounded border bg-muted/40 p-2 text-xs text-muted-foreground">
               Unterfeld von <span className="font-medium text-foreground">{parent.display_name}</span>
               {isBlockChild ? " (Messblock)" : " (Repeater)"}.
+            </div>
+          )}
+          {dsOptions.length > 0 && (
+            <div className="rounded border p-3 space-y-2">
+              <Label className="text-sm">Datenquelle aus vorherigem Workflow-Schritt</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Select value={dsKey} onValueChange={setDsKey}>
+                  <SelectTrigger><SelectValue placeholder="Keine" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— keine —</SelectItem>
+                    {(dsOptions as any[]).map(o => (
+                      <SelectItem key={`${o.step_key}.${o.field_key}`} value={`${o.step_key}.${o.field_key}`}>
+                        {(o.service_name ?? o.step_name)} → {o.field_label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={dsMode} onValueChange={(v) => setDsMode(v as any)} disabled={dsKey === "__none__"}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="display">Nur anzeigen</SelectItem>
+                    <SelectItem value="copy">Wert übernehmen</SelectItem>
+                    <SelectItem value="calc">In Berechnung verwenden</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Die Herkunft des Wertes wird beim Speichern mitgeführt und bleibt nachvollziehbar.
+              </p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">

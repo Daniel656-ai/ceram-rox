@@ -533,9 +533,36 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
   const [role, setRole] = useState(step.role_required ?? "any");
   const [mandatory, setMandatory] = useState(step.is_mandatory);
   const [positionSource, setPositionSource] = useState<string>(step.position_source ?? "none");
+  const [stepKind, setStepKind] = useState<"service" | "internal">(step.step_kind ?? "internal");
+  const [serviceId, setServiceId] = useState<string>(step.service_id ?? "__none__");
+  const [dependsOn, setDependsOn] = useState<string[]>(step.depends_on_step_keys ?? []);
+  const [createsSubsample, setCreatesSubsample] = useState<boolean>(step.creates_subsample ?? false);
 
   // Sync when step changes
-  useMemo(() => { setName(step.name); setStepKey(step.step_key); setDesc(step.description ?? ""); setRole(step.role_required ?? "any"); setMandatory(step.is_mandatory); setPositionSource(step.position_source ?? "none"); }, [step.id]);
+  useMemo(() => {
+    setName(step.name); setStepKey(step.step_key); setDesc(step.description ?? "");
+    setRole(step.role_required ?? "any"); setMandatory(step.is_mandatory);
+    setPositionSource(step.position_source ?? "none");
+    setStepKind(step.step_kind ?? "internal");
+    setServiceId(step.service_id ?? "__none__");
+    setDependsOn(step.depends_on_step_keys ?? []);
+    setCreatesSubsample(step.creates_subsample ?? false);
+  }, [step.id]);
+
+  // Dienstleistungskatalog für Dienstleistungsschritte (Typ 1).
+  const { data: services = [] } = useQuery({
+    queryKey: ["measurement-services", "active"],
+    queryFn: () => api.measurementServices.listActive(),
+  });
+
+  // Alle übrigen Schritte derselben Vorlage als mögliche Vorgänger.
+  const { data: siblingSteps = [] } = useQuery({
+    queryKey: ["process-steps", step.template_id],
+    queryFn: () => api.processTemplateSteps.listForTemplate(step.template_id),
+  });
+  const possiblePredecessors = (siblingSteps as ProcessStep[]).filter(
+    s => s.id !== step.id && s.order_index < step.order_index
+  );
 
   const saveMut = useMutation({
     mutationFn: () => api.processTemplateSteps.update(step.id, {
@@ -544,6 +571,10 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
       role_required: role === "any" ? null : role,
       is_mandatory: mandatory,
       position_source: positionSource === "none" ? null : positionSource,
+      step_kind: stepKind,
+      service_id: stepKind === "service" && serviceId !== "__none__" ? serviceId : null,
+      depends_on_step_keys: dependsOn,
+      creates_subsample: createsSubsample,
     }),
     onSuccess: () => { toast.success("Gespeichert"); onSaved(); },
     onError: (e: any) => toast.error(e.message || "Fehler"),
@@ -621,6 +652,63 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
           </div>
           <div className="flex items-end gap-2"><Switch checked={mandatory} onCheckedChange={setMandatory} /><Label>Pflicht</Label></div>
         </div>
+
+        {/* Schrittart: Dienstleistungsschritt (Typ 1) vs. interner Prozessschritt (Typ 2) */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Schrittart</Label>
+            <Select value={stepKind} onValueChange={(v) => setStepKind(v as "service" | "internal")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="internal">Interner Prozessschritt</SelectItem>
+                <SelectItem value="service">Dienstleistungsschritt</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {stepKind === "service" && (
+            <div>
+              <Label>Dienstleistung</Label>
+              <Select value={serviceId} onValueChange={setServiceId}>
+                <SelectTrigger><SelectValue placeholder="Dienstleistung wählen" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— keine —</SelectItem>
+                  {(services as any[]).map(sv => (
+                    <SelectItem key={sv.id} value={sv.id}>{sv.service_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Verwendet die Formulare der Dienstleistung – es werden keine Kopien angelegt.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Abhängigkeiten: Schritt wird erst nach Abschluss der Vorgänger ausführbar */}
+        <div>
+          <Label>Vorgängerschritte (Abhängigkeiten)</Label>
+          {possiblePredecessors.length === 0 ? (
+            <p className="text-xs text-muted-foreground mt-1">Keine vorhergehenden Schritte verfügbar.</p>
+          ) : (
+            <div className="mt-1 flex flex-wrap gap-3 rounded border p-2">
+              {possiblePredecessors.map(p => (
+                <label key={p.id} className="flex items-center gap-2 text-sm">
+                  <Switch
+                    checked={dependsOn.includes(p.step_key)}
+                    onCheckedChange={(c) => setDependsOn(prev => c ? [...prev, p.step_key] : prev.filter(k => k !== p.step_key))}
+                  />
+                  {p.name}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Switch checked={createsSubsample} onCheckedChange={setCreatesSubsample} />
+          <Label>Erzeugt Teilprobe (Probenvorbereitung)</Label>
+        </div>
+
         <div className="flex justify-end"><Button onClick={() => saveMut.mutate()}>Schritt speichern</Button></div>
 
         <div className="border-t pt-4">
