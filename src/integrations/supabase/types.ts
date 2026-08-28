@@ -757,6 +757,7 @@ export type Database = {
           binding_path: string | null
           category: string | null
           created_at: string
+          data_source: Json
           decimal_places: number | null
           default_value: string | null
           description: string | null
@@ -786,6 +787,7 @@ export type Database = {
           binding_path?: string | null
           category?: string | null
           created_at?: string
+          data_source?: Json
           decimal_places?: number | null
           default_value?: string | null
           description?: string | null
@@ -815,6 +817,7 @@ export type Database = {
           binding_path?: string | null
           category?: string | null
           created_at?: string
+          data_source?: Json
           decimal_places?: number | null
           default_value?: string | null
           description?: string | null
@@ -2452,6 +2455,7 @@ export type Database = {
           icon: string | null
           id: string
           price: number | null
+          process_template_id: string | null
           responsible_user_id: string | null
           service_name: string
           standard_duration_hours: number
@@ -2471,6 +2475,7 @@ export type Database = {
           icon?: string | null
           id?: string
           price?: number | null
+          process_template_id?: string | null
           responsible_user_id?: string | null
           service_name: string
           standard_duration_hours?: number
@@ -2490,6 +2495,7 @@ export type Database = {
           icon?: string | null
           id?: string
           price?: number | null
+          process_template_id?: string | null
           responsible_user_id?: string | null
           service_name?: string
           standard_duration_hours?: number
@@ -2498,6 +2504,13 @@ export type Database = {
           workstation_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "measurement_services_process_template_id_fkey"
+            columns: ["process_template_id"]
+            isOneToOne: false
+            referencedRelation: "process_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "measurement_services_workstation_id_fkey"
             columns: ["workstation_id"]
@@ -3732,6 +3745,7 @@ export type Database = {
           id: string
           measurement_number: string
           order_id: string
+          origin: string
           original_sample_id: string | null
           planned_end_date: string | null
           planned_hours: number | null
@@ -3741,8 +3755,10 @@ export type Database = {
           ranking: number | null
           sample_id: string | null
           service_id: string
+          source_measurement_id: string | null
           source_package_id: string | null
           source_package_name_snapshot: string | null
+          source_step_key: string | null
           status: Database["public"]["Enums"]["measurement_status"]
           updated_at: string
           workstation_id: string | null
@@ -3758,6 +3774,7 @@ export type Database = {
           id?: string
           measurement_number: string
           order_id: string
+          origin?: string
           original_sample_id?: string | null
           planned_end_date?: string | null
           planned_hours?: number | null
@@ -3767,8 +3784,10 @@ export type Database = {
           ranking?: number | null
           sample_id?: string | null
           service_id: string
+          source_measurement_id?: string | null
           source_package_id?: string | null
           source_package_name_snapshot?: string | null
+          source_step_key?: string | null
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
           workstation_id?: string | null
@@ -3784,6 +3803,7 @@ export type Database = {
           id?: string
           measurement_number?: string
           order_id?: string
+          origin?: string
           original_sample_id?: string | null
           planned_end_date?: string | null
           planned_hours?: number | null
@@ -3793,8 +3813,10 @@ export type Database = {
           ranking?: number | null
           sample_id?: string | null
           service_id?: string
+          source_measurement_id?: string | null
           source_package_id?: string | null
           source_package_name_snapshot?: string | null
+          source_step_key?: string | null
           status?: Database["public"]["Enums"]["measurement_status"]
           updated_at?: string
           workstation_id?: string | null
@@ -3833,6 +3855,13 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_measurements_source_measurement_id_fkey"
+            columns: ["source_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
             referencedColumns: ["id"]
           },
           {
@@ -5162,6 +5191,8 @@ export type Database = {
           auto_actions: Json
           condition_expr: Json
           created_at: string
+          creates_subsample: boolean
+          depends_on_step_keys: string[]
           description: string | null
           due_hours: number | null
           escalation_role: string | null
@@ -5175,7 +5206,9 @@ export type Database = {
           position_source: string | null
           role_required: string | null
           role_view_key: string | null
+          service_id: string | null
           step_key: string
+          step_kind: string
           template_id: string
           updated_at: string
         }
@@ -5184,6 +5217,8 @@ export type Database = {
           auto_actions?: Json
           condition_expr?: Json
           created_at?: string
+          creates_subsample?: boolean
+          depends_on_step_keys?: string[]
           description?: string | null
           due_hours?: number | null
           escalation_role?: string | null
@@ -5197,7 +5232,9 @@ export type Database = {
           position_source?: string | null
           role_required?: string | null
           role_view_key?: string | null
+          service_id?: string | null
           step_key: string
+          step_kind?: string
           template_id: string
           updated_at?: string
         }
@@ -5206,6 +5243,8 @@ export type Database = {
           auto_actions?: Json
           condition_expr?: Json
           created_at?: string
+          creates_subsample?: boolean
+          depends_on_step_keys?: string[]
           description?: string | null
           due_hours?: number | null
           escalation_role?: string | null
@@ -5219,7 +5258,9 @@ export type Database = {
           position_source?: string | null
           role_required?: string | null
           role_view_key?: string | null
+          service_id?: string | null
           step_key?: string
+          step_kind?: string
           template_id?: string
           updated_at?: string
         }
@@ -5229,6 +5270,13 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_steps_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
             referencedColumns: ["id"]
           },
           {
@@ -7524,6 +7572,7 @@ export type Database = {
             | Database["public"]["Enums"]["post_measurement_action"]
             | null
           post_measurement_action_text: string | null
+          prepared_for_measurement_id: string | null
           project_id: string
           raw_material_code: string | null
           raw_material_id: string | null
@@ -7536,6 +7585,7 @@ export type Database = {
           storage_expiry_date: string | null
           storage_hints: string | null
           storage_min_duration: string | null
+          subsample_suffix: string | null
           tags: Json
           updated_at: string
           v2o5_content: number | null
@@ -7565,6 +7615,7 @@ export type Database = {
             | Database["public"]["Enums"]["post_measurement_action"]
             | null
           post_measurement_action_text?: string | null
+          prepared_for_measurement_id?: string | null
           project_id: string
           raw_material_code?: string | null
           raw_material_id?: string | null
@@ -7577,6 +7628,7 @@ export type Database = {
           storage_expiry_date?: string | null
           storage_hints?: string | null
           storage_min_duration?: string | null
+          subsample_suffix?: string | null
           tags?: Json
           updated_at?: string
           v2o5_content?: number | null
@@ -7606,6 +7658,7 @@ export type Database = {
             | Database["public"]["Enums"]["post_measurement_action"]
             | null
           post_measurement_action_text?: string | null
+          prepared_for_measurement_id?: string | null
           project_id?: string
           raw_material_code?: string | null
           raw_material_id?: string | null
@@ -7618,6 +7671,7 @@ export type Database = {
           storage_expiry_date?: string | null
           storage_hints?: string | null
           storage_min_duration?: string | null
+          subsample_suffix?: string | null
           tags?: Json
           updated_at?: string
           v2o5_content?: number | null
@@ -7656,6 +7710,13 @@ export type Database = {
             columns: ["pilot_plant_order_id"]
             isOneToOne: false
             referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "samples_prepared_for_measurement_id_fkey"
+            columns: ["prepared_for_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
             referencedColumns: ["id"]
           },
           {
