@@ -468,6 +468,12 @@ function EditServiceDialog({
 }) {
   const [form, setForm] = useState<any>({});
 
+  // Prozessvorlagen für die Workflow-Verknüpfung der Dienstleistung.
+  const { data: processTemplates = [] } = useQuery({
+    queryKey: ["process-templates", "active"],
+    queryFn: () => api.processTemplates.list({ includeArchived: false }),
+  });
+
   useEffect(() => {
     if (service) {
       setForm({
@@ -478,6 +484,7 @@ function EditServiceDialog({
         standard_duration_hours: service.standard_duration_hours ?? 1,
         hourly_rate: service.hourly_rate ?? 0,
         work_instructions: service.work_instructions ?? "",
+        process_template_id: service.process_template_id ?? "__none__",
         active: !!service.active,
       });
     }
@@ -532,6 +539,23 @@ function EditServiceDialog({
             )}
           </div>
           <div>
+            <Label>Workflow (Prozessvorlage)</Label>
+            <Select value={form.process_template_id ?? "__none__"} onValueChange={v => setForm((f: any) => ({ ...f, process_template_id: v }))}>
+              <SelectTrigger><SelectValue placeholder="Kein Workflow" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— kein Workflow —</SelectItem>
+                {(processTemplates as any[]).map(pt => (
+                  <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Beim Buchen dieser Dienstleistung werden die im Workflow hinterlegten
+              Dienstleistungsschritte (z. B. Probenvorbereitung, Geometrievermessung)
+              automatisch für den Auftrag erzeugt und bleiben abrechenbar.
+            </p>
+          </div>
+          <div>
             <Label>Arbeitsanweisung</Label>
             <Textarea value={form.work_instructions ?? ""} onChange={e => setForm((f: any) => ({ ...f, work_instructions: e.target.value }))} rows={3} />
           </div>
@@ -546,6 +570,7 @@ function EditServiceDialog({
             standard_duration_hours: form.standard_duration_hours,
             ...(canEditRates ? { hourly_rate: form.hourly_rate } : {}),
             work_instructions: form.work_instructions || null,
+            process_template_id: form.process_template_id && form.process_template_id !== "__none__" ? form.process_template_id : null,
           })}>Speichern</Button>
         </DialogFooter>
       </DialogContent>
