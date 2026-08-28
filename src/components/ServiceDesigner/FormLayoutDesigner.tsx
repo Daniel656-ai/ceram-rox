@@ -13,7 +13,7 @@ import {
   type LayoutNode, type LayoutNodeType, type FormLayoutTree,
   type LayoutWidth, type FieldNode, type CalculationNode,
   createNode, normalizeLayout, findNode, updateNode,
-  removeNode, insertNode, collectUsedFieldIds, columnRatios, COLUMN_PRESETS, COLUMN_COUNT_OPTIONS, MAX_COLUMNS,
+  removeNode, insertNode, collectUsedFieldIds, columnRatios, COLUMN_PRESETS, COLUMN_COUNT_OPTIONS, MAX_COLUMNS, MAX_ROW_SPAN,
 } from "@/lib/api/formDefinitionLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -656,6 +656,9 @@ function ColumnsInspector({ node, onChange, disabled }: {
  * Knotentypen mit Darstellungsoption „Hervorheben“ (reine Optik, keine
  * Auswirkung auf Rollenrechte oder offizielle Ergebnisse).
  */
+/** Knotentypen, die über mehrere Rasterzeilen gespannt werden können. */
+const SPANNABLE_TYPES: LayoutNode["type"][] = ["field", "calculation", "group", "container", "note"];
+
 const HIGHLIGHTABLE_TYPES: LayoutNode["type"][] = [
   "field", "calculation", "section", "group", "container", "heading", "note",
 ];
@@ -699,6 +702,45 @@ function Inspector({ node, fields, formId, onChange, onDelete, canManage }: {
           <SelectContent>{WIDTH_OPTS.map(w => <SelectItem key={w.v} value={String(w.v)}>{w.l}</SelectItem>)}</SelectContent>
         </Select>
       </div>
+
+      {SPANNABLE_TYPES.includes(node.type) && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-xs">Zeilen spannen</Label>
+            <Select
+              value={String(node.rowSpan ?? 1)}
+              onValueChange={(v) => {
+                const rows = parseInt(v, 10);
+                // Standard für mehrzeilige Felder: mittig ausgerichtet.
+                onChange({ rowSpan: rows, vAlign: rows > 1 ? ((node as any).vAlign ?? "middle") : undefined } as any);
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: MAX_ROW_SPAN }, (_, i) => i + 1).map(n => (
+                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Vertikale Ausrichtung</Label>
+            <Select
+              value={(node as any).vAlign ?? ((node.rowSpan ?? 1) > 1 ? "middle" : "top")}
+              onValueChange={(v) => onChange({ vAlign: v } as any)}
+              disabled={disabled}
+            >
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="top">Oben</SelectItem>
+                <SelectItem value="middle">Mittig</SelectItem>
+                <SelectItem value="bottom">Unten</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
 
       <div>
         <Label className="text-xs">CSS-Klassen</Label>
