@@ -36,6 +36,24 @@ function first(args: Val[]): number {
   return f.length ? f[0] : NaN;
 }
 
+/**
+ * Hilfsfunktion für einstellige Mathematikfunktionen mit optionaler
+ * Gültigkeitsprüfung. Fehlende Werte (NaN) bleiben „unvollständig“ und lösen
+ * KEINEN Fehler aus – nur echte Definitionsverletzungen melden einen Fehler.
+ * Weitere Funktionen (LOG, EXP, SIN …) lassen sich hier analog ergänzen.
+ */
+function unary(
+  fn: (x: number) => number,
+  guard?: { ok: (x: number) => boolean; message: string },
+): FnImpl {
+  return (a) => {
+    const x = first(a);
+    if (!Number.isFinite(x)) return NaN;
+    if (guard && !guard.ok(x)) throw new Error(guard.message);
+    return fn(x);
+  };
+}
+
 const FUNCTIONS: Record<string, FnImpl> = {
   SUM: (a) => flat(a).reduce((s, v) => s + v, 0),
   AVERAGE: (a) => { const f = flat(a); return f.length ? f.reduce((s, v) => s + v, 0) / f.length : NaN; },
@@ -65,6 +83,8 @@ const FUNCTIONS: Record<string, FnImpl> = {
   ABS: (a) => Math.abs(first(a)),
   SQRT: (a) => Math.sqrt(first(a)),
   POW: (a) => { const f = flat(a); return Math.pow(f[0], f[1]); },
+  /** Natürlicher Logarithmus (Basis e) – nur für Werte > 0 definiert. */
+  LN: unary(Math.log, { ok: (x) => x > 0, message: "LN() ist nur für Werte > 0 definiert." }),
   IF: (a) => {
     const f = flat(a);
     return f[0] ? f[1] : f[2] ?? 0;
@@ -72,6 +92,32 @@ const FUNCTIONS: Record<string, FnImpl> = {
 };
 
 export const FORMULA_FUNCTIONS = Object.keys(FUNCTIONS);
+
+/** Kurzbeschreibungen für Funktionsauswahl / Autovervollständigung. */
+export const FORMULA_FUNCTION_INFO: Record<string, string> = {
+  SUM: "Summe",
+  AVERAGE: "Mittelwert",
+  AVG: "Mittelwert (Kurzform)",
+  MIN: "Kleinster Wert",
+  MAX: "Größter Wert",
+  COUNT: "Anzahl der Werte",
+  MEDIAN: "Median",
+  ROUND: "Runden (Wert, Nachkommastellen)",
+  CEIL: "Aufrunden",
+  FLOOR: "Abrunden",
+  ABS: "Absolutwert",
+  SQRT: "Quadratwurzel",
+  POW: "Potenz (Basis, Exponent)",
+  LN: "Natürlicher Logarithmus",
+  IF: "Bedingung (Prüfung, dann, sonst)",
+};
+
+/** Anzeigetext für Funktionslisten, z. B. „LN(x) – Natürlicher Logarithmus“. */
+export function formulaFunctionLabel(name: string): string {
+  const info = FORMULA_FUNCTION_INFO[name];
+  return info ? `${name}(x) – ${info}` : `${name}( … )`;
+}
+
 
 function toNumber(v: unknown): number {
   if (v == null || v === "") return NaN;
