@@ -22,9 +22,18 @@ export interface ProcessStep {
   role_view_key: string | null;
   /** Field IDs that are locked (read-only) after this step is completed. */
   locked_field_ids: string[];
+  /** `service` = verweist auf eine echte Dienstleistung, `internal` = interner Prozessschritt. */
+  step_kind: "service" | "internal";
+  /** Verknüpfte Dienstleistung (nur bei `step_kind = service`). */
+  service_id: string | null;
+  /** Schrittschlüssel, die vor diesem Schritt abgeschlossen sein müssen. */
+  depends_on_step_keys: string[];
+  /** Erzeugt beim Start automatisch eine Teilprobe der zugeordneten Probe. */
+  creates_subsample: boolean;
   created_at: string;
   updated_at: string;
 }
+
 
 export const processSteps = {
   listForTemplate: (templateId: string) =>
