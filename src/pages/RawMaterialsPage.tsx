@@ -332,7 +332,7 @@ export default function RawMaterialsPage() {
                       <TableCell className="text-xs">
                         {(() => {
                           const locs = locationsByMaterial.get(m.id) || [];
-                          if (locs.length) return <span title={locs.join(" · ")}>{formatLocationList(locs)}</span>;
+                          if (locs.length) return <LocationChips locations={locs} />;
                           const fallback = formatLocation(m.storage_locations);
                           return fallback === "–" ? "–" : <span className="text-muted-foreground">{fallback} (Standard)</span>;
                         })()}
