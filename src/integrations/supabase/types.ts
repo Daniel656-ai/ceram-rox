@@ -3739,6 +3739,7 @@ export type Database = {
           analysis_request_id: string | null
           assigned_to: string | null
           created_at: string
+          depends_on_step_keys: string[]
           due_date: string | null
           duration_deviation_reason: string | null
           estimated_delivery_date: string | null
@@ -3768,6 +3769,7 @@ export type Database = {
           analysis_request_id?: string | null
           assigned_to?: string | null
           created_at?: string
+          depends_on_step_keys?: string[]
           due_date?: string | null
           duration_deviation_reason?: string | null
           estimated_delivery_date?: string | null
@@ -3797,6 +3799,7 @@ export type Database = {
           analysis_request_id?: string | null
           assigned_to?: string | null
           created_at?: string
+          depends_on_step_keys?: string[]
           due_date?: string | null
           duration_deviation_reason?: string | null
           estimated_delivery_date?: string | null
@@ -9394,6 +9397,10 @@ export type Database = {
         Args: { _version_a: string; _version_b: string }
         Returns: Json
       }
+      expand_service_workflow: {
+        Args: { _measurement_id: string }
+        Returns: number
+      }
       finalize_mixture_batch: {
         Args: { _batch_id: string; _produced_quantity: number }
         Returns: undefined
@@ -9684,6 +9691,10 @@ export type Database = {
         Returns: boolean
       }
       measurement_has_official_result: {
+        Args: { _measurement_id: string }
+        Returns: boolean
+      }
+      measurement_is_ready: {
         Args: { _measurement_id: string }
         Returns: boolean
       }
