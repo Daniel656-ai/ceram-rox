@@ -105,6 +105,31 @@ export const workflowContext = {
     return out;
   },
 
+  /**
+   * Datenquellen für ein Formular: findet den Schritt, dem das Formular zugeordnet
+   * ist, und liefert die Felder aller vorhergehenden Schritte derselben Vorlage.
+   */
+  listSourcesForForm: async (formId: string): Promise<AvailableSourceField[]> => {
+    const steps = (await unwrap(
+      dbClient
+        .from("process_steps" as any)
+        .select("template_id, order_index")
+        .eq("form_id", formId)
+        .order("order_index")
+    )) as any[];
+    if (!steps || steps.length === 0) return [];
+    const results = await Promise.all(
+      steps.map((s) => workflowContext.listAvailableFields(s.template_id, s.order_index))
+    );
+    const seen = new Set<string>();
+    return results.flat().filter((f) => {
+      const k = `${f.step_key}.${f.field_key}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  },
+
   /** Gesammelte Schrittdaten eines Auftrags (`order_instances.shared_data`). */
   loadSharedData: async (orderInstanceId: string): Promise<Record<string, any>> => {
     const row = (await unwrap(
