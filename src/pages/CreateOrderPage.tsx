@@ -125,7 +125,7 @@ export default function CreateOrderPage() {
   // ---------------------------------------------------------------------
   // Entwürfe & Vorlagen (additiv, über Berechtigungen deaktivierbar)
   // ---------------------------------------------------------------------
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const draftsEnabled = hasPermission("orders.drafts.manage");
   const [draftId, setDraftId] = useState<string | null>(searchParams.get("draft"));
   const [loadedDraft, setLoadedDraft] = useState<OrderDraft | null>(null);
