@@ -931,10 +931,28 @@ export default function CreateOrderPage() {
         </Card>
         )}
 
-        <div className="flex gap-3">
+        {loadedDraft?.template_baseline && (
+          <TemplateReviewPanel
+            baseline={loadedDraft.template_baseline}
+            current={draftPayload}
+            sourceLabel={loadedDraft.source_label}
+            serviceCount={measurements.length}
+            sampleCount={selectedSampleIds.length}
+            requiresSamples={orderKind !== "pilot_plant"}
+          />
+        )}
+
+        <div className="flex gap-3 flex-wrap items-center">
           <Button type="submit" disabled={submitting}>{submitting ? t("orders:submitting") : t("orders:submit_order")}</Button>
+          {draftsEnabled && (
+            <Button type="button" variant="secondary" onClick={handleSaveAndClose}>
+              <Save className="h-4 w-4 mr-2" /> Entwurf speichern &amp; schließen
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>{t("common:cancel")}</Button>
+          {draftsEnabled && saveIndicator}
         </div>
+
       </form>
       ) : (
       /* Batch Planning Mode */
