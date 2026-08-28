@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects, useCreateProject } from "@/hooks/useProjects";
@@ -22,12 +22,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy, Layers, Package as PackageIcon, ChevronsUpDown } from "lucide-react";
+import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
 import ServiceLinkedForms, { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
+import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
+import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
+import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
+import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
 
 interface SelectedMeasurement {
   uid: string;
@@ -117,6 +121,81 @@ export default function CreateOrderPage() {
   // from order_kind_form_templates). No hardcoded field list.
   const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
   const [dynamicFormId, setDynamicFormId] = useState<string | null>(null);
+
+  // ---------------------------------------------------------------------
+  // Entwürfe & Vorlagen (additiv, über Berechtigungen deaktivierbar)
+  // ---------------------------------------------------------------------
+  const [searchParams] = useSearchParams();
+  const draftsEnabled = hasPermission("orders.drafts.manage");
+  const [draftId, setDraftId] = useState<string | null>(searchParams.get("draft"));
+  const [loadedDraft, setLoadedDraft] = useState<OrderDraft | null>(null);
+  const [draftLoading, setDraftLoading] = useState(!!searchParams.get("draft"));
+
+  const draftPayload: OrderDraftPayload = useMemo(() => ({
+    selectedProjectId, orderType, orderKind, dueDate, notes,
+    measurements, selectedSampleIds, processTemplateId,
+    measurementParams, measurementFormValues, dynamicValues, dynamicFormId,
+  }), [selectedProjectId, orderType, orderKind, dueDate, notes, measurements,
+       selectedSampleIds, processTemplateId, measurementParams,
+       measurementFormValues, dynamicValues, dynamicFormId]);
+
+  const draftTitle = useMemo(() => {
+    const proj = (projects as any[]).find((p) => p.id === selectedProjectId);
+    const base = proj ? `${proj.project_number}${proj.project_name ? " – " + proj.project_name : ""}` : "Neuer Auftrag";
+    return loadedDraft?.source_label ? `Kopie von ${loadedDraft.source_label} · ${base}` : base;
+  }, [projects, selectedProjectId, loadedDraft]);
+
+  const hasDraftContent =
+    !!selectedProjectId || measurements.length > 0 || selectedSampleIds.length > 0 ||
+    !!notes || Object.keys(dynamicValues).length > 0;
+
+  const autosave = useOrderDraftAutosave({
+    enabled: draftsEnabled && mode === "single" && !draftLoading,
+    userId: user?.id,
+    draftId,
+    onDraftCreated: (id) => setDraftId(id),
+    payload: draftPayload,
+    title: draftTitle,
+    hasContent: hasDraftContent,
+  });
+
+  // Entwurf laden (?draft=<id>) – exakt an seinem bisherigen Stand.
+  useEffect(() => {
+    const id = searchParams.get("draft");
+    if (!id) { setDraftLoading(false); return; }
+    let cancelled = false;
+    setDraftLoading(true);
+    api.orderDrafts.get(id)
+      .then((d) => {
+        if (cancelled || !d) return;
+        const p = d.payload || {};
+        setSelectedProjectId(p.selectedProjectId ?? "");
+        setOrderType(p.orderType ?? "");
+        setOrderKind(p.orderKind === "pilot_plant" ? "pilot_plant" : "labor");
+        setDueDate(p.dueDate ?? "");
+        setNotes(p.notes ?? "");
+        setMeasurements((p.measurements ?? []) as SelectedMeasurement[]);
+        setSelectedSampleIds(p.selectedSampleIds ?? []);
+        setProcessTemplateId(p.processTemplateId ?? "__none__");
+        setMeasurementParams((p.measurementParams ?? {}) as any);
+        setMeasurementFormValues((p.measurementFormValues ?? {}) as any);
+        setDynamicValues((p.dynamicValues ?? {}) as any);
+        setDynamicFormId(p.dynamicFormId ?? null);
+        setDraftId(d.id);
+        setLoadedDraft(d);
+      })
+      .catch((e: any) => toast.error("Entwurf konnte nicht geladen werden", { description: e.message }))
+      .finally(() => { if (!cancelled) setDraftLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("draft")]);
+
+  const handleSaveAndClose = async () => {
+    const id = await autosave.saveNow();
+    if (id) { toast.success("Entwurf gespeichert"); navigate("/auftraege"); }
+    else toast.error("Entwurf konnte nicht gespeichert werden");
+  };
+
 
   // Batch state
   const [batchTemplateId, setBatchTemplateId] = useState("");
@@ -512,6 +591,9 @@ export default function CreateOrderPage() {
           }
         }
       }
+      // Auftrag wurde eingereicht → Entwurf wird entfernt (kein Datenverlust,
+      // die Daten leben ab jetzt im produktiven Auftrag).
+      await autosave.discard();
       toast.success(t("orders:created_success"));
       navigate(`/auftraege/${order.id}`);
     } catch (err: any) {
@@ -534,15 +616,44 @@ export default function CreateOrderPage() {
     hoechste: t("common:priority_highest"),
   };
 
+  const saveIndicator =
+    autosave.state === "saving" ? (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Speichere Änderungen …
+      </span>
+    ) : autosave.state === "saved" ? (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Alle Änderungen gespeichert
+      </span>
+    ) : autosave.state === "error" ? (
+      <span className="flex items-center gap-1.5 text-xs text-destructive">
+        <CloudOff className="h-3.5 w-3.5" /> Änderungen konnten nicht gespeichert werden
+      </span>
+    ) : null;
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{t("orders:create_title")}</h1>
           <p className="text-muted-foreground">{t("orders:create_subtitle")}</p>
         </div>
+        {mode === "single" && draftsEnabled && saveIndicator}
       </div>
+
+      {mode === "single" && <OrderDraftsPanel activeDraftId={draftId} />}
+
+      {mode === "single" && loadedDraft?.source_label && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+          <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+          <p className="text-sm">
+            Dieser Auftrag wurde aus einer Vorlage erstellt (<strong>{loadedDraft.source_label}</strong>).
+            Bitte prüfen Sie die übernommenen Angaben. Alle Inhalte sind vollständig editierbar.
+          </p>
+        </div>
+      )}
+
 
       {/* Mode toggle */}
       <div className="flex gap-2">
@@ -820,10 +931,28 @@ export default function CreateOrderPage() {
         </Card>
         )}
 
-        <div className="flex gap-3">
+        {loadedDraft?.template_baseline && (
+          <TemplateReviewPanel
+            baseline={loadedDraft.template_baseline}
+            current={draftPayload}
+            sourceLabel={loadedDraft.source_label}
+            serviceCount={measurements.length}
+            sampleCount={selectedSampleIds.length}
+            requiresSamples={orderKind !== "pilot_plant"}
+          />
+        )}
+
+        <div className="flex gap-3 flex-wrap items-center">
           <Button type="submit" disabled={submitting}>{submitting ? t("orders:submitting") : t("orders:submit_order")}</Button>
+          {draftsEnabled && (
+            <Button type="button" variant="secondary" onClick={handleSaveAndClose}>
+              <Save className="h-4 w-4 mr-2" /> Entwurf speichern &amp; schließen
+            </Button>
+          )}
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>{t("common:cancel")}</Button>
+          {draftsEnabled && saveIndicator}
         </div>
+
       </form>
       ) : (
       /* Batch Planning Mode */

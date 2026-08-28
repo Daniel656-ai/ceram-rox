@@ -3581,6 +3581,85 @@ export type Database = {
           },
         ]
       }
+      order_drafts: {
+        Row: {
+          copied_at: string | null
+          copied_by: string | null
+          copy_options: Json | null
+          created_at: string
+          created_by: string
+          id: string
+          order_kind: string | null
+          payload: Json
+          project_id: string | null
+          service_count: number
+          source_draft_id: string | null
+          source_label: string | null
+          source_order_id: string | null
+          template_baseline: Json | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          copied_at?: string | null
+          copied_by?: string | null
+          copy_options?: Json | null
+          created_at?: string
+          created_by: string
+          id?: string
+          order_kind?: string | null
+          payload?: Json
+          project_id?: string | null
+          service_count?: number
+          source_draft_id?: string | null
+          source_label?: string | null
+          source_order_id?: string | null
+          template_baseline?: Json | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          copied_at?: string | null
+          copied_by?: string | null
+          copy_options?: Json | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          order_kind?: string | null
+          payload?: Json
+          project_id?: string | null
+          service_count?: number
+          source_draft_id?: string | null
+          source_label?: string | null
+          source_order_id?: string | null
+          template_baseline?: Json | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_drafts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_drafts_source_draft_id_fkey"
+            columns: ["source_draft_id"]
+            isOneToOne: false
+            referencedRelation: "order_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_drafts_source_order_id_fkey"
+            columns: ["source_order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_form_versions: {
         Row: {
           created_at: string
