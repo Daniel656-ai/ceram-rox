@@ -15,11 +15,22 @@ export function formatStorageLocation(loc: any): string {
   return parts || "–";
 }
 
-/** Gebinde, die physisch noch Bestand repräsentieren. */
+/**
+ * Gebinde, die physisch noch vorhanden sind.
+ *
+ * Fachliche Regel: Relevanz wird über den Status bestimmt, NICHT über
+ * die Menge. Ein leeres Gebinde (current_quantity = 0) steht oft noch
+ * physisch am Lagerort (Rückgabe, Entsorgung ausstehend, Audit) und
+ * bleibt damit für die Lagerortanzeige relevant.
+ * Ausgeschlossen sind nur Status, die "physisch nicht mehr vorhanden"
+ * bedeuten (container_status: verfuegbar, reserviert, in_verwendung,
+ * leer, gesperrt, entsorgt).
+ */
+const INACTIVE_CONTAINER_STATUSES = new Set(["entsorgt"]);
+
 export function isActiveContainer(c: any): boolean {
   if (!c) return false;
-  if (c.status === "entsorgt") return false;
-  if (Number(c.current_quantity ?? 0) <= 0) return false;
+  if (c.status && INACTIVE_CONTAINER_STATUSES.has(c.status)) return false;
   return true;
 }
 
