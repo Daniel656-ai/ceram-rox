@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import RichText from "@/components/forms/RichText";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +64,7 @@ function AnalysisTable({ analysis, actions }: { analysis: AnalysisEntry; actions
                 const corrected = actions.correctedResultIds.has((v as AnalysisValue).resultId);
                 return (
                   <TableRow key={v.key}>
-                    <TableCell>{v.label}</TableCell>
+                    <TableCell><RichText value={v.label} /></TableCell>
                     <TableCell className="text-right tabular-nums font-mono">
                       <span className="inline-flex items-center gap-1 justify-end">
                         {v.value !== null ? fmt(v.value) : v.text ?? ""}
@@ -88,7 +89,7 @@ function AnalysisTable({ analysis, actions }: { analysis: AnalysisEntry; actions
                         )}
                       </span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{v.unit ?? ""}</TableCell>
+                    <TableCell className="text-muted-foreground"><RichText value={v.unit ?? ""} /></TableCell>
                     <TableCell className="text-right">
                       {actions.canEdit && (
                         <Button
@@ -195,7 +196,7 @@ function ComparisonView({ analyses }: { analyses: AnalysisEntry[] }) {
                 <TableBody>
                   {g.rows.map((r) => (
                     <TableRow key={r.key}>
-                      <TableCell className="sticky left-0 bg-background z-10">{r.label}</TableCell>
+                      <TableCell className="sticky left-0 bg-background z-10"><RichText value={r.label} /></TableCell>
                       {r.cells.map((c, i) => (
                         <TableCell key={i} className="text-right tabular-nums font-mono">
                           {c.value !== null ? fmt(c.value) : c.text ?? ""}
@@ -205,7 +206,7 @@ function ComparisonView({ analyses }: { analyses: AnalysisEntry[] }) {
                       <TableCell className="text-right tabular-nums font-mono">{fmt(r.min)}</TableCell>
                       <TableCell className="text-right tabular-nums font-mono">{fmt(r.max)}</TableCell>
                       <TableCell className="text-right tabular-nums font-mono">{fmt(r.sd)}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.unit ?? ""}</TableCell>
+                      <TableCell className="text-muted-foreground"><RichText value={r.unit ?? ""} /></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
