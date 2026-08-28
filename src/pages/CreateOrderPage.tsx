@@ -591,6 +591,9 @@ export default function CreateOrderPage() {
           }
         }
       }
+      // Auftrag wurde eingereicht → Entwurf wird entfernt (kein Datenverlust,
+      // die Daten leben ab jetzt im produktiven Auftrag).
+      await autosave.discard();
       toast.success(t("orders:created_success"));
       navigate(`/auftraege/${order.id}`);
     } catch (err: any) {
