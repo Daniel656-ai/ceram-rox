@@ -31,6 +31,9 @@ export const ALL_PERMISSIONS = [
   "orders.view",
   "orders.edit",
   "orders.delete",
+  // Auftragsentwürfe & Vorlagen (optionale Zusatzfunktionen, deaktivierbar)
+  "orders.drafts.manage",
+  "orders.use_as_template",
   // Raw materials / consumables / mixtures
   "raw_materials.manage",
   "raw_materials.batches.manage",
@@ -173,6 +176,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "orders.view": { de: "Aufträge ansehen", en: "View orders" },
   "orders.edit": { de: "Aufträge bearbeiten", en: "Edit orders" },
   "orders.delete": { de: "Aufträge löschen", en: "Delete orders" },
+  "orders.drafts.manage": { de: "Auftragsentwürfe verwalten", en: "Manage order drafts" },
+  "orders.use_as_template": { de: "Aufträge als Vorlage verwenden", en: "Use orders as template" },
   "raw_materials.manage": { de: "Rohstoffe verwalten", en: "Manage raw materials" },
   "raw_materials.batches.manage": { de: "LOT-Nummern & Gebinde anlegen/bearbeiten", en: "Create/edit LOTs & containers" },
   "consumables.manage": { de: "Verbrauchsmaterialien verwalten", en: "Manage consumables" },
@@ -210,7 +215,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
   { key: "samples", labelDe: "Proben", labelEn: "Samples", permissions: ["samples.create", "samples.view", "samples.edit"] },
   { key: "measurements", labelDe: "Aufgaben", labelEn: "Tasks", permissions: ["measurements.enter", "measurements.view", "results.correct"] },
-  { key: "orders", labelDe: "Aufträge", labelEn: "Orders", permissions: ["orders.create", "orders.view", "orders.edit", "orders.delete"] },
+  { key: "orders", labelDe: "Aufträge", labelEn: "Orders", permissions: ["orders.create", "orders.view", "orders.edit", "orders.delete", "orders.drafts.manage", "orders.use_as_template"] },
   { key: "projects", labelDe: "Projekte", labelEn: "Projects", permissions: ["projects.create", "projects.view", "projects.edit", "projects.assign", "weekly_reviews.manage_all"] },
   { key: "costs", labelDe: "Kosten", labelEn: "Costs", permissions: ["costs.manage", "costs.view_personnel", "costs.view_hourly_rates", "costs.edit_hourly_rates"] },
   { key: "general", labelDe: "Allgemein", labelEn: "General", permissions: ["priorities.edit", "locations.edit", "reports.create", "reports.generate", "reports.approve", "reports.delete", "sds.manage", "raw_materials.manage", "raw_materials.batches.manage", "consumables.manage"] },
