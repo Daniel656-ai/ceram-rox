@@ -185,7 +185,7 @@ function StaticSection({
   return (
     <div className="border rounded-md p-3 space-y-2">
       <div className="text-sm font-semibold flex items-center gap-2">
-        {sec.title}
+        <RichText value={sec.title} />
         <Badge variant="outline" className="text-[10px]">Designer</Badge>
       </div>
       {sec.description && <p className="text-xs text-muted-foreground"><RichText value={sec.description} /></p>}
