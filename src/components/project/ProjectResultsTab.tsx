@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { toUnicode } from "@/lib/richText";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -43,7 +44,7 @@ export function buildProjectResultRows(raw: any[], getUserName: (id: string) => 
         orderId: m.measurement_orders?.id,
         orderNumber: m.measurement_orders?.order_number || "–",
         serviceName: m.measurement_services?.service_name || "–",
-        parameter: formatResultLabel(r.display_label || r.result_name, r.unit),
+        parameter: toUnicode(formatResultLabel(r.display_label || r.result_name, r.unit)),
         value: r.value,
         unit: r.unit,
         measuredAt: r.measured_at,

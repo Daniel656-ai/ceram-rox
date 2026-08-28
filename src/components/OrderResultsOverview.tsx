@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import RichText from "@/components/forms/RichText";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -54,7 +55,7 @@ export default function OrderResultsOverview({ orderId }: { orderId: string }) {
                   <TableHead>Gemessene Probe</TableHead>
                   {g.columns.map((c) => (
                     <TableHead key={c.key} className="text-right">
-                      {formatResultLabel(c.label, c.unit)}
+                      <RichText value={formatResultLabel(c.label, c.unit)} />
                     </TableHead>
                   ))}
 

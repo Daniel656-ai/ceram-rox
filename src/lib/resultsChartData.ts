@@ -1,4 +1,5 @@
 import type { ResultRecord } from "@/hooks/useResultsDatabase";
+import { toUnicode } from "@/lib/richText";
 import { resultLabel } from "@/hooks/useResultsDatabase";
 import { formatResultLabel } from "@/lib/resultLabels";
 
@@ -123,7 +124,7 @@ export function collectNumericParameters(records: ResultRecord[]): NumericParame
     }
   }
   return Array.from(map.values())
-    .map((o) => ({ ...o, label: formatResultLabel(o.key, o.unit) }))
+    .map((o) => ({ ...o, label: toUnicode(formatResultLabel(o.key, o.unit)) }))
     .sort((a, b) => a.key.localeCompare(b.key, "de"));
 }
 

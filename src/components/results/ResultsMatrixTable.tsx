@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import RichText from "@/components/forms/RichText";
+import { toUnicode } from "@/lib/richText";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
@@ -73,9 +75,9 @@ export default function ResultsMatrixTable({
                 key={col.key}
                 className="bg-muted text-right font-medium px-3 py-2 border-b align-bottom whitespace-normal break-words leading-tight"
                 style={{ minWidth: 130, maxWidth: 220 }}
-                title={columnHeader(col)}
+                title={toUnicode(columnHeader(col))}
               >
-                {columnHeader(col)}
+                <RichText value={columnHeader(col)} />
               </th>
             ))}
           </tr>

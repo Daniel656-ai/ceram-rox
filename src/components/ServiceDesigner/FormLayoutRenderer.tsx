@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
+import RichText from "@/components/forms/RichText";
 import { columnsGridStyle } from "@/lib/api/formDefinitionLayout";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree, CalculationNode } from "@/lib/api/formDefinitionLayout";
 import { type FormField, readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
@@ -150,9 +151,13 @@ function FormItemShell({
     <div className={cn("flex h-full flex-col gap-1", highlight && HIGHLIGHT_CLS)}>
       <Label className={LABEL_ZONE}>
         {icon}
-        <span className="line-clamp-2">{label}</span>
+        <span className="line-clamp-2">
+          {typeof label === "string" ? <RichText value={label} /> : label}
+        </span>
         {required && <span className="text-destructive">*</span>}
-        {unit && <span className="text-muted-foreground font-normal">[{unit}]</span>}
+        {unit && (
+          <span className="text-muted-foreground font-normal">[<RichText value={unit} />]</span>
+        )}
         {locked && <Lock className="h-3 w-3 text-muted-foreground shrink-0" aria-label="Gesperrt" />}
       </Label>
       <div className={cn("min-w-0", CONTROL_H)}>{control}</div>
@@ -483,7 +488,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
             <tbody>
               {importedRows.map((r, i) => (
                 <tr key={i}>
-                  <td className="pr-2 text-muted-foreground">{r.label}{r.unit ? ` [${r.unit}]` : ""}</td>
+                  <td className="pr-2 text-muted-foreground"><RichText value={r.label} />{r.unit ? <> [<RichText value={r.unit} />]</> : null}</td>
                   <td className="text-right font-mono">{String(r.value)}</td>
                 </tr>
               ))}
@@ -511,7 +516,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                   <SelectItem value="__none__">Zuordnen…</SelectItem>
                   {targets.map((t) => (
                     <SelectItem key={t.field_key} value={t.field_key}>
-                      {t.display_name}{t.unit ? ` [${t.unit}]` : ""}
+                      <RichText value={t.display_name} />{t.unit ? <> [<RichText value={t.unit} />]</> : null}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1273,7 +1278,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
       const n = node;
       return (
         <div className={cn("border rounded-lg p-4 bg-card", widthCls(n.width), n.highlight && HIGHLIGHT_CLS, n.className)}>
-          {n.title && <div className="font-semibold text-sm mb-1">{tr(n.title)}</div>}
+          {n.title && <div className="font-semibold text-sm mb-1"><RichText value={tr(n.title)} /></div>}
           {n.description && <p className="text-xs text-muted-foreground mb-3">{tr(n.description)}</p>}
           <div className="grid grid-cols-12 gap-3">
             {n.children.map(c => <RenderNode key={c.id} node={c} fields={fields} />)}
@@ -1286,7 +1291,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
       const n = node;
       return (
         <div className={cn("border rounded p-3", widthCls(n.width), (n as any).highlight && HIGHLIGHT_CLS, n.className)}>
-          {(n as any).title && <div className="font-medium text-sm mb-2">{tr((n as any).title)}</div>}
+          {(n as any).title && <div className="font-medium text-sm mb-2"><RichText value={tr((n as any).title)} /></div>}
           <div className="grid grid-cols-12 gap-3">
             {(n as any).children.map((c: LayoutNode) => <RenderNode key={c.id} node={c} fields={fields} />)}
           </div>

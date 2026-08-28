@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import RichText from "@/components/forms/RichText";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
@@ -184,10 +185,10 @@ function StaticSection({
   return (
     <div className="border rounded-md p-3 space-y-2">
       <div className="text-sm font-semibold flex items-center gap-2">
-        {sec.title}
+        <RichText value={sec.title} />
         <Badge variant="outline" className="text-[10px]">Designer</Badge>
       </div>
-      {sec.description && <p className="text-xs text-muted-foreground">{sec.description}</p>}
+      {sec.description && <p className="text-xs text-muted-foreground"><RichText value={sec.description} /></p>}
       <SectionFieldGrid
         sec={sec}
         fieldById={fieldById}
@@ -280,7 +281,7 @@ function RepeatableSection({
               {entries.length}{rep.max ? ` / ${rep.max}` : ""} {itemLabel}
             </span>
           </div>
-          {sec.description && <p className="text-xs text-muted-foreground">{sec.description}</p>}
+          {sec.description && <p className="text-xs text-muted-foreground"><RichText value={sec.description} /></p>}
         </div>
       </div>
 
@@ -370,10 +371,10 @@ function SectionFieldGrid({
             {f.field_type === "image" ? (
               <div className="space-y-2">
                 <Label className="text-xs flex items-center gap-1">
-                  {label}
+                  <RichText value={label} />
                   {isRequired && <span className="text-destructive">*</span>}
                 </Label>
-                {help && !compact && <p className="text-[10px] text-muted-foreground">{help}</p>}
+                {help && !compact && <p className="text-[10px] text-muted-foreground"><RichText value={help} /></p>}
                 <ImageGalleryField
                   fieldKey={f.field_key}
                   mode={readImageMeta(f).mode}
@@ -400,23 +401,23 @@ function SectionFieldGrid({
               <div className="rounded-md border border-primary/40 bg-primary/5 p-2">
                 <Label className="text-xs flex items-center gap-1">
                   <Calculator className="h-3 w-3 text-primary" />
-                  {label}
-                  {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
+                  <RichText value={label} />
+                  {f.unit && <span className="text-muted-foreground font-normal">(<RichText value={f.unit} />)</span>}
                   <Badge variant="outline" className="ml-auto text-[9px] uppercase tracking-wide">auto</Badge>
                 </Label>
-                {help && !compact && <p className="text-[10px] text-muted-foreground mb-1">{help}</p>}
+                {help && !compact && <p className="text-[10px] text-muted-foreground mb-1"><RichText value={help} /></p>}
                 <Input readOnly value={val ?? ""} className={`${inputSize} font-mono bg-background`} placeholder="wird automatisch berechnet" />
               </div>
             ) : (
               <>
                 <Label className="text-xs flex items-center gap-1">
-                  {label}
-                  {f.unit && <span className="text-muted-foreground font-normal">({f.unit})</span>}
+                  <RichText value={label} />
+                  {f.unit && <span className="text-muted-foreground font-normal">(<RichText value={f.unit} />)</span>}
                   {isRequired && <span className="text-destructive">*</span>}
                   {hasError && <AlertCircle className="h-3 w-3 text-destructive" />}
                 </Label>
                 {help && !compact && (
-                  <p className="text-[10px] text-muted-foreground mb-1">{help}</p>
+                  <p className="text-[10px] text-muted-foreground mb-1"><RichText value={help} /></p>
                 )}
                 {renderInput(f, val, (v) => onValueChange(f.field_key, v), readonly, inputSize, hasError)}
               </>

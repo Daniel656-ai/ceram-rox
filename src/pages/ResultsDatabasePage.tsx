@@ -1,4 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import RichText from "@/components/forms/RichText";
+import { toUnicode } from "@/lib/richText";
 import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -161,7 +163,7 @@ export default function ResultsDatabasePage() {
         "Messdienstleister": r.assignedToName,
       };
       allParamColumns.forEach((col) => {
-        row[columnHeader(col)] = exportCell(r, col.key);
+        row[toUnicode(columnHeader(col))] = exportCell(r, col.key);
       });
       return row;
     });
@@ -611,7 +613,7 @@ export default function ResultsDatabasePage() {
                             checked={!hiddenParams.includes(col.key)}
                             onCheckedChange={() => toggleParam(col.key)}
                           />
-                          {columnHeader(col)}
+                          <RichText value={columnHeader(col)} />
                         </label>
                       ))}
                       {allParamColumns.length === 0 && (
