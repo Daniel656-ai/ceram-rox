@@ -9392,6 +9392,15 @@ export type Database = {
         Args: { _order_id: string; _process_template_ids: string[] }
         Returns: string[]
       }
+      create_subsample: {
+        Args: {
+          _description?: string
+          _measurement_id?: string
+          _name?: string
+          _parent_sample_id: string
+        }
+        Returns: string
+      }
       delete_service_safe: { Args: { _service_id: string }; Returns: undefined }
       diff_recipe_versions: {
         Args: { _version_a: string; _version_b: string }
@@ -9423,6 +9432,26 @@ export type Database = {
           position_no: number
           quantity: number
           status: string
+        }[]
+      }
+      get_order_preparation_overview: {
+        Args: { _order_id: string }
+        Returns: {
+          is_ready: boolean
+          measurement_id: string
+          measurement_number: string
+          origin: string
+          parent_sample_id: string
+          parent_sample_number: string
+          preparation_note: string
+          requires_subsample: boolean
+          sample_id: string
+          sample_name: string
+          sample_number: string
+          service_id: string
+          service_name: string
+          status: string
+          subsample_suffix: string
         }[]
       }
       get_portfolio_controlling_report: {
