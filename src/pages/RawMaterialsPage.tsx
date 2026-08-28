@@ -27,7 +27,8 @@ import { StorageLocationsManager } from "@/components/StorageLocationsManager";
 import { ImportRawMaterialsDialog } from "@/components/ImportRawMaterialsDialog";
 import { PersonSelect } from "@/components/PersonSelect";
 import { formatQuantity } from "@/lib/formatQuantity";
-import { aggregateContainerLocations, formatLocationList, isActiveContainer, formatStorageLocation } from "@/lib/storageLocations";
+import { aggregateContainerLocations, isActiveContainer, formatStorageLocation } from "@/lib/storageLocations";
+import { LocationChips } from "@/components/LocationChips";
 
 
 
@@ -331,7 +332,7 @@ export default function RawMaterialsPage() {
                       <TableCell className="text-xs">
                         {(() => {
                           const locs = locationsByMaterial.get(m.id) || [];
-                          if (locs.length) return <span title={locs.join(" · ")}>{formatLocationList(locs)}</span>;
+                          if (locs.length) return <LocationChips locations={locs} />;
                           const fallback = formatLocation(m.storage_locations);
                           return fallback === "–" ? "–" : <span className="text-muted-foreground">{fallback} (Standard)</span>;
                         })()}
