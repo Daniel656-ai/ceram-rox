@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SymbolInput } from "@/components/forms/SymbolInput";
+import RichText from "@/components/forms/RichText";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -198,7 +199,7 @@ export default function CalculationsSection() {
               const output = parseOutputBinding(c.output_binding);
               return (
                 <TableRow key={c.id}>
-                  <TableCell>{c.display_name}</TableCell>
+                  <TableCell><RichText value={c.display_name} /></TableCell>
                   <TableCell className="font-mono text-xs">{c.calc_key}</TableCell>
                   <TableCell className="font-mono text-xs">{c.formula}</TableCell>
                   <TableCell>

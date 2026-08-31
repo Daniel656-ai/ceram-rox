@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SymbolPickerButton, SymbolInput } from "@/components/forms/SymbolInput";
+import RichText from "@/components/forms/RichText";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -340,7 +341,7 @@ export default function LocalCalculationsPanel({
                 {(calcs as FormCalculation[]).map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
-                      <div className="font-medium text-sm">{c.display_name}</div>
+                      <div className="font-medium text-sm"><RichText value={c.display_name} /></div>
                       {c.description && <div className="text-xs text-muted-foreground">{c.description}</div>}
                     </TableCell>
                     <TableCell className="text-xs">
