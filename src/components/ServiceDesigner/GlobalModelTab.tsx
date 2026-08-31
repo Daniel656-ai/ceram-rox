@@ -374,7 +374,7 @@ export default function GlobalModelTab() {
               )}
               {visibleFields.map((f) => (
                 <TableRow key={f.id}>
-                  <TableCell className="font-medium">{f.display_name}</TableCell>
+                  <TableCell className="font-medium"><RichText value={f.display_name} /></TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{f.field_key}</TableCell>
                   <TableCell className="text-xs">{objectName(f.object_id)}</TableCell>
 
