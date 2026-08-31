@@ -134,6 +134,13 @@ const ROW_SPAN_CLS: Record<number, string> = {
   5: "md:row-span-5", 6: "md:row-span-6",
 };
 
+/**
+ * Höhe einer Rasterzeile: Label-Zone (1,75rem) + Kontrollhöhe (2,25rem).
+ * Der Zeilenabstand entspricht dem Grid-`gap-3` (0,75rem).
+ */
+const ROW_BASE_REM = 4;
+const ROW_GAP_REM = 0.75;
+
 const spanCls = (n: { rowSpan?: number; vAlign?: "top" | "middle" | "bottom" }) => {
   const rs = Math.max(1, Math.min(6, Math.round(Number(n.rowSpan ?? 1))));
   if (rs <= 1 && !n.vAlign) return undefined;
@@ -146,6 +153,20 @@ const spanCls = (n: { rowSpan?: number; vAlign?: "top" | "middle" | "bottom" }) 
     align === "bottom" && "justify-end",
     align !== "top" && "[&>*]:h-auto",
   );
+};
+
+/**
+ * Die Rasterzeilen sind inhaltsabhängig hoch (`grid-auto-rows: auto`). Ein
+ * reiner `row-span` belegt dadurch zwar die richtige Fläche im Raster, ändert
+ * aber die sichtbare Höhe nicht, solange die belegten Zeilen leer bleiben.
+ * Deshalb erhält ein gespanntes Element zusätzlich die Mindesthöhe der
+ * belegten Zeilen inkl. Zwischenabstand — ohne das bestehende Raster oder die
+ * Position anderer Felder zu verändern.
+ */
+const spanStyle = (n: { rowSpan?: number }): React.CSSProperties | undefined => {
+  const rs = Math.max(1, Math.min(6, Math.round(Number(n.rowSpan ?? 1))));
+  if (rs <= 1) return undefined;
+  return { minHeight: `${rs * ROW_BASE_REM + (rs - 1) * ROW_GAP_REM}rem` };
 };
 
 
@@ -1432,7 +1453,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
         );
       }
       return (
-        <div className={cn(widthCls(node.width), spanCls(node), "min-w-0", node.className)}>
+        <div className={cn(widthCls(node.width), spanCls(node), "min-w-0", node.className)} style={spanStyle(node)}>
           <FieldWithLabel field={f} node={node} allFields={fields} highlight={node.highlight} />
         </div>
       );
@@ -1440,7 +1461,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     case "calculation": {
       const n = node as CalculationNode;
       return (
-        <div className={cn(widthCls(n.width), spanCls(n), "min-w-0", n.className)}>
+        <div className={cn(widthCls(n.width), spanCls(n), "min-w-0", n.className)} style={spanStyle(n)}>
           <CalculationDisplay node={n} />
         </div>
       );
