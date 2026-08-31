@@ -511,11 +511,11 @@ export default function GlobalModelTab() {
             </div>
             <div>
               <Label className="text-xs">Einheit</Label>
-              <Input value={fieldDraft.unit} onChange={(e) => setFieldDraft({ ...fieldDraft, unit: e.target.value })} />
+              <SymbolInput value={fieldDraft.unit} onChange={(v) => setFieldDraft({ ...fieldDraft, unit: v })} />
             </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Standardwert</Label>
-              <Input value={fieldDraft.default_value} onChange={(e) => setFieldDraft({ ...fieldDraft, default_value: e.target.value })} />
+              <SymbolInput value={fieldDraft.default_value} onChange={(v) => setFieldDraft({ ...fieldDraft, default_value: v })} />
             </div>
             <div>
               <Label className="text-xs">Globale Liste (Auswahlwerte)</Label>
