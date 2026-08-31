@@ -495,9 +495,15 @@ export default function LocalCalculationsPanel({
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <Textarea rows={3} className="font-mono text-xs" value={draft.formula}
-                    placeholder="z. B. AVERAGE(messung_1, messung_2, messung_3)"
-                    onChange={(e) => setDraft((d) => ({ ...d, formula: e.target.value }))} />
+                  <div className="flex items-start gap-2">
+                    <Textarea rows={3} className="font-mono text-xs" value={draft.formula}
+                      placeholder="z. B. AVERAGE(messung_1, messung_2, messung_3) · Winkel im Bogenmaß: SIN(α), DEGREES(ATAN(y/x))"
+                      onChange={(e) => setDraft((d) => ({ ...d, formula: e.target.value }))} />
+                    <SymbolPickerButton
+                      onPick={(s) => setDraft((d) => ({ ...d, formula: `${d.formula}${s}` }))}
+                    />
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
