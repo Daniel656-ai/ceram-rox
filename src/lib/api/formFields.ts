@@ -1,5 +1,10 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import {
+  applyGlobalDefinitions,
+  type GlobalDefinitionLike,
+} from "@/lib/globalFieldInheritance";
+
 
 export type FormFieldType =
   | "text" | "longtext" | "number" | "decimal" | "percent"
