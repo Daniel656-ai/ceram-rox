@@ -13,7 +13,7 @@ import { SymbolInput } from "@/components/forms/SymbolInput";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GripVertical, Trash2, Plus, Heading1, Minus, CornerDownLeft, Folders, Move } from "lucide-react";
+import { GripVertical, Trash2, Plus, Heading1, Minus, CornerDownLeft, Folders, Move, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type RepeaterLayout, type RepeaterLayoutItem, type RepeaterLeafItem, type RepeaterGroupItem,
@@ -27,8 +27,19 @@ export interface RepeaterSubfieldInfo {
   unit?: string | null;
 }
 
+export interface RepeaterCalcInfo {
+  calc_key: string;
+  label: string;
+  unit?: string | null;
+}
+
 interface Props {
   subfields: RepeaterSubfieldInfo[];
+  /**
+   * Lokale Berechnungen des Formulars. Sie können als Element im Eintrag
+   * platziert werden und werden je Messpunkt mit dessen Werten ausgewertet.
+   */
+  calculations?: RepeaterCalcInfo[];
   /** Rohwert aus metadata.repeater.layout */
   value: unknown;
   onChange: (layout: RepeaterLayout) => void;
@@ -42,10 +53,11 @@ const ROOT = "__root__";
  * Ergebnis wird pro Repeater gespeichert und in jedem Formular verwendet,
  * das diesen Repeater referenziert.
  */
-export default function RepeaterLayoutDesigner({ subfields, value, onChange, disabled }: Props) {
+export default function RepeaterLayoutDesigner({ subfields, calculations = [], value, onChange, disabled }: Props) {
   const keys = useMemo(() => subfields.map((s) => s.key), [subfields]);
   const layout = useMemo(() => normalizeRepeaterLayout(value, keys), [value, keys]);
   const labelFor = (k: string) => subfields.find((s) => s.key === k)?.label ?? k;
+  const calcLabelFor = (k: string) => calculations.find((c) => c.calc_key === k)?.label ?? k;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const [previewCount] = useState(1);
@@ -193,6 +205,13 @@ export default function RepeaterLayoutDesigner({ subfields, value, onChange, dis
               onChange={(e) => patchItem(item.id, { text: e.target.value } as any)}
             />
           )}
+          {item.type === "calculation" && (
+            <>
+              <Calculator className="inline h-3 w-3 mr-1 text-muted-foreground" />
+              {calcLabelFor(item.calc_key)}
+              <span className="ml-2 font-mono text-[10px] text-muted-foreground">{item.calc_key}</span>
+            </>
+          )}
           {item.type === "spacer" && <span className="text-muted-foreground">Abstand / Platzhalter</span>}
           {item.type === "break" && <span className="text-muted-foreground">Zeilenumbruch</span>}
           {item.type === "group" && (
@@ -290,6 +309,24 @@ export default function RepeaterLayoutDesigner({ subfields, value, onChange, dis
             onClick={() => addItem({ id: newItemId(), type: "spacer", width: 6 })}>
             <Minus className="h-3 w-3 mr-1" />Abstand
           </Button>
+          {calculations.length > 0 && (
+            <Select
+              value=""
+              onValueChange={(v) => addItem({ id: newItemId(), type: "calculation", calc_key: v, width: 4 })}
+            >
+              <SelectTrigger className="h-7 w-[190px] text-[11px]">
+                <Calculator className="h-3 w-3 mr-1" />
+                <SelectValue placeholder="Berechnung einfügen" />
+              </SelectTrigger>
+              <SelectContent>
+                {calculations.map((c) => (
+                  <SelectItem key={c.calc_key} value={c.calc_key}>
+                    {c.label}{c.unit ? ` [${c.unit}]` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]"
             onClick={() => commit(keys.map((k) => ({ id: newItemId(), type: "field", key: k, width: 6 } as RepeaterLayoutItem)))}>
             <Plus className="h-3 w-3 mr-1" />Zurücksetzen
@@ -338,6 +375,14 @@ function PreviewItem({
         <div className={cn("grid grid-cols-12", repeaterGapClass(gap))}>
           {item.children.map((c) => <PreviewItem key={c.id} item={c} labelFor={labelFor} gap={gap} />)}
         </div>
+      </div>
+    );
+  }
+  if (item.type === "calculation") {
+    return (
+      <div className={repeaterWidthClass(item.width)}>
+        <p className="text-[10px] text-muted-foreground truncate">{item.label_override || item.calc_key}</p>
+        <div className="h-7 rounded border bg-muted/40" />
       </div>
     );
   }
