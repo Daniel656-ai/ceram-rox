@@ -440,7 +440,7 @@ export default function GlobalModelTab() {
             </div>
             <div>
               <Label className="text-xs">Beschreibung</Label>
-              <Textarea rows={2} value={objDraft.description} onChange={(e) => setObjDraft({ ...objDraft, description: e.target.value })} />
+              <SymbolTextarea rows={2} value={objDraft.description} onChange={(v) => setObjDraft({ ...objDraft, description: v })} />
             </div>
           </div>
           <DialogFooter>
