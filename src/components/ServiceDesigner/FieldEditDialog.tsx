@@ -512,10 +512,26 @@ export function RepeaterConfigPanel({
 
       <SubfieldManager field={field} fields={fields} disabled={disabled} isBlock={isBlock} />
 
+      <div>
+        <Label className="text-xs">Messumfang aus Feld (optional)</Label>
+        <Input className="h-8 text-xs" value={meta.plan_field_key ?? ""} placeholder="z. B. anzahl_temperaturpunkte"
+          onChange={(e) => saveMeta({ plan_field_key: e.target.value || undefined })} disabled={disabled} />
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Feldschlüssel, der den vom Auftrag vorgesehenen Umfang liefert. Wird als Vorgabe
+          angezeigt („auf n ergänzen“), begrenzt die Anzahl aber nicht.
+        </p>
+      </div>
+      <label className="flex items-center gap-2 text-xs">
+        <input type="checkbox" checked={meta.table_view === true} disabled={disabled}
+          onChange={(e) => saveMeta({ table_view: e.target.checked })} />
+        Zusätzliche Tabellenansicht der Einträge (Messreihe)
+      </label>
+
       {children.length > 0 && (
         <div className="pt-2 border-t">
           <RepeaterLayoutDesigner
             subfields={children.map((c) => ({ key: c.field_key, label: c.display_name, type: c.field_type, unit: c.unit }))}
+            calculations={formCalcs.map((c) => ({ calc_key: c.calc_key, label: c.display_name, unit: c.unit }))}
             value={meta.layout}
             disabled={disabled}
             onChange={(layout) => saveMeta({ layout })}
