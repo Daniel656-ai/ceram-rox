@@ -48,7 +48,16 @@ import { evaluateLocalCalculations, formatCalcResult } from "@/lib/localCalculat
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
 import { walkNodes } from "@/lib/api/formDefinitionLayout";
-import { readValueSource, isSameFormLink } from "@/lib/fieldLinks";
+import { readValueSource, isSameFormLink, isPreviousServiceLink, resolveLinkedValue, linkOriginLabel, type StepData } from "@/lib/fieldLinks";
+import { createContext as createReactContext } from "react";
+
+/**
+ * Werte vorangegangener Workflow-Schritte (step_key -> Feldwerte).
+ * Quelle ist ausschließlich die bestehende Feldverknüpfung (`data_source`).
+ */
+const EMPTY_STEP_DATA: StepData = {};
+const StepDataCtx = createReactContext<StepData>(EMPTY_STEP_DATA);
+export const useStepData = () => useContext(StepDataCtx);
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -685,7 +694,7 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
   // Formulars. Es entsteht KEINE zweite unabhängige Kopie – der Wert wird bei
   // jeder Änderung der Quelle nachgeführt.
   const vs = readValueSource(field as any);
-  if (isSameFormLink(vs)) {
+  if (isSameFormLink(vs) || isPreviousServiceLink(vs)) {
     const src = allFields.find((f) => f.field_key === vs!.source.field_key) ?? null;
     return (
       <FormItemShell
@@ -694,11 +703,13 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
         unit={field.unit || src?.unit || null}
         highlight={highlight}
         icon={<Link2 className="h-3 w-3 text-primary shrink-0 mt-[1px]" />}
-        control={<LinkedFieldControl field={field} sourceKey={vs!.source.field_key} />}
+        control={<LinkedFieldControl field={field} valueSource={vs!} />}
         footer={
           <>
             <p className="text-[10px] text-muted-foreground">
-              🔗 Wert aus {src?.display_name || vs!.source.label || vs!.source.field_key}
+              🔗 Wert aus {isSameFormLink(vs)
+                ? (src?.display_name || vs!.source.label || vs!.source.field_key)
+                : linkOriginLabel(vs)}
             </p>
             {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
           </>
@@ -730,10 +741,13 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
  * Feldschlüssel gespiegelt, damit Berechnungen, Ergebnisdefinitionen und die
  * Ergebnisdatenbank unverändert mit dem bestehenden Schlüssel arbeiten können.
  */
-function LinkedFieldControl({ field, sourceKey }: { field: FormField; sourceKey: string }) {
+function LinkedFieldControl({ field, valueSource }: { field: FormField; valueSource: ReturnType<typeof readValueSource> }) {
   const { setValue, interactive } = useBinding(field.field_key);
   const read = useScopeReader();
-  const srcRaw = read(sourceKey);
+  const stepData = useStepData();
+  const srcRaw = valueSource && valueSource.source.kind === "form_field"
+    ? read(valueSource.source.field_key)
+    : resolveLinkedValue(valueSource, { stepData });
   const ownRaw = read(field.field_key);
 
   useEffect(() => {
@@ -1535,6 +1549,7 @@ export default function FormLayoutRenderer({
   onChange,
   formId,
   localCalculations,
+  stepData,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
@@ -1546,6 +1561,8 @@ export default function FormLayoutRenderer({
   formId?: string;
   /** Optional bereits geladene lokale Berechnungen (z. B. Live-Vorschau im Designer). */
   localCalculations?: FormCalculation[];
+  /** Werte vorangegangener Workflow-Schritte für verknüpfte Felder. */
+  stepData?: StepData;
 }) {
   const interactive = !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
@@ -1628,6 +1645,7 @@ export default function FormLayoutRenderer({
   }
   return (
     <PermissionsCtx.Provider value={permissions ?? null}>
+      <StepDataCtx.Provider value={stepData ?? EMPTY_STEP_DATA}>
       <CalcResultsCtx.Provider value={calcResults}>
       <ValuesCtx.Provider value={bind}>
         <div className="grid grid-cols-12 gap-3">
@@ -1635,6 +1653,7 @@ export default function FormLayoutRenderer({
         </div>
       </ValuesCtx.Provider>
       </CalcResultsCtx.Provider>
+      </StepDataCtx.Provider>
     </PermissionsCtx.Provider>
   );
 }
