@@ -209,3 +209,30 @@ export function evaluateEntryCalculations(
 ): Record<string, LocalCalcResult> {
   return evaluateLocalCalculations(calcs, mergeEntryScope(rootValues, entry), knownFieldKeys);
 }
+
+/**
+ * Ermittelt die Berechnungen, die sich fachlich auf einen Messpunkt beziehen:
+ * alle Berechnungen, die (direkt oder über andere Berechnungen) mindestens ein
+ * Unterfeld der Messreihe verwenden. Nur diese Ergebnisse werden je Messpunkt
+ * gespeichert – formularweite Berechnungen bleiben unverändert.
+ */
+export function seriesCalculations(
+  calcs: FormCalculation[],
+  childKeys: string[],
+): FormCalculation[] {
+  const child = new Set(childKeys);
+  const selected = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const c of calcs) {
+      if (selected.has(c.calc_key)) continue;
+      const refs = extractReferences(c.formula || "");
+      if (refs.some((r) => child.has(r) || selected.has(r))) {
+        selected.add(c.calc_key);
+        changed = true;
+      }
+    }
+  }
+  return calcs.filter((c) => selected.has(c.calc_key));
+}
