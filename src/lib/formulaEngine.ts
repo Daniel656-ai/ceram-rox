@@ -85,11 +85,39 @@ const FUNCTIONS: Record<string, FnImpl> = {
   POW: (a) => { const f = flat(a); return Math.pow(f[0], f[1]); },
   /** Natürlicher Logarithmus (Basis e) – nur für Werte > 0 definiert. */
   LN: unary(Math.log, { ok: (x) => x > 0, message: "LN() ist nur für Werte > 0 definiert." }),
+  /** Trigonometrie – Argumente im Bogenmaß (Radiant). */
+  SIN: unary(Math.sin),
+  COS: unary(Math.cos),
+  TAN: unary(Math.tan, {
+    ok: (x) => Math.abs(Math.cos(x)) > 1e-12,
+    message: "TAN() ist für 90° (π/2) nicht definiert.",
+  }),
+  /** Umkehrfunktionen – Ergebnis im Bogenmaß (Radiant). */
+  ASIN: unary(Math.asin, {
+    ok: (x) => x >= -1 && x <= 1,
+    message: "ASIN() ist nur für Werte zwischen -1 und 1 definiert.",
+  }),
+  ACOS: unary(Math.acos, {
+    ok: (x) => x >= -1 && x <= 1,
+    message: "ACOS() ist nur für Werte zwischen -1 und 1 definiert.",
+  }),
+  ATAN: unary(Math.atan),
+  /** Umrechnung zwischen Grad und Bogenmaß. */
+  RADIANS: unary((x) => (x * Math.PI) / 180),
+  DEGREES: unary((x) => (x * 180) / Math.PI),
   IF: (a) => {
     const f = flat(a);
     return f[0] ? f[1] : f[2] ?? 0;
   },
 };
+
+/** Konstanten, die in Formeln direkt verwendet werden dürfen. */
+const CONSTANTS: Record<string, number> = {
+  PI: Math.PI,
+  π: Math.PI,
+  E: Math.E,
+};
+
 
 export const FORMULA_FUNCTIONS = Object.keys(FUNCTIONS);
 
