@@ -13,6 +13,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { toast } from "sonner";
 import { Plus, Boxes, Pencil, Archive, Search, Lock, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
+import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
+import RichText from "@/components/forms/RichText";
+import { toPlain } from "@/lib/richText";
 import {
   GLOBAL_FIELD_SOURCES,
   GLOBAL_FIELD_TYPES,
@@ -25,7 +28,8 @@ import {
 } from "@/lib/api/globalModel";
 
 const slug = (s: string) =>
-  s.toLowerCase()
+  // Auszeichnung (_{...} / ^{...}) fließt nie in technische Schlüssel ein.
+  toPlain(s).toLowerCase()
     .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
@@ -370,7 +374,7 @@ export default function GlobalModelTab() {
               )}
               {visibleFields.map((f) => (
                 <TableRow key={f.id}>
-                  <TableCell className="font-medium">{f.display_name}</TableCell>
+                  <TableCell className="font-medium"><RichText value={f.display_name} /></TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{f.field_key}</TableCell>
                   <TableCell className="text-xs">{objectName(f.object_id)}</TableCell>
 
@@ -380,7 +384,7 @@ export default function GlobalModelTab() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs">{f.category ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{f.unit ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{f.unit ? <RichText value={f.unit} /> : "—"}</TableCell>
                   <TableCell className="text-xs">
                     {GLOBAL_FIELD_SOURCES.find((s) => s.value === f.data_source)?.label ?? f.data_source}
                   </TableCell>
@@ -419,7 +423,7 @@ export default function GlobalModelTab() {
           <div className="space-y-3">
             <div>
               <Label className="text-xs">Anzeigename</Label>
-              <Input value={objDraft.display_name} onChange={(e) => setObjDraft({ ...objDraft, display_name: e.target.value })} />
+              <SymbolInput value={objDraft.display_name} onChange={(v) => setObjDraft({ ...objDraft, display_name: v })} />
             </div>
             <div>
               <Label className="text-xs">Technische ID {objDraft.id && "(unveränderlich)"}</Label>
@@ -436,7 +440,7 @@ export default function GlobalModelTab() {
             </div>
             <div>
               <Label className="text-xs">Beschreibung</Label>
-              <Textarea rows={2} value={objDraft.description} onChange={(e) => setObjDraft({ ...objDraft, description: e.target.value })} />
+              <SymbolTextarea rows={2} value={objDraft.description} onChange={(v) => setObjDraft({ ...objDraft, description: v })} />
             </div>
           </div>
           <DialogFooter>
@@ -472,7 +476,7 @@ export default function GlobalModelTab() {
             <div className="sm:col-span-2">
 
               <Label className="text-xs">Anzeigename</Label>
-              <Input value={fieldDraft.display_name} onChange={(e) => setFieldDraft({ ...fieldDraft, display_name: e.target.value })} />
+              <SymbolInput value={fieldDraft.display_name} onChange={(v) => setFieldDraft({ ...fieldDraft, display_name: v })} />
             </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Technische ID {fieldDraft.id && "(unveränderlich)"}</Label>
@@ -507,11 +511,11 @@ export default function GlobalModelTab() {
             </div>
             <div>
               <Label className="text-xs">Einheit</Label>
-              <Input value={fieldDraft.unit} onChange={(e) => setFieldDraft({ ...fieldDraft, unit: e.target.value })} />
+              <SymbolInput value={fieldDraft.unit} onChange={(v) => setFieldDraft({ ...fieldDraft, unit: v })} />
             </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Standardwert</Label>
-              <Input value={fieldDraft.default_value} onChange={(e) => setFieldDraft({ ...fieldDraft, default_value: e.target.value })} />
+              <SymbolInput value={fieldDraft.default_value} onChange={(v) => setFieldDraft({ ...fieldDraft, default_value: v })} />
             </div>
             <div>
               <Label className="text-xs">Globale Liste (Auswahlwerte)</Label>
@@ -599,7 +603,7 @@ export default function GlobalModelTab() {
 
             <div className="sm:col-span-2">
               <Label className="text-xs">Beschreibung</Label>
-              <Textarea rows={2} value={fieldDraft.description} onChange={(e) => setFieldDraft({ ...fieldDraft, description: e.target.value })} />
+              <SymbolTextarea rows={2} value={fieldDraft.description} onChange={(v) => setFieldDraft({ ...fieldDraft, description: v })} />
             </div>
           </div>
           <DialogFooter>
@@ -717,7 +721,7 @@ function GlobalRepeaterSettings({
           {subfields.map((s, i) => (
             <div key={s.field_key} className="rounded border bg-background px-2 py-1.5 space-y-1">
               <div className="flex items-center gap-2">
-                <span className="flex-1 truncate text-xs font-medium">{s.display_name}</span>
+                <span className="flex-1 truncate text-xs font-medium"><RichText value={s.display_name} /></span>
                 <Badge variant="outline" className="font-mono text-[10px]">{s.field_key}</Badge>
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(i, -1)}>↑</Button>
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(i, 1)}>↓</Button>
@@ -731,8 +735,8 @@ function GlobalRepeaterSettings({
                     {SUBFIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Input className="h-7 text-xs" placeholder="Einheit" value={s.unit ?? ""}
-                  onChange={(e) => patchSubfield(i, { unit: e.target.value || null })} />
+                <SymbolInput className="h-7 text-xs" value={s.unit ?? ""} placeholder="Einheit"
+                  onChange={(v) => patchSubfield(i, { unit: v || null })} />
                 <label className="flex items-center gap-2 text-xs">
                   <input type="checkbox" checked={!!s.is_required}
                     onChange={(e) => patchSubfield(i, { is_required: e.target.checked })} />
@@ -755,8 +759,8 @@ function GlobalRepeaterSettings({
           ))}
         </div>
         <div className="grid gap-1 sm:grid-cols-2">
-          <Input className="h-8 text-xs" placeholder="Anzeigename (z. B. Rohstoff)"
-            value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+          <SymbolInput className="h-8 text-xs" placeholder="Anzeigename (z. B. Rohstoff)"
+            value={newLabel} onChange={setNewLabel} />
           <Input className="h-8 text-xs font-mono" placeholder={slug(newLabel) || "technische_id"}
             value={newKey} onChange={(e) => setNewKey(e.target.value)} />
           <Select value={newType} onValueChange={setNewType}>
@@ -765,8 +769,8 @@ function GlobalRepeaterSettings({
               {SUBFIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Input className="h-8 text-xs" placeholder="Einheit (optional)"
-            value={newUnit} onChange={(e) => setNewUnit(e.target.value)} />
+          <SymbolInput className="h-8 text-xs" placeholder="Einheit (optional)"
+            value={newUnit} onChange={setNewUnit} />
         </div>
         <Button type="button" size="sm" variant="outline" className="mt-2 w-full"
           disabled={!newLabel.trim()} onClick={addSubfield}>
