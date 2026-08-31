@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SymbolInput } from "@/components/forms/SymbolInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -537,8 +538,8 @@ function TabsChildrenEditor({ node, fields, onMutate, selectedId, onSelect, dept
         <div key={tab.id} className="border rounded">
           <div className="flex items-center gap-2 px-2 py-1 bg-muted/30">
             <Badge variant="outline" className="text-[10px]">Tab</Badge>
-            <Input value={(tab as any).title ?? ""} className="h-6 text-xs" disabled={!canManage}
-              onChange={(e) => onMutate((prev: FormLayoutTree) => ({ ...prev, nodes: updateNode(prev.nodes, tab.id, { title: e.target.value } as any) }))} />
+            <SymbolInput value={(tab as any).title ?? ""} className="h-6 text-xs" disabled={!canManage}
+              onChange={(v) => onMutate((prev: FormLayoutTree) => ({ ...prev, nodes: updateNode(prev.nodes, tab.id, { title: v } as any) }))} />
             <Button size="icon" variant="ghost" className="h-6 w-6" disabled={!canManage}
               onClick={() => onMutate((prev: FormLayoutTree) => ({
                 ...prev,
@@ -751,7 +752,7 @@ function Inspector({ node, fields, formId, onChange, onDelete, canManage }: {
       {("title" in node) && (
         <div>
           <Label className="text-xs">Titel</Label>
-          <Input value={(node as any).title ?? ""} className="h-8 text-xs" onChange={(e) => onChange({ title: e.target.value } as any)} disabled={disabled} />
+          <SymbolInput value={(node as any).title ?? ""} className="h-8 text-xs" onChange={(v) => onChange({ title: v } as any)} disabled={disabled} />
         </div>
       )}
       {node.type === "section" && (

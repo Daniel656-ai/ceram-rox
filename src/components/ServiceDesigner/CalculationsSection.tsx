@@ -4,6 +4,8 @@ import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SymbolInput } from "@/components/forms/SymbolInput";
+import RichText from "@/components/forms/RichText";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -197,7 +199,7 @@ export default function CalculationsSection() {
               const output = parseOutputBinding(c.output_binding);
               return (
                 <TableRow key={c.id}>
-                  <TableCell>{c.display_name}</TableCell>
+                  <TableCell><RichText value={c.display_name} /></TableCell>
                   <TableCell className="font-mono text-xs">{c.calc_key}</TableCell>
                   <TableCell className="font-mono text-xs">{c.formula}</TableCell>
                   <TableCell>
@@ -224,7 +226,7 @@ export default function CalculationsSection() {
           <DialogHeader><DialogTitle>{draft.id ? "Berechnung bearbeiten" : "Neue globale Berechnung"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Bezeichnung</Label><Input value={draft.display_name} onChange={(e) => setDraft((d) => ({ ...d, display_name: e.target.value }))} placeholder="z.B. Benötigte Bauteile" /></div>
+              <div><Label>Bezeichnung</Label><SymbolInput value={draft.display_name} onChange={(v) => setDraft((d) => ({ ...d, display_name: v }))} placeholder="z.B. Benötigte Bauteile" /></div>
               <div><Label>Schlüssel</Label><Input value={draft.calc_key} disabled={!!draft.id} onChange={(e) => setDraft((d) => ({ ...d, calc_key: slug(e.target.value) }))} placeholder={slug(draft.display_name) || "benoetigte_bauteile"} /></div>
             </div>
 
@@ -299,7 +301,7 @@ export default function CalculationsSection() {
                 </div>
               )}
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <div><Label>Einheit</Label><Input value={draft.unit} onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))} placeholder="Stk" /></div>
+                <div><Label>Einheit</Label><SymbolInput value={draft.unit} onChange={(v) => setDraft((d) => ({ ...d, unit: v }))} placeholder="Stk" /></div>
                 <div><Label>Nachkommastellen</Label><Input type="number" value={draft.decimals} onChange={(e) => setDraft((d) => ({ ...d, decimals: Number(e.target.value) }))} /></div>
               </div>
             </div>

@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SymbolPickerButton } from "@/components/forms/SymbolInput";
+import { SymbolPickerButton, SymbolInput } from "@/components/forms/SymbolInput";
+import RichText from "@/components/forms/RichText";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -340,7 +341,7 @@ export default function LocalCalculationsPanel({
                 {(calcs as FormCalculation[]).map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
-                      <div className="font-medium text-sm">{c.display_name}</div>
+                      <div className="font-medium text-sm"><RichText value={c.display_name} /></div>
                       {c.description && <div className="text-xs text-muted-foreground">{c.description}</div>}
                     </TableCell>
                     <TableCell className="text-xs">
@@ -384,8 +385,8 @@ export default function LocalCalculationsPanel({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Name der Berechnung *</Label>
-                <Input value={draft.display_name} placeholder="z. B. Volumen"
-                  onChange={(e) => setDraft((d) => ({ ...d, display_name: e.target.value }))} />
+                <SymbolInput value={draft.display_name} placeholder="z. B. Volumen"
+                  onChange={(v) => setDraft((d) => ({ ...d, display_name: v }))} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Beschreibung (optional)</Label>
@@ -583,7 +584,7 @@ export default function LocalCalculationsPanel({
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Einheit (optional)</Label>
-                <Input value={draft.unit} placeholder="kg" onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))} />
+                <SymbolInput value={draft.unit} placeholder="kg" onChange={(v) => setDraft((d) => ({ ...d, unit: v }))} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Nachkommastellen</Label>
@@ -611,9 +612,9 @@ export default function LocalCalculationsPanel({
                 Nur markierte Werte werden beim Abschluss der Aufgabe in die Ergebnisdatenbank übernommen.
               </p>
               {draft.is_result && (
-                <Input className="h-8" placeholder={draft.display_name || "Ergebnis-Bezeichnung"}
+                <SymbolInput className="h-8" placeholder={draft.display_name || "Ergebnis-Bezeichnung"}
                   value={draft.result_label}
-                  onChange={(e) => setDraft((d) => ({ ...d, result_label: e.target.value }))} />
+                  onChange={(v) => setDraft((d) => ({ ...d, result_label: v }))} />
               )}
             </div>
 
