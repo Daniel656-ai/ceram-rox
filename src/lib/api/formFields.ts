@@ -64,6 +64,14 @@ export interface RepeaterMeta {
   storage_key?: string;
   /** Freies Layout der Unterfelder (siehe src/lib/repeaterLayout.ts). */
   layout?: unknown;
+  /**
+   * Feldschlüssel (Auftrags-/Formularfeld), das den vorgesehenen Messumfang
+   * liefert, z. B. „Anzahl Temperaturpunkte“. Reine Vorgabe/Orientierung:
+   * daraus werden Messpunkte vorgeschlagen, nie erzwungen.
+   */
+  plan_field_key?: string;
+  /** Kompakte Tabellendarstellung der Einträge zusätzlich anbieten. */
+  table_view?: boolean;
 }
 
 export const readRepeaterMeta = (field: FormField): RepeaterMeta => {
@@ -76,6 +84,8 @@ export const readRepeaterMeta = (field: FormField): RepeaterMeta => {
     add_label: typeof r.add_label === "string" ? r.add_label : "Eintrag hinzufügen",
     storage_key: typeof r.storage_key === "string" ? r.storage_key : undefined,
     layout: r.layout ?? null,
+    plan_field_key: typeof r.plan_field_key === "string" && r.plan_field_key.trim() ? r.plan_field_key.trim() : undefined,
+    table_view: r.table_view === true,
   };
 };
 

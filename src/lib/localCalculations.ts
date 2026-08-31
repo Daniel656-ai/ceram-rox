@@ -168,3 +168,71 @@ export function isCalcInputFieldDef(
 ): boolean {
   return isCalcInputField(field.field_type) || isLinkedField(field);
 }
+
+/* -------------------------------------------------------------
+ * Messreihen: Berechnungen je Eintrag (Messpunkt)
+ * -----------------------------------------------------------
+ * Es gibt bewusst KEINE zweite Berechnungsstruktur. Dieselben lokalen
+ * Berechnungen (`form_calculations`) werden lediglich in einem anderen
+ * Scope ausgewertet: Werte des aktuellen Eintrags überlagern die
+ * Formularwerte. Dadurch bedeutet `Temperatur` innerhalb eines
+ * Messpunktes automatisch `current.Temperatur` — ohne Vermischung
+ * zwischen den Messpunkten.
+ */
+
+/** Metaschlüssel eines Eintrags (z. B. `__instance_id`) sind keine Rechengrößen. */
+const isEntryMetaKey = (k: string) => k.startsWith("__");
+
+/** Scope eines Messpunktes: Formularwerte, überlagert von Eintragswerten. */
+export function mergeEntryScope(
+  rootValues: Record<string, unknown> | undefined,
+  entry: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...(rootValues ?? {}) };
+  for (const [k, v] of Object.entries(entry ?? {})) {
+    if (isEntryMetaKey(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * Wertet die Berechnungen für genau einen Messpunkt aus. Fehlt eine
+ * Eingangsgröße, bleibt das Ergebnis `null` („nicht berechenbar“) – es wird
+ * niemals 0 angenommen.
+ */
+export function evaluateEntryCalculations(
+  calcs: FormCalculation[],
+  rootValues: Record<string, unknown> | undefined,
+  entry: Record<string, unknown> | undefined,
+  knownFieldKeys: Iterable<string> = [],
+): Record<string, LocalCalcResult> {
+  return evaluateLocalCalculations(calcs, mergeEntryScope(rootValues, entry), knownFieldKeys);
+}
+
+/**
+ * Ermittelt die Berechnungen, die sich fachlich auf einen Messpunkt beziehen:
+ * alle Berechnungen, die (direkt oder über andere Berechnungen) mindestens ein
+ * Unterfeld der Messreihe verwenden. Nur diese Ergebnisse werden je Messpunkt
+ * gespeichert – formularweite Berechnungen bleiben unverändert.
+ */
+export function seriesCalculations(
+  calcs: FormCalculation[],
+  childKeys: string[],
+): FormCalculation[] {
+  const child = new Set(childKeys);
+  const selected = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const c of calcs) {
+      if (selected.has(c.calc_key)) continue;
+      const refs = extractReferences(c.formula || "");
+      if (refs.some((r) => child.has(r) || selected.has(r))) {
+        selected.add(c.calc_key);
+        changed = true;
+      }
+    }
+  }
+  return calcs.filter((c) => selected.has(c.calc_key));
+}
