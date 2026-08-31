@@ -1,5 +1,10 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import {
+  applyGlobalDefinitions,
+  type GlobalDefinitionLike,
+} from "@/lib/globalFieldInheritance";
+
 
 export type FormFieldType =
   | "text" | "longtext" | "number" | "decimal" | "percent"
@@ -82,15 +87,40 @@ export const writeRepeaterMeta = (field: FormField, patch: Partial<RepeaterMeta>
 };
 
 export const formFields = {
-  listForForm: (formId: string) =>
-    unwrap(
+  /**
+   * Lädt die Felder eines Formulars. Felder mit `global_field_id` werden mit der
+   * zentralen Definition (Bezeichnung, Schreibweise, Einheit, Beschreibung)
+   * überlagert, damit Änderungen an globalen Feldern sofort in allen bestehenden
+   * Formularen sichtbar sind. Gespeicherte Werte, Schlüssel und Layout bleiben
+   * unverändert.
+   */
+  listForForm: async (formId: string) => {
+    const fields = (await unwrap(
       dbClient
         .from("form_fields" as any)
         .select("*")
         .eq("form_id", formId)
         .order("sort_order")
         .order("created_at")
-    ) as unknown as Promise<FormField[]>,
+    )) as unknown as FormField[];
+    const ids = Array.from(
+      new Set(fields.map((f) => f.global_field_id).filter(Boolean) as string[])
+    );
+    if (!ids.length) return fields;
+    try {
+      const globals = (await unwrap(
+        dbClient
+          .from("global_fields" as any)
+          .select("id,field_key,display_name,description,unit,is_repeatable,data_type")
+          .in("id", ids)
+      )) as unknown as GlobalDefinitionLike[];
+      return applyGlobalDefinitions(fields, globals);
+    } catch {
+      // Zentrale Definition nicht lesbar (z.B. Berechtigungen): Kopie verwenden.
+      return fields;
+    }
+  },
+
 
   create: (input: Partial<FormField> & { form_id: string; field_key: string; display_name: string; field_type: FormFieldType }) =>
     unwrap(
