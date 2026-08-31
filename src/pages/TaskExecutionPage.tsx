@@ -49,6 +49,18 @@ function TaskExecutionPageInner() {
   const serviceId: string | undefined = (measurement as any)?.service_id;
 
   /**
+   * Werte vorangegangener Workflow-Schritte des Auftrags. Grundlage für
+   * Feldverknüpfungen und darauf aufbauende Berechnungen (kein zweiter
+   * Speicherort – es wird die bestehende `shared_form_data` gelesen).
+   */
+  const orderId: string | undefined = (measurement as any)?.order_id;
+  const { data: stepData = {} } = useQuery({
+    queryKey: ["order-shared-form-data", orderId],
+    queryFn: () => api.orderSharedFormData.get(orderId!),
+    enabled: !!orderId,
+  });
+
+  /**
    * Strikte Rollentrennung: Der Messdienstleister sieht ausschließlich das
    * Messdienstleisterformular der Dienstleistung. Kein Fallback auf das
    * Auftraggeberformular und kein pauschales „Ergebnisformular".
@@ -516,6 +528,7 @@ function TaskExecutionPageInner() {
               <ServiceLinkedForms
                 serviceId={serviceId}
                 context="employee"
+                stepData={stepData as any}
                 values={values}
                 onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
               />
