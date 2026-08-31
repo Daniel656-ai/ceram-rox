@@ -920,7 +920,7 @@ function RepeaterEntry({
     if (item.type === "group") {
       return (
         <div key={item.id} className={cn(repeaterWidthClass(item.width), "rounded border p-2 bg-muted/20")}>
-          {item.title && <p className="text-[11px] font-medium mb-2">{item.title}</p>}
+          {item.title && <p className="text-[11px] font-medium mb-2"><RichText value={item.title} /></p>}
           <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
             {item.children.map(renderItem)}
           </div>
@@ -1495,7 +1495,7 @@ function TabsInner({ defaultTab, tabs, children }: { defaultTab: string; tabs: {
   return (
     <Tabs value={val} onValueChange={setVal}>
       <TabsList>
-        {tabs.map(t => <TabsTrigger key={t.id} value={t.id}>{t.title}</TabsTrigger>)}
+        {tabs.map(t => <TabsTrigger key={t.id} value={t.id}><RichText value={t.title} /></TabsTrigger>)}
       </TabsList>
       {children}
     </Tabs>
