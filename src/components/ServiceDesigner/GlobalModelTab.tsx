@@ -735,8 +735,8 @@ function GlobalRepeaterSettings({
                     {SUBFIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Input className="h-7 text-xs" placeholder="Einheit" value={s.unit ?? ""}
-                  onChange={(e) => patchSubfield(i, { unit: e.target.value || null })} />
+                <SymbolInput className="h-7 text-xs" value={s.unit ?? ""} placeholder="Einheit"
+                  onChange={(v) => patchSubfield(i, { unit: v || null })} />
                 <label className="flex items-center gap-2 text-xs">
                   <input type="checkbox" checked={!!s.is_required}
                     onChange={(e) => patchSubfield(i, { is_required: e.target.checked })} />
