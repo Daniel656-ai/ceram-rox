@@ -48,7 +48,7 @@ import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculation
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
 import { walkNodes } from "@/lib/api/formDefinitionLayout";
-import { readValueSource, isSameFormLink, isPreviousServiceLink, resolveLinkedValue, linkOriginLabel, type StepData } from "@/lib/fieldLinks";
+import { readValueSource, isSameFormLink, isPreviousServiceLink, resolveLinkedValue, linkOriginLabel, numericValue, type StepData } from "@/lib/fieldLinks";
 import { createContext as createReactContext } from "react";
 
 /**
