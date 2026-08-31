@@ -168,3 +168,44 @@ export function isCalcInputFieldDef(
 ): boolean {
   return isCalcInputField(field.field_type) || isLinkedField(field);
 }
+
+/* -------------------------------------------------------------
+ * Messreihen: Berechnungen je Eintrag (Messpunkt)
+ * -----------------------------------------------------------
+ * Es gibt bewusst KEINE zweite Berechnungsstruktur. Dieselben lokalen
+ * Berechnungen (`form_calculations`) werden lediglich in einem anderen
+ * Scope ausgewertet: Werte des aktuellen Eintrags überlagern die
+ * Formularwerte. Dadurch bedeutet `Temperatur` innerhalb eines
+ * Messpunktes automatisch `current.Temperatur` — ohne Vermischung
+ * zwischen den Messpunkten.
+ */
+
+/** Metaschlüssel eines Eintrags (z. B. `__instance_id`) sind keine Rechengrößen. */
+const isEntryMetaKey = (k: string) => k.startsWith("__");
+
+/** Scope eines Messpunktes: Formularwerte, überlagert von Eintragswerten. */
+export function mergeEntryScope(
+  rootValues: Record<string, unknown> | undefined,
+  entry: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...(rootValues ?? {}) };
+  for (const [k, v] of Object.entries(entry ?? {})) {
+    if (isEntryMetaKey(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * Wertet die Berechnungen für genau einen Messpunkt aus. Fehlt eine
+ * Eingangsgröße, bleibt das Ergebnis `null` („nicht berechenbar“) – es wird
+ * niemals 0 angenommen.
+ */
+export function evaluateEntryCalculations(
+  calcs: FormCalculation[],
+  rootValues: Record<string, unknown> | undefined,
+  entry: Record<string, unknown> | undefined,
+  knownFieldKeys: Iterable<string> = [],
+): Record<string, LocalCalcResult> {
+  return evaluateLocalCalculations(calcs, mergeEntryScope(rootValues, entry), knownFieldKeys);
+}
