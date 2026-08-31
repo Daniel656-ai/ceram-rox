@@ -22,10 +22,11 @@ import type {
   CalcToken, CalcOperator, CalcRounding, FormCalculation,
 } from "@/lib/api/formCalculations";
 import {
-  buildFormulaFromTokens, isCalcInputField, wouldCreateCycle,
+  buildFormulaFromTokens, isCalcInputFieldDef, wouldCreateCycle,
   evaluateLocalCalculations, formatCalcResult,
 } from "@/lib/localCalculations";
 import { extractReferences, FORMULA_FUNCTIONS, formulaFunctionLabel } from "@/lib/formulaEngine";
+import { readValueSource, isLinkedField, linkOriginLabel } from "@/lib/fieldLinks";
 
 const OPERATORS: { v: CalcOperator; l: string }[] = [
   { v: "+", l: "+" }, { v: "-", l: "−" }, { v: "*", l: "×" }, { v: "/", l: "÷" },
@@ -151,11 +152,18 @@ export default function LocalCalculationsPanel({
     queryFn: () => api.formCalculations.listForForm(form.id),
   });
 
-  /** Nur rechenbare Felder des aktuellen Formulars (keine Textfelder/Überschriften). */
+  /**
+   * Rechenbare Größen des Formulars: numerische Felder UND verknüpfte Felder
+   * (bestehende Feldverknüpfung `data_source`). Verknüpfte Felder liefern zur
+   * Laufzeit den aktuellen Wert der Quelle – es wird kein Wert kopiert.
+   */
   const numericFields = useMemo(
-    () => fields.filter((f) => isCalcInputField(f.field_type)),
+    () => fields.filter((f) => isCalcInputFieldDef(f as any)),
     [fields]
   );
+  const localFields = useMemo(() => numericFields.filter((f) => !isLinkedField(f as any)), [numericFields]);
+  const linkedFields = useMemo(() => numericFields.filter((f) => isLinkedField(f as any)), [numericFields]);
+  const originOf = (f: FormField) => linkOriginLabel(readValueSource(f as any));
   const fieldLabel = (key: string) =>
     fields.find((f) => f.field_key === key)?.display_name
     ?? calcs.find((c) => c.calc_key === key)?.display_name
@@ -445,13 +453,24 @@ export default function LocalCalculationsPanel({
                               <SelectItem value="__none__">— Feld wählen —</SelectItem>
                               <SelectGroup>
                                 <SelectLabel>Formularfelder</SelectLabel>
-                                {numericFields.map((f: FormField) => (
+                                {localFields.map((f: FormField) => (
                                   <SelectItem key={f.id} value={f.field_key}>
                                     {f.display_name}{f.unit ? ` [${f.unit}]` : ""}
                                   </SelectItem>
                                 ))}
                                 {numericFields.length === 0 && <SelectItem value="__empty__" disabled>Keine rechenbaren Felder</SelectItem>}
                               </SelectGroup>
+                              {linkedFields.length > 0 && (
+                                <SelectGroup>
+                                  <SelectLabel>Verknüpfte Felder</SelectLabel>
+                                  {linkedFields.map((f: FormField) => (
+                                    <SelectItem key={f.id} value={f.field_key}>
+                                      🔗 {f.display_name}{f.unit ? ` [${f.unit}]` : ""}
+                                      {originOf(f) ? ` · aus ${originOf(f)}` : ""}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              )}
                               {(calcs as FormCalculation[]).filter((c) => c.id !== draft.id).length > 0 && (
                                 <SelectGroup>
                                   <SelectLabel>Andere Berechnungen</SelectLabel>
@@ -479,7 +498,8 @@ export default function LocalCalculationsPanel({
                     </Button>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Es werden ausschließlich rechenbare Felder dieses Formulars angeboten – technische Schlüssel sind nicht nötig.
+                    Angeboten werden rechenbare Felder dieses Formulars sowie 🔗 verknüpfte Felder
+                    (Werte aus vorangegangenen Dienstleistungen). Technische Schlüssel sind nicht nötig.
                   </p>
                 </div>
               ) : (
@@ -513,7 +533,7 @@ export default function LocalCalculationsPanel({
                       </PopoverTrigger>
                       <PopoverContent className="w-72 p-2 max-h-72 overflow-y-auto">
                         <p className="text-[11px] text-muted-foreground px-1 pb-1">Formularfelder</p>
-                        {numericFields.map((f) => (
+                        {localFields.map((f) => (
                           <button key={f.id} type="button"
                             className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted"
                             onClick={() => setDraft((d) => ({ ...d, formula: appendRef(d.formula, f.field_key) }))}>
@@ -521,6 +541,20 @@ export default function LocalCalculationsPanel({
                             <span className="ml-2 font-mono text-[10px] text-muted-foreground">{f.field_key}</span>
                           </button>
                         ))}
+                        {linkedFields.length > 0 && (
+                          <>
+                            <p className="text-[11px] text-muted-foreground px-1 py-1">Verknüpfte Felder</p>
+                            {linkedFields.map((f) => (
+                              <button key={f.id} type="button"
+                                className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted"
+                                onClick={() => setDraft((d) => ({ ...d, formula: appendRef(d.formula, f.field_key) }))}>
+                                🔗 {f.display_name}
+                                {originOf(f) ? <span className="ml-1 text-[10px] text-muted-foreground">aus {originOf(f)}</span> : null}
+                                <span className="ml-2 font-mono text-[10px] text-muted-foreground">{f.field_key}</span>
+                              </button>
+                            ))}
+                          </>
+                        )}
                         {(calcs as FormCalculation[]).length > 0 && (
                           <>
                             <p className="text-[11px] text-muted-foreground px-1 py-1">Berechnungen</p>

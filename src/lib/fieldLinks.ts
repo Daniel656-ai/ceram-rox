@@ -164,3 +164,47 @@ export function conditionsToContext(conditions: ResultCondition[]): Record<strin
   for (const c of conditions) out[c.label] = formatConditionValue(c.value, c.unit);
   return out;
 }
+
+/* -------------------------------------------------------------
+ * Verknüpfte Felder als Eingangsgröße von Berechnungen
+ * -----------------------------------------------------------
+ * Es gibt bewusst KEINE zweite Verknüpfungsstruktur: Berechnungen nutzen
+ * dieselbe `form_fields.data_source`. Der verknüpfte Wert wird zur Laufzeit
+ * aufgelöst und unter dem eigenen Feldschlüssel gespiegelt – damit sind
+ * verknüpfte Felder in Formeln wie lokale Felder referenzierbar.
+ */
+
+/** Werte vorangegangener Schritte: step_key -> { field_key: Wert }. */
+export type StepData = Record<string, Record<string, unknown> | undefined>;
+
+/** Verknüpfung mit einem Feld einer vorangegangenen Dienstleistung? */
+export function isPreviousServiceLink(vs: ValueSource | null): boolean {
+  return !!vs && vs.source.kind === "workflow_step" && !!vs.source.step_key;
+}
+
+/** Besitzt das Feld überhaupt eine Wertquelle (lokal oder vorgelagert)? */
+export function isLinkedField(field: { data_source?: unknown } | null | undefined): boolean {
+  return !!readValueSource((field ?? {}) as any);
+}
+
+/** Sprechende Herkunft für die Anzeige im Berechnungs-/Formeleditor. */
+export function linkOriginLabel(vs: ValueSource | null): string | null {
+  if (!vs) return null;
+  if (vs.source.kind === "form_field") return vs.source.label || vs.source.field_key;
+  return vs.source.label || [vs.source.step_key, vs.source.field_key].filter(Boolean).join(" → ");
+}
+
+/**
+ * Aktueller Wert einer Verknüpfung. Kein Ersatzwert (nie 0): fehlt der Wert,
+ * wird `null` geliefert und die Berechnung bleibt „nicht berechenbar“.
+ */
+export function resolveLinkedValue(
+  vs: ValueSource | null,
+  ctx: { formValues?: Record<string, unknown>; stepData?: StepData },
+): unknown {
+  if (!vs) return null;
+  const raw = vs.source.kind === "form_field"
+    ? ctx.formValues?.[vs.source.field_key]
+    : ctx.stepData?.[vs.source.step_key ?? ""]?.[vs.source.field_key];
+  return raw === undefined || raw === "" ? null : raw;
+}
