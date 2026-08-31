@@ -1453,7 +1453,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
         );
       }
       return (
-        <div className={cn(widthCls(node.width), spanCls(node), "min-w-0", node.className)}>
+        <div className={cn(widthCls(node.width), spanCls(node), "min-w-0", node.className)} style={spanStyle(node)}>
           <FieldWithLabel field={f} node={node} allFields={fields} highlight={node.highlight} />
         </div>
       );
@@ -1461,7 +1461,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     case "calculation": {
       const n = node as CalculationNode;
       return (
-        <div className={cn(widthCls(n.width), spanCls(n), "min-w-0", n.className)}>
+        <div className={cn(widthCls(n.width), spanCls(n), "min-w-0", n.className)} style={spanStyle(n)}>
           <CalculationDisplay node={n} />
         </div>
       );
