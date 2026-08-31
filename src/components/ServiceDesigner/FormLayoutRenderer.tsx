@@ -76,6 +76,8 @@ interface ValuesCtxShape {
   set: (key: string, v: any) => void;
   /** interactive (non-preview) rendering */
   interactive: boolean;
+  /** Alle Formularwerte (für Auswertungen im Messpunkt-Scope). */
+  values: Record<string, any>;
 }
 const ValuesCtx = createContext<ValuesCtxShape | null>(null);
 
@@ -92,6 +94,9 @@ export interface CalcDisplayResult {
 
 /** Ergebnisse aller im Formular eingebundenen Berechnungen (lokal + global). */
 const CalcResultsCtx = createContext<Record<string, CalcDisplayResult>>({});
+
+/** Lokale Berechnungen des Formulars – für Auswertungen je Messpunkt. */
+const LocalCalcsCtx = createContext<FormCalculation[]>([]);
 
 const EntryScopeCtx = createContext<{
   get: (key: string) => any;
@@ -1569,6 +1574,7 @@ export default function FormLayoutRenderer({
     get: (k) => values?.[k],
     set: (k, v) => onChange?.(k, v),
     interactive,
+    values: values ?? {},
   }), [values, onChange, interactive]);
 
   const calcNodes = useMemo(() => {
@@ -1647,11 +1653,13 @@ export default function FormLayoutRenderer({
     <PermissionsCtx.Provider value={permissions ?? null}>
       <StepDataCtx.Provider value={stepData ?? EMPTY_STEP_DATA}>
       <CalcResultsCtx.Provider value={calcResults}>
+      <LocalCalcsCtx.Provider value={localCalcs}>
       <ValuesCtx.Provider value={bind}>
         <div className="grid grid-cols-12 gap-3">
           {layout.nodes.map(n => <RenderNode key={n.id} node={n} fields={fields} />)}
         </div>
       </ValuesCtx.Provider>
+      </LocalCalcsCtx.Provider>
       </CalcResultsCtx.Provider>
       </StepDataCtx.Provider>
     </PermissionsCtx.Provider>
