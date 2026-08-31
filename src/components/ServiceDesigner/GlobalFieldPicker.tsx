@@ -287,12 +287,12 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                           onCheckedChange={(c) => setSelected((s) => ({ ...s, [f.id]: c ? 1 : 0 }))}
                         />
                         <span className="flex-1 truncate">
-                          {f.display_name}
+                          <RichText value={f.display_name} />
                           <span className="ml-2 font-mono text-[10px] text-muted-foreground">
                             {objectById[f.object_id]?.object_key}.{f.field_key}
                           </span>
                         </span>
-                        {f.unit && <Badge variant="outline" className="text-[10px]">{f.unit}</Badge>}
+                        {f.unit && <Badge variant="outline" className="text-[10px]"><RichText value={f.unit} /></Badge>}
                         <Badge variant="outline" className="text-[10px]">
                           {GLOBAL_FIELD_TYPES.find((t) => t.value === f.data_type)?.label ?? f.data_type}
                         </Badge>
