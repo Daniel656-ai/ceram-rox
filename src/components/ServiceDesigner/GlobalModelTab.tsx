@@ -476,7 +476,7 @@ export default function GlobalModelTab() {
             <div className="sm:col-span-2">
 
               <Label className="text-xs">Anzeigename</Label>
-              <Input value={fieldDraft.display_name} onChange={(e) => setFieldDraft({ ...fieldDraft, display_name: e.target.value })} />
+              <SymbolInput value={fieldDraft.display_name} onChange={(v) => setFieldDraft({ ...fieldDraft, display_name: v })} />
             </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Technische ID {fieldDraft.id && "(unveränderlich)"}</Label>
