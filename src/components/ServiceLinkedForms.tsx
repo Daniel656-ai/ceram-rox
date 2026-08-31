@@ -32,6 +32,8 @@ interface SingleProps {
   onChange: (key: string, value: any) => void;
   /** Ergebnisansicht bzw. abgeschlossene Aufgaben: alles schreibgeschützt. */
   readOnly?: boolean;
+  /** Werte vorangegangener Workflow-Schritte (für verknüpfte Felder). */
+  stepData?: Record<string, Record<string, unknown> | undefined>;
 }
 
 /**
@@ -40,7 +42,7 @@ interface SingleProps {
  * stammen aus den Rollenansichten des Formulars – nicht aus separaten
  * Rollenformularen.
  */
-function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly }: SingleProps) {
+function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly, stepData }: SingleProps) {
   const { data: form } = useQuery({
     queryKey: ["form-definition", formId],
     queryFn: () => api.formDefinitions.get(formId),
@@ -166,6 +168,7 @@ function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly }:
         values={localValues}
         onChange={(key, v) => onChange(linkedFormValueKey(formId, key), v)}
         formId={formId}
+        stepData={stepData}
       />
     </div>
   );
@@ -178,6 +181,8 @@ interface Props {
   values: Record<string, any>;
   onChange: (key: string, value: any) => void;
   readOnly?: boolean;
+  /** Werte vorangegangener Workflow-Schritte (für verknüpfte Felder). */
+  stepData?: Record<string, Record<string, unknown> | undefined>;
 }
 
 /**
@@ -186,7 +191,7 @@ interface Props {
  * Kontexts. Die Dienstleistung verknüpft nur noch EIN Formular – die
  * Rollentrennung erfolgt über dessen Rollenansichten.
  */
-export default function ServiceLinkedForms({ serviceId, context, values, onChange, readOnly }: Props) {
+export default function ServiceLinkedForms({ serviceId, context, values, onChange, readOnly, stepData }: Props) {
   const { data: links = [] } = useQuery({
     queryKey: ["service-form-links", serviceId],
     queryFn: () => api.serviceFormLinks.listForService(serviceId),
@@ -206,6 +211,7 @@ export default function ServiceLinkedForms({ serviceId, context, values, onChang
           values={values}
           onChange={onChange}
           readOnly={readOnly}
+          stepData={stepData}
         />
       ))}
     </div>
