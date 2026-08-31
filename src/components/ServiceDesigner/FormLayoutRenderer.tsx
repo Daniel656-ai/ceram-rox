@@ -44,7 +44,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
-import { evaluateLocalCalculations, formatCalcResult } from "@/lib/localCalculations";
+import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculations, formatCalcResult } from "@/lib/localCalculations";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
 import { walkNodes } from "@/lib/api/formDefinitionLayout";
@@ -942,6 +942,43 @@ function RepeaterEntry({
 
   const keys = useMemo(() => children.map((c) => c.field_key), [children]);
   const tree = useMemo(() => normalizeRepeaterLayout(layout, keys), [layout, keys]);
+
+  /* ---- Berechnungen im Scope dieses Eintrags (Messpunkt) -----------
+   * Dieselbe Formel wird für jeden Messpunkt mit dessen eigenen Werten
+   * ausgewertet. Fehlende Eingangsgrößen ⇒ kein Ergebnis (nie 0). */
+  const root = useContext(ValuesCtx);
+  const allCalcs = useContext(LocalCalcsCtx);
+  const entryCalcs = useMemo(() => seriesCalculations(allCalcs, keys), [allCalcs, keys]);
+
+  const entryResults = useMemo(() => {
+    const raw = evaluateEntryCalculations(allCalcs, root?.values, entry, keys);
+    const out: Record<string, CalcDisplayResult> = {};
+    for (const c of allCalcs) {
+      const r = raw[c.calc_key];
+      out[`local:${c.calc_key}`] = {
+        value: r?.value ?? null,
+        error: r?.error ?? null,
+        label: c.display_name,
+        unit: c.unit,
+        decimals: c.decimals ?? 2,
+        description: c.description,
+      };
+    }
+    return out;
+  }, [allCalcs, root?.values, entry, keys]);
+
+  /** Ergebnisse je Messpunkt im Eintrag speichern (Reihenfolge bleibt erhalten). */
+  const interactiveRoot = !!root?.interactive;
+  useEffect(() => {
+    if (!interactiveRoot || !entryCalcs.length) return;
+    const patch: Record<string, any> = {};
+    for (const c of entryCalcs) {
+      const v = entryResults[`local:${c.calc_key}`]?.value ?? null;
+      if ((entry?.[c.calc_key] ?? null) !== v) patch[c.calc_key] = v;
+    }
+    if (Object.keys(patch).length) onChange({ ...(entry ?? {}), ...patch });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entryResults, interactiveRoot, entryCalcs]);
   const byKey = useMemo(
     () => Object.fromEntries(children.map((c) => [c.field_key, c])) as Record<string, FormField>,
     [children]
@@ -967,6 +1004,19 @@ function RepeaterEntry({
         </div>
       );
     }
+    if (item.type === "calculation") {
+      return (
+        <div key={item.id} className={repeaterWidthClass(item.width)}>
+          <CalculationDisplay
+            node={{
+              id: item.id, type: "calculation", scope: "local",
+              calc_key: item.calc_key, width: 12,
+              label_override: item.label_override ?? undefined,
+            } as CalculationNode}
+          />
+        </div>
+      );
+    }
     const cf = byKey[item.key];
     if (!cf) return null;
     return (
@@ -981,6 +1031,7 @@ function RepeaterEntry({
   };
 
   return (
+    <CalcResultsCtx.Provider value={entryResults}>
     <EntryScopeCtx.Provider value={scope}>
       <div className="border rounded p-3 bg-background">
         <div className="flex items-center justify-between mb-2">
@@ -1012,6 +1063,7 @@ function RepeaterEntry({
         </div>
       </div>
     </EntryScopeCtx.Provider>
+    </CalcResultsCtx.Provider>
   );
 }
 
