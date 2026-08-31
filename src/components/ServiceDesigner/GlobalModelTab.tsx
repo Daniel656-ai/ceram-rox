@@ -759,8 +759,8 @@ function GlobalRepeaterSettings({
           ))}
         </div>
         <div className="grid gap-1 sm:grid-cols-2">
-          <Input className="h-8 text-xs" placeholder="Anzeigename (z. B. Rohstoff)"
-            value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+          <SymbolInput className="h-8 text-xs" placeholder="Anzeigename (z. B. Rohstoff)"
+            value={newLabel} onChange={setNewLabel} />
           <Input className="h-8 text-xs font-mono" placeholder={slug(newLabel) || "technische_id"}
             value={newKey} onChange={(e) => setNewKey(e.target.value)} />
           <Select value={newType} onValueChange={setNewType}>
@@ -769,8 +769,8 @@ function GlobalRepeaterSettings({
               {SUBFIELD_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Input className="h-8 text-xs" placeholder="Einheit (optional)"
-            value={newUnit} onChange={(e) => setNewUnit(e.target.value)} />
+          <SymbolInput className="h-8 text-xs" placeholder="Einheit (optional)"
+            value={newUnit} onChange={setNewUnit} />
         </div>
         <Button type="button" size="sm" variant="outline" className="mt-2 w-full"
           disabled={!newLabel.trim()} onClick={addSubfield}>
