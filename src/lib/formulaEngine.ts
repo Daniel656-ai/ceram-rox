@@ -137,8 +137,20 @@ export const FORMULA_FUNCTION_INFO: Record<string, string> = {
   SQRT: "Quadratwurzel",
   POW: "Potenz (Basis, Exponent)",
   LN: "Natürlicher Logarithmus",
+  SIN: "Sinus (Winkel im Bogenmaß)",
+  COS: "Kosinus (Winkel im Bogenmaß)",
+  TAN: "Tangens (Winkel im Bogenmaß)",
+  ASIN: "Arkussinus (Ergebnis im Bogenmaß)",
+  ACOS: "Arkuskosinus (Ergebnis im Bogenmaß)",
+  ATAN: "Arkustangens (Ergebnis im Bogenmaß)",
+  RADIANS: "Grad → Bogenmaß",
+  DEGREES: "Bogenmaß → Grad",
   IF: "Bedingung (Prüfung, dann, sonst)",
 };
+
+/** In Formeln direkt nutzbare Konstanten (für Editor-Hinweise). */
+export const FORMULA_CONSTANTS = Object.keys(CONSTANTS);
+
 
 /** Parameter-Hinweis je Funktion (Standard: einstellig). */
 const FORMULA_FUNCTION_ARGS: Record<string, string> = {
