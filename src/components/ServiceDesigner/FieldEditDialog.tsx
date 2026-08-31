@@ -446,6 +446,13 @@ export function RepeaterConfigPanel({
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["form-fields", field.form_id] });
 
+  /** Lokale Berechnungen dieses Formulars – als Element im Eintrag platzierbar. */
+  const { data: formCalcs = [] } = useQuery({
+    queryKey: ["form-calculations", field.form_id],
+    queryFn: () => api.formCalculations.listForForm(field.form_id),
+    enabled: !!field.form_id,
+  });
+
   const saveMeta = async (patch: any) => {
     const metadata = isBlock
       ? writeMeasurementBlockMeta(field, patch)
