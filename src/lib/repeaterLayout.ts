@@ -27,6 +27,18 @@ export interface RepeaterSpacerItem {
   type: "spacer";
   width: number;
 }
+/**
+ * Berechnung innerhalb eines Eintrags (Messpunkt). Verweist auf eine lokale
+ * Berechnung des Formulars (`form_calculations.calc_key`). Die Formel wird
+ * EINMAL definiert und je Eintrag mit dessen eigenen Werten ausgewertet.
+ */
+export interface RepeaterCalcItem {
+  id: string;
+  type: "calculation";
+  calc_key: string;
+  width: number;
+  label_override?: string | null;
+}
 export interface RepeaterBreakItem {
   id: string;
   type: "break";
@@ -35,7 +47,8 @@ export type RepeaterLeafItem =
   | RepeaterFieldItem
   | RepeaterHeadingItem
   | RepeaterSpacerItem
-  | RepeaterBreakItem;
+  | RepeaterBreakItem
+  | RepeaterCalcItem;
 
 export interface RepeaterGroupItem {
   id: string;
@@ -88,7 +101,17 @@ export const newItemId = () => Math.random().toString(36).slice(2, 10);
 
 export const emptyRepeaterLayout = (): RepeaterLayout => ({ version: 1, gap: "md", items: [] });
 
-const isLeaf = (t: string) => ["field", "heading", "spacer", "break"].includes(t);
+const isLeaf = (t: string) => ["field", "heading", "spacer", "break", "calculation"].includes(t);
+
+/** Alle im Layout referenzierten Berechnungsschlüssel. */
+export const collectLayoutCalcKeys = (layout: RepeaterLayout): string[] => {
+  const out: string[] = [];
+  for (const it of layout.items) {
+    if (it.type === "calculation") out.push(it.calc_key);
+    if (it.type === "group") for (const c of it.children) if (c.type === "calculation") out.push(c.calc_key);
+  }
+  return out;
+};
 
 /** Alle im Layout referenzierten Unterfeld-Keys. */
 export const collectLayoutFieldKeys = (layout: RepeaterLayout): string[] => {
@@ -105,7 +128,12 @@ export const collectLayoutFieldKeys = (layout: RepeaterLayout): string[] => {
  * Unterfelder am Ende ergänzen. So bleibt das Layout immer konsistent
  * mit der aktuellen Unterfeld-Definition.
  */
-export function normalizeRepeaterLayout(raw: unknown, availableKeys: string[]): RepeaterLayout {
+export function normalizeRepeaterLayout(
+  raw: unknown,
+  availableKeys: string[],
+  /** Bekannte Berechnungsschlüssel; ohne Angabe bleiben alle erhalten. */
+  availableCalcKeys?: string[],
+): RepeaterLayout {
   const base = emptyRepeaterLayout();
   const src = (raw && typeof raw === "object" ? (raw as any) : {}) as Partial<RepeaterLayout>;
   const gap: RepeaterGap = src.gap === "sm" || src.gap === "lg" ? src.gap : "md";
@@ -119,6 +147,15 @@ export function normalizeRepeaterLayout(raw: unknown, availableKeys: string[]): 
     const width = typeof it.width === "number" ? Math.max(1, Math.min(12, it.width)) : 12;
     if (it.type === "heading") return { id, type: "heading", text: String(it.text ?? "Überschrift"), width };
     if (it.type === "spacer") return { id, type: "spacer", width };
+    if (it.type === "calculation") {
+      const ck = String(it.calc_key ?? "");
+      if (!ck) return null;
+      if (availableCalcKeys && !availableCalcKeys.includes(ck)) return null;
+      return {
+        id, type: "calculation", calc_key: ck, width,
+        label_override: typeof it.label_override === "string" ? it.label_override : null,
+      };
+    }
     const key = String(it.key ?? "");
     if (!known.has(key) || seen.has(key)) return null;
     seen.add(key);
