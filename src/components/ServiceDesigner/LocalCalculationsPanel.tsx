@@ -345,7 +345,7 @@ export default function LocalCalculationsPanel({
                     <TableCell className="text-xs">
                       {extractReferences(c.formula).length
                         ? c.formula.split(/\s+/).map((p, i) =>
-                            /^[a-zA-Z_]/.test(p)
+                            /^[A-Za-z_\u0370-\u03FF]/.test(p)
                               ? <Badge key={i} variant={isKnownRef(p) || FORMULA_FUNCTIONS.includes(p.toUpperCase()) ? "secondary" : "destructive"} className="mr-1 mb-1">{fieldLabel(p)}</Badge>
                               : <span key={i} className="mr-1">{p}</span>)
                         : <span className="text-muted-foreground">{c.formula}</span>}
@@ -552,7 +552,7 @@ export default function LocalCalculationsPanel({
               <div className="text-xs text-muted-foreground">
                 Ergebnis ={" "}
                 {referenced.length
-                  ? formula.split(/\s+/).map((p, i) => /^[a-zA-Z_]/.test(p)
+                  ? formula.split(/\s+/).map((p, i) => /^[A-Za-z_\u0370-\u03FF]/.test(p)
                       ? <Badge key={i} variant={isKnownRef(p) || FORMULA_FUNCTIONS.includes(p.toUpperCase()) ? "secondary" : "destructive"} className="mr-1">{fieldLabel(p)}</Badge>
                       : <span key={i} className="mr-1">{p}</span>)
                   : <span>{formula || "—"}</span>}
