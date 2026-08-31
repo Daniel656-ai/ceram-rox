@@ -721,7 +721,7 @@ function GlobalRepeaterSettings({
           {subfields.map((s, i) => (
             <div key={s.field_key} className="rounded border bg-background px-2 py-1.5 space-y-1">
               <div className="flex items-center gap-2">
-                <span className="flex-1 truncate text-xs font-medium">{s.display_name}</span>
+                <span className="flex-1 truncate text-xs font-medium"><RichText value={s.display_name} /></span>
                 <Badge variant="outline" className="font-mono text-[10px]">{s.field_key}</Badge>
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(i, -1)}>↑</Button>
                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => move(i, 1)}>↓</Button>
