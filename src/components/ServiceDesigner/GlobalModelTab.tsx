@@ -384,7 +384,7 @@ export default function GlobalModelTab() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs">{f.category ?? "—"}</TableCell>
-                  <TableCell className="text-xs">{f.unit ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{f.unit ? <RichText value={f.unit} /> : "—"}</TableCell>
                   <TableCell className="text-xs">
                     {GLOBAL_FIELD_SOURCES.find((s) => s.value === f.data_source)?.label ?? f.data_source}
                   </TableCell>
