@@ -9,6 +9,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SymbolInput } from "@/components/forms/SymbolInput";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -195,9 +196,9 @@ export default function RepeaterLayoutDesigner({ subfields, value, onChange, dis
           {item.type === "spacer" && <span className="text-muted-foreground">Abstand / Platzhalter</span>}
           {item.type === "break" && <span className="text-muted-foreground">Zeilenumbruch</span>}
           {item.type === "group" && (
-            <Input
+            <SymbolInput
               className="h-7 text-xs" value={item.title} disabled={disabled}
-              onChange={(e) => patchItem(item.id, { title: e.target.value } as any)}
+              onChange={(v) => patchItem(item.id, { title: v } as any)}
             />
           )}
         </span>

@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SymbolInput } from "@/components/forms/SymbolInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -153,7 +154,7 @@ function ValidationsSection() {
           <DialogHeader><DialogTitle>{draft.id ? "Regel bearbeiten" : "Neue globale Validierung"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Bezeichnung</Label><Input value={draft.display_name} onChange={(e) => setDraft((d) => ({ ...d, display_name: e.target.value }))} placeholder="z.B. Pressdruck" /></div>
+              <div><Label>Bezeichnung</Label><SymbolInput value={draft.display_name} onChange={(v) => setDraft((d) => ({ ...d, display_name: v }))} placeholder="z.B. Pressdruck" /></div>
               <div><Label>Schlüssel</Label><Input value={draft.validation_key} disabled={!!draft.id} onChange={(e) => setDraft((d) => ({ ...d, validation_key: slug(e.target.value) }))} placeholder={slug(draft.display_name) || "pressdruck"} /></div>
             </div>
             <div>
@@ -169,7 +170,7 @@ function ValidationsSection() {
               <div className="grid grid-cols-3 gap-3">
                 <div><Label>Min</Label><Input type="number" value={draft.min_value} onChange={(e) => setDraft((d) => ({ ...d, min_value: e.target.value }))} /></div>
                 <div><Label>Max</Label><Input type="number" value={draft.max_value} onChange={(e) => setDraft((d) => ({ ...d, max_value: e.target.value }))} /></div>
-                <div><Label>Einheit</Label><Input value={draft.unit} onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))} placeholder="bar" /></div>
+                <div><Label>Einheit</Label><SymbolInput value={draft.unit} onChange={(v) => setDraft((d) => ({ ...d, unit: v }))} placeholder="bar" /></div>
               </div>
             )}
             {draft.rule_type === "pattern" && (

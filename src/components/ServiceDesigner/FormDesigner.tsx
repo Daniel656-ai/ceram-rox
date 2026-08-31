@@ -13,6 +13,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SymbolInput } from "@/components/forms/SymbolInput";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -430,10 +431,10 @@ function SectionBlock({
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
           <div className="flex-1 space-y-1">
-            <Input
+            <SymbolInput
               value={section.title}
               disabled={!canManage}
-              onChange={(e) => onChangeSection({ title: e.target.value })}
+              onChange={(v) => onChangeSection({ title: v })}
               className="h-8 font-medium"
             />
             <Input
