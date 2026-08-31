@@ -207,6 +207,13 @@ type Tok = TokBase & (
 /** Menschenlesbare Position (1-basiert) für Fehlermeldungen. */
 const at = (p: number | undefined) => (p == null ? "" : ` (Position ${p + 1})`);
 
+/**
+ * Erlaubte Zeichen in Feldreferenzen: lateinische Buchstaben, Umlaute sowie
+ * griechische Klein-/Großbuchstaben (α, β, Δ, Ω …) und tief-/hochgestellte Ziffern.
+ */
+const ID_START = /[A-Za-z_ÄÖÜäöüß\u0370-\u03FF\u1F00-\u1FFF]/;
+const ID_PART = /[A-Za-z0-9_ÄÖÜäöüß\u0370-\u03FF\u1F00-\u1FFF\u2070-\u209F]/;
+
 function tokenize(src: string): Tok[] {
   const out: Tok[] = [];
   let i = 0;
@@ -224,13 +231,13 @@ function tokenize(src: string): Tok[] {
       out.push({ t: "num", v: Number(raw), p: i });
       i = j; continue;
     }
-    if (/[A-Za-z_ÄÖÜäöüß]/.test(c)) {
+    if (ID_START.test(c)) {
       let j = i;
       // Bezeichner dürfen Punkte enthalten (Systemvariablen: probe.lotnummer)
       while (
         j < src.length &&
-        (/[A-Za-z0-9_ÄÖÜäöüß]/.test(src[j]) ||
-          (src[j] === "." && /[A-Za-z_ÄÖÜäöüß]/.test(src[j + 1] ?? "")))
+        (ID_PART.test(src[j]) ||
+          (src[j] === "." && ID_START.test(src[j + 1] ?? "")))
       ) j++;
       out.push({ t: "id", v: src.slice(i, j), p: i });
       i = j; continue;
@@ -334,6 +341,10 @@ class Parser {
         }
         this.eat(); // consume )
         return fn(args);
+      }
+      // Konstante (π, PI, E) – nur wenn nicht durch ein Feld überschrieben
+      if (!(name in this.ctx) && (name in CONSTANTS || name.toUpperCase() in CONSTANTS)) {
+        return CONSTANTS[name] ?? CONSTANTS[name.toUpperCase()];
       }
       // Variable / Feldschlüssel
       if (!(name in this.ctx)) {
