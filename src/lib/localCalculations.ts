@@ -11,6 +11,7 @@
 
 import { evaluateFormula, extractReferences } from "@/lib/formulaEngine";
 import type { CalcToken, FormCalculation, CalcRounding } from "@/lib/api/formCalculations";
+import { isLinkedField } from "@/lib/fieldLinks";
 
 /** Zulässige Feldtypen als Eingangsgröße einer lokalen Berechnung. */
 export const NUMERIC_FIELD_TYPES = [
@@ -154,4 +155,16 @@ export function formatCalcResult(value: number | null, decimals: number, unit?: 
     maximumFractionDigits: Math.max(0, decimals),
   });
   return unit ? `${txt} ${unit}` : txt;
+}
+
+/**
+ * Kann ein Feld als Eingangsgröße einer Berechnung dienen?
+ * Zusätzlich zu den numerischen Feldtypen gelten auch verknüpfte Felder
+ * (Wertquelle aus demselben Formular oder aus einer vorangegangenen
+ * Dienstleistung) als rechenbar – ihr Wert wird zur Laufzeit aufgelöst.
+ */
+export function isCalcInputFieldDef(
+  field: { field_type: string; data_source?: unknown },
+): boolean {
+  return isCalcInputField(field.field_type) || isLinkedField(field);
 }
