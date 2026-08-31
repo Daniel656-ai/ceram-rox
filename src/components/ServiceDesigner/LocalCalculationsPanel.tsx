@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SymbolPickerButton } from "@/components/forms/SymbolInput";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -345,7 +346,7 @@ export default function LocalCalculationsPanel({
                     <TableCell className="text-xs">
                       {extractReferences(c.formula).length
                         ? c.formula.split(/\s+/).map((p, i) =>
-                            /^[a-zA-Z_]/.test(p)
+                            /^[A-Za-z_\u0370-\u03FF]/.test(p)
                               ? <Badge key={i} variant={isKnownRef(p) || FORMULA_FUNCTIONS.includes(p.toUpperCase()) ? "secondary" : "destructive"} className="mr-1 mb-1">{fieldLabel(p)}</Badge>
                               : <span key={i} className="mr-1">{p}</span>)
                         : <span className="text-muted-foreground">{c.formula}</span>}
@@ -495,9 +496,15 @@ export default function LocalCalculationsPanel({
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <Textarea rows={3} className="font-mono text-xs" value={draft.formula}
-                    placeholder="z. B. AVERAGE(messung_1, messung_2, messung_3)"
-                    onChange={(e) => setDraft((d) => ({ ...d, formula: e.target.value }))} />
+                  <div className="flex items-start gap-2">
+                    <Textarea rows={3} className="font-mono text-xs" value={draft.formula}
+                      placeholder="z. B. AVERAGE(messung_1, messung_2, messung_3) · Winkel im Bogenmaß: SIN(α), DEGREES(ATAN(y/x))"
+                      onChange={(e) => setDraft((d) => ({ ...d, formula: e.target.value }))} />
+                    <SymbolPickerButton
+                      onPick={(s) => setDraft((d) => ({ ...d, formula: `${d.formula}${s}` }))}
+                    />
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
@@ -552,7 +559,7 @@ export default function LocalCalculationsPanel({
               <div className="text-xs text-muted-foreground">
                 Ergebnis ={" "}
                 {referenced.length
-                  ? formula.split(/\s+/).map((p, i) => /^[a-zA-Z_]/.test(p)
+                  ? formula.split(/\s+/).map((p, i) => /^[A-Za-z_\u0370-\u03FF]/.test(p)
                       ? <Badge key={i} variant={isKnownRef(p) || FORMULA_FUNCTIONS.includes(p.toUpperCase()) ? "secondary" : "destructive"} className="mr-1">{fieldLabel(p)}</Badge>
                       : <span key={i} className="mr-1">{p}</span>)
                   : <span>{formula || "—"}</span>}
