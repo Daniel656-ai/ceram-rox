@@ -13,6 +13,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { toast } from "sonner";
 import { Plus, Boxes, Pencil, Archive, Search, Lock, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
+import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
+import RichText from "@/components/forms/RichText";
+import { toPlain } from "@/lib/richText";
 import {
   GLOBAL_FIELD_SOURCES,
   GLOBAL_FIELD_TYPES,
