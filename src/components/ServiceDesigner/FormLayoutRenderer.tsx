@@ -830,6 +830,13 @@ function RepeaterField({
   const label = node.label_override || field.display_name;
   const desc = node.description_override ?? field.description;
 
+  /** Vorgesehener Messumfang laut Auftrag (reine Vorgabe, keine Begrenzung). */
+  const planned = (() => {
+    if (!meta.plan_field_key) return null;
+    const n = numericValue(root?.get(meta.plan_field_key));
+    return n != null && n > 0 ? Math.round(n) : null;
+  })();
+
   const updateEntries = (next: Array<Record<string, any>>) => root?.set(storageKey, next);
 
   const add = () => {
@@ -878,7 +885,27 @@ function RepeaterField({
         )}
       </div>
       {desc && <p className="text-xs text-muted-foreground px-3 pt-2">{desc}</p>}
+      {planned != null && (
+        <div className="flex items-center gap-2 px-3 pt-2 text-xs text-muted-foreground">
+          <span>Vorgesehen laut Auftrag: {planned} {meta.item_label ?? "Eintrag"}(e)</span>
+          {canAdd && entries.length < planned && (
+            <Button
+              size="sm" variant="ghost" type="button" className="h-6 text-[11px]"
+              onClick={() => {
+                const next = entries.slice();
+                while (next.length < planned) next.push({});
+                updateEntries(next);
+              }}
+            >
+              <Plus className="h-3 w-3 mr-1" />auf {planned} ergänzen
+            </Button>
+          )}
+        </div>
+      )}
       <div className="p-3 space-y-3">
+        {meta.table_view && entries.length > 0 && (
+          <RepeaterTable entries={entries} children={children} storageKeyLabel={meta.item_label ?? "Eintrag"} />
+        )}
         {entries.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-4">
             Noch keine Einträge.
@@ -908,6 +935,61 @@ function RepeaterField({
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Kompakte Tabellendarstellung einer Messreihe: eine Zeile je Messpunkt,
+ * Spalten aus Unterfeldern und den zugehörigen Berechnungen (inkl. Einheiten).
+ */
+function RepeaterTable({
+  entries, children, storageKeyLabel,
+}: { entries: Array<Record<string, any>>; children: FormField[]; storageKeyLabel: string }) {
+  const root = useContext(ValuesCtx);
+  const allCalcs = useContext(LocalCalcsCtx);
+  const keys = useMemo(() => children.map((c) => c.field_key), [children]);
+  const calcs = useMemo(() => seriesCalculations(allCalcs, keys), [allCalcs, keys]);
+
+  const rows = entries.map((e) => ({
+    entry: e,
+    results: evaluateEntryCalculations(allCalcs, root?.values, e, keys),
+  }));
+
+  return (
+    <div className="overflow-x-auto rounded border">
+      <table className="w-full text-xs">
+        <thead className="bg-muted/50">
+          <tr>
+            <th className="px-2 py-1 text-left font-medium">{storageKeyLabel}</th>
+            {children.map((c) => (
+              <th key={c.id} className="px-2 py-1 text-left font-medium whitespace-nowrap">
+                <RichText value={c.display_name} />{c.unit ? ` [${c.unit}]` : ""}
+              </th>
+            ))}
+            {calcs.map((c) => (
+              <th key={c.id} className="px-2 py-1 text-left font-medium whitespace-nowrap">
+                <RichText value={c.display_name} />{c.unit ? ` [${c.unit}]` : ""}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-t">
+              <td className="px-2 py-1 text-muted-foreground">{i + 1}</td>
+              {children.map((c) => (
+                <td key={c.id} className="px-2 py-1">{r.entry?.[c.field_key] ?? "—"}</td>
+              ))}
+              {calcs.map((c) => (
+                <td key={c.id} className="px-2 py-1">
+                  {formatCalcResult(r.results[c.calc_key]?.value ?? null, c.decimals ?? 2, c.unit)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
