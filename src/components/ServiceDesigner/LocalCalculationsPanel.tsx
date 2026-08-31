@@ -384,8 +384,8 @@ export default function LocalCalculationsPanel({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Name der Berechnung *</Label>
-                <Input value={draft.display_name} placeholder="z. B. Volumen"
-                  onChange={(e) => setDraft((d) => ({ ...d, display_name: e.target.value }))} />
+                <SymbolInput value={draft.display_name} placeholder="z. B. Volumen"
+                  onChange={(v) => setDraft((d) => ({ ...d, display_name: v }))} />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Beschreibung (optional)</Label>
