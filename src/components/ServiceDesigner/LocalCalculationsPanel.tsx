@@ -542,14 +542,15 @@ export default function LocalCalculationsPanel({
                                   ))}
                                 </SelectGroup>
                               )}
-                              {(calcs as FormCalculation[]).filter((c) => c.id !== draft.id).length > 0 && (
+                              {selectableCalcs.length > 0 && (
                                 <SelectGroup>
                                   <SelectLabel>Andere Berechnungen</SelectLabel>
-                                  {(calcs as FormCalculation[]).filter((c) => c.id !== draft.id).map((c) => (
+                                  {selectableCalcs.map((c) => (
                                     <SelectItem key={c.id} value={c.calc_key}>{c.display_name}</SelectItem>
                                   ))}
                                 </SelectGroup>
                               )}
+
                               <SelectGroup>
                                 <SelectLabel>Sonstiges</SelectLabel>
                                 <SelectItem value="__const__">Fester Wert …</SelectItem>
