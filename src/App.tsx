@@ -56,8 +56,10 @@ import { UpdateChecker } from "@/components/UpdateChecker";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <AppErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+
       <Toaster />
       <Sonner />
       <UpdateChecker />
