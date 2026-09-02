@@ -829,9 +829,15 @@ function CalculationInspector({
     queryKey: ["global-calculations"],
     queryFn: () => api.globalCalculations.list(),
   });
-  const options = node.scope === "global"
-    ? (globalCalcs as any[]).map((c) => ({ key: c.calc_key, label: c.display_name }))
-    : (localCalcs as any[]).map((c) => ({ key: c.calc_key, label: c.display_name }));
+  // Berechnungen ohne technischen Schlüssel (Altdaten) dürfen nicht in die
+  // Auswahlliste: Radix Select verbietet leere Werte und würde beim Öffnen des
+  // Eigenschaftenbereichs eine Render-Exception (weißer Bildschirm) auslösen.
+  const source = node.scope === "global" ? (globalCalcs as any[]) : (localCalcs as any[]);
+  const options = source
+    .filter((c) => typeof c?.calc_key === "string" && c.calc_key.length > 0)
+    .map((c) => ({ key: c.calc_key as string, label: (c.display_name as string) || c.calc_key }));
+  const skipped = source.length - options.length;
+
 
   return (
     <>
