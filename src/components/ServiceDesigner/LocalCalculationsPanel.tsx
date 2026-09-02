@@ -27,6 +27,8 @@ import {
 } from "@/lib/localCalculations";
 import { extractReferences, FORMULA_FUNCTIONS, formulaFunctionLabel } from "@/lib/formulaEngine";
 import { readValueSource, isLinkedField, linkOriginLabel } from "@/lib/fieldLinks";
+import { GEOMETRY_CALCULATIONS, type GeometryCalcDefinition } from "@/lib/geometry/calculations";
+
 
 const OPERATORS: { v: CalcOperator; l: string }[] = [
   { v: "+", l: "+" }, { v: "-", l: "−" }, { v: "*", l: "×" }, { v: "/", l: "÷" },
@@ -211,6 +213,28 @@ export default function LocalCalculationsPanel({
   const openNew = () => { setDraft(emptyDraft()); setTestValues({}); setOpen(true); };
 
   /**
+   * Übernimmt eine zentrale Berechnungsdefinition (z. B. Geometrie/Auslegung)
+   * als Entwurf. Die Formel wird nicht dupliziert, sondern aus der zentralen
+   * Definition gelesen; Feldschlüssel können anschließend angepasst werden.
+   */
+  const openFromTemplate = (g: GeometryCalcDefinition) => {
+    setDraft({
+      ...emptyDraft(),
+      calc_key: g.calc_key,
+      display_name: g.display_name,
+      description: g.description,
+      unit: g.unit,
+      decimals: g.decimals,
+      advanced: true,
+      tokens: [],
+      formula: g.formula,
+    });
+    setTestValues({});
+    setOpen(true);
+  };
+
+
+  /**
    * Referenzen anhand der stabilen ID auflösen: wurde der technische
    * Feldschlüssel nachträglich geändert, wird der Token automatisch korrigiert
    * statt als „unbekanntes Feld" zu gelten.
@@ -326,8 +350,36 @@ export default function LocalCalculationsPanel({
             </p>
           </div>
           {canManage && (
-            <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" />Neue Berechnung</Button>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline">Vorlage</Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-96 p-2">
+                  <p className="text-xs text-muted-foreground px-1 pb-2">
+                    Zentrale Berechnungen (Geometrie/Auslegung). Die Formel bleibt zentral
+                    definiert – hier wird sie nur für dieses Formular übernommen.
+                  </p>
+                  <div className="max-h-72 overflow-auto space-y-1">
+                    {GEOMETRY_CALCULATIONS.map((g) => (
+                      <button
+                        key={g.calc_key}
+                        type="button"
+                        className="w-full rounded px-2 py-1.5 text-left hover:bg-muted"
+                        onClick={() => openFromTemplate(g)}
+                      >
+                        <span className="text-xs font-medium">{g.display_name}</span>
+                        <span className="ml-2 text-[11px] text-muted-foreground">{g.unit}</span>
+                        <span className="block font-mono text-[11px] text-muted-foreground">{g.formula}</span>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" />Neue Berechnung</Button>
+            </div>
           )}
+
         </CardHeader>
         <CardContent>
           {calcs.length === 0 ? (
