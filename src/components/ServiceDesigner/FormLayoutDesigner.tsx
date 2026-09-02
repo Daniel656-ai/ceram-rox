@@ -1,3 +1,4 @@
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -262,13 +263,19 @@ export default function FormLayoutDesigner({
             <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Eigenschaften</CardTitle></CardHeader>
             <CardContent>
               {selected ? (
-                <Inspector node={selected} fields={fields} formId={form.id}
-                  onChange={(patch) => mutate(prev => ({ ...prev, nodes: updateNode(prev.nodes, selected.id, patch) }))}
-                  onDelete={() => { mutate(prev => ({ ...prev, nodes: removeNode(prev.nodes, selected.id) })); setSelectedId(null); }}
-                  canManage={canManage} />
+                <ErrorBoundary
+                  key={selected.id}
+                  title="Eigenschaften konnten nicht geladen werden. Bitte Formel bzw. Feldreferenzen prüfen."
+                >
+                  <Inspector node={selected} fields={fields} formId={form.id}
+                    onChange={(patch) => mutate(prev => ({ ...prev, nodes: updateNode(prev.nodes, selected.id, patch) }))}
+                    onDelete={() => { mutate(prev => ({ ...prev, nodes: removeNode(prev.nodes, selected.id) })); setSelectedId(null); }}
+                    canManage={canManage} />
+                </ErrorBoundary>
               ) : (
                 <p className="text-xs text-muted-foreground">Kein Element ausgewählt. Baustein anklicken oder aus der Palette ziehen.</p>
               )}
+
             </CardContent>
           </Card>
 
@@ -829,9 +836,15 @@ function CalculationInspector({
     queryKey: ["global-calculations"],
     queryFn: () => api.globalCalculations.list(),
   });
-  const options = node.scope === "global"
-    ? (globalCalcs as any[]).map((c) => ({ key: c.calc_key, label: c.display_name }))
-    : (localCalcs as any[]).map((c) => ({ key: c.calc_key, label: c.display_name }));
+  // Berechnungen ohne technischen Schlüssel (Altdaten) dürfen nicht in die
+  // Auswahlliste: Radix Select verbietet leere Werte und würde beim Öffnen des
+  // Eigenschaftenbereichs eine Render-Exception (weißer Bildschirm) auslösen.
+  const source = node.scope === "global" ? (globalCalcs as any[]) : (localCalcs as any[]);
+  const options = source
+    .filter((c) => typeof c?.calc_key === "string" && c.calc_key.length > 0)
+    .map((c) => ({ key: c.calc_key as string, label: (c.display_name as string) || c.calc_key }));
+  const skipped = source.length - options.length;
+
 
   return (
     <>
@@ -854,6 +867,12 @@ function CalculationInspector({
             {options.map((o) => <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        {skipped > 0 && (
+          <p className="text-[11px] text-destructive mt-1">
+            {skipped} Berechnung(en) ohne technischen Schlüssel werden nicht angeboten –
+            bitte im Tab „Berechnungen“ öffnen und erneut speichern.
+          </p>
+        )}
         {options.length === 0 && (
           <p className="text-[11px] text-muted-foreground mt-1">
             {node.scope === "global"
@@ -861,6 +880,7 @@ function CalculationInspector({
               : "Noch keine lokalen Berechnungen – im Tab „Berechnungen“ anlegen."}
           </p>
         )}
+
       </div>
       <div>
         <Label className="text-xs">Beschriftung (optional)</Label>

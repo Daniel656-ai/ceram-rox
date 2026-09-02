@@ -1,3 +1,4 @@
+import AppErrorBoundary from "@/components/AppErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -56,8 +57,10 @@ import { UpdateChecker } from "@/components/UpdateChecker";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <AppErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+
       <Toaster />
       <Sonner />
       <UpdateChecker />
@@ -138,6 +141,8 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </AppErrorBoundary>
 );
+
 
 export default App;
