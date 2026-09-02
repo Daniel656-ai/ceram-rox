@@ -197,98 +197,141 @@ export default function FormLayoutDesigner({
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
-      <div className="grid grid-cols-12 gap-3">
+      {/* Vollhöhen-Arbeitsbereich: Seitenpanels scrollen eigenständig, die
+          Arbeitsfläche in der Mitte bekommt die gesamte Restbreite/-höhe. */}
+      <div className="flex gap-3 items-stretch h-[calc(100vh-13rem)] min-h-[560px]">
         {/* Palette + fields */}
-        <div className="col-span-3 space-y-3">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Layout-Bausteine</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2">
-              {PALETTE.map((it, i) => (
-                <PaletteItem key={i} it={it} canManage={canManage} onAdd={() => addAtRoot(it.key, it.extra)} />
-              ))}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-xs uppercase tracking-wide">Verfügbare Felder</CardTitle>
-              <Badge variant="outline">{unusedFields.length}</Badge>
-            </CardHeader>
-            <CardContent className="p-2">
-              <ScrollArea className="h-[420px] pr-2">
-                {fields.length === 0 && <p className="text-xs text-muted-foreground p-2">Noch keine Felder definiert. Wechsle zum Tab „Felder".</p>}
-                {fields.length > 0 && unusedFields.length === 0 && <p className="text-xs text-muted-foreground p-2">Alle Felder sind platziert.</p>}
-                <div className="space-y-1">
-                  {unusedFields.map(f => <FieldPaletteItem key={f.id} field={f} canManage={canManage} />)}
+        {paletteOpen && (
+          <div className="w-60 shrink-0 space-y-3 overflow-y-auto pr-1">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Layout-Bausteine</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-2 gap-2">
+                {PALETTE.map((it, i) => (
+                  <PaletteItem key={i} it={it} canManage={canManage} onAdd={() => addAtRoot(it.key, it.extra)} />
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-xs uppercase tracking-wide">Verfügbare Felder</CardTitle>
+                <Badge variant="outline">{unusedFields.length}</Badge>
+              </CardHeader>
+              <CardContent className="p-2">
+                <ScrollArea className="h-[300px] pr-2">
+                  {fields.length === 0 && <p className="text-xs text-muted-foreground p-2">Noch keine Felder definiert. Wechsle zum Tab „Felder".</p>}
+                  {fields.length > 0 && unusedFields.length === 0 && <p className="text-xs text-muted-foreground p-2">Alle Felder sind platziert.</p>}
+                  <div className="space-y-1">
+                    {unusedFields.map(f => <FieldPaletteItem key={f.id} field={f} canManage={canManage} />)}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Systemvariablen aus dem Prozessmanager (read-only) */}
+            <SystemVariablesPanel compact />
+          </div>
+        )}
+
+        {/* Canvas – Hauptbereich */}
+        <div className="flex-1 min-w-0">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="pb-2 space-y-2">
+              <div className="flex flex-row items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0"
+                    title={paletteOpen ? "Bausteinleiste ausblenden" : "Bausteinleiste einblenden"}
+                    onClick={() => setPaletteOpen(v => !v)}>
+                    {paletteOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                  </Button>
+                  <CardTitle className="text-sm truncate">{headerTitle}</CardTitle>
                 </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-
-          {/* Systemvariablen aus dem Prozessmanager (read-only) */}
-          <SystemVariablesPanel compact />
-        </div>
-
-
-        {/* Canvas */}
-        <div className="col-span-6">
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">{headerTitle}</CardTitle>
-              <div className="flex gap-2">
-                {dirty && <Badge variant="secondary">Ungespeichert</Badge>}
-                <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)}>
-                  <Eye className="h-3 w-3 mr-1" />Live-Vorschau öffnen
+                <div className="flex gap-2 shrink-0">
+                  {dirty && <Badge variant="secondary">Ungespeichert</Badge>}
+                  <Button size="sm" variant="outline" onClick={() => setPreviewOpen(true)}>
+                    <Eye className="h-3 w-3 mr-1" />Live-Vorschau
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setLayout(normalizeLayout(initialLayout ?? (form as any).layout)); setDirty(false); setSelectedId(null); }} disabled={!dirty}>
+                    <RotateCcw className="h-3 w-3 mr-1" />Zurücksetzen
+                  </Button>
+                  <Button size="sm" onClick={() => saveMut.mutate()} disabled={!dirty || !canManage || saveMut.isPending}>
+                    <Save className="h-3 w-3 mr-1" />Speichern
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7"
+                    title={inspectorOpen ? "Eigenschaften ausblenden" : "Eigenschaften einblenden"}
+                    onClick={() => setInspectorOpen(v => !v)}>
+                    {inspectorOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              {/* Zoom betrifft ausschließlich die Darstellung (CSS-Transform),
+                  niemals gespeicherte Breiten, Spalten oder Positionen. */}
+              <div className="flex items-center gap-1 text-xs">
+                <Button size="icon" variant="outline" className="h-7 w-7" title="Verkleinern"
+                  onClick={() => setZoom(z => clampZoom(z - 0.1))}>
+                  <Minus className="h-3 w-3" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => { setLayout(normalizeLayout(initialLayout ?? (form as any).layout)); setDirty(false); setSelectedId(null); }} disabled={!dirty}>
-                  <RotateCcw className="h-3 w-3 mr-1" />Zurücksetzen
+                <button type="button" onClick={() => setZoom(1)} title="Auf 100 % zurücksetzen"
+                  className="w-14 text-center tabular-nums rounded border h-7 hover:bg-accent">
+                  {Math.round(zoom * 100)} %
+                </button>
+                <Button size="icon" variant="outline" className="h-7 w-7" title="Vergrößern"
+                  onClick={() => setZoom(z => clampZoom(z + 0.1))}>
+                  <Plus className="h-3 w-3" />
                 </Button>
-                <Button size="sm" onClick={() => saveMut.mutate()} disabled={!dirty || !canManage || saveMut.isPending}>
-                  <Save className="h-3 w-3 mr-1" />Speichern
-                </Button>
+                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => fitZoom("width")}>An Breite anpassen</Button>
+                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => fitZoom("page")}>Auf Seite anpassen</Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <RootCanvas
-                layout={layout} fields={fields}
-                selectedId={selectedId} onSelect={setSelectedId}
-                onMutate={mutate} canManage={canManage}
-              />
+            <CardContent className="flex-1 min-h-0 overflow-auto p-3" ref={viewportRef}>
+              <div
+                ref={canvasRef}
+                style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: `${100 / zoom}%` }}
+              >
+                <RootCanvas
+                  layout={layout} fields={fields}
+                  selectedId={selectedId} onSelect={setSelectedId}
+                  onMutate={mutate} canManage={canManage}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Inspector + preview */}
-        <div className="col-span-3">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Eigenschaften</CardTitle></CardHeader>
-            <CardContent>
-              {selected ? (
-                <ErrorBoundary
-                  key={selected.id}
-                  title="Eigenschaften konnten nicht geladen werden. Bitte Formel bzw. Feldreferenzen prüfen."
-                >
-                  <Inspector node={selected} fields={fields} formId={form.id}
-                    onChange={(patch) => mutate(prev => ({ ...prev, nodes: updateNode(prev.nodes, selected.id, patch) }))}
-                    onDelete={() => { mutate(prev => ({ ...prev, nodes: removeNode(prev.nodes, selected.id) })); setSelectedId(null); }}
-                    canManage={canManage} />
-                </ErrorBoundary>
-              ) : (
-                <p className="text-xs text-muted-foreground">Kein Element ausgewählt. Baustein anklicken oder aus der Palette ziehen.</p>
-              )}
+        {inspectorOpen && (
+          <div className="w-[320px] shrink-0 overflow-y-auto pl-1">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Eigenschaften</CardTitle></CardHeader>
+              <CardContent>
+                {selected ? (
+                  <ErrorBoundary
+                    key={selected.id}
+                    title="Eigenschaften konnten nicht geladen werden. Bitte Formel bzw. Feldreferenzen prüfen."
+                  >
+                    <Inspector node={selected} fields={fields} formId={form.id}
+                      onChange={(patch) => mutate(prev => ({ ...prev, nodes: updateNode(prev.nodes, selected.id, patch) }))}
+                      onDelete={() => { mutate(prev => ({ ...prev, nodes: removeNode(prev.nodes, selected.id) })); setSelectedId(null); }}
+                      canManage={canManage} />
+                  </ErrorBoundary>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Kein Element ausgewählt. Baustein anklicken oder aus der Palette ziehen.</p>
+                )}
 
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="mt-3">
-            <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Live-Vorschau</CardTitle></CardHeader>
-            <CardContent>
-              <div className="scale-[0.85] origin-top-left w-[118%]">
-                <FormLayoutRenderer layout={layout} fields={fields} formId={form.id} />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="mt-3">
+              <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-wide">Live-Vorschau</CardTitle></CardHeader>
+              <CardContent>
+                <div className="scale-[0.85] origin-top-left w-[118%]">
+                  <FormLayoutRenderer layout={layout} fields={fields} formId={form.id} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
+
 
       <FormPreviewDialog
         open={previewOpen}
