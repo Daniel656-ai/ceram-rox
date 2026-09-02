@@ -27,6 +27,8 @@ import {
 } from "@/lib/localCalculations";
 import { extractReferences, FORMULA_FUNCTIONS, formulaFunctionLabel } from "@/lib/formulaEngine";
 import { readValueSource, isLinkedField, linkOriginLabel } from "@/lib/fieldLinks";
+import { GEOMETRY_CALCULATIONS, type GeometryCalcDefinition } from "@/lib/geometry/calculations";
+
 
 const OPERATORS: { v: CalcOperator; l: string }[] = [
   { v: "+", l: "+" }, { v: "-", l: "−" }, { v: "*", l: "×" }, { v: "/", l: "÷" },
