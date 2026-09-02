@@ -107,10 +107,29 @@ function FormulaSyntaxHelp() {
   );
 }
 
-const slug = (s: string) =>
-  s.toLowerCase()
+/**
+ * Griechische Zeichen werden auf ihren lateinischen Namen abgebildet, damit
+ * Bezeichnungen wie „ε“ einen gültigen technischen Schlüssel („epsilon“)
+ * erhalten. Ohne diese Abbildung entstünde ein leerer Schlüssel.
+ */
+const GREEK_NAMES: Record<string, string> = {
+  α: "alpha", β: "beta", γ: "gamma", δ: "delta", ε: "epsilon", ζ: "zeta",
+  η: "eta", θ: "theta", ι: "iota", κ: "kappa", λ: "lambda", μ: "my",
+  ν: "ny", ξ: "xi", ο: "omikron", π: "pi", ρ: "rho", σ: "sigma", ς: "sigma",
+  τ: "tau", υ: "ypsilon", φ: "phi", χ: "chi", ψ: "psi", ω: "omega",
+};
+
+const slug = (s: string) => {
+  const base = (s ?? "")
+    .toLowerCase()
+    .replace(/[\u0370-\u03FF]/g, (ch) => GREEK_NAMES[ch] ?? " ")
     .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
     .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  // Niemals einen leeren Schlüssel erzeugen – er würde die Auswahllisten
+  // (Radix Select) zum Absturz bringen.
+  return base || `berechnung_${Math.random().toString(36).slice(2, 8)}`;
+};
+
 
 interface Draft {
   id?: string;
