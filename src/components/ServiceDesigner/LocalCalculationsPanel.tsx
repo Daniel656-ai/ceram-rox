@@ -326,8 +326,36 @@ export default function LocalCalculationsPanel({
             </p>
           </div>
           {canManage && (
-            <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" />Neue Berechnung</Button>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline">Vorlage</Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-96 p-2">
+                  <p className="text-xs text-muted-foreground px-1 pb-2">
+                    Zentrale Berechnungen (Geometrie/Auslegung). Die Formel bleibt zentral
+                    definiert – hier wird sie nur für dieses Formular übernommen.
+                  </p>
+                  <div className="max-h-72 overflow-auto space-y-1">
+                    {GEOMETRY_CALCULATIONS.map((g) => (
+                      <button
+                        key={g.calc_key}
+                        type="button"
+                        className="w-full rounded px-2 py-1.5 text-left hover:bg-muted"
+                        onClick={() => openFromTemplate(g)}
+                      >
+                        <span className="text-xs font-medium">{g.display_name}</span>
+                        <span className="ml-2 text-[11px] text-muted-foreground">{g.unit}</span>
+                        <span className="block font-mono text-[11px] text-muted-foreground">{g.formula}</span>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" />Neue Berechnung</Button>
+            </div>
           )}
+
         </CardHeader>
         <CardContent>
           {calcs.length === 0 ? (
