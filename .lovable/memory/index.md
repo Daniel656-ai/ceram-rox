@@ -1,0 +1,1 @@
+- [Geometrie-Auslegung](mem://features/geometry-design-calculation) — AP, ε, Bauteillänge, AV/SV/FR, Zelligkeitsempfehlung aus Stammdaten
