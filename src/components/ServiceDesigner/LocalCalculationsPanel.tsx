@@ -27,6 +27,7 @@ import {
 } from "@/lib/localCalculations";
 import { extractReferences, FORMULA_FUNCTIONS, formulaFunctionLabel } from "@/lib/formulaEngine";
 import { readValueSource, isLinkedField, linkOriginLabel } from "@/lib/fieldLinks";
+import { repeaterAggregateRefs } from "@/lib/repeaterAggregation";
 import { GEOMETRY_CALCULATIONS, type GeometryCalcDefinition } from "@/lib/geometry/calculations";
 
 
