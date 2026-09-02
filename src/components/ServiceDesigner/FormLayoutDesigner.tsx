@@ -1,5 +1,5 @@
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext, PointerSensor, useSensor, useSensors, useDroppable, useDraggable,
@@ -32,11 +32,15 @@ import {
   LayoutGrid, Columns3, Columns2, Square, Minus, Heading1,
   StickyNote, Save, RotateCcw, Trash2, ChevronRight, ChevronDown,
   GripVertical, FolderTree, Folders, Plus, Rows, Calculator, Eye,
+  PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen,
 } from "lucide-react";
 import FormLayoutRenderer from "./FormLayoutRenderer";
 import FormPreviewDialog from "./FormPreviewDialog";
 import { RepeaterConfigPanel } from "./FieldEditDialog";
 import SystemVariablesPanel from "./SystemVariablesPanel";
+
+/** Anzeigezoom der Arbeitsfläche – rein visuell, 40 % bis 200 %. */
+const clampZoom = (z: number) => Math.min(2, Math.max(0.4, Math.round(z * 100) / 100));
 
 // ---------- palette ----------
 const PALETTE: { key: LayoutNodeType; label: string; icon: any; extra?: any }[] = [
