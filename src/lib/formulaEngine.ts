@@ -79,6 +79,11 @@ const FUNCTIONS: Record<string, FnImpl> = {
     return Math.round(x * p) / p;
   },
   CEIL: (a) => Math.ceil(first(a)),
+  /** Deutschsprachige Aliase – identisch zu CEIL/FLOOR. */
+  ROUNDUP: (a) => Math.ceil(first(a)),
+  AUFRUNDEN: (a) => Math.ceil(first(a)),
+  ROUNDDOWN: (a) => Math.floor(first(a)),
+  ABRUNDEN: (a) => Math.floor(first(a)),
   FLOOR: (a) => Math.floor(first(a)),
   ABS: (a) => Math.abs(first(a)),
   SQRT: (a) => Math.sqrt(first(a)),
@@ -132,6 +137,10 @@ export const FORMULA_FUNCTION_INFO: Record<string, string> = {
   MEDIAN: "Median",
   ROUND: "Runden (Wert, Nachkommastellen)",
   CEIL: "Aufrunden",
+  ROUNDUP: "Aufrunden (Alias)",
+  AUFRUNDEN: "Aufrunden (deutsch)",
+  ROUNDDOWN: "Abrunden (Alias)",
+  ABRUNDEN: "Abrunden (deutsch)",
   FLOOR: "Abrunden",
   ABS: "Absolutwert",
   SQRT: "Quadratwurzel",

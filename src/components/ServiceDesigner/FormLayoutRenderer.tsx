@@ -45,6 +45,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculations, formatCalcResult } from "@/lib/localCalculations";
+import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
 import { walkNodes } from "@/lib/api/formDefinitionLayout";
@@ -1735,8 +1736,13 @@ export default function FormLayoutRenderer({
 
   const calcResults = useMemo(() => {
     const out: Record<string, CalcDisplayResult> = {};
-    const vals = values ?? {};
-    const local = evaluateLocalCalculations(localCalcs, vals, fields.map((f) => f.field_key));
+    // Werte des Formulars + Listen aus Wiederholbereichen (rein zur Auswertung).
+    const aggregates = repeaterAggregateScope(fields, values ?? {});
+    const vals = { ...(values ?? {}), ...aggregates };
+    const local = evaluateLocalCalculations(localCalcs, vals, [
+      ...fields.map((f) => f.field_key),
+      ...Object.keys(aggregates),
+    ]);
     for (const c of localCalcs) {
       const r = local[c.calc_key];
       out[`local:${c.calc_key}`] = {
