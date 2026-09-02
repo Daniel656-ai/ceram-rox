@@ -190,13 +190,21 @@ export default function LocalCalculationsPanel({
     ?? calcs.find((c) => c.calc_key === key)?.display_name
     ?? key;
 
+  /**
+   * Aggregierbare Unterfelder aus Wiederholbereichen (Messreihen). Sie stehen
+   * als Liste über ALLE Einträge zur Verfügung und werden mit den vorhandenen
+   * Aggregatfunktionen (SUM, COUNT, MAX …) ausgewertet.
+   */
+  const aggregateRefs = useMemo(() => repeaterAggregateRefs(fields as FormField[]), [fields]);
+
   /** Alle im aktuellen Formular gültigen Referenzen (Felder + Berechnungen). */
   const knownRefs = useMemo(
     () => new Set<string>([
       ...fields.map((f) => f.field_key),
+      ...aggregateRefs.map((a) => a.key),
       ...(calcs as FormCalculation[]).map((c) => c.calc_key),
     ]),
-    [fields, calcs]
+    [fields, calcs, aggregateRefs]
   );
   const isKnownRef = (key: string) => knownRefs.has(key);
 
@@ -532,6 +540,8 @@ export default function LocalCalculationsPanel({
                             onValueChange={(v) => {
                               if (v === "__const__") { setToken(i, { source: "const", ref: null, ref_id: null, value: 0 } as any); return; }
                               if (v === "__none__") { setToken(i, { source: "field", ref: "", ref_id: null } as any); return; }
+                              const agg = aggregateRefs.find((a) => v === `SUM(${a.key})` || v === `COUNT(${a.key})`);
+                              if (agg) { setToken(i, { source: "field", ref: v, ref_id: null } as any); return; }
                               const calc = (calcs as FormCalculation[]).find((c) => c.calc_key === v);
                               const field = fields.find((f) => f.field_key === v);
                               setToken(i, {
@@ -561,6 +571,21 @@ export default function LocalCalculationsPanel({
                                     <SelectItem key={f.id} value={f.field_key}>
                                       🔗 {f.display_name}{f.unit ? ` [${f.unit}]` : ""}
                                       {originOf(f) ? ` · aus ${originOf(f)}` : ""}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              )}
+                              {aggregateRefs.length > 0 && (
+                                <SelectGroup>
+                                  <SelectLabel>Messreihen (über alle Einträge)</SelectLabel>
+                                  {aggregateRefs.map((a) => (
+                                    <SelectItem key={`sum-${a.key}`} value={`SUM(${a.key})`}>
+                                      Σ Summe · {a.label}{a.unit ? ` [${a.unit}]` : ""}
+                                    </SelectItem>
+                                  ))}
+                                  {aggregateRefs.map((a) => (
+                                    <SelectItem key={`count-${a.key}`} value={`COUNT(${a.key})`}>
+                                      # Anzahl · {a.label}
                                     </SelectItem>
                                   ))}
                                 </SelectGroup>
