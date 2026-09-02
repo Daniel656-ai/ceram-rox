@@ -213,6 +213,28 @@ export default function LocalCalculationsPanel({
   const openNew = () => { setDraft(emptyDraft()); setTestValues({}); setOpen(true); };
 
   /**
+   * Übernimmt eine zentrale Berechnungsdefinition (z. B. Geometrie/Auslegung)
+   * als Entwurf. Die Formel wird nicht dupliziert, sondern aus der zentralen
+   * Definition gelesen; Feldschlüssel können anschließend angepasst werden.
+   */
+  const openFromTemplate = (g: GeometryCalcDefinition) => {
+    setDraft({
+      ...emptyDraft(),
+      calc_key: g.calc_key,
+      display_name: g.display_name,
+      description: g.description,
+      unit: g.unit,
+      decimals: g.decimals,
+      advanced: true,
+      tokens: [],
+      formula: g.formula,
+    });
+    setTestValues({});
+    setOpen(true);
+  };
+
+
+  /**
    * Referenzen anhand der stabilen ID auflösen: wurde der technische
    * Feldschlüssel nachträglich geändert, wird der Token automatisch korrigiert
    * statt als „unbekanntes Feld" zu gelten.
