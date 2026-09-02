@@ -200,6 +200,21 @@ export default function LocalCalculationsPanel({
   );
   const isKnownRef = (key: string) => knownRefs.has(key);
 
+  /**
+   * Auswählbare Berechnungen: ein leerer technischer Schlüssel (Altdaten) darf
+   * nicht in die Auswahlliste – Radix Select verbietet leere Werte und würde
+   * beim Öffnen eine Render-Exception werfen.
+   */
+  const selectableCalcs = useMemo(
+    () => (calcs as FormCalculation[]).filter((c) => c.id !== draft.id && !!c.calc_key),
+    [calcs, draft.id]
+  );
+  const brokenCalcs = useMemo(
+    () => (calcs as FormCalculation[]).filter((c) => !c.calc_key),
+    [calcs]
+  );
+
+
   const formula = draft.advanced ? draft.formula : buildFormulaFromTokens(draft.tokens);
 
   const cycle = useMemo(() => {
