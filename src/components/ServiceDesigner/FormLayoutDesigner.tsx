@@ -860,6 +860,12 @@ function CalculationInspector({
             {options.map((o) => <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        {skipped > 0 && (
+          <p className="text-[11px] text-destructive mt-1">
+            {skipped} Berechnung(en) ohne technischen Schlüssel werden nicht angeboten –
+            bitte im Tab „Berechnungen“ öffnen und erneut speichern.
+          </p>
+        )}
         {options.length === 0 && (
           <p className="text-[11px] text-muted-foreground mt-1">
             {node.scope === "global"
@@ -867,6 +873,7 @@ function CalculationInspector({
               : "Noch keine lokalen Berechnungen – im Tab „Berechnungen“ anlegen."}
           </p>
         )}
+
       </div>
       <div>
         <Label className="text-xs">Beschriftung (optional)</Label>
