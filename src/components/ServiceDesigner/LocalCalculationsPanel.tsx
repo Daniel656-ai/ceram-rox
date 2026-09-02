@@ -416,6 +416,14 @@ export default function LocalCalculationsPanel({
 
         </CardHeader>
         <CardContent>
+          {brokenCalcs.length > 0 && (
+            <p className="mb-2 text-xs text-destructive flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              {brokenCalcs.length} Berechnung(en) ohne technischen Schlüssel – bitte öffnen und
+              erneut speichern, damit sie wieder in Auswahllisten erscheinen.
+            </p>
+          )}
+
           {calcs.length === 0 ? (
             <p className="text-xs text-muted-foreground py-6 text-center border rounded">
               Noch keine lokalen Berechnungen. Lege z.&nbsp;B. „Volumen = Länge × Breite × Höhe“ an.
