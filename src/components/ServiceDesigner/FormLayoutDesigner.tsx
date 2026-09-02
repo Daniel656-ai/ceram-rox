@@ -195,6 +195,30 @@ export default function FormLayoutDesigner({
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
+  // --- Darstellung der Arbeitsfläche (rein visuell) -------------------------
+  // Zoom, ein- und ausklappbare Seitenpanels beeinflussen ausschließlich die
+  // Anzeige. Layoutdaten (Spalten, Breiten, Positionen) bleiben unberührt.
+  const [zoom, setZoom] = useState(1);
+  const [paletteOpen, setPaletteOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  const fitZoom = (mode: "width" | "page") => {
+    const vp = viewportRef.current;
+    const content = canvasRef.current?.firstElementChild as HTMLElement | undefined;
+    if (!vp || !content) return;
+    // scrollWidth/Height sind vom CSS-Transform unabhängig -> echte Layoutmaße.
+    const w = content.scrollWidth;
+    const h = content.scrollHeight;
+    if (!w || !h) return;
+    const byWidth = (vp.clientWidth - 24) / w;
+    const next = mode === "width" ? byWidth : Math.min(byWidth, (vp.clientHeight - 24) / h);
+    setZoom(clampZoom(next));
+  };
+
+
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
       {/* Vollhöhen-Arbeitsbereich: Seitenpanels scrollen eigenständig, die
