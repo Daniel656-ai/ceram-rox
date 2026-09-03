@@ -76,6 +76,26 @@ function ServiceCustomerForm({
   );
 }
 
+/**
+ * Hinweis auf interne Arbeitsschritte, die beim Buchen dieser Dienstleistung
+ * automatisch mit erzeugt werden. Der Auftraggeber muss sie nicht auswählen.
+ */
+function RequiredStepsHint({ serviceId }: { serviceId: string }) {
+  const { data: required = [] } = useQuery({
+    queryKey: ["service-required-services", serviceId],
+    queryFn: () => api.serviceDependencies.requiredServices(serviceId),
+    enabled: !!serviceId,
+    staleTime: 5 * 60 * 1000,
+  });
+  if (required.length === 0) return null;
+  return (
+    <p className="text-xs text-muted-foreground mt-1">
+      Automatisch enthaltene Arbeitsschritte:{" "}
+      {required.map((r) => r.service_name).join(", ")}
+    </p>
+  );
+}
+
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
@@ -878,6 +898,7 @@ export default function CreateOrderPage() {
                             <Badge variant="outline" className="font-normal">manuell</Badge>
                           )}
                         </p>
+                        <RequiredStepsHint serviceId={m.service_id} />
                       </div>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateMeasurement(m.uid)} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
                       <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(m.uid)}><Trash2 className="h-4 w-4" /></Button>
