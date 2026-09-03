@@ -373,8 +373,24 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
 
 
 
-        <TabsContent value="steps" className="mt-4">
+        <TabsContent value="steps" className="mt-4 space-y-4">
+          {/* Ablauf-Übersicht: Welche Dienstleistung löst welchen Ablauf aus? */}
+          <div className="flex flex-wrap items-center gap-2 rounded border bg-muted/30 p-3 text-sm">
+            {steps.length === 0 ? (
+              <span className="text-xs text-muted-foreground">Noch keine Schritte definiert.</span>
+            ) : (
+              steps.map((s, i) => (
+                <span key={s.id} className="flex items-center gap-2">
+                  <Badge variant={s.step_kind === "service" ? "default" : "outline"}>
+                    {i + 1}. {s.name}
+                  </Badge>
+                  {i < steps.length - 1 && <span className="text-muted-foreground">→</span>}
+                </span>
+              ))
+            )}
+          </div>
           <div className="grid grid-cols-12 gap-4">
+
             {/* Steps list */}
             <Card className="col-span-3">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
