@@ -573,42 +573,8 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
-  const { data: form } = useQuery({
-    queryKey: ["step-form", step.id, step.form_id],
-    queryFn: () => step.form_id ? api.formDefinitions.get(step.form_id) : Promise.resolve(null),
-  });
+  // Formularverknüpfungen werden bewusst nicht mehr im Prozessschritt gepflegt.
 
-  const createFormMut = useMutation({
-    mutationFn: async () => {
-      // Neu angelegte Formulare landen direkt in der globalen Bibliothek,
-      // damit sie in weiteren Prozessschritten wiederverwendet werden können.
-      const f = await api.formDefinitions.create({ name: `Formular: ${step.name}`, scope: "global" });
-      await api.processTemplateSteps.update(step.id, { form_id: f.id });
-      return f;
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); qc.invalidateQueries({ queryKey: ["form-definitions"] }); onSaved(); toast.success("Formular angelegt"); },
-    onError: (e: any) => toast.error(e.message || "Fehler"),
-  });
-
-  // Alle vorhandenen Formularvorlagen zur Verknüpfung anbieten (global + template-eigene),
-  // damit im Service/Prozess-Designer angelegte Formulare hier ausgewählt werden können.
-  const { data: allForms = [] } = useQuery({
-    queryKey: ["form-definitions", "all"],
-    queryFn: () => api.formDefinitions.list(),
-  });
-  const linkableForms = allForms.filter(f => f.id !== step.form_id);
-
-  const linkFormMut = useMutation({
-    mutationFn: async (formId: string) => api.processTemplateSteps.update(step.id, { form_id: formId }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); onSaved(); toast.success("Formular verknüpft"); },
-    onError: (e: any) => toast.error(e.message || "Fehler"),
-  });
-
-  const unlinkFormMut = useMutation({
-    mutationFn: async () => api.processTemplateSteps.update(step.id, { form_id: null }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); onSaved(); toast.success("Verknüpfung aufgehoben"); },
-    onError: (e: any) => toast.error(e.message || "Fehler"),
-  });
 
   return (
     <Card>
