@@ -273,7 +273,7 @@ function RepeatableSection({
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-sm font-semibold flex items-center gap-2">
-            {sec.title}
+            <RichText value={sec.title} />
             <Badge variant="outline" className="text-[10px] gap-1">
               <Repeat className="h-3 w-3" /> Wiederholbar
             </Badge>
@@ -458,7 +458,7 @@ function renderInput(field: any, value: any, onChange: (v: any) => void, readonl
         <Select value={value ?? ""} onValueChange={onChange} disabled={readonly}>
           <SelectTrigger className={cls}><SelectValue placeholder="Bitte wählen…" /></SelectTrigger>
           <SelectContent>
-            {opts.map((o: any) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {opts.map((o: any) => <SelectItem key={o.value} value={o.value}><RichText value={String(o.label)} /></SelectItem>)}
           </SelectContent>
         </Select>
       );
@@ -482,7 +482,7 @@ function renderInput(field: any, value: any, onChange: (v: any) => void, readonl
                     : selected.filter((s) => s !== String(o.value)))
                 }
               />
-              <Label htmlFor={`ms-${field.id}-${o.value}`} className="text-sm font-normal cursor-pointer">{o.label}</Label>
+              <Label htmlFor={`ms-${field.id}-${o.value}`} className="text-sm font-normal cursor-pointer"><RichText value={String(o.label)} /></Label>
             </div>
           ))}
         </div>

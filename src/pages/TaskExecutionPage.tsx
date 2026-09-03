@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ArrowLeft, CheckCircle2, ClipboardList } from "lucide-react";
 import OrderUploadedFiles from "@/components/OrderUploadedFiles";
+import RichText from "@/components/forms/RichText";
 import ServiceLinkedForms, { linkedFormValueKey } from "@/components/ServiceLinkedForms";
 import { toast } from "sonner";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
@@ -663,7 +664,7 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
         {orderNotes?.trim() ? (
           <div>
             <p className="text-xs text-muted-foreground mb-1">Anmerkung zum Auftrag</p>
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{orderNotes}</p>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed"><RichText value={orderNotes} /></p>
           </div>
         ) : null}
 
@@ -671,10 +672,10 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
             {scalars.map((p) => (
               <div key={p.id} className="text-sm border-b border-border/50 py-1">
-                <span className="text-muted-foreground">{p.parameter_name}: </span>
+                <span className="text-muted-foreground"><RichText value={p.parameter_name} />: </span>
                 <span className="font-medium">
-                  {formatScalar(p.parameter_value)}
-                  {p.unit ? ` ${p.unit}` : ""}
+                  <RichText value={formatScalar(p.parameter_value)} />
+                  {p.unit ? <> <RichText value={p.unit} /></> : ""}
                 </span>
               </div>
             ))}
@@ -687,7 +688,7 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
           const label = String(p.parameter_name).replace(/^repeat:/, "");
           return (
             <div key={p.id}>
-              <p className="text-xs text-muted-foreground mb-1">{label}</p>
+              <p className="text-xs text-muted-foreground mb-1"><RichText value={label} /></p>
               <div className="space-y-2">
                 {rows.map((row, i) => (
                   <div
@@ -699,13 +700,13 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
                         {Object.entries(row).map(([k, v]) => (
                           <div key={k}>
-                            <span className="text-muted-foreground">{k}: </span>
-                            <span className="font-medium">{formatScalar(v)}</span>
+                            <span className="text-muted-foreground"><RichText value={k} />: </span>
+                            <span className="font-medium"><RichText value={formatScalar(v)} /></span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <span>{formatScalar(row)}</span>
+                      <span><RichText value={formatScalar(row)} /></span>
                     )}
                   </div>
                 ))}
