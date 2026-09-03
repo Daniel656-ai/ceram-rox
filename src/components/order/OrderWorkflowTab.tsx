@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
@@ -53,6 +54,7 @@ export default function OrderWorkflowTab({
 }) {
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, role } = useAuth();
   const { data: users = [] } = useUsers();
   const { data: auditLogs = [] } = useOrderAuditLog(order.id);
@@ -115,11 +117,34 @@ export default function OrderWorkflowTab({
   return (
     <div className="space-y-4 pt-4">
       <Card>
-        <CardHeader className="py-3">
+        <CardHeader className="py-3 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2">
             <ListChecks className="h-4 w-4" /> Dienstleistungen & Aufgaben ({groups.length})
           </CardTitle>
+          {role === "master" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const created = await api.serviceDependencies.expandOrder(order.id);
+                  toast.success(
+                    created > 0
+                      ? `${created} fehlende Aufgabe(n) ergänzt`
+                      : "Alle erforderlichen Aufgaben vorhanden"
+                  );
+                  queryClient.invalidateQueries({ queryKey: ["order", order.id] });
+                  queryClient.invalidateQueries({ queryKey: ["orders"] });
+                } catch (err: any) {
+                  toast.error("Prüfung fehlgeschlagen", { description: err.message });
+                }
+              }}
+            >
+              Workflow prüfen
+            </Button>
+          )}
         </CardHeader>
+
         <CardContent className="space-y-5">
           {groups.length === 0 && (
             <p className="text-sm text-muted-foreground">Keine Dienstleistungen beauftragt.</p>
@@ -148,7 +173,17 @@ export default function OrderWorkflowTab({
                 <TableBody>
                   {g.tasks.map((t) => (
                     <TableRow key={t.id}>
-                      <TableCell className="font-mono text-xs">{t.measurement_number}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        <span className="inline-flex items-center gap-1">
+                          {t.measurement_number}
+                          {t.origin === "workflow" && (
+                            <Badge variant="secondary" className="text-[10px] font-sans">
+                              automatisch
+                            </Badge>
+                          )}
+                        </span>
+                      </TableCell>
+
                       <TableCell className="font-mono text-xs">
                         {t.samples?.sample_number || "–"}
                       </TableCell>
