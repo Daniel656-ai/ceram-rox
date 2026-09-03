@@ -458,7 +458,7 @@ function renderInput(field: any, value: any, onChange: (v: any) => void, readonl
         <Select value={value ?? ""} onValueChange={onChange} disabled={readonly}>
           <SelectTrigger className={cls}><SelectValue placeholder="Bitte wählen…" /></SelectTrigger>
           <SelectContent>
-            {opts.map((o: any) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {opts.map((o: any) => <SelectItem key={o.value} value={o.value}><RichText value={String(o.label)} /></SelectItem>)}
           </SelectContent>
         </Select>
       );
