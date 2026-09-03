@@ -148,7 +148,17 @@ export default function OrderWorkflowTab({
                 <TableBody>
                   {g.tasks.map((t) => (
                     <TableRow key={t.id}>
-                      <TableCell className="font-mono text-xs">{t.measurement_number}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        <span className="inline-flex items-center gap-1">
+                          {t.measurement_number}
+                          {t.origin === "workflow" && (
+                            <Badge variant="secondary" className="text-[10px] font-sans">
+                              automatisch
+                            </Badge>
+                          )}
+                        </span>
+                      </TableCell>
+
                       <TableCell className="font-mono text-xs">
                         {t.samples?.sample_number || "–"}
                       </TableCell>
