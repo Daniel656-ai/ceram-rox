@@ -170,6 +170,7 @@ import { formRoleViews } from "./formRoleViews";
 import { formFieldPermissions } from "./formFieldPermissions";
 import { serviceFormLinks } from "./serviceFormLinks";
 import { processServiceLinks } from "./processServiceLinks";
+import { serviceDependencies } from "./serviceDependencies";
 import { workflowProcessLinks } from "./workflowProcessLinks";
 import { orderWorkflow } from "./orderWorkflow";
 import { orderInstances } from "./orderInstances";
@@ -348,6 +349,7 @@ export const api = {
   // ---- Workflow-Architektur: Vorlagen-Verknüpfungen & Auftrags-Instanzen ----
   serviceFormLinks,
   processServiceLinks,
+  serviceDependencies,
   workflowProcessLinks,
   orderWorkflow,
 
