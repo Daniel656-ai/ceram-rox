@@ -482,7 +482,7 @@ function renderInput(field: any, value: any, onChange: (v: any) => void, readonl
                     : selected.filter((s) => s !== String(o.value)))
                 }
               />
-              <Label htmlFor={`ms-${field.id}-${o.value}`} className="text-sm font-normal cursor-pointer">{o.label}</Label>
+              <Label htmlFor={`ms-${field.id}-${o.value}`} className="text-sm font-normal cursor-pointer"><RichText value={String(o.label)} /></Label>
             </div>
           ))}
         </div>
