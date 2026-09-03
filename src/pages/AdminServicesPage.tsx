@@ -467,12 +467,30 @@ function EditServiceDialog({
   canEditRates: boolean;
 }) {
   const [form, setForm] = useState<any>({});
+  const [depIds, setDepIds] = useState<string[]>([]);
 
   // Prozessvorlagen für die Workflow-Verknüpfung der Dienstleistung.
   const { data: processTemplates = [] } = useQuery({
     queryKey: ["process-templates", "active"],
     queryFn: () => api.processTemplates.list({ includeArchived: false }),
   });
+
+  // Alle aktiven Dienstleistungen als Auswahl für Abhängigkeiten.
+  const { data: allServices = [] } = useQuery({
+    queryKey: ["services", "active"],
+    queryFn: () => api.measurementServices.listActive(),
+  });
+
+  // Bereits hinterlegte Abhängigkeiten der bearbeiteten Dienstleistung.
+  const { data: deps = [] } = useQuery({
+    queryKey: ["service-dependencies", service?.id],
+    queryFn: () => api.serviceDependencies.listForService(service!.id),
+    enabled: !!service?.id,
+  });
+
+  useEffect(() => {
+    setDepIds((deps as any[]).map((d) => d.requires_service_id));
+  }, [deps]);
 
   useEffect(() => {
     if (service) {
@@ -491,6 +509,11 @@ function EditServiceDialog({
   }, [service]);
 
   if (!service) return null;
+
+  const toggleDep = (id: string) =>
+    setDepIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+
 
   return (
     <Dialog open={!!service} onOpenChange={(o) => { if (!o) onClose(); }}>
