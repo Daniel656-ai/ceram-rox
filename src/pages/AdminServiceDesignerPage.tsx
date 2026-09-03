@@ -356,16 +356,11 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
         </Button>
       </div>
 
-      <Tabs defaultValue="general">
+      <Tabs defaultValue="steps">
         <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="steps"><Layers className="h-4 w-4 mr-1" />Ablauf</TabsTrigger>
+          <TabsTrigger value="services"><Puzzle className="h-4 w-4 mr-1" />Dienstleistungs-Zuordnung</TabsTrigger>
           <TabsTrigger value="general"><Settings className="h-4 w-4 mr-1" />Allgemein</TabsTrigger>
-          <TabsTrigger value="steps"><Layers className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
-          <TabsTrigger value="customer_form"><FormInput className="h-4 w-4 mr-1" />Auftraggeberformular</TabsTrigger>
-          <TabsTrigger value="employee_form"><FormInput className="h-4 w-4 mr-1" />Messdienstleisterformular</TabsTrigger>
-          <TabsTrigger value="report"><FileText className="h-4 w-4 mr-1" />Berichtsvorlage</TabsTrigger>
-          <TabsTrigger value="calc"><Calculator className="h-4 w-4 mr-1" />Berechnungen</TabsTrigger>
-          <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
-          <TabsTrigger value="services"><Puzzle className="h-4 w-4 mr-1" />Dienstleistungen</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-4">
@@ -373,51 +368,10 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
         </TabsContent>
 
         <TabsContent value="services" className="mt-4">
-          <ProcessServicesTab processTemplateId={template.id} canManage={true} />
-        </TabsContent>
-
-        <TabsContent value="customer_form" className="mt-4">
-          <RoleFormTab
-            template={template}
-            metaKey="customer_form_id"
-            title="Auftraggeberformular"
-            description="Formular, das der Auftraggeber beim Anlegen dieser Dienstleistung ausfüllt."
-            defaultFormName={`Auftraggeberformular: ${template.name}`}
-            renderFieldsEditor={(f) => <FormFieldsEditor form={f} />}
-          />
-        </TabsContent>
-
-        <TabsContent value="employee_form" className="mt-4">
-          <RoleFormTab
-            template={template}
-            metaKey="employee_form_id"
-            title="Messdienstleisterformular"
-            description="Formular, das der Messdienstleister bei der Ausführung ausfüllt."
-            defaultFormName={`Messdienstleisterformular: ${template.name}`}
-            renderFieldsEditor={(f) => <FormFieldsEditor form={f} />}
-          />
-        </TabsContent>
-
-        <TabsContent value="report" className="mt-4">
-          <ReportTemplateDesigner template={template} />
+          <TemplateServiceAssignment template={template} />
         </TabsContent>
 
 
-        <TabsContent value="calc" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2"><Calculator className="h-4 w-4" />Berechnungen</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>Dieser Tab ist vorbereitet für Formeldefinitionen und berechnete Felder auf Dienstleistungs-Ebene.</p>
-              <p>Formel-Editor und Feldreferenzen werden im nächsten Schritt hier integriert.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="preview" className="mt-4">
-          <ServicePreviewTab template={template} />
-        </TabsContent>
 
         <TabsContent value="steps" className="mt-4">
           <div className="grid grid-cols-12 gap-4">
