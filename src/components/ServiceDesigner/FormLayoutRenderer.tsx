@@ -13,7 +13,7 @@ import {
 
 
 import {
-  normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass,
+  normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass, repeaterUnitMinPx,
   type RepeaterLayoutItem,
 } from "@/lib/repeaterLayout";
 import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
@@ -192,8 +192,9 @@ const spanStyle = (n: { rowSpan?: number }): React.CSSProperties | undefined => 
  * Außenabstand kommt ausschließlich vom Grid (gap), nie vom Element selbst.
  * ---------------------------------------------------------------- */
 
-/** Reservierte Höhe der Label-Zeile (max. 2 Zeilen) – hält Controls auf einer Linie. */
-const LABEL_ZONE = "text-xs leading-tight min-h-[1.75rem] flex items-start gap-1 [overflow-wrap:anywhere]";
+/** Reservierte Höhe der Label-Zeile (Bezeichnung + eigene Einheitenzeile). */
+const LABEL_ZONE =
+  "text-xs leading-tight flex flex-col justify-end gap-0.5 min-h-[2.4rem] [overflow-wrap:break-word] [word-break:normal] hyphens-none";
 /** Einheitliche Mindesthöhe von Eingaben/Anzeigen. */
 export const CONTROL_H = "min-h-9";
 
@@ -212,21 +213,25 @@ function FormItemShell({
   return (
     <div className={cn("flex h-full flex-col gap-1", highlight && HIGHLIGHT_CLS)}>
       <Label className={LABEL_ZONE}>
-        {icon}
-        <span className="line-clamp-2">
-          {typeof label === "string" ? <RichText value={label} /> : label}
+        <span className="flex items-start gap-1 font-medium">
+          {icon}
+          <span className="line-clamp-2">
+            {typeof label === "string" ? <RichText value={label} /> : label}
+          </span>
+          {required && <span className="text-destructive">*</span>}
+          {locked && <Lock className="h-3 w-3 text-muted-foreground shrink-0" aria-label="Gesperrt" />}
         </span>
-        {required && <span className="text-destructive">*</span>}
-        {unit && (
-          <span className="text-muted-foreground font-normal">[<RichText value={unit} />]</span>
-        )}
-        {locked && <Lock className="h-3 w-3 text-muted-foreground shrink-0" aria-label="Gesperrt" />}
+        {/* Einheit immer in eigener, dezenter Zeile – hält alle Controls auf einer Linie. */}
+        <span className="text-[10px] font-normal leading-none text-muted-foreground min-h-[0.7rem] whitespace-nowrap">
+          {unit ? <>[<RichText value={unit} />]</> : null}
+        </span>
       </Label>
       <div className={cn("min-w-0", CONTROL_H)}>{control}</div>
       {footer}
     </div>
   );
 }
+
 
 /* ----------------------------------------------------------------
  * Field renderer (works for both top-level and inside-repeater)
@@ -958,32 +963,36 @@ function RepeaterTable({
   }));
 
   return (
-    <div className="overflow-x-auto rounded border">
-      <table className="w-full text-xs">
-        <thead className="bg-muted/50">
+    <div className="overflow-auto max-h-[65vh] rounded border">
+      <table className="w-full text-xs border-separate border-spacing-0">
+        <thead className="sticky top-0 z-20 bg-muted">
           <tr>
-            <th className="px-2 py-1 text-left font-medium">{storageKeyLabel}</th>
+            <th className="sticky left-0 z-30 bg-muted px-2 py-1 text-left font-medium border-b border-r whitespace-nowrap">
+              {storageKeyLabel}
+            </th>
             {children.map((c) => (
-              <th key={c.id} className="px-2 py-1 text-left font-medium whitespace-nowrap">
-                <RichText value={c.display_name} />{c.unit ? ` [${c.unit}]` : ""}
+              <th key={c.id} className="bg-muted px-2 py-1 text-left font-medium border-b align-bottom leading-tight min-w-[84px]">
+                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={c.display_name} /></div>
+                {c.unit && <div className="text-[10px] font-normal text-muted-foreground">[<RichText value={c.unit} />]</div>}
               </th>
             ))}
             {calcs.map((c) => (
-              <th key={c.id} className="px-2 py-1 text-left font-medium whitespace-nowrap">
-                <RichText value={c.display_name} />{c.unit ? ` [${c.unit}]` : ""}
+              <th key={c.id} className="bg-muted px-2 py-1 text-left font-medium border-b align-bottom leading-tight min-w-[84px]">
+                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={c.display_name} /></div>
+                {c.unit && <div className="text-[10px] font-normal text-muted-foreground">[<RichText value={c.unit} />]</div>}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-t">
-              <td className="px-2 py-1 text-muted-foreground">{i + 1}</td>
+            <tr key={i} className="bg-background">
+              <td className="sticky left-0 z-10 bg-background px-2 py-1 text-muted-foreground border-b border-r">{i + 1}</td>
               {children.map((c) => (
-                <td key={c.id} className="px-2 py-1">{r.entry?.[c.field_key] ?? "—"}</td>
+                <td key={c.id} className="px-2 py-1 border-b tabular-nums">{r.entry?.[c.field_key] ?? "—"}</td>
               ))}
               {calcs.map((c) => (
-                <td key={c.id} className="px-2 py-1">
+                <td key={c.id} className="px-2 py-1 border-b tabular-nums">
                   {formatCalcResult(r.results[c.calc_key]?.value ?? null, c.decimals ?? 2, c.unit)}
                 </td>
               ))}
@@ -994,6 +1003,7 @@ function RepeaterTable({
     </div>
   );
 }
+
 
 function RepeaterEntry({
   index, entry, children, allFields, readonly, layout,
@@ -1067,29 +1077,58 @@ function RepeaterEntry({
     [children]
   );
 
+  /* Kompakte Messreihen: schmale Spalten werden nicht weiter gequetscht,
+   * sondern erhalten eine Mindestbreite; der Block scrollt horizontal. */
+  const denseUnit = useMemo(() => repeaterUnitMinPx(tree.items), [tree.items]);
+  const firstDenseId = useMemo(
+    () => tree.items.find((i) => i.type === "field" || i.type === "calculation")?.id ?? null,
+    [tree.items]
+  );
+
+  const cellProps = (item: RepeaterLayoutItem, extraMin?: number) => {
+    const w = item.type === "break" ? 12 : Math.max(1, Math.min(12, Math.round((item as any).width ?? 12)));
+    if (!denseUnit) return { className: repeaterWidthClass(w), style: undefined as React.CSSProperties | undefined };
+    return {
+      className: "",
+      style: {
+        gridColumn: `span ${w} / span ${w}`,
+        ...(extraMin ? { minWidth: extraMin } : null),
+      } as React.CSSProperties,
+    };
+  };
+
   const renderItem = (item: RepeaterLayoutItem): JSX.Element | null => {
-    if (item.type === "break") return <div key={item.id} className="col-span-12 h-0" />;
-    if (item.type === "spacer") return <div key={item.id} className={repeaterWidthClass(item.width)} />;
+    if (item.type === "break") return <div key={item.id} className="col-span-12 h-0" style={denseUnit ? { gridColumn: "span 12 / span 12" } : undefined} />;
+    if (item.type === "spacer") {
+      const p = cellProps(item);
+      return <div key={item.id} className={p.className} style={p.style} />;
+    }
     if (item.type === "heading") {
+      const p = cellProps(item);
       return (
-        <div key={item.id} className={cn(repeaterWidthClass(item.width), "text-xs font-semibold text-muted-foreground pt-1")}>
-          {item.text}
+        <div key={item.id} className={cn(p.className, "text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-1")} style={p.style}>
+          <RichText value={item.text} />
         </div>
       );
     }
     if (item.type === "group") {
+      const p = cellProps(item);
       return (
-        <div key={item.id} className={cn(repeaterWidthClass(item.width), "rounded border p-2 bg-muted/20")}>
-          {item.title && <p className="text-[11px] font-medium mb-2"><RichText value={item.title} /></p>}
+        <div key={item.id} className={cn(p.className, "rounded border p-2 bg-muted/20 min-w-0")} style={p.style}>
+          {item.title && <p className="text-[11px] font-medium mb-2 uppercase tracking-wide text-muted-foreground"><RichText value={item.title} /></p>}
           <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
             {item.children.map(renderItem)}
           </div>
         </div>
       );
     }
+    const sticky = denseUnit && item.id === firstDenseId
+      ? "sticky left-0 z-10 bg-background pr-2"
+      : "";
     if (item.type === "calculation") {
+      const p = cellProps(item);
       return (
-        <div key={item.id} className={repeaterWidthClass(item.width)}>
+        <div key={item.id} className={cn(p.className, sticky)} style={p.style}>
           <CalculationDisplay
             node={{
               id: item.id, type: "calculation", scope: "local",
@@ -1102,8 +1141,11 @@ function RepeaterEntry({
     }
     const cf = byKey[item.key];
     if (!cf) return null;
+    // Freitext-/Bemerkungsfelder brauchen spürbar mehr Platz als Messwerte.
+    const wide = ["textarea", "long_text", "rich_text"].includes(String(cf.field_type));
+    const p = cellProps(item, wide ? 220 : undefined);
     return (
-      <div key={item.id} className={repeaterWidthClass(item.width)}>
+      <div key={item.id} className={cn(p.className, sticky, "min-w-0")} style={p.style}>
         <FieldWithLabel
           field={cf}
           node={{ id: `inline-${cf.id}`, type: "field", field_id: cf.id, width: 12 }}
@@ -1135,19 +1177,24 @@ function RepeaterEntry({
           </div>
         </div>
         {header}
-        <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
-
-          {tree.items.map(renderItem)}
-          {children.length === 0 && (
-            <p className="col-span-12 text-xs text-muted-foreground">
-              Für diesen Repeater sind noch keine Unterfelder definiert.
-            </p>
-          )}
+        <div className={denseUnit ? "overflow-x-auto -mx-1 px-1 pb-1" : undefined}>
+          <div
+            className={cn("grid items-end", !denseUnit && "grid-cols-12", repeaterGapClass(tree.gap))}
+            style={denseUnit ? { gridTemplateColumns: `repeat(12, minmax(${denseUnit}px, 1fr))` } : undefined}
+          >
+            {tree.items.map(renderItem)}
+            {children.length === 0 && (
+              <p className="col-span-12 text-xs text-muted-foreground">
+                Für diesen Repeater sind noch keine Unterfelder definiert.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </EntryScopeCtx.Provider>
     </CalcResultsCtx.Provider>
   );
+
 }
 
 /* ----------------------------------------------------------------
@@ -1523,6 +1570,35 @@ function MeasurementBlockField({
  * Node renderer
  * ---------------------------------------------------------------- */
 
+/**
+ * Raster für Kindknoten. Enthält der Abschnitt sehr schmale Spalten
+ * (Messwertfelder), erhalten die Rasterspalten eine Mindestbreite und der
+ * Bereich scrollt horizontal, statt alles zusammenzuquetschen. Abschnitte mit
+ * normalen Feldbreiten bleiben unverändert.
+ */
+function NodeGrid({ children: nodes, fields }: { children: LayoutNode[]; fields: FormField[] }) {
+  const unit = useMemo(() => {
+    let u = 0;
+    for (const c of nodes) {
+      if (c.type !== "field" && c.type !== "calculation") continue;
+      const w = Math.max(1, Math.min(12, Math.round(Number((c as any).width ?? 12))));
+      if (w > 4) continue;
+      u = Math.max(u, Math.ceil(84 / w));
+    }
+    return u > 0 ? u : null;
+  }, [nodes]);
+
+  const grid = (
+    <div
+      className={cn("grid gap-3 items-end", !unit && "grid-cols-12")}
+      style={unit ? { gridTemplateColumns: `repeat(12, minmax(${unit}px, 1fr))` } : undefined}
+    >
+      {nodes.map((c) => <RenderNode key={c.id} node={c} fields={fields} />)}
+    </div>
+  );
+  return unit ? <div className="overflow-x-auto -mx-1 px-1 pb-1">{grid}</div> : grid;
+}
+
 function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] }) {
   const tr = useSystemTextRenderer();
   if (node.visible === false) return null;
@@ -1534,9 +1610,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
         <div className={cn("border rounded-lg p-4 bg-card", widthCls(n.width), n.highlight && HIGHLIGHT_CLS, n.className)}>
           {n.title && <div className="font-semibold text-sm mb-1"><RichText value={tr(n.title)} /></div>}
           {n.description && <p className="text-xs text-muted-foreground mb-3">{tr(n.description)}</p>}
-          <div className="grid grid-cols-12 gap-3">
-            {n.children.map(c => <RenderNode key={c.id} node={c} fields={fields} />)}
-          </div>
+          <NodeGrid fields={fields}>{n.children}</NodeGrid>
         </div>
       );
     }
@@ -1546,12 +1620,11 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
       return (
         <div className={cn("border rounded p-3", widthCls(n.width), (n as any).highlight && HIGHLIGHT_CLS, n.className)}>
           {(n as any).title && <div className="font-medium text-sm mb-2"><RichText value={tr((n as any).title)} /></div>}
-          <div className="grid grid-cols-12 gap-3">
-            {(n as any).children.map((c: LayoutNode) => <RenderNode key={c.id} node={c} fields={fields} />)}
-          </div>
+          <NodeGrid fields={fields}>{(n as any).children}</NodeGrid>
         </div>
       );
     }
+
     case "tabs": {
       const n = node as TabsNode;
       const first = n.children[0]?.id ?? "";
