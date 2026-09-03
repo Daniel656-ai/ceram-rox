@@ -700,13 +700,13 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
                         {Object.entries(row).map(([k, v]) => (
                           <div key={k}>
-                            <span className="text-muted-foreground">{k}: </span>
-                            <span className="font-medium">{formatScalar(v)}</span>
+                            <span className="text-muted-foreground"><RichText value={k} />: </span>
+                            <span className="font-medium"><RichText value={formatScalar(v)} /></span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <span>{formatScalar(row)}</span>
+                      <span><RichText value={formatScalar(row)} /></span>
                     )}
                   </div>
                 ))}
