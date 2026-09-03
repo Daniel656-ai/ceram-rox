@@ -192,8 +192,9 @@ const spanStyle = (n: { rowSpan?: number }): React.CSSProperties | undefined => 
  * Außenabstand kommt ausschließlich vom Grid (gap), nie vom Element selbst.
  * ---------------------------------------------------------------- */
 
-/** Reservierte Höhe der Label-Zeile (max. 2 Zeilen) – hält Controls auf einer Linie. */
-const LABEL_ZONE = "text-xs leading-tight min-h-[1.75rem] flex items-start gap-1 [overflow-wrap:anywhere]";
+/** Reservierte Höhe der Label-Zeile (Bezeichnung + eigene Einheitenzeile). */
+const LABEL_ZONE =
+  "text-xs leading-tight flex flex-col justify-end gap-0.5 min-h-[2.4rem] [overflow-wrap:break-word] [word-break:normal] hyphens-none";
 /** Einheitliche Mindesthöhe von Eingaben/Anzeigen. */
 export const CONTROL_H = "min-h-9";
 
@@ -212,21 +213,25 @@ function FormItemShell({
   return (
     <div className={cn("flex h-full flex-col gap-1", highlight && HIGHLIGHT_CLS)}>
       <Label className={LABEL_ZONE}>
-        {icon}
-        <span className="line-clamp-2">
-          {typeof label === "string" ? <RichText value={label} /> : label}
+        <span className="flex items-start gap-1 font-medium">
+          {icon}
+          <span className="line-clamp-2">
+            {typeof label === "string" ? <RichText value={label} /> : label}
+          </span>
+          {required && <span className="text-destructive">*</span>}
+          {locked && <Lock className="h-3 w-3 text-muted-foreground shrink-0" aria-label="Gesperrt" />}
         </span>
-        {required && <span className="text-destructive">*</span>}
-        {unit && (
-          <span className="text-muted-foreground font-normal">[<RichText value={unit} />]</span>
-        )}
-        {locked && <Lock className="h-3 w-3 text-muted-foreground shrink-0" aria-label="Gesperrt" />}
+        {/* Einheit immer in eigener, dezenter Zeile – hält alle Controls auf einer Linie. */}
+        <span className="text-[10px] font-normal leading-none text-muted-foreground min-h-[0.7rem] whitespace-nowrap">
+          {unit ? <>[<RichText value={unit} />]</> : null}
+        </span>
       </Label>
       <div className={cn("min-w-0", CONTROL_H)}>{control}</div>
       {footer}
     </div>
   );
 }
+
 
 /* ----------------------------------------------------------------
  * Field renderer (works for both top-level and inside-repeater)
