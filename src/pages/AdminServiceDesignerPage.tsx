@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle, LinkIcon, Settings, Eye, Calculator, ClipboardList, Boxes, Library } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FormInput, Puzzle, LinkIcon, Settings, ClipboardList, Boxes, Library } from "lucide-react";
 import type { ProcessKind, ProcessTemplate } from "@/lib/api/processTemplates";
 import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
@@ -30,11 +30,7 @@ import LocalCalculationsPanel from "@/components/ServiceDesigner/LocalCalculatio
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
-import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
-import RoleFormTab from "@/components/ServiceDesigner/RoleFormTab";
-import ServicePreviewTab from "@/components/ServiceDesigner/ServicePreviewTab";
-import ReportTemplateDesigner from "@/components/ServiceDesigner/ReportTemplateDesigner";
 import GlobalModelTab from "@/components/ServiceDesigner/GlobalModelTab";
 import GlobalLibraryTab from "@/components/ServiceDesigner/GlobalLibraryTab";
 import GlobalFieldPicker from "@/components/ServiceDesigner/GlobalFieldPicker";
@@ -356,16 +352,11 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
         </Button>
       </div>
 
-      <Tabs defaultValue="general">
+      <Tabs defaultValue="steps">
         <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="steps"><Layers className="h-4 w-4 mr-1" />Ablauf</TabsTrigger>
+          <TabsTrigger value="services"><Puzzle className="h-4 w-4 mr-1" />Dienstleistungs-Zuordnung</TabsTrigger>
           <TabsTrigger value="general"><Settings className="h-4 w-4 mr-1" />Allgemein</TabsTrigger>
-          <TabsTrigger value="steps"><Layers className="h-4 w-4 mr-1" />Workflow</TabsTrigger>
-          <TabsTrigger value="customer_form"><FormInput className="h-4 w-4 mr-1" />Auftraggeberformular</TabsTrigger>
-          <TabsTrigger value="employee_form"><FormInput className="h-4 w-4 mr-1" />Messdienstleisterformular</TabsTrigger>
-          <TabsTrigger value="report"><FileText className="h-4 w-4 mr-1" />Berichtsvorlage</TabsTrigger>
-          <TabsTrigger value="calc"><Calculator className="h-4 w-4 mr-1" />Berechnungen</TabsTrigger>
-          <TabsTrigger value="preview"><Eye className="h-4 w-4 mr-1" />Vorschau</TabsTrigger>
-          <TabsTrigger value="services"><Puzzle className="h-4 w-4 mr-1" />Dienstleistungen</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-4">
@@ -373,54 +364,29 @@ function TemplateEditor({ templateId, onBack }: { templateId: string; onBack: ()
         </TabsContent>
 
         <TabsContent value="services" className="mt-4">
-          <ProcessServicesTab processTemplateId={template.id} canManage={true} />
-        </TabsContent>
-
-        <TabsContent value="customer_form" className="mt-4">
-          <RoleFormTab
-            template={template}
-            metaKey="customer_form_id"
-            title="Auftraggeberformular"
-            description="Formular, das der Auftraggeber beim Anlegen dieser Dienstleistung ausfüllt."
-            defaultFormName={`Auftraggeberformular: ${template.name}`}
-            renderFieldsEditor={(f) => <FormFieldsEditor form={f} />}
-          />
-        </TabsContent>
-
-        <TabsContent value="employee_form" className="mt-4">
-          <RoleFormTab
-            template={template}
-            metaKey="employee_form_id"
-            title="Messdienstleisterformular"
-            description="Formular, das der Messdienstleister bei der Ausführung ausfüllt."
-            defaultFormName={`Messdienstleisterformular: ${template.name}`}
-            renderFieldsEditor={(f) => <FormFieldsEditor form={f} />}
-          />
-        </TabsContent>
-
-        <TabsContent value="report" className="mt-4">
-          <ReportTemplateDesigner template={template} />
+          <TemplateServiceAssignment template={template} />
         </TabsContent>
 
 
-        <TabsContent value="calc" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2"><Calculator className="h-4 w-4" />Berechnungen</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>Dieser Tab ist vorbereitet für Formeldefinitionen und berechnete Felder auf Dienstleistungs-Ebene.</p>
-              <p>Formel-Editor und Feldreferenzen werden im nächsten Schritt hier integriert.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="preview" className="mt-4">
-          <ServicePreviewTab template={template} />
-        </TabsContent>
-
-        <TabsContent value="steps" className="mt-4">
+        <TabsContent value="steps" className="mt-4 space-y-4">
+          {/* Ablauf-Übersicht: Welche Dienstleistung löst welchen Ablauf aus? */}
+          <div className="flex flex-wrap items-center gap-2 rounded border bg-muted/30 p-3 text-sm">
+            {steps.length === 0 ? (
+              <span className="text-xs text-muted-foreground">Noch keine Schritte definiert.</span>
+            ) : (
+              steps.map((s, i) => (
+                <span key={s.id} className="flex items-center gap-2">
+                  <Badge variant={s.step_kind === "service" ? "default" : "outline"}>
+                    {i + 1}. {s.name}
+                  </Badge>
+                  {i < steps.length - 1 && <span className="text-muted-foreground">→</span>}
+                </span>
+              ))
+            )}
+          </div>
           <div className="grid grid-cols-12 gap-4">
+
             {/* Steps list */}
             <Card className="col-span-3">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -573,42 +539,8 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
     onError: (e: any) => toast.error(e.message || "Fehler"),
   });
 
-  const { data: form } = useQuery({
-    queryKey: ["step-form", step.id, step.form_id],
-    queryFn: () => step.form_id ? api.formDefinitions.get(step.form_id) : Promise.resolve(null),
-  });
+  // Formularverknüpfungen werden bewusst nicht mehr im Prozessschritt gepflegt.
 
-  const createFormMut = useMutation({
-    mutationFn: async () => {
-      // Neu angelegte Formulare landen direkt in der globalen Bibliothek,
-      // damit sie in weiteren Prozessschritten wiederverwendet werden können.
-      const f = await api.formDefinitions.create({ name: `Formular: ${step.name}`, scope: "global" });
-      await api.processTemplateSteps.update(step.id, { form_id: f.id });
-      return f;
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); qc.invalidateQueries({ queryKey: ["form-definitions"] }); onSaved(); toast.success("Formular angelegt"); },
-    onError: (e: any) => toast.error(e.message || "Fehler"),
-  });
-
-  // Alle vorhandenen Formularvorlagen zur Verknüpfung anbieten (global + template-eigene),
-  // damit im Service/Prozess-Designer angelegte Formulare hier ausgewählt werden können.
-  const { data: allForms = [] } = useQuery({
-    queryKey: ["form-definitions", "all"],
-    queryFn: () => api.formDefinitions.list(),
-  });
-  const linkableForms = allForms.filter(f => f.id !== step.form_id);
-
-  const linkFormMut = useMutation({
-    mutationFn: async (formId: string) => api.processTemplateSteps.update(step.id, { form_id: formId }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); onSaved(); toast.success("Formular verknüpft"); },
-    onError: (e: any) => toast.error(e.message || "Fehler"),
-  });
-
-  const unlinkFormMut = useMutation({
-    mutationFn: async () => api.processTemplateSteps.update(step.id, { form_id: null }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["step-form", step.id] }); qc.invalidateQueries({ queryKey: ["process-steps"] }); onSaved(); toast.success("Verknüpfung aufgehoben"); },
-    onError: (e: any) => toast.error(e.message || "Fehler"),
-  });
 
   return (
     <Card>
@@ -704,52 +636,14 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
 
         <div className="flex justify-end"><Button onClick={() => saveMut.mutate()}>Schritt speichern</Button></div>
 
-        <div className="border-t pt-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><FormInput className="h-4 w-4" />Formular</h3>
-            {step.form_id && (
-              <Button size="sm" variant="ghost" onClick={() => { if (confirm("Formular-Verknüpfung aufheben? Das Formular selbst bleibt erhalten.")) unlinkFormMut.mutate(); }}>
-                Verknüpfung aufheben
-              </Button>
-            )}
-          </div>
-
-          {!step.form_id && (
-            <div className="space-y-3 rounded border bg-muted/30 p-3">
-              <p className="text-xs text-muted-foreground">
-                Vorhandenes Formular aus dem Service Designer verknüpfen (bevorzugt — vermeidet Duplikate)
-                oder neues, schritt-eigenes Formular anlegen.
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select onValueChange={(v) => v && linkFormMut.mutate(v)}>
-                  <SelectTrigger className="w-72"><SelectValue placeholder="Vorhandenes Formular verknüpfen…" /></SelectTrigger>
-                  <SelectContent>
-                    {linkableForms.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">Keine Formulare vorhanden.</div>}
-                    {linkableForms.map(gf => (
-                      <SelectItem key={gf.id} value={gf.id}>
-                        {gf.name} · v{gf.version}{gf.scope === "global" ? " · global" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="text-xs text-muted-foreground">oder</span>
-                <Button size="sm" variant="outline" onClick={() => createFormMut.mutate()}>
-                  <Plus className="h-4 w-4 mr-1" />Neues Formular
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step.form_id && form && (
-            <>
-              <div className="text-xs text-muted-foreground mb-2">
-                Verknüpftes Formular: <span className="font-medium">{form.name}</span>
-                {form.scope === "global" && <Badge variant="outline" className="ml-2 text-xs">Global (Service Designer)</Badge>}
-              </div>
-              <FormFieldsEditor form={form} />
-            </>
-          )}
+        {/* Formulare werden bewusst NICHT hier konfiguriert: Sie gehören zur
+            Dienstleistung bzw. zur Formular-Bibliothek (Formulardesigner). */}
+        <div className="border-t pt-4 text-xs text-muted-foreground">
+          Formulare, Felder und Berechnungen werden nicht im Prozessdesigner gepflegt.
+          Ein Dienstleistungsschritt verwendet automatisch die Formulare der referenzierten
+          Dienstleistung (Formular-Bibliothek / Dienstleistungsverwaltung).
         </div>
+
 
         <div className="border-t pt-4">
           <ProcessStepRawMaterials stepId={step.id} />
@@ -980,6 +874,93 @@ function GlobalFormLibrary() {
           <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte ein Formular links auswählen oder anlegen.</CardContent></Card>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------------- Dienstleistungs-Zuordnung ----------------
+/**
+ * Ordnet Dienstleistungen dieser Prozessvorlage zu (`measurement_services.process_template_id`).
+ * Beim Buchen einer zugeordneten Dienstleistung erzeugt die Workflow-Engine
+ * automatisch die hier definierten Prozessschritte (Dienstleistungsschritte).
+ */
+function TemplateServiceAssignment({ template }: { template: ProcessTemplate }) {
+  const qc = useQueryClient();
+  const { data: services = [] } = useQuery({
+    queryKey: ["measurement-services", "all"],
+    queryFn: () => api.measurementServices.listAll(),
+  });
+  const { data: steps = [] } = useQuery({
+    queryKey: ["process-steps", template.id],
+    queryFn: () => api.processTemplateSteps.listForTemplate(template.id),
+  });
+
+  const assignMut = useMutation({
+    mutationFn: ({ id, assign }: { id: string; assign: boolean }) =>
+      api.measurementServices.update(id, { process_template_id: assign ? template.id : null }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["measurement-services"] });
+      toast.success("Zuordnung gespeichert");
+    },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const list = (services as any[]).filter((s) => s.active && !s.archived_at);
+  const assigned = list.filter((s) => s.process_template_id === template.id);
+  const serviceSteps = (steps as ProcessStep[]).filter((s) => s.step_kind === "service" && s.service_id);
+
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Diese Vorlage wird verwendet von</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {assigned.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Noch keiner Dienstleistung zugeordnet. Erst dann wird der Ablauf beim Buchen ausgeführt.
+            </p>
+          ) : (
+            assigned.map((s) => (
+              <div key={s.id} className="flex items-center justify-between rounded border px-2 py-1.5">
+                <span className="text-sm">{s.service_name}</span>
+                <Button size="sm" variant="ghost" onClick={() => assignMut.mutate({ id: s.id, assign: false })}>
+                  Entfernen
+                </Button>
+              </div>
+            ))
+          )}
+          <div className="border-t pt-2 text-xs text-muted-foreground">
+            Beim Buchen entstehen automatisch{" "}
+            <span className="font-medium">{serviceSteps.length}</span> Prozessschritt(e):{" "}
+            {serviceSteps.map((s) => s.name).join(" → ") || "—"}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Dienstleistung zuordnen</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-96 overflow-y-auto rounded border p-2 space-y-1">
+            {list.map((s) => {
+              const mine = s.process_template_id === template.id;
+              const other = !!s.process_template_id && !mine;
+              return (
+                <div key={s.id} className="flex items-center gap-2 px-1 py-1 text-sm">
+                  <Switch
+                    checked={mine}
+                    onCheckedChange={(c) => assignMut.mutate({ id: s.id, assign: c })}
+                  />
+                  <span className="flex-1 truncate">{s.service_name}</span>
+                  {other && <Badge variant="outline" className="text-[10px]">andere Vorlage</Badge>}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
