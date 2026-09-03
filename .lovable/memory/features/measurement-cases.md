@@ -1,12 +1,12 @@
 ---
 name: Messfall / Analyseschema
-description: Konfigurierbare Messfälle erzeugen automatisch die erforderlichen Messungsinstanzen eines Messdatenblocks (ersetzt Excel-/Makro-Logik)
+description: Messfälle sind eine fachliche Konfigurationsebene der Messblock-Felder im Formulardesigner – kein eigener Formular-/Tabellenbaustein und kein eigener Tab im Prozessdesigner
 type: feature
 ---
 
-- Tabellen `measurement_cases` (Vorlage: Name, Schlüssel, Methode) und `measurement_case_instances` (Bezeichnung, Methode, Importprofil, `context` als frei definierbare Eigenschaften wie Probenvorbereitung/Analyseart). Lesen: alle angemeldeten Benutzer; Pflege: `can_manage_designer`.
-- Verwaltung: Service Designer → Tab „Messfälle“ (`MeasurementCasesSection`). Keine Messfälle im Frontend hartcodiert.
-- Aktivierung je Messblock im Feldeditor („Messfall-Steuerung“): vorgegebener Messfall, erlaubte Messfälle, Sperre gegen manuelles Hinzufügen/Löschen.
-- Laufzeit (`FormLayoutRenderer` → `MeasurementBlockField`): ROX erzeugt die Messungen automatisch (`buildEntriesFromCase`), zeigt je Messung eine Karte mit Bezeichnung, Kontext-Badges und Importstatus („Noch nicht importiert“ / „✓ Import abgeschlossen“). Bezeichnungs-/Kontextfelder werden ausgeblendet – nur Messwerte und Messdatenimport sind sichtbar.
-- Jede Instanz hat eigenes Importprofil (`__import_profile_id`) und eigene Ergebnisse; Interne Schlüssel: `__case_id`, `__case_instance_id`.
-- Direktverwaltung am Messfall-Feld (analog Importprofil): `MeasurementCaseEditorDialog` erlaubt Anlegen („+“) und Bearbeiten („✎“) direkt im Messblock (Laufzeit) und im Feldeditor. Sichtbar nur bei `services.manage`/`master`. Nur aktive Messfälle wählbar; ein bereits verwendeter inaktiver Messfall bleibt als „(inaktiv)“ sichtbar. Bearbeiten wirkt nur auf zukünftige Messungen – bestehende Einträge bleiben unverändert.
+- Architekturtrennung: **Prozessdesigner** = fachlicher Ablauf/Abhängigkeiten (z. B. Geometrievermessung → Probenvorbereitung → Messung), **Formulardesigner** = Auswahl, Konfiguration und Layout aller Bausteine, **Messfall** = Konfigurationsebene innerhalb eines Messblock-Feldes.
+- Es gibt **keinen** Tab „Messfälle“ im Prozess-/Service-Designer (entfernt, da er als eigenständige Tabellen-/Bausteinebene fachlich falsch war und durch fehlende Tab-Registrierung ohnehin nicht anwählbar war).
+- Verwaltung erfolgt ausschließlich am Messblock-Feld im Feldeditor („Messfall-Steuerung“): Anlegen („+“) und Bearbeiten („✎“) über `MeasurementCaseEditorDialog`, dazu vorgegebener Messfall, erlaubte Messfälle und Sperre gegen manuelles Hinzufügen/Löschen.
+- Tabellen `measurement_cases` / `measurement_case_instances` (Bezeichnung, Methode, Importprofil, `context`, `curve_config`). Lesen: alle angemeldeten Benutzer; Pflege: `can_manage_designer`.
+- Laufzeit (`FormLayoutRenderer` → `MeasurementBlockField`): Messungen werden aus dem Messfall erzeugt (`buildEntriesFromCase`), je Messung eine Karte mit Bezeichnung, Kontext-Badges und Importstatus. Interne Schlüssel: `__case_id`, `__case_instance_id`, `__import_profile_id`.
+- Messfälle ersetzen niemals die Bausteinauswahl des Formulardesigners (Text, Zahl, Berechnung, Ergebnis, Messwerttabelle, Geometrie, globale Felder usw.).
