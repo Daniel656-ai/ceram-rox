@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FileText, FormInput, Puzzle, LinkIcon, Settings, Eye, Calculator, ClipboardList, Boxes, Library } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, Beaker, Factory, Layers, FormInput, Puzzle, LinkIcon, Settings, ClipboardList, Boxes, Library } from "lucide-react";
 import type { ProcessKind, ProcessTemplate } from "@/lib/api/processTemplates";
 import type { ProcessStep } from "@/lib/api/processSteps";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
@@ -30,11 +30,7 @@ import LocalCalculationsPanel from "@/components/ServiceDesigner/LocalCalculatio
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
 import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
-import ProcessServicesTab from "@/components/ServiceDesigner/ProcessServicesTab";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
-import RoleFormTab from "@/components/ServiceDesigner/RoleFormTab";
-import ServicePreviewTab from "@/components/ServiceDesigner/ServicePreviewTab";
-import ReportTemplateDesigner from "@/components/ServiceDesigner/ReportTemplateDesigner";
 import GlobalModelTab from "@/components/ServiceDesigner/GlobalModelTab";
 import GlobalLibraryTab from "@/components/ServiceDesigner/GlobalLibraryTab";
 import GlobalFieldPicker from "@/components/ServiceDesigner/GlobalFieldPicker";
