@@ -963,32 +963,36 @@ function RepeaterTable({
   }));
 
   return (
-    <div className="overflow-x-auto rounded border">
-      <table className="w-full text-xs">
-        <thead className="bg-muted/50">
+    <div className="overflow-auto max-h-[65vh] rounded border">
+      <table className="w-full text-xs border-separate border-spacing-0">
+        <thead className="sticky top-0 z-20 bg-muted">
           <tr>
-            <th className="px-2 py-1 text-left font-medium">{storageKeyLabel}</th>
+            <th className="sticky left-0 z-30 bg-muted px-2 py-1 text-left font-medium border-b border-r whitespace-nowrap">
+              {storageKeyLabel}
+            </th>
             {children.map((c) => (
-              <th key={c.id} className="px-2 py-1 text-left font-medium whitespace-nowrap">
-                <RichText value={c.display_name} />{c.unit ? ` [${c.unit}]` : ""}
+              <th key={c.id} className="bg-muted px-2 py-1 text-left font-medium border-b align-bottom leading-tight min-w-[84px]">
+                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={c.display_name} /></div>
+                {c.unit && <div className="text-[10px] font-normal text-muted-foreground">[<RichText value={c.unit} />]</div>}
               </th>
             ))}
             {calcs.map((c) => (
-              <th key={c.id} className="px-2 py-1 text-left font-medium whitespace-nowrap">
-                <RichText value={c.display_name} />{c.unit ? ` [${c.unit}]` : ""}
+              <th key={c.id} className="bg-muted px-2 py-1 text-left font-medium border-b align-bottom leading-tight min-w-[84px]">
+                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={c.display_name} /></div>
+                {c.unit && <div className="text-[10px] font-normal text-muted-foreground">[<RichText value={c.unit} />]</div>}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-t">
-              <td className="px-2 py-1 text-muted-foreground">{i + 1}</td>
+            <tr key={i} className="bg-background">
+              <td className="sticky left-0 z-10 bg-background px-2 py-1 text-muted-foreground border-b border-r">{i + 1}</td>
               {children.map((c) => (
-                <td key={c.id} className="px-2 py-1">{r.entry?.[c.field_key] ?? "—"}</td>
+                <td key={c.id} className="px-2 py-1 border-b tabular-nums">{r.entry?.[c.field_key] ?? "—"}</td>
               ))}
               {calcs.map((c) => (
-                <td key={c.id} className="px-2 py-1">
+                <td key={c.id} className="px-2 py-1 border-b tabular-nums">
                   {formatCalcResult(r.results[c.calc_key]?.value ?? null, c.decimals ?? 2, c.unit)}
                 </td>
               ))}
@@ -999,6 +1003,7 @@ function RepeaterTable({
     </div>
   );
 }
+
 
 function RepeaterEntry({
   index, entry, children, allFields, readonly, layout,
