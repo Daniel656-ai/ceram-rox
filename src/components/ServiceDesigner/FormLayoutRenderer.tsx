@@ -1072,29 +1072,58 @@ function RepeaterEntry({
     [children]
   );
 
+  /* Kompakte Messreihen: schmale Spalten werden nicht weiter gequetscht,
+   * sondern erhalten eine Mindestbreite; der Block scrollt horizontal. */
+  const denseUnit = useMemo(() => repeaterUnitMinPx(tree.items), [tree.items]);
+  const firstDenseId = useMemo(
+    () => tree.items.find((i) => i.type === "field" || i.type === "calculation")?.id ?? null,
+    [tree.items]
+  );
+
+  const cellProps = (item: RepeaterLayoutItem, extraMin?: number) => {
+    const w = item.type === "break" ? 12 : Math.max(1, Math.min(12, Math.round((item as any).width ?? 12)));
+    if (!denseUnit) return { className: repeaterWidthClass(w), style: undefined as React.CSSProperties | undefined };
+    return {
+      className: "",
+      style: {
+        gridColumn: `span ${w} / span ${w}`,
+        ...(extraMin ? { minWidth: extraMin } : null),
+      } as React.CSSProperties,
+    };
+  };
+
   const renderItem = (item: RepeaterLayoutItem): JSX.Element | null => {
-    if (item.type === "break") return <div key={item.id} className="col-span-12 h-0" />;
-    if (item.type === "spacer") return <div key={item.id} className={repeaterWidthClass(item.width)} />;
+    if (item.type === "break") return <div key={item.id} className="col-span-12 h-0" style={denseUnit ? { gridColumn: "span 12 / span 12" } : undefined} />;
+    if (item.type === "spacer") {
+      const p = cellProps(item);
+      return <div key={item.id} className={p.className} style={p.style} />;
+    }
     if (item.type === "heading") {
+      const p = cellProps(item);
       return (
-        <div key={item.id} className={cn(repeaterWidthClass(item.width), "text-xs font-semibold text-muted-foreground pt-1")}>
-          {item.text}
+        <div key={item.id} className={cn(p.className, "text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-1")} style={p.style}>
+          <RichText value={item.text} />
         </div>
       );
     }
     if (item.type === "group") {
+      const p = cellProps(item);
       return (
-        <div key={item.id} className={cn(repeaterWidthClass(item.width), "rounded border p-2 bg-muted/20")}>
-          {item.title && <p className="text-[11px] font-medium mb-2"><RichText value={item.title} /></p>}
+        <div key={item.id} className={cn(p.className, "rounded border p-2 bg-muted/20 min-w-0")} style={p.style}>
+          {item.title && <p className="text-[11px] font-medium mb-2 uppercase tracking-wide text-muted-foreground"><RichText value={item.title} /></p>}
           <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
             {item.children.map(renderItem)}
           </div>
         </div>
       );
     }
+    const sticky = denseUnit && item.id === firstDenseId
+      ? "sticky left-0 z-10 bg-background pr-2"
+      : "";
     if (item.type === "calculation") {
+      const p = cellProps(item);
       return (
-        <div key={item.id} className={repeaterWidthClass(item.width)}>
+        <div key={item.id} className={cn(p.className, sticky)} style={p.style}>
           <CalculationDisplay
             node={{
               id: item.id, type: "calculation", scope: "local",
@@ -1107,8 +1136,11 @@ function RepeaterEntry({
     }
     const cf = byKey[item.key];
     if (!cf) return null;
+    // Freitext-/Bemerkungsfelder brauchen spürbar mehr Platz als Messwerte.
+    const wide = ["textarea", "long_text", "rich_text"].includes(String(cf.field_type));
+    const p = cellProps(item, wide ? 220 : undefined);
     return (
-      <div key={item.id} className={repeaterWidthClass(item.width)}>
+      <div key={item.id} className={cn(p.className, sticky, "min-w-0")} style={p.style}>
         <FieldWithLabel
           field={cf}
           node={{ id: `inline-${cf.id}`, type: "field", field_id: cf.id, width: 12 }}
@@ -1140,19 +1172,24 @@ function RepeaterEntry({
           </div>
         </div>
         {header}
-        <div className={cn("grid grid-cols-12", repeaterGapClass(tree.gap))}>
-
-          {tree.items.map(renderItem)}
-          {children.length === 0 && (
-            <p className="col-span-12 text-xs text-muted-foreground">
-              Für diesen Repeater sind noch keine Unterfelder definiert.
-            </p>
-          )}
+        <div className={denseUnit ? "overflow-x-auto -mx-1 px-1 pb-1" : undefined}>
+          <div
+            className={cn("grid items-end", !denseUnit && "grid-cols-12", repeaterGapClass(tree.gap))}
+            style={denseUnit ? { gridTemplateColumns: `repeat(12, minmax(${denseUnit}px, 1fr))` } : undefined}
+          >
+            {tree.items.map(renderItem)}
+            {children.length === 0 && (
+              <p className="col-span-12 text-xs text-muted-foreground">
+                Für diesen Repeater sind noch keine Unterfelder definiert.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </EntryScopeCtx.Provider>
     </CalcResultsCtx.Provider>
   );
+
 }
 
 /* ----------------------------------------------------------------
