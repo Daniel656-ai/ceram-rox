@@ -178,7 +178,7 @@ export default function OrderWorkflowTab({
                           {t.measurement_number}
                           {t.origin === "workflow" && (
                             <Badge variant="secondary" className="text-[10px] font-sans">
-                              automatisch
+                              interner Schritt
                             </Badge>
                           )}
                         </span>
