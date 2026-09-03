@@ -9963,6 +9963,13 @@ export type Database = {
           template_id: string
         }[]
       }
+      service_required_services: {
+        Args: { _service_id: string }
+        Returns: {
+          service_id: string
+          service_name: string
+        }[]
+      }
       snapshot_template: { Args: { _template_id: string }; Returns: Json }
       start_mixture_batch:
         | { Args: { _batch_id: string }; Returns: undefined }
