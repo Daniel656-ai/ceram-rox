@@ -1570,6 +1570,35 @@ function MeasurementBlockField({
  * Node renderer
  * ---------------------------------------------------------------- */
 
+/**
+ * Raster für Kindknoten. Enthält der Abschnitt sehr schmale Spalten
+ * (Messwertfelder), erhalten die Rasterspalten eine Mindestbreite und der
+ * Bereich scrollt horizontal, statt alles zusammenzuquetschen. Abschnitte mit
+ * normalen Feldbreiten bleiben unverändert.
+ */
+function NodeGrid({ children: nodes, fields }: { children: LayoutNode[]; fields: FormField[] }) {
+  const unit = useMemo(() => {
+    let u = 0;
+    for (const c of nodes) {
+      if (c.type !== "field" && c.type !== "calculation") continue;
+      const w = Math.max(1, Math.min(12, Math.round(Number((c as any).width ?? 12))));
+      if (w > 4) continue;
+      u = Math.max(u, Math.ceil(84 / w));
+    }
+    return u > 0 ? u : null;
+  }, [nodes]);
+
+  const grid = (
+    <div
+      className={cn("grid gap-3 items-end", !unit && "grid-cols-12")}
+      style={unit ? { gridTemplateColumns: `repeat(12, minmax(${unit}px, 1fr))` } : undefined}
+    >
+      {nodes.map((c) => <RenderNode key={c.id} node={c} fields={fields} />)}
+    </div>
+  );
+  return unit ? <div className="overflow-x-auto -mx-1 px-1 pb-1">{grid}</div> : grid;
+}
+
 function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] }) {
   const tr = useSystemTextRenderer();
   if (node.visible === false) return null;
@@ -1581,9 +1610,7 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
         <div className={cn("border rounded-lg p-4 bg-card", widthCls(n.width), n.highlight && HIGHLIGHT_CLS, n.className)}>
           {n.title && <div className="font-semibold text-sm mb-1"><RichText value={tr(n.title)} /></div>}
           {n.description && <p className="text-xs text-muted-foreground mb-3">{tr(n.description)}</p>}
-          <div className="grid grid-cols-12 gap-3">
-            {n.children.map(c => <RenderNode key={c.id} node={c} fields={fields} />)}
-          </div>
+          <NodeGrid fields={fields}>{n.children}</NodeGrid>
         </div>
       );
     }
@@ -1593,12 +1620,11 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
       return (
         <div className={cn("border rounded p-3", widthCls(n.width), (n as any).highlight && HIGHLIGHT_CLS, n.className)}>
           {(n as any).title && <div className="font-medium text-sm mb-2"><RichText value={tr((n as any).title)} /></div>}
-          <div className="grid grid-cols-12 gap-3">
-            {(n as any).children.map((c: LayoutNode) => <RenderNode key={c.id} node={c} fields={fields} />)}
-          </div>
+          <NodeGrid fields={fields}>{(n as any).children}</NodeGrid>
         </div>
       );
     }
+
     case "tabs": {
       const n = node as TabsNode;
       const first = n.children[0]?.id ?? "";
