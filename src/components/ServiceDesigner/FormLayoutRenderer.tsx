@@ -13,7 +13,7 @@ import {
 
 
 import {
-  normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass,
+  normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass, repeaterUnitMinPx,
   type RepeaterLayoutItem,
 } from "@/lib/repeaterLayout";
 import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
