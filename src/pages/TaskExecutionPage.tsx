@@ -664,7 +664,7 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
         {orderNotes?.trim() ? (
           <div>
             <p className="text-xs text-muted-foreground mb-1">Anmerkung zum Auftrag</p>
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">{orderNotes}</p>
+            <p className="text-sm whitespace-pre-wrap leading-relaxed"><RichText value={orderNotes} /></p>
           </div>
         ) : null}
 
