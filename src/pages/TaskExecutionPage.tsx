@@ -672,10 +672,10 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
             {scalars.map((p) => (
               <div key={p.id} className="text-sm border-b border-border/50 py-1">
-                <span className="text-muted-foreground">{p.parameter_name}: </span>
+                <span className="text-muted-foreground"><RichText value={p.parameter_name} />: </span>
                 <span className="font-medium">
-                  {formatScalar(p.parameter_value)}
-                  {p.unit ? ` ${p.unit}` : ""}
+                  <RichText value={formatScalar(p.parameter_value)} />
+                  {p.unit ? <> <RichText value={p.unit} /></> : ""}
                 </span>
               </div>
             ))}
