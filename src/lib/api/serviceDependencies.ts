@@ -45,6 +45,15 @@ export const serviceDependencies = {
     );
   },
 
+  /** Alle (auch mehrstufig) automatisch erforderlichen internen Schritte einer Dienstleistung. */
+  requiredServices: async (serviceId: string) => {
+    const { data, error } = await dbClient.rpc("service_required_services" as any, {
+      _service_id: serviceId,
+    } as any);
+    if (error) throw error;
+    return (data ?? []) as Array<{ service_id: string; service_name: string }>;
+  },
+
   /** Fehlende abhängige Aufgaben eines Auftrags nachziehen (idempotent). */
   expandOrder: async (orderId: string) => {
     const { data, error } = await dbClient.rpc("expand_order_workflows" as any, {
