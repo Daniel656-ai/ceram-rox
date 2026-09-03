@@ -115,11 +115,34 @@ export default function OrderWorkflowTab({
   return (
     <div className="space-y-4 pt-4">
       <Card>
-        <CardHeader className="py-3">
+        <CardHeader className="py-3 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2">
             <ListChecks className="h-4 w-4" /> Dienstleistungen & Aufgaben ({groups.length})
           </CardTitle>
+          {role === "master" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const created = await api.serviceDependencies.expandOrder(order.id);
+                  toast.success(
+                    created > 0
+                      ? `${created} fehlende Aufgabe(n) ergänzt`
+                      : "Alle erforderlichen Aufgaben vorhanden"
+                  );
+                  queryClient.invalidateQueries({ queryKey: ["order", order.id] });
+                  queryClient.invalidateQueries({ queryKey: ["orders"] });
+                } catch (err: any) {
+                  toast.error("Prüfung fehlgeschlagen", { description: err.message });
+                }
+              }}
+            >
+              Workflow prüfen
+            </Button>
+          )}
         </CardHeader>
+
         <CardContent className="space-y-5">
           {groups.length === 0 && (
             <p className="text-sm text-muted-foreground">Keine Dienstleistungen beauftragt.</p>
