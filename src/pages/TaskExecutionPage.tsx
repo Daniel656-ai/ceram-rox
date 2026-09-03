@@ -688,7 +688,7 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
           const label = String(p.parameter_name).replace(/^repeat:/, "");
           return (
             <div key={p.id}>
-              <p className="text-xs text-muted-foreground mb-1">{label}</p>
+              <p className="text-xs text-muted-foreground mb-1"><RichText value={label} /></p>
               <div className="space-y-2">
                 {rows.map((row, i) => (
                   <div
