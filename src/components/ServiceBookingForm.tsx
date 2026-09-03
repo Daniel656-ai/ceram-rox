@@ -273,7 +273,7 @@ function RepeatableSection({
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-sm font-semibold flex items-center gap-2">
-            {sec.title}
+            <RichText value={sec.title} />
             <Badge variant="outline" className="text-[10px] gap-1">
               <Repeat className="h-3 w-3" /> Wiederholbar
             </Badge>
