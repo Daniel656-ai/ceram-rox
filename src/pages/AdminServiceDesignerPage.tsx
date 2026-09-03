@@ -704,52 +704,14 @@ function StepEditor({ step, onSaved }: { step: ProcessStep; onSaved: () => void 
 
         <div className="flex justify-end"><Button onClick={() => saveMut.mutate()}>Schritt speichern</Button></div>
 
-        <div className="border-t pt-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold flex items-center gap-2"><FormInput className="h-4 w-4" />Formular</h3>
-            {step.form_id && (
-              <Button size="sm" variant="ghost" onClick={() => { if (confirm("Formular-Verknüpfung aufheben? Das Formular selbst bleibt erhalten.")) unlinkFormMut.mutate(); }}>
-                Verknüpfung aufheben
-              </Button>
-            )}
-          </div>
-
-          {!step.form_id && (
-            <div className="space-y-3 rounded border bg-muted/30 p-3">
-              <p className="text-xs text-muted-foreground">
-                Vorhandenes Formular aus dem Service Designer verknüpfen (bevorzugt — vermeidet Duplikate)
-                oder neues, schritt-eigenes Formular anlegen.
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select onValueChange={(v) => v && linkFormMut.mutate(v)}>
-                  <SelectTrigger className="w-72"><SelectValue placeholder="Vorhandenes Formular verknüpfen…" /></SelectTrigger>
-                  <SelectContent>
-                    {linkableForms.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">Keine Formulare vorhanden.</div>}
-                    {linkableForms.map(gf => (
-                      <SelectItem key={gf.id} value={gf.id}>
-                        {gf.name} · v{gf.version}{gf.scope === "global" ? " · global" : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="text-xs text-muted-foreground">oder</span>
-                <Button size="sm" variant="outline" onClick={() => createFormMut.mutate()}>
-                  <Plus className="h-4 w-4 mr-1" />Neues Formular
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step.form_id && form && (
-            <>
-              <div className="text-xs text-muted-foreground mb-2">
-                Verknüpftes Formular: <span className="font-medium">{form.name}</span>
-                {form.scope === "global" && <Badge variant="outline" className="ml-2 text-xs">Global (Service Designer)</Badge>}
-              </div>
-              <FormFieldsEditor form={form} />
-            </>
-          )}
+        {/* Formulare werden bewusst NICHT hier konfiguriert: Sie gehören zur
+            Dienstleistung bzw. zur Formular-Bibliothek (Formulardesigner). */}
+        <div className="border-t pt-4 text-xs text-muted-foreground">
+          Formulare, Felder und Berechnungen werden nicht im Prozessdesigner gepflegt.
+          Ein Dienstleistungsschritt verwendet automatisch die Formulare der referenzierten
+          Dienstleistung (Formular-Bibliothek / Dienstleistungsverwaltung).
         </div>
+
 
         <div className="border-t pt-4">
           <ProcessStepRawMaterials stepId={step.id} />
