@@ -865,3 +865,90 @@ function GlobalFormLibrary() {
     </div>
   );
 }
+
+// ---------------- Dienstleistungs-Zuordnung ----------------
+/**
+ * Ordnet Dienstleistungen dieser Prozessvorlage zu (`measurement_services.process_template_id`).
+ * Beim Buchen einer zugeordneten Dienstleistung erzeugt die Workflow-Engine
+ * automatisch die hier definierten Prozessschritte (Dienstleistungsschritte).
+ */
+function TemplateServiceAssignment({ template }: { template: ProcessTemplate }) {
+  const qc = useQueryClient();
+  const { data: services = [] } = useQuery({
+    queryKey: ["measurement-services", "all"],
+    queryFn: () => api.measurementServices.listAll(),
+  });
+  const { data: steps = [] } = useQuery({
+    queryKey: ["process-steps", template.id],
+    queryFn: () => api.processTemplateSteps.listForTemplate(template.id),
+  });
+
+  const assignMut = useMutation({
+    mutationFn: ({ id, assign }: { id: string; assign: boolean }) =>
+      api.measurementServices.update(id, { process_template_id: assign ? template.id : null }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["measurement-services"] });
+      toast.success("Zuordnung gespeichert");
+    },
+    onError: (e: any) => toast.error(e.message || "Fehler"),
+  });
+
+  const list = (services as any[]).filter((s) => s.active && !s.archived_at);
+  const assigned = list.filter((s) => s.process_template_id === template.id);
+  const serviceSteps = (steps as ProcessStep[]).filter((s) => s.step_kind === "service" && s.service_id);
+
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Diese Vorlage wird verwendet von</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {assigned.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Noch keiner Dienstleistung zugeordnet. Erst dann wird der Ablauf beim Buchen ausgeführt.
+            </p>
+          ) : (
+            assigned.map((s) => (
+              <div key={s.id} className="flex items-center justify-between rounded border px-2 py-1.5">
+                <span className="text-sm">{s.service_name}</span>
+                <Button size="sm" variant="ghost" onClick={() => assignMut.mutate({ id: s.id, assign: false })}>
+                  Entfernen
+                </Button>
+              </div>
+            ))
+          )}
+          <div className="border-t pt-2 text-xs text-muted-foreground">
+            Beim Buchen entstehen automatisch{" "}
+            <span className="font-medium">{serviceSteps.length}</span> Prozessschritt(e):{" "}
+            {serviceSteps.map((s) => s.name).join(" → ") || "—"}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Dienstleistung zuordnen</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-96 overflow-y-auto rounded border p-2 space-y-1">
+            {list.map((s) => {
+              const mine = s.process_template_id === template.id;
+              const other = !!s.process_template_id && !mine;
+              return (
+                <div key={s.id} className="flex items-center gap-2 px-1 py-1 text-sm">
+                  <Switch
+                    checked={mine}
+                    onCheckedChange={(c) => assignMut.mutate({ id: s.id, assign: c })}
+                  />
+                  <span className="flex-1 truncate">{s.service_name}</span>
+                  {other && <Badge variant="outline" className="text-[10px]">andere Vorlage</Badge>}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
