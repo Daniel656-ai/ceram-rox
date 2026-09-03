@@ -579,13 +579,43 @@ function EditServiceDialog({
             </p>
           </div>
           <div>
+            <Label>Automatisch erforderliche Dienstleistungen</Label>
+            <p className="text-xs text-muted-foreground mt-1 mb-2">
+              Wird diese Dienstleistung beauftragt, legt ROX die hier ausgewählten
+              Dienstleistungen automatisch als zusätzliche Aufgaben im Auftrag an –
+              unabhängig von Formular- oder Prozessvorlagen. Bereits vorhandene
+              Aufgaben werden nicht doppelt erzeugt.
+            </p>
+            <div className="max-h-56 overflow-y-auto rounded-md border p-2 space-y-1">
+              {(allServices as any[])
+                .filter((s) => s.id !== service.id)
+                .map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 text-sm py-0.5 cursor-pointer">
+                    <Checkbox
+                      checked={depIds.includes(s.id)}
+                      onCheckedChange={() => toggleDep(s.id)}
+                    />
+                    <span>{s.service_name}</span>
+                    <Badge variant="outline" className="text-[10px]">
+                      {s.category === "pilot_plant" ? "Technikum" : "Labor"}
+                    </Badge>
+                  </label>
+                ))}
+              {(allServices as any[]).length <= 1 && (
+                <p className="text-xs text-muted-foreground">Keine weiteren Dienstleistungen vorhanden.</p>
+              )}
+            </div>
+          </div>
+          <div>
             <Label>Arbeitsanweisung</Label>
             <Textarea value={form.work_instructions ?? ""} onChange={e => setForm((f: any) => ({ ...f, work_instructions: e.target.value }))} rows={3} />
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
-          <Button onClick={() => onSave(service.id, {
+          <Button onClick={async () => {
+            await api.serviceDependencies.setForService(service.id, depIds);
+            await onSave(service.id, {
             service_name: form.service_name,
             category: form.category,
             description: form.description || null,
@@ -594,7 +624,9 @@ function EditServiceDialog({
             ...(canEditRates ? { hourly_rate: form.hourly_rate } : {}),
             work_instructions: form.work_instructions || null,
             process_template_id: form.process_template_id && form.process_template_id !== "__none__" ? form.process_template_id : null,
-          })}>Speichern</Button>
+            });
+          }}>Speichern</Button>
+
         </DialogFooter>
       </DialogContent>
     </Dialog>
