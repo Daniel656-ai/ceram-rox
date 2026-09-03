@@ -190,3 +190,36 @@ export function normalizeRepeaterLayout(
 /** True, wenn tatsächlich ein individuelles Layout gespeichert wurde. */
 export const hasRepeaterLayout = (raw: unknown): boolean =>
   !!raw && typeof raw === "object" && Array.isArray((raw as any).items) && (raw as any).items.length > 0;
+
+/* ----------------------------------------------------------------
+ * Dichte Messwertdarstellung
+ *
+ * Messformulare mit vielen schmalen Spalten sollen NICHT weiter
+ * zusammengequetscht, sondern horizontal scrollbar werden. Dafür wird eine
+ * Mindestbreite je Rasterspalte (1/12) berechnet, sodass jedes Feld noch
+ * lesbar bleibt. Rein fachlich ändert sich nichts – nur die Darstellung.
+ * ---------------------------------------------------------------- */
+
+/** Angestrebte Mindestbreite eines kompakten Messwertfeldes in px. */
+export const DENSE_MIN_FIELD_PX = 84;
+/** Schwelle: ab dieser Feldbreite (in 1/12) gilt ein Feld als "kompakt". */
+const DENSE_WIDTH_THRESHOLD = 4;
+
+const leafWidth = (it: RepeaterLayoutItem): number =>
+  it.type === "break" ? 12 : Math.max(1, Math.min(12, Math.round((it as any).width ?? 12)));
+
+/**
+ * Mindestbreite je Rastereinheit (1/12) oder `null`, wenn das Layout keine
+ * kompakten Spalten enthält (dann bleibt alles unverändert).
+ */
+export function repeaterUnitMinPx(items: RepeaterLayoutItem[]): number | null {
+  let unit = 0;
+  for (const it of items) {
+    if (it.type === "break" || it.type === "spacer") continue;
+    if (it.type === "group") continue;
+    const w = leafWidth(it);
+    if (w > DENSE_WIDTH_THRESHOLD) continue;
+    unit = Math.max(unit, Math.ceil(DENSE_MIN_FIELD_PX / w));
+  }
+  return unit > 0 ? unit : null;
+}
