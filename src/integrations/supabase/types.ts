@@ -7961,6 +7961,51 @@ export type Database = {
           },
         ]
       }
+      service_dependencies: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          order_index: number
+          requires_service_id: string
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          order_index?: number
+          requires_service_id: string
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          order_index?: number
+          requires_service_id?: string
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_dependencies_requires_service_id_fkey"
+            columns: ["requires_service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_dependencies_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_document_templates: {
         Row: {
           content: string
@@ -9485,6 +9530,7 @@ export type Database = {
         Args: { _version_a: string; _version_b: string }
         Returns: Json
       }
+      expand_order_workflows: { Args: { _order_id: string }; Returns: number }
       expand_service_workflow: {
         Args: { _measurement_id: string }
         Returns: number
