@@ -373,8 +373,10 @@ export default function CreateOrderPage() {
     }
     setSubmitting(true);
     try {
-      const projectId = selectedProjectId;
-      if (!projectId) { toast.error(t("orders:select_project_error")); setSubmitting(false); return; }
+      // Projektzuordnung ist nur für projektbezogene Aufträge (F&E) verpflichtend.
+      // Kunden- und Produktionsaufträge dürfen ohne Projekt gespeichert werden.
+      const projectId = selectedProjectId || null;
+      if (!projectId && projectRequired) { toast.error(t("orders:select_project_error")); setSubmitting(false); return; }
 
       const order = await createOrder.mutateAsync({
         project_id: projectId, order_type: orderType as any, created_by: user.id,
