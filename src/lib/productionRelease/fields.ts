@@ -170,7 +170,7 @@ export function coerceFieldValue(key: string, raw: unknown): unknown {
   if (def.type === "date") {
     const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-    const de = s.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
+    const de = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})/);
     if (de) {
       const y = de[3].length === 2 ? `20${de[3]}` : de[3];
       return `${y}-${de[2].padStart(2, "0")}-${de[1].padStart(2, "0")}`;
