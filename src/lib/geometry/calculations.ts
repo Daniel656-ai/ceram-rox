@@ -198,7 +198,14 @@ export interface CellDensityOption {
   key: string;
   label: string;
   zellenzahl: number;
+  /**
+   * Fachlicher Mess-/Prüftyp (z. B. „NOx“, „SOx“). Bewusst NICHT der Name einer
+   * Dienstleistung: eine Umbenennung der Dienstleistung darf die Zuordnung nie
+   * beeinflussen.
+   */
+  messtyp?: string | null;
 }
+
 
 export interface DesignInput {
   /** Geometrie der Probe (gemessen). */
