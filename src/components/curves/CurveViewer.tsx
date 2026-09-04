@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  CartesianGrid, Legend, Line, LineChart, ReferenceArea, ReferenceLine,
+  CartesianGrid, Label as RLabel, Legend, Line, LineChart, ReferenceArea, ReferenceDot, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { Label } from "@/components/ui/label";
@@ -21,8 +21,23 @@ export interface CurveSelection {
   to: number;
 }
 
+/**
+ * Gespeicherter Auswertungspunkt, der im Diagramm eingezeichnet wird.
+ * Der Graph spiegelt damit exakt die gespeicherte Auswertung wider.
+ */
+export interface CurveMarker {
+  x: number;
+  values: { yKey: string; value: number | null }[];
+}
+
 interface Props {
   dataset: MeasurementDataset;
+  /** Eingezeichnete Auswertungspunkte (X-Position + Kurvenschnittpunkte). */
+  markers?: CurveMarker[];
+  /** Werte direkt am Punkt anzeigen. */
+  showMarkerValues?: boolean;
+  /** Container des Diagramms – für Export/Snapshot. */
+  chartRef?: React.RefObject<HTMLDivElement>;
   /** Vorbelegung, z. B. aus der Messfall-Konfiguration. */
   defaults?: Partial<Pick<CurveSelection, "xKey" | "yKeys" | "y2Key">>;
   onSelectionChange?: (selection: CurveSelection) => void;
@@ -49,7 +64,7 @@ const axisLabel = (label: string, unit: string | null) => (unit ? `${label} [${u
  * Achsen, Einheiten und Kurven stammen ausschließlich aus den importierten
  * Kanälen – es sind keine gerätespezifischen Spalten fest hinterlegt.
  */
-export default function CurveViewer({ dataset, defaults, onSelectionChange, height = 340 }: Props) {
+export default function CurveViewer({ dataset, defaults, onSelectionChange, height = 340, markers = [], showMarkerValues = true, chartRef }: Props) {
   const channels = dataset.channels ?? [];
   const numericKeys = channels.map((c) => c.key);
 
@@ -186,7 +201,7 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
         </div>
       </div>
 
-      <div className="rounded border p-2" style={{ height: chartHeight }}>
+      <div ref={chartRef} className="rounded border bg-background p-2" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
@@ -247,6 +262,36 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
             {y2Channel && (
               <Line yAxisId="right" type="monotone" dataKey={y2Channel.key} dot={false} strokeWidth={2}
                 strokeDasharray="4 2" stroke={COLORS[(yKeys.length) % COLORS.length]} isAnimationActive={false} connectNulls />
+            )}
+            {markers.map((m, mi) => (
+              <ReferenceLine
+                key={`marker-${mi}-${m.x}`}
+                yAxisId="left"
+                x={m.x}
+                stroke="hsl(var(--destructive))"
+                strokeWidth={1}
+              >
+                <RLabel value={`${fmt(m.x)}${xChannel?.unit ? ` ${xChannel.unit}` : ""}`} position="top" fontSize={10} />
+              </ReferenceLine>
+            ))}
+            {markers.flatMap((m, mi) =>
+              m.values
+                .filter((v) => v.value != null && (yKeys.includes(v.yKey) || v.yKey === y2Key))
+                .map((v) => (
+                  <ReferenceDot
+                    key={`dot-${mi}-${v.yKey}`}
+                    yAxisId={v.yKey === y2Key ? "right" : "left"}
+                    x={m.x}
+                    y={v.value as number}
+                    r={4}
+                    fill="hsl(var(--destructive))"
+                    stroke="hsl(var(--background))"
+                  >
+                    {showMarkerValues && (
+                      <RLabel value={fmt(v.value as number)} position="right" fontSize={10} />
+                    )}
+                  </ReferenceDot>
+                ))
             )}
             {dragStart != null && dragEnd != null && (
               <ReferenceArea yAxisId="left" x1={dragStart} x2={dragEnd} strokeOpacity={0.3} />

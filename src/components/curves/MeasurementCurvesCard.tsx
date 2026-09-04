@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart } from "lucide-react";
 import CurveViewer from "./CurveViewer";
+import CurvePointEvaluations from "./CurvePointEvaluations";
 
 interface Props {
   measurementId: string;
@@ -49,6 +50,19 @@ export default function MeasurementCurvesCard({ measurementId }: Props) {
     queryFn: () => api.measurementRawData.listEvaluations(currentId),
     enabled: !!currentId,
   });
+
+  /** Gespeicherte Auswertungspunkte im Graphen sichtbar machen. */
+  const markers = useMemo(() => {
+    const byGroup = new Map<string, { x: number; values: { yKey: string; value: number | null }[] }>();
+    for (const e of evaluations) {
+      if (e.kind !== "point") continue;
+      const key = e.group_id ?? e.id;
+      const g = byGroup.get(key) ?? { x: Number(e.x_at ?? e.x_from), values: [] };
+      g.values.push({ yKey: e.y_channel, value: e.value == null ? null : Number(e.value) });
+      byGroup.set(key, g);
+    }
+    return [...byGroup.values()];
+  }, [evaluations]);
 
   if (datasets.length === 0) return null;
 
@@ -94,11 +108,20 @@ export default function MeasurementCurvesCard({ measurementId }: Props) {
               Kontrolle der gespeicherten Rohdaten und Signalzuordnung. Die Auswertung
               erfolgt später im Auftrag durch den Auftragsersteller.
             </p>
-            <CurveViewer dataset={dataset} defaults={defaults} />
+            <CurveViewer dataset={dataset} defaults={defaults} markers={markers} />
+            <CurvePointEvaluations
+              datasetId={currentId}
+              dataset={dataset}
+              xKey={defaults?.xKey ?? dataset.channels[0]?.key ?? ""}
+              yKeys={defaults?.yKeys ?? []}
+              records={evaluations}
+              readOnly
+              onChanged={() => {}}
+            />
           </>
         )}
 
-        {evaluations.length > 0 && (
+        {evaluations.some((e) => e.kind !== "point") && (
           <div className="rounded border">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
@@ -111,7 +134,7 @@ export default function MeasurementCurvesCard({ measurementId }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {evaluations.map((e) => (
+                {evaluations.filter((e) => e.kind !== "point").map((e) => (
                   <tr key={e.id} className="border-t">
                     <td className="p-2">{e.method_label ?? e.method}</td>
                     <td className="p-2">{e.y_channel} über {e.x_channel}</td>

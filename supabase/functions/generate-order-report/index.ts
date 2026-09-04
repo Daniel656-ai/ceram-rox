@@ -219,6 +219,34 @@ Deno.serve(async (req: Request) => {
     }
 
 
+    // ---- Gespeicherte Kurvenauswertungen (nur die für den Bericht markierten Punkte)
+    let curveEvaluations: any[] = [];
+    try {
+      if (measurementIds.length) {
+        const { data: dsRows } = await admin
+          .from("measurement_raw_datasets")
+          .select("id, source_file_name, instrument, measurement_id")
+          .in("measurement_id", measurementIds);
+        const dsIds = (dsRows ?? []).map((d: any) => d.id);
+        if (dsIds.length) {
+          const { data: evRows } = await admin
+            .from("measurement_curve_evaluations")
+            .select("*")
+            .in("dataset_id", dsIds)
+            .eq("include_in_report", true)
+            .order("x_at", { ascending: true });
+          const dsById = new Map((dsRows ?? []).map((d: any) => [d.id, d]));
+          curveEvaluations = (evRows ?? []).map((e: any) => ({
+            ...e,
+            source_file_name: dsById.get(e.dataset_id)?.source_file_name ?? null,
+            instrument: dsById.get(e.dataset_id)?.instrument ?? null,
+          }));
+        }
+      }
+    } catch (_e) {
+      curveEvaluations = [];
+    }
+
     const snapshot: any = {
       order: {
         ...order,
@@ -231,6 +259,7 @@ Deno.serve(async (req: Request) => {
       employee_form: employeeForm,
       measurement_parameter: allParams,
       measurement_result: allResults,
+      curve_evaluation: curveEvaluations,
       workflow: {
         steps: (workflowSteps.data ?? []),
         tasks: (workflowTasks.data ?? []),
@@ -557,6 +586,32 @@ function renderPdf(snapshot: any, layout: any) {
       doc.setFontSize(9).text(`◦ ${r.result_name ?? "—"}: ${r.value ?? "—"} ${r.unit ?? ""}${r.remarks ? " (" + r.remarks + ")" : ""}`,
         marginX + 8, y);
       y += 12;
+    }
+  }
+
+  // Kurvenauswertungen (gespeicherte Auswertung, unabhängig von den Rohdaten)
+  const curveEvals = snapshot.curve_evaluation ?? [];
+  if (curveEvals.length) {
+    y += 10; y = ensureSpace(doc, y, 60);
+    doc.setFontSize(11).setFont(PDF_FONT, "bold").setTextColor(30);
+    doc.text(`Kurvenauswertung (${curveEvals.length})`, marginX, y); y += 14;
+    doc.setFontSize(9).setFont(PDF_FONT, "normal").setTextColor(60);
+    for (const e of curveEvals) {
+      y = ensureSpace(doc, y);
+      const xVal = e.x_at ?? e.x_from;
+      const xTxt = `${e.x_label ?? e.x_channel} ${xVal}${e.x_unit ? " " + e.x_unit : ""}`;
+      doc.text(
+        `• ${e.y_label ?? e.y_channel} bei ${xTxt}: ${e.value ?? "—"}${e.unit ? " " + e.unit : ""}`,
+        marginX + 8, y
+      );
+      y += 11;
+      if (e.comment) {
+        y = ensureSpace(doc, y);
+        doc.setTextColor(120);
+        doc.text(`   ${e.comment}`, marginX + 8, y);
+        doc.setTextColor(60);
+        y += 11;
+      }
     }
   }
 

@@ -1,6 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 import type { MeasurementChannel, MeasurementDataset } from "@/lib/curves/dataset";
+import { ORDER_UPLOADS_BUCKET } from "./serviceFieldTemplates";
 
 /** Messpunkte werden blockweise gespeichert, damit auch lange Messreihen performant bleiben. */
 const CHUNK_SIZE = 2000;
@@ -52,6 +53,19 @@ export interface CurveEvaluationRecord {
   id: string;
   dataset_id: string;
   measurement_result_id: string | null;
+  /** "point" = Wert an definierter Stelle, "range" = Bereichsauswertung. */
+  kind: "point" | "range";
+  /** Ausgewertete X-Position (nur bei kind = "point"). */
+  x_at: number | null;
+  /** Klammert alle Kurvenwerte derselben Auswertung (z. B. 850 °C über 3 Kurven). */
+  group_id: string | null;
+  comment: string | null;
+  include_in_report: boolean;
+  x_label: string | null;
+  y_label: string | null;
+  revision: number;
+  updated_by: string | null;
+  updated_at: string;
   method: string;
   method_label: string | null;
   x_channel: string;
@@ -69,9 +83,20 @@ export interface CurveEvaluationRecord {
   created_at: string;
 }
 
+/** Eine Kurve innerhalb einer Punktauswertung. */
+export interface EvaluationCurveValue {
+  y_channel: string;
+  y_label: string;
+  y_unit: string | null;
+  value: number | null;
+}
+
+
 const DATASETS = "measurement_raw_datasets" as any;
 const SERIES = "measurement_raw_series" as any;
 const EVALUATIONS = "measurement_curve_evaluations" as any;
+/** Diagramm-Momentaufnahmen liegen im bestehenden Auftrags-Bucket. */
+const CHART_BUCKET = ORDER_UPLOADS_BUCKET;
 
 /**
  * `created_by` der Kurventabellen verweist auf `public.profiles.id`, während
@@ -215,22 +240,124 @@ export const measurementRawData = {
 
   remove: (id: string) => run(dbClient.from(DATASETS).delete().eq("id", id)),
 
-  /** Dokumentierte Kurvenauswertungen eines Datensatzes. */
+  /** Dokumentierte Kurvenauswertungen eines Datensatzes (älteste zuerst innerhalb einer Gruppe). */
   listEvaluations: (datasetId: string) =>
     unwrap(
       dbClient.from(EVALUATIONS).select("*").eq("dataset_id", datasetId)
         .order("created_at", { ascending: false })
     ) as unknown as Promise<CurveEvaluationRecord[]>,
 
-  createEvaluation: async (input: Omit<CurveEvaluationRecord, "id" | "created_at">) => {
+  createEvaluation: async (
+    input: Partial<CurveEvaluationRecord> & { dataset_id: string; method: string; x_channel: string; y_channel: string }
+  ) => {
     const profileId = await currentProfileId();
     return (await unwrap(
       dbClient.from(EVALUATIONS)
-        .insert({ ...input, created_by: profileId } as any)
+        .insert({ ...input, created_by: profileId, updated_by: profileId } as any)
         .select()
         .single()
     )) as unknown as CurveEvaluationRecord;
   },
+
+  /**
+   * Speichert einen Auswertungspunkt („Wert an definierter Stelle") für beliebig
+   * viele Kurven. Alle Kurvenwerte einer Stelle teilen sich eine Gruppen-Id,
+   * damit die Zuordnung Punkt ↔ Kurve dauerhaft erhalten bleibt.
+   * Die Rohdaten werden dabei nicht verändert.
+   */
+  saveEvaluationPoint: async (input: {
+    dataset_id: string;
+    method?: string;
+    method_label?: string;
+    x_channel: string;
+    x_label: string;
+    x_unit: string | null;
+    x_at: number;
+    comment?: string | null;
+    include_in_report?: boolean;
+    curves: EvaluationCurveValue[];
+  }): Promise<CurveEvaluationRecord[]> => {
+    if (input.curves.length === 0) throw new Error("Für die Auswertung wurde keine Kurve ausgewählt.");
+    const profileId = await currentProfileId();
+    const groupId =
+      globalThis.crypto?.randomUUID?.() ??
+      `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const rows = input.curves.map((c) => ({
+      dataset_id: input.dataset_id,
+      kind: "point",
+      group_id: groupId,
+      method: input.method ?? "value_at_x",
+      method_label: input.method_label ?? "Wert an definierter Stelle",
+      x_channel: input.x_channel,
+      x_label: input.x_label,
+      x_unit: input.x_unit,
+      x_at: input.x_at,
+      x_from: input.x_at,
+      x_to: input.x_at,
+      y_channel: c.y_channel,
+      y_label: c.y_label,
+      y_unit: c.y_unit,
+      value: c.value,
+      unit: c.y_unit,
+      formula: "y = y(x) linear interpoliert",
+      details: [{ label: "Stelle (X)", value: String(input.x_at) }],
+      result_label: `${c.y_label} bei ${input.x_at}${input.x_unit ? ` ${input.x_unit}` : ""}`,
+      comment: input.comment ?? null,
+      include_in_report: input.include_in_report ?? true,
+      created_by: profileId,
+      updated_by: profileId,
+    }));
+    return (await unwrap(
+      dbClient.from(EVALUATIONS).insert(rows as any).select()
+    )) as unknown as CurveEvaluationRecord[];
+  },
+
+  updateEvaluation: async (
+    id: string,
+    patch: Partial<Pick<CurveEvaluationRecord, "comment" | "include_in_report" | "result_label" | "value">>
+  ) => {
+    const profileId = await currentProfileId();
+    await run(
+      dbClient.from(EVALUATIONS).update({ ...patch, updated_by: profileId } as any).eq("id", id)
+    );
+  },
+
+  /** Aktualisiert alle Kurvenwerte eines Auswertungspunktes gemeinsam. */
+  updateEvaluationGroup: async (
+    groupId: string,
+    patch: Partial<Pick<CurveEvaluationRecord, "comment" | "include_in_report">>
+  ) => {
+    const profileId = await currentProfileId();
+    await run(
+      dbClient.from(EVALUATIONS).update({ ...patch, updated_by: profileId } as any).eq("group_id", groupId)
+    );
+  },
+
+  deleteEvaluation: (id: string) => run(dbClient.from(EVALUATIONS).delete().eq("id", id)),
+
+  deleteEvaluationGroup: (groupId: string) =>
+    run(dbClient.from(EVALUATIONS).delete().eq("group_id", groupId)),
+
+  /** Legt das Auswertungsdiagramm eines Datensatzes ab (nur Darstellung, keine Rohdaten). */
+  saveChartSnapshot: async (datasetId: string, png: Blob) => {
+    const path = `curve-charts/${datasetId}.png`;
+    const { error } = await dbClient.storage
+      .from(CHART_BUCKET)
+      .upload(path, png, { upsert: true, contentType: "image/png" });
+    if (error) throw error;
+    await run(
+      dbClient.from(DATASETS)
+        .update({ evaluation_chart_path: path, evaluation_chart_updated_at: new Date().toISOString() } as any)
+        .eq("id", datasetId)
+    );
+    return path;
+  },
+
+  chartSnapshotUrl: async (path: string, expiresIn = 600) => {
+    const { data } = await dbClient.storage.from(CHART_BUCKET).createSignedUrl(path, expiresIn);
+    return data?.signedUrl ?? null;
+  },
+
 
   /** Verknüpft eine Auswertung mit dem daraus erzeugten offiziellen Ergebnis. */
   linkResult: (evaluationId: string, measurementResultId: string) =>

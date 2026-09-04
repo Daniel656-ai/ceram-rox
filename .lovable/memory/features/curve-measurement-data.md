@@ -31,3 +31,20 @@ Datei → Importer → `MeasurementDataset` (Kanäle + Messpunkte) → Kurve →
 
 - Keine zweite Ergebnisdatenbank: berechnete Werte gehen als `measurement_results` mit `is_official` ein; Änderungen laufen über die bestehende Korrekturlogik.
 - Keine fest verdrahteten Spaltenlisten im Frontend.
+
+## Auswertungsebenen (strikt getrennt)
+
+1. **Rohdaten** – `measurement_raw_datasets` + `measurement_raw_series`, unveränderlich, CSV-Export.
+2. **Gespeicherte Auswertung** – `measurement_curve_evaluations` mit `kind` (`point`/`range`),
+   `x_at`, `group_id` (klammert alle Kurvenwerte einer Stelle), `comment`,
+   `include_in_report`, `x_label`/`y_label`, `revision`, `updated_by`/`updated_at`
+   (Trigger `trg_mce_touch`). Beliebig viele Punkte, jederzeit erweiterbar.
+3. **Ergebnisbericht** – `generate-order-report` liest die als `include_in_report`
+   markierten Auswertungen (`snapshot.curve_evaluation`).
+
+- `CurvePointEvaluations.tsx`: „Wert an definierter Stelle" für mehrere Kurven gleichzeitig,
+  Interpolation über `interpolateAt`, Kommentar, Bericht-Schalter, Löschen.
+- `CurveViewer` zeichnet gespeicherte Punkte über `markers` (ReferenceLine + ReferenceDot).
+- `src/lib/curves/export.ts`: `rawDataCsv`, `evaluationCsv`, `exportEvaluationPdf` (Tabelle + Graph).
+- X-Achse bleibt generisch (keine Temperatur-Fixierung); weitere Methoden kommen über
+  `src/lib/curves/evaluations.ts` dazu.
