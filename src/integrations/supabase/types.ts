@@ -9499,6 +9499,10 @@ export type Database = {
         }[]
       }
       claim_measurement: { Args: { _measurement_id: string }; Returns: string }
+      clone_global_form: {
+        Args: { _new_name: string; _source_form_id: string }
+        Returns: string
+      }
       clone_template_as_new_version: {
         Args: { _template_id: string }
         Returns: string
@@ -10043,6 +10047,10 @@ export type Database = {
         Returns: string
       }
       release_mixture_batch: { Args: { _batch_id: string }; Returns: undefined }
+      rename_form_definition: {
+        Args: { _form_id: string; _new_name: string }
+        Returns: undefined
+      }
       resolve_workflow_template: {
         Args: { p_order_id: string }
         Returns: {
