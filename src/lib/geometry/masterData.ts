@@ -16,6 +16,9 @@ import {
 
 export const CELL_DENSITY_LIST_KEY = "zelligkeiten";
 export const CELL_DENSITY_ATTRIBUTE = "zellenzahl";
+/** Fachlicher Mess-/Prüftyp der Zelligkeit (NOx, SOx …) – nie ein Dienstleistungsname. */
+export const CELL_DENSITY_MEASUREMENT_TYPE_ATTRIBUTE = "messtyp";
+
 
 export const REACTOR_LIST_KEY = "reaktorgeometrien";
 export const REACTOR_WIDTH_ATTRIBUTE = "breite_mm";
