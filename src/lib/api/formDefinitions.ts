@@ -41,4 +41,27 @@ export const formDefinitions = {
         .eq("id", id)
     ),
   remove: (id: string) => run(dbClient.from("form_definitions" as any).delete().eq("id", id)),
+
+  /**
+   * Vollständige, unabhängige Kopie eines (globalen) Formulars inkl. Feldern,
+   * Berechnungen, Regeln, Rollenansichten, Berechtigungen und Layout.
+   * Alle Unterobjekte erhalten neue IDs; interne Referenzen werden umgeschrieben.
+   */
+  clone: async (sourceId: string, newName: string): Promise<string> => {
+    const { data, error } = await dbClient.rpc("clone_global_form" as any, {
+      _source_form_id: sourceId,
+      _new_name: newName,
+    });
+    if (error) throw error;
+    return data as unknown as string;
+  },
+
+  /** Bezeichnung ändern – technische Identität und Verknüpfungen bleiben erhalten. */
+  rename: async (id: string, newName: string): Promise<void> => {
+    const { error } = await dbClient.rpc("rename_form_definition" as any, {
+      _form_id: id,
+      _new_name: newName,
+    });
+    if (error) throw error;
+  },
 };
