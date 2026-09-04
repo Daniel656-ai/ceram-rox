@@ -176,21 +176,30 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
       <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal">
-            {multiple
-              ? selectedIds.length > 0
-                ? `${selectedIds.length} ${selectedIds.length === 1 ? "Probe" : "Proben"} ausgewählt`
-                : "Proben auswählen"
-              : selected
-                ? `${selected.sample_number} – ${selected.sample_name}`
-                : placeholder}
+          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal h-auto min-h-9 text-left">
+            <span className="truncate">
+              {multiple
+                ? selectedIds.length > 0
+                  ? `${selectedIds.length} ${selectedIds.length === 1 ? "Probe" : "Proben"} ausgewählt`
+                  : "Proben auswählen"
+                : selected
+                  ? `${selected.sample_number} – ${selected.sample_name}`
+                  : placeholder}
+            </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0 z-[60]"
+          align="start"
+          side="bottom"
+          sideOffset={4}
+          collisionPadding={8}
+          avoidCollisions={false}
+        >
           <Command>
             <CommandInput placeholder={t("scan_placeholder")} />
-            <CommandList>
+            <CommandList className="max-h-64 overflow-y-auto">
               {canCreate && (
                 <CommandGroup forceMount>
                   <CommandItem
@@ -218,10 +227,11 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
                       key={s.id}
                       value={`${s.sample_number} ${s.sample_name} ${proj?.project_number || ""}`}
                       onSelect={() => pick(s.id)}
+                      className={cn(isSelected && "bg-accent/50")}
                     >
-                      <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
-                      <div className="flex flex-col">
-                        <span className="font-medium">
+                      <Check className={cn("mr-2 h-4 w-4 shrink-0", isSelected ? "opacity-100 text-primary" : "opacity-0")} />
+                      <div className="flex flex-col min-w-0">
+                        <span className={cn("font-medium truncate", isSelected && "text-primary")}>
                           {s.sample_number} – {s.sample_name}
                         </span>
                       </div>
@@ -230,28 +240,40 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
                 })}
               </CommandGroup>
             </CommandList>
-
-
           </Command>
         </PopoverContent>
       </Popover>
 
       {multiple && selectedSamples.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {selectedSamples.map((s) => (
-            <Badge key={s.id} variant="secondary" className="gap-1 py-1 pl-2 pr-1">
-              <span className="font-mono text-xs">{s.sample_number}</span>
-              <span className="text-xs">– {s.sample_name}</span>
-              <button
-                type="button"
-                aria-label={`${s.sample_number} entfernen`}
-                onClick={() => removeSelected(s.id)}
-                className="ml-1 rounded-sm p-0.5 hover:bg-muted"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
+        <div className="rounded-md border bg-muted/30">
+          <div className="flex items-center justify-between gap-2 border-b px-2.5 py-1.5">
+            <span className="text-xs font-medium text-muted-foreground">
+              {selectedIds.length} {selectedIds.length === 1 ? "Probe" : "Proben"} ausgewählt
+            </span>
+            <button
+              type="button"
+              onClick={() => onValuesChange?.([])}
+              className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+            >
+              Alle entfernen
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-28 p-2">
+            {selectedSamples.map((s) => (
+              <Badge key={s.id} variant="secondary" className="gap-1 py-1 pl-2 pr-1 max-w-full">
+                <span className="font-mono text-xs shrink-0">{s.sample_number}</span>
+                <span className="text-xs truncate max-w-40">– {s.sample_name}</span>
+                <button
+                  type="button"
+                  aria-label={`${s.sample_number} entfernen`}
+                  onClick={() => removeSelected(s.id)}
+                  className="ml-1 rounded-sm p-0.5 hover:bg-muted shrink-0"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
       </div>
