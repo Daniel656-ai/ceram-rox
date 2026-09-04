@@ -1,6 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 import type { MeasurementChannel, MeasurementDataset } from "@/lib/curves/dataset";
+import { ORDER_UPLOADS_BUCKET } from "./serviceFieldTemplates";
 
 /** Messpunkte werden blockweise gespeichert, damit auch lange Messreihen performant bleiben. */
 const CHUNK_SIZE = 2000;
@@ -94,6 +95,8 @@ export interface EvaluationCurveValue {
 const DATASETS = "measurement_raw_datasets" as any;
 const SERIES = "measurement_raw_series" as any;
 const EVALUATIONS = "measurement_curve_evaluations" as any;
+/** Diagramm-Momentaufnahmen liegen im bestehenden Auftrags-Bucket. */
+const CHART_BUCKET = ORDER_UPLOADS_BUCKET;
 
 /**
  * `created_by` der Kurventabellen verweist auf `public.profiles.id`, während
