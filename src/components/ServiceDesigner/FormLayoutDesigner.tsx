@@ -595,6 +595,30 @@ function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canMana
         <Badge variant="outline" className="text-[10px]">{typeLabel}</Badge>
         <span className="text-xs font-medium truncate flex-1">{fieldLabel}</span>
         {node.width && node.width !== 12 && <Badge variant="secondary" className="text-[10px]">{WIDTH_OPTS.find(w => w.v === node.width)?.l}</Badge>}
+        {/* Präzises Einfügen ohne Drag&Drop: legt garantiert im selben
+            Container direkt unterhalb dieses Knotens an. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" disabled={!canManage}
+              title="Direkt darunter einfügen" onClick={(e) => e.stopPropagation()}>
+              <Plus className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={() => insertBelow("columns", { columnCount: 2, ratios: [1, 1] })}>
+              Zeile darunter (2 Spalten)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => insertBelow("columns", { columnCount: 3, ratios: [1, 1, 1] })}>
+              Zeile darunter (3 Spalten)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => insertBelow("columns", { columnCount: MAX_COLUMNS, ratios: Array.from({ length: MAX_COLUMNS }, () => 1) })}>
+              Zeile darunter ({MAX_COLUMNS} Spalten)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => insertBelow("section")}>Abschnitt darunter</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => insertBelow("divider")}>Trennlinie darunter</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
       </div>
 
       {isContainer && !collapsed && (
