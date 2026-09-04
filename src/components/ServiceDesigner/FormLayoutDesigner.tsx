@@ -263,7 +263,7 @@ export default function FormLayoutDesigner({
 
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
+    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
       {/* Vollhöhen-Arbeitsbereich: Seitenpanels scrollen eigenständig, die
           Arbeitsfläche in der Mitte bekommt die gesamte Restbreite/-höhe. */}
       <div className="flex gap-3 items-stretch h-[calc(100vh-13rem)] min-h-[560px]">
