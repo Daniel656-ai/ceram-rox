@@ -814,6 +814,41 @@ function GlobalFormLibrary() {
     onError: (e: any) => toast.error(e.message || "Löschen fehlgeschlagen"),
   });
 
+  /** Kopieren / Umbenennen – Dialogzustand */
+  const [nameDialog, setNameDialog] = useState<
+    { mode: "copy" | "rename"; form: FormDefinition; value: string } | null
+  >(null);
+
+  const cloneMut = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => api.formDefinitions.clone(id, name),
+    onSuccess: (newId) => {
+      toast.success("Kopie erstellt");
+      setNameDialog(null);
+      qc.invalidateQueries({ queryKey: ["form-definitions"] });
+      setSelectedFormId(newId);
+    },
+    onError: (e: any) => toast.error(e.message || "Kopieren fehlgeschlagen"),
+  });
+
+  const renameMut = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => api.formDefinitions.rename(id, name),
+    onSuccess: () => {
+      toast.success("Umbenannt");
+      setNameDialog(null);
+      qc.invalidateQueries({ queryKey: ["form-definitions"] });
+    },
+    onError: (e: any) => toast.error(e.message || "Umbenennen fehlgeschlagen"),
+  });
+
+  const dialogBusy = cloneMut.isPending || renameMut.isPending;
+  const submitNameDialog = () => {
+    if (!nameDialog) return;
+    const name = nameDialog.value.trim();
+    if (!name) return;
+    if (nameDialog.mode === "copy") cloneMut.mutate({ id: nameDialog.form.id, name });
+    else renameMut.mutate({ id: nameDialog.form.id, name });
+  };
+
   const selectedForm = forms.find(f => f.id === selectedFormId) ?? null;
 
   return (
@@ -838,12 +873,54 @@ function GlobalFormLibrary() {
                 <span className="flex-1 text-sm truncate">{f.name}</span>
                 <Badge variant="outline" className="text-xs">{f.scope === "global" ? "global" : "Vorlage"}</Badge>
                 <Badge variant="outline" className="text-xs">v{f.version}</Badge>
-                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); if (confirm(`Formular „${f.name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
+                <Button
+                  size="icon" variant="ghost" className="h-6 w-6" title="Kopieren"
+                  onClick={(e) => { e.stopPropagation(); setNameDialog({ mode: "copy", form: f, value: `${f.name} (Kopie)` }); }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="icon" variant="ghost" className="h-6 w-6" title="Umbenennen"
+                  onClick={(e) => { e.stopPropagation(); setNameDialog({ mode: "rename", form: f, value: f.name }); }}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" title="Löschen" onClick={(e) => { e.stopPropagation(); if (confirm(`Formular „${f.name}" löschen?`)) removeMut.mutate(f.id); }}><Trash2 className="h-3 w-3" /></Button>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!nameDialog} onOpenChange={(o) => { if (!o && !dialogBusy) setNameDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{nameDialog?.mode === "copy" ? "Formular kopieren" : "Formular umbenennen"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Bezeichnung</Label>
+            <Input
+              autoFocus
+              value={nameDialog?.value ?? ""}
+              onChange={(e) => setNameDialog(d => d ? { ...d, value: e.target.value } : d)}
+              onKeyDown={(e) => { if (e.key === "Enter") submitNameDialog(); }}
+              placeholder="z. B. SOx Messdienstleisterformular"
+            />
+            {nameDialog?.mode === "copy" && (
+              <p className="text-xs text-muted-foreground">
+                Es wird eine vollständige, unabhängige Kopie mit allen Feldern, Berechnungen,
+                Regeln, Rollenansichten und dem Layout erstellt. Das Original bleibt unverändert.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNameDialog(null)} disabled={dialogBusy}>Abbrechen</Button>
+            <Button onClick={submitNameDialog} disabled={dialogBusy || !nameDialog?.value.trim()}>
+              {nameDialog?.mode === "copy" ? "Kopie erstellen" : "Speichern"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="col-span-8">
         {selectedForm ? (
