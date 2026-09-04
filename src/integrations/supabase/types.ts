@@ -9684,11 +9684,22 @@ export type Database = {
         Args: { _portfolio_id: string }
         Returns: Json
       }
+      get_portfolio_ffg_diagnostics: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          detail: string
+          hours: number
+          issue: string
+          reference: string
+          severity: string
+        }[]
+      }
       get_portfolio_ffg_summary: {
-        Args: { _portfolio_id: string }
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
         Returns: {
           category_id: string
           category_name: string
+          entries_count: number
           hours: number
           work_package_code: string
           work_package_id: string
@@ -9722,6 +9733,21 @@ export type Database = {
           short_code: string
         }[]
       }
+      get_portfolio_hours_by_person_project: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          entries_count: number
+          hours: number
+          person_id: string
+          person_name: string
+          project_id: string
+          project_name: string
+          project_number: string
+          short_code: string
+          work_package_id: string
+          work_package_name: string
+        }[]
+      }
       get_portfolio_hours_by_project: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
         Returns: {
@@ -9736,6 +9762,7 @@ export type Database = {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
         Returns: {
           minutes: number
+          task_code: string
           task_id: string
           task_name: string
           work_package_id: string
@@ -9917,6 +9944,23 @@ export type Database = {
       order_has_official_result: {
         Args: { _order_id: string }
         Returns: boolean
+      }
+      portfolio_time_allocation: {
+        Args: { _end?: string; _portfolio_id: string; _start?: string }
+        Returns: {
+          category_id: string
+          entry_date: string
+          entry_id: string
+          match_source: string
+          minutes: number
+          person_id: string
+          portfolio_task_id: string
+          portfolio_work_package_id: string
+          project_id: string
+          project_name: string
+          project_number: string
+          project_work_package_id: string
+        }[]
       }
       pp_complete_block: {
         Args: { _block_id: string; _data?: Json; _notes?: string }
