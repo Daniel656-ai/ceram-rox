@@ -1877,63 +1877,93 @@ export type Database = {
       }
       measurement_curve_evaluations: {
         Row: {
+          comment: string | null
           created_at: string
           created_by: string | null
           dataset_id: string
           details: Json
           formula: string | null
+          group_id: string | null
           id: string
+          include_in_report: boolean
+          kind: string
           measurement_result_id: string | null
           method: string
           method_label: string | null
           result_label: string | null
+          revision: number
           unit: string | null
+          updated_at: string
+          updated_by: string | null
           value: number | null
+          x_at: number | null
           x_channel: string
           x_from: number
+          x_label: string | null
           x_to: number
           x_unit: string | null
           y_channel: string
+          y_label: string | null
           y_unit: string | null
         }
         Insert: {
+          comment?: string | null
           created_at?: string
           created_by?: string | null
           dataset_id: string
           details?: Json
           formula?: string | null
+          group_id?: string | null
           id?: string
+          include_in_report?: boolean
+          kind?: string
           measurement_result_id?: string | null
           method: string
           method_label?: string | null
           result_label?: string | null
+          revision?: number
           unit?: string | null
+          updated_at?: string
+          updated_by?: string | null
           value?: number | null
+          x_at?: number | null
           x_channel: string
           x_from: number
+          x_label?: string | null
           x_to: number
           x_unit?: string | null
           y_channel: string
+          y_label?: string | null
           y_unit?: string | null
         }
         Update: {
+          comment?: string | null
           created_at?: string
           created_by?: string | null
           dataset_id?: string
           details?: Json
           formula?: string | null
+          group_id?: string | null
           id?: string
+          include_in_report?: boolean
+          kind?: string
           measurement_result_id?: string | null
           method?: string
           method_label?: string | null
           result_label?: string | null
+          revision?: number
           unit?: string | null
+          updated_at?: string
+          updated_by?: string | null
           value?: number | null
+          x_at?: number | null
           x_channel?: string
           x_from?: number
+          x_label?: string | null
           x_to?: number
           x_unit?: string | null
           y_channel?: string
+          y_label?: string | null
           y_unit?: string | null
         }
         Relationships: [
@@ -1956,6 +1986,13 @@ export type Database = {
             columns: ["measurement_result_id"]
             isOneToOne: false
             referencedRelation: "measurement_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_curve_evaluations_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2161,6 +2198,8 @@ export type Database = {
           channels: Json
           created_at: string
           created_by: string | null
+          evaluation_chart_path: string | null
+          evaluation_chart_updated_at: string | null
           id: string
           importer_id: string
           instance_key: string | null
@@ -2183,6 +2222,8 @@ export type Database = {
           channels?: Json
           created_at?: string
           created_by?: string | null
+          evaluation_chart_path?: string | null
+          evaluation_chart_updated_at?: string | null
           id?: string
           importer_id: string
           instance_key?: string | null
@@ -2205,6 +2246,8 @@ export type Database = {
           channels?: Json
           created_at?: string
           created_by?: string | null
+          evaluation_chart_path?: string | null
+          evaluation_chart_updated_at?: string | null
           id?: string
           importer_id?: string
           instance_key?: string | null
