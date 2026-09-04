@@ -707,18 +707,26 @@ export default function CreateOrderPage() {
       {mode === "single" ? (
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
-          <CardHeader><CardTitle className="text-base">{t("common:project")}</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {t("common:project")} {projectRequired ? "*" : <span className="text-muted-foreground font-normal">({t("orders:project_optional")})</span>}
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             <div>
               <Label>{t("orders:select_project")}</Label>
-              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+              <Select value={selectedProjectId || "__none__"} onValueChange={(v) => setSelectedProjectId(v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder={t("orders:choose_project")} /></SelectTrigger>
                 <SelectContent>
+                  {!projectRequired && <SelectItem value="__none__">{t("orders:no_project")}</SelectItem>}
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.project_number} {p.project_name ? `– ${p.project_name}` : ""}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {!projectRequired && (
+                <p className="text-xs text-muted-foreground mt-1">{t("orders:project_optional_hint")}</p>
+              )}
             </div>
           </CardContent>
         </Card>
