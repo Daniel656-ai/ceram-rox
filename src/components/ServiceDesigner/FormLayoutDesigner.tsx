@@ -3,9 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext, PointerSensor, useSensor, useSensors, useDroppable, useDraggable,
-  DragOverlay, closestCenter,
-  type DragStartEvent, type DragEndEvent,
+  DragOverlay, closestCenter, pointerWithin, rectIntersection,
+  type DragStartEvent, type DragEndEvent, type CollisionDetection,
 } from "@dnd-kit/core";
+
 import { api } from "@/lib/api";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import { type FormField } from "@/lib/api/formFields";
