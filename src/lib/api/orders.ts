@@ -27,7 +27,7 @@ export const orders = {
     ),
 
   create: (order: {
-    project_id: string;
+    project_id: string | null;
     order_type: OrderType;
     created_by: string;
     due_date?: string;

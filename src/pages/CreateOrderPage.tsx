@@ -359,6 +359,11 @@ export default function CreateOrderPage() {
     setMeasurementFormValues((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [key]: value } }));
   };
 
+  // Projektbezogene Aufträge (F&E) benötigen ein Projekt; Kunden- und
+  // Produktionsaufträge nicht. Keine Sonderlogik an anderer Stelle.
+  const PROJECT_OPTIONAL_ORDER_TYPES = ["customer", "production"];
+  const projectRequired = !!orderType && !PROJECT_OPTIONAL_ORDER_TYPES.includes(orderType);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const isPurePP = orderKind === "pilot_plant";
@@ -373,8 +378,10 @@ export default function CreateOrderPage() {
     }
     setSubmitting(true);
     try {
-      const projectId = selectedProjectId;
-      if (!projectId) { toast.error(t("orders:select_project_error")); setSubmitting(false); return; }
+      // Projektzuordnung ist nur für projektbezogene Aufträge (F&E) verpflichtend.
+      // Kunden- und Produktionsaufträge dürfen ohne Projekt gespeichert werden.
+      const projectId = selectedProjectId || null;
+      if (!projectId && projectRequired) { toast.error(t("orders:select_project_error")); setSubmitting(false); return; }
 
       const order = await createOrder.mutateAsync({
         project_id: projectId, order_type: orderType as any, created_by: user.id,
@@ -700,18 +707,26 @@ export default function CreateOrderPage() {
       {mode === "single" ? (
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
-          <CardHeader><CardTitle className="text-base">{t("common:project")}</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">
+              {t("common:project")} {projectRequired ? "*" : <span className="text-muted-foreground font-normal">({t("orders:project_optional")})</span>}
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             <div>
               <Label>{t("orders:select_project")}</Label>
-              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+              <Select value={selectedProjectId || "__none__"} onValueChange={(v) => setSelectedProjectId(v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder={t("orders:choose_project")} /></SelectTrigger>
                 <SelectContent>
+                  {!projectRequired && <SelectItem value="__none__">{t("orders:no_project")}</SelectItem>}
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.project_number} {p.project_name ? `– ${p.project_name}` : ""}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {!projectRequired && (
+                <p className="text-xs text-muted-foreground mt-1">{t("orders:project_optional_hint")}</p>
+              )}
             </div>
           </CardContent>
         </Card>

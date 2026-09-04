@@ -6,13 +6,16 @@ import { de } from "date-fns/locale";
 import { expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { columnHeader, resultCell, type ResultParamColumn } from "@/lib/resultSchema";
 
+/**
+ * Kompakter, fixierter Identifikationsbereich. Breiten orientieren sich am
+ * tatsächlichen Inhalt (Nummern, Kurztexte) – keine überbreiten Spalten.
+ */
 const IDENT_COLUMNS = [
-  { key: "sample", label: "Probe", width: 150 },
-  { key: "order", label: "Auftrag", width: 130 },
-  { key: "service", label: "Dienstleistung", width: 160 },
-  { key: "analysis", label: "Analyse", width: 130 },
-  { key: "instance", label: "Messung", width: 150 },
-  { key: "date", label: "Datum", width: 100 },
+  { key: "sample", label: "Probe", width: 116 },
+  { key: "order", label: "Auftrag", width: 92 },
+  { key: "service", label: "Dienstleistung", width: 132 },
+  { key: "analysis", label: "Analyse", width: 96 },
+  { key: "date", label: "Datum", width: 84 },
 ] as const;
 
 const OFFSETS = IDENT_COLUMNS.reduce<number[]>((acc, c, i) => {
@@ -30,7 +33,7 @@ function fmtValue(v: number | null, text: string | null, present: boolean) {
  * Ergebnismatrix: eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte.
  * Die Spaltenstruktur stammt aus der stabilen Ergebnisdefinition und bleibt
  * unabhängig von Filtern erhalten. Identifikationsspalten bleiben beim
- * horizontalen Scrollen fixiert.
+ * horizontalen Scrollen fixiert und bilden eine eigene, deckende Ebene.
  */
 export default function ResultsMatrixTable({
   records,
@@ -58,14 +61,14 @@ export default function ResultsMatrixTable({
 
   return (
     <div className="relative w-full overflow-auto max-h-[70vh] border rounded-md">
-      <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 140 }}>
-        <thead className="sticky top-0 z-30">
-          <tr className="bg-muted">
+      <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 130 }}>
+        <thead>
+          <tr>
             {IDENT_COLUMNS.map((c, i) => (
               <th
                 key={c.key}
-                className="sticky bg-muted text-left font-medium px-3 py-2 border-b border-r whitespace-nowrap z-20"
-                style={{ left: OFFSETS[i], width: c.width, minWidth: c.width }}
+                className="sticky top-0 bg-muted text-left font-medium px-2 py-2 border-b border-r whitespace-nowrap z-40"
+                style={{ left: OFFSETS[i], width: c.width, minWidth: c.width, maxWidth: c.width }}
               >
                 {c.label}
               </th>
@@ -73,8 +76,8 @@ export default function ResultsMatrixTable({
             {columns.map((col) => (
               <th
                 key={col.key}
-                className="bg-muted text-right font-medium px-3 py-2 border-b align-bottom whitespace-normal break-words leading-tight"
-                style={{ minWidth: 130, maxWidth: 220 }}
+                className="sticky top-0 bg-muted text-right font-medium px-3 py-2 border-b align-bottom whitespace-normal break-words leading-tight z-30"
+                style={{ minWidth: 120, maxWidth: 220 }}
                 title={toUnicode(columnHeader(col))}
               >
                 <RichText value={columnHeader(col)} />
@@ -83,73 +86,68 @@ export default function ResultsMatrixTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={`${r.measurementId}:${r.instanceKey ?? ""}`} className="odd:bg-background even:bg-muted/20 hover:bg-accent/30">
-              <td
-                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top z-10"
-                style={{ left: OFFSETS[0], width: IDENT_COLUMNS[0].width }}
-              >
-                <span className="font-mono text-xs">{r.sampleNumber || "–"}</span>
-                {r.sampleName ? (
-                  <div className="text-[11px] text-muted-foreground">{r.sampleName}</div>
-                ) : null}
-                {r.originalSampleNumber ? (
-                  <div className="text-[11px] text-muted-foreground">
-                    Ersatzprobe für {r.originalSampleNumber}
-                  </div>
-                ) : null}
-              </td>
-              <td
-                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top font-mono text-xs z-10"
-                style={{ left: OFFSETS[1], width: IDENT_COLUMNS[1].width }}
-              >
-                {r.orderNumber}
-              </td>
-              <td
-                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top z-10"
-                style={{ left: OFFSETS[2], width: IDENT_COLUMNS[2].width }}
-              >
-                {r.serviceName}
-              </td>
-              <td
-                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top font-mono text-xs z-10"
-                style={{ left: OFFSETS[3], width: IDENT_COLUMNS[3].width }}
-              >
-                {r.measurementNumber}
-              </td>
-              <td
-                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top z-10"
-                style={{ left: OFFSETS[4], width: IDENT_COLUMNS[4].width }}
-              >
-                {r.instanceLabel ? (
-                  <>
-                    <span>{r.instanceLabel}</span>
-                    {r.instanceContext && Object.keys(r.instanceContext).length > 0 && (
-                      <div className="text-[11px] text-muted-foreground">
-                        {Object.values(r.instanceContext).filter(Boolean).join(" · ")}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">–</span>
-                )}
-              </td>
-              <td
-                className="sticky bg-inherit px-3 py-1.5 border-b border-r align-top whitespace-nowrap z-10"
-                style={{ left: OFFSETS[5], width: IDENT_COLUMNS[5].width }}
-              >
-                {r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "–"}
-              </td>
-              {columns.map((col) => {
-                const cell = resultCell(r, col.key);
-                return (
-                  <td key={col.key} className="px-3 py-1.5 border-b text-right tabular-nums font-mono">
-                    {fmtValue(cell.value, cell.text, cell.present)}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+          {rows.map((r, rowIdx) => {
+            // Deckender Hintergrund: der fixierte Bereich darf niemals die
+            // darunter durchscrollenden Ergebniszellen durchscheinen lassen.
+            const rowBg = rowIdx % 2 === 0 ? "bg-background" : "bg-muted/40";
+            const stickyBg = rowIdx % 2 === 0 ? "bg-background" : "bg-secondary";
+            const stickyCell = `sticky ${stickyBg} px-2 py-1.5 border-b border-r align-top z-20`;
+            return (
+              <tr key={`${r.measurementId}:${r.instanceKey ?? ""}`} className={rowBg}>
+                <td
+                  className={stickyCell}
+                  style={{ left: OFFSETS[0], width: IDENT_COLUMNS[0].width, maxWidth: IDENT_COLUMNS[0].width }}
+                >
+                  <span className="font-mono text-xs">{r.sampleNumber || "–"}</span>
+                  {r.sampleName ? (
+                    <div className="text-[11px] text-muted-foreground truncate" title={r.sampleName}>{r.sampleName}</div>
+                  ) : null}
+                  {r.originalSampleNumber ? (
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      Ersatzprobe für {r.originalSampleNumber}
+                    </div>
+                  ) : null}
+                </td>
+                <td
+                  className={`${stickyCell} font-mono text-xs`}
+                  style={{ left: OFFSETS[1], width: IDENT_COLUMNS[1].width, maxWidth: IDENT_COLUMNS[1].width }}
+                >
+                  {r.orderNumber}
+                </td>
+                <td
+                  className={stickyCell}
+                  style={{ left: OFFSETS[2], width: IDENT_COLUMNS[2].width, maxWidth: IDENT_COLUMNS[2].width }}
+                >
+                  <div className="truncate" title={r.serviceName}>{r.serviceName}</div>
+                </td>
+                <td
+                  className={`${stickyCell} font-mono text-xs`}
+                  style={{ left: OFFSETS[3], width: IDENT_COLUMNS[3].width, maxWidth: IDENT_COLUMNS[3].width }}
+                >
+                  {r.measurementNumber}
+                  {r.instanceLabel ? (
+                    <div className="font-sans text-[11px] text-muted-foreground truncate" title={r.instanceLabel}>
+                      {r.instanceLabel}
+                    </div>
+                  ) : null}
+                </td>
+                <td
+                  className={`${stickyCell} whitespace-nowrap`}
+                  style={{ left: OFFSETS[4], width: IDENT_COLUMNS[4].width, maxWidth: IDENT_COLUMNS[4].width }}
+                >
+                  {r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yy", { locale: de }) : "–"}
+                </td>
+                {columns.map((col) => {
+                  const cell = resultCell(r, col.key);
+                  return (
+                    <td key={col.key} className="px-3 py-1.5 border-b text-right tabular-nums font-mono">
+                      {fmtValue(cell.value, cell.text, cell.present)}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

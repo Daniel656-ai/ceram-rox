@@ -239,7 +239,7 @@ function OrderDetailPageInner() {
             Auftrag: {(order as any).order_number || (order as any).projects?.project_number}
           </h1>
           <p className="text-muted-foreground">
-            {(order as any).order_number ? `Projekt: ${(order as any).projects?.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]}
+            {(order as any).projects?.project_number ? `Projekt: ${(order as any).projects.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]}
             {creatorName ? ` · Auftraggeber: ${creatorName}` : ""}
             {` · Erstellt am ${new Date(order.created_at).toLocaleDateString("de-DE")}`}
           </p>
