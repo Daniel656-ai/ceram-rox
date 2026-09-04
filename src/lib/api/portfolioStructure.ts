@@ -309,15 +309,39 @@ export const portfolioFfgAnalytics = {
     rpc("get_portfolio_costs_by_work_package", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
   costsByCategory: (portfolioId: string, start?: string | null, end?: string | null) =>
     rpc("get_portfolio_costs_by_category", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<any[]>,
-  ffgSummary: (portfolioId: string) =>
-    rpc("get_portfolio_ffg_summary", { _portfolio_id: portfolioId }) as Promise<
+  /** Stunden je Portfolio-Arbeitspaket; enthält eine Zeile „Nicht zugeordnet". */
+  ffgSummary: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_ffg_summary", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<
       Array<{
-        work_package_id: string;
+        work_package_id: string | null;
         work_package_code: string | null;
         work_package_name: string;
         category_id: string | null;
         category_name: string | null;
         hours: number;
+        entries_count: number;
       }>
     >,
+  /** Stunden je Mitarbeiter und Projekt – direkt aus den Arbeitszeitbuchungen. */
+  hoursByPersonProject: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_hours_by_person_project", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<
+      Array<{
+        person_id: string;
+        person_name: string;
+        short_code: string | null;
+        project_id: string;
+        project_number: string | null;
+        project_name: string;
+        work_package_id: string | null;
+        work_package_name: string | null;
+        hours: number;
+        entries_count: number;
+      }>
+    >,
+  /** Diagnose auffälliger Verknüpfungen (fehlende Zuordnungen, Dubletten …). */
+  diagnostics: (portfolioId: string, start?: string | null, end?: string | null) =>
+    rpc("get_portfolio_ffg_diagnostics", { _portfolio_id: portfolioId, _start: start ?? null, _end: end ?? null }) as Promise<
+      Array<{ issue: string; severity: string; reference: string | null; detail: string | null; hours: number }>
+    >,
 };
+
