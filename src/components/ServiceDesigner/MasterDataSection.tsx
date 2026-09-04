@@ -220,16 +220,49 @@ export default function MasterDataSection({
           if (v === undefined || v === null || v === "") throw new Error(`Pflichtfeld fehlt: ${a.display_name}`);
         }
       }
+      const label = itemDraft.label.trim();
+      if (!label) throw new Error("Bezeichnung erforderlich");
+
+      // Fachliche Eindeutigkeit: Hat die Kategorie ein Attribut „messtyp“, gilt
+      // die Kombination Bezeichnung + Messtyp als eindeutig (nicht die
+      // Bezeichnung allein). Der technische Schlüssel (item_value) bleibt
+      // davon unberührt und wird separat eindeutig gemacht.
+      const messtypAttr = attributes.find((a) => a.attribute_key === "messtyp");
+      const messtyp = messtypAttr ? String(itemDraft.metadata.messtyp ?? "").trim() : "";
+      if (messtypAttr) {
+        const dup = items.some((it) =>
+          it.id !== itemDraft.id &&
+          it.label.trim().toLowerCase() === label.toLowerCase() &&
+          String((it.metadata ?? {}).messtyp ?? "").trim().toLowerCase() === messtyp.toLowerCase()
+        );
+        if (dup) {
+          throw new Error("Für diese Kombination aus Bezeichnung und Messtyp existiert bereits ein Stammdatensatz.");
+        }
+      }
+
+      // Technischen Schlüssel eindeutig machen: Basis-Slug aus Bezeichnung,
+      // bei Kollision (z. B. gleiche Bezeichnung, anderer Messtyp) den
+      // Messtyp anhängen, danach notfalls nummerieren.
+      let itemValue = itemDraft.item_value.trim() || slug(label);
+      const taken = new Set(items.filter((it) => it.id !== itemDraft.id).map((it) => it.item_value));
+      if (taken.has(itemValue) && messtyp) {
+        itemValue = `${itemValue}-${slug(messtyp)}`;
+      }
+      if (taken.has(itemValue)) {
+        let n = 2;
+        while (taken.has(`${itemValue}-${n}`)) n++;
+        itemValue = `${itemValue}-${n}`;
+      }
+
       const payload = {
         list_id: selectedId,
-        item_value: itemDraft.item_value || slug(itemDraft.label),
-        label: itemDraft.label.trim(),
+        item_value: itemValue,
+        label,
         description: itemDraft.description.trim() || null,
         sort_order: itemDraft.sort_order,
         is_active: itemDraft.is_active,
         metadata: itemDraft.metadata,
       };
-      if (!payload.label) throw new Error("Bezeichnung erforderlich");
       if (itemDraft.id) {
         const { list_id: _l, ...rest } = payload;
         await api.globalListItems.update(itemDraft.id, rest as any);
