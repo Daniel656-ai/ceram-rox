@@ -359,6 +359,11 @@ export default function CreateOrderPage() {
     setMeasurementFormValues((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [key]: value } }));
   };
 
+  // Projektbezogene Aufträge (F&E) benötigen ein Projekt; Kunden- und
+  // Produktionsaufträge nicht. Keine Sonderlogik an anderer Stelle.
+  const PROJECT_OPTIONAL_ORDER_TYPES = ["customer", "production"];
+  const projectRequired = !!orderType && !PROJECT_OPTIONAL_ORDER_TYPES.includes(orderType);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const isPurePP = orderKind === "pilot_plant";
