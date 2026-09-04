@@ -165,5 +165,8 @@
   "instructions_6": "Neu: Fehler können direkt in der Vorschau korrigiert werden!",
   "copy_order": "Auftrag kopieren",
   "copy_success": "Auftrag kopiert – neuer Entwurf erstellt",
-  "copy_error": "Kopieren fehlgeschlagen"
+  "copy_error": "Kopieren fehlgeschlagen",
+  "project_optional": "optional",
+  "no_project": "Kein Projekt",
+  "project_optional_hint": "Bei Kunden- und Produktionsaufträgen ist die Projektzuordnung optional."
 }

@@ -165,5 +165,8 @@
   "instructions_6": "New: Errors can be corrected directly in the preview!",
   "copy_order": "Copy order",
   "copy_success": "Order copied – new draft created",
-  "copy_error": "Copy failed"
+  "copy_error": "Copy failed",
+  "project_optional": "optional",
+  "no_project": "No project",
+  "project_optional_hint": "For customer and production orders the project assignment is optional."
 }
