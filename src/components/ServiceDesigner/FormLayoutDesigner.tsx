@@ -683,23 +683,28 @@ function ContainerChildren({ parentId, children, depth, fields, selectedId, onSe
   selectedId: string | null; onSelect: (id: string) => void;
   onMutate: (u: (p: FormLayoutTree) => FormLayoutTree) => void; canManage: boolean;
 }) {
+  // Verschachtelungstiefe fließt in die Trefferauswahl ein: der Zeiger über
+  // einer Spalte trifft die Spalte, der Zeiger über einer Einfügelinie die Linie.
+  const zoneDepth = depth + 1;
   if (children.length === 0) {
-    return <DropZone id={`drop-empty-${parentId}`} parentId={parentId} index={0} mode="empty" />;
+    return <DropZone id={`drop-empty-${parentId}`} parentId={parentId} index={0} mode="empty" depth={zoneDepth} />;
   }
   return (
     <>
-      <DropZone id={`drop-${parentId}-0`} parentId={parentId} index={0} />
+      <DropZone id={`drop-${parentId}-0`} parentId={parentId} index={0} depth={zoneDepth} />
       {children.map((c, i) => (
         <div key={c.id}>
           <NodeItem node={c} depth={depth + 1} fields={fields}
+            parentId={parentId} index={i}
             selectedId={selectedId} onSelect={onSelect}
             onMutate={onMutate} canManage={canManage} />
-          <DropZone id={`drop-${parentId}-${i + 1}`} parentId={parentId} index={i + 1} />
+          <DropZone id={`drop-${parentId}-${i + 1}`} parentId={parentId} index={i + 1} depth={zoneDepth} />
         </div>
       ))}
     </>
   );
 }
+
 
 function TabsChildrenEditor({ node, fields, onMutate, selectedId, onSelect, depth, canManage }: any) {
   return (
