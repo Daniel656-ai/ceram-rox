@@ -545,12 +545,21 @@ function RootCanvas({ layout, fields, selectedId, onSelect, onMutate, canManage 
 
 
 // ---------- recursive node ----------
-function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canManage }: {
+function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canManage, parentId = null, index = 0 }: {
   node: LayoutNode; depth: number; fields: FormField[];
   selectedId: string | null; onSelect: (id: string) => void;
   onMutate: (u: (p: FormLayoutTree) => FormLayoutTree) => void;
   canManage: boolean;
+  /** Container dieses Knotens (null = Formularwurzel) und Position darin. */
+  parentId?: string | null; index?: number;
 }) {
+  /** Fügt einen Baustein deterministisch direkt UNTER diesem Knoten ein. */
+  const insertBelow = (type: LayoutNodeType, extra?: any) => {
+    const newNode = createNode(type, extra);
+    onMutate(prev => ({ ...prev, nodes: insertNode(prev.nodes, parentId, index + 1, newNode) }));
+    onSelect(newNode.id);
+  };
+
   const [collapsed, setCollapsed] = useState(false);
   const selected = selectedId === node.id;
   const isContainer = "children" in node && Array.isArray((node as any).children);
