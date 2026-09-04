@@ -3,9 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext, PointerSensor, useSensor, useSensors, useDroppable, useDraggable,
-  DragOverlay, closestCenter,
-  type DragStartEvent, type DragEndEvent,
+  DragOverlay, closestCenter, pointerWithin, rectIntersection,
+  type DragStartEvent, type DragEndEvent, type CollisionDetection,
 } from "@dnd-kit/core";
+
 import { api } from "@/lib/api";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import { type FormField } from "@/lib/api/formFields";
@@ -26,6 +27,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -172,6 +175,44 @@ export default function FormLayoutDesigner({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
+  /**
+   * Einfügeposition strikt an der tatsächlichen Mauszeigerposition ermitteln.
+   *
+   * `closestCenter` (bisher) vergleicht nur Mittelpunkte: eine schmale
+   * Einfügelinie zwischen zwei Zeilen verliert dabei regelmäßig gegen die
+   * große Fläche einer benachbarten Spalte – die Einfügemarke „springt“ in
+   * eine vorhandene Spalte. Deshalb:
+   *   1. nur Ziele berücksichtigen, die der Zeiger wirklich überdeckt,
+   *   2. explizite Einfügelinien („gap“) haben Vorrang vor Flächenzielen,
+   *   3. bei mehreren Flächenzielen gewinnt das tiefste (spezifischste),
+   *   4. nur ohne jeden Treffer wird auf die Abstandssuche zurückgefallen.
+   */
+  const collisionDetection: CollisionDetection = (args) => {
+    const zoneOf = (id: string | number) =>
+      (args.droppableContainers.find(c => c.id === id)?.data.current ?? {}) as
+        { parentId?: string | null; index?: number; zone?: string; depth?: number };
+
+    const hits = pointerWithin(args);
+    if (hits.length > 0) {
+      const gaps = hits.filter(h => zoneOf(h.id).zone === "gap");
+      if (gaps.length > 0) {
+        // Bei überlappenden Linien die dem Zeiger nächstgelegene wählen.
+        const ranked = closestCenter({
+          ...args,
+          droppableContainers: args.droppableContainers.filter(c => gaps.some(g => g.id === c.id)),
+        });
+        return ranked.length ? ranked : [gaps[0]];
+      }
+      // Flächenziele: tiefste Verschachtelung gewinnt (Spalte vor Abschnitt).
+      const sorted = [...hits].sort((a, b) => (zoneOf(b.id).depth ?? 0) - (zoneOf(a.id).depth ?? 0));
+      return [sorted[0]];
+    }
+
+    const intersections = rectIntersection(args);
+    return intersections.length ? intersections : closestCenter(args);
+  };
+
+
   const onDragStart = (e: DragStartEvent) => {
     const d = e.active.data.current as DragData | undefined;
     if (d) setDragging(d);
@@ -224,7 +265,7 @@ export default function FormLayoutDesigner({
 
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
+    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
       {/* Vollhöhen-Arbeitsbereich: Seitenpanels scrollen eigenständig, die
           Arbeitsfläche in der Mitte bekommt die gesamte Restbreite/-höhe. */}
       <div className="flex gap-3 items-stretch h-[calc(100vh-13rem)] min-h-[560px]">
@@ -431,15 +472,22 @@ function FieldPaletteItem({ field, canManage }: { field: FormField; canManage: b
 }
 
 // ---------- drop zones ----------
-function DropZone({ id, parentId, index, mode = "gap" }:
-  { id: string; parentId: string | null; index: number; mode?: "gap" | "empty" | "append" }) {
-  const { setNodeRef, isOver } = useDroppable({ id, data: { parentId, index } });
+/**
+ * Einfügeziel im Layoutbaum.
+ * `zone` und `depth` steuern die Trefferauswahl (siehe collisionDetection):
+ * - "gap"    = Einfügelinie ZWISCHEN zwei Knoten desselben Containers
+ * - "empty"  = leerer Container / leere Spalte
+ * - "append" = Bereich am Ende eines Containers
+ */
+function DropZone({ id, parentId, index, mode = "gap", depth = 0, label }:
+  { id: string; parentId: string | null; index: number; mode?: "gap" | "empty" | "append"; depth?: number; label?: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id, data: { parentId, index, zone: mode, depth } });
   if (mode === "empty") {
     return (
       <div ref={setNodeRef}
         className={cn("text-[11px] text-muted-foreground text-center py-6 border border-dashed rounded transition-colors",
           isOver ? "bg-primary/10 border-primary text-primary" : "")}>
-        Baustein oder Feld hierher ziehen
+        {label ?? "Baustein oder Feld hierher ziehen"}
       </div>
     );
   }
@@ -448,14 +496,21 @@ function DropZone({ id, parentId, index, mode = "gap" }:
       <div ref={setNodeRef}
         className={cn("h-8 border border-dashed rounded mt-1 transition-colors flex items-center justify-center text-[10px] text-muted-foreground",
           isOver ? "bg-primary/10 border-primary text-primary" : "")}>
-        {isOver ? "Hier ablegen" : ""}
+        {isOver ? (label ?? "Hier ablegen") : (label ?? "")}
       </div>
     );
   }
+  // Großzügige Trefferfläche, optisch aber nur eine dünne Linie: dadurch
+  // bleibt die Einfügemarke genau dort, wo der Zeiger steht.
   return (
-    <div ref={setNodeRef}
-      className={cn("h-2 my-0.5 rounded transition-colors", isOver ? "bg-primary/50 h-3" : "bg-transparent")}
-    />
+    <div ref={setNodeRef} className="relative py-1.5 -my-0.5">
+      <div className={cn("h-1 rounded transition-colors", isOver ? "bg-primary" : "bg-transparent")} />
+      {isOver && (
+        <span className="absolute left-0 -top-1 text-[9px] text-primary bg-background px-1 rounded">
+          Neue Zeile hier einfügen
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -469,31 +524,44 @@ function RootCanvas({ layout, fields, selectedId, onSelect, onMutate, canManage 
   return (
     <div className="min-h-[520px] border rounded bg-background p-3">
       {layout.nodes.length === 0 ? (
-        <DropZone id="drop-root-empty" parentId={null} index={0} mode="empty" />
+        <DropZone id="drop-root-empty" parentId={null} index={0} mode="empty" depth={0} />
       ) : (
         <>
-          <DropZone id="drop-root-0" parentId={null} index={0} />
+          <DropZone id="drop-root-0" parentId={null} index={0} depth={0} />
           {layout.nodes.map((n, i) => (
             <div key={n.id}>
               <NodeItem node={n} depth={0} fields={fields}
+                parentId={null} index={i}
                 selectedId={selectedId} onSelect={onSelect}
                 onMutate={onMutate} canManage={canManage} />
-              <DropZone id={`drop-root-${i + 1}`} parentId={null} index={i + 1} />
+              <DropZone id={`drop-root-${i + 1}`} parentId={null} index={i + 1} depth={0} />
             </div>
           ))}
+          <DropZone id="drop-root-append" parentId={null} index={layout.nodes.length}
+            mode="append" depth={0} label="Ans Ende des Formulars" />
         </>
       )}
     </div>
   );
 }
 
+
 // ---------- recursive node ----------
-function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canManage }: {
+function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canManage, parentId = null, index = 0 }: {
   node: LayoutNode; depth: number; fields: FormField[];
   selectedId: string | null; onSelect: (id: string) => void;
   onMutate: (u: (p: FormLayoutTree) => FormLayoutTree) => void;
   canManage: boolean;
+  /** Container dieses Knotens (null = Formularwurzel) und Position darin. */
+  parentId?: string | null; index?: number;
 }) {
+  /** Fügt einen Baustein deterministisch direkt UNTER diesem Knoten ein. */
+  const insertBelow = (type: LayoutNodeType, extra?: any) => {
+    const newNode = createNode(type, extra);
+    onMutate(prev => ({ ...prev, nodes: insertNode(prev.nodes, parentId, index + 1, newNode) }));
+    onSelect(newNode.id);
+  };
+
   const [collapsed, setCollapsed] = useState(false);
   const selected = selectedId === node.id;
   const isContainer = "children" in node && Array.isArray((node as any).children);
@@ -529,6 +597,30 @@ function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canMana
         <Badge variant="outline" className="text-[10px]">{typeLabel}</Badge>
         <span className="text-xs font-medium truncate flex-1">{fieldLabel}</span>
         {node.width && node.width !== 12 && <Badge variant="secondary" className="text-[10px]">{WIDTH_OPTS.find(w => w.v === node.width)?.l}</Badge>}
+        {/* Präzises Einfügen ohne Drag&Drop: legt garantiert im selben
+            Container direkt unterhalb dieses Knotens an. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" disabled={!canManage}
+              title="Direkt darunter einfügen" onClick={(e) => e.stopPropagation()}>
+              <Plus className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={() => insertBelow("columns", { columnCount: 2, ratios: [1, 1] })}>
+              Zeile darunter (2 Spalten)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => insertBelow("columns", { columnCount: 3, ratios: [1, 1, 1] })}>
+              Zeile darunter (3 Spalten)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => insertBelow("columns", { columnCount: MAX_COLUMNS, ratios: Array.from({ length: MAX_COLUMNS }, () => 1) })}>
+              Zeile darunter ({MAX_COLUMNS} Spalten)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => insertBelow("section")}>Abschnitt darunter</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => insertBelow("divider")}>Trennlinie darunter</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
       </div>
 
       {isContainer && !collapsed && (
@@ -591,23 +683,28 @@ function ContainerChildren({ parentId, children, depth, fields, selectedId, onSe
   selectedId: string | null; onSelect: (id: string) => void;
   onMutate: (u: (p: FormLayoutTree) => FormLayoutTree) => void; canManage: boolean;
 }) {
+  // Verschachtelungstiefe fließt in die Trefferauswahl ein: der Zeiger über
+  // einer Spalte trifft die Spalte, der Zeiger über einer Einfügelinie die Linie.
+  const zoneDepth = depth + 1;
   if (children.length === 0) {
-    return <DropZone id={`drop-empty-${parentId}`} parentId={parentId} index={0} mode="empty" />;
+    return <DropZone id={`drop-empty-${parentId}`} parentId={parentId} index={0} mode="empty" depth={zoneDepth} />;
   }
   return (
     <>
-      <DropZone id={`drop-${parentId}-0`} parentId={parentId} index={0} />
+      <DropZone id={`drop-${parentId}-0`} parentId={parentId} index={0} depth={zoneDepth} />
       {children.map((c, i) => (
         <div key={c.id}>
           <NodeItem node={c} depth={depth + 1} fields={fields}
+            parentId={parentId} index={i}
             selectedId={selectedId} onSelect={onSelect}
             onMutate={onMutate} canManage={canManage} />
-          <DropZone id={`drop-${parentId}-${i + 1}`} parentId={parentId} index={i + 1} />
+          <DropZone id={`drop-${parentId}-${i + 1}`} parentId={parentId} index={i + 1} depth={zoneDepth} />
         </div>
       ))}
     </>
   );
 }
+
 
 function TabsChildrenEditor({ node, fields, onMutate, selectedId, onSelect, depth, canManage }: any) {
   return (
