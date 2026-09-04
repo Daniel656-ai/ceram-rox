@@ -72,6 +72,15 @@ export const ALL_PERMISSIONS = [
   "portfolios.export",
   "portfolios.documents.manage",
   "portfolios.dashboard.view",
+  // Fertigungsfreigaben
+  "production_releases.view",
+  "production_releases.create",
+  "production_releases.edit",
+  "production_releases.import",
+  "production_releases.approve",
+  "production_releases.delete",
+  // Kundenstamm (Grundlage spätere Kundenverwaltung)
+  "customers.manage",
 ] as const;
 
 export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
@@ -97,6 +106,7 @@ export const NAV_PERMISSIONS = [
   "nav.admin.sync",
   "nav.admin.database",
   "nav.portfolios",
+  "nav.production_releases",
 ] as const;
 
 export type NavPermissionKey = (typeof NAV_PERMISSIONS)[number];
@@ -121,6 +131,7 @@ export const NAV_PERMISSION_LABELS: Record<NavPermissionKey, { de: string; en: s
   "nav.admin.sync": { de: "Synchronisation", en: "Synchronization" },
   "nav.admin.database": { de: "Datenbank", en: "Database" },
   "nav.portfolios": { de: "Projektportfolio", en: "Project Portfolio" },
+  "nav.production_releases": { de: "Fertigungsfreigaben", en: "Production Releases" },
 };
 
 export interface NavTreeNode {
@@ -140,6 +151,7 @@ export const NAV_TREE: NavTreeNode[] = [
   { key: "nav.lab_planning" },
   { key: "nav.calendar" },
   { key: "nav.portfolios" },
+  { key: "nav.production_releases" },
   {
     key: "nav.admin",
     children: [
@@ -210,6 +222,13 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "portfolios.export": { de: "Portfolio-Berichte exportieren", en: "Export portfolio reports" },
   "portfolios.documents.manage": { de: "Portfolio-Dokumente verwalten", en: "Manage portfolio documents" },
   "portfolios.dashboard.view": { de: "Portfolio-Dashboard ansehen", en: "View portfolio dashboard" },
+  "production_releases.view": { de: "Fertigungsfreigaben ansehen", en: "View production releases" },
+  "production_releases.create": { de: "Fertigungsfreigabe anlegen", en: "Create production releases" },
+  "production_releases.edit": { de: "Fertigungsfreigabe bearbeiten", en: "Edit production releases" },
+  "production_releases.import": { de: "Fertigungsfreigabe per PDF importieren", en: "Import production release from PDF" },
+  "production_releases.approve": { de: "Fertigungsfreigabe freigeben / abschließen", en: "Approve / close production releases" },
+  "production_releases.delete": { de: "Fertigungsfreigabe löschen", en: "Delete production releases" },
+  "customers.manage": { de: "Kundenstamm verwalten", en: "Manage customers" },
 };
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
@@ -224,6 +243,7 @@ export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string;
   { key: "calendar", labelDe: "Kalender & Urlaub", labelEn: "Calendar & Vacation", permissions: ["calendar.view_others_vacation"] },
   { key: "notifications", labelDe: "Benachrichtigungen & Audit", labelEn: "Notifications & Audit", permissions: ["notifications.measurement_completed", "notifications.priority_violation", "activity_log.view_all"] },
   { key: "portfolios", labelDe: "Projektportfolio", labelEn: "Project Portfolio", permissions: ["portfolios.view", "portfolios.create", "portfolios.edit", "portfolios.delete", "portfolios.assign_projects", "portfolios.remove_projects", "portfolios.export", "portfolios.documents.manage", "portfolios.dashboard.view"] },
+  { key: "production_releases", labelDe: "Fertigungsfreigaben", labelEn: "Production Releases", permissions: ["production_releases.view", "production_releases.create", "production_releases.edit", "production_releases.import", "production_releases.approve", "production_releases.delete", "customers.manage"] },
 ];
 
 export function usePermissions() {

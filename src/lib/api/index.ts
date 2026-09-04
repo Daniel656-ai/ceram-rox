@@ -180,6 +180,7 @@ import { orderKindFormTemplates } from "./orderKindFormTemplates";
 import { systemContext } from "./systemContext";
 import { workflowContext } from "./workflowContext";
 import { orderPreparation } from "./orderPreparation";
+import { productionReleases, customers } from "./productionReleases";
 
 
 
@@ -366,6 +367,10 @@ export const api = {
   // ---- Workflow-Datenkontext & Probenvorbereitung ----
   workflowContext,
   orderPreparation,
+
+  // ---- Fertigungsfreigaben & Kundenstamm ----
+  productionReleases,
+  customers,
 
 
 

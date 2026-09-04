@@ -462,6 +462,107 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_contacts: {
+        Row: {
+          created_at: string
+          customer_id: string
+          email: string | null
+          id: string
+          is_primary: boolean
+          name: string
+          phone: string | null
+          role_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean
+          name: string
+          phone?: string | null
+          role_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean
+          name?: string
+          phone?: string | null
+          role_title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_contacts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          customer_number: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          postal_code: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_number?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_number?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           file_name: string
@@ -5464,6 +5565,366 @@ export type Database = {
         }
         Relationships: []
       }
+      production_release_imports: {
+        Row: {
+          created_at: string
+          extracted: Json
+          file_name: string
+          id: string
+          imported_by: string | null
+          raw_text: string | null
+          release_id: string | null
+          storage_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          extracted?: Json
+          file_name: string
+          id?: string
+          imported_by?: string | null
+          raw_text?: string | null
+          release_id?: string | null
+          storage_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          extracted?: Json
+          file_name?: string
+          id?: string
+          imported_by?: string | null
+          raw_text?: string | null
+          release_id?: string | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_release_imports_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "production_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_release_settings: {
+        Row: {
+          created_at: string
+          default_form_definition_id: string | null
+          id: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_form_definition_id?: string | null
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_form_definition_id?: string | null
+          id?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_release_settings_default_form_definition_id_fkey"
+            columns: ["default_form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_release_test_parameters: {
+        Row: {
+          created_at: string
+          id: string
+          parameter_key: string
+          parameter_label: string | null
+          release_id: string
+          section: string
+          section_label: string | null
+          sort_order: number
+          source_type: string
+          unit: string | null
+          updated_at: string
+          value_num: number | null
+          value_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          parameter_key: string
+          parameter_label?: string | null
+          release_id: string
+          section: string
+          section_label?: string | null
+          sort_order?: number
+          source_type?: string
+          unit?: string | null
+          updated_at?: string
+          value_num?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parameter_key?: string
+          parameter_label?: string | null
+          release_id?: string
+          section?: string
+          section_label?: string | null
+          sort_order?: number
+          source_type?: string
+          unit?: string | null
+          updated_at?: string
+          value_num?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_release_test_parameters_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "production_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_releases: {
+        Row: {
+          accessories: string | null
+          accessory_costs: number | null
+          article_number: string | null
+          cell_configuration: string | null
+          cellularity_item_id: string | null
+          completion_date: string | null
+          cost_center_code: string | null
+          costs_per_module: number | null
+          created_at: string
+          created_by: string | null
+          cross_section_mm: number | null
+          cross_section_tolerance: string | null
+          customer_id: string | null
+          customer_name: string | null
+          delivery_address: string | null
+          delivery_date: string | null
+          delivery_terms: string | null
+          drawing_approval: string | null
+          elements_total: number | null
+          end_customer: string | null
+          field_sources: Json
+          form_data: Json
+          form_definition_id: string | null
+          freight_costs: number | null
+          id: string
+          imported_at: string | null
+          imported_by: string | null
+          inner_wall_thickness_mm: number | null
+          inner_wall_tolerance: string | null
+          length_mm: number | null
+          length_tolerance: string | null
+          module_costs: number | null
+          module_flow: string | null
+          module_material: string | null
+          module_numbering: string | null
+          normal_modules: number | null
+          packaging: string | null
+          piece_count: number | null
+          product_type: string | null
+          project_id: string | null
+          project_name: string | null
+          qa_qc_requirements: string | null
+          recipe: string | null
+          recipe_mixture_id: string | null
+          released_at: string | null
+          released_by: string | null
+          remarks: string | null
+          sales_owner: string | null
+          sample_elements: number | null
+          sorting_criteria: string | null
+          source_document_name: string | null
+          source_document_path: string | null
+          source_type: string
+          spare_elements: number | null
+          status: Database["public"]["Enums"]["production_release_status"]
+          target_geometry: string | null
+          test_conditions_remarks: string | null
+          test_elements_per_module: number | null
+          test_modules: number | null
+          updated_at: string
+          updated_by: string | null
+          v2o5_percent: number | null
+        }
+        Insert: {
+          accessories?: string | null
+          accessory_costs?: number | null
+          article_number?: string | null
+          cell_configuration?: string | null
+          cellularity_item_id?: string | null
+          completion_date?: string | null
+          cost_center_code?: string | null
+          costs_per_module?: number | null
+          created_at?: string
+          created_by?: string | null
+          cross_section_mm?: number | null
+          cross_section_tolerance?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          delivery_address?: string | null
+          delivery_date?: string | null
+          delivery_terms?: string | null
+          drawing_approval?: string | null
+          elements_total?: number | null
+          end_customer?: string | null
+          field_sources?: Json
+          form_data?: Json
+          form_definition_id?: string | null
+          freight_costs?: number | null
+          id?: string
+          imported_at?: string | null
+          imported_by?: string | null
+          inner_wall_thickness_mm?: number | null
+          inner_wall_tolerance?: string | null
+          length_mm?: number | null
+          length_tolerance?: string | null
+          module_costs?: number | null
+          module_flow?: string | null
+          module_material?: string | null
+          module_numbering?: string | null
+          normal_modules?: number | null
+          packaging?: string | null
+          piece_count?: number | null
+          product_type?: string | null
+          project_id?: string | null
+          project_name?: string | null
+          qa_qc_requirements?: string | null
+          recipe?: string | null
+          recipe_mixture_id?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          remarks?: string | null
+          sales_owner?: string | null
+          sample_elements?: number | null
+          sorting_criteria?: string | null
+          source_document_name?: string | null
+          source_document_path?: string | null
+          source_type?: string
+          spare_elements?: number | null
+          status?: Database["public"]["Enums"]["production_release_status"]
+          target_geometry?: string | null
+          test_conditions_remarks?: string | null
+          test_elements_per_module?: number | null
+          test_modules?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          v2o5_percent?: number | null
+        }
+        Update: {
+          accessories?: string | null
+          accessory_costs?: number | null
+          article_number?: string | null
+          cell_configuration?: string | null
+          cellularity_item_id?: string | null
+          completion_date?: string | null
+          cost_center_code?: string | null
+          costs_per_module?: number | null
+          created_at?: string
+          created_by?: string | null
+          cross_section_mm?: number | null
+          cross_section_tolerance?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          delivery_address?: string | null
+          delivery_date?: string | null
+          delivery_terms?: string | null
+          drawing_approval?: string | null
+          elements_total?: number | null
+          end_customer?: string | null
+          field_sources?: Json
+          form_data?: Json
+          form_definition_id?: string | null
+          freight_costs?: number | null
+          id?: string
+          imported_at?: string | null
+          imported_by?: string | null
+          inner_wall_thickness_mm?: number | null
+          inner_wall_tolerance?: string | null
+          length_mm?: number | null
+          length_tolerance?: string | null
+          module_costs?: number | null
+          module_flow?: string | null
+          module_material?: string | null
+          module_numbering?: string | null
+          normal_modules?: number | null
+          packaging?: string | null
+          piece_count?: number | null
+          product_type?: string | null
+          project_id?: string | null
+          project_name?: string | null
+          qa_qc_requirements?: string | null
+          recipe?: string | null
+          recipe_mixture_id?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          remarks?: string | null
+          sales_owner?: string | null
+          sample_elements?: number | null
+          sorting_criteria?: string | null
+          source_document_name?: string | null
+          source_document_path?: string | null
+          source_type?: string
+          spare_elements?: number | null
+          status?: Database["public"]["Enums"]["production_release_status"]
+          target_geometry?: string | null
+          test_conditions_remarks?: string | null
+          test_elements_per_module?: number | null
+          test_modules?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          v2o5_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_releases_cellularity_item_id_fkey"
+            columns: ["cellularity_item_id"]
+            isOneToOne: false
+            referencedRelation: "global_list_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_releases_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_releases_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_releases_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_releases_recipe_mixture_id_fkey"
+            columns: ["recipe_mixture_id"]
+            isOneToOne: false
+            referencedRelation: "mixtures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -7103,6 +7564,7 @@ export type Database = {
           budget_warning_threshold: number | null
           created_at: string
           created_by: string
+          customer_id: string | null
           description: string | null
           end_date: string | null
           id: string
@@ -7120,6 +7582,7 @@ export type Database = {
           budget_warning_threshold?: number | null
           created_at?: string
           created_by: string
+          customer_id?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
@@ -7137,6 +7600,7 @@ export type Database = {
           budget_warning_threshold?: number | null
           created_at?: string
           created_by?: string
+          customer_id?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
@@ -7149,6 +7613,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_portfolio_id_fkey"
             columns: ["portfolio_id"]
@@ -10362,6 +10833,11 @@ export type Database = {
         | "andere"
       process_template_kind: "labor" | "pilot_plant"
       process_template_scope: "template" | "snippet" | "global"
+      production_release_status:
+        | "entwurf"
+        | "in_pruefung"
+        | "freigegeben"
+        | "abgeschlossen"
       project_closure_status: "draft" | "in_approval" | "approved"
       project_document_kind: "application" | "report"
       project_role: "owner" | "leader" | "member"
@@ -10717,6 +11193,12 @@ export const Constants = {
       ],
       process_template_kind: ["labor", "pilot_plant"],
       process_template_scope: ["template", "snippet", "global"],
+      production_release_status: [
+        "entwurf",
+        "in_pruefung",
+        "freigegeben",
+        "abgeschlossen",
+      ],
       project_closure_status: ["draft", "in_approval", "approved"],
       project_document_kind: ["application", "report"],
       project_role: ["owner", "leader", "member"],
