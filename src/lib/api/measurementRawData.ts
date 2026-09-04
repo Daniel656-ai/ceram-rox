@@ -52,6 +52,19 @@ export interface CurveEvaluationRecord {
   id: string;
   dataset_id: string;
   measurement_result_id: string | null;
+  /** "point" = Wert an definierter Stelle, "range" = Bereichsauswertung. */
+  kind: "point" | "range";
+  /** Ausgewertete X-Position (nur bei kind = "point"). */
+  x_at: number | null;
+  /** Klammert alle Kurvenwerte derselben Auswertung (z. B. 850 °C über 3 Kurven). */
+  group_id: string | null;
+  comment: string | null;
+  include_in_report: boolean;
+  x_label: string | null;
+  y_label: string | null;
+  revision: number;
+  updated_by: string | null;
+  updated_at: string;
   method: string;
   method_label: string | null;
   x_channel: string;
@@ -68,6 +81,15 @@ export interface CurveEvaluationRecord {
   created_by: string | null;
   created_at: string;
 }
+
+/** Eine Kurve innerhalb einer Punktauswertung. */
+export interface EvaluationCurveValue {
+  y_channel: string;
+  y_label: string;
+  y_unit: string | null;
+  value: number | null;
+}
+
 
 const DATASETS = "measurement_raw_datasets" as any;
 const SERIES = "measurement_raw_series" as any;
