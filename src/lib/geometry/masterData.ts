@@ -16,6 +16,9 @@ import {
 
 export const CELL_DENSITY_LIST_KEY = "zelligkeiten";
 export const CELL_DENSITY_ATTRIBUTE = "zellenzahl";
+/** Fachlicher Mess-/Prüftyp der Zelligkeit (NOx, SOx …) – nie ein Dienstleistungsname. */
+export const CELL_DENSITY_MEASUREMENT_TYPE_ATTRIBUTE = "messtyp";
+
 
 export const REACTOR_LIST_KEY = "reaktorgeometrien";
 export const REACTOR_WIDTH_ATTRIBUTE = "breite_mm";
@@ -43,10 +46,31 @@ export function activeCellDensities(catalog: MasterDataCategory[]): CellDensityO
       key: i.item_value,
       label: i.label || i.item_value,
       zellenzahl: toNumber((i.metadata ?? {})[CELL_DENSITY_ATTRIBUTE]) ?? toNumber(i.item_value) ?? NaN,
+      messtyp:
+        (((i.metadata ?? {})[CELL_DENSITY_MEASUREMENT_TYPE_ATTRIBUTE] as string | undefined) ?? null) || null,
     }))
     .filter((o) => Number.isFinite(o.zellenzahl))
     .sort((a, b) => a.zellenzahl - b.zellenzahl);
 }
+
+/**
+ * Zelligkeiten eines fachlichen Mess-/Prüftyps (z. B. „NOx“).
+ *
+ * Bewusst über den Messtyp aus den Stammdaten – NICHT über den Namen einer
+ * Dienstleistung. Eine Umbenennung („NOx“ → „Aktivitätsmessung“) lässt die
+ * Zuordnung dadurch unverändert. Ohne Messtyp werden alle aktiven Zelligkeiten
+ * geliefert; Einträge ohne gepflegten Messtyp gelten als typunabhängig.
+ */
+export function cellDensitiesForMeasurementType(
+  catalog: MasterDataCategory[],
+  messtyp?: string | null,
+): CellDensityOption[] {
+  const all = activeCellDensities(catalog);
+  const key = (messtyp ?? "").trim().toLowerCase();
+  if (!key) return all;
+  return all.filter((o) => !o.messtyp || o.messtyp.trim().toLowerCase() === key);
+}
+
 
 /**
  * Verfügbare Reaktorgeometrien (Messkonfigurationen). Die Standardkonfiguration
