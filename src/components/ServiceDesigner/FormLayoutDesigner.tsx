@@ -173,6 +173,44 @@ export default function FormLayoutDesigner({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
+  /**
+   * Einfügeposition strikt an der tatsächlichen Mauszeigerposition ermitteln.
+   *
+   * `closestCenter` (bisher) vergleicht nur Mittelpunkte: eine schmale
+   * Einfügelinie zwischen zwei Zeilen verliert dabei regelmäßig gegen die
+   * große Fläche einer benachbarten Spalte – die Einfügemarke „springt“ in
+   * eine vorhandene Spalte. Deshalb:
+   *   1. nur Ziele berücksichtigen, die der Zeiger wirklich überdeckt,
+   *   2. explizite Einfügelinien („gap“) haben Vorrang vor Flächenzielen,
+   *   3. bei mehreren Flächenzielen gewinnt das tiefste (spezifischste),
+   *   4. nur ohne jeden Treffer wird auf die Abstandssuche zurückgefallen.
+   */
+  const collisionDetection: CollisionDetection = (args) => {
+    const zoneOf = (id: string | number) =>
+      (args.droppableContainers.find(c => c.id === id)?.data.current ?? {}) as
+        { parentId?: string | null; index?: number; zone?: string; depth?: number };
+
+    const hits = pointerWithin(args);
+    if (hits.length > 0) {
+      const gaps = hits.filter(h => zoneOf(h.id).zone === "gap");
+      if (gaps.length > 0) {
+        // Bei überlappenden Linien die dem Zeiger nächstgelegene wählen.
+        const ranked = closestCenter({
+          ...args,
+          droppableContainers: args.droppableContainers.filter(c => gaps.some(g => g.id === c.id)),
+        });
+        return ranked.length ? ranked : [gaps[0]];
+      }
+      // Flächenziele: tiefste Verschachtelung gewinnt (Spalte vor Abschnitt).
+      const sorted = [...hits].sort((a, b) => (zoneOf(b.id).depth ?? 0) - (zoneOf(a.id).depth ?? 0));
+      return [sorted[0]];
+    }
+
+    const intersections = rectIntersection(args);
+    return intersections.length ? intersections : closestCenter(args);
+  };
+
+
   const onDragStart = (e: DragStartEvent) => {
     const d = e.active.data.current as DragData | undefined;
     if (d) setDragging(d);
