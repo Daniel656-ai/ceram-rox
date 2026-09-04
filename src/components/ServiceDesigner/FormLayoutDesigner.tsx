@@ -470,15 +470,22 @@ function FieldPaletteItem({ field, canManage }: { field: FormField; canManage: b
 }
 
 // ---------- drop zones ----------
-function DropZone({ id, parentId, index, mode = "gap" }:
-  { id: string; parentId: string | null; index: number; mode?: "gap" | "empty" | "append" }) {
-  const { setNodeRef, isOver } = useDroppable({ id, data: { parentId, index } });
+/**
+ * Einfügeziel im Layoutbaum.
+ * `zone` und `depth` steuern die Trefferauswahl (siehe collisionDetection):
+ * - "gap"    = Einfügelinie ZWISCHEN zwei Knoten desselben Containers
+ * - "empty"  = leerer Container / leere Spalte
+ * - "append" = Bereich am Ende eines Containers
+ */
+function DropZone({ id, parentId, index, mode = "gap", depth = 0, label }:
+  { id: string; parentId: string | null; index: number; mode?: "gap" | "empty" | "append"; depth?: number; label?: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id, data: { parentId, index, zone: mode, depth } });
   if (mode === "empty") {
     return (
       <div ref={setNodeRef}
         className={cn("text-[11px] text-muted-foreground text-center py-6 border border-dashed rounded transition-colors",
           isOver ? "bg-primary/10 border-primary text-primary" : "")}>
-        Baustein oder Feld hierher ziehen
+        {label ?? "Baustein oder Feld hierher ziehen"}
       </div>
     );
   }
@@ -487,14 +494,21 @@ function DropZone({ id, parentId, index, mode = "gap" }:
       <div ref={setNodeRef}
         className={cn("h-8 border border-dashed rounded mt-1 transition-colors flex items-center justify-center text-[10px] text-muted-foreground",
           isOver ? "bg-primary/10 border-primary text-primary" : "")}>
-        {isOver ? "Hier ablegen" : ""}
+        {isOver ? (label ?? "Hier ablegen") : (label ?? "")}
       </div>
     );
   }
+  // Großzügige Trefferfläche, optisch aber nur eine dünne Linie: dadurch
+  // bleibt die Einfügemarke genau dort, wo der Zeiger steht.
   return (
-    <div ref={setNodeRef}
-      className={cn("h-2 my-0.5 rounded transition-colors", isOver ? "bg-primary/50 h-3" : "bg-transparent")}
-    />
+    <div ref={setNodeRef} className="relative py-1.5 -my-0.5">
+      <div className={cn("h-1 rounded transition-colors", isOver ? "bg-primary" : "bg-transparent")} />
+      {isOver && (
+        <span className="absolute left-0 -top-1 text-[9px] text-primary bg-background px-1 rounded">
+          Neue Zeile hier einfügen
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -508,23 +522,27 @@ function RootCanvas({ layout, fields, selectedId, onSelect, onMutate, canManage 
   return (
     <div className="min-h-[520px] border rounded bg-background p-3">
       {layout.nodes.length === 0 ? (
-        <DropZone id="drop-root-empty" parentId={null} index={0} mode="empty" />
+        <DropZone id="drop-root-empty" parentId={null} index={0} mode="empty" depth={0} />
       ) : (
         <>
-          <DropZone id="drop-root-0" parentId={null} index={0} />
+          <DropZone id="drop-root-0" parentId={null} index={0} depth={0} />
           {layout.nodes.map((n, i) => (
             <div key={n.id}>
               <NodeItem node={n} depth={0} fields={fields}
+                parentId={null} index={i}
                 selectedId={selectedId} onSelect={onSelect}
                 onMutate={onMutate} canManage={canManage} />
-              <DropZone id={`drop-root-${i + 1}`} parentId={null} index={i + 1} />
+              <DropZone id={`drop-root-${i + 1}`} parentId={null} index={i + 1} depth={0} />
             </div>
           ))}
+          <DropZone id="drop-root-append" parentId={null} index={layout.nodes.length}
+            mode="append" depth={0} label="Ans Ende des Formulars" />
         </>
       )}
     </div>
   );
 }
+
 
 // ---------- recursive node ----------
 function NodeItem({ node, depth, fields, selectedId, onSelect, onMutate, canManage }: {
