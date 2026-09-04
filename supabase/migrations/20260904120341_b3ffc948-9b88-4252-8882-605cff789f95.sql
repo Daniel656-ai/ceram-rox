@@ -1,0 +1,1 @@
+ALTER TABLE public.measurement_orders ALTER COLUMN project_id DROP NOT NULL;

@@ -2067,7 +2067,7 @@ export type Database = {
           pp_remarks: string | null
           pp_v2o5_percent: number | null
           priority: Database["public"]["Enums"]["order_priority"]
-          project_id: string
+          project_id: string | null
           ranking: number | null
           reference_number: string | null
           reference_type: Database["public"]["Enums"]["reference_type"] | null
@@ -2098,7 +2098,7 @@ export type Database = {
           pp_remarks?: string | null
           pp_v2o5_percent?: number | null
           priority?: Database["public"]["Enums"]["order_priority"]
-          project_id: string
+          project_id?: string | null
           ranking?: number | null
           reference_number?: string | null
           reference_type?: Database["public"]["Enums"]["reference_type"] | null
@@ -2131,7 +2131,7 @@ export type Database = {
           pp_remarks?: string | null
           pp_v2o5_percent?: number | null
           priority?: Database["public"]["Enums"]["order_priority"]
-          project_id?: string
+          project_id?: string | null
           ranking?: number | null
           reference_number?: string | null
           reference_type?: Database["public"]["Enums"]["reference_type"] | null
