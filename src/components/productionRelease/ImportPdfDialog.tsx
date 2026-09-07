@@ -184,31 +184,86 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
         </DialogHeader>
 
         <div
-          className="flex items-center gap-3 rounded-md border border-dashed p-3"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            const f = e.dataTransfer.files?.[0];
-            if (f && f.type === "application/pdf") { setFile(f); setAnalysis(null); void analyze(f); }
+          role="button"
+          tabIndex={0}
+          aria-label="PDF hierher ziehen oder auswählen"
+          onClick={() => inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputRef.current?.click(); }
           }}
+          onDragEnter={(e) => {
+            e.preventDefault(); e.stopPropagation();
+            dragDepth.current += 1;
+            setDragActive(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault(); e.stopPropagation();
+            e.dataTransfer.dropEffect = "copy";
+            if (!dragActive) setDragActive(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault(); e.stopPropagation();
+            dragDepth.current = Math.max(0, dragDepth.current - 1);
+            if (dragDepth.current === 0) setDragActive(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault(); e.stopPropagation();
+            dragDepth.current = 0;
+            setDragActive(false);
+            acceptFiles(e.dataTransfer?.files);
+          }}
+          className={`flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
+            dragActive ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:bg-muted/40"
+          }`}
         >
-          <UploadCloud className="h-5 w-5 text-muted-foreground shrink-0" />
-          <Input
+          <UploadCloud className={`h-6 w-6 ${dragActive ? "text-primary" : "text-muted-foreground"}`} />
+          <p className="text-sm font-medium">
+            {dragActive ? "PDF hier ablegen" : "PDF hierher ziehen oder klicken, um eine Datei auszuwählen"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Nur PDF, max. 50 MB. Das Original-PDF wird unverändert gespeichert.
+          </p>
+          <input
+            ref={inputRef}
             type="file"
-            accept="application/pdf"
+            accept="application/pdf,.pdf"
+            className="hidden"
             onChange={(e) => {
-              const f = e.target.files?.[0] ?? null;
-              setFile(f); setAnalysis(null);
+              acceptFiles(e.target.files);
+              e.target.value = "";
             }}
           />
-          <Button onClick={() => file && analyze(file)} disabled={!file || busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            <span className="ml-2">Analysieren</span>
-          </Button>
+          {file && (
+            <div className="mt-1 flex items-center gap-2 text-sm">
+              <FileUp className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{file.name}</span>
+              <span className="text-muted-foreground">
+                ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              </span>
+              {busy ? (
+                <Badge variant="outline" className="gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> wird analysiert
+                </Badge>
+              ) : analysis ? (
+                <Badge variant="outline" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                  analysiert
+                </Badge>
+              ) : null}
+            </div>
+          )}
+          {fileError && <p className="text-sm text-destructive">{fileError}</p>}
+          {file && !busy && !analysis && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-1"
+              onClick={(e) => { e.stopPropagation(); void analyze(file); }}
+            >
+              <Sparkles className="h-4 w-4 mr-2" /> Erneut analysieren
+            </Button>
+          )}
         </div>
-        <p className="text-xs text-muted-foreground -mt-2">
-          PDF hierher ziehen oder auswählen. Das Original-PDF wird unverändert gespeichert.
-        </p>
+
 
         {analysis && (
           <div className="space-y-6">
