@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import {
-  parseMeasurementText, mapReadings, allSourceNames, outputValue,
+  parseMeasurementText, mapReadings, allSourceNames, outputValue, rowStatus, openTargets,
   type MappedRow, type TargetCandidate, type DecimalSeparator,
 } from "@/lib/measurementImport";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -141,7 +141,7 @@ export default function MeasurementImportDialog({
   const assigned = rows.filter((r) => r.targetFieldKey);
   const unassigned = rows.filter((r) => !r.targetFieldKey);
   /** Ergebnisfelder des Messfalls, die der Import nicht befüllt hat. */
-  const open = openTargets(rows, targets);
+  const openFields = openTargets(rows, targets);
 
   const invalid = assigned.filter((r) => r.value == null && !r.belowDetection);
 
