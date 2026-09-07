@@ -165,3 +165,51 @@ export const sameElement = (a: string, b: string): boolean => {
 export function formatElementKey(key: string): string {
   return String(key ?? "").replace(/\d/g, (d) => SUB[Number(d)]);
 }
+
+/* ------------------------------------------------------------------ */
+/* Element-Zuordnung eines Ergebnisfeldes                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Ein Ergebnisfeld kann einen fest hinterlegten Element-Schlüssel besitzen
+ * (`metadata.element_key`). Ist keiner gepflegt, wird er aus Bezeichnung,
+ * Ergebnis-Label oder Feldschlüssel abgeleitet. Die sichtbare Bezeichnung
+ * bleibt frei formatierbar ("SiO₂") – die Zuordnung erfolgt über den Schlüssel.
+ */
+export interface ElementKeyFieldLike {
+  metadata?: unknown;
+  display_name?: string | null;
+  result_label?: string | null;
+  field_key?: string | null;
+}
+
+/** Ausschließlich der manuell konfigurierte Schlüssel (ohne Ableitung). */
+export function explicitFieldElementKey(field: ElementKeyFieldLike): string | null {
+  const m = (field?.metadata ?? {}) as Record<string, unknown>;
+  const v = m.element_key;
+  return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+}
+
+/** Konfigurierter Schlüssel, sonst automatisch erkannter Schlüssel. */
+export function fieldElementKey(field: ElementKeyFieldLike): string | null {
+  const explicit = explicitFieldElementKey(field);
+  if (explicit) return elementKey(explicit) ?? explicit;
+  for (const cand of [field.display_name, field.result_label, field.field_key]) {
+    if (!cand) continue;
+    const k = elementKey(String(cand));
+    if (k) return k;
+  }
+  return null;
+}
+
+/** Schreibt den Element-Schlüssel in die Feld-Metadaten (leer = entfernen). */
+export function writeFieldElementKey(
+  metadata: unknown,
+  value: string | null | undefined
+): Record<string, unknown> {
+  const m = { ...((metadata ?? {}) as Record<string, unknown>) };
+  const v = (value ?? "").trim();
+  if (v) m.element_key = elementKey(v) ?? v;
+  else delete m.element_key;
+  return m;
+}
