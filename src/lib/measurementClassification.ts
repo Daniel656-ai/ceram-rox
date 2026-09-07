@@ -9,6 +9,7 @@
  * und Einheit – kein gerätespezifisches Wissen.
  */
 import { normalizeName } from "@/lib/measurementImport";
+import { elementKey } from "@/lib/elementKeys";
 
 /* ------------------------------------------------------------------ */
 /* Einheiten                                                           */
