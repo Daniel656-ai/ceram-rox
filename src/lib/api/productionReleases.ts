@@ -238,7 +238,8 @@ export const productionReleases = {
     const { data, error } = await dbClient.functions.invoke("parse-production-release", {
       body: args,
     });
-    if (error) throw error;
+    if (error) throw await toReadableImportError(error, data);
+    if (data && data.success === false) throw await toReadableImportError(null, data);
     return {
       fields: (data?.fields ?? {}) as Record<string, unknown>,
       testParameters: (data?.testParameters ?? []) as ProductionReleaseTestParameter[],
