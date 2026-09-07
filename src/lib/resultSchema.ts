@@ -118,7 +118,7 @@ export function buildServiceSchemas(
       );
       for (const d of defined) {
         pushColumn(schema.columns, {
-          key: d.parameter_name,
+          key: paramKey(d.parameter_name),
           label: d.parameter_name,
           unit: d.unit || null,
           group: parseGroup(d.description),
@@ -128,12 +128,13 @@ export function buildServiceSchemas(
     }
     for (const o of rec.outputResults) {
       pushColumn(schema.columns, {
-        key: resultLabel(o),
+        key: paramKey(resultLabel(o)),
         label: resultLabel(o),
         unit: (o.unit || "").trim() || null,
         group: null,
       });
     }
+
   }
 
   // Auch Dienstleistungen ohne Datensätze behalten ihre definierte Struktur,
