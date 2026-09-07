@@ -204,9 +204,11 @@ export const productionReleases = {
   },
 
   // ---- PDF-Import ----------------------------------------------------------
-  async uploadDocument(file: File): Promise<string> {
-    const path = `${crypto.randomUUID()}/${file.name}`;
-    const { error } = await dbClient.storage.from(BUCKET).upload(path, file);
+  /** Original-PDF unverändert ablegen (wird nie überschrieben). */
+  async uploadDocument(file: Blob, fileName?: string): Promise<string> {
+    const name = fileName ?? (file as File).name ?? "dokument.pdf";
+    const path = `${crypto.randomUUID()}/${name}`;
+    const { error } = await dbClient.storage.from(BUCKET).upload(path, file, { upsert: false });
     if (error) throw error;
     return path;
   },
@@ -216,10 +218,22 @@ export const productionReleases = {
     return data?.signedUrl ?? null;
   },
 
-  /** KI-gestützte Strukturerkennung des PDF-Textes (Edge Function). */
-  async analyzePdfText(args: { fileName: string; pages: string[] }): Promise<{
+  /**
+   * KI-gestützte Strukturerkennung (Edge Function).
+   * `pages` = Text inkl. visueller Marker, `pairs` = räumlich zugeordnete
+   * alt/neu-Paare, `images` = Seitenbilder für OCR, `existing` = bisheriger Stand.
+   */
+  async analyzePdfText(args: {
+    fileName: string;
+    pages: string[];
+    pairs?: unknown[];
+    images?: string[];
+    existing?: Record<string, unknown> | null;
+  }): Promise<{
     fields: Record<string, unknown>;
     testParameters: ProductionReleaseTestParameter[];
+    document: Record<string, unknown>;
+    changes: Record<string, unknown>[];
   }> {
     const { data, error } = await dbClient.functions.invoke("parse-production-release", {
       body: args,
@@ -228,6 +242,8 @@ export const productionReleases = {
     return {
       fields: (data?.fields ?? {}) as Record<string, unknown>,
       testParameters: (data?.testParameters ?? []) as ProductionReleaseTestParameter[],
+      document: (data?.document ?? {}) as Record<string, unknown>,
+      changes: (data?.changes ?? []) as Record<string, unknown>[],
     };
   },
 
