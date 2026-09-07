@@ -329,6 +329,24 @@ export default function FieldEditDialog({
             <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
             <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
           </div>
+          {!isBlock && !isRepeater && !isImport && (
+            <div className="rounded border p-3 space-y-1 bg-muted/20">
+              <Label className="text-xs">Element-Schlüssel (Messdatenimport)</Label>
+              <Input
+                value={elementKeyInput}
+                disabled={isGlobalRef}
+                onChange={(e) => setElementKeyInput(e.target.value)}
+                placeholder={autoElementKey ? `automatisch: ${autoElementKey}` : "z. B. SiO2, Fe2O3, Pb"}
+                className="font-mono"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Verbindet importierte Messwerte (z. B. RFA) mit diesem Ergebnisfeld – unabhängig von der
+                sichtbaren Bezeichnung. Leer lassen, wenn die Bezeichnung eindeutig ist
+                {autoElementKey ? ` (erkannt: ${formatElementKey(autoElementKey)}).` : "."}
+              </p>
+            </div>
+          )}
+
           {!isBlock && !isRepeater && (
             <div className="rounded border p-3 space-y-2 bg-muted/30">
               <div className="flex items-center gap-2">
