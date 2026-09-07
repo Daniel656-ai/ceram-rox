@@ -565,13 +565,13 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
       )}
 
       {unassigned.length > 0 && (
-        <div className="rounded border border-amber-300 bg-amber-50/50 p-2 space-y-1">
-          <p className="text-[11px] font-medium text-amber-700">
-            Zusätzliche / nicht zugeordnete Messwerte ({unassigned.length})
+        <div className="rounded border bg-muted/20 p-2 space-y-1">
+          <p className="text-[11px] font-medium text-muted-foreground">
+            Importiert – für Messfall nicht benötigt ({unassigned.length})
           </p>
           {unassigned.map((r, i) => (
             <div key={i} className="flex items-center gap-2 text-[11px]">
-              <span className="flex-1">⚠ {r.parameter}</span>
+              <span className="flex-1">{r.parameter}</span>
               <span className="font-mono">{String(r.value ?? r.raw ?? "")}{r.unit ? ` ${r.unit}` : ""}</span>
               <Select
                 value="__none__"

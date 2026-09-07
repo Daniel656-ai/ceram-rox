@@ -427,7 +427,7 @@ export default function MeasurementImportDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
               <Button onClick={apply} disabled={assigned.length === 0 && unassigned.length === 0}>
                 {assigned.length} Wert(e) übernehmen
-                {unassigned.length > 0 ? ` (+${unassigned.length} nicht zugeordnet)` : ""}
+                {unassigned.length > 0 ? ` (+${unassigned.length} nicht benötigt, gespeichert)` : ""}
               </Button>
             </div>
               </TabsContent>
