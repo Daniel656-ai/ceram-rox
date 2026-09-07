@@ -10,6 +10,7 @@ import {
   readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
   CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, CASE_CURVE_KEY, CASE_ELEMENTS_KEY, caseElementKeys,
   readCaseCurveConfig, hasCurveConfig, type CaseTemplate,
+  CASE_ELEMENT_SPEC_KEY, caseElementSpec,
 } from "@/lib/measurementBlocks";
 
 
@@ -1247,7 +1248,12 @@ function MeasurementBlockField({
             caseCfg.allowed_case_ids.includes(c.id) ||
             extraCaseIds.includes(c.id)
         )
-        .map((c) => ({ id: c.id, name: c.name, instances: c.instances ?? [] })),
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          elements: c.elements ?? [],
+          instances: c.instances ?? [],
+        })),
     [allCases, caseCfg.allowed_case_ids, extraCaseIds]
   );
 
@@ -1331,6 +1337,28 @@ function MeasurementBlockField({
     [childDefs, root, storageKey]
   );
   const caseNeedsSetup = !!activeCase && !entriesMatchCase(entries, activeCase);
+
+  /**
+   * Die Ergebnisliste des Messfalls (Auswahl, Reihenfolge, offizielle
+   * Ergebnisse) wird ohne Datenverlust in bestehende Messungen übernommen –
+   * erfasste Messwerte bleiben unverändert.
+   */
+  useEffect(() => {
+    if (!caseCfg.enabled || !interactive || readonly || !activeCase || entries.length === 0) return;
+    const spec = caseElementSpec(activeCase);
+    const same = (e: Record<string, any>) =>
+      JSON.stringify(e?.[CASE_ELEMENT_SPEC_KEY] ?? []) === JSON.stringify(spec);
+    const relevant = entries.filter((e) => e?.[CASE_ID_KEY] === activeCase.id);
+    if (relevant.length === 0 || relevant.every(same)) return;
+    updateEntries(
+      entries.map((e) =>
+        e?.[CASE_ID_KEY] === activeCase.id
+          ? { ...e, [CASE_ELEMENT_SPEC_KEY]: spec, [CASE_ELEMENTS_KEY]: spec.map((x) => x.key) }
+          : e
+      )
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseCfg.enabled, interactive, readonly, activeCase, entries]);
 
   // Vorgegebener Messfall: Messungen automatisch anlegen, solange nichts erfasst ist.
   useEffect(() => {
