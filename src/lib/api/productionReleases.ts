@@ -210,9 +210,16 @@ async function callImportService(
     } catch {
       json = null; // z. B. HTML-Fehlerseite des Gateways
     }
-    // Antwortete wirklich das Supabase-Gateway (und nicht z. B. der lokale
+    // Antwortete wirklich das Backend (und nicht z. B. der lokale
     // Desktop-Asset-Server)? Nur dann ist ein 404 fachlich aussagekräftig.
-    const fromGateway = !!(res.headers.get("sb-project-ref") || res.headers.get("x-served-by"));
+    // Antwort-Header sind bei Cross-Origin nicht lesbar, daher wird die
+    // Zieladresse geprüft: eine absolute Backend-URL ≠ eigene Herkunft.
+    let fromGateway = false;
+    try {
+      fromGateway = new URL(url).origin !== globalThis.location?.origin;
+    } catch {
+      fromGateway = false;
+    }
     console.info("[Fertigungsfreigabe-Import] Antwort", {
       endpunkt: url,
       status: res.status,
