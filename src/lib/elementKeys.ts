@@ -110,6 +110,29 @@ function canonicalFormula(input: string): string | null {
 }
 
 /**
+ * Schreibweise ohne Groß-/Kleinschreibung reparieren: "sio2" -> "SiO2".
+ * Es wird greedy das längste bekannte Elementsymbol gelesen.
+ */
+function recase(input: string): string {
+  const f = plainFormula(input);
+  const symbols = Object.keys(ELEMENTS);
+  let out = "";
+  let i = 0;
+  while (i < f.length) {
+    const c = f[i];
+    if (/[0-9().·*]/.test(c)) { out += c; i += 1; continue; }
+    const two = f.slice(i, i + 2).toLowerCase();
+    const one = c.toLowerCase();
+    const m2 = symbols.find((s) => s.length === 2 && s.toLowerCase() === two);
+    const m1 = symbols.find((s) => s.length === 1 && s.toLowerCase() === one);
+    if (m2) { out += m2; i += 2; continue; }
+    if (m1) { out += m1; i += 1; continue; }
+    return f;
+  }
+  return out;
+}
+
+/**
  * Stabiler Element-/Verbindungsschlüssel einer beliebigen Bezeichnung.
  * Gibt `null` zurück, wenn es sich um keine chemische Bezeichnung handelt.
  */
@@ -125,7 +148,7 @@ export function elementKey(rawName: string): string | null {
   }
 
   // 2) Formelschreibweise (SiO₂, Fe2O3, As, Pb …)
-  const formula = canonicalFormula(raw);
+  const formula = canonicalFormula(raw) ?? canonicalFormula(recase(raw));
   if (formula) return formula;
 
   return null;

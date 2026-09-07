@@ -82,7 +82,7 @@ export function canonicalParameter(rawName: string): string {
   // Chemische Bezeichnungen werden über den stabilen Element-Schlüssel
   // verglichen: "SiO₂", "SiO2", "Silicon dioxide" -> derselbe Schlüssel.
   const el = elementKey(name);
-  if (el) return `el:${el.toLowerCase()}`;
+  if (el) return el.toLowerCase();
   const n = normalizeName(name);
   return ALIASES[n] ?? n;
 }
