@@ -133,6 +133,21 @@ function recase(input: string): string {
 }
 
 /**
+ * Entfernt Einheiten-Anhängsel einer Bezeichnung: „V2O5 (%)“ -> „V2O5“,
+ * „As (PPM)“ -> „As“, „SiO2 %“ -> „SiO2“. Die Einheit ist niemals Bestandteil
+ * des Elements und darf die Zuordnung nicht verhindern.
+ */
+function stripUnitSuffix(raw: string): string {
+  let s = String(raw ?? "").trim();
+  // Klammerausdruck am Ende: (%), [PPM], {mg/kg}
+  const bracket = s.match(/^(.*\S)\s*[([{][^)\]}]*[)\]}]\s*$/);
+  if (bracket) s = bracket[1].trim();
+  // Angehängte Einheit ohne Klammern
+  s = s.replace(/\s*(%|wt\.?%|ppm|ppb|ppt|mg\/kg|g\/kg|µg\/g|ug\/g|mg\/g)\s*$/i, "").trim();
+  return s.replace(/[:=]\s*$/, "").trim();
+}
+
+/**
  * Stabiler Element-/Verbindungsschlüssel einer beliebigen Bezeichnung.
  * Gibt `null` zurück, wenn es sich um keine chemische Bezeichnung handelt.
  */
@@ -151,8 +166,13 @@ export function elementKey(rawName: string): string | null {
   const formula = canonicalFormula(raw) ?? canonicalFormula(recase(raw));
   if (formula) return formula;
 
+  // 3) Bezeichnung mit Einheit („V2O5 (%)“, „As (PPM)“) – Einheit entfernen
+  const bare = stripUnitSuffix(raw);
+  if (bare && bare !== raw) return elementKey(bare);
+
   return null;
 }
+
 
 /** Vergleichsschlüssel: Element-Key falls erkennbar, sonst null. */
 export const sameElement = (a: string, b: string): boolean => {
