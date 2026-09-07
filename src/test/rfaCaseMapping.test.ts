@@ -40,6 +40,5 @@ describe("RFA-Zuordnung über Messkontext-Schlüssel", () => {
       "SiO2 (%) → SiO2 → nicht in der Ergebnisliste des Messfalls"
     );
   });
-
-  });
 });
+
