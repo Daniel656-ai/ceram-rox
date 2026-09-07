@@ -387,24 +387,34 @@ export const productionReleases = {
     document: Record<string, unknown>;
     changes: Record<string, unknown>[];
   }> {
-    let data: {
-      success?: boolean;
-      fields?: unknown;
-      testParameters?: unknown;
-      document?: unknown;
-      changes?: unknown;
-    } | null = null;
-    let error: unknown = null;
+    let call: Awaited<ReturnType<typeof callImportService>>;
     try {
-      const res = await dbClient.functions.invoke("parse-production-release", { body: args });
-      data = res.data;
-      error = res.error;
+      call = await callImportService(args);
     } catch (e) {
       // z. B. abgebrochene Verbindung – nicht als generischer Fehler verschlucken
       throw await toReadableImportError(e, null);
     }
-    if (error) throw await toReadableImportError(error, data);
+
+    const data = call.json as
+      | { success?: boolean; fields?: unknown; testParameters?: unknown; document?: unknown; changes?: unknown }
+      | null;
+
+    if (call.status === 404 && !data?.error_code) {
+      const err = new Error(
+        `Der Importdienst „${IMPORT_FUNCTION_NAME}“ ist unter ${call.url} nicht erreichbar (HTTP 404). Fehlercode: FUNCTION_NOT_FOUND.`
+      );
+      (err as Error & { code?: string; status?: number }).code = "FUNCTION_NOT_FOUND";
+      (err as Error & { code?: string; status?: number }).status = 404;
+      throw err;
+    }
+    if (call.status < 200 || call.status >= 300) {
+      throw await toReadableImportError(
+        { context: { status: call.status } } as unknown,
+        data ?? { message: call.raw.slice(0, 300) }
+      );
+    }
     if (data && data.success === false) throw await toReadableImportError(null, data);
+
     return {
       fields: (data?.fields ?? {}) as Record<string, unknown>,
       testParameters: (data?.testParameters ?? []) as ProductionReleaseTestParameter[],
