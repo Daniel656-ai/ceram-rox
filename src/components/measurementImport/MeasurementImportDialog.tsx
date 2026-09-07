@@ -140,6 +140,9 @@ export default function MeasurementImportDialog({
 
   const assigned = rows.filter((r) => r.targetFieldKey);
   const unassigned = rows.filter((r) => !r.targetFieldKey);
+  /** Ergebnisfelder des Messfalls, die der Import nicht befüllt hat. */
+  const open = openTargets(rows, targets);
+
   const invalid = assigned.filter((r) => r.value == null && !r.belowDetection);
 
   const apply = () => {
