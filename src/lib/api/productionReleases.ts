@@ -147,8 +147,13 @@ async function toReadableImportError(error: unknown, data: unknown): Promise<Err
 /** Name des Importdienstes (Edge Function) – eine einzige Quelle der Wahrheit. */
 export const IMPORT_FUNCTION_NAME = "parse-production-release";
 
-const FUNCTIONS_BASE = `${String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "")}/functions/v1`;
-const ANON_KEY = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "");
+const FUNCTIONS_BASE = FUNCTIONS_BASE_URL;
+const ANON_KEY = BACKEND_ANON_KEY;
+
+/** Diagnose der aktuellen Backend-Konfiguration (Web und Desktop identisch). */
+export function importServiceDiagnostics() {
+  return { funktion: IMPORT_FUNCTION_NAME, endpunkt: `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`, ...backendDiagnostics() };
+}
 
 /**
  * Direkter, vollständig protokollierter Aufruf des Importdienstes.
@@ -160,23 +165,30 @@ const ANON_KEY = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "");
  */
 async function callImportService(
   body: unknown
-): Promise<{ status: number; json: Record<string, unknown> | null; raw: string; url: string }> {
+): Promise<{
+  status: number;
+  json: Record<string, unknown> | null;
+  raw: string;
+  url: string;
+  fromGateway: boolean;
+}> {
   const url = `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`;
   const { data: sess } = await dbClient.auth.getSession();
   const token = sess?.session?.access_token ?? ANON_KEY;
   const payload = JSON.stringify(body ?? {});
 
-  if (!FUNCTIONS_BASE.startsWith("http")) {
+  if (!/^https?:\/\//i.test(FUNCTIONS_BASE)) {
     throw new Error(
-      "Die Backend-Adresse ist in dieser Anwendung nicht konfiguriert (VITE_SUPABASE_URL fehlt). Fehlercode: BACKEND_URL_MISSING."
+      "Die Backend-Adresse ist in dieser Anwendung nicht konfiguriert. Fehlercode: BACKEND_URL_MISSING."
     );
   }
 
-  let last: { status: number; json: Record<string, unknown> | null; raw: string } | null = null;
+  let last:
+    | { status: number; json: Record<string, unknown> | null; raw: string; fromGateway: boolean }
+    | null = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     console.info("[Fertigungsfreigabe-Import] Aufruf", {
-      funktion: IMPORT_FUNCTION_NAME,
-      endpunkt: url,
+      ...importServiceDiagnostics(),
       versuch: attempt,
       nutzlastKB: Math.round(payload.length / 1024),
       authentifiziert: !!sess?.session,
@@ -197,19 +209,23 @@ async function callImportService(
     } catch {
       json = null; // z. B. HTML-Fehlerseite des Gateways
     }
+    // Antwortete wirklich das Supabase-Gateway (und nicht z. B. der lokale
+    // Desktop-Asset-Server)? Nur dann ist ein 404 fachlich aussagekräftig.
+    const fromGateway = !!(res.headers.get("sb-project-ref") || res.headers.get("x-served-by"));
     console.info("[Fertigungsfreigabe-Import] Antwort", {
       endpunkt: url,
       status: res.status,
       erfolg: res.ok,
+      vomBackend: fromGateway,
       antwort: raw.slice(0, 400),
     });
-    last = { status: res.status, json, raw };
+    last = { status: res.status, json, raw, fromGateway };
     // 404/502/503/504 ohne Fachantwort = Dienst gerade nicht auflösbar → erneut versuchen
     const transient = [404, 502, 503, 504].includes(res.status) && !json?.error_code;
     if (!transient || attempt === 3) break;
     await new Promise((r) => setTimeout(r, attempt * 1500));
   }
-  return { ...(last as { status: number; json: Record<string, unknown> | null; raw: string }), url };
+  return { ...(last as NonNullable<typeof last>), url };
 }
 
 
