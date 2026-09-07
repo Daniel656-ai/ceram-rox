@@ -144,8 +144,13 @@ function stripUnitSuffix(raw: string): string {
   if (bracket) s = bracket[1].trim();
   // Angehängte Einheit ohne Klammern
   s = s.replace(/\s*(%|wt\.?%|ppm|ppb|ppt|mg\/kg|g\/kg|µg\/g|ug\/g|mg\/g)\s*$/i, "").trim();
+  // Vorangestellte Einheit: „% V2O5“, „Gew.-% SiO2“, „ppm As“
+  s = s
+    .replace(/^\s*(?:gew\.?\s*-?\s*%|masse\s*-?\s*%|mass\s*-?\s*%|wt\.?\s*-?\s*%|%|ppm|ppb|ppt|mg\/kg|g\/kg|µg\/g|ug\/g|mg\/g)\s*[:.\-–]?\s*/i, "")
+    .trim();
   return s.replace(/[:=]\s*$/, "").trim();
 }
+
 
 /**
  * Stabiler Element-/Verbindungsschlüssel einer beliebigen Bezeichnung.
