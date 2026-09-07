@@ -10,7 +10,7 @@
 
 import type { RawMeasurementRow } from "./orderResultsAggregation";
 import { computeStats } from "./resultsStatistics";
-import type { ResultParamColumn } from "./resultSchema";
+import { paramKey, type ResultParamColumn } from "./resultSchema";
 
 export interface AnalysisValue {
   /** ID des zugrunde liegenden Ergebnisdatensatzes (für Korrekturen/Historie). */
