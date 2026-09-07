@@ -144,6 +144,75 @@ async function toReadableImportError(error: unknown, data: unknown): Promise<Err
   return err;
 }
 
+/** Name des Importdienstes (Edge Function) – eine einzige Quelle der Wahrheit. */
+export const IMPORT_FUNCTION_NAME = "parse-production-release";
+
+const FUNCTIONS_BASE = `${String(import.meta.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "")}/functions/v1`;
+const ANON_KEY = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "");
+
+/**
+ * Direkter, vollständig protokollierter Aufruf des Importdienstes.
+ *
+ * Bewusst ohne `functions.invoke`: so sind Endpunkt, HTTP-Status und Antwort
+ * eindeutig nachvollziehbar und ein 404 kann nicht als generischer Fehler
+ * verschleiert werden. Kurzzeitig nicht auflösbare Funktionen (z. B. direkt
+ * nach einem Deploy oder bei Kaltstart des Gateways) werden erneut versucht.
+ */
+async function callImportService(
+  body: unknown
+): Promise<{ status: number; json: Record<string, unknown> | null; raw: string; url: string }> {
+  const url = `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`;
+  const { data: sess } = await dbClient.auth.getSession();
+  const token = sess?.session?.access_token ?? ANON_KEY;
+  const payload = JSON.stringify(body ?? {});
+
+  if (!FUNCTIONS_BASE.startsWith("http")) {
+    throw new Error(
+      "Die Backend-Adresse ist in dieser Anwendung nicht konfiguriert (VITE_SUPABASE_URL fehlt). Fehlercode: BACKEND_URL_MISSING."
+    );
+  }
+
+  let last: { status: number; json: Record<string, unknown> | null; raw: string } | null = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    console.info("[Fertigungsfreigabe-Import] Aufruf", {
+      funktion: IMPORT_FUNCTION_NAME,
+      endpunkt: url,
+      versuch: attempt,
+      nutzlastKB: Math.round(payload.length / 1024),
+      authentifiziert: !!sess?.session,
+    });
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: ANON_KEY,
+        Authorization: `Bearer ${token}`,
+      },
+      body: payload,
+    });
+    const raw = await res.text();
+    let json: Record<string, unknown> | null = null;
+    try {
+      json = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    } catch {
+      json = null; // z. B. HTML-Fehlerseite des Gateways
+    }
+    console.info("[Fertigungsfreigabe-Import] Antwort", {
+      endpunkt: url,
+      status: res.status,
+      erfolg: res.ok,
+      antwort: raw.slice(0, 400),
+    });
+    last = { status: res.status, json, raw };
+    // 404/502/503/504 ohne Fachantwort = Dienst gerade nicht auflösbar → erneut versuchen
+    const transient = [404, 502, 503, 504].includes(res.status) && !json?.error_code;
+    if (!transient || attempt === 3) break;
+    await new Promise((r) => setTimeout(r, attempt * 1500));
+  }
+  return { ...(last as { status: number; json: Record<string, unknown> | null; raw: string }), url };
+}
+
+
 
 export const productionReleases = {
   async list(opts: { onlyCurrent?: boolean } = {}): Promise<ProductionReleaseRow[]> {
@@ -318,24 +387,41 @@ export const productionReleases = {
     document: Record<string, unknown>;
     changes: Record<string, unknown>[];
   }> {
-    let data: {
-      success?: boolean;
-      fields?: unknown;
-      testParameters?: unknown;
-      document?: unknown;
-      changes?: unknown;
-    } | null = null;
-    let error: unknown = null;
+    let call: Awaited<ReturnType<typeof callImportService>>;
     try {
-      const res = await dbClient.functions.invoke("parse-production-release", { body: args });
-      data = res.data;
-      error = res.error;
+      call = await callImportService(args);
     } catch (e) {
       // z. B. abgebrochene Verbindung – nicht als generischer Fehler verschlucken
       throw await toReadableImportError(e, null);
     }
-    if (error) throw await toReadableImportError(error, data);
+
+    const data = call.json as
+      | {
+          success?: boolean;
+          error_code?: string;
+          fields?: unknown;
+          testParameters?: unknown;
+          document?: unknown;
+          changes?: unknown;
+        }
+      | null;
+
+    if (call.status === 404 && !data?.error_code) {
+      const err = new Error(
+        `Der Importdienst „${IMPORT_FUNCTION_NAME}“ ist unter ${call.url} nicht erreichbar (HTTP 404). Fehlercode: FUNCTION_NOT_FOUND.`
+      );
+      (err as Error & { code?: string; status?: number }).code = "FUNCTION_NOT_FOUND";
+      (err as Error & { code?: string; status?: number }).status = 404;
+      throw err;
+    }
+    if (call.status < 200 || call.status >= 300) {
+      throw await toReadableImportError(
+        { context: { status: call.status } } as unknown,
+        data ?? { message: call.raw.slice(0, 300) }
+      );
+    }
     if (data && data.success === false) throw await toReadableImportError(null, data);
+
     return {
       fields: (data?.fields ?? {}) as Record<string, unknown>,
       testParameters: (data?.testParameters ?? []) as ProductionReleaseTestParameter[],
