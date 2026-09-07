@@ -153,7 +153,8 @@ Deno.serve(async (req) => {
     .join("\n\n")
     .slice(0, 120000);
 
-  if (!text.replace(/\s/g, "").length && !images.length) {
+  const rawTextLength = pages.join("").replace(/\s/g, "").length;
+  if (!rawTextLength && !images.length) {
     return fail(
       400,
       "PDF_EMPTY",
