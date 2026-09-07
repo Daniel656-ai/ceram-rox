@@ -14,6 +14,32 @@
 
 import { resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { formatResultLabel } from "@/lib/resultLabels";
+import { elementKey } from "@/lib/elementKeys";
+
+/**
+ * Kanonischer Zuordnungsschlüssel eines Ergebnisparameters.
+ *
+ * Die sichtbare Bezeichnung ist frei formatierbar („% V₂O₅“, „V2O5 (%)“,
+ * „Vanadiumpentoxid“) – zugeordnet wird immer über den stabilen Schlüssel.
+ * Nur so treffen definierte Ergebnisspalten und tatsächlich gemessene Werte
+ * zuverlässig aufeinander. Nicht-chemische Bezeichnungen werden lediglich
+ * normalisiert (Groß-/Kleinschreibung, Sonderzeichen).
+ */
+export function paramKey(label: string): string {
+  const raw = String(label ?? "").trim();
+  if (!raw) return "";
+  const ek = elementKey(raw);
+  if (ek) return ek;
+  const norm = raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "");
+  return norm || raw.toLowerCase();
+}
+
+
 
 
 export interface ResultParamColumn {
