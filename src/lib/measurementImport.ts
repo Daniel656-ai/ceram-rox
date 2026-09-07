@@ -245,9 +245,10 @@ function findMapping(name: string, mappings: ImportMapping[]): ImportMapping | n
 
 export interface MapOptions {
   /**
-   * Im Messfall („Vorgabewerte / Messkontext“) definierte Element-Schlüssel.
-   * Ist die Liste gefüllt, werden ausschließlich diese Elemente übernommen;
-   * alle weiteren Spalten der Importdatei bleiben unberücksichtigt.
+   * Ergebnis-Elemente des Messfalls. Sie schränken die Erkennung NICHT ein –
+   * der Importer erkennt weiterhin alle Elemente der Messdatei (auch für die
+   * standardlose RFA). Die Liste dient nur der Diagnose/Kennzeichnung: welche
+   * erkannten Elemente gehören zur Ergebnisliste des Messfalls.
    */
   caseElementKeys?: string[] | null;
 }
@@ -301,22 +302,18 @@ export function mapReadings(
     const bareName = splitNameUnit(r.sourceName).name;
     const detected = elementKey(bareName) ?? elementKey(r.sourceName);
     const caseElementKey = detected && caseKeys.has(detected) ? detected : null;
-    const restricted = caseKeys.size > 0;
 
     if (m && byKey.has(m.target_field_key)) {
       targetFieldKey = m.target_field_key;
       origin = "profile";
       matchedBy = "profile";
       factor = m.factor ?? null;
-    } else if (restricted && detected) {
-      // Messfall gibt die Elemente vor: nur diese werden übernommen.
-      if (!caseElementKey) {
-        matchNote = "Element im Messfall nicht definiert – wird ignoriert.";
-      } else {
-        const t = byElement.get(detected) ?? canon.get(detected.toLowerCase());
-        if (t) { targetFieldKey = t.field_key; origin = "auto"; matchedBy = "element"; }
-        else matchNote = `Messkontext-Schlüssel ${detected} vorhanden, aber kein passendes Ergebnisfeld gefunden.`;
-      }
+    } else if (detected) {
+      // Erkennung ist bewusst unbeschränkt: jedes Element der Messdatei wird
+      // erkannt. Ob es ein offizielles Ergebnis ist, entscheidet der Messfall.
+      const t = byElement.get(detected) ?? canon.get(detected.toLowerCase());
+      if (t) { targetFieldKey = t.field_key; origin = "auto"; matchedBy = "element"; }
+      else matchNote = `Element ${detected} erkannt, aber kein passendes Ergebnisfeld im Messfall.`;
     } else {
       const t = (detected ? byElement.get(detected) : undefined) ?? canon.get(canonicalParameter(r.sourceName));
       if (t) {
@@ -348,7 +345,7 @@ export function mappingReport(rows: MappedRow[], targets: TargetCandidate[]): st
   const byKey = new Map(targets.map((t) => [t.field_key, t]));
   return rows.map((r) => {
     const el = r.elementKeyDetected ?? "—";
-    const ctx = r.caseElementKey ? `Messkontext ${r.caseElementKey}` : "kein Messkontext-Schlüssel";
+    const ctx = r.caseElementKey ? `Messfall-Element ${r.caseElementKey}` : "nicht in der Ergebnisliste des Messfalls";
     const t = r.targetFieldKey ? byKey.get(r.targetFieldKey) : undefined;
     const field = t ? `Ergebnisfeld ${t.display_name} (${t.field_key})` : "kein Ergebnisfeld";
     const value = r.targetFieldKey

@@ -3,6 +3,7 @@ import type { FormField } from "@/lib/api/formFields";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import { evaluateLocalCalculations } from "@/lib/localCalculations";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import { fieldElementKey, formatElementKey } from "@/lib/elementKeys";
 import {
   readResultConditions, collectResultConditions, buildConditionLabel, conditionsToContext,
 } from "@/lib/fieldLinks";
@@ -70,19 +71,59 @@ export function buildLinkedFormResultCandidates(
     const storageKey = meta.storage_key || block.field_key;
     const children = fields.filter((f) => f.parent_field_id === block.id);
     for (const instance of readInstances(localValues[storageKey], meta, toBlockChildDefs(children))) {
-      for (const child of children) {
-        if (child.field_type === "measurement_import" || child.field_type === "repeater") continue;
-        if (readBlockChildRole(child) !== "value") continue;
+      const valueChildren = children.filter(
+        (c) =>
+          c.field_type !== "measurement_import" &&
+          c.field_type !== "repeater" &&
+          readBlockChildRole(c) === "value"
+      );
+      const base = {
+        kind: "field" as const,
+        instanceKey: instance.instanceId,
+        instanceLabel: instance.label,
+        instanceContext: instance.context,
+      };
+      // Element-Zuordnung der Messwertfelder (Schlüssel statt Bezeichnung).
+      const byElement = new Map<string, FormField>();
+      for (const c of valueChildren) {
+        const ek = fieldElementKey(c as any);
+        if (ek && !byElement.has(ek)) byElement.set(ek, c);
+      }
+      const spec = instance.elementSpec;
+      const usedIds = new Set<string>();
+
+      // Der Messfall gibt Auswahl UND Reihenfolge der Ergebnis-Elemente vor.
+      // Ein Element ohne Messwert bleibt als leere Ergebnisposition erhalten.
+      for (const item of spec) {
+        const child = byElement.get(item.key);
+        if (child) usedIds.add(child.id);
         instanceCandidates.push({
+          ...base,
+          key: instanceResultKey(
+            prefix, storageKey, instance.instanceId,
+            child ? child.field_key : `element:${item.key}`
+          ),
+          label: child
+            ? child.result_label || child.display_name || child.field_key
+            : item.label || formatElementKey(item.key),
+          unit: (child as any)?.unit ?? null,
+          value: child ? instance.values[child.field_key] : null,
+          official: item.official,
+        });
+      }
+
+      for (const child of valueChildren) {
+        if (usedIds.has(child.id)) continue;
+        // Elementfelder außerhalb der Messfall-Liste sind erkannt/verfügbar,
+        // aber niemals offizielles Ergebnis dieses Messfalls.
+        const isElement = spec.length > 0 && !!fieldElementKey(child as any);
+        instanceCandidates.push({
+          ...base,
           key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
           label: child.result_label || child.display_name || child.field_key,
           unit: (child as any).unit ?? null,
           value: instance.values[child.field_key],
-          official: child.is_result === true,
-          kind: "field",
-          instanceKey: instance.instanceId,
-          instanceLabel: instance.label,
-          instanceContext: instance.context,
+          official: isElement ? false : child.is_result === true,
         });
       }
     }
