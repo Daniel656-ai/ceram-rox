@@ -403,7 +403,10 @@ export function buildEntriesFromCase(
       [CASE_INSTANCE_KEY]: inst.id,
       [IMPORT_PROFILE_KEY]: inst.import_profile_id ?? null,
       [CASE_ELEMENT_SPEC_KEY]: spec,
-      [CASE_ELEMENTS_KEY]: spec.length ? spec.map((s) => s.key) : caseElementKeys(inst.context),
+      // Ausschließlich die Ergebnisliste des Messfalls. Der Messkontext bzw.
+      // eine Import-Unterkategorie bestimmt die Ergebnisse NIEMALS.
+      [CASE_ELEMENTS_KEY]: spec.map((s) => s.key),
+
 
       [CASE_CURVE_KEY]: hasCurveConfig(readCaseCurveConfig(inst.curve_config))
         ? readCaseCurveConfig(inst.curve_config)
