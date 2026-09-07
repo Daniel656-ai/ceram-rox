@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import {
-  parseMeasurementText, mapReadings, allSourceNames, outputValue, rowStatus, openTargets,
+  parseMeasurementText, mapReadings, allSourceNames, outputValue, rowStatus, openTargets, mappingReport,
   type MappedRow, type TargetCandidate, type DecimalSeparator,
 } from "@/lib/measurementImport";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -53,6 +53,11 @@ interface Props {
   targets: TargetCandidate[];
   /** Aktuelle Werte der Zielfelder – für Konflikterkennung beim Dateiimport. */
   currentValues?: Record<string, unknown>;
+  /**
+   * Vom Messfall vorgegebene Element-Schlüssel (Messkontext). Ist die Liste
+   * gefüllt, werden ausschließlich diese Elemente übernommen.
+   */
+  caseElementKeys?: string[] | null;
   /** Zulässige Datei-Importer (leer = alle registrierten). */
   allowedImporters?: string[] | null;
   /** Zuordnung für die dauerhafte Speicherung importierter Messkurven. */
@@ -71,7 +76,7 @@ interface Props {
 
 
 export default function MeasurementImportDialog({
-  open, onOpenChange, defaultProfileId, targets, currentValues, allowedImporters,
+  open, onOpenChange, defaultProfileId, targets, currentValues, allowedImporters, caseElementKeys,
   curveContext, curveDefaults, allowedEvaluations, enableEvaluation = false,
   onApply, canManageProfiles = true,
 }: Props) {
@@ -134,14 +139,15 @@ export default function MeasurementImportDialog({
     const base = mapReadings(
       measurementReadings.map((c) => ({ ...c.reading, sourceName: c.cls.parameter, unit: c.reading.unit ?? c.cls.unit })),
       profile,
-      targets
+      targets,
+      { caseElementKeys }
     );
     return base.map((r, i) => {
       const o = overrides[i];
       if (o === undefined) return r;
       return { ...r, targetFieldKey: o === "__none__" ? null : o, origin: "manual" as const };
     });
-  }, [measurementReadings, profile, targets, overrides]);
+  }, [measurementReadings, profile, targets, overrides, caseElementKeys]);
 
   const assigned = rows.filter((r) => r.targetFieldKey);
   const unassigned = rows.filter((r) => !r.targetFieldKey);
@@ -329,7 +335,16 @@ export default function MeasurementImportDialog({
                       {unassigned.length} importiert – für Messfall nicht benötigt
                     </Badge>
                   )}
-                  {openFields.length > 0 && (
+                  <details className="rounded border bg-muted/20 p-2 text-[11px]">
+                  <summary className="cursor-pointer font-medium">Zuordnungsprotokoll anzeigen</summary>
+                  <ul className="mt-1 space-y-0.5 font-mono">
+                    {mappingReport(rows, targets).map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                </details>
+
+                {openFields.length > 0 && (
                     <Badge variant="outline" className="gap-1 border-amber-400 text-amber-700">
                       <AlertTriangle className="h-3 w-3" />{openFields.length} offene Zuordnung(en)
                     </Badge>
@@ -393,7 +408,10 @@ export default function MeasurementImportDialog({
                         .map(({ r, i }) => (
                         <tr key={i} className="border-t">
                           <td className="p-2 font-medium">{r.sourceName}</td>
-                          <td className="p-2 font-mono text-muted-foreground">{elementKey(r.sourceName) ?? "—"}</td>
+                          <td className="p-2 font-mono text-muted-foreground">
+                            {r.elementKeyDetected ?? elementKey(r.sourceName) ?? "—"}
+                            {r.caseElementKey ? <span className="ml-1 text-[10px]">· Messkontext</span> : null}
+                          </td>
                           <td className="p-2 font-mono">{r.value ?? (r.belowDetection ? r.raw : r.raw)}</td>
                           <td className="p-2 text-muted-foreground">{r.unit ?? r.targetUnit ?? "—"}</td>
                           <td className="p-2"><Badge variant="secondary">Messwert</Badge></td>

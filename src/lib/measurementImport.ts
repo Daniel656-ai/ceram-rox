@@ -224,6 +224,14 @@ export interface MappedRow extends ParsedReading {
   targetUnit?: string | null;
   factor?: number | null;
   unitMismatch?: boolean;
+  /** Aus der Spaltenüberschrift bestimmtes Element („V2O5 (%)“ -> „V2O5“). */
+  elementKeyDetected?: string | null;
+  /** Passender Element-Schlüssel aus dem Messkontext des Messfalls. */
+  caseElementKey?: string | null;
+  /** Wodurch die Zuordnung zustande kam (Diagnose). */
+  matchedBy?: "profile" | "element" | "name" | "none";
+  /** Klartext-Begründung, wenn keine Zuordnung möglich war. */
+  matchNote?: string | null;
 }
 
 export function allSourceNames(profile: MeasurementImportProfile | null | undefined): string[] {
@@ -235,11 +243,21 @@ function findMapping(name: string, mappings: ImportMapping[]): ImportMapping | n
   return mappings.find((m) => (m.source_names ?? []).some((s) => canonicalParameter(s) === n)) ?? null;
 }
 
-/** Ordnet gelesene Werte den Formularfeldern zu (Profil zuerst, dann Namensähnlichkeit). */
+export interface MapOptions {
+  /**
+   * Im Messfall („Vorgabewerte / Messkontext“) definierte Element-Schlüssel.
+   * Ist die Liste gefüllt, werden ausschließlich diese Elemente übernommen;
+   * alle weiteren Spalten der Importdatei bleiben unberücksichtigt.
+   */
+  caseElementKeys?: string[] | null;
+}
+
+/** Ordnet gelesene Werte den Formularfeldern zu (Profil zuerst, dann Element-Schlüssel). */
 export function mapReadings(
   readings: ParsedReading[],
   profile: MeasurementImportProfile | null | undefined,
-  targets: TargetCandidate[]
+  targets: TargetCandidate[],
+  options: MapOptions = {}
 ): MappedRow[] {
   const mappings = profile?.mappings ?? [];
   const byKey = new Map(targets.map((t) => [t.field_key, t]));
@@ -264,31 +282,82 @@ export function mapReadings(
     }
   }
 
+  // Messfall-Vorgabe: Element-Schlüssel des Messkontexts, normalisiert.
+  const caseKeys = new Map<string, string>();
+  for (const raw of options.caseElementKeys ?? []) {
+    const ek = elementKey(String(raw ?? ""));
+    if (ek) caseKeys.set(ek, String(raw));
+  }
+
   return readings.map((r) => {
     const m = findMapping(r.sourceName, mappings);
     let targetFieldKey: string | null = null;
     let origin: MappedRow["origin"] = "none";
+    let matchedBy: MappedRow["matchedBy"] = "none";
     let factor: number | null = null;
+    let matchNote: string | null = null;
+
+    // Spaltenüberschrift normalisieren und das Element bestimmen.
+    const bareName = splitNameUnit(r.sourceName).name;
+    const detected = elementKey(bareName) ?? elementKey(r.sourceName);
+    const caseElementKey = detected && caseKeys.has(detected) ? detected : null;
+    const restricted = caseKeys.size > 0;
 
     if (m && byKey.has(m.target_field_key)) {
       targetFieldKey = m.target_field_key;
       origin = "profile";
+      matchedBy = "profile";
       factor = m.factor ?? null;
+    } else if (restricted && detected) {
+      // Messfall gibt die Elemente vor: nur diese werden übernommen.
+      if (!caseElementKey) {
+        matchNote = "Element im Messfall nicht definiert – wird ignoriert.";
+      } else {
+        const t = byElement.get(detected) ?? canon.get(detected.toLowerCase());
+        if (t) { targetFieldKey = t.field_key; origin = "auto"; matchedBy = "element"; }
+        else matchNote = `Messkontext-Schlüssel ${detected} vorhanden, aber kein passendes Ergebnisfeld gefunden.`;
+      }
     } else {
-      const ek = elementKey(splitNameUnit(r.sourceName).name);
-      const t = (ek ? byElement.get(ek) : undefined) ?? canon.get(canonicalParameter(r.sourceName));
-      if (t) { targetFieldKey = t.field_key; origin = "auto"; }
+      const t = (detected ? byElement.get(detected) : undefined) ?? canon.get(canonicalParameter(r.sourceName));
+      if (t) {
+        targetFieldKey = t.field_key;
+        origin = "auto";
+        matchedBy = detected && byElement.has(detected) ? "element" : "name";
+      } else {
+        matchNote = "Kein passendes Ergebnisfeld gefunden.";
+      }
     }
-
 
     const target = targetFieldKey ? byKey.get(targetFieldKey) : undefined;
     const targetUnit = target?.unit ?? m?.unit ?? null;
     // Einheit kann im Namen stecken ("As (PPM)") – Parametername bleibt sauber.
     const unit = r.unit ?? splitNameUnit(r.sourceName).unit ?? null;
     const unitMismatch = !!(unit && targetUnit && normalizeName(unit) !== normalizeName(targetUnit));
-    return { ...r, unit, targetFieldKey, origin, targetUnit, factor, unitMismatch };
+    return {
+      ...r, unit, targetFieldKey, origin, targetUnit, factor, unitMismatch,
+      elementKeyDetected: detected ?? null, caseElementKey, matchedBy, matchNote,
+    };
   });
 }
+
+/**
+ * Nachvollziehbares Zuordnungsprotokoll je importierter Spalte:
+ * Spaltenüberschrift → Element → Messkontext-Schlüssel → Ergebnisfeld → Wert.
+ */
+export function mappingReport(rows: MappedRow[], targets: TargetCandidate[]): string[] {
+  const byKey = new Map(targets.map((t) => [t.field_key, t]));
+  return rows.map((r) => {
+    const el = r.elementKeyDetected ?? "—";
+    const ctx = r.caseElementKey ? `Messkontext ${r.caseElementKey}` : "kein Messkontext-Schlüssel";
+    const t = r.targetFieldKey ? byKey.get(r.targetFieldKey) : undefined;
+    const field = t ? `Ergebnisfeld ${t.display_name} (${t.field_key})` : "kein Ergebnisfeld";
+    const value = r.targetFieldKey
+      ? `Wert ${r.belowDetection ? r.raw : r.value ?? "—"}`
+      : r.matchNote ?? "nicht übernommen";
+    return `${r.sourceName} → ${el} → ${ctx} → ${field} → ${value}`;
+  });
+}
+
 
 /** Wert, der tatsächlich in das Formularfeld geschrieben wird. */
 export function outputValue(row: MappedRow): number | string | null {

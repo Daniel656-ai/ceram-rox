@@ -8,7 +8,7 @@ import {
   readMeasurementBlockMeta, instanceLabel, newInstanceId, toBlockChildDefs, readBlockChildRole,
   INSTANCE_ID_KEY, INSTANCE_LABEL_KEY, INSTANCE_CONTEXT_KEY,
   readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
-  CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, CASE_CURVE_KEY,
+  CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, CASE_CURVE_KEY, CASE_ELEMENTS_KEY, caseElementKeys,
   readCaseCurveConfig, hasCurveConfig, type CaseTemplate,
 } from "@/lib/measurementBlocks";
 
@@ -455,6 +455,17 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
    * dort hinterlegte Importprofil dieser Messung – jede Messung importiert
    * eigenständig und überschreibt niemals eine andere Messung.
    */
+  /**
+   * Vom Messfall vorgegebene Elemente (Schlüssel des Messkontexts). Nur diese
+   * werden aus einer Importdatei übernommen; alles andere bleibt unbeachtet.
+   */
+  const caseElements = useMemo(() => {
+    const stored = read(CASE_ELEMENTS_KEY);
+    if (Array.isArray(stored)) return stored.map(String).filter(Boolean);
+    const ctx = read(INSTANCE_CONTEXT_KEY);
+    return ctx && typeof ctx === "object" ? caseElementKeys(ctx as Record<string, unknown>) : [];
+  }, [read]);
+
   const instanceProfile = read(IMPORT_PROFILE_KEY);
   const effectiveProfileId =
     (typeof instanceProfile === "string" && instanceProfile) || cfg.profile_id;
@@ -618,6 +629,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           targets={targets}
           currentValues={currentValues}
           allowedImporters={cfg.importers}
+          caseElementKeys={caseElements}
           curveContext={
             runtime
               ? {

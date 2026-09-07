@@ -13,10 +13,12 @@
  * nutzbar – der Import schreibt weiterhin in den Eintrags-Scope.
  */
 import type { FormField } from "@/lib/api/formFields";
+import { elementKey } from "@/lib/elementKeys";
 
 export const INSTANCE_ID_KEY = "__instance_id";
 export const INSTANCE_LABEL_KEY = "__label";
 export const INSTANCE_CONTEXT_KEY = "__context";
+
 
 export interface MeasurementContextFieldDef {
   key: string;
@@ -280,6 +282,28 @@ export const hasCurveConfig = (c: CaseCurveConfig) =>
 /** Schlüssel der Kurvenkonfiguration im Messblock-Eintrag. */
 export const CASE_CURVE_KEY = "__curve_config";
 
+/**
+ * Vom Messfall vorgegebene Element-/Verbindungsschlüssel dieser Messung.
+ * Sie stammen ausschließlich aus den Schlüsseln des Messkontexts
+ * („Vorgabewerte / Messkontext“) – es gibt keine zweite Datenstruktur.
+ */
+export const CASE_ELEMENTS_KEY = "__case_elements";
+
+/**
+ * Liest aus einem Messkontext die darin definierten Elemente. Ein
+ * Kontextschlüssel gilt als Element, wenn er als chemische Bezeichnung
+ * erkennbar ist (z. B. `V2O5`, `WO3`, `As`) – unabhängig davon, ob ein
+ * Vorgabewert hinterlegt ist.
+ */
+export function caseElementKeys(context: Record<string, unknown> | null | undefined): string[] {
+  const out: string[] = [];
+  for (const k of Object.keys(context ?? {})) {
+    const ek = elementKey(k);
+    if (ek && !out.includes(ek)) out.push(ek);
+  }
+  return out;
+}
+
 /** Minimale Sicht auf einen Messfall – hält diese Datei frei von API-Typen. */
 export interface CaseTemplate {
   id: string;
@@ -314,13 +338,20 @@ export function buildEntriesFromCase(
       [CASE_ID_KEY]: caseDef.id,
       [CASE_INSTANCE_KEY]: inst.id,
       [IMPORT_PROFILE_KEY]: inst.import_profile_id ?? null,
+      [CASE_ELEMENTS_KEY]: caseElementKeys(inst.context),
       [CASE_CURVE_KEY]: hasCurveConfig(readCaseCurveConfig(inst.curve_config))
         ? readCaseCurveConfig(inst.curve_config)
         : null,
     };
     for (const k of labelKeys) entry[k] = inst.label;
     const legacy: Record<string, string> = {};
+    const elementNames = new Set(
+      Object.keys(inst.context ?? {}).filter((k) => elementKey(k))
+    );
     for (const [k, v] of Object.entries(inst.context ?? {})) {
+      // Element-Schlüssel beschreiben die benötigten Messgrößen, nicht den
+      // Messkontext – sie werden nicht als Kontexttext mitgeführt.
+      if (elementNames.has(k)) continue;
       if (v == null || String(v).trim() === "") continue;
       if (contextKeys.has(k)) entry[k] = v;
       else legacy[k] = String(v);
@@ -330,6 +361,7 @@ export function buildEntriesFromCase(
     return entry;
   });
 }
+
 
 /** Sind die Einträge bereits aus genau diesem Messfall erzeugt worden? */
 export const entriesMatchCase = (
