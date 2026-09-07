@@ -457,14 +457,16 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
    * eigenständig und überschreibt niemals eine andere Messung.
    */
   /**
-   * Vom Messfall vorgegebene Elemente (Schlüssel des Messkontexts). Nur diese
-   * werden aus einer Importdatei übernommen; alles andere bleibt unbeachtet.
+   * Ergebnis-Elemente des Messfalls (Ebene 2). Sie schränken die Erkennung
+   * nicht ein, sondern kennzeichnen nur, welche erkannten Elemente zur
+   * Ergebnisliste gehören. Der Messkontext / eine Import-Unterkategorie wird
+   * hier bewusst NICHT mehr ausgewertet.
    */
   const caseElements = useMemo(() => {
+    const spec = readCaseElementSpec(read(CASE_ELEMENT_SPEC_KEY));
+    if (spec.length) return spec.map((s) => s.key);
     const stored = read(CASE_ELEMENTS_KEY);
-    if (Array.isArray(stored)) return stored.map(String).filter(Boolean);
-    const ctx = read(INSTANCE_CONTEXT_KEY);
-    return ctx && typeof ctx === "object" ? caseElementKeys(ctx as Record<string, unknown>) : [];
+    return Array.isArray(stored) ? stored.map(String).filter(Boolean) : [];
   }, [read]);
 
   const instanceProfile = read(IMPORT_PROFILE_KEY);
