@@ -424,11 +424,19 @@ export const productionReleases = {
       | null;
 
     if (call.status === 404 && !data?.error_code) {
+      const diag = importServiceDiagnostics();
+      // Kam die 404 gar nicht vom Backend, liegt ein Konfigurationsfehler der
+      // Anwendung vor – das darf nicht als „Dienst nicht gefunden" erscheinen.
       const err = new Error(
-        `Der Importdienst „${IMPORT_FUNCTION_NAME}“ ist unter ${call.url} nicht erreichbar (HTTP 404). Fehlercode: FUNCTION_NOT_FOUND.`
+        call.fromGateway
+          ? `Der Importdienst „${IMPORT_FUNCTION_NAME}“ ist unter ${call.url} nicht erreichbar (HTTP 404). Fehlercode: FUNCTION_NOT_FOUND.`
+          : `Die Anfrage hat das Backend nicht erreicht (${call.url}, HTTP 404, Laufzeit: ${diag.laufzeit}, Projekt: ${diag.projektRef || "unbekannt"}). Fehlercode: BACKEND_UNREACHABLE.`
       );
-      (err as Error & { code?: string; status?: number }).code = "FUNCTION_NOT_FOUND";
+      (err as Error & { code?: string; status?: number }).code = call.fromGateway
+        ? "FUNCTION_NOT_FOUND"
+        : "BACKEND_UNREACHABLE";
       (err as Error & { code?: string; status?: number }).status = 404;
+      console.error("[Fertigungsfreigabe-Import] 404", { ...diag, vomBackend: call.fromGateway, antwort: call.raw.slice(0, 300) });
       throw err;
     }
     if (call.status < 200 || call.status >= 300) {
