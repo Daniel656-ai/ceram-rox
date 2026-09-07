@@ -48,6 +48,12 @@ const CONFIDENCE_LABEL: Record<string, string> = { high: "hoch", medium: "mittel
  * PDF → strukturierte Fertigungsfreigabe (Neuanlage ODER Revision).
  * Bewusst mit Prüfschritt: analysieren → anzeigen → korrigieren → übernehmen.
  */
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+function isPdf(f: File) {
+  return f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+}
+
 export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
   const { user } = useAuth();
   const { data: settings } = useReleaseSettings();
@@ -58,10 +64,17 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [tests, setTests] = useState<ProductionReleaseTestParameter[]>([]);
   const [changes, setChanges] = useState<DetectedChange[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const dragDepth = useRef(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setFile(null); setValues({}); setTests([]); setChanges([]); setAnalysis(null);
+    setFileError(null); setDragActive(false); dragDepth.current = 0;
+    if (inputRef.current) inputRef.current.value = "";
   };
+
 
   const analyze = async (f: File) => {
     setBusy(true);
