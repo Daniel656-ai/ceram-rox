@@ -78,6 +78,7 @@ export default function MeasurementImportDialog({
   const [overrides, setOverrides] = useState<Record<number, string>>({});
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingNew, setEditingNew] = useState(false);
+  const [showNotNeeded, setShowNotNeeded] = useState(false);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["measurement-import-profiles"],
@@ -397,6 +398,18 @@ export default function MeasurementImportDialog({
                     </tbody>
                   </table>
                 </div>
+
+                {unassigned.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-[11px] underline text-muted-foreground"
+                    onClick={() => setShowNotNeeded((v) => !v)}
+                  >
+                    {showNotNeeded
+                      ? "Nicht benötigte Elemente ausblenden"
+                      : `${unassigned.length} für den Messfall nicht benötigte Elemente anzeigen (werden gespeichert)`}
+                  </button>
+                )}
 
                 {metadataRows.length > 0 && (
                   <p className="text-[11px] text-muted-foreground">
