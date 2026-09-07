@@ -153,10 +153,16 @@ export default function RawMaterialsPage() {
 
 
   const handleAddMaterial = async () => {
-    if (!name) { toast.error(t("raw_materials:name_required")); return; }
-    // Duplicate name detection (case-insensitive)
-    const dup = materials?.find((m) => m.material_name.toLowerCase() === name.trim().toLowerCase());
-    if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
+    if (!name.trim()) { toast.error(t("raw_materials:name_required")); return; }
+    // INSERT: Duplikatsprüfung gegen alle bestehenden Rohstoffe.
+    const dup = materials?.find((m) => (m.material_name || "").trim().toLowerCase() === name.trim().toLowerCase());
+    if (dup) {
+      toast.error(t("raw_materials:duplicate_name"), {
+        description: dup.material_number ? `${dup.material_name} (${dup.material_number})` : dup.material_name,
+      });
+      return;
+    }
+
     try {
       await addMaterial.mutateAsync({ material_name: name, material_number: number.trim() || null, other_designation: otherDesignation.trim() || null, cas_number: casNumber.trim() || null, mrs_number: mrsNumber.trim() || null, supplier: supplier || undefined, description: desc || undefined, unit, default_location_id: locationId || undefined, is_hazardous: hazardCats.length > 0, hazard_categories: hazardCats, psa_symbols: psaSymbols, responsible_user_id: responsibleUserId || null });
       toast.success(t("raw_materials:material_created"));
