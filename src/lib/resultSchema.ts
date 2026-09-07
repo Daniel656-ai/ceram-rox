@@ -158,7 +158,11 @@ export interface ResultCellValue {
 
 /** Wert eines Ergebnisparameters – leer bleibt leer, 0 bleibt 0. */
 export function resultCell(record: ResultRecord, key: string): ResultCellValue {
-  const hit = record.outputResults.find((o) => resultLabel(o) === key);
+  const wanted = paramKey(key);
+  const hit =
+    record.outputResults.find((o) => resultLabel(o) === key) ??
+    record.outputResults.find((o) => paramKey(resultLabel(o)) === wanted);
+
   if (!hit) return { present: false, value: null, text: null };
   if (hit.value === null || hit.value === undefined) {
     const text = (hit.remarks || "").trim();
