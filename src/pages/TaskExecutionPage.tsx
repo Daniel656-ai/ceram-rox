@@ -437,6 +437,30 @@ function TaskExecutionPageInner() {
 
       <Card>
         <CardHeader className="py-3">
+          <CardTitle className="text-sm">Auftragsdaten</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div>
+            <p className="text-muted-foreground text-xs">Auftragsnummer</p>
+            <p className="font-medium font-mono">{order?.order_number || "Keine Auftragsnummer"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Projektnummer</p>
+            <p className="font-medium font-mono">{project?.project_number || "Kein Projekt"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Priorität</p>
+            <p className="font-medium">{priorityLabel}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Fälligkeit</p>
+            <p className="font-medium">{dueLabel}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="py-3">
           <CardTitle className="text-sm">Kontext</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
