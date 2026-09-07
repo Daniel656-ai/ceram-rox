@@ -78,3 +78,12 @@ describe("orderResultsStructure", () => {
     expect(cmp[0].max).toBe(58);
   });
 });
+
+describe("Zuordnung über Elementschlüssel", () => {
+  it("verbindet '% V₂O₅' mit der definierten Spalte 'V2O5'", () => {
+    expect(paramKey("% V₂O₅")).toBe("V2O5");
+    expect(paramKey("V2O5 (%)")).toBe("V2O5");
+    expect(paramKey("Vanadiumpentoxid")).toBe("V2O5");
+    expect(paramKey("Glühverlust")).toBe(paramKey("Gluehverlust"));
+  });
+});
