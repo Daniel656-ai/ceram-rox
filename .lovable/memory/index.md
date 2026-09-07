@@ -1,2 +1,3 @@
 - [Geometrie-Auslegung](mem://features/geometry-design-calculation) — AP, ε, Bauteillänge, AV/SV/FR, Zelligkeitsempfehlung aus Stammdaten
 - [Element-Keys Import](mem://features/element-keys-import-mapping) — Stabile Element-Schlüssel verbinden Importdaten mit Ergebnisfeldern des Messfalls
+- [RFA-Zuordnung](mem://features/rfa-case-element-mapping) — Messkontext-Schlüssel steuern Import-Zuordnung, Einheiten werden ignoriert
