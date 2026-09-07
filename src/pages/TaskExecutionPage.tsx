@@ -416,6 +416,18 @@ function TaskExecutionPageInner() {
   const project = order?.projects;
   const sample = order?.samples;
 
+  /** Priorität: gespeicherter Rang der Messung, sonst des Auftrags, sonst Auftragspriorität. */
+  const rank: number | null = m.ranking ?? order?.ranking ?? null;
+  const priorityLabel = rank
+    ? `Prio ${rank}${order?.priority ? ` · ${ORDER_PRIORITY_LABELS[order.priority as OrderPriority] ?? order.priority}` : ""}`
+    : order?.priority
+      ? (ORDER_PRIORITY_LABELS[order.priority as OrderPriority] ?? String(order.priority))
+      : "Keine Priorität";
+
+  /** Fälligkeit: eigenes Datum der Messung, sonst des Auftrags – nie abgeleitet. */
+  const dueRaw: string | null = m.due_date ?? order?.due_date ?? null;
+  const dueLabel = dueRaw ? new Date(dueRaw).toLocaleDateString("de-AT") : "Keine Fälligkeit";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
