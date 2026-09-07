@@ -469,6 +469,12 @@ function TaskExecutionPageInner() {
             <p className="text-muted-foreground text-xs">Fälligkeit</p>
             <p className="font-medium">{dueLabel}</p>
           </div>
+          <div className="col-span-2 md:col-span-4">
+            <p className="text-muted-foreground text-xs">Anforderungen</p>
+            <p className="font-medium whitespace-pre-wrap">
+              {order?.notes?.trim() ? order.notes : "Keine Anforderungen hinterlegt"}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
