@@ -7,6 +7,7 @@
  */
 import type { ImportMapping, MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import { canonicalParameter, splitNameUnit } from "@/lib/measurementClassification";
+import { elementKey, fieldElementKey } from "@/lib/elementKeys";
 
 export type DecimalSeparator = "auto" | "," | ".";
 
@@ -247,10 +248,9 @@ export function mapReadings(
   const byElement = new Map<string, TargetCandidate>();
   for (const t of targets) {
     const ek = fieldElementKey({
-      metadata: (t as { metadata?: unknown }).metadata,
+      metadata: t.element_key ? { element_key: t.element_key } : undefined,
       display_name: t.display_name,
       field_key: t.field_key,
-      ...(t.element_key ? { metadata: { element_key: t.element_key } } : {}),
     });
     if (ek && !byElement.has(ek)) byElement.set(ek, t);
   }
