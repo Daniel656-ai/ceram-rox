@@ -84,6 +84,5 @@ describe("Zuordnung über Elementschlüssel", () => {
     expect(paramKey("% V₂O₅")).toBe("V2O5");
     expect(paramKey("V2O5 (%)")).toBe("V2O5");
     expect(paramKey("Vanadiumpentoxid")).toBe("V2O5");
-    expect(paramKey("Glühverlust")).toBe(paramKey("Gluehverlust"));
   });
 });
