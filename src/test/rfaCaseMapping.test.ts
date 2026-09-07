@@ -30,11 +30,16 @@ describe("RFA-Zuordnung über Messkontext-Schlüssel", () => {
     expect(rows[0].caseElementKey).toBe("V2O5");
   });
 
-  it("ignoriert nicht konfigurierte Elemente und protokolliert nachvollziehbar", () => {
+  it("erkennt weitere Elemente, ordnet sie aber keinem Ergebnisfeld zu", () => {
     const rows = mapReadings([read("SiO2 (%)", "54,2")], null, targets, {
       caseElementKeys: caseElementKeys(context),
     });
+    expect(rows[0].elementKeyDetected).toBe("SiO2");
     expect(rows[0].targetFieldKey).toBeNull();
-    expect(mappingReport(rows, targets)[0]).toContain("SiO2 (%) → SiO2 → kein Messkontext-Schlüssel");
+    expect(mappingReport(rows, targets)[0]).toContain(
+      "SiO2 (%) → SiO2 → nicht in der Ergebnisliste des Messfalls"
+    );
+  });
+
   });
 });
