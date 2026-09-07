@@ -9,6 +9,7 @@
  * und Einheit – kein gerätespezifisches Wissen.
  */
 import { normalizeName } from "@/lib/measurementImport";
+import { elementKey } from "@/lib/elementKeys";
 
 /* ------------------------------------------------------------------ */
 /* Einheiten                                                           */
@@ -78,9 +79,14 @@ const ALIASES: Record<string, string> = {
 /** Vergleichsform eines Parameters ohne Einheit, mit Alias-Auflösung. */
 export function canonicalParameter(rawName: string): string {
   const { name } = splitNameUnit(rawName);
+  // Chemische Bezeichnungen werden über den stabilen Element-Schlüssel
+  // verglichen: "SiO₂", "SiO2", "Silicon dioxide" -> derselbe Schlüssel.
+  const el = elementKey(name);
+  if (el) return el.toLowerCase();
   const n = normalizeName(name);
   return ALIASES[n] ?? n;
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Metadaten-Erkennung                                                 */

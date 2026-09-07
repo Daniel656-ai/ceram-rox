@@ -278,3 +278,30 @@ export function outputValue(row: MappedRow): number | string | null {
   const f = row.factor;
   return typeof f === "number" && Number.isFinite(f) && f !== 0 ? row.value * f : row.value;
 }
+
+/* ------------------------------------------------------------------ */
+/* Statuslogik: Importdaten ≠ Formularfelder ≠ Ergebnisfelder          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Status einer importierten Messgröße bezogen auf den aktuellen Messfall:
+ *   assigned    – einem Ergebnisfeld des Messfalls zugeordnet
+ *   not_needed  – gültiger Messwert, im Messfall aber nicht benötigt
+ *   unreadable  – Wert konnte nicht gelesen werden
+ */
+export type ImportRowStatus = "assigned" | "not_needed" | "unreadable";
+
+export function rowStatus(r: MappedRow): ImportRowStatus {
+  if (!r.targetFieldKey) return "not_needed";
+  if (r.value == null && !r.belowDetection) return "unreadable";
+  return "assigned";
+}
+
+/**
+ * Ergebnisfelder des Messfalls, die durch den Import (noch) nicht befüllt
+ * werden – nur diese benötigen eine manuelle Zuordnung.
+ */
+export function openTargets(rows: MappedRow[], targets: TargetCandidate[]): TargetCandidate[] {
+  const covered = new Set(rows.filter((r) => rowStatus(r) === "assigned").map((r) => r.targetFieldKey as string));
+  return targets.filter((t) => !covered.has(t.field_key));
+}

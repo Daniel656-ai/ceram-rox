@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import {
-  parseMeasurementText, mapReadings, allSourceNames, outputValue,
+  parseMeasurementText, mapReadings, allSourceNames, outputValue, rowStatus, openTargets,
   type MappedRow, type TargetCandidate, type DecimalSeparator,
 } from "@/lib/measurementImport";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -17,7 +17,9 @@ import { AlertTriangle, ClipboardPaste, Settings2, Plus, FileUp } from "lucide-r
 import ImportProfileEditorDialog from "./ImportProfileEditorDialog";
 import MeasurementFileImportPanel, { type CurvePersistContext } from "./MeasurementFileImportPanel";
 import { toast } from "sonner";
+import { elementKey } from "@/lib/elementKeys";
 import {
+  canonicalParameter,
   classifyReading,
   type ImportMetadataEntry,
   type UnassignedMeasurementValue,
@@ -78,6 +80,7 @@ export default function MeasurementImportDialog({
   const [overrides, setOverrides] = useState<Record<number, string>>({});
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingNew, setEditingNew] = useState(false);
+  const [showNotNeeded, setShowNotNeeded] = useState(false);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["measurement-import-profiles"],
@@ -140,6 +143,9 @@ export default function MeasurementImportDialog({
 
   const assigned = rows.filter((r) => r.targetFieldKey);
   const unassigned = rows.filter((r) => !r.targetFieldKey);
+  /** Ergebnisfelder des Messfalls, die der Import nicht befüllt hat. */
+  const openFields = openTargets(rows, targets);
+
   const invalid = assigned.filter((r) => r.value == null && !r.belowDetection);
 
   const apply = () => {
@@ -153,7 +159,8 @@ export default function MeasurementImportDialog({
     // „nicht zugeordnet“ mitgeführt und können später zugeordnet werden.
     const keep: UnassignedMeasurementValue[] = unassigned.map((r) => ({
       parameter: r.sourceName,
-      normalized: r.sourceName,
+      normalized: canonicalParameter(r.sourceName),
+      element_key: elementKey(r.sourceName),
       raw: r.raw,
       value: outputValue(r),
       unit: r.unit ?? null,
@@ -282,10 +289,15 @@ export default function MeasurementImportDialog({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Badge variant="outline">Format: {formatLabel(parsed.detectedFormat)}</Badge>
-                  <Badge variant="secondary">{assigned.length} zugeordnet</Badge>
+                  <Badge variant="secondary">{assigned.length} automatisch zugeordnet</Badge>
                   {unassigned.length > 0 && (
-                    <Badge variant="outline" className="gap-1">
-                      <AlertTriangle className="h-3 w-3" />{unassigned.length} nicht zugeordnet (werden gespeichert)
+                    <Badge variant="outline">
+                      {unassigned.length} importiert – für Messfall nicht benötigt
+                    </Badge>
+                  )}
+                  {openFields.length > 0 && (
+                    <Badge variant="outline" className="gap-1 border-amber-400 text-amber-700">
+                      <AlertTriangle className="h-3 w-3" />{openFields.length} offene Zuordnung(en)
                     </Badge>
                   )}
                   {metadataRows.length > 0 && <Badge variant="outline">{metadataRows.length} Metadaten</Badge>}
@@ -296,20 +308,54 @@ export default function MeasurementImportDialog({
                   )}
                 </div>
 
+                {openFields.length > 0 && (
+                  <div className="rounded border border-amber-300 bg-amber-50/50 p-2 space-y-1">
+                    <p className="text-[11px] font-medium text-amber-700">
+                      Offene Zuordnungen – diese Ergebnisfelder des Messfalls wurden nicht erkannt
+                    </p>
+                    {openFields.map((t) => (
+                      <div key={t.field_key} className="flex items-center gap-2 text-[11px]">
+                        <span className="flex-1">{t.display_name}{t.unit ? ` [${t.unit}]` : ""}</span>
+                        <Select
+                          value="__none__"
+                          onValueChange={(v) => {
+                            const idx = rows.findIndex((r) => r.sourceName === v && !r.targetFieldKey);
+                            if (idx >= 0) setOverrides((p) => ({ ...p, [idx]: t.field_key }));
+                          }}
+                        >
+                          <SelectTrigger className="h-7 w-64 text-[11px]">
+                            <SelectValue placeholder="Importwert zuordnen…" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            <SelectItem value="__none__">Importwert zuordnen…</SelectItem>
+                            {unassigned.map((r) => (
+                              <SelectItem key={r.sourceName} value={r.sourceName}>
+                                {r.sourceName} · {r.raw}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="border rounded overflow-hidden">
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="text-left p-2">Datenname</th>
+                        <th className="text-left p-2">Importiertes Element</th>
                         <th className="text-left p-2">Wert</th>
                         <th className="text-left p-2">Einheit</th>
                         <th className="text-left p-2">Kategorie</th>
-                        <th className="text-left p-2">Zuordnung</th>
+                        <th className="text-left p-2">Ergebnisfeld</th>
                         <th className="text-left p-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map((r, i) => (
+                      {rows.map((r, i) => ({ r, i }))
+                        .filter(({ r }) => showNotNeeded || rowStatus(r) !== "not_needed")
+                        .map(({ r, i }) => (
                         <tr key={i} className="border-t">
                           <td className="p-2 font-medium">{r.sourceName}</td>
                           <td className="p-2 font-mono">{r.value ?? (r.belowDetection ? r.raw : r.raw)}</td>
@@ -322,7 +368,7 @@ export default function MeasurementImportDialog({
                             >
                               <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                               <SelectContent className="max-h-72">
-                                <SelectItem value="__none__">— kein Feld (nicht zugeordnet speichern) —</SelectItem>
+                                <SelectItem value="__none__">— kein Ergebnisfeld (für Messfall nicht benötigt) —</SelectItem>
                                 {targets.map((t) => (
                                   <SelectItem key={t.field_key} value={t.field_key}>
                                     {t.display_name}{t.unit ? ` [${t.unit}]` : ""}
@@ -332,17 +378,18 @@ export default function MeasurementImportDialog({
                             </Select>
                           </td>
                           <td className="p-2">
-                            {!r.targetFieldKey ? <span className="text-amber-600">⚠ nicht zugeordnet – bleibt erhalten</span>
+                            {!r.targetFieldKey ? <span className="text-muted-foreground">importiert – für Messfall nicht benötigt</span>
                               : r.value == null && !r.belowDetection ? <span className="text-destructive">nicht lesbar</span>
                               : r.unitMismatch ? <span className="text-amber-600">Einheit {r.unit} ≠ {r.targetUnit}</span>
                               : r.origin === "profile" ? <span className="text-muted-foreground">✓ Profil</span>
-                              : r.origin === "auto" ? <span className="text-muted-foreground">✓ Namensabgleich</span>
+                              : r.origin === "auto" ? <span className="text-muted-foreground">✓ automatisch zugeordnet</span>
                               : <span className="text-muted-foreground">✓ manuell</span>}
                           </td>
                         </tr>
                       ))}
                       {metadataRows.map((m, i) => (
                         <tr key={`meta-${i}`} className="border-t bg-muted/20">
+
                           <td className="p-2">{m.label}</td>
                           <td className="p-2 font-mono text-muted-foreground">{m.value}</td>
                           <td className="p-2 text-muted-foreground">—</td>
@@ -354,6 +401,18 @@ export default function MeasurementImportDialog({
                     </tbody>
                   </table>
                 </div>
+
+                {unassigned.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-[11px] underline text-muted-foreground"
+                    onClick={() => setShowNotNeeded((v) => !v)}
+                  >
+                    {showNotNeeded
+                      ? "Nicht benötigte Elemente ausblenden"
+                      : `${unassigned.length} für den Messfall nicht benötigte Elemente anzeigen (werden gespeichert)`}
+                  </button>
+                )}
 
                 {metadataRows.length > 0 && (
                   <p className="text-[11px] text-muted-foreground">
@@ -371,7 +430,7 @@ export default function MeasurementImportDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
               <Button onClick={apply} disabled={assigned.length === 0 && unassigned.length === 0}>
                 {assigned.length} Wert(e) übernehmen
-                {unassigned.length > 0 ? ` (+${unassigned.length} nicht zugeordnet)` : ""}
+                {unassigned.length > 0 ? ` (+${unassigned.length} nicht benötigt, gespeichert)` : ""}
               </Button>
             </div>
               </TabsContent>
