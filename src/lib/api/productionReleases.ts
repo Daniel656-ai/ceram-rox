@@ -396,7 +396,14 @@ export const productionReleases = {
     }
 
     const data = call.json as
-      | { success?: boolean; fields?: unknown; testParameters?: unknown; document?: unknown; changes?: unknown }
+      | {
+          success?: boolean;
+          error_code?: string;
+          fields?: unknown;
+          testParameters?: unknown;
+          document?: unknown;
+          changes?: unknown;
+        }
       | null;
 
     if (call.status === 404 && !data?.error_code) {
