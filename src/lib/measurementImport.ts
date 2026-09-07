@@ -242,6 +242,18 @@ export function mapReadings(
 ): MappedRow[] {
   const mappings = profile?.mappings ?? [];
   const byKey = new Map(targets.map((t) => [t.field_key, t]));
+  // Element-Abgleich: der stabile Element-/Verbindungsschlüssel verbindet
+  // Messwert und Ergebnisfeld unabhängig von der sichtbaren Bezeichnung.
+  const byElement = new Map<string, TargetCandidate>();
+  for (const t of targets) {
+    const ek = fieldElementKey({
+      metadata: (t as { metadata?: unknown }).metadata,
+      display_name: t.display_name,
+      field_key: t.field_key,
+      ...(t.element_key ? { metadata: { element_key: t.element_key } } : {}),
+    });
+    if (ek && !byElement.has(ek)) byElement.set(ek, t);
+  }
   // Kanonischer Abgleich: Einheiten im Namen ("As (PPM)"), Groß-/Kleinschreibung
   // und bekannte Aliasnamen ("Arsenic") dürfen die Zuordnung nicht verhindern.
   const canon = new Map<string, TargetCandidate>();
@@ -263,9 +275,11 @@ export function mapReadings(
       origin = "profile";
       factor = m.factor ?? null;
     } else {
-      const t = canon.get(canonicalParameter(r.sourceName));
+      const ek = elementKey(splitNameUnit(r.sourceName).name);
+      const t = (ek ? byElement.get(ek) : undefined) ?? canon.get(canonicalParameter(r.sourceName));
       if (t) { targetFieldKey = t.field_key; origin = "auto"; }
     }
+
 
     const target = targetFieldKey ? byKey.get(targetFieldKey) : undefined;
     const targetUnit = target?.unit ?? m?.unit ?? null;
