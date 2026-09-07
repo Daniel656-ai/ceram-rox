@@ -1,6 +1,9 @@
-// Fertigungsfreigabe: strukturierte Erkennung aus PDF-Text.
+// Fertigungsfreigabe: strukturierte Erkennung aus PDF-Text UND visuellen Merkmalen.
 // Nutzt das Lovable AI Gateway mit Tool-Calling, damit die Antwort strikt dem
 // Feldkatalog von ROX entspricht (keine Freitext-Blobs).
+//
+// Quellenunabhängig: der Aufrufer (PDF-Upload heute, Outlook-Anhang später)
+// liefert immer dieselbe Struktur.
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -31,7 +34,7 @@ const tool = {
   type: "function",
   function: {
     name: "submit_production_release",
-    description: "Liefert die strukturiert erkannten Daten einer Fertigungsfreigabe.",
+    description: "Liefert die strukturiert erkannten Daten einer Fertigungsfreigabe inkl. Revisionsmerkmalen.",
     parameters: {
       type: "object",
       properties: {
@@ -47,6 +50,42 @@ const tool = {
               unit: { type: "string" },
             },
             required: ["section", "parameter_key", "value_text"],
+            additionalProperties: false,
+          },
+        },
+        document: {
+          type: "object",
+          description: "Dokumentkennungen zur Identifikation von Neuanlage vs. Revision.",
+          properties: {
+            release_number: { type: "string", description: "Fertigungsfreigabenummer / Dokumentnummer, z.B. 0075-6107" },
+            revision_number: { type: "string", description: "Revisions-/Änderungsnummer als Zahl, z.B. 2" },
+            revision_date: { type: "string", description: "Änderungsdatum wie im Dokument" },
+            order_number: { type: "string" },
+            project_number: { type: "string" },
+            customer_number: { type: "string" },
+            drawing_number: { type: "string" },
+            is_revision: { type: "boolean", description: "true, wenn das Dokument als Revision/Änderung gekennzeichnet ist" },
+            confidence: { type: "string", enum: ["high", "medium", "low"] },
+          },
+          additionalProperties: false,
+        },
+        changes: {
+          type: "array",
+          description:
+            "Erkannte Änderungen gegenüber dem bisherigen Stand. NUR Änderungen aufnehmen, die im Dokument belegt sind (durchgestrichen, rot, oder abweichend zum übergebenen bisherigen Stand).",
+          items: {
+            type: "object",
+            properties: {
+              field_key: { type: "string", description: "Feldschlüssel aus dem Katalog, oder leer wenn unklar" },
+              field_hint: { type: "string", description: "Bezeichnung im Dokument, wenn field_key unklar ist" },
+              old_value: { type: "string" },
+              new_value: { type: "string" },
+              detection: { type: "string", enum: ["strikethrough", "red", "combined", "text", "unknown"] },
+              confidence: { type: "string", enum: ["high", "medium", "low"] },
+              page: { type: "number" },
+              note: { type: "string", description: "Warum unsicher (nur bei confidence medium/low)" },
+            },
+            required: ["detection", "confidence"],
             additionalProperties: false,
           },
         },
@@ -66,19 +105,58 @@ Regeln:
 - Geometrie: L = length_mm, D = cross_section_mm, ti = inner_wall_thickness_mm, Zellkonfiguration z.B. "75x75" -> cell_configuration, V2O5 -> v2o5_percent.
 - Das Beiblatt (meist Seite 2) enthält Prüfbedingungen für NOx/SOx im Bench und im Micro-Reaktor.
   Ordne jeden Wert dem richtigen Abschnitt (section) und Parameter (parameter_key) zu.
-- Datumsangaben als TT.MM.JJJJ oder JJJJ-MM-TT so übernehmen wie im Dokument.`;
+- Datumsangaben als TT.MM.JJJJ oder JJJJ-MM-TT so übernehmen wie im Dokument.
+
+REVISIONEN:
+- Im Text sind visuelle Merkmale markiert: [DURCHGESTRICHEN:alterWert] und [ROT:neuerWert].
+- Zusätzlich bekommst du eine Liste räumlich zugeordneter Paare (alter/neuer Wert) und ggf. den
+  bisher in ROX gespeicherten Stand.
+- Ein durchgestrichener Wert ist IMMER der alte Wert; der räumlich zugeordnete nicht durchgestrichene
+  bzw. rote Wert ist der neue Wert.
+- Ein rot dargestellter Wert ohne Durchstreichung ist der neue Wert; der bisher gespeicherte Wert ist der alte.
+- In "fields" gehört immer der NEUE, gültige Wert.
+- confidence "high" nur, wenn Feldzuordnung, alter und neuer Wert eindeutig sind.
+- Wenn unklar ist, welches Feld betroffen ist oder welcher Wert gilt: confidence "low" oder "medium"
+  setzen und den Wert NICHT in "fields" schreiben. Niemals raten.
+- Erkenne Fertigungsfreigabenummer, Revisionsnummer und Änderungsdatum, sofern vorhanden.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { fileName, pages } = await req.json();
-    const text = (Array.isArray(pages) ? pages : [])
+    const body = await req.json();
+    const fileName: string = body?.fileName ?? "unbekannt";
+    const pages: string[] = Array.isArray(body?.pages) ? body.pages : [];
+    const pairs: unknown[] = Array.isArray(body?.pairs) ? body.pairs : [];
+    const images: string[] = Array.isArray(body?.images) ? body.images : [];
+    const existing = body?.existing ?? null;
+
+    const text = pages
       .map((p: string, i: number) => `--- Seite ${i + 1} ---\n${p}`)
       .join("\n\n")
       .slice(0, 120000);
 
     const key = Deno.env.get("LOVABLE_API_KEY");
     if (!key) throw new Error("LOVABLE_API_KEY fehlt");
+
+    const parts: Record<string, unknown>[] = [];
+    let prompt = `Dokument: ${fileName}\n\n${text}`;
+    if (pairs.length) {
+      prompt += `\n\n--- Visuell erkannte Änderungspaare (alt -> neu, mit Kontext) ---\n${
+        JSON.stringify(pairs).slice(0, 20000)
+      }`;
+    }
+    if (existing) {
+      prompt += `\n\n--- Bisher in ROX gespeicherter Stand dieser Fertigungsfreigabe ---\n${
+        JSON.stringify(existing).slice(0, 20000)
+      }\nVergleiche damit und melde nur tatsächliche Abweichungen als "changes".`;
+    }
+    if (images.length) {
+      prompt += `\n\nEinige Seiten enthielten keinen auslesbaren Text. Lies diese Seiten als Bild (OCR) aus.`;
+    }
+    parts.push({ type: "text", text: prompt });
+    for (const img of images.slice(0, 4)) {
+      parts.push({ type: "image_url", image_url: { url: img } });
+    }
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -87,7 +165,7 @@ Deno.serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM },
-          { role: "user", content: `Dokument: ${fileName ?? "unbekannt"}\n\n${text}` },
+          { role: "user", content: parts },
         ],
         tools: [tool],
         tool_choice: { type: "function", function: { name: "submit_production_release" } },
@@ -116,10 +194,16 @@ Deno.serve(async (req) => {
     const testParameters = (parsed.testParameters ?? []).filter(
       (t: { value_text?: string }) => t?.value_text && String(t.value_text).trim() !== "",
     );
+    const changes = (parsed.changes ?? []).filter(
+      (c: { old_value?: string; new_value?: string }) =>
+        (c?.old_value && String(c.old_value).trim() !== "") ||
+        (c?.new_value && String(c.new_value).trim() !== ""),
+    );
 
-    return new Response(JSON.stringify({ fields, testParameters }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ fields, testParameters, document: parsed.document ?? {}, changes }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },

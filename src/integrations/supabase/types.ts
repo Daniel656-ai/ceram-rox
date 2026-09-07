@@ -5565,6 +5565,74 @@ export type Database = {
         }
         Relationships: []
       }
+      production_release_changes: {
+        Row: {
+          confidence: string
+          created_at: string
+          detection: string
+          evidence: Json
+          field_key: string
+          field_label: string | null
+          id: string
+          new_value: string | null
+          note: string | null
+          old_value: string | null
+          page: number | null
+          release_id: string
+          resolved_value: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scope: string
+          status: string
+        }
+        Insert: {
+          confidence?: string
+          created_at?: string
+          detection?: string
+          evidence?: Json
+          field_key: string
+          field_label?: string | null
+          id?: string
+          new_value?: string | null
+          note?: string | null
+          old_value?: string | null
+          page?: number | null
+          release_id: string
+          resolved_value?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scope?: string
+          status?: string
+        }
+        Update: {
+          confidence?: string
+          created_at?: string
+          detection?: string
+          evidence?: Json
+          field_key?: string
+          field_label?: string | null
+          id?: string
+          new_value?: string | null
+          note?: string | null
+          old_value?: string | null
+          page?: number | null
+          release_id?: string
+          resolved_value?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scope?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_release_changes_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "production_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_release_imports: {
         Row: {
           created_at: string
@@ -5713,6 +5781,7 @@ export type Database = {
           delivery_address: string | null
           delivery_date: string | null
           delivery_terms: string | null
+          detection_meta: Json
           drawing_approval: string | null
           elements_total: number | null
           end_customer: string | null
@@ -5721,10 +5790,13 @@ export type Database = {
           form_definition_id: string | null
           freight_costs: number | null
           id: string
+          import_source: string | null
+          import_status: string
           imported_at: string | null
           imported_by: string | null
           inner_wall_thickness_mm: number | null
           inner_wall_tolerance: string | null
+          is_current: boolean
           length_mm: number | null
           length_tolerance: string | null
           module_costs: number | null
@@ -5734,15 +5806,22 @@ export type Database = {
           normal_modules: number | null
           packaging: string | null
           piece_count: number | null
+          previous_release_id: string | null
           product_type: string | null
           project_id: string | null
           project_name: string | null
           qa_qc_requirements: string | null
           recipe: string | null
           recipe_mixture_id: string | null
+          release_number: string | null
           released_at: string | null
           released_by: string | null
           remarks: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          revision_date: string | null
+          revision_number: number
+          root_release_id: string | null
           sales_owner: string | null
           sample_elements: number | null
           sorting_criteria: string | null
@@ -5751,6 +5830,7 @@ export type Database = {
           source_type: string
           spare_elements: number | null
           status: Database["public"]["Enums"]["production_release_status"]
+          superseded_at: string | null
           target_geometry: string | null
           test_conditions_remarks: string | null
           test_elements_per_module: number | null
@@ -5777,6 +5857,7 @@ export type Database = {
           delivery_address?: string | null
           delivery_date?: string | null
           delivery_terms?: string | null
+          detection_meta?: Json
           drawing_approval?: string | null
           elements_total?: number | null
           end_customer?: string | null
@@ -5785,10 +5866,13 @@ export type Database = {
           form_definition_id?: string | null
           freight_costs?: number | null
           id?: string
+          import_source?: string | null
+          import_status?: string
           imported_at?: string | null
           imported_by?: string | null
           inner_wall_thickness_mm?: number | null
           inner_wall_tolerance?: string | null
+          is_current?: boolean
           length_mm?: number | null
           length_tolerance?: string | null
           module_costs?: number | null
@@ -5798,15 +5882,22 @@ export type Database = {
           normal_modules?: number | null
           packaging?: string | null
           piece_count?: number | null
+          previous_release_id?: string | null
           product_type?: string | null
           project_id?: string | null
           project_name?: string | null
           qa_qc_requirements?: string | null
           recipe?: string | null
           recipe_mixture_id?: string | null
+          release_number?: string | null
           released_at?: string | null
           released_by?: string | null
           remarks?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision_date?: string | null
+          revision_number?: number
+          root_release_id?: string | null
           sales_owner?: string | null
           sample_elements?: number | null
           sorting_criteria?: string | null
@@ -5815,6 +5906,7 @@ export type Database = {
           source_type?: string
           spare_elements?: number | null
           status?: Database["public"]["Enums"]["production_release_status"]
+          superseded_at?: string | null
           target_geometry?: string | null
           test_conditions_remarks?: string | null
           test_elements_per_module?: number | null
@@ -5841,6 +5933,7 @@ export type Database = {
           delivery_address?: string | null
           delivery_date?: string | null
           delivery_terms?: string | null
+          detection_meta?: Json
           drawing_approval?: string | null
           elements_total?: number | null
           end_customer?: string | null
@@ -5849,10 +5942,13 @@ export type Database = {
           form_definition_id?: string | null
           freight_costs?: number | null
           id?: string
+          import_source?: string | null
+          import_status?: string
           imported_at?: string | null
           imported_by?: string | null
           inner_wall_thickness_mm?: number | null
           inner_wall_tolerance?: string | null
+          is_current?: boolean
           length_mm?: number | null
           length_tolerance?: string | null
           module_costs?: number | null
@@ -5862,15 +5958,22 @@ export type Database = {
           normal_modules?: number | null
           packaging?: string | null
           piece_count?: number | null
+          previous_release_id?: string | null
           product_type?: string | null
           project_id?: string | null
           project_name?: string | null
           qa_qc_requirements?: string | null
           recipe?: string | null
           recipe_mixture_id?: string | null
+          release_number?: string | null
           released_at?: string | null
           released_by?: string | null
           remarks?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision_date?: string | null
+          revision_number?: number
+          root_release_id?: string | null
           sales_owner?: string | null
           sample_elements?: number | null
           sorting_criteria?: string | null
@@ -5879,6 +5982,7 @@ export type Database = {
           source_type?: string
           spare_elements?: number | null
           status?: Database["public"]["Enums"]["production_release_status"]
+          superseded_at?: string | null
           target_geometry?: string | null
           test_conditions_remarks?: string | null
           test_elements_per_module?: number | null
@@ -5910,6 +6014,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "production_releases_previous_release_id_fkey"
+            columns: ["previous_release_id"]
+            isOneToOne: false
+            referencedRelation: "production_releases"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "production_releases_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -5921,6 +6032,13 @@ export type Database = {
             columns: ["recipe_mixture_id"]
             isOneToOne: false
             referencedRelation: "mixtures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_releases_root_release_id_fkey"
+            columns: ["root_release_id"]
+            isOneToOne: false
+            referencedRelation: "production_releases"
             referencedColumns: ["id"]
           },
         ]
