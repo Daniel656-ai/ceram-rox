@@ -1,3 +1,4 @@
+import { fieldElementKey, explicitFieldElementKey, writeFieldElementKey, elementKey, formatElementKey } from "@/lib/elementKeys";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -62,6 +63,9 @@ export default function FieldEditDialog({
     (((field.metadata ?? {}) as any)?.measurement_import?.profile_id as string) ?? ""
   );
   const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
+  // Stabiler Element-/Verbindungsschlüssel für den Messdatenimport (z. B. RFA).
+  const [elementKeyInput, setElementKeyInput] = useState(explicitFieldElementKey(field as any) ?? "");
+  const autoElementKey = elementKey(field.display_name ?? "") ?? elementKey(field.field_key ?? "");
   const [imageMode, setImageMode] = useState<ImageFieldMode>(readImageMeta(field).mode);
   const [blockRole, setBlockRole] = useState<BlockChildRole>(readBlockChildRole(field));
   // Workflow-Datenquelle: Wert aus einem vorherigen Workflow-Schritt beziehen.
@@ -147,6 +151,8 @@ export default function FieldEditDialog({
       // Darstellungsart des Bildfeldes (Einzelbild bleibt Standard).
       if (isImage) Object.assign(metadata, writeImageMeta(metadata, { mode: imageMode }));
       if (isBlockChild) metadata.block_role = blockRole;
+      Object.assign(metadata, writeFieldElementKey(metadata, elementKeyInput));
+      if (!elementKeyInput.trim()) delete (metadata as any).element_key;
       Object.assign(metadata, writeResultConditions(metadata, isResult ? conditionKeys : []));
       if (!isResult || !conditionKeys.length) delete (metadata as any).result_conditions;
 
@@ -328,6 +334,24 @@ export default function FieldEditDialog({
             <div className="flex items-end gap-2"><Switch checked={required} onCheckedChange={setRequired} /><Label>Pflicht</Label></div>
             <div className="flex items-end gap-2"><Switch checked={readonly} onCheckedChange={setReadonly} /><Label>Read-only</Label></div>
           </div>
+          {!isBlock && !isRepeater && !isImport && (
+            <div className="rounded border p-3 space-y-1 bg-muted/20">
+              <Label className="text-xs">Element-Schlüssel (Messdatenimport)</Label>
+              <Input
+                value={elementKeyInput}
+                disabled={isGlobalRef}
+                onChange={(e) => setElementKeyInput(e.target.value)}
+                placeholder={autoElementKey ? `automatisch: ${autoElementKey}` : "z. B. SiO2, Fe2O3, Pb"}
+                className="font-mono"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Verbindet importierte Messwerte (z. B. RFA) mit diesem Ergebnisfeld – unabhängig von der
+                sichtbaren Bezeichnung. Leer lassen, wenn die Bezeichnung eindeutig ist
+                {autoElementKey ? ` (erkannt: ${formatElementKey(autoElementKey)}).` : "."}
+              </p>
+            </div>
+          )}
+
           {!isBlock && !isRepeater && (
             <div className="rounded border p-3 space-y-2 bg-muted/30">
               <div className="flex items-center gap-2">
@@ -809,7 +833,7 @@ export function ImportFieldConfig({
     .filter(f => f.id !== field.id && f.parent_field_id === field.parent_field_id
       && !["repeater", "measurement_block", "measurement_import"].includes(f.field_type)
       && readBlockChildRole(f) === "value")
-    .map(f => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type, decimal_places: (f as any).decimal_places ?? null }));
+    .map(f => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type, decimal_places: (f as any).decimal_places ?? null, element_key: fieldElementKey(f as any) }));
 
   return (
     <div className="rounded border p-3 space-y-2 bg-muted/30">

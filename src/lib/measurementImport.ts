@@ -7,6 +7,7 @@
  */
 import type { ImportMapping, MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import { canonicalParameter, splitNameUnit } from "@/lib/measurementClassification";
+import { elementKey, fieldElementKey } from "@/lib/elementKeys";
 
 export type DecimalSeparator = "auto" | "," | ".";
 
@@ -206,7 +207,14 @@ export interface TargetCandidate {
   field_type?: string;
   /** Im Formular hinterlegte Nachkommastellen (maßgeblich für Ergebniswerte). */
   decimal_places?: number | null;
+  /**
+   * Stabiler Element-/Verbindungsschlüssel des Ergebnisfeldes (z. B. "SiO2").
+   * Im Messfall bzw. Formulardesigner konfigurierbar; ist keiner gepflegt,
+   * wird er aus der Bezeichnung abgeleitet.
+   */
+  element_key?: string | null;
 }
+
 
 export interface MappedRow extends ParsedReading {
   /** Zielfeld-Key oder null (= wird nicht übernommen). */
@@ -235,6 +243,17 @@ export function mapReadings(
 ): MappedRow[] {
   const mappings = profile?.mappings ?? [];
   const byKey = new Map(targets.map((t) => [t.field_key, t]));
+  // Element-Abgleich: der stabile Element-/Verbindungsschlüssel verbindet
+  // Messwert und Ergebnisfeld unabhängig von der sichtbaren Bezeichnung.
+  const byElement = new Map<string, TargetCandidate>();
+  for (const t of targets) {
+    const ek = fieldElementKey({
+      metadata: t.element_key ? { element_key: t.element_key } : undefined,
+      display_name: t.display_name,
+      field_key: t.field_key,
+    });
+    if (ek && !byElement.has(ek)) byElement.set(ek, t);
+  }
   // Kanonischer Abgleich: Einheiten im Namen ("As (PPM)"), Groß-/Kleinschreibung
   // und bekannte Aliasnamen ("Arsenic") dürfen die Zuordnung nicht verhindern.
   const canon = new Map<string, TargetCandidate>();
@@ -256,9 +275,11 @@ export function mapReadings(
       origin = "profile";
       factor = m.factor ?? null;
     } else {
-      const t = canon.get(canonicalParameter(r.sourceName));
+      const ek = elementKey(splitNameUnit(r.sourceName).name);
+      const t = (ek ? byElement.get(ek) : undefined) ?? canon.get(canonicalParameter(r.sourceName));
       if (t) { targetFieldKey = t.field_key; origin = "auto"; }
     }
+
 
     const target = targetFieldKey ? byKey.get(targetFieldKey) : undefined;
     const targetUnit = target?.unit ?? m?.unit ?? null;

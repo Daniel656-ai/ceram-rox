@@ -11,13 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, ClipboardPaste, Settings2, Plus, FileUp } from "lucide-react";
 import ImportProfileEditorDialog from "./ImportProfileEditorDialog";
 import MeasurementFileImportPanel, { type CurvePersistContext } from "./MeasurementFileImportPanel";
 import { toast } from "sonner";
-import { elementKey } from "@/lib/elementKeys";
+import { elementKey, fieldElementKey, formatElementKey } from "@/lib/elementKeys";
 import {
   canonicalParameter,
   classifyReading,
@@ -81,6 +82,7 @@ export default function MeasurementImportDialog({
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingNew, setEditingNew] = useState(false);
   const [showNotNeeded, setShowNotNeeded] = useState(false);
+  const [rememberMapping, setRememberMapping] = useState(true);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["measurement-import-profiles"],
@@ -148,6 +150,36 @@ export default function MeasurementImportDialog({
 
   const invalid = assigned.filter((r) => r.value == null && !r.belowDetection);
 
+  /** Manuell gesetzte Zuordnungen dauerhaft im Importprofil sichern. */
+  const persistManualMappings = async () => {
+    if (!profile || !canManageProfiles || !rememberMapping) return;
+    const manual = rows.filter((r) => r.origin === "manual" && r.targetFieldKey);
+    if (!manual.length) return;
+    const next = (profile.mappings ?? []).map((m) => ({ ...m, source_names: [...(m.source_names ?? [])] }));
+    let changed = false;
+    for (const r of manual) {
+      const entry = next.find((m) => m.target_field_key === r.targetFieldKey);
+      const names = [r.sourceName, ...(elementKey(r.sourceName) ? [elementKey(r.sourceName) as string] : [])];
+      if (entry) {
+        for (const n of names) {
+          if (!entry.source_names.some((x) => x.toLowerCase() === n.toLowerCase())) {
+            entry.source_names.push(n); changed = true;
+          }
+        }
+      } else {
+        next.push({ source_names: names, target_field_key: r.targetFieldKey as string, unit: r.unit ?? null });
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    try {
+      await api.measurementImportProfiles.update(profile.id, { mappings: next });
+      toast.success("Zuordnung im Importprofil gespeichert.");
+    } catch {
+      toast.error("Zuordnung konnte nicht im Importprofil gespeichert werden.");
+    }
+  };
+
   const apply = () => {
     const values: Record<string, number | string | null> = {};
     for (const r of assigned) {
@@ -169,6 +201,7 @@ export default function MeasurementImportDialog({
       toast.error("Keine übernehmbaren Messwerte gefunden.");
       return;
     }
+    void persistManualMappings();
     onApply(values, {
       profileName: profile?.name ?? "Ohne Profil",
       sampleLabel: sample?.label ?? "",
@@ -289,7 +322,8 @@ export default function MeasurementImportDialog({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Badge variant="outline">Format: {formatLabel(parsed.detectedFormat)}</Badge>
-                  <Badge variant="secondary">{assigned.length} automatisch zugeordnet</Badge>
+                  <Badge variant="secondary">{assigned.length} zugeordnet</Badge>
+                  <Badge variant="outline">{targets.length} Ergebnisfeld(er) im Messfall</Badge>
                   {unassigned.length > 0 && (
                     <Badge variant="outline">
                       {unassigned.length} importiert – für Messfall nicht benötigt
@@ -345,6 +379,7 @@ export default function MeasurementImportDialog({
                     <thead className="bg-muted/50">
                       <tr>
                         <th className="text-left p-2">Importiertes Element</th>
+                        <th className="text-left p-2">Element-Key</th>
                         <th className="text-left p-2">Wert</th>
                         <th className="text-left p-2">Einheit</th>
                         <th className="text-left p-2">Kategorie</th>
@@ -358,6 +393,7 @@ export default function MeasurementImportDialog({
                         .map(({ r, i }) => (
                         <tr key={i} className="border-t">
                           <td className="p-2 font-medium">{r.sourceName}</td>
+                          <td className="p-2 font-mono text-muted-foreground">{elementKey(r.sourceName) ?? "—"}</td>
                           <td className="p-2 font-mono">{r.value ?? (r.belowDetection ? r.raw : r.raw)}</td>
                           <td className="p-2 text-muted-foreground">{r.unit ?? r.targetUnit ?? "—"}</td>
                           <td className="p-2"><Badge variant="secondary">Messwert</Badge></td>
@@ -369,11 +405,14 @@ export default function MeasurementImportDialog({
                               <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                               <SelectContent className="max-h-72">
                                 <SelectItem value="__none__">— kein Ergebnisfeld (für Messfall nicht benötigt) —</SelectItem>
-                                {targets.map((t) => (
-                                  <SelectItem key={t.field_key} value={t.field_key}>
-                                    {t.display_name}{t.unit ? ` [${t.unit}]` : ""}
-                                  </SelectItem>
-                                ))}
+                                {targets.map((t) => {
+                                  const ek = fieldElementKey({ metadata: t.element_key ? { element_key: t.element_key } : undefined, display_name: t.display_name, field_key: t.field_key });
+                                  return (
+                                    <SelectItem key={t.field_key} value={t.field_key}>
+                                      {t.display_name}{t.unit ? ` [${t.unit}]` : ""}{ek ? ` · ${ek}` : ""}
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           </td>
@@ -391,6 +430,7 @@ export default function MeasurementImportDialog({
                         <tr key={`meta-${i}`} className="border-t bg-muted/20">
 
                           <td className="p-2">{m.label}</td>
+                          <td className="p-2 text-muted-foreground">—</td>
                           <td className="p-2 font-mono text-muted-foreground">{m.value}</td>
                           <td className="p-2 text-muted-foreground">—</td>
                           <td className="p-2"><Badge variant="outline">Metadaten</Badge></td>
@@ -426,12 +466,20 @@ export default function MeasurementImportDialog({
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
+            <div className="flex items-center justify-between gap-2">
+              {profile && canManageProfiles && rows.some((r) => r.origin === "manual" && r.targetFieldKey) ? (
+                <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <Checkbox checked={rememberMapping} onCheckedChange={(v) => setRememberMapping(!!v)} />
+                  Manuelle Zuordnungen dauerhaft im Profil „{profile.name}“ merken
+                </label>
+              ) : <span />}
+              <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
               <Button onClick={apply} disabled={assigned.length === 0 && unassigned.length === 0}>
                 {assigned.length} Wert(e) übernehmen
                 {unassigned.length > 0 ? ` (+${unassigned.length} nicht benötigt, gespeichert)` : ""}
               </Button>
+              </div>
             </div>
               </TabsContent>
             </Tabs>

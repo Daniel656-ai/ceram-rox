@@ -1,3 +1,4 @@
+import { fieldElementKey, explicitFieldElementKey, writeFieldElementKey, elementKey, formatElementKey } from "@/lib/elementKeys";
 import { useMemo, useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
 import RichText from "@/components/forms/RichText";
 import { columnsGridStyle } from "@/lib/api/formDefinitionLayout";
@@ -486,7 +487,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
             !["repeater", "measurement_block", "measurement_import"].includes(f.field_type) &&
             readBlockChildRole(f) === "value"
         )
-        .map((f) => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type, decimal_places: (f as any).decimal_places ?? null })),
+        .map((f) => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type, decimal_places: (f as any).decimal_places ?? null, element_key: fieldElementKey(f as any) })),
     [allFields, field.id, field.parent_field_id]
   );
 
