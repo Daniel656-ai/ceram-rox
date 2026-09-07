@@ -21,6 +21,7 @@ import RichText from "@/components/forms/RichText";
 import ServiceLinkedForms, { linkedFormValueKey } from "@/components/ServiceLinkedForms";
 import { toast } from "sonner";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
+import { ORDER_PRIORITY_LABELS, type OrderPriority } from "@/lib/types";
 import {
   buildLinkedFormResultCandidates,
   buildServiceResultCandidates,
@@ -416,6 +417,18 @@ function TaskExecutionPageInner() {
   const project = order?.projects;
   const sample = order?.samples;
 
+  /** Priorität: gespeicherter Rang der Messung, sonst des Auftrags, sonst Auftragspriorität. */
+  const rank: number | null = m.ranking ?? order?.ranking ?? null;
+  const priorityLabel = rank
+    ? `Prio ${rank}${order?.priority ? ` · ${ORDER_PRIORITY_LABELS[order.priority as OrderPriority] ?? order.priority}` : ""}`
+    : order?.priority
+      ? (ORDER_PRIORITY_LABELS[order.priority as OrderPriority] ?? String(order.priority))
+      : "Keine Priorität";
+
+  /** Fälligkeit: eigenes Datum der Messung, sonst des Auftrags – nie abgeleitet. */
+  const dueRaw: string | null = m.due_date ?? order?.due_date ?? null;
+  const dueLabel = dueRaw ? new Date(dueRaw).toLocaleDateString("de-AT") : "Keine Fälligkeit";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -434,6 +447,36 @@ function TaskExecutionPageInner() {
         </div>
         <StatusBadge status={m.status} />
       </div>
+
+      <Card>
+        <CardHeader className="py-3">
+          <CardTitle className="text-sm">Auftragsdaten</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div>
+            <p className="text-muted-foreground text-xs">Auftragsnummer</p>
+            <p className="font-medium font-mono">{order?.order_number || "Keine Auftragsnummer"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Projektnummer</p>
+            <p className="font-medium font-mono">{project?.project_number || "Kein Projekt"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Priorität</p>
+            <p className="font-medium">{priorityLabel}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs">Fälligkeit</p>
+            <p className="font-medium">{dueLabel}</p>
+          </div>
+          <div className="col-span-2 md:col-span-4">
+            <p className="text-muted-foreground text-xs">Anforderungen</p>
+            <p className="font-medium whitespace-pre-wrap">
+              {order?.notes?.trim() ? order.notes : "Keine Anforderungen hinterlegt"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="py-3">
