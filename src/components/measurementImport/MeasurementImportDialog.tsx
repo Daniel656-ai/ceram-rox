@@ -17,7 +17,9 @@ import { AlertTriangle, ClipboardPaste, Settings2, Plus, FileUp } from "lucide-r
 import ImportProfileEditorDialog from "./ImportProfileEditorDialog";
 import MeasurementFileImportPanel, { type CurvePersistContext } from "./MeasurementFileImportPanel";
 import { toast } from "sonner";
+import { elementKey } from "@/lib/elementKeys";
 import {
+  canonicalParameter,
   classifyReading,
   type ImportMetadataEntry,
   type UnassignedMeasurementValue,
@@ -157,7 +159,8 @@ export default function MeasurementImportDialog({
     // „nicht zugeordnet“ mitgeführt und können später zugeordnet werden.
     const keep: UnassignedMeasurementValue[] = unassigned.map((r) => ({
       parameter: r.sourceName,
-      normalized: r.sourceName,
+      normalized: canonicalParameter(r.sourceName),
+      element_key: elementKey(r.sourceName),
       raw: r.raw,
       value: outputValue(r),
       unit: r.unit ?? null,
