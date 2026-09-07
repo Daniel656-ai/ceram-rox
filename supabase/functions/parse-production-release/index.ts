@@ -120,14 +120,33 @@ REVISIONEN:
   setzen und den Wert NICHT in "fields" schreiben. Niemals raten.
 - Erkenne Fertigungsfreigabenummer, Revisionsnummer und Änderungsdatum, sofern vorhanden.`;
 
-/** Strukturierte Fehlerantwort – nie ein roher Stacktrace an das Frontend. */
-function fail(status: number, code: string, message: string, technical?: unknown) {
-  console.error(`[parse-production-release] ${code} (${status}):`, technical ?? message);
-  return new Response(JSON.stringify({ success: false, error_code: code, message }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+/** Kurzform einer beliebigen Ausnahme für Log und Diagnosefeld. */
+function describe(e: unknown): string {
+  if (e instanceof Error) return `${e.name}: ${e.message}`;
+  if (typeof e === "string") return e.slice(0, 500);
+  try {
+    return JSON.stringify(e).slice(0, 500);
+  } catch {
+    return String(e);
+  }
 }
+
+/**
+ * Strukturierte Fehlerantwort – nie ein roher Stacktrace an das Frontend,
+ * aber immer ein Fehlercode plus knappe Diagnose, damit der Fehler nicht
+ * als generischer 500er verschluckt wird.
+ */
+function fail(status: number, code: string, message: string, technical?: unknown) {
+  const detail = technical === undefined ? undefined : describe(technical);
+  console.error(`[parse-production-release] ${code} (${status}): ${detail ?? message}`);
+  return new Response(
+    JSON.stringify({ success: false, error_code: code, message, detail, status }),
+    { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
+/** Obergrenze für den KI-Aufruf; danach lieber ein klarer Timeout als ein toter Worker. */
+const AI_TIMEOUT_MS = 110_000;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -147,6 +166,12 @@ Deno.serve(async (req) => {
   const pairs: unknown[] = Array.isArray(body?.pairs) ? body.pairs : [];
   const images: string[] = Array.isArray(body?.images) ? (body.images as string[]).map(String) : [];
   const existing = body?.existing ?? null;
+
+  console.log(
+    `[parse-production-release] Start: datei="${fileName}" seiten=${pages.length} ` +
+      `zeichen=${pages.join("").length} paare=${pairs.length} bilder=${images.length} ` +
+      `bildKB=${Math.round(images.join("").length / 1024)} revisionVergleich=${existing ? "ja" : "nein"}`,
+  );
 
   const text = pages
     .map((p: string, i: number) => `--- Seite ${i + 1} ---\n${p}`)
@@ -198,16 +223,45 @@ Deno.serve(async (req) => {
       tool_choice: { type: "function", function: { name: "submit_production_release" } },
     });
 
-    // Ein Wiederholungsversuch bei vorübergehenden Serverfehlern.
+    // Ein Wiederholungsversuch bei vorübergehenden Serverfehlern, jeweils mit
+    // hartem Timeout – sonst stirbt der Worker ohne verwertbare Antwort.
     let res: Response | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
-      res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: payload,
-      });
+      const started = Date.now();
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS);
+      try {
+        res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: payload,
+          signal: ctrl.signal,
+        });
+      } catch (e) {
+        const aborted = e instanceof Error && e.name === "AbortError";
+        console.error(
+          `[parse-production-release] AI Gateway Versuch ${attempt + 1} fehlgeschlagen nach ` +
+            `${Date.now() - started} ms: ${describe(e)}`,
+        );
+        if (attempt === 1) {
+          return aborted
+            ? fail(
+              504,
+              "AI_TIMEOUT",
+              "Die Dokumenterkennung hat zu lange gedauert. Bitte das PDF erneut importieren oder auf die relevanten Seiten kürzen.",
+              e,
+            )
+            : fail(502, "AI_UNAVAILABLE", "Die Dokumenterkennung ist derzeit nicht erreichbar.", e);
+        }
+        await new Promise((r) => setTimeout(r, 800));
+        continue;
+      } finally {
+        clearTimeout(timer);
+      }
+      console.log(
+        `[parse-production-release] AI Gateway ${res.status} nach ${Date.now() - started} ms (Versuch ${attempt + 1})`,
+      );
       if (res.status < 500) break;
-      console.error(`[parse-production-release] AI Gateway ${res.status}, Versuch ${attempt + 1}`);
       await new Promise((r) => setTimeout(r, 800));
     }
     if (!res) return fail(502, "AI_UNAVAILABLE", "Die Dokumenterkennung ist derzeit nicht erreichbar.");
@@ -222,8 +276,14 @@ Deno.serve(async (req) => {
       return fail(502, "AI_ERROR", "Die Fertigungsfreigabe konnte nicht ausgewertet werden.", `${res.status}: ${await res.text()}`);
     }
 
-    const json = await res.json();
-    const call = json?.choices?.[0]?.message?.tool_calls?.[0];
+    let json: Record<string, unknown>;
+    try {
+      json = await res.json();
+    } catch (e) {
+      return fail(502, "AI_BAD_RESPONSE", "Die Antwort der Dokumenterkennung war unlesbar.", e);
+    }
+    // deno-lint-ignore no-explicit-any
+    const call = (json as any)?.choices?.[0]?.message?.tool_calls?.[0];
     if (!call?.function?.arguments) {
       return fail(422, "NO_DATA_RECOGNIZED", "In diesem Dokument wurden keine Fertigungsfreigabedaten erkannt.", json);
     }

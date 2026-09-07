@@ -92,7 +92,9 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
           : `${Object.keys(res.rawValues).length} Felder und ${res.testParameters.length} Prüfwerte erkannt.`
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Analyse fehlgeschlagen");
+      const detail = e instanceof Error ? e.message : "Unbekannte Ursache.";
+      setFileError(`Fertigungsfreigabe konnte nicht verarbeitet werden. ${detail}`);
+      toast.error(`Fertigungsfreigabe konnte nicht verarbeitet werden. ${detail}`, { duration: 12000 });
     } finally {
       setBusy(false);
     }
@@ -161,7 +163,12 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
       reset();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Import fehlgeschlagen");
+      toast.error(
+        `Fertigungsfreigabe konnte nicht verarbeitet werden. ${
+          e instanceof Error ? e.message : "Fehler beim Speichern der erkannten Daten."
+        }`,
+        { duration: 12000 }
+      );
     } finally {
       setSaving(false);
     }

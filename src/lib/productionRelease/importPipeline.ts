@@ -79,6 +79,22 @@ function guessFieldKey(hint: string): string | null {
   return best?.key ?? null;
 }
 
+/** Grenzen der an den Importdienst gesendeten Nutzlast. */
+const MAX_PAIRS = 600;
+const MAX_IMAGES = 4;
+const MAX_TEXT_CHARS = 200_000;
+
+/** Seitentexte auf eine verarbeitbare Gesamtlänge kürzen (Reihenfolge bleibt erhalten). */
+function capPageTexts(texts: string[]): string[] {
+  let budget = MAX_TEXT_CHARS;
+  return texts.map((t) => {
+    if (budget <= 0) return "";
+    const slice = t.slice(0, budget);
+    budget -= slice.length;
+    return slice;
+  });
+}
+
 /**
  * Schritt 1 – Dokument analysieren. Verändert nichts in der Datenbank.
  */
@@ -88,14 +104,40 @@ export async function analyzeReleaseDocument(args: {
   source?: ImportSource;
 }): Promise<ReleaseAnalysis> {
   const source = args.source ?? "pdf_upload";
-  const visual = await extractVisualDocument(args.file, args.fileName);
-  const rawText = visual.pageTexts.join("\n\n");
-  const pairs: VisualPair[] = visual.pages.flatMap((p) => p.pairs);
-  const images = visual.pages.map((p) => p.imageDataUrl).filter(Boolean) as string[];
 
-  if (!rawText.trim() && !images.length) {
-    throw new Error("Aus dem PDF konnte weder Text noch ein Seitenbild gelesen werden.");
+  // Phase 1: PDF auslesen. Fehler hier klar als Lesefehler kennzeichnen.
+  let visual: Awaited<ReturnType<typeof extractVisualDocument>>;
+  try {
+    visual = await extractVisualDocument(args.file, args.fileName);
+  } catch (e) {
+    console.error("[Fertigungsfreigabe-Import] PDF-Auslesen fehlgeschlagen", e);
+    throw new Error(
+      `Fehler beim PDF-Auslesen. ${e instanceof Error ? e.message : "Die Datei konnte nicht geöffnet werden."}`
+    );
   }
+
+  const rawText = visual.pageTexts.join("\n\n");
+  const allPairs: VisualPair[] = visual.pages.flatMap((p) => p.pairs);
+  const allImages = visual.pages.map((p) => p.imageDataUrl).filter(Boolean) as string[];
+
+  if (!rawText.trim() && !allImages.length) {
+    throw new Error(
+      "Fehler beim PDF-Auslesen. Aus dem PDF konnte weder Text noch ein Seitenbild gelesen werden."
+    );
+  }
+
+  // Phase 2: Auswertung. Die Nutzlast wird begrenzt, damit große Dokumente
+  // nicht an Größen-/Zeitgrenzen des Importdienstes scheitern.
+  const pairs = allPairs.slice(0, MAX_PAIRS);
+  const images = allImages.slice(0, MAX_IMAGES);
+  const pageTexts = capPageTexts(visual.pageTexts);
+  console.info("[Fertigungsfreigabe-Import] Analyse", {
+    datei: args.fileName,
+    seiten: visual.pageTexts.length,
+    zeichen: pageTexts.join("").length,
+    paare: `${pairs.length}/${allPairs.length}`,
+    bilder: `${images.length}/${allImages.length}`,
+  });
 
   // Erste, schnelle Vorab-Identifikation über Klartext (ohne KI),
   // damit der bisherige Stand als Vergleich mitgeschickt werden kann.
@@ -106,7 +148,7 @@ export async function analyzeReleaseDocument(args: {
 
   const res = await api.productionReleases.analyzePdfText({
     fileName: args.fileName,
-    pages: visual.pageTexts,
+    pages: pageTexts,
     pairs,
     images,
     existing: existing ? snapshot(existing) : null,
@@ -309,6 +351,26 @@ export interface CommitResult {
  * Bestehende Revisionen werden niemals überschrieben.
  */
 export async function commitReleaseImport(args: {
+  analysis: ReleaseAnalysis;
+  values: Record<string, unknown>;
+  testParameters: ProductionReleaseTestParameter[];
+  changes: DetectedChange[];
+  userId: string | null;
+  defaultFormDefinitionId?: string | null;
+}): Promise<CommitResult> {
+  try {
+    return await saveReleaseImport(args);
+  } catch (e) {
+    console.error("[Fertigungsfreigabe-Import] Speichern fehlgeschlagen", e);
+    throw new Error(
+      `Fehler beim Speichern der erkannten Daten. ${
+        e instanceof Error ? e.message : "Unbekannte Ursache."
+      }`
+    );
+  }
+}
+
+async function saveReleaseImport(args: {
   analysis: ReleaseAnalysis;
   /** vom Anwender ggf. korrigierte Rohwerte */
   values: Record<string, unknown>;

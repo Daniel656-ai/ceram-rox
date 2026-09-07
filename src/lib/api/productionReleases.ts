@@ -77,33 +77,70 @@ const IMPORT_ERROR_TEXTS: Record<string, string> = {
   PAYMENT_REQUIRED: "Das Kontingent für die Dokumenterkennung ist aufgebraucht.",
   AI_ERROR: "Die Fertigungsfreigabe konnte nicht ausgewertet werden.",
   AI_UNAVAILABLE: "Die Dokumenterkennung ist derzeit nicht erreichbar.",
+  AI_TIMEOUT:
+    "Die Dokumenterkennung hat zu lange gedauert. Bitte erneut versuchen oder das PDF auf die relevanten Seiten kürzen.",
+  AI_BAD_RESPONSE: "Die Antwort der Dokumenterkennung war unlesbar.",
   CONFIG_MISSING: "Die Dokumenterkennung ist derzeit nicht verfügbar.",
   UNAUTHORIZED: "Die Sitzung ist abgelaufen. Bitte neu anmelden und erneut importieren.",
 };
 
+/** Fallback-Texte, wenn der Importdienst gar keine verwertbare Antwort liefert. */
+function textForStatus(status: number | undefined): string | undefined {
+  if (status === 401 || status === 403) return IMPORT_ERROR_TEXTS.UNAUTHORIZED;
+  if (status === 404) return "Der Importdienst wurde nicht gefunden. Bitte den Administrator informieren.";
+  if (status === 413) return "Das PDF ist für die Auswertung zu groß. Bitte auf die relevanten Seiten kürzen.";
+  if (status === 429) return IMPORT_ERROR_TEXTS.RATE_LIMITED;
+  if (status === 504 || status === 408) return IMPORT_ERROR_TEXTS.AI_TIMEOUT;
+  if (status === 546) return "Die Auswertung wurde vorzeitig abgebrochen (Zeit-/Speichergrenze). Bitte das PDF kürzen.";
+  if (status && status >= 500) return "Der Importdienst hat die Auswertung mit einem Serverfehler beendet.";
+  return undefined;
+}
+
 async function toReadableImportError(error: unknown, data: unknown): Promise<Error> {
-  let payload = (data ?? null) as { error_code?: string; message?: string } | null;
+  let payload = (data ?? null) as
+    | { error_code?: string; message?: string; detail?: string }
+    | null;
 
   // supabase-js liefert bei non-2xx die Original-Response in `context`
   const ctx = (error as { context?: Response } | null)?.context;
-  if (!payload?.error_code && ctx && typeof ctx.json === "function") {
+  let rawBody: string | undefined;
+  if (!payload?.error_code && ctx && typeof ctx.clone === "function") {
     try {
-      payload = await ctx.clone().json();
+      rawBody = await ctx.clone().text();
+      payload = rawBody ? JSON.parse(rawBody) : null;
     } catch {
-      payload = null;
+      payload = null; // z. B. HTML-Fehlerseite des Gateways
     }
   }
+
   const status = ctx?.status;
-  const code = payload?.error_code ?? (status === 401 || status === 403 ? "UNAUTHORIZED" : undefined);
+  const code = payload?.error_code ?? (status ? undefined : "NETWORK");
+  const network =
+    !status &&
+    (error as { name?: string; message?: string } | null)?.message !== undefined &&
+    /fetch|network|Failed to send/i.test(String((error as { message?: string })?.message ?? ""));
+
   const message =
     (code ? IMPORT_ERROR_TEXTS[code] : undefined) ??
     payload?.message ??
-    "Die Fertigungsfreigabe konnte nicht verarbeitet werden. Bitte erneut versuchen.";
+    textForStatus(status) ??
+    (network
+      ? "Der Importdienst ist nicht erreichbar. Bitte Netzwerkverbindung prüfen und erneut versuchen."
+      : "Die Auswertung des Dokuments ist fehlgeschlagen.");
 
   // Technische Details nur im Entwicklerprotokoll
-  console.error("[Fertigungsfreigabe-Import]", { status, code, error, payload });
-  const err = new Error(message);
-  (err as Error & { code?: string }).code = code;
+  console.error("[Fertigungsfreigabe-Import]", {
+    status,
+    code,
+    message,
+    detail: payload?.detail,
+    rawBody: rawBody?.slice(0, 800),
+    error,
+  });
+
+  const err = new Error(status ? `${message} (Status ${status})` : message);
+  (err as Error & { code?: string; status?: number }).code = code;
+  (err as Error & { code?: string; status?: number }).status = status;
   return err;
 }
 
@@ -276,9 +313,22 @@ export const productionReleases = {
     document: Record<string, unknown>;
     changes: Record<string, unknown>[];
   }> {
-    const { data, error } = await dbClient.functions.invoke("parse-production-release", {
-      body: args,
-    });
+    let data: {
+      success?: boolean;
+      fields?: unknown;
+      testParameters?: unknown;
+      document?: unknown;
+      changes?: unknown;
+    } | null = null;
+    let error: unknown = null;
+    try {
+      const res = await dbClient.functions.invoke("parse-production-release", { body: args });
+      data = res.data;
+      error = res.error;
+    } catch (e) {
+      // z. B. abgebrochene Verbindung – nicht als generischer Fehler verschlucken
+      throw await toReadableImportError(e, null);
+    }
     if (error) throw await toReadableImportError(error, data);
     if (data && data.success === false) throw await toReadableImportError(null, data);
     return {
