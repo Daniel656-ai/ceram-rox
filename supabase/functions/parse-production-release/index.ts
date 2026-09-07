@@ -120,24 +120,53 @@ REVISIONEN:
   setzen und den Wert NICHT in "fields" schreiben. Niemals raten.
 - Erkenne Fertigungsfreigabenummer, Revisionsnummer und Änderungsdatum, sofern vorhanden.`;
 
+/** Strukturierte Fehlerantwort – nie ein roher Stacktrace an das Frontend. */
+function fail(status: number, code: string, message: string, technical?: unknown) {
+  console.error(`[parse-production-release] ${code} (${status}):`, technical ?? message);
+  return new Response(JSON.stringify({ success: false, error_code: code, message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") {
+    return fail(405, "METHOD_NOT_ALLOWED", "Ungültiger Aufruf des Importdienstes.");
+  }
+
+  let body: Record<string, unknown>;
   try {
-    const body = await req.json();
-    const fileName: string = body?.fileName ?? "unbekannt";
-    const pages: string[] = Array.isArray(body?.pages) ? body.pages : [];
-    const pairs: unknown[] = Array.isArray(body?.pairs) ? body.pairs : [];
-    const images: string[] = Array.isArray(body?.images) ? body.images : [];
-    const existing = body?.existing ?? null;
+    body = await req.json();
+  } catch (e) {
+    return fail(400, "INVALID_PAYLOAD", "Die Importdaten konnten nicht gelesen werden.", e);
+  }
 
-    const text = pages
-      .map((p: string, i: number) => `--- Seite ${i + 1} ---\n${p}`)
-      .join("\n\n")
-      .slice(0, 120000);
+  const fileName: string = typeof body?.fileName === "string" ? body.fileName : "unbekannt";
+  const pages: string[] = Array.isArray(body?.pages) ? (body.pages as string[]).map(String) : [];
+  const pairs: unknown[] = Array.isArray(body?.pairs) ? body.pairs : [];
+  const images: string[] = Array.isArray(body?.images) ? (body.images as string[]).map(String) : [];
+  const existing = body?.existing ?? null;
 
-    const key = Deno.env.get("LOVABLE_API_KEY");
-    if (!key) throw new Error("LOVABLE_API_KEY fehlt");
+  const text = pages
+    .map((p: string, i: number) => `--- Seite ${i + 1} ---\n${p}`)
+    .join("\n\n")
+    .slice(0, 120000);
 
+  if (!text.replace(/\s/g, "").length && !images.length) {
+    return fail(
+      400,
+      "PDF_EMPTY",
+      "Aus dieser Datei konnten weder Text noch Seitenbilder gelesen werden. Bitte prüfen, ob es sich um eine gültige Fertigungsfreigabe handelt.",
+    );
+  }
+
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) {
+    return fail(500, "CONFIG_MISSING", "Die Dokumenterkennung ist derzeit nicht verfügbar.");
+  }
+
+  try {
     const parts: Record<string, unknown>[] = [];
     let prompt = `Dokument: ${fileName}\n\n${text}`;
     if (pairs.length) {
@@ -158,55 +187,79 @@ Deno.serve(async (req) => {
       parts.push({ type: "image_url", image_url: { url: img } });
     }
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM },
-          { role: "user", content: parts },
-        ],
-        tools: [tool],
-        tool_choice: { type: "function", function: { name: "submit_production_release" } },
-      }),
+    const payload = JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: parts },
+      ],
+      tools: [tool],
+      tool_choice: { type: "function", function: { name: "submit_production_release" } },
     });
 
-    if (res.status === 429) {
-      return new Response(JSON.stringify({ error: "rate_limited" }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Ein Wiederholungsversuch bei vorübergehenden Serverfehlern.
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: payload,
       });
+      if (res.status < 500) break;
+      console.error(`[parse-production-release] AI Gateway ${res.status}, Versuch ${attempt + 1}`);
+      await new Promise((r) => setTimeout(r, 800));
+    }
+    if (!res) return fail(502, "AI_UNAVAILABLE", "Die Dokumenterkennung ist derzeit nicht erreichbar.");
+
+    if (res.status === 429) {
+      return fail(429, "RATE_LIMITED", "Zu viele Importe in kurzer Zeit. Bitte in einer Minute erneut versuchen.");
     }
     if (res.status === 402) {
-      return new Response(JSON.stringify({ error: "payment_required" }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return fail(402, "PAYMENT_REQUIRED", "Das Kontingent für die Dokumenterkennung ist aufgebraucht.");
     }
-    if (!res.ok) throw new Error(`AI Gateway ${res.status}: ${await res.text()}`);
+    if (!res.ok) {
+      return fail(502, "AI_ERROR", "Die Fertigungsfreigabe konnte nicht ausgewertet werden.", `${res.status}: ${await res.text()}`);
+    }
 
     const json = await res.json();
     const call = json?.choices?.[0]?.message?.tool_calls?.[0];
-    const parsed = call?.function?.arguments ? JSON.parse(call.function.arguments) : {};
+    if (!call?.function?.arguments) {
+      return fail(422, "NO_DATA_RECOGNIZED", "In diesem Dokument wurden keine Fertigungsfreigabedaten erkannt.", json);
+    }
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(call.function.arguments);
+    } catch (e) {
+      return fail(422, "PDF_PARSE_ERROR", "Die Fertigungsfreigabe konnte nicht gelesen werden.", e);
+    }
+
     const fields: Record<string, string> = {};
-    for (const [k, v] of Object.entries(parsed.fields ?? {})) {
+    for (const [k, v] of Object.entries((parsed.fields ?? {}) as Record<string, unknown>)) {
       if (v !== null && v !== undefined && String(v).trim() !== "") fields[k] = String(v).trim();
     }
-    const testParameters = (parsed.testParameters ?? []).filter(
-      (t: { value_text?: string }) => t?.value_text && String(t.value_text).trim() !== "",
+    const testParameters = ((parsed.testParameters ?? []) as { value_text?: string }[]).filter(
+      (t) => t?.value_text && String(t.value_text).trim() !== "",
     );
-    const changes = (parsed.changes ?? []).filter(
-      (c: { old_value?: string; new_value?: string }) =>
+    const changes = ((parsed.changes ?? []) as { old_value?: string; new_value?: string }[]).filter(
+      (c) =>
         (c?.old_value && String(c.old_value).trim() !== "") ||
         (c?.new_value && String(c.new_value).trim() !== ""),
     );
 
+    if (!Object.keys(fields).length && !testParameters.length && !changes.length) {
+      return fail(
+        422,
+        "NO_DATA_RECOGNIZED",
+        "In diesem Dokument wurden keine Fertigungsfreigabedaten erkannt.",
+        { fileName },
+      );
+    }
+
     return new Response(
-      JSON.stringify({ fields, testParameters, document: parsed.document ?? {}, changes }),
+      JSON.stringify({ success: true, fields, testParameters, document: parsed.document ?? {}, changes }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return fail(500, "UNEXPECTED_ERROR", "Beim Import ist ein unerwarteter Fehler aufgetreten.", e);
   }
 });
