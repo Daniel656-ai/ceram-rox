@@ -65,12 +65,16 @@ function orderValues(
   columns?: ResultParamColumn[]
 ): AnalysisValue[] {
   if (!columns || columns.length === 0) return values;
-  const order = new Map(columns.map((c, i) => [c.key, i]));
-  const groups = new Map(columns.map((c) => [c.key, c.group]));
+  // Zuordnung über den kanonischen Parameterschlüssel: die sichtbare
+  // Bezeichnung („% V₂O₅“) darf die Zuordnung zur definierten Spalte („V2O5“)
+  // niemals verhindern.
+  const order = new Map(columns.map((c, i) => [paramKey(c.key), i]));
+  const groups = new Map(columns.map((c) => [paramKey(c.key), c.group]));
   return values
-    .map((v) => ({ ...v, group: v.group ?? groups.get(v.key) ?? null }))
-    .sort((a, b) => (order.get(a.key) ?? 1e6) - (order.get(b.key) ?? 1e6));
+    .map((v) => ({ ...v, group: v.group ?? groups.get(paramKey(v.key)) ?? null }))
+    .sort((a, b) => (order.get(paramKey(a.key)) ?? 1e6) - (order.get(paramKey(b.key)) ?? 1e6));
 }
+
 
 export function buildOrderResultStructure(
   rows: RawMeasurementRow[],
