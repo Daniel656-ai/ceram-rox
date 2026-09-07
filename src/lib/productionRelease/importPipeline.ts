@@ -17,6 +17,10 @@ import { extractVisualDocument, type VisualDocument, type VisualPair } from "./p
 import {
   RELEASE_FIELDS, RELEASE_FIELD_BY_KEY, coerceFieldValue,
 } from "./fields";
+import {
+  buildBlocks, mergeBlockResults, asText, sameValue, MAX_BLOCKS_LIMIT,
+  type Block, type BlockResult,
+} from "./blocks";
 import type {
   ProductionReleaseChange, ProductionReleaseRow, ProductionReleaseTestParameter,
 } from "@/lib/api/productionReleases";
@@ -34,6 +38,21 @@ export interface DetectedChange {
   note?: string | null;
   /** eindeutig erkannt -> wird automatisch übernommen */
   auto: boolean;
+}
+
+export interface ReleaseCoverage {
+  fileName: string;
+  fileBytes: number;
+  totalPages: number;
+  /** tatsächlich ausgewertete Seiten (1-basiert) */
+  processedPages: number[];
+  /** Seiten, die nicht ausgewertet werden konnten */
+  failedPages: number[];
+  /** höchste vollständig verarbeitete Seite */
+  processedUntilPage: number;
+  complete: boolean;
+  blocks: number;
+  errors: { pages: number[]; code: string; message: string }[];
 }
 
 export interface ReleaseAnalysis {
@@ -58,18 +77,10 @@ export interface ReleaseAnalysis {
   rawText: string;
   visual: VisualDocument;
   file: Blob;
+  /** Nachweis, welche Seiten tatsächlich verarbeitet wurden */
+  coverage: ReleaseCoverage;
 }
 
-function asText(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  return String(v).trim();
-}
-
-function sameValue(a: unknown, b: unknown): boolean {
-  const na = asText(a).replace(/\s+/g, " ").toLowerCase();
-  const nb = asText(b).replace(/\s+/g, " ").toLowerCase();
-  return na === nb;
-}
 
 /** Ordnet einen Dokument-Kontext ("Stückzahl:") einem Feldschlüssel zu. */
 function guessFieldKey(hint: string): string | null {
@@ -79,24 +90,15 @@ function guessFieldKey(hint: string): string | null {
   return best?.key ?? null;
 }
 
-/** Grenzen der an den Importdienst gesendeten Nutzlast. */
-const MAX_PAIRS = 600;
-const MAX_IMAGES = 4;
-const MAX_TEXT_CHARS = 200_000;
-
-/** Seitentexte auf eine verarbeitbare Gesamtlänge kürzen (Reihenfolge bleibt erhalten). */
-function capPageTexts(texts: string[]): string[] {
-  let budget = MAX_TEXT_CHARS;
-  return texts.map((t) => {
-    if (budget <= 0) return "";
-    const slice = t.slice(0, budget);
-    budget -= slice.length;
-    return slice;
-  });
+function errorCodeOf(e: unknown): string {
+  const anyE = e as { code?: string } | null;
+  if (anyE && typeof anyE.code === "string") return anyE.code;
+  return "BLOCK_ANALYSIS_FAILED";
 }
 
 /**
  * Schritt 1 – Dokument analysieren. Verändert nichts in der Datenbank.
+ * Das gesamte PDF wird ausgewertet; bei Bedarf blockweise.
  */
 export async function analyzeReleaseDocument(args: {
   file: Blob;
@@ -108,7 +110,8 @@ export async function analyzeReleaseDocument(args: {
   // Phase 1: PDF auslesen. Fehler hier klar als Lesefehler kennzeichnen.
   let visual: Awaited<ReturnType<typeof extractVisualDocument>>;
   try {
-    visual = await extractVisualDocument(args.file, args.fileName);
+    // OCR für JEDE textlose Seite, nicht nur für die ersten Seiten.
+    visual = await extractVisualDocument(args.file, args.fileName, { maxOcrPages: 200 });
   } catch (e) {
     console.error("[Fertigungsfreigabe-Import] PDF-Auslesen fehlgeschlagen", e);
     throw new Error(
@@ -119,6 +122,8 @@ export async function analyzeReleaseDocument(args: {
   const rawText = visual.pageTexts.join("\n\n");
   const allPairs: VisualPair[] = visual.pages.flatMap((p) => p.pairs);
   const allImages = visual.pages.map((p) => p.imageDataUrl).filter(Boolean) as string[];
+  const totalPages = visual.pages.length;
+  const fileBytes = args.file.size ?? 0;
 
   if (!rawText.trim() && !allImages.length) {
     throw new Error(
@@ -126,17 +131,29 @@ export async function analyzeReleaseDocument(args: {
     );
   }
 
-  // Phase 2: Auswertung. Die Nutzlast wird begrenzt, damit große Dokumente
-  // nicht an Größen-/Zeitgrenzen des Importdienstes scheitern.
-  const pairs = allPairs.slice(0, MAX_PAIRS);
-  const images = allImages.slice(0, MAX_IMAGES);
-  const pageTexts = capPageTexts(visual.pageTexts);
+  const blocks = buildBlocks(visual);
+  const processedPages: number[] = [];
+  const failedPages: number[] = [];
+  const errors: ReleaseCoverage["errors"] = [];
+
+  if (blocks.length > MAX_BLOCKS_LIMIT) {
+    // Nichts stillschweigend abschneiden: das Dokument ist zu groß.
+    const cutoff = blocks.slice(MAX_BLOCKS_LIMIT).flatMap((b) => b.pageNumbers);
+    throw new Error(
+      `Fertigungsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze. ` +
+        `Datei: ${args.fileName}; Größe: ${(fileBytes / 1024 / 1024).toFixed(2)} MB; Seiten: ${totalPages}; ` +
+        `verarbeitbar bis Seite ${blocks[MAX_BLOCKS_LIMIT - 1].pageNumbers.at(-1)}; nicht verarbeitbar: Seiten ${cutoff[0]}–${cutoff.at(-1)}; Fehlercode: DOC_TOO_LARGE.`
+    );
+  }
+
   console.info("[Fertigungsfreigabe-Import] Analyse", {
     datei: args.fileName,
-    seiten: visual.pageTexts.length,
-    zeichen: pageTexts.join("").length,
-    paare: `${pairs.length}/${allPairs.length}`,
-    bilder: `${images.length}/${allImages.length}`,
+    groesseMB: (fileBytes / 1024 / 1024).toFixed(2),
+    seiten: totalPages,
+    zeichen: rawText.length,
+    paare: allPairs.length,
+    bilder: allImages.length,
+    bloecke: blocks.length,
   });
 
   // Erste, schnelle Vorab-Identifikation über Klartext (ohne KI),
@@ -146,15 +163,63 @@ export async function analyzeReleaseDocument(args: {
     .findExisting(preKeys)
     .catch(() => null);
 
-  const res = await api.productionReleases.analyzePdfText({
-    fileName: args.fileName,
-    pages: pageTexts,
-    pairs,
-    images,
-    existing: existing ? snapshot(existing) : null,
-  });
+  const results: { block: Block; res: BlockResult }[] = [];
+  for (const block of blocks) {
+    try {
+      const res = await api.productionReleases.analyzePdfText({
+        fileName: args.fileName,
+        pages: block.pages,
+        pageNumbers: block.pageNumbers,
+        totalPages,
+        partial: blocks.length > 1,
+        pairs: block.pairs,
+        images: block.images,
+        existing: existing ? snapshot(existing) : null,
+      });
+      results.push({ block, res: res as BlockResult });
+      processedPages.push(...block.pageNumbers);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unbekannte Ursache.";
+      const code = errorCodeOf(e);
+      // Ein leerer Block (z. B. Trennblatt ohne Inhalt) ist kein Datenverlust.
+      const empty =
+        block.pages.join("").replace(/\s/g, "").length === 0 && block.images.length === 0;
+      if (empty && /NO_DATA_RECOGNIZED|PDF_EMPTY/.test(code)) {
+        processedPages.push(...block.pageNumbers);
+        continue;
+      }
+      failedPages.push(...block.pageNumbers);
+      errors.push({ pages: block.pageNumbers, code, message });
+      console.error(
+        `[Fertigungsfreigabe-Import] Block Seiten ${block.pageNumbers.join(",")} fehlgeschlagen (${code}): ${message}`
+      );
+    }
+  }
 
-  const doc = res.document ?? {};
+  if (!results.length) {
+    const first = errors[0];
+    throw new Error(
+      `Fertigungsfreigabe konnte nicht verarbeitet werden. ${first?.message ?? "Die Auswertung lieferte kein Ergebnis."} ` +
+        `Datei: ${args.fileName}; Größe: ${(fileBytes / 1024 / 1024).toFixed(2)} MB; Seiten: ${totalPages}; ` +
+        `verarbeitet bis Seite 0; nicht verarbeitet: Seiten 1–${totalPages}; Fehlercode: ${first?.code ?? "NO_RESULT"}.`
+    );
+  }
+
+  const coverage: ReleaseCoverage = {
+    fileName: args.fileName,
+    fileBytes,
+    totalPages,
+    processedPages: [...processedPages].sort((a, b) => a - b),
+    failedPages: [...failedPages].sort((a, b) => a - b),
+    processedUntilPage: processedPages.length ? Math.max(...processedPages) : 0,
+    complete: failedPages.length === 0,
+    blocks: blocks.length,
+    errors,
+  };
+
+  const merged = mergeBlockResults(results);
+
+  const doc = merged.document;
   const releaseNumber = asText(doc.release_number) || preKeys.release_number || "";
   const revisionNumber = Number.parseInt(asText(doc.revision_number), 10);
 
@@ -163,16 +228,16 @@ export async function analyzeReleaseDocument(args: {
     existing = await api.productionReleases
       .findExisting({
         release_number: releaseNumber,
-        article_number: asText(res.fields.article_number),
-        drawing_approval: asText(res.fields.drawing_approval),
-        cost_center_code: asText(res.fields.cost_center_code),
+        article_number: asText(merged.fields.article_number),
+        drawing_approval: asText(merged.fields.drawing_approval),
+        cost_center_code: asText(merged.fields.cost_center_code),
       })
       .catch(() => null);
   }
 
   const rawValues: Record<string, string> = {};
   const values: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(res.fields)) {
+  for (const [k, v] of Object.entries(merged.fields)) {
     if (!RELEASE_FIELD_BY_KEY[k]) continue;
     const s = asText(v);
     if (!s) continue;
@@ -183,13 +248,17 @@ export async function analyzeReleaseDocument(args: {
 
   const isRevision = !!existing;
   const changes = buildChanges({
-    aiChanges: res.changes ?? [],
-    pairs,
+    aiChanges: merged.changes,
+    pairs: allPairs,
     existing,
     values,
     rawValues,
     isRevision,
   });
+
+  // Widersprüchliche Werte aus verschiedenen Blöcken: nie stillschweigend
+  // entscheiden, sondern zur Prüfung vorlegen.
+  for (const c of merged.conflicts) changes.push(c);
 
   // Unsichere Werte dürfen nicht automatisch gesetzt werden
   for (const c of changes) {
@@ -204,7 +273,7 @@ export async function analyzeReleaseDocument(args: {
     source,
     values,
     rawValues,
-    testParameters: res.testParameters ?? [],
+    testParameters: merged.testParameters,
     document: {
       ...doc,
       release_number: releaseNumber || undefined,
@@ -217,6 +286,7 @@ export async function analyzeReleaseDocument(args: {
     rawText,
     visual,
     file: args.file,
+    coverage,
   };
 }
 
@@ -390,8 +460,31 @@ async function saveReleaseImport(args: {
     storagePath = null;
   }
 
-  const autoChanges = changes.filter((c) => c.auto && c.field_key);
-  const pending = changes.filter((c) => !c.auto);
+  const cov = analysis.coverage;
+  const incomplete = !!cov && !cov.complete;
+  // Teilverarbeitung darf niemals als vollständige Freigabe gelten.
+  const allChanges = incomplete
+    ? [
+        ...changes,
+        {
+          field_key: "",
+          field_label: "Unvollständige Dokumentverarbeitung",
+          old_value: "",
+          new_value: "",
+          detection: "unknown" as const,
+          confidence: "low" as const,
+          page: cov.failedPages[0] ?? null,
+          note:
+            `Nicht verarbeitete Seiten: ${cov.failedPages.join(", ")} von ${cov.totalPages}. ` +
+            `Fehlercode(s): ${cov.errors.map((e) => e.code).join(", ") || "UNBEKANNT"}. ` +
+            `Bitte die betroffenen Seiten manuell prüfen.`,
+          auto: false,
+        } satisfies DetectedChange,
+      ]
+    : changes;
+
+  const autoChanges = allChanges.filter((c) => c.auto && c.field_key);
+  const pending = allChanges.filter((c) => !c.auto);
 
   const base: Record<string, unknown> = {};
   const prev = analysis.existing;
@@ -445,7 +538,7 @@ async function saveReleaseImport(args: {
     is_current: true,
     source_type: "pdf",
     import_source: analysis.source,
-    import_status: pending.length ? "review_required" : "imported",
+    import_status: pending.length || incomplete ? "review_required" : "imported",
     source_document_path: storagePath,
     source_document_name: analysis.fileName,
     field_sources: sources,
@@ -455,6 +548,8 @@ async function saveReleaseImport(args: {
       ocr_pages: analysis.visual.pages.filter((p) => p.ocrNeeded).map((p) => p.page),
       auto_applied: autoChanges.length,
       pending: pending.length,
+      coverage: cov ?? null,
+      fully_processed: !incomplete,
     },
     imported_at: now,
     imported_by: userId,
@@ -479,7 +574,7 @@ async function saveReleaseImport(args: {
     await api.productionReleases.replaceTestParameters(row.id, tests);
   }
 
-  const changeRows: ProductionReleaseChange[] = changes.map((c) => ({
+  const changeRows: ProductionReleaseChange[] = allChanges.map((c) => ({
     field_key: c.field_key || "unbekannt",
     field_label: c.field_label,
     old_value: c.old_value || null,

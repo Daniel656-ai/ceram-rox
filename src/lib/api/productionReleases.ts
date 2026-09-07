@@ -304,6 +304,11 @@ export const productionReleases = {
   async analyzePdfText(args: {
     fileName: string;
     pages: string[];
+    /** echte Seitennummern des Blocks (für Protokoll und Änderungszuordnung) */
+    pageNumbers?: number[];
+    totalPages?: number;
+    /** true, wenn nur ein Block eines größeren Dokuments gesendet wird */
+    partial?: boolean;
     pairs?: unknown[];
     images?: string[];
     existing?: Record<string, unknown> | null;

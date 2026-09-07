@@ -84,6 +84,16 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
       setValues(res.rawValues);
       setTests(res.testParameters);
       setChanges(res.changes);
+      if (!res.coverage.complete) {
+        const msg =
+          `Fertigungsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze. ` +
+          `Datei: ${res.coverage.fileName}; Größe: ${(res.coverage.fileBytes / 1024 / 1024).toFixed(2)} MB; ` +
+          `Seiten: ${res.coverage.totalPages}; verarbeitet bis Seite ${res.coverage.processedUntilPage}; ` +
+          `nicht verarbeitet: Seite(n) ${res.coverage.failedPages.join(", ")}; ` +
+          `Fehlercode: ${res.coverage.errors.map((e) => e.code).join(", ") || "UNBEKANNT"}.`;
+        setFileError(msg);
+        toast.error(msg, { duration: 15000 });
+      }
       const auto = res.changes.filter((c) => c.auto).length;
       const open = res.changes.length - auto;
       toast.success(
@@ -300,6 +310,32 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
                 {analysis.visual.pages.some((p) => p.ocrNeeded) && <> Für einzelne Seiten wurde OCR verwendet.</>}
               </AlertDescription>
             </Alert>
+
+            <Alert variant={analysis.coverage.complete ? "default" : "destructive"}>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>
+                {analysis.coverage.complete
+                  ? `Vollständig verarbeitet: alle ${analysis.coverage.totalPages} Seite(n)`
+                  : "Fertigungsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze."}
+              </AlertTitle>
+              <AlertDescription className="text-sm">
+                Datei: <span className="font-medium">{analysis.coverage.fileName}</span> ·{" "}
+                {(analysis.coverage.fileBytes / 1024 / 1024).toFixed(2)} MB · Seiten:{" "}
+                {analysis.coverage.totalPages} · verarbeitet in {analysis.coverage.blocks} Block(en) ·
+                verarbeitet bis Seite {analysis.coverage.processedUntilPage}.
+                {!analysis.coverage.complete && (
+                  <>
+                    {" "}Nicht verarbeitet: Seite(n) {analysis.coverage.failedPages.join(", ")}. Fehlercode:{" "}
+                    <span className="font-mono">
+                      {analysis.coverage.errors.map((e) => e.code).join(", ") || "UNBEKANNT"}
+                    </span>
+                    . Der Import wird als „Prüfung erforderlich“ gespeichert – nicht als vollständige
+                    Fertigungsfreigabe.
+                  </>
+                )}
+              </AlertDescription>
+            </Alert>
+
 
             {!!changes.length && (
               <div>

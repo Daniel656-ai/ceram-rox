@@ -166,20 +166,33 @@ Deno.serve(async (req) => {
   const pairs: unknown[] = Array.isArray(body?.pairs) ? body.pairs : [];
   const images: string[] = Array.isArray(body?.images) ? (body.images as string[]).map(String) : [];
   const existing = body?.existing ?? null;
+  const pageNumbers: number[] = Array.isArray(body?.pageNumbers)
+    ? (body.pageNumbers as unknown[]).map((n) => Number(n)).filter((n) => Number.isFinite(n))
+    : [];
+  const totalPages: number = Number(body?.totalPages) || pages.length;
+  // Blockverarbeitung: ein Block ohne erkennbare Daten ist kein Fehler,
+  // solange andere Blöcke desselben Dokuments Daten liefern.
+  const partial = body?.partial === true;
 
   console.log(
     `[parse-production-release] Start: datei="${fileName}" seiten=${pages.length} ` +
-      `zeichen=${pages.join("").length} paare=${pairs.length} bilder=${images.length} ` +
+      `seitenNr=${pageNumbers.join(",") || "-"} vonGesamt=${totalPages} zeichen=${pages.join("").length} paare=${pairs.length} bilder=${images.length} ` +
       `bildKB=${Math.round(images.join("").length / 1024)} revisionVergleich=${existing ? "ja" : "nein"}`,
   );
 
   const text = pages
-    .map((p: string, i: number) => `--- Seite ${i + 1} ---\n${p}`)
+    .map((p: string, i: number) => `--- Seite ${pageNumbers[i] ?? i + 1} von ${totalPages} ---\n${p}`)
     .join("\n\n")
     .slice(0, 120000);
 
   const rawTextLength = pages.join("").replace(/\s/g, "").length;
   if (!rawTextLength && !images.length) {
+    if (partial) {
+      return new Response(
+        JSON.stringify({ success: true, fields: {}, testParameters: [], document: {}, changes: [], empty: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     return fail(
       400,
       "PDF_EMPTY",
@@ -312,6 +325,13 @@ Deno.serve(async (req) => {
       .some((k) => doc[k] !== undefined && String(doc[k] ?? "").trim() !== "");
 
     if (!Object.keys(fields).length && !testParameters.length && !changes.length && !docHasIdentifiers) {
+      if (partial) {
+        console.log(`[parse-production-release] Block ohne Daten (Seiten ${pageNumbers.join(",")}) – kein Fehler.`);
+        return new Response(
+          JSON.stringify({ success: true, fields: {}, testParameters: [], document: {}, changes: [], empty: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       return fail(
         422,
         "NO_DATA_RECOGNIZED",
