@@ -238,3 +238,56 @@ export function writeFieldElementKey(
   else delete m.element_key;
   return m;
 }
+
+/* ------------------------------------------------------------------ */
+/* Globale Elementbibliothek                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Ein Eintrag der globalen Elementbibliothek. Die Bibliothek ist bewusst
+ * unabhängig von Messfällen, Formularen und Unterkategorien: sie beschreibt
+ * nur, WAS ein Messgerät liefern kann. Welche davon offizielle Ergebnisse
+ * sind, entscheidet ausschließlich der jeweilige Messfall.
+ */
+export interface LibraryElement {
+  /** Stabiler interner Schlüssel, z. B. "V2O5". */
+  key: string;
+  /** Anzeige mit tiefgestellten Zahlen, z. B. "V₂O₅". */
+  label: string;
+  group: "Oxide / Verbindungen" | "Elemente" | "Sonstige";
+}
+
+const COMPOUND_ORDER = [
+  "SiO2", "Al2O3", "Fe2O3", "TiO2", "CaO", "MgO", "BaO", "Na2O", "K2O",
+  "SO3", "P2O5", "V2O5", "WO3", "MoO3", "ZrO2", "Cr2O3", "MnO", "ZnO",
+];
+
+/** Vollständige globale Elementbibliothek (Verbindungen + Reinelemente). */
+export const elementLibrary: LibraryElement[] = (() => {
+  const out: LibraryElement[] = [];
+  const seen = new Set<string>();
+  const push = (key: string, group: LibraryElement["group"]) => {
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    out.push({ key, label: formatElementKey(key), group });
+  };
+  for (const k of COMPOUND_ORDER) push(k, "Oxide / Verbindungen");
+  for (const v of Object.values(COMPOUND_NAMES)) {
+    if (v !== "LOI") push(v, "Oxide / Verbindungen");
+  }
+  for (const sym of Object.keys(ELEMENTS)) push(sym, "Elemente");
+  push("LOI", "Sonstige");
+  return out;
+})();
+
+/** Bibliothekseintrag zu einem Schlüssel (auch für freie Eingaben). */
+export function libraryElement(key: string): LibraryElement {
+  const k = elementKey(key) ?? String(key ?? "").trim();
+  return (
+    elementLibrary.find((e) => e.key === k) ?? {
+      key: k,
+      label: formatElementKey(k),
+      group: "Sonstige",
+    }
+  );
+}

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { MeasurementCase, MeasurementCaseInstance } from "@/lib/api/measurementCases";
+import type {
+  MeasurementCase, MeasurementCaseInstance, MeasurementCaseElement,
+} from "@/lib/api/measurementCases";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { elementLibrary, libraryElement, formatElementKey, elementKey } from "@/lib/elementKeys";
 import { Checkbox } from "@/components/ui/checkbox";
 import { curveEvaluations } from "@/lib/curves/evaluations";
 import { emptyCurveConfig, readCaseCurveConfig, type CaseCurveConfig } from "@/lib/measurementBlocks";
@@ -37,6 +40,13 @@ interface DraftInstance {
   curve: CaseCurveConfig;
 }
 
+/** Ein Ergebnis-Element des Messfalls (Auswahl aus der globalen Bibliothek). */
+interface DraftElement {
+  key: string;
+  label: string | null;
+  official: boolean;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -61,6 +71,7 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
   const [method, setMethod] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [instances, setInstances] = useState<DraftInstance[]>([]);
+  const [elements, setElements] = useState<DraftElement[]>([]);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["measurement-import-profiles"],
@@ -83,6 +94,13 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
         curve: readCaseCurveConfig((i as any).curve_config),
       }))
     );
+    setElements(
+      (caseDef?.elements ?? []).map((e: MeasurementCaseElement) => ({
+        key: e.element_key,
+        label: e.label ?? null,
+        official: e.is_official !== false,
+      }))
+    );
   }, [open, caseDef]);
 
   const patchInstance = (idx: number, p: Partial<DraftInstance>) =>
@@ -95,6 +113,12 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
     [next[i], next[j]] = [next[j], next[i]];
     setInstances(next);
   };
+
+  const saveElements = async (caseId: string) =>
+    api.measurementCases.replaceElements(
+      caseId,
+      elements.map((e) => ({ element_key: e.key, label: e.label, is_official: e.official }))
+    );
 
   const saveMut = useMutation({
     mutationFn: async (): Promise<MeasurementCase> => {
@@ -136,6 +160,7 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
         if (inst.id) await api.measurementCases.updateInstance(inst.id, payload as any);
         else await api.measurementCases.addInstance({ case_id: target.id, ...payload } as any);
       }
+      await saveElements(target.id);
       return target;
     },
     onSuccess: async (saved) => {
@@ -175,6 +200,8 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
               Aktiv – nur aktive Messfälle stehen bei neuen Messungen zur Auswahl
             </Label>
           </div>
+
+          <CaseElementsEditor value={elements} onChange={setElements} />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -360,6 +387,119 @@ function CurveConfigEditor({
             </label>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+/**
+ * Ergebnis-Elemente des Messfalls: Auswahl und Reihenfolge aus der globalen
+ * Elementbibliothek. Diese Liste – und nicht die Unterkategorie oder der
+ * Messkontext – bestimmt, welche offiziellen Ergebnisse der Messfall besitzt.
+ */
+function CaseElementsEditor({
+  value, onChange,
+}: {
+  value: DraftElement[];
+  onChange: (v: DraftElement[]) => void;
+}) {
+  const [pick, setPick] = useState("");
+  const [free, setFree] = useState("");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  const add = (raw: string) => {
+    const entry = libraryElement(raw);
+    if (!entry.key || value.some((v) => v.key === entry.key)) return;
+    onChange([...value, { key: entry.key, label: null, official: true }]);
+  };
+
+  const move = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= value.length) return;
+    const next = value.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    onChange(next);
+  };
+
+  const available = elementLibrary.filter((e) => !value.some((v) => v.key === e.key));
+
+  return (
+    <div className="space-y-2 rounded border p-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+          Ergebnis-Elemente ({value.length})
+        </Label>
+        <span className="text-[11px] text-muted-foreground">
+          Reihenfolge per Ziehen ändern
+        </span>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Diese Auswahl bestimmt die offiziellen Ergebnisse dieses Messfalls. Der
+        Messdatenimport erkennt weiterhin alle Elemente der Messdatei.
+      </p>
+
+      {value.map((el, i) => (
+        <div
+          key={el.key}
+          draggable
+          onDragStart={() => setDragIndex(i)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => { if (dragIndex != null) move(dragIndex, i); setDragIndex(null); }}
+          className="flex items-center gap-2 rounded border bg-muted/20 px-2 py-1"
+        >
+          <GripVertical className="h-3.5 w-3.5 cursor-grab text-muted-foreground" />
+          <Badge variant="outline" className="shrink-0">{i + 1}</Badge>
+          <span className="w-28 font-medium">{formatElementKey(el.key)}</span>
+          <Input
+            className="h-8 flex-1 text-xs"
+            placeholder="Eigene Bezeichnung (optional)"
+            value={el.label ?? ""}
+            onChange={(e) =>
+              onChange(value.map((x, idx) => (idx === i ? { ...x, label: e.target.value || null } : x)))
+            }
+          />
+          <label className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+            <Checkbox
+              checked={el.official}
+              onCheckedChange={(c) =>
+                onChange(value.map((x, idx) => (idx === i ? { ...x, official: c === true } : x)))
+              }
+            />
+            offiziell
+          </label>
+          <Button size="icon" variant="ghost" type="button" className="h-8 w-8 text-destructive"
+            onClick={() => onChange(value.filter((_, idx) => idx !== i))}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+      {value.length === 0 && (
+        <p className="text-xs text-muted-foreground">
+          Keine Elemente definiert – der Messfall gibt dann keine Ergebnisliste vor.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={pick} onValueChange={(v) => { add(v); setPick(""); }}>
+          <SelectTrigger className="h-8 w-64 text-xs">
+            <SelectValue placeholder="Element aus Bibliothek wählen…" />
+          </SelectTrigger>
+          <SelectContent className="max-h-72">
+            {available.map((e) => (
+              <SelectItem key={e.key} value={e.key}>
+                {e.label} · {e.group}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input className="h-8 w-44 text-xs" placeholder="oder eingeben, z.B. V2O5"
+          value={free} onChange={(e) => setFree(e.target.value)} />
+        <Button size="sm" variant="outline" type="button"
+          disabled={!elementKey(free) && !free.trim()}
+          onClick={() => { add(free); setFree(""); }}>
+          <Plus className="h-3.5 w-3.5 mr-1" />Hinzufügen
+        </Button>
       </div>
     </div>
   );

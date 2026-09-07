@@ -1886,6 +1886,47 @@ export type Database = {
           },
         ]
       }
+      measurement_case_elements: {
+        Row: {
+          case_id: string
+          created_at: string
+          element_key: string
+          id: string
+          is_official: boolean
+          label: string | null
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          element_key: string
+          id?: string
+          is_official?: boolean
+          label?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          element_key?: string
+          id?: string
+          is_official?: boolean
+          label?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_case_elements_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurement_case_instances: {
         Row: {
           case_id: string

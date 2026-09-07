@@ -127,8 +127,14 @@ export interface MeasurementInstance {
   context: Record<string, string>;
   /** Reine Ergebniswerte der Messung (ohne Kontext-Schlüssel). */
   values: Record<string, unknown>;
+  /**
+   * Vom Messfall vorgegebene Ergebnis-Elemente (Auswahl + Reihenfolge).
+   * Leer = keine Vorgabe (z. B. standardlose Messung).
+   */
+  elementSpec: CaseElementSpec[];
   index: number;
 }
+
 
 const isMetaKey = (k: string) => k.startsWith("__");
 
@@ -173,8 +179,10 @@ export function readInstances(
       label: instanceLabel(explicit, context, meta, index),
       context,
       values,
+      elementSpec: readCaseElementSpec(e[CASE_ELEMENT_SPEC_KEY]),
       index,
     };
+
   });
 }
 
@@ -284,10 +292,49 @@ export const CASE_CURVE_KEY = "__curve_config";
 
 /**
  * Vom Messfall vorgegebene Element-/Verbindungsschlüssel dieser Messung.
- * Sie stammen ausschließlich aus den Schlüsseln des Messkontexts
- * („Vorgabewerte / Messkontext“) – es gibt keine zweite Datenstruktur.
+ * Maßgeblich ist die Ergebnisliste des Messfalls (`measurement_case_elements`);
+ * nur wenn dort nichts gepflegt ist, dienen die Schlüssel des Messkontexts als
+ * Rückfallebene (Altbestand).
  */
 export const CASE_ELEMENTS_KEY = "__case_elements";
+
+/**
+ * Vollständige Ergebnisliste des Messfalls: Element, Reihenfolge und ob es ein
+ * offizielles Ergebnis ist. Unterkategorien bzw. Messkontext bestimmen diese
+ * Liste NICHT.
+ */
+export const CASE_ELEMENT_SPEC_KEY = "__case_element_spec";
+
+export interface CaseElementSpec {
+  key: string;
+  label: string;
+  official: boolean;
+}
+
+/** Liest die Ergebnisliste eines Messfalls aus einem Messblock-Eintrag. */
+export function readCaseElementSpec(raw: unknown): CaseElementSpec[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CaseElementSpec[] = [];
+  for (const item of raw) {
+    if (typeof item === "string") {
+      const k = elementKey(item) ?? item.trim();
+      if (k) out.push({ key: k, label: k, official: true });
+      continue;
+    }
+    const o = (item ?? {}) as Record<string, unknown>;
+    const rawKey = typeof o.key === "string" ? o.key : "";
+    const k = elementKey(rawKey) ?? rawKey.trim();
+    if (!k) continue;
+    out.push({
+      key: k,
+      label: typeof o.label === "string" && o.label.trim() ? o.label.trim() : k,
+      official: o.official !== false,
+    });
+  }
+  return out;
+}
+
+
 
 /**
  * Liest aus einem Messkontext die darin definierten Elemente. Ein
@@ -308,6 +355,11 @@ export function caseElementKeys(context: Record<string, unknown> | null | undefi
 export interface CaseTemplate {
   id: string;
   name: string;
+  /**
+   * Ergebnisliste des Messfalls (Auswahl + Reihenfolge aus der globalen
+   * Elementbibliothek). Sie ist unabhängig vom Messkontext.
+   */
+  elements?: Array<{ element_key: string; label?: string | null; is_official?: boolean }>;
   instances: Array<{
     id: string;
     label: string;
@@ -316,6 +368,17 @@ export interface CaseTemplate {
     context?: Record<string, string> | null;
     curve_config?: unknown;
   }>;
+}
+
+/** Ergebnisliste eines Messfalls in die Block-Darstellung übersetzen. */
+export function caseElementSpec(caseDef: CaseTemplate): CaseElementSpec[] {
+  return readCaseElementSpec(
+    (caseDef.elements ?? []).map((e) => ({
+      key: e.element_key,
+      label: e.label ?? undefined,
+      official: e.is_official !== false,
+    }))
+  );
 }
 
 /**
@@ -329,6 +392,7 @@ export function buildEntriesFromCase(
 ): Array<Record<string, unknown>> {
   const contextKeys = new Set(children.filter((c) => c.role === "context").map((c) => c.field_key));
   const labelKeys = children.filter((c) => c.role === "label").map((c) => c.field_key);
+  const spec = caseElementSpec(caseDef);
 
   return caseDef.instances.map((inst) => {
     const entry: Record<string, unknown> = {
@@ -338,7 +402,9 @@ export function buildEntriesFromCase(
       [CASE_ID_KEY]: caseDef.id,
       [CASE_INSTANCE_KEY]: inst.id,
       [IMPORT_PROFILE_KEY]: inst.import_profile_id ?? null,
-      [CASE_ELEMENTS_KEY]: caseElementKeys(inst.context),
+      [CASE_ELEMENT_SPEC_KEY]: spec,
+      [CASE_ELEMENTS_KEY]: spec.length ? spec.map((s) => s.key) : caseElementKeys(inst.context),
+
       [CASE_CURVE_KEY]: hasCurveConfig(readCaseCurveConfig(inst.curve_config))
         ? readCaseCurveConfig(inst.curve_config)
         : null,
