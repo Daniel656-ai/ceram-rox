@@ -213,36 +213,13 @@ export default function ProductionReleasesPage() {
       <ImportPdfDialog
         open={importOpen}
         onOpenChange={setImportOpen}
-        onImported={async ({ values, testParameters, fileName, storagePath, rawText }) => {
-          try {
-            const now = new Date().toISOString();
-            const fieldSources = Object.fromEntries(
-              Object.keys(values).map((k) => [k, { source: "pdf", at: now, by: user?.id ?? null, document: fileName }])
-            );
-            const id = await save.mutateAsync({
-              values: {
-                ...values,
-                status: "entwurf",
-                source_type: "pdf",
-                source_document_path: storagePath,
-                source_document_name: fileName,
-                field_sources: fieldSources,
-                imported_at: now,
-                imported_by: user?.id ?? null,
-                created_by: user?.id ?? null,
-                form_definition_id: settings?.default_form_definition_id ?? null,
-              },
-              testParameters: testParameters.map((t) => ({ ...t, source_type: "pdf" })),
-            });
-            await api.productionReleases.logImport({
-              releaseId: id, fileName, storagePath, rawText,
-              extracted: { values, testParameters }, importedBy: user?.id ?? null,
-            });
-            toast.success("Fertigungsfreigabe aus PDF erstellt.");
-            navigate(`/fertigungsfreigaben/${id}`);
-          } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Speichern fehlgeschlagen");
-          }
+        onImported={({ releaseId, isRevision, revisionNumber, pendingCount }) => {
+          toast.success(
+            isRevision
+              ? `Revision ${revisionNumber} angelegt.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen eine Prüfung.` : ""}`
+              : `Fertigungsfreigabe aus PDF erstellt.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen eine Prüfung.` : ""}`
+          );
+          navigate(`/fertigungsfreigaben/${releaseId}`);
         }}
       />
 
