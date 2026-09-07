@@ -46,16 +46,75 @@ export interface ProductionReleaseTestParameter {
   source_type?: string;
 }
 
+/** Erkannte Änderung einer Revision (Fall A–D). */
+export interface ProductionReleaseChange {
+  id?: string;
+  release_id?: string;
+  scope?: string;
+  field_key: string;
+  field_label?: string | null;
+  old_value?: string | null;
+  new_value?: string | null;
+  detection: "strikethrough" | "red" | "combined" | "text" | "unknown";
+  confidence: "high" | "medium" | "low";
+  status: "auto_applied" | "pending" | "accepted" | "corrected" | "dismissed";
+  page?: number | null;
+  note?: string | null;
+  evidence?: Record<string, unknown>;
+  resolved_value?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  created_at?: string;
+}
+
 export const productionReleases = {
-  async list(): Promise<ProductionReleaseRow[]> {
+  async list(opts: { onlyCurrent?: boolean } = {}): Promise<ProductionReleaseRow[]> {
+    let q = db
+      .from("production_releases")
+      .select(
+        "id,status,project_id,project_name,customer_id,customer_name,article_number,completion_date,delivery_date,piece_count,source_type,created_at,updated_at,release_number,revision_number,is_current,import_status,root_release_id"
+      )
+      .order("created_at", { ascending: false });
+    if (opts.onlyCurrent) q = q.eq("is_current", true);
+    return (await unwrap(q)) as ProductionReleaseRow[];
+  },
+
+  /** Alle Revisionen eines Stammsatzes – älteste zuerst. */
+  async revisions(rootId: string): Promise<ProductionReleaseRow[]> {
     return (await unwrap(
       db
         .from("production_releases")
         .select(
-          "id,status,project_id,project_name,customer_id,customer_name,article_number,completion_date,delivery_date,piece_count,source_type,created_at,updated_at"
+          "id,status,revision_number,revision_date,is_current,import_status,source_document_name,source_document_path,imported_at,created_at,release_number"
         )
-        .order("created_at", { ascending: false })
+        .eq("root_release_id", rootId)
+        .order("revision_number", { ascending: true })
     )) as ProductionReleaseRow[];
+  },
+
+  /**
+   * Sucht eine bestehende (aktuelle) Fertigungsfreigabe anhand stabiler
+   * Dokumentkennungen. Reihenfolge = Priorität der Merkmale.
+   */
+  async findExisting(keys: {
+    release_number?: string | null;
+    article_number?: string | null;
+    drawing_approval?: string | null;
+    cost_center_code?: string | null;
+    project_name?: string | null;
+  }): Promise<ProductionReleaseRow | null> {
+    const attempts: [string, string][] = [];
+    if (keys.release_number?.trim()) attempts.push(["release_number", keys.release_number.trim()]);
+    if (keys.article_number?.trim()) attempts.push(["article_number", keys.article_number.trim()]);
+    if (keys.drawing_approval?.trim()) attempts.push(["drawing_approval", keys.drawing_approval.trim()]);
+    if (keys.cost_center_code?.trim()) attempts.push(["cost_center_code", keys.cost_center_code.trim()]);
+    for (const [col, val] of attempts) {
+      const rows = (await unwrap(
+        db.from("production_releases").select("*").eq("is_current", true).ilike(col, val).limit(2)
+      )) as ProductionReleaseRow[];
+      if (rows?.length === 1) return rows[0];
+    }
+    return null;
   },
 
   async get(id: string): Promise<ProductionReleaseRow> {
@@ -77,6 +136,47 @@ export const productionReleases = {
   async remove(id: string): Promise<void> {
     await run(db.from("production_releases").delete().eq("id", id));
   },
+
+  // ---- Erkannte Änderungen / Prüfung ---------------------------------------
+  async changes(releaseId: string): Promise<ProductionReleaseChange[]> {
+    return (await unwrap(
+      db
+        .from("production_release_changes")
+        .select("*")
+        .eq("release_id", releaseId)
+        .order("created_at", { ascending: true })
+    )) as ProductionReleaseChange[];
+  },
+
+  async addChanges(releaseId: string, rows: ProductionReleaseChange[]): Promise<void> {
+    if (!rows.length) return;
+    await run(
+      db
+        .from("production_release_changes")
+        .insert(rows.map((r) => ({ ...r, id: undefined, release_id: releaseId })))
+    );
+  },
+
+  async updateChange(id: string, values: Partial<ProductionReleaseChange>): Promise<void> {
+    await run(db.from("production_release_changes").update(values).eq("id", id));
+  },
+
+  /** Offene Prüfpunkte je Fertigungsfreigabe (für Hinweisbanner/Übersicht). */
+  async pendingChangeCounts(releaseIds: string[]): Promise<Record<string, number>> {
+    if (!releaseIds.length) return {};
+    const rows = (await unwrap(
+      db
+        .from("production_release_changes")
+        .select("release_id")
+        .in("release_id", releaseIds)
+        .eq("status", "pending")
+    )) as { release_id: string }[];
+    const out: Record<string, number> = {};
+    for (const r of rows ?? []) out[r.release_id] = (out[r.release_id] ?? 0) + 1;
+    return out;
+  },
+
+
 
   // ---- Prüf- und Messvorgaben (strukturiert) --------------------------------
   async testParameters(releaseId: string): Promise<ProductionReleaseTestParameter[]> {
@@ -104,9 +204,11 @@ export const productionReleases = {
   },
 
   // ---- PDF-Import ----------------------------------------------------------
-  async uploadDocument(file: File): Promise<string> {
-    const path = `${crypto.randomUUID()}/${file.name}`;
-    const { error } = await dbClient.storage.from(BUCKET).upload(path, file);
+  /** Original-PDF unverändert ablegen (wird nie überschrieben). */
+  async uploadDocument(file: Blob, fileName?: string): Promise<string> {
+    const name = fileName ?? (file as File).name ?? "dokument.pdf";
+    const path = `${crypto.randomUUID()}/${name}`;
+    const { error } = await dbClient.storage.from(BUCKET).upload(path, file, { upsert: false });
     if (error) throw error;
     return path;
   },
@@ -116,10 +218,22 @@ export const productionReleases = {
     return data?.signedUrl ?? null;
   },
 
-  /** KI-gestützte Strukturerkennung des PDF-Textes (Edge Function). */
-  async analyzePdfText(args: { fileName: string; pages: string[] }): Promise<{
+  /**
+   * KI-gestützte Strukturerkennung (Edge Function).
+   * `pages` = Text inkl. visueller Marker, `pairs` = räumlich zugeordnete
+   * alt/neu-Paare, `images` = Seitenbilder für OCR, `existing` = bisheriger Stand.
+   */
+  async analyzePdfText(args: {
+    fileName: string;
+    pages: string[];
+    pairs?: unknown[];
+    images?: string[];
+    existing?: Record<string, unknown> | null;
+  }): Promise<{
     fields: Record<string, unknown>;
     testParameters: ProductionReleaseTestParameter[];
+    document: Record<string, unknown>;
+    changes: Record<string, unknown>[];
   }> {
     const { data, error } = await dbClient.functions.invoke("parse-production-release", {
       body: args,
@@ -128,6 +242,8 @@ export const productionReleases = {
     return {
       fields: (data?.fields ?? {}) as Record<string, unknown>,
       testParameters: (data?.testParameters ?? []) as ProductionReleaseTestParameter[],
+      document: (data?.document ?? {}) as Record<string, unknown>,
+      changes: (data?.changes ?? []) as Record<string, unknown>[],
     };
   },
 

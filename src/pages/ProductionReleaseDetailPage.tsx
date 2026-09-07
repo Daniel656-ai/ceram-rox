@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Trash2, FileDown, Plus } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ArrowLeft, Save, Trash2, FileDown, Plus, AlertTriangle, History } from "lucide-react";
 import {
   RELEASE_FIELDS, RELEASE_FIELD_GROUPS, RELEASE_STATUS_LABEL, RELEASE_STATUS_COLOR,
   RELEASE_STATUS_FLOW, TEST_SECTIONS, TEST_PARAMETERS, TEST_SECTION_LABEL,
@@ -26,8 +27,9 @@ import {
 } from "@/lib/productionRelease/fields";
 import {
   useProductionRelease, useReleaseTestParameters, useProductionReleasePermissions,
-  useSaveRelease, useDeleteRelease, useCustomers,
+  useSaveRelease, useDeleteRelease, useCustomers, useReleaseChanges, useReleaseRevisions,
 } from "@/hooks/useProductionReleases";
+import { ReviewChangesDialog } from "@/components/productionRelease/ReviewChangesDialog";
 import type { ProductionReleaseTestParameter } from "@/lib/api/productionReleases";
 
 const NONE = "__none__";
@@ -47,6 +49,13 @@ export default function ProductionReleaseDetailPage() {
   const [tests, setTests] = useState<ProductionReleaseTestParameter[]>([]);
   const [customerId, setCustomerId] = useState<string>(NONE);
   const [projectId, setProjectId] = useState<string>(NONE);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  const rootId = (release?.root_release_id as string | undefined) ?? release?.id;
+  const { data: changes = [] } = useReleaseChanges(id);
+  const { data: revisions = [] } = useReleaseRevisions(rootId);
+  const pendingChanges = changes.filter((c) => c.status === "pending");
+  const appliedChanges = changes.filter((c) => c.status !== "pending" && c.status !== "dismissed");
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects-lookup-release"],
@@ -133,6 +142,20 @@ export default function ProductionReleaseDetailPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {!!pendingChanges.length && (
+        <Alert className="border-amber-500/60 bg-amber-50 dark:bg-amber-900/20">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Prüfung erforderlich</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              ROX konnte bei dieser Revision nicht alle Änderungen eindeutig erkennen.{" "}
+              {pendingChanges.length} Angabe(n) benötigen Ihre Prüfung.
+            </span>
+            <Button size="sm" onClick={() => setReviewOpen(true)}>Änderungen prüfen</Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/fertigungsfreigaben")}>
@@ -146,6 +169,19 @@ export default function ProductionReleaseDetailPage() {
               <Badge variant="outline" className={RELEASE_STATUS_COLOR[release.status]}>
                 {RELEASE_STATUS_LABEL[release.status] ?? release.status}
               </Badge>
+              {!!release.release_number && (
+                <span className="font-mono">{String(release.release_number)}</span>
+              )}
+              <Badge variant="outline">Rev. {Number(release.revision_number) || 0}</Badge>
+              <Badge variant="outline" className={release.is_current === false ? "text-muted-foreground" : ""}>
+                {release.is_current === false ? "historische Revision" : "aktuelle Revision"}
+              </Badge>
+              {release.import_status === "review_required" && (
+                <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                  Prüfung erforderlich
+                </Badge>
+              )}
+              {release.import_status === "reviewed" && <Badge variant="outline">geprüft</Badge>}
               <span>{release.source_type === "pdf" ? "aus PDF importiert" : "manuell erfasst"}</span>
             </div>
           </div>
@@ -191,6 +227,9 @@ export default function ProductionReleaseDetailPage() {
         <TabsList>
           <TabsTrigger value="data">Daten</TabsTrigger>
           <TabsTrigger value="tests">Prüf- & Messvorgaben</TabsTrigger>
+          <TabsTrigger value="revisions">
+            Revisionen{revisions.length > 1 ? ` (${revisions.length})` : ""}
+          </TabsTrigger>
           <TabsTrigger value="links">Verknüpfungen</TabsTrigger>
         </TabsList>
 
@@ -338,6 +377,148 @@ export default function ProductionReleaseDetailPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="revisions" className="pt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base">Revisionshistorie</CardTitle>
+              {!!pendingChanges.length && (
+                <Button size="sm" onClick={() => setReviewOpen(true)}>
+                  <AlertTriangle className="h-4 w-4 mr-2" /> Änderungen prüfen
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-24">Revision</TableHead>
+                    <TableHead>Änderungsdatum</TableHead>
+                    <TableHead>Original-PDF</TableHead>
+                    <TableHead>Prüfstatus</TableHead>
+                    <TableHead className="w-32" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {revisions.map((rev) => (
+                    <TableRow key={rev.id} className={rev.id === release.id ? "bg-muted/40" : ""}>
+                      <TableCell className="font-medium">
+                        Rev. {Number(rev.revision_number) || 0}
+                        {rev.is_current !== false && (
+                          <Badge variant="outline" className="ml-2">aktuell</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {rev.revision_date
+                          ? new Date(String(rev.revision_date)).toLocaleDateString("de-AT")
+                          : new Date(rev.created_at).toLocaleDateString("de-AT")}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {rev.source_document_name ? (
+                          <Button
+                            variant="link"
+                            className="h-auto p-0"
+                            onClick={async () => {
+                              const url = await api.productionReleases.documentUrl(
+                                rev.source_document_path as string
+                              );
+                              if (url) window.open(url, "_blank");
+                              else toast.error("Originaldokument nicht verfügbar.");
+                            }}
+                          >
+                            {String(rev.source_document_name)}
+                          </Button>
+                        ) : "–"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {rev.import_status === "review_required"
+                          ? "Prüfung erforderlich"
+                          : rev.import_status === "reviewed"
+                            ? "geprüft"
+                            : rev.import_status === "imported"
+                              ? "importiert"
+                              : "–"}
+                      </TableCell>
+                      <TableCell>
+                        {rev.id !== release.id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/fertigungsfreigaben/${rev.id}`)}
+                          >
+                            <History className="h-4 w-4 mr-2" /> Öffnen
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!revisions.length && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                        Keine Revisionen erfasst.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                Änderungsprotokoll dieser Revision
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Feld</TableHead>
+                    <TableHead>Alt</TableHead>
+                    <TableHead>Neu</TableHead>
+                    <TableHead>Erkennung</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!changes.length && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                        Keine erkannten Änderungen – diese Fertigungsfreigabe wurde nicht als
+                        Revision importiert.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {changes.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="text-sm">{c.field_label || c.field_key}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground line-through">
+                        {c.old_value || "–"}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {c.resolved_value ?? c.new_value ?? "–"}
+                      </TableCell>
+                      <TableCell className="text-xs">{c.detection}</TableCell>
+                      <TableCell className="text-xs">
+                        {c.status === "auto_applied" && "automatisch übernommen"}
+                        {c.status === "pending" && "Prüfung erforderlich"}
+                        {c.status === "accepted" && "geprüft & übernommen"}
+                        {c.status === "corrected" && "korrigiert"}
+                        {c.status === "dismissed" && "als unverändert markiert"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {!!appliedChanges.length && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  Das Protokoll enthält ausschließlich tatsächlich erkannte Änderungen.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="links" className="pt-4 space-y-4">
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-base">Stabile Referenzen</CardTitle></CardHeader>
@@ -399,6 +580,15 @@ export default function ProductionReleaseDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {id && (
+        <ReviewChangesDialog
+          releaseId={id}
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          readOnly={readOnly}
+        />
+      )}
     </div>
   );
 }
