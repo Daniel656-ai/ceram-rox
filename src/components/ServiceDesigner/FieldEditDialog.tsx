@@ -63,6 +63,9 @@ export default function FieldEditDialog({
     (((field.metadata ?? {}) as any)?.measurement_import?.profile_id as string) ?? ""
   );
   const [resultLabel, setResultLabel] = useState((field as any).result_label ?? "");
+  // Stabiler Element-/Verbindungsschlüssel für den Messdatenimport (z. B. RFA).
+  const [elementKeyInput, setElementKeyInput] = useState(explicitFieldElementKey(field as any) ?? "");
+  const autoElementKey = elementKey(field.display_name ?? "") ?? elementKey(field.field_key ?? "");
   const [imageMode, setImageMode] = useState<ImageFieldMode>(readImageMeta(field).mode);
   const [blockRole, setBlockRole] = useState<BlockChildRole>(readBlockChildRole(field));
   // Workflow-Datenquelle: Wert aus einem vorherigen Workflow-Schritt beziehen.
@@ -148,6 +151,8 @@ export default function FieldEditDialog({
       // Darstellungsart des Bildfeldes (Einzelbild bleibt Standard).
       if (isImage) Object.assign(metadata, writeImageMeta(metadata, { mode: imageMode }));
       if (isBlockChild) metadata.block_role = blockRole;
+      Object.assign(metadata, writeFieldElementKey(metadata, elementKeyInput));
+      if (!elementKeyInput.trim()) delete (metadata as any).element_key;
       Object.assign(metadata, writeResultConditions(metadata, isResult ? conditionKeys : []));
       if (!isResult || !conditionKeys.length) delete (metadata as any).result_conditions;
 
