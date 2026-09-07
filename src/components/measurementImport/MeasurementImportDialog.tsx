@@ -285,10 +285,15 @@ export default function MeasurementImportDialog({
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Badge variant="outline">Format: {formatLabel(parsed.detectedFormat)}</Badge>
-                  <Badge variant="secondary">{assigned.length} zugeordnet</Badge>
+                  <Badge variant="secondary">{assigned.length} automatisch zugeordnet</Badge>
                   {unassigned.length > 0 && (
-                    <Badge variant="outline" className="gap-1">
-                      <AlertTriangle className="h-3 w-3" />{unassigned.length} nicht zugeordnet (werden gespeichert)
+                    <Badge variant="outline">
+                      {unassigned.length} importiert – für Messfall nicht benötigt
+                    </Badge>
+                  )}
+                  {openFields.length > 0 && (
+                    <Badge variant="outline" className="gap-1 border-amber-400 text-amber-700">
+                      <AlertTriangle className="h-3 w-3" />{openFields.length} offene Zuordnung(en)
                     </Badge>
                   )}
                   {metadataRows.length > 0 && <Badge variant="outline">{metadataRows.length} Metadaten</Badge>}
@@ -299,20 +304,54 @@ export default function MeasurementImportDialog({
                   )}
                 </div>
 
+                {openFields.length > 0 && (
+                  <div className="rounded border border-amber-300 bg-amber-50/50 p-2 space-y-1">
+                    <p className="text-[11px] font-medium text-amber-700">
+                      Offene Zuordnungen – diese Ergebnisfelder des Messfalls wurden nicht erkannt
+                    </p>
+                    {openFields.map((t) => (
+                      <div key={t.field_key} className="flex items-center gap-2 text-[11px]">
+                        <span className="flex-1">{t.display_name}{t.unit ? ` [${t.unit}]` : ""}</span>
+                        <Select
+                          value="__none__"
+                          onValueChange={(v) => {
+                            const idx = rows.findIndex((r) => r.sourceName === v && !r.targetFieldKey);
+                            if (idx >= 0) setOverrides((p) => ({ ...p, [idx]: t.field_key }));
+                          }}
+                        >
+                          <SelectTrigger className="h-7 w-64 text-[11px]">
+                            <SelectValue placeholder="Importwert zuordnen…" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            <SelectItem value="__none__">Importwert zuordnen…</SelectItem>
+                            {unassigned.map((r) => (
+                              <SelectItem key={r.sourceName} value={r.sourceName}>
+                                {r.sourceName} · {r.raw}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="border rounded overflow-hidden">
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="text-left p-2">Datenname</th>
+                        <th className="text-left p-2">Importiertes Element</th>
                         <th className="text-left p-2">Wert</th>
                         <th className="text-left p-2">Einheit</th>
                         <th className="text-left p-2">Kategorie</th>
-                        <th className="text-left p-2">Zuordnung</th>
+                        <th className="text-left p-2">Ergebnisfeld</th>
                         <th className="text-left p-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map((r, i) => (
+                      {rows.map((r, i) => ({ r, i }))
+                        .filter(({ r }) => showNotNeeded || rowStatus(r) !== "not_needed")
+                        .map(({ r, i }) => (
                         <tr key={i} className="border-t">
                           <td className="p-2 font-medium">{r.sourceName}</td>
                           <td className="p-2 font-mono">{r.value ?? (r.belowDetection ? r.raw : r.raw)}</td>
@@ -325,7 +364,7 @@ export default function MeasurementImportDialog({
                             >
                               <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                               <SelectContent className="max-h-72">
-                                <SelectItem value="__none__">— kein Feld (nicht zugeordnet speichern) —</SelectItem>
+                                <SelectItem value="__none__">— kein Ergebnisfeld (für Messfall nicht benötigt) —</SelectItem>
                                 {targets.map((t) => (
                                   <SelectItem key={t.field_key} value={t.field_key}>
                                     {t.display_name}{t.unit ? ` [${t.unit}]` : ""}
@@ -335,17 +374,18 @@ export default function MeasurementImportDialog({
                             </Select>
                           </td>
                           <td className="p-2">
-                            {!r.targetFieldKey ? <span className="text-amber-600">⚠ nicht zugeordnet – bleibt erhalten</span>
+                            {!r.targetFieldKey ? <span className="text-muted-foreground">importiert – für Messfall nicht benötigt</span>
                               : r.value == null && !r.belowDetection ? <span className="text-destructive">nicht lesbar</span>
                               : r.unitMismatch ? <span className="text-amber-600">Einheit {r.unit} ≠ {r.targetUnit}</span>
                               : r.origin === "profile" ? <span className="text-muted-foreground">✓ Profil</span>
-                              : r.origin === "auto" ? <span className="text-muted-foreground">✓ Namensabgleich</span>
+                              : r.origin === "auto" ? <span className="text-muted-foreground">✓ automatisch zugeordnet</span>
                               : <span className="text-muted-foreground">✓ manuell</span>}
                           </td>
                         </tr>
                       ))}
                       {metadataRows.map((m, i) => (
                         <tr key={`meta-${i}`} className="border-t bg-muted/20">
+
                           <td className="p-2">{m.label}</td>
                           <td className="p-2 font-mono text-muted-foreground">{m.value}</td>
                           <td className="p-2 text-muted-foreground">—</td>
