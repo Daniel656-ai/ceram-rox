@@ -119,12 +119,24 @@ export default function RawMaterialDetailPage() {
 
 
   const handleUpdateMaterial = async () => {
-    if (!editName) { toast.error(t("raw_materials:name_required")); return; }
-    // Duplicate name check (excluding self)
-    const dup = allMaterials?.find(
-      (m: any) => m.id !== id && m.material_name.toLowerCase() === editName.trim().toLowerCase(),
-    );
-    if (dup) { toast.error(t("raw_materials:duplicate_name")); return; }
+    if (!editName.trim()) { toast.error(t("raw_materials:name_required")); return; }
+    // UPDATE: der aktuell bearbeitete Datensatz wird immer ausgeschlossen.
+    // Die Duplikatsprüfung greift nur, wenn der Name tatsächlich geändert wurde –
+    // Änderungen an Lagerort, Hersteller, Gefahrzeichen etc. dürfen nie blockiert werden.
+    const nextName = editName.trim().toLowerCase();
+    const currentName = (mat?.material_name || "").trim().toLowerCase();
+    if (nextName !== currentName) {
+      const dup = allMaterials?.find(
+        (m: any) => m.id !== id && (m.material_name || "").trim().toLowerCase() === nextName,
+      );
+      if (dup) {
+        toast.error(t("raw_materials:duplicate_name"), {
+          description: dup.material_number ? `${dup.material_name} (${dup.material_number})` : dup.material_name,
+        });
+        return;
+      }
+    }
+
     try {
       await updateMaterial.mutateAsync({
         id: id!,
