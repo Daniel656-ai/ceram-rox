@@ -162,6 +162,7 @@ export default function ProductionReleasesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Freigabe / Rev.</TableHead>
                 <TableHead>Projekt</TableHead>
                 <TableHead>Kunde</TableHead>
                 <TableHead>Artikelnummer</TableHead>
@@ -175,11 +176,11 @@ export default function ProductionReleasesPage() {
             </TableHeader>
             <TableBody>
               {isLoading && (
-                <TableRow><TableCell colSpan={9} className="text-muted-foreground">Wird geladen …</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-muted-foreground">Wird geladen …</TableCell></TableRow>
               )}
               {!isLoading && !filtered.length && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                     Noch keine Fertigungsfreigaben vorhanden.
                   </TableCell>
                 </TableRow>
@@ -190,6 +191,15 @@ export default function ProductionReleasesPage() {
                   className="cursor-pointer"
                   onClick={() => navigate(`/fertigungsfreigaben/${r.id}`)}
                 >
+                  <TableCell className="text-xs">
+                    <div className="font-mono">{(r.release_number as string) || "–"}</div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Badge variant="outline">Rev. {Number(r.revision_number) || 0}</Badge>
+                      {r.is_current === false && (
+                        <Badge variant="outline" className="text-muted-foreground">historisch</Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="font-medium">{r.project_name || "–"}</TableCell>
                   <TableCell>{r.customer_name || "–"}</TableCell>
                   <TableCell className="font-mono text-xs">{r.article_number || "–"}</TableCell>
@@ -197,9 +207,19 @@ export default function ProductionReleasesPage() {
                   <TableCell>{fmtDate(r.delivery_date)}</TableCell>
                   <TableCell className="text-right">{r.piece_count ?? "–"}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={RELEASE_STATUS_COLOR[r.status]}>
-                      {RELEASE_STATUS_LABEL[r.status] ?? r.status}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="outline" className={RELEASE_STATUS_COLOR[r.status]}>
+                        {RELEASE_STATUS_LABEL[r.status] ?? r.status}
+                      </Badge>
+                      {r.import_status === "review_required" && (
+                        <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                          Prüfung erforderlich
+                        </Badge>
+                      )}
+                      {r.import_status === "reviewed" && (
+                        <Badge variant="outline" className="text-muted-foreground">geprüft</Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{fmtDate(r.updated_at)}</TableCell>
@@ -207,6 +227,7 @@ export default function ProductionReleasesPage() {
               ))}
             </TableBody>
           </Table>
+
         </CardContent>
       </Card>
 
