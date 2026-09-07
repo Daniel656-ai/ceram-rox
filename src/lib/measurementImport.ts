@@ -206,7 +206,14 @@ export interface TargetCandidate {
   field_type?: string;
   /** Im Formular hinterlegte Nachkommastellen (maßgeblich für Ergebniswerte). */
   decimal_places?: number | null;
+  /**
+   * Stabiler Element-/Verbindungsschlüssel des Ergebnisfeldes (z. B. "SiO2").
+   * Im Messfall bzw. Formulardesigner konfigurierbar; ist keiner gepflegt,
+   * wird er aus der Bezeichnung abgeleitet.
+   */
+  element_key?: string | null;
 }
+
 
 export interface MappedRow extends ParsedReading {
   /** Zielfeld-Key oder null (= wird nicht übernommen). */
