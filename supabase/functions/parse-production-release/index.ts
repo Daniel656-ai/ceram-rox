@@ -247,7 +247,11 @@ Deno.serve(async (req) => {
         (c?.new_value && String(c.new_value).trim() !== ""),
     );
 
-    if (!Object.keys(fields).length && !testParameters.length && !changes.length) {
+    const doc = (parsed.document ?? {}) as Record<string, unknown>;
+    const docHasIdentifiers = ["release_number", "revision_number", "order_number", "project_number", "drawing_number"]
+      .some((k) => doc[k] !== undefined && String(doc[k] ?? "").trim() !== "");
+
+    if (!Object.keys(fields).length && !testParameters.length && !changes.length && !docHasIdentifiers) {
       return fail(
         422,
         "NO_DATA_RECOGNIZED",
