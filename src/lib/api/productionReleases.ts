@@ -67,6 +67,47 @@ export interface ProductionReleaseChange {
   created_at?: string;
 }
 
+/** Verständliche Meldungen aus der strukturierten Fehlerantwort des Importdienstes. */
+const IMPORT_ERROR_TEXTS: Record<string, string> = {
+  INVALID_PAYLOAD: "Die Datei konnte nicht an die Auswertung übergeben werden.",
+  PDF_EMPTY: "Aus dieser Datei konnten weder Text noch Seitenbilder gelesen werden.",
+  PDF_PARSE_ERROR: "Die Fertigungsfreigabe konnte nicht gelesen werden.",
+  NO_DATA_RECOGNIZED: "In diesem Dokument wurden keine Fertigungsfreigabedaten erkannt.",
+  RATE_LIMITED: "Zu viele Importe in kurzer Zeit. Bitte in einer Minute erneut versuchen.",
+  PAYMENT_REQUIRED: "Das Kontingent für die Dokumenterkennung ist aufgebraucht.",
+  AI_ERROR: "Die Fertigungsfreigabe konnte nicht ausgewertet werden.",
+  AI_UNAVAILABLE: "Die Dokumenterkennung ist derzeit nicht erreichbar.",
+  CONFIG_MISSING: "Die Dokumenterkennung ist derzeit nicht verfügbar.",
+  UNAUTHORIZED: "Die Sitzung ist abgelaufen. Bitte neu anmelden und erneut importieren.",
+};
+
+async function toReadableImportError(error: unknown, data: unknown): Promise<Error> {
+  let payload = (data ?? null) as { error_code?: string; message?: string } | null;
+
+  // supabase-js liefert bei non-2xx die Original-Response in `context`
+  const ctx = (error as { context?: Response } | null)?.context;
+  if (!payload?.error_code && ctx && typeof ctx.json === "function") {
+    try {
+      payload = await ctx.clone().json();
+    } catch {
+      payload = null;
+    }
+  }
+  const status = ctx?.status;
+  const code = payload?.error_code ?? (status === 401 || status === 403 ? "UNAUTHORIZED" : undefined);
+  const message =
+    (code ? IMPORT_ERROR_TEXTS[code] : undefined) ??
+    payload?.message ??
+    "Die Fertigungsfreigabe konnte nicht verarbeitet werden. Bitte erneut versuchen.";
+
+  // Technische Details nur im Entwicklerprotokoll
+  console.error("[Fertigungsfreigabe-Import]", { status, code, error, payload });
+  const err = new Error(message);
+  (err as Error & { code?: string }).code = code;
+  return err;
+}
+
+
 export const productionReleases = {
   async list(opts: { onlyCurrent?: boolean } = {}): Promise<ProductionReleaseRow[]> {
     let q = db
@@ -238,7 +279,8 @@ export const productionReleases = {
     const { data, error } = await dbClient.functions.invoke("parse-production-release", {
       body: args,
     });
-    if (error) throw error;
+    if (error) throw await toReadableImportError(error, data);
+    if (data && data.success === false) throw await toReadableImportError(null, data);
     return {
       fields: (data?.fields ?? {}) as Record<string, unknown>,
       testParameters: (data?.testParameters ?? []) as ProductionReleaseTestParameter[],
