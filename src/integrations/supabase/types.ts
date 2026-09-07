@@ -9994,6 +9994,14 @@ export type Database = {
         Args: { _new_scope?: string; _source_form_id: string }
         Returns: string
       }
+      _clone_form_full: {
+        Args: {
+          _new_name?: string
+          _new_scope?: string
+          _source_form_id: string
+        }
+        Returns: string
+      }
       _order_lock_bypass: { Args: never; Returns: boolean }
       activate_mixture_recipe_version: {
         Args: { _version_id: string }
