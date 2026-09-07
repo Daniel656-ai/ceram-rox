@@ -98,6 +98,42 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
     }
   };
 
+  /** Einziger Weg für Auswahl UND Drag & Drop. */
+  const acceptFiles = (list: FileList | File[] | null | undefined) => {
+    const files = Array.from(list ?? []);
+    if (!files.length) return;
+    if (busy || saving) {
+      toast.info("Es läuft bereits eine Analyse – bitte kurz warten.");
+      return;
+    }
+    const pdfs = files.filter(isPdf);
+    if (!pdfs.length) {
+      setFileError("Nur PDF-Dateien können importiert werden.");
+      toast.error("Nur PDF-Dateien können importiert werden.");
+      return;
+    }
+    const f = pdfs[0];
+    if (files.length > 1) {
+      toast.info(`Mehrere Dateien erkannt – „${f.name}“ wird verwendet.`);
+    }
+    if (f.size === 0) {
+      setFileError("Die Datei ist leer.");
+      toast.error("Die Datei ist leer.");
+      return;
+    }
+    if (f.size > MAX_FILE_BYTES) {
+      setFileError("Die Datei ist größer als 50 MB.");
+      toast.error("Die Datei ist größer als 50 MB.");
+      return;
+    }
+    setFileError(null);
+    setFile(f);
+    setAnalysis(null); setValues({}); setTests([]); setChanges([]);
+    void analyze(f);
+  };
+
+
+
   const apply = async () => {
     if (!analysis) return;
     setSaving(true);
