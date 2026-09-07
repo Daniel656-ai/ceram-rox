@@ -6,6 +6,7 @@
  */
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { BACKEND_ANON_KEY, FUNCTIONS_BASE_URL, backendDiagnostics } from "./backendConfig";
 
 const BUCKET = "production-releases";
 
