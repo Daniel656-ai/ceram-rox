@@ -13,18 +13,22 @@ import {
 import { toast } from "sonner";
 import { FileUp, Loader2, Sparkles, AlertTriangle, History, UploadCloud } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
 import {
   RELEASE_FIELDS, RELEASE_FIELD_GROUPS, TEST_SECTION_LABEL, TEST_PARAMETER_LABEL,
   coerceFieldValue, RELEASE_FIELD_BY_KEY,
 } from "@/lib/productionRelease/fields";
 import {
-  analyzeReleaseDocument, commitReleaseImport,
+  analyzeReleaseDocument, commitReleaseImport, assignAnalysisToRelease,
   type ReleaseAnalysis, type DetectedChange,
 } from "@/lib/productionRelease/importPipeline";
-import { useReleaseSettings } from "@/hooks/useProductionReleases";
+import { useReleaseSettings, useProductionReleases } from "@/hooks/useProductionReleases";
 import type { ProductionReleaseTestParameter, ProductionReleaseSpecSet } from "@/lib/api/productionReleases";
 import { releaseTypeLabel } from "@/lib/productionRelease/releaseTypes";
 import { SpecSetsEditor } from "./SpecSetsEditor";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   open: boolean;
@@ -60,6 +64,9 @@ function isPdf(f: File) {
 export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
   const { user } = useAuth();
   const { data: settings } = useReleaseSettings();
+  const { data: allReleases } = useProductionReleases();
+  const currentReleases = (allReleases ?? []).filter((r) => r.is_current);
+  const [manualTarget, setManualTarget] = useState<string>("__none__");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -101,11 +108,15 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
       }
       const auto = res.changes.filter((c) => c.auto).length;
       const open = res.changes.length - auto;
-      toast.success(
-        res.isRevision
-          ? `Revision erkannt – ${auto} Änderung(en) eindeutig, ${open} zur Prüfung.`
-          : `${Object.keys(res.rawValues).length} Felder und ${res.testParameters.length} Prüfwerte erkannt.`
-      );
+      if (res.matchBlocker) {
+        toast.warning(res.matchBlocker, { duration: 15000 });
+      } else {
+        toast.success(
+          res.isRevision
+            ? `Revision ${res.targetRevisionNumber} von ${res.existing?.release_number ?? ""} erkannt – ${auto} Änderung(en) eindeutig, ${open} zur Prüfung.`
+            : `Neue Fertigungsfreigabe ${res.identity.releaseNumber ?? ""}: ${Object.keys(res.rawValues).length} Felder und ${res.testParameters.length} Prüfwerte erkannt.`
+        );
+      }
     } catch (e) {
       const detail = e instanceof Error ? e.message : "Unbekannte Ursache.";
       setFileError(`Fertigungsfreigabe konnte nicht verarbeitet werden. ${detail}`);
@@ -146,6 +157,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
     setFileError(null);
     setFile(f);
     setAnalysis(null); setValues({}); setTests([]); setChanges([]); setSpecSets([]);
+    setManualTarget("__none__");
     void analyze(f);
   };
 
@@ -166,8 +178,31 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
 
   const openSpecValues = specSets.flatMap((x) => x.values).filter((v) => v.needs_review && !v.confirmed_at).length;
 
+  /** Manuelle Zuordnung: bestehende Freigabe wählen (Revision) oder ausdrücklich neu anlegen. */
+  const reassign = async (targetId: string | null) => {
+    if (!analysis) return;
+    try {
+      const target = targetId ? await api.productionReleases.get(targetId) : null;
+      const next = assignAnalysisToRelease(analysis, target);
+      setAnalysis(next);
+      setValues(next.rawValues);
+      setChanges(next.changes);
+      toast.success(
+        target
+          ? `Zugeordnet: Rev. ${next.targetRevisionNumber} von ${target.release_number ?? "–"}.`
+          : "Wird als neue Fertigungsfreigabe angelegt."
+      );
+    } catch (e) {
+      toast.error(`Zuordnung nicht möglich. ${e instanceof Error ? e.message : ""}`);
+    }
+  };
+
   const apply = async () => {
     if (!analysis) return;
+    if (analysis.matchBlocker) {
+      toast.error(analysis.matchBlocker, { duration: 12000 });
+      return;
+    }
     if (openSpecValues > 0) {
       toast.error(
         `${openSpecValues} unsicher erkannte Vorgabe${openSpecValues === 1 ? "" : "n"} müssen zuerst bestätigt oder korrigiert werden.`
@@ -318,30 +353,70 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
 
         {analysis && (
           <div className="space-y-6">
-            <Alert>
+            <Alert variant={analysis.matchBlocker ? "destructive" : "default"}>
               <History className="h-4 w-4" />
               <AlertTitle>
-                {analysis.isRevision
-                  ? `Revision einer bestehenden Fertigungsfreigabe${
-                      analysis.existing?.release_number ? ` (${analysis.existing.release_number})` : ""
-                    }`
-                  : "Neue Fertigungsfreigabe"}
+                {analysis.matchBlocker
+                  ? "Zuordnung prüfen"
+                  : analysis.isRevision
+                    ? `Revision ${analysis.targetRevisionNumber} der bestehenden Fertigungsfreigabe${
+                        analysis.existing?.release_number ? ` ${analysis.existing.release_number}` : ""
+                      }`
+                    : `Neue Fertigungsfreigabe${analysis.identity.releaseNumber ? ` ${analysis.identity.releaseNumber}` : ""}`}
               </AlertTitle>
-              <AlertDescription className="text-sm">
-                {analysis.isRevision ? (
-                  <>
-                    Bestehende Freigabe erkannt – die bisherige Revision bleibt als Historie erhalten,
-                    es wird Rev.{" "}
-                    {(Number(analysis.existing?.revision_number) || 0) + 1} angelegt.
-                  </>
+              <AlertDescription className="text-sm space-y-2">
+                <div>
+                  Kennung aus {analysis.identity.source === "filename" ? "Dateiname" : analysis.identity.source === "text" ? "Dokumenttext" : "–"}:{" "}
+                  {analysis.identity.variantCode && <>Variante <span className="font-mono">{analysis.identity.variantCode}</span>, </>}
+                  {analysis.identity.orderNumber && <>Auftrag <span className="font-mono">{analysis.identity.orderNumber}</span>, </>}
+                  Revisionskennung{" "}
+                  <span className="font-mono">
+                    {analysis.identity.hasRevisionTag ? `Rev. ${analysis.identity.revisionNumber}` : "keine"}
+                  </span>.
+                  {analysis.document.revision_date && <> Änderungsdatum: {analysis.document.revision_date}.</>}
+                  {analysis.visual.pages.some((p) => p.ocrNeeded) && <> Für einzelne Seiten wurde OCR verwendet.</>}
+                </div>
+                {analysis.matchBlocker ? (
+                  <div className="font-medium">{analysis.matchBlocker}</div>
+                ) : analysis.isRevision ? (
+                  <div>
+                    Der bisherige Stand (Rev. {Number(analysis.existing?.revision_number) || 0}) bleibt bis zum Abschluss
+                    der Prüfung gültig und danach als Historie erhalten.
+                  </div>
                 ) : (
-                  <>Es wurde keine passende bestehende Fertigungsfreigabe gefunden.</>
+                  <div>Für diese Kennung ist noch keine Fertigungsfreigabe vorhanden – sie wird als Entwurf neu angelegt.</div>
                 )}
-                {analysis.document.release_number && (
-                  <> Dokumentnummer: <span className="font-mono">{analysis.document.release_number}</span>.</>
+                {analysis.matchWarnings.map((w, i) => (
+                  <div key={i} className="flex gap-2"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /><span>{w}</span></div>
+                ))}
+                {(analysis.matchState === "revision_unmatched" || analysis.matchState === "revision_conflict" ||
+                  analysis.matchState === "revision_without_tag") && (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <Select value={manualTarget} onValueChange={setManualTarget}>
+                      <SelectTrigger className="h-8 w-[280px] bg-background text-foreground">
+                        <SelectValue placeholder="Bestehende Fertigungsfreigabe wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Bestehende Fertigungsfreigabe wählen…</SelectItem>
+                        {currentReleases.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            {(r.release_number as string) || "ohne Nr."} · Rev. {Number(r.revision_number) || 0}
+                            {r.project_name ? ` · ${r.project_name}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="secondary" disabled={manualTarget === "__none__"}
+                      onClick={() => void reassign(manualTarget)}>
+                      Als Revision zuordnen
+                    </Button>
+                    {analysis.matchState !== "revision_conflict" && (
+                      <Button size="sm" variant="outline" onClick={() => void reassign(null)}>
+                        Trotzdem als neue Fertigungsfreigabe anlegen
+                      </Button>
+                    )}
+                  </div>
                 )}
-                {analysis.document.revision_date && <> Änderungsdatum: {analysis.document.revision_date}.</>}
-                {analysis.visual.pages.some((p) => p.ocrNeeded) && <> Für einzelne Seiten wurde OCR verwendet.</>}
               </AlertDescription>
             </Alert>
 
@@ -521,9 +596,9 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-          <Button onClick={apply} disabled={!analysis || saving || openSpecValues > 0}>
+          <Button onClick={apply} disabled={!analysis || saving || openSpecValues > 0 || !!analysis?.matchBlocker}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileUp className="h-4 w-4 mr-2" />}
-            {analysis?.isRevision ? "Revision anlegen" : "Werte übernehmen"}
+            {analysis?.isRevision ? `Revision ${analysis.targetRevisionNumber} anlegen` : "Werte übernehmen"}
           </Button>
         </DialogFooter>
       </DialogContent>
