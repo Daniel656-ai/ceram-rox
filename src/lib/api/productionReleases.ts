@@ -352,6 +352,34 @@ export const productionReleases = {
   },
 
   /**
+   * Schließt die Prüfung einer Revision atomar ab: Status → "abgeschlossen",
+   * Prüfung erledigt (import_status "reviewed"), Revision wird – falls noch
+   * nicht geschehen – zum aktuellen Stand. Wird bei offenen Prüfpunkten abgelehnt.
+   */
+  async completeRevision(releaseId: string): Promise<{
+    release_id: string;
+    revision_number: number | null;
+    status: string;
+    promoted: boolean;
+    promotion: { previous_release_id?: string | null; root_release_id?: string } | null;
+    completed_at: string;
+    completed_by: string;
+  }> {
+    const { data, error } = await db.rpc("complete_production_release_revision", { _release_id: releaseId });
+    if (error) {
+      console.error("[Fertigungsfreigabe] Abschluss fehlgeschlagen", {
+        zeitpunkt: new Date().toISOString(),
+        revisionId: releaseId,
+        fehlercode: (error as { hint?: string }).hint ?? (error as { code?: string }).code ?? null,
+        fehler: error,
+      });
+      throw error;
+    }
+    return data;
+  },
+
+
+  /**
    * Sucht eine bestehende (aktuelle) Fertigungsfreigabe anhand stabiler
    * Dokumentkennungen. Reihenfolge = Priorität der Merkmale.
    */
