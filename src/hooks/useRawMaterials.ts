@@ -89,6 +89,14 @@ export function useDeleteRawMaterial() {
 }
 
 // ---- Batches ----
+/** Sucht eine bestehende LOT desselben Rohstoffs (Duplikatschutz beim Import). */
+export function useFindBatch() {
+  return useMutation({
+    mutationFn: ({ raw_material_id, batch_number }: { raw_material_id: string; batch_number: string }) =>
+      api.rawMaterialBatches.findByNumber(raw_material_id, batch_number),
+  });
+}
+
 export function useAddBatch() {
   const qc = useQueryClient();
   return useMutation({

@@ -1,5 +1,12 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { normalizeQuantity } from "@/lib/formatQuantity";
+
+/** Liefermenge systemweit auf max. 3 Nachkommastellen normalisieren (Speicherung, nicht nur Anzeige). */
+function withNormalizedDeliveryQuantity<T extends { delivery_quantity?: number | null }>(obj: T): T {
+  if (!("delivery_quantity" in obj) || obj.delivery_quantity === undefined) return obj;
+  return { ...obj, delivery_quantity: normalizeQuantity(obj.delivery_quantity) };
+}
 
 export const storageLocations = {
   list: () =>
@@ -117,7 +124,18 @@ export const rawMaterialBatches = {
     moisture_percent?: number | null;
     ph_value?: number | null;
   }) =>
-    unwrap(dbClient.from("raw_material_batches").insert(b as any).select().single()),
+    unwrap(dbClient.from("raw_material_batches").insert(withNormalizedDeliveryQuantity(b) as any).select().single()),
+
+  /** Bestehende LOT desselben Rohstoffs anhand der LOT-Nummer finden (verhindert Duplikate beim Import). */
+  findByNumber: (rawMaterialId: string, batchNumber: string) =>
+    unwrap(
+      dbClient
+        .from("raw_material_batches")
+        .select("*")
+        .eq("raw_material_id", rawMaterialId)
+        .eq("batch_number", batchNumber)
+        .maybeSingle()
+    ),
 
   update: (
     id: string,
@@ -136,7 +154,7 @@ export const rawMaterialBatches = {
       moisture_percent: number | null;
       ph_value: number | null;
     }>
-  ) => run(dbClient.from("raw_material_batches").update(updates as any).eq("id", id)),
+  ) => run(dbClient.from("raw_material_batches").update(withNormalizedDeliveryQuantity(updates) as any).eq("id", id)),
 
   delete: (id: string) =>
     run(dbClient.from("raw_material_batches").delete().eq("id", id)),
