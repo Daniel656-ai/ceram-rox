@@ -54,7 +54,7 @@ export function parseReleaseFileName(fileName: string | null | undefined): Relea
   const m = base.match(/(\d{3,5})\s*[-_]\s*(\d{3,5})/);
   if (!m) return { ...EMPTY };
   const rest = base.slice((m.index ?? 0) + m[0].length);
-  const rev = rest.match(/(?:^|[\s._\-(])(?:rev(?:ision)?|änderung|aenderung)[\s._\-]*0*(\d{1,3})\b/i);
+  const rev = rest.match(/(?:^|[\s._(-])(?:rev(?:ision)?|änderung|aenderung)[\s._\-]*0*(\d{1,3})\b/i);
   return {
     releaseNumber: `${m[1]}-${m[2]}`,
     variantCode: m[1],
