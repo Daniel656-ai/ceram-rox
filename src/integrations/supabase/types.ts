@@ -5747,6 +5747,112 @@ export type Database = {
           },
         ]
       }
+      production_release_spec_sets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          page: number | null
+          release_id: string
+          release_type: string
+          sort_order: number
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          page?: number | null
+          release_id: string
+          release_type?: string
+          sort_order?: number
+          source_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          page?: number | null
+          release_id?: string
+          release_type?: string
+          sort_order?: number
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_release_spec_sets_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "production_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_release_spec_values: {
+        Row: {
+          confidence: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          needs_review: boolean
+          parameter_key: string
+          parameter_label: string | null
+          sort_order: number
+          spec_set_id: string
+          unit: string | null
+          updated_at: string
+          value_num: number | null
+          value_text: string | null
+        }
+        Insert: {
+          confidence?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          needs_review?: boolean
+          parameter_key: string
+          parameter_label?: string | null
+          sort_order?: number
+          spec_set_id: string
+          unit?: string | null
+          updated_at?: string
+          value_num?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          confidence?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          needs_review?: boolean
+          parameter_key?: string
+          parameter_label?: string | null
+          sort_order?: number
+          spec_set_id?: string
+          unit?: string | null
+          updated_at?: string
+          value_num?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_release_spec_values_spec_set_id_fkey"
+            columns: ["spec_set_id"]
+            isOneToOne: false
+            referencedRelation: "production_release_spec_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_release_test_parameters: {
         Row: {
           created_at: string
@@ -5855,6 +5961,7 @@ export type Database = {
           recipe: string | null
           recipe_mixture_id: string | null
           release_number: string | null
+          release_type: string
           released_at: string | null
           released_by: string | null
           remarks: string | null
@@ -5931,6 +6038,7 @@ export type Database = {
           recipe?: string | null
           recipe_mixture_id?: string | null
           release_number?: string | null
+          release_type?: string
           released_at?: string | null
           released_by?: string | null
           remarks?: string | null
@@ -6007,6 +6115,7 @@ export type Database = {
           recipe?: string | null
           recipe_mixture_id?: string | null
           release_number?: string | null
+          release_type?: string
           released_at?: string | null
           released_by?: string | null
           remarks?: string | null
