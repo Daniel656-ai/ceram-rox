@@ -300,11 +300,55 @@ export const productionReleases = {
       db
         .from("production_releases")
         .select(
-          "id,status,revision_number,revision_date,is_current,import_status,source_document_name,source_document_path,imported_at,created_at,release_number"
+          "id,status,revision_number,revision_date,is_current,import_status,source_document_name,source_document_path,imported_at,created_at,release_number,superseded_at,reviewed_at"
         )
         .eq("root_release_id", rootId)
         .order("revision_number", { ascending: true })
     )) as ProductionReleaseRow[];
+  },
+
+  /**
+   * Noch nicht freigegebene Revision eines Stammsatzes (nicht aktuell, nicht
+   * abgelöst). Es kann höchstens eine geben.
+   */
+  async pendingRevision(rootId: string): Promise<ProductionReleaseRow | null> {
+    const rows = (await unwrap(
+      db
+        .from("production_releases")
+        .select("id,revision_number,import_status,created_at")
+        .eq("root_release_id", rootId)
+        .eq("is_current", false)
+        .is("superseded_at", null)
+        .order("revision_number", { ascending: false })
+        .limit(1)
+    )) as ProductionReleaseRow[];
+    return rows?.[0] ?? null;
+  },
+
+  /**
+   * Revision freigeben – atomar in der Datenbank (Prüfpunkte/Vorgaben geprüft,
+   * bisheriger Stand wird Historie, Revision wird aktueller Stand).
+   * Schlägt ein Schritt fehl, bleibt der bisherige Stand vollständig erhalten.
+   */
+  async releaseRevision(releaseId: string): Promise<{
+    release_id: string;
+    root_release_id: string;
+    previous_release_id: string | null;
+    revision_number: number | null;
+    released_at: string;
+    released_by: string;
+  }> {
+    const { data, error } = await db.rpc("release_production_release_revision", { _release_id: releaseId });
+    if (error) {
+      console.error("[Fertigungsfreigabe] Revisionsfreigabe fehlgeschlagen", {
+        zeitpunkt: new Date().toISOString(),
+        revisionId: releaseId,
+        fehlercode: (error as { hint?: string }).hint ?? (error as { code?: string }).code ?? null,
+        fehler: error,
+      });
+      throw error;
+    }
+    return data;
   },
 
   /**
