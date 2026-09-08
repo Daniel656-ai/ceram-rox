@@ -6,7 +6,13 @@
  */
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
-import { BACKEND_ANON_KEY, FUNCTIONS_BASE_URL, backendDiagnostics } from "./backendConfig";
+import {
+  IMPORT_SERVICE_ANON_KEY,
+  IMPORT_SERVICE_FUNCTIONS_URL,
+  IMPORT_SERVICE_PROJECT_REF,
+  IMPORT_SERVICE_URL,
+  backendDiagnostics,
+} from "./backendConfig";
 
 const BUCKET = "production-releases";
 
@@ -148,12 +154,19 @@ async function toReadableImportError(error: unknown, data: unknown): Promise<Err
 /** Name des Importdienstes (Edge Function) – eine einzige Quelle der Wahrheit. */
 export const IMPORT_FUNCTION_NAME = "parse-production-release";
 
-const FUNCTIONS_BASE = FUNCTIONS_BASE_URL;
-const ANON_KEY = BACKEND_ANON_KEY;
+// Nur dieser eine Dienst läuft immer auf dem produktiven Analyse-Projekt.
+const FUNCTIONS_BASE = IMPORT_SERVICE_FUNCTIONS_URL;
+const ANON_KEY = IMPORT_SERVICE_ANON_KEY;
 
-/** Diagnose der aktuellen Backend-Konfiguration (Web und Desktop identisch). */
+/** Diagnose der Konfiguration des Analysedienstes. */
 export function importServiceDiagnostics() {
-  return { funktion: IMPORT_FUNCTION_NAME, endpunkt: `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`, ...backendDiagnostics() };
+  return {
+    funktion: IMPORT_FUNCTION_NAME,
+    endpunkt: `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`,
+    ...backendDiagnostics(),
+    analyseDienstUrl: IMPORT_SERVICE_URL,
+    analyseDienstProjekt: IMPORT_SERVICE_PROJECT_REF,
+  };
 }
 
 /**
@@ -175,7 +188,10 @@ async function callImportService(
 }> {
   const url = `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`;
   const { data: sess } = await dbClient.auth.getSession();
-  const token = sess?.session?.access_token ?? ANON_KEY;
+  // Der Analysedienst prüft kein JWT (verify_jwt = false). Da die Anmeldung
+  // der Desktop-App zu einem anderen Backend gehört, wird immer der
+  // öffentliche Key des Analyse-Projekts gesendet.
+  const token = ANON_KEY;
   const payload = JSON.stringify(body ?? {});
 
   if (!/^https?:\/\//i.test(FUNCTIONS_BASE)) {
