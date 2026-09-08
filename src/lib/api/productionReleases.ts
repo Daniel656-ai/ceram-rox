@@ -188,7 +188,10 @@ async function callImportService(
 }> {
   const url = `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`;
   const { data: sess } = await dbClient.auth.getSession();
-  const token = sess?.session?.access_token ?? ANON_KEY;
+  // Der Analysedienst prüft kein JWT (verify_jwt = false). Da die Anmeldung
+  // der Desktop-App zu einem anderen Backend gehört, wird immer der
+  // öffentliche Key des Analyse-Projekts gesendet.
+  const token = ANON_KEY;
   const payload = JSON.stringify(body ?? {});
 
   if (!/^https?:\/\//i.test(FUNCTIONS_BASE)) {
