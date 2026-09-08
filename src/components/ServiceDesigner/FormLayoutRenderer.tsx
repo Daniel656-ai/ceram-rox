@@ -10,8 +10,9 @@ import {
   readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
   CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, CASE_CURVE_KEY, CASE_ELEMENTS_KEY,
   readCaseCurveConfig, hasCurveConfig, type CaseTemplate,
-  CASE_ELEMENT_SPEC_KEY, caseElementSpec, readCaseElementSpec,
+  CASE_ELEMENT_SPEC_KEY, CASE_ELEMENT_RANGE_KEY, caseElementSpec, readCaseElementSpec, elementFromValueKey,
 } from "@/lib/measurementBlocks";
+import { buildCaseTargets } from "@/lib/measurementImport";
 
 
 import {
@@ -462,11 +463,19 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
    * Ergebnisliste gehören. Der Messkontext / eine Import-Unterkategorie wird
    * hier bewusst NICHT mehr ausgewertet.
    */
-  const caseElements = useMemo(() => {
+  const caseSpec = useMemo(() => {
     const spec = readCaseElementSpec(read(CASE_ELEMENT_SPEC_KEY));
-    if (spec.length) return spec.map((s) => s.key);
+    if (spec.length) return spec;
     const stored = read(CASE_ELEMENTS_KEY);
-    return Array.isArray(stored) ? stored.map(String).filter(Boolean) : [];
+    return Array.isArray(stored)
+      ? readCaseElementSpec(stored.map(String).filter(Boolean))
+      : [];
+  }, [read]);
+  const caseElements = useMemo(() => caseSpec.map((s) => s.key), [caseSpec]);
+  /** Elementbereich des Messfalls (z. B. Standardlos „B-U“). */
+  const caseRange = useMemo(() => {
+    const v = read(CASE_ELEMENT_RANGE_KEY);
+    return typeof v === "string" && v.trim() ? v.trim() : null;
   }, [read]);
 
   const instanceProfile = read(IMPORT_PROFILE_KEY);
@@ -491,7 +500,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
    * Bezeichnungsfelder eines Messblocks beschreiben die Messung und dürfen
    * durch den Import niemals überschrieben werden.
    */
-  const targets = useMemo(
+  const formTargets = useMemo(
     () =>
       allFields
         .filter(
@@ -503,6 +512,16 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
         )
         .map((f) => ({ field_key: f.field_key, display_name: f.display_name, unit: f.unit, field_type: f.field_type, decimal_places: (f as any).decimal_places ?? null, element_key: fieldElementKey(f as any) })),
     [allFields, field.id, field.parent_field_id]
+  );
+  /**
+   * Führende Zielliste = Ergebnis-Elemente des Messfalls. Elemente ohne
+   * eigenes Formularfeld werden direkt in der Messung gespeichert
+   * (`element:<Key>`); Formular-Elementfelder außerhalb der Messfall-Liste
+   * sind keine Ziele. Ohne Messfall gilt weiterhin die Formularliste.
+   */
+  const targets = useMemo(
+    () => buildCaseTargets(caseSpec, formTargets, caseRange),
+    [caseSpec, formTargets, caseRange]
   );
 
   const currentValues = useMemo(() => {
@@ -516,13 +535,25 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
 
   /** Übersicht der zuletzt in DIESEN Scope übernommenen Messwerte. */
   const importedKeys: string[] = Array.isArray(last?.keys) ? last.keys : [];
+  const labelFor = (k: string) => {
+    const t = targets.find((x) => x.field_key === k);
+    if (t) return { label: t.display_name, unit: t.unit };
+    const el = elementFromValueKey(k);
+    return el ? { label: formatElementKey(el), unit: null } : null;
+  };
   const importedRows = importedKeys
     .map((k) => {
-      const t = targets.find((x) => x.field_key === k);
+      const t = labelFor(k);
       const v = read(k);
-      return t && v != null && v !== "" ? { label: t.display_name, unit: t.unit, value: v } : null;
+      return t && v != null && v !== "" ? { label: t.label, unit: t.unit, value: v } : null;
     })
     .filter(Boolean) as Array<{ label: string; unit?: string | null; value: unknown }>;
+  /** Konfigurierte Messfall-Elemente ohne importierten Messwert – sichtbar, kein Fehler. */
+  const missingCaseElements = caseSpec.filter((s) => {
+    const t = targets.find((x) => x.element_key === s.key);
+    const v = t ? read(t.field_key) : undefined;
+    return v == null || v === "";
+  });
 
   /** Echte Messwerte ohne Zielfeld – bleiben dieser Messung erhalten. */
   const unassigned: any[] = Array.isArray(last?.unassigned) ? last.unassigned : [];
@@ -577,6 +608,11 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
             </tbody>
           </table>
         </div>
+      )}
+      {last?.imported_at && missingCaseElements.length > 0 && (
+        <p className="text-[11px] text-amber-700">
+          Kein Messwert importiert für: {missingCaseElements.map((s) => s.label || formatElementKey(s.key)).join(", ")}
+        </p>
       )}
 
       {unassigned.length > 0 && (
@@ -633,6 +669,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           currentValues={currentValues}
           allowedImporters={cfg.importers}
           caseElementKeys={caseElements}
+          elementRange={caseRange}
           curveContext={
             runtime
               ? {
@@ -1254,6 +1291,7 @@ function MeasurementBlockField({
           id: c.id,
           name: c.name,
           elements: c.elements ?? [],
+          element_range: c.element_range ?? null,
           instances: c.instances ?? [],
         })),
     [allCases, caseCfg.allowed_case_ids, extraCaseIds]
@@ -1348,14 +1386,16 @@ function MeasurementBlockField({
   useEffect(() => {
     if (!caseCfg.enabled || !interactive || readonly || !activeCase || entries.length === 0) return;
     const spec = caseElementSpec(activeCase);
+    const range = (activeCase as CaseTemplate).element_range?.trim() || null;
     const same = (e: Record<string, any>) =>
-      JSON.stringify(e?.[CASE_ELEMENT_SPEC_KEY] ?? []) === JSON.stringify(spec);
+      JSON.stringify(e?.[CASE_ELEMENT_SPEC_KEY] ?? []) === JSON.stringify(spec) &&
+      ((e?.[CASE_ELEMENT_RANGE_KEY] ?? null) || null) === range;
     const relevant = entries.filter((e) => e?.[CASE_ID_KEY] === activeCase.id);
     if (relevant.length === 0 || relevant.every(same)) return;
     updateEntries(
       entries.map((e) =>
         e?.[CASE_ID_KEY] === activeCase.id
-          ? { ...e, [CASE_ELEMENT_SPEC_KEY]: spec, [CASE_ELEMENTS_KEY]: spec.map((x) => x.key) }
+          ? { ...e, [CASE_ELEMENT_SPEC_KEY]: spec, [CASE_ELEMENTS_KEY]: spec.map((x) => x.key), [CASE_ELEMENT_RANGE_KEY]: range }
           : e
       )
     );
