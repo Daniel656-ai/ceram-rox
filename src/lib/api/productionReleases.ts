@@ -154,12 +154,19 @@ async function toReadableImportError(error: unknown, data: unknown): Promise<Err
 /** Name des Importdienstes (Edge Function) – eine einzige Quelle der Wahrheit. */
 export const IMPORT_FUNCTION_NAME = "parse-production-release";
 
-const FUNCTIONS_BASE = FUNCTIONS_BASE_URL;
-const ANON_KEY = BACKEND_ANON_KEY;
+// Nur dieser eine Dienst läuft immer auf dem produktiven Analyse-Projekt.
+const FUNCTIONS_BASE = IMPORT_SERVICE_FUNCTIONS_URL;
+const ANON_KEY = IMPORT_SERVICE_ANON_KEY;
 
-/** Diagnose der aktuellen Backend-Konfiguration (Web und Desktop identisch). */
+/** Diagnose der Konfiguration des Analysedienstes. */
 export function importServiceDiagnostics() {
-  return { funktion: IMPORT_FUNCTION_NAME, endpunkt: `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`, ...backendDiagnostics() };
+  return {
+    funktion: IMPORT_FUNCTION_NAME,
+    endpunkt: `${FUNCTIONS_BASE}/${IMPORT_FUNCTION_NAME}`,
+    ...backendDiagnostics(),
+    analyseDienstUrl: IMPORT_SERVICE_URL,
+    analyseDienstProjekt: IMPORT_SERVICE_PROJECT_REF,
+  };
 }
 
 /**
