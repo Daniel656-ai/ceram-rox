@@ -613,7 +613,9 @@ async function saveReleaseImport(args: {
     is_current: !prev,
     source_type: "pdf",
     import_source: analysis.source,
-    import_status: pending.length || incomplete || openSpecValues ? "review_required" : "imported",
+    // Jede importierte Revision muss vom Benutzer geprüft werden (Entwurf + Prüfung erforderlich);
+    // das Flag wird erst mit „Abschließen“ aufgehoben.
+    import_status: "review_required",
     source_document_path: storagePath,
     source_document_name: analysis.fileName,
     field_sources: sources,

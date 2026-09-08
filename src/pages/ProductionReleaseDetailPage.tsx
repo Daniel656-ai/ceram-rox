@@ -23,12 +23,12 @@ import { ArrowLeft, Save, Trash2, FileDown, Plus, AlertTriangle, History, Shield
 import {
   RELEASE_FIELDS, RELEASE_FIELD_GROUPS, RELEASE_STATUS_LABEL, RELEASE_STATUS_COLOR,
   RELEASE_STATUS_FLOW, TEST_SECTIONS, TEST_PARAMETERS, TEST_SECTION_LABEL,
-  TEST_PARAMETER_LABEL, coerceFieldValue,
+  TEST_PARAMETER_LABEL, coerceFieldValue, isReviewRequired,
 } from "@/lib/productionRelease/fields";
 import {
   useProductionRelease, useReleaseTestParameters, useProductionReleasePermissions,
   useSaveRelease, useDeleteRelease, useCustomers, useReleaseChanges, useReleaseRevisions,
-  useReleaseSpecSets, useReleaseRevision,
+  useReleaseSpecSets, useReleaseRevision, useCompleteRelease,
 } from "@/hooks/useProductionReleases";
 import { describeSaveError } from "@/lib/productionRelease/specSets";
 import { ReviewChangesDialog } from "@/components/productionRelease/ReviewChangesDialog";
@@ -60,6 +60,7 @@ export default function ProductionReleaseDetailPage() {
   const { data: changes = [] } = useReleaseChanges(id);
   const { data: revisions = [] } = useReleaseRevisions(rootId);
   const releaseRev = useReleaseRevision();
+  const completeRel = useCompleteRelease();
   const pendingChanges = changes.filter((c) => c.status === "pending");
   const appliedChanges = changes.filter((c) => c.status !== "pending" && c.status !== "dismissed");
   const openSpecValues = specSets.flatMap((s) => s.values).filter((v) => v.needs_review && !v.confirmed_at).length;
@@ -141,6 +142,20 @@ export default function ProductionReleaseDetailPage() {
 
   const setStatus = async (status: string) => {
     if (!id) return;
+    if (status === "abgeschlossen") {
+      // Abschließen = Prüfung erledigt + Status abgeschlossen + Revision aktuell (atomar im Backend)
+      try {
+        const res = await completeRel.mutateAsync(id);
+        toast.success(
+          res.promoted
+            ? `Revision ${Number(res.revision_number) || 0} abgeschlossen – sie ist jetzt der aktuelle Stand.`
+            : "Fertigungsfreigabe abgeschlossen – Prüfung erledigt."
+        );
+      } catch (e) {
+        toast.error(`Abschluss nicht möglich. ${describeSaveError(e)}`, { duration: 12000 });
+      }
+      return;
+    }
     const extra: Record<string, unknown> = { status };
     if (status === "freigegeben") {
       extra.released_at = new Date().toISOString();
@@ -149,6 +164,7 @@ export default function ProductionReleaseDetailPage() {
     await save.mutateAsync({ id, values: extra });
     toast.success(`Status: ${RELEASE_STATUS_LABEL[status] ?? status}`);
   };
+  const canComplete = !pendingChanges.length && !openSpecValues;
 
   const addTestRow = () =>
     setTests((p) => [...p, { section: "nox_bench", parameter_key: "flowrate", value_text: "", unit: "" }]);
@@ -226,9 +242,9 @@ export default function ProductionReleaseDetailPage() {
                   ? "Revision – Freigabe ausstehend"
                   : release.is_current === false ? "historische Revision" : "aktuelle Revision"}
               </Badge>
-              {release.import_status === "review_required" && (
+              {isReviewRequired(release) && (
                 <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                  Prüfung erforderlich
+                  {release.status === "in_pruefung" ? "Prüfung erforderlich – Prüfung läuft" : "Prüfung erforderlich"}
                 </Badge>
               )}
               {release.import_status === "reviewed" && <Badge variant="outline">geprüft</Badge>}
@@ -250,8 +266,18 @@ export default function ProductionReleaseDetailPage() {
           )}
           {perms.canApprove &&
             nextStatuses.map((s) => (
-              <Button key={s} variant="outline" onClick={() => setStatus(s)}>
-                {RELEASE_STATUS_LABEL[s]}
+              <Button
+                key={s}
+                variant={s === "abgeschlossen" ? "default" : "outline"}
+                disabled={s === "abgeschlossen" && (!canComplete || completeRel.isPending)}
+                title={
+                  s === "abgeschlossen" && !canComplete
+                    ? "Erst alle Prüfpunkte und unsicheren Vorgaben erledigen."
+                    : undefined
+                }
+                onClick={() => setStatus(s)}
+              >
+                {s === "abgeschlossen" ? "Abschließen" : RELEASE_STATUS_LABEL[s]}
               </Button>
             ))}
           {perms.canDelete && (

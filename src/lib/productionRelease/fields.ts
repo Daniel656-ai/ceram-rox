@@ -134,12 +134,23 @@ export const RELEASE_STATUS_COLOR: Record<string, string> = {
 };
 
 /** Nächste erlaubte Status – zentral, damit die Logik erweiterbar bleibt. */
+/**
+ * Statusworkflow: Entwurf → In Prüfung → Abgeschlossen.
+ * „Abschließen“ beendet gleichzeitig die Prüfung der Revision (kein „Prüfung erforderlich“ mehr).
+ * „freigegeben“ bleibt für bestehende Datensätze erhalten und führt nur noch zum Abschluss.
+ */
 export const RELEASE_STATUS_FLOW: Record<string, string[]> = {
   entwurf: ["in_pruefung"],
-  in_pruefung: ["entwurf", "freigegeben"],
+  in_pruefung: ["entwurf", "abgeschlossen"],
   freigegeben: ["in_pruefung", "abgeschlossen"],
   abgeschlossen: [],
 };
+
+/** Prüfung erforderlich = Revision noch nicht abgeschlossen und Prüfflag aktiv. */
+export function isReviewRequired(r: { status?: string | null; import_status?: string | null } | null | undefined): boolean {
+  if (!r) return false;
+  return r.status !== "abgeschlossen" && r.import_status === "review_required";
+}
 
 /** Herkunft eines Feldwertes (Datenstruktur für spätere Audit-Trails). */
 export interface FieldSource {

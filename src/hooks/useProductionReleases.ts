@@ -200,16 +200,11 @@ export function useResolveChange() {
         reviewed_at: now,
       });
 
+      // Hinweis: „Prüfung erforderlich“ (import_status) wird bewusst NICHT hier,
+      // sondern erst beim Abschließen (Status „abgeschlossen“) aufgehoben –
+      // solange die Prüfung läuft, bleibt das Flag aktiv.
       const rest = await api.productionReleases.changes(args.releaseId);
-      const open = rest.filter((c) => c.status === "pending").length;
-      if (!open) {
-        await api.productionReleases.update(args.releaseId, {
-          import_status: "reviewed",
-          reviewed_at: now,
-          reviewed_by: user?.id ?? null,
-        });
-      }
-      return open;
+      return rest.filter((c) => c.status === "pending").length;
     },
     onSuccess: (_open, vars) => {
       qc.invalidateQueries({ queryKey: ["production-release-changes", vars.releaseId] });
