@@ -28,7 +28,7 @@ import {
 import {
   useProductionRelease, useReleaseTestParameters, useProductionReleasePermissions,
   useSaveRelease, useDeleteRelease, useCustomers, useReleaseChanges, useReleaseRevisions,
-  useReleaseSpecSets, useReleaseRevision, useCompleteRelease,
+  useReleaseSpecSets, useCompleteRelease,
 } from "@/hooks/useProductionReleases";
 import { describeSaveError } from "@/lib/productionRelease/specSets";
 import { ReviewChangesDialog } from "@/components/productionRelease/ReviewChangesDialog";
