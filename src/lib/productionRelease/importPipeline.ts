@@ -548,7 +548,7 @@ async function saveReleaseImport(args: {
   const now = new Date().toISOString();
   const releaseType = analysis.releaseType || (analysis.existing?.release_type as string) || DEFAULT_RELEASE_TYPE;
   // Unsichere Vorgaben ohne Bestätigung dürfen nie als gesichert gespeichert werden.
-  const specSets = (args.specSets ?? analysis.specSets).map((s) => ({
+  const specSets: ProductionReleaseSpecSet[] = (args.specSets ?? analysis.specSets).map((s) => ({
     ...s,
     release_type: releaseType,
     values: s.values.map((v) => ({
@@ -681,7 +681,7 @@ async function saveReleaseImport(args: {
 
   // Vorgabensätze: gehören eindeutig zu DIESER Revision. Liefert die neue
   // Revision keine, wird der Stand der Vorrevision kopiert (nie vermischt).
-  let setsToSave = specSets;
+  let setsToSave: ProductionReleaseSpecSet[] = specSets;
   if (!setsToSave.length && prev) {
     setsToSave = (await api.productionReleases.specSets(prev.id)).map((s) => ({
       ...s, id: undefined, release_id: undefined,
