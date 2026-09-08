@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeSpecSets, describeSaveError } from "@/lib/productionRelease/importPipeline";
+import { normalizeSpecSets, describeSaveError } from "@/lib/productionRelease/specSets";
 import { coerceFieldValue } from "@/lib/productionRelease/fields";
 import { formatSpecValue, normalizeReleaseType, parseSpecNumber } from "@/lib/productionRelease/releaseTypes";
 import { mergeBlockResults } from "@/lib/productionRelease/blocks";
