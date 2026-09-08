@@ -27,6 +27,10 @@ import type {
 } from "@/lib/api/productionReleases";
 import { DEFAULT_RELEASE_TYPE, normalizeReleaseType, parseSpecNumber } from "./releaseTypes";
 import { normalizeSpecSets, describeSaveError } from "./specSets";
+import {
+  parseReleaseFileName, identityFromText, decideMatch,
+  type ReleaseDocumentIdentity, type ReleaseMatchState,
+} from "./documentIdentity";
 
 export type ImportSource = "pdf_upload" | "outlook" | "api";
 
@@ -76,6 +80,17 @@ export interface ReleaseAnalysis {
   };
   existing: ProductionReleaseRow | null;
   isRevision: boolean;
+  /** Kennung aus Dateiname (bevorzugt) bzw. Dokumenttext */
+  identity: ReleaseDocumentIdentity;
+  /** Ergebnis der Zuordnung Neuanlage/Revision */
+  matchState: ReleaseMatchState;
+  /** Revisionsnummer, die beim Speichern verwendet wird */
+  targetRevisionNumber: number;
+  matchWarnings: string[];
+  /** blockierender Grund – Speichern nicht möglich, solange gesetzt */
+  matchBlocker: string | null;
+  /** KI-Änderungsmeldungen (roh) – für Neuzuordnung durch den Benutzer */
+  rawAiChanges: Record<string, unknown>[];
   changes: DetectedChange[];
   rawText: string;
   visual: VisualDocument;
@@ -164,11 +179,14 @@ export async function analyzeReleaseDocument(args: {
     bloecke: blocks.length,
   });
 
-  // Erste, schnelle Vorab-Identifikation über Klartext (ohne KI),
-  // damit der bisherige Stand als Vergleich mitgeschickt werden kann.
+  // Stufe 1 – Identifikation: Dateiname (Variante-Auftrag[_RevX]) ist führend,
+  // der Dokumenttext nur Fallback. Damit der bisherige Stand als Vergleich
+  // an die KI mitgeschickt werden kann, wird hier bereits gesucht.
   const preKeys = sniffIdentifiers(rawText);
+  let identity = parseReleaseFileName(args.fileName);
+  if (!identity.releaseNumber) identity = identityFromText(preKeys.release_number, preKeys.revision_number);
   let existing = await api.productionReleases
-    .findExisting(preKeys)
+    .findCurrentByReleaseNumber(identity.releaseNumber)
     .catch(() => null);
 
   const results: { block: Block; res: BlockResult }[] = [];
@@ -230,20 +248,21 @@ export async function analyzeReleaseDocument(args: {
   const specSets = normalizeSpecSets(merged.specSets, releaseType);
 
   const doc = merged.document;
-  const releaseNumber = asText(doc.release_number) || preKeys.release_number || "";
+  // Der Dateiname ist die verbindliche Kennung; KI-/Textkennung nur, wenn er keine liefert.
+  const releaseNumber = identity.source === "filename"
+    ? identity.releaseNumber!
+    : asText(doc.release_number) || preKeys.release_number || "";
   const revisionNumber = Number.parseInt(asText(doc.revision_number), 10);
 
-  // Zweiter Versuch der Identifikation mit den KI-Kennungen
-  if (!existing) {
-    existing = await api.productionReleases
-      .findExisting({
-        release_number: releaseNumber,
-        article_number: asText(merged.fields.article_number),
-        drawing_approval: asText(merged.fields.drawing_approval),
-        cost_center_code: asText(merged.fields.cost_center_code),
-      })
-      .catch(() => null);
+  // Zweiter Versuch der Identifikation mit der KI-Dokumentnummer – ausschließlich
+  // über die Kennung, nie über Artikelnummer/Zeichnung (gleicher Serienartikel ≠ Revision).
+  if (identity.source !== "filename" && releaseNumber) {
+    identity = identityFromText(releaseNumber, Number.isFinite(revisionNumber) ? revisionNumber : preKeys.revision_number);
+    if (!existing) {
+      existing = await api.productionReleases.findCurrentByReleaseNumber(releaseNumber).catch(() => null);
+    }
   }
+  const decision = decideMatch(identity, existing);
 
   const rawValues: Record<string, string> = {};
   const values: Record<string, unknown> = {};
@@ -256,7 +275,9 @@ export async function analyzeReleaseDocument(args: {
     if (coerced !== null && coerced !== undefined && coerced !== "") values[k] = coerced;
   }
 
-  const isRevision = !!existing;
+  // Stufe 3 – inhaltliche Änderungen: nur Plausibilisierung/Darstellung,
+  // sie entscheiden NICHT über Neuanlage vs. Revision.
+  const isRevision = decision.isRevision && !!existing;
   const changes = buildChanges({
     aiChanges: merged.changes,
     pairs: allPairs,
@@ -278,6 +299,19 @@ export async function analyzeReleaseDocument(args: {
     }
   }
 
+  console.info("[Fertigungsfreigabe-Import] Zuordnung", {
+    datei: args.fileName,
+    kennung: identity.releaseNumber,
+    variante: identity.variantCode,
+    auftrag: identity.orderNumber,
+    revisionskennung: identity.hasRevisionTag ? identity.revisionNumber : null,
+    quelle: identity.source,
+    bestehendeFreigabeId: existing?.id ?? null,
+    bestehendeRevision: existing?.revision_number ?? null,
+    entscheidung: decision.state,
+    zielRevision: decision.revisionNumber,
+  });
+
   return {
     fileName: args.fileName,
     source,
@@ -287,11 +321,20 @@ export async function analyzeReleaseDocument(args: {
     document: {
       ...doc,
       release_number: releaseNumber || undefined,
-      revision_number: Number.isFinite(revisionNumber) ? revisionNumber : null,
+      revision_number: identity.hasRevisionTag
+        ? identity.revisionNumber
+        : Number.isFinite(revisionNumber) ? revisionNumber : null,
       revision_date: asText(doc.revision_date) || null,
+      is_revision: decision.isRevision,
     },
     existing,
     isRevision,
+    identity,
+    matchState: decision.state,
+    targetRevisionNumber: decision.revisionNumber,
+    matchWarnings: decision.warnings,
+    matchBlocker: decision.blocker,
+    rawAiChanges: merged.changes,
     changes,
     rawText,
     visual,
@@ -299,6 +342,59 @@ export async function analyzeReleaseDocument(args: {
     coverage,
     releaseType,
     specSets,
+  };
+}
+
+/**
+ * Manuelle Zuordnung durch den Benutzer (z. B. „_Rev1“ ohne auffindbaren Stammsatz):
+ * ordnet die Analyse einer bestehenden Fertigungsfreigabe zu (Revision) oder –
+ * ausdrücklich – als neue Fertigungsfreigabe ein. Änderungen werden gegen den
+ * gewählten Stand neu ermittelt; die Datenbank wird nicht berührt.
+ */
+export function assignAnalysisToRelease(
+  analysis: ReleaseAnalysis,
+  target: ProductionReleaseRow | null,
+): ReleaseAnalysis {
+  const identity: ReleaseDocumentIdentity = target
+    ? analysis.identity
+    : { ...analysis.identity, hasRevisionTag: false };
+  const decision = target ? decideMatch(analysis.identity, target) : decideMatch(identity, null);
+  const isRevision = !!target && decision.isRevision;
+  const pairs: VisualPair[] = analysis.visual.pages.flatMap((p) => p.pairs);
+  const changes = buildChanges({
+    aiChanges: analysis.rawAiChanges,
+    pairs,
+    existing: target,
+    values: analysis.values,
+    rawValues: analysis.rawValues,
+    isRevision,
+  });
+  const values = { ...analysis.values };
+  const rawValues = { ...analysis.rawValues };
+  for (const c of changes) {
+    if (!c.auto && c.field_key && Object.prototype.hasOwnProperty.call(values, c.field_key)) {
+      delete values[c.field_key];
+      delete rawValues[c.field_key];
+    }
+  }
+  const releaseNumber = target
+    ? (target.release_number as string | null) ?? analysis.document.release_number
+    : analysis.document.release_number;
+  return {
+    ...analysis,
+    values,
+    rawValues,
+    existing: target,
+    isRevision,
+    identity,
+    matchState: target ? decision.state : "new_forced",
+    targetRevisionNumber: target ? decision.revisionNumber : (analysis.identity.revisionNumber ?? 0),
+    matchWarnings: target
+      ? decision.warnings
+      : [`Die Datei ${analysis.fileName} wurde auf Wunsch des Benutzers als NEUE Fertigungsfreigabe eingeordnet.`],
+    matchBlocker: target ? decision.blocker : null,
+    document: { ...analysis.document, release_number: releaseNumber || undefined, is_revision: isRevision },
+    changes,
   };
 }
 
@@ -544,6 +640,12 @@ async function saveReleaseImport(args: {
   const autoChanges = allChanges.filter((c) => c.auto && c.field_key);
   const pending = allChanges.filter((c) => !c.auto);
 
+  // Sicherheitsfall: Revision ohne auffindbaren Stammsatz oder nicht neuere
+  // Revision darf NIE automatisch gespeichert werden.
+  if (analysis.matchBlocker) {
+    throw new Error(analysis.matchBlocker);
+  }
+
   const base: Record<string, unknown> = {};
   const prev = analysis.existing;
   if (prev) {
@@ -587,14 +689,17 @@ async function saveReleaseImport(args: {
     sources[c.field_key] = { source: "pdf", at: now, by: userId, document: analysis.fileName };
   }
 
+  // Revisionsnummer: _RevX aus dem Dateinamen, sonst bisheriger Stand + 1.
+  // Immer neuer als der aktuell gültige Stand (Vergleich erfolgte gegen diesen).
   const revisionNumber = prev
-    ? (Number(prev.revision_number) || 0) + 1
-    : Number.isFinite(analysis.document.revision_number as number)
-      ? Number(analysis.document.revision_number)
+    ? Math.max(analysis.targetRevisionNumber ?? 0, (Number(prev.revision_number) || 0) + 1)
+    : Number.isFinite(analysis.targetRevisionNumber)
+      ? Number(analysis.targetRevisionNumber)
       : 0;
 
   const releaseNumber =
-    analysis.document.release_number || (prev?.release_number as string | null) || null;
+    (prev?.release_number as string | null) || analysis.identity.releaseNumber ||
+    analysis.document.release_number || null;
 
   // Änderungsdatum kommt aus dem Dokument als "TT.MM.JJJJ" – die Datenbank
   // erwartet ISO. Unlesbare Datumsangaben bleiben leer statt den Import zu stoppen.
