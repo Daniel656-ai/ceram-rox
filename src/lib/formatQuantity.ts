@@ -57,7 +57,7 @@ export function normalizeQuantity(
 export function parseQuantity(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === "") return null;
   if (typeof raw === "number") return isFinite(raw) ? raw : null;
-  let s = String(raw).trim().replace(/\s/g, "").replace(/[^\d.,\-]/g, "");
+  let s = String(raw).trim().replace(/\s/g, "").replace(/[^\d.,-]/g, "");
   if (!s) return null;
   const lastComma = s.lastIndexOf(",");
   const lastDot = s.lastIndexOf(".");
