@@ -10261,6 +10261,10 @@ export type Database = {
         Args: { _batch_id: string; _produced_quantity?: number }
         Returns: undefined
       }
+      complete_production_release_revision: {
+        Args: { _release_id: string }
+        Returns: Json
+      }
       copy_mixture: {
         Args: {
           _as_template?: boolean
