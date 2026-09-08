@@ -1,11 +1,13 @@
 ---
-name: RFA-Zuordnung über Messkontext-Schlüssel
-description: Messfall-Messkontext liefert die benötigten Element-Schlüssel; Importspalten werden ohne Einheit darüber den Ergebnisfeldern zugeordnet
+name: RFA-Zuordnung über Messfall-Ergebniselemente
+description: Messfall-Ergebnisliste (measurement_case_elements) + optionaler Elementbereich sind die führende Zielliste des Imports; Elemente ohne Formularfeld werden als element:<Key> in der Messung gespeichert
 type: feature
 ---
 
-- Ablauf: Auftrag → Messfall → Messkontext („Vorgabewerte“) → Schlüssel (`V2O5`, `WO3`, `As`) → RFA-Spalte → Ergebnisfeld → Messwert. Keine zweite Datenstruktur, keine hartkodierten Elemente.
-- `caseElementKeys(context)` in `src/lib/measurementBlocks.ts` liest die Element-Schlüssel aus den Messkontext-Schlüsseln; sie werden als `CASE_ELEMENTS_KEY` im Messblock-Eintrag mitgeführt und im `FormLayoutRenderer` an den Importdialog gereicht.
-- `mapReadings(..., { caseElementKeys })`: ist die Liste gefüllt, werden nur diese Elemente übernommen; alle anderen Spalten werden ignoriert (kein Fehler).
-- Spaltenüberschriften werden vor dem Matching normalisiert: Einheit in Klammern/angehängt (`(%)`, `(PPM)`, `mg/kg`), Leerzeichen, Groß-/Kleinschreibung. `V2O5 (%)` → `V2O5`, `As (PPM)` → `As` (`stripUnitSuffix` in `elementKeys.ts`).
-- Diagnose: `mappingReport(rows, targets)` liefert je Spalte „Überschrift → Element → Messkontext → Ergebnisfeld → Wert“; im Importdialog als aufklappbares Zuordnungsprotokoll sichtbar.
+- Ablauf: Messfall → `measurement_case_elements` (Auswahl, Reihenfolge, offiziell) → Zielliste (`buildCaseTargets`) → Import erkennt ALLE Spalten → Zuordnung über Element-Key → Wert in Messung → `buildLinkedFormResultCandidates` → `measurement_results` (Upsert per result_name, keine Duplikate).
+- Der Import besitzt keine eigene Elementliste. Ändert der Benutzer die Ergebnis-Elemente im Messfall, folgt der Import automatisch (Sync-Effekt in FormLayoutRenderer schreibt Spec/Range in bestehende Messungen).
+- Messfall-Element ohne passendes Formularfeld → virtuelles Ziel `element:<Key>` (Speicherung direkt im Messblock-Eintrag). Formular-Elementfelder außerhalb der Messfall-Liste sind keine Ziele und nie offiziell.
+- Fehlendes Element im Import: leere Ergebnisposition bleibt (kein Abbruch), UI zeigt „Kein Messwert importiert für: …“. Zusätzliche Importelemente: Status „nicht benötigt“, bleiben im Import-JSON erhalten.
+- Elementbereich (`measurement_cases.element_range`, z. B. „B-U“, Standardlos): erkannte Elemente, deren Leitelement (erstes Nicht-O/H-Symbol) in der Ordnungszahl-Spanne liegt, werden dynamisch als `element:<Key>` übernommen und nach Ordnungszahl als offizielle Ergebnisse geführt. „LOI“ ist kein Element.
+- Spaltenüberschriften werden vor dem Matching normalisiert (Einheit in Klammern/angehängt, Groß-/Kleinschreibung, Tiefstellung). Diagnose: `mappingReport`.
+- Akzeptanztests A–E: `src/test/rfaCaseImportFlow.test.ts`.
