@@ -23,7 +23,12 @@ import {
 } from "./blocks";
 import type {
   ProductionReleaseChange, ProductionReleaseRow, ProductionReleaseTestParameter,
+  ProductionReleaseSpecSet, ProductionReleaseSpecValue,
 } from "@/lib/api/productionReleases";
+import {
+  DEFAULT_RELEASE_TYPE, normalizeReleaseType, releaseTypeDef, matchParameterKey,
+  slugParameterKey, parseSpecNumber, subscriptFormula,
+} from "./releaseTypes";
 
 export type ImportSource = "pdf_upload" | "outlook" | "api";
 
@@ -79,6 +84,59 @@ export interface ReleaseAnalysis {
   file: Blob;
   /** Nachweis, welche Seiten tatsächlich verarbeitet wurden */
   coverage: ReleaseCoverage;
+  /** erkannter Fertigungsfreigabe-Typ (Schlüssel der Typ-Registry) */
+  releaseType: string;
+  /** typabhängige Vorgabensätze (z. B. NOx-Messpunkte); unsichere Werte tragen needs_review */
+  specSets: ProductionReleaseSpecSet[];
+}
+
+/**
+ * Rohe Vorgabensätze der Erkennung in die gespeicherte Struktur überführen.
+ * Unsichere Werte werden markiert – nie stillschweigend als sicher übernommen.
+ */
+export function normalizeSpecSets(
+  raw: Record<string, unknown>[],
+  releaseType: string
+): ProductionReleaseSpecSet[] {
+  const type = releaseTypeDef(releaseType);
+  const order = new Map(type.parameters.map((p, i) => [p.key, i]));
+  const out: ProductionReleaseSpecSet[] = [];
+  for (const [i, s] of raw.entries()) {
+    const params = Array.isArray(s.parameters) ? (s.parameters as Record<string, unknown>[]) : [];
+    const values: ProductionReleaseSpecValue[] = [];
+    for (const p of params) {
+      const rawKey = asText(p.key);
+      const rawLabel = asText(p.label);
+      const def = matchParameterKey(type, rawKey) ?? (rawLabel ? matchParameterKey(type, rawLabel) : null);
+      const key = def?.key ?? slugParameterKey(rawKey || rawLabel);
+      const valueText = asText(p.value);
+      if (!valueText) continue;
+      const conf = (["high", "medium", "low"].includes(asText(p.confidence)) ? asText(p.confidence) : "low") as
+        ProductionReleaseSpecValue["confidence"];
+      const unit = asText(p.unit) || def?.defaultUnit || null;
+      values.push({
+        parameter_key: key,
+        parameter_label: def?.labelDe ?? subscriptFormula(rawLabel || rawKey),
+        value_text: valueText,
+        value_num: parseSpecNumber(valueText),
+        unit: unit === "" ? null : unit,
+        confidence: conf,
+        needs_review: conf !== "high" || !def,
+      });
+    }
+    if (!values.length) continue;
+    values.sort((a, b) => (order.get(a.parameter_key) ?? 999) - (order.get(b.parameter_key) ?? 999));
+    values.forEach((v, j) => { v.sort_order = j; });
+    out.push({
+      release_type: releaseType,
+      label: asText(s.label) || `${type.setLabelDe} ${i + 1}`,
+      sort_order: i,
+      source_type: "pdf",
+      page: typeof s.page === "number" ? s.page : null,
+      values,
+    });
+  }
+  return out;
 }
 
 
@@ -218,6 +276,8 @@ export async function analyzeReleaseDocument(args: {
   };
 
   const merged = mergeBlockResults(results);
+  const releaseType = normalizeReleaseType(merged.releaseType ?? DEFAULT_RELEASE_TYPE);
+  const specSets = normalizeSpecSets(merged.specSets, releaseType);
 
   const doc = merged.document;
   const releaseNumber = asText(doc.release_number) || preKeys.release_number || "";
@@ -287,6 +347,8 @@ export async function analyzeReleaseDocument(args: {
     visual,
     file: args.file,
     coverage,
+    releaseType,
+    specSets,
   };
 }
 
@@ -425,18 +487,50 @@ export async function commitReleaseImport(args: {
   values: Record<string, unknown>;
   testParameters: ProductionReleaseTestParameter[];
   changes: DetectedChange[];
+  /** vom Anwender geprüfte/korrigierte Vorgabensätze */
+  specSets?: ProductionReleaseSpecSet[];
   userId: string | null;
   defaultFormDefinitionId?: string | null;
 }): Promise<CommitResult> {
   try {
     return await saveReleaseImport(args);
   } catch (e) {
+    // Backend-Fehler kommen als einfache Objekte ({message, code, details, hint}),
+    // nicht als Error – deshalb hier vollständig protokollieren und beschreiben.
     console.error("[Fertigungsfreigabe-Import] Speichern fehlgeschlagen", e);
-    throw new Error(
-      `Fehler beim Speichern der erkannten Daten. ${
-        e instanceof Error ? e.message : "Unbekannte Ursache."
-      }`
-    );
+    throw new Error(`Fehler beim Speichern der erkannten Daten. ${describeSaveError(e)}`);
+  }
+}
+
+/** Verständliche, aber vollständige Beschreibung eines Speicherfehlers. */
+export function describeSaveError(e: unknown): string {
+  if (e instanceof Error) return e.message || "Unbekannte Ursache.";
+  if (e && typeof e === "object") {
+    const o = e as { message?: unknown; code?: unknown; details?: unknown; hint?: unknown; step?: unknown };
+    const parts = [
+      o.step ? `Schritt: ${String(o.step)}` : "",
+      o.message ? String(o.message) : "",
+      o.details ? `Details: ${String(o.details)}` : "",
+      o.hint ? `Hinweis: ${String(o.hint)}` : "",
+      o.code ? `Fehlercode: ${String(o.code)}` : "",
+    ].filter(Boolean);
+    if (parts.length) return parts.join(" – ");
+  }
+  if (typeof e === "string" && e.trim()) return e;
+  return "Unbekannte Ursache.";
+}
+
+/** Führt einen Speicherschritt aus und hängt bei Fehlern den Schrittnamen an. */
+async function step<T>(name: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e && typeof e === "object" && !(e instanceof Error)) {
+      (e as { step?: string }).step = name;
+    } else if (e instanceof Error) {
+      e.message = `Schritt: ${name} – ${e.message}`;
+    }
+    throw e;
   }
 }
 
@@ -446,11 +540,24 @@ async function saveReleaseImport(args: {
   values: Record<string, unknown>;
   testParameters: ProductionReleaseTestParameter[];
   changes: DetectedChange[];
+  specSets?: ProductionReleaseSpecSet[];
   userId: string | null;
   defaultFormDefinitionId?: string | null;
 }): Promise<CommitResult> {
   const { analysis, values, testParameters, changes, userId } = args;
   const now = new Date().toISOString();
+  const releaseType = analysis.releaseType || (analysis.existing?.release_type as string) || DEFAULT_RELEASE_TYPE;
+  // Unsichere Vorgaben ohne Bestätigung dürfen nie als gesichert gespeichert werden.
+  const specSets = (args.specSets ?? analysis.specSets).map((s) => ({
+    ...s,
+    release_type: releaseType,
+    values: s.values.map((v) => ({
+      ...v,
+      value_num: v.value_num ?? parseSpecNumber(v.value_text),
+      needs_review: !!v.needs_review && !v.confirmed_at,
+    })),
+  }));
+  const openSpecValues = specSets.flatMap((s) => s.values).filter((v) => v.needs_review).length;
 
   // Original-PDF unverändert ablegen (Fehler dürfen den Import nicht stoppen)
   let storagePath: string | null = null;
@@ -528,17 +635,22 @@ async function saveReleaseImport(args: {
   const releaseNumber =
     analysis.document.release_number || (prev?.release_number as string | null) || null;
 
-  const row = await api.productionReleases.create({
+  // Änderungsdatum kommt aus dem Dokument als "TT.MM.JJJJ" – die Datenbank
+  // erwartet ISO. Unlesbare Datumsangaben bleiben leer statt den Import zu stoppen.
+  const revisionDate = coerceFieldValue("delivery_date", analysis.document.revision_date ?? null) as string | null;
+
+  const row = await step("Fertigungsfreigabe anlegen", () => api.productionReleases.create({
     ...base,
+    release_type: releaseType,
     release_number: releaseNumber,
     revision_number: revisionNumber,
-    revision_date: analysis.document.revision_date ?? null,
+    revision_date: revisionDate,
     root_release_id: prev ? (prev.root_release_id ?? prev.id) : null,
     previous_release_id: prev?.id ?? null,
     is_current: true,
     source_type: "pdf",
     import_source: analysis.source,
-    import_status: pending.length || incomplete ? "review_required" : "imported",
+    import_status: pending.length || incomplete || openSpecValues ? "review_required" : "imported",
     source_document_path: storagePath,
     source_document_name: analysis.fileName,
     field_sources: sources,
@@ -550,17 +662,35 @@ async function saveReleaseImport(args: {
       pending: pending.length,
       coverage: cov ?? null,
       fully_processed: !incomplete,
+      release_type: releaseType,
+      spec_sets: specSets.length,
+      spec_values_open: openSpecValues,
     },
     imported_at: now,
     imported_by: userId,
     created_by: userId,
     updated_by: userId,
-  });
+  }));
 
   if (!prev) {
-    await api.productionReleases.update(row.id, { root_release_id: row.id });
+    await step("Stammsatz verknüpfen", () => api.productionReleases.update(row.id, { root_release_id: row.id }));
   } else {
-    await api.productionReleases.update(prev.id, { is_current: false, superseded_at: now });
+    await step("Vorherige Revision ablösen", () =>
+      api.productionReleases.update(prev.id, { is_current: false, superseded_at: now }));
+  }
+
+  // Vorgabensätze: gehören eindeutig zu DIESER Revision. Liefert die neue
+  // Revision keine, wird der Stand der Vorrevision kopiert (nie vermischt).
+  let setsToSave = specSets;
+  if (!setsToSave.length && prev) {
+    setsToSave = (await api.productionReleases.specSets(prev.id)).map((s) => ({
+      ...s, id: undefined, release_id: undefined,
+      values: s.values.map((v) => ({ ...v, id: undefined, spec_set_id: undefined })),
+    }));
+  }
+  if (setsToSave.length) {
+    await step("Vorgabensätze speichern", () =>
+      api.productionReleases.replaceSpecSets(row.id, setsToSave, userId));
   }
 
   // Prüfvorgaben: erkannte übernehmen, sonst den bisherigen Stand fortschreiben
@@ -571,7 +701,7 @@ async function saveReleaseImport(args: {
     }));
   }
   if (tests.length) {
-    await api.productionReleases.replaceTestParameters(row.id, tests);
+    await step("Prüfvorgaben speichern", () => api.productionReleases.replaceTestParameters(row.id, tests));
   }
 
   const changeRows: ProductionReleaseChange[] = allChanges.map((c) => ({
@@ -586,9 +716,9 @@ async function saveReleaseImport(args: {
     note: c.note ?? null,
     evidence: {},
   }));
-  await api.productionReleases.addChanges(row.id, changeRows);
+  await step("Änderungsprotokoll speichern", () => api.productionReleases.addChanges(row.id, changeRows));
 
-  await api.productionReleases.logImport({
+  await step("Importprotokoll speichern", () => api.productionReleases.logImport({
     releaseId: row.id,
     fileName: analysis.fileName,
     storagePath,
@@ -599,15 +729,17 @@ async function saveReleaseImport(args: {
       document: analysis.document,
       changes: changeRows,
       source: analysis.source,
+      releaseType,
+      specSets: setsToSave,
     },
     importedBy: userId,
-  });
+  }));
 
   return {
     releaseId: row.id,
     rootId: (prev ? (prev.root_release_id ?? prev.id) : row.id) as string,
     revisionNumber,
     isRevision: !!prev,
-    pendingCount: pending.length,
+    pendingCount: pending.length + openSpecValues,
   };
 }

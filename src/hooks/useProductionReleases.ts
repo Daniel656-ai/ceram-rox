@@ -49,6 +49,15 @@ export function useReleaseTestParameters(id: string | undefined) {
   });
 }
 
+/** Typabhängige Vorgabensätze (z. B. NOx-Messpunkte) einer Revision. */
+export function useReleaseSpecSets(id: string | undefined) {
+  return useQuery({
+    queryKey: ["production-release-spec-sets", id],
+    queryFn: () => api.productionReleases.specSets(id!),
+    enabled: !!id,
+  });
+}
+
 export function useReleaseSettings() {
   return useQuery({
     queryKey: ["production-release-settings"],
