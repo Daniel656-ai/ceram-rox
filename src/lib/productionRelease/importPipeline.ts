@@ -608,7 +608,9 @@ async function saveReleaseImport(args: {
     revision_date: revisionDate,
     root_release_id: prev ? (prev.root_release_id ?? prev.id) : null,
     previous_release_id: prev?.id ?? null,
-    is_current: true,
+    // Eine Revision wird erst mit der expliziten Freigabe zum aktuellen Stand;
+    // bis dahin bleibt die bisherige Revision gültig (kein paralleler Datenstand).
+    is_current: !prev,
     source_type: "pdf",
     import_source: analysis.source,
     import_status: pending.length || incomplete || openSpecValues ? "review_required" : "imported",
@@ -635,9 +637,6 @@ async function saveReleaseImport(args: {
 
   if (!prev) {
     await step("Stammsatz verknüpfen", () => api.productionReleases.update(row.id, { root_release_id: row.id }));
-  } else {
-    await step("Vorherige Revision ablösen", () =>
-      api.productionReleases.update(prev.id, { is_current: false, superseded_at: now }));
   }
 
   // Vorgabensätze: gehören eindeutig zu DIESER Revision. Liefert die neue
