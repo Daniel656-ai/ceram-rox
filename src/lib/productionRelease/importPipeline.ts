@@ -547,6 +547,16 @@ async function saveReleaseImport(args: {
   const base: Record<string, unknown> = {};
   const prev = analysis.existing;
   if (prev) {
+    // Es darf immer nur EINE noch nicht freigegebene Revision je Stammsatz geben.
+    const rootId = (prev.root_release_id ?? prev.id) as string;
+    const openRev = await step("Offene Revision prüfen", () =>
+      api.productionReleases.pendingRevision(rootId));
+    if (openRev) {
+      throw new Error(
+        `Für diese Fertigungsfreigabe wartet bereits Revision ${Number(openRev.revision_number) || 0} auf Prüfung und Freigabe. ` +
+          `Bitte diese zuerst freigeben oder löschen, bevor eine weitere Revision importiert wird. Fehlercode: REVISION_PENDING.`
+      );
+    }
     // Revision baut auf dem bisherigen Stand auf
     for (const f of RELEASE_FIELDS) {
       const v = prev[f.key];
