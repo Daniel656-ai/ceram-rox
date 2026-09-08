@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
-import { elementLibrary, libraryElement, formatElementKey, elementKey } from "@/lib/elementKeys";
+import { elementLibrary, libraryElement, formatElementKey, elementKey, parseElementRange } from "@/lib/elementKeys";
 import { Checkbox } from "@/components/ui/checkbox";
 import { curveEvaluations } from "@/lib/curves/evaluations";
 import { emptyCurveConfig, readCaseCurveConfig, type CaseCurveConfig } from "@/lib/measurementBlocks";
@@ -72,6 +72,8 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
   const [isActive, setIsActive] = useState(true);
   const [instances, setInstances] = useState<DraftInstance[]>([]);
   const [elements, setElements] = useState<DraftElement[]>([]);
+  const [elementRange, setElementRange] = useState("");
+  const parsedRange = parseElementRange(elementRange);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["measurement-import-profiles"],
@@ -84,6 +86,7 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
     setDescription(caseDef?.description ?? "");
     setMethod(caseDef?.method ?? "");
     setIsActive(caseDef?.is_active !== false);
+    setElementRange(caseDef?.element_range ?? "");
     setInstances(
       (caseDef?.instances ?? []).map((i: MeasurementCaseInstance) => ({
         id: i.id,
@@ -123,6 +126,10 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
   const saveMut = useMutation({
     mutationFn: async (): Promise<MeasurementCase> => {
       if (!name.trim()) throw new Error("Bezeichnung erforderlich");
+      if (elementRange.trim() && !parsedRange) {
+        throw new Error("Elementbereich ungültig – erwartet z. B. „B-U“ (Elementsymbole).");
+      }
+      const rangeValue = parsedRange ? `${parsedRange.fromSymbol}-${parsedRange.toSymbol}` : null;
       let target = caseDef;
       if (target) {
         await api.measurementCases.update(target.id, {
@@ -130,6 +137,7 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
           description: description.trim() || null,
           method: method.trim() || null,
           is_active: isActive,
+          element_range: rangeValue,
         });
       } else {
         target = await api.measurementCases.create({
@@ -138,7 +146,9 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
           description: description.trim() || null,
           method: method.trim() || null,
         });
-        if (!isActive) await api.measurementCases.update(target.id, { is_active: false });
+        if (!isActive || rangeValue) {
+          await api.measurementCases.update(target.id, { is_active: isActive, element_range: rangeValue });
+        }
       }
 
       // Entfernte Messungen löschen
@@ -202,6 +212,28 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
           </div>
 
           <CaseElementsEditor value={elements} onChange={setElements} />
+
+          <div className="rounded border p-2 space-y-1">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+              Elementbereich (optional, z. B. Standardlos)
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input className="h-8 w-32 font-mono text-xs" placeholder="B-U" value={elementRange}
+                onChange={(e) => setElementRange(e.target.value)} />
+              {elementRange.trim() && (
+                parsedRange
+                  ? <span className="text-[11px] text-muted-foreground">
+                      {parsedRange.fromSymbol} (Z {parsedRange.from}) bis {parsedRange.toSymbol} (Z {parsedRange.to})
+                    </span>
+                  : <span className="text-[11px] text-destructive">ungültig – z. B. „B-U“</span>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Alle importierten Elemente/Oxide, deren Leitelement im Bereich liegt, werden als
+              Ergebnisse übernommen – zusätzlich zur festen Liste oben. Ohne Bereich zählen nur
+              die oben ausgewählten Ergebnis-Elemente.
+            </p>
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

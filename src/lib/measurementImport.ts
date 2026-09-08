@@ -7,7 +7,8 @@
  */
 import type { ImportMapping, MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import { canonicalParameter, splitNameUnit } from "@/lib/measurementClassification";
-import { elementKey, fieldElementKey } from "@/lib/elementKeys";
+import { elementKey, fieldElementKey, formatElementKey, parseElementRange, elementInRange } from "@/lib/elementKeys";
+import { elementValueKey, elementFromValueKey } from "@/lib/measurementBlocks";
 
 export type DecimalSeparator = "auto" | "," | ".";
 
@@ -251,6 +252,80 @@ export interface MapOptions {
    * erkannten Elemente gehören zur Ergebnisliste des Messfalls.
    */
   caseElementKeys?: string[] | null;
+  /**
+   * Elementbereich des Messfalls (z. B. „B-U“). Erkannte Elemente innerhalb
+   * des Bereichs ohne eigenes Ergebnisfeld erhalten dynamisch das Ziel
+   * `element:<Key>` – der Messfall definiert damit einen Bereich statt einer
+   * festen Liste.
+   */
+  elementRange?: string | null;
+}
+
+/** Element-Schlüssel eines Zielfelds (konfiguriert oder abgeleitet). */
+export function targetElementKey(t: TargetCandidate): string | null {
+  return fieldElementKey({
+    metadata: t.element_key ? { element_key: t.element_key } : undefined,
+    display_name: t.display_name,
+    field_key: t.field_key,
+  });
+}
+
+/**
+ * Baut die Zielliste des Imports aus der Messfall-Konfiguration (führend) und
+ * den Formularfeldern des Scopes:
+ *  - jedes Messfall-Element wird zum Ziel – mit dem passenden Formularfeld,
+ *    sonst als virtuelles Ziel `element:<Key>` (Speicherung im Messblock);
+ *  - Elementfelder des Formulars außerhalb der Messfall-Liste sind KEINE
+ *    Ziele (sie würden sonst Ergebnisse außerhalb des Messfalls erzeugen);
+ *  - Nicht-Element-Felder (z. B. Feuchte) bleiben unverändert erhalten.
+ * Ohne Messfall-Liste bleibt die Formularliste unverändert.
+ */
+export function buildCaseTargets(
+  spec: Array<{ key: string; label?: string | null }>,
+  formTargets: TargetCandidate[],
+  elementRange?: string | null
+): TargetCandidate[] {
+  if (!spec.length) {
+    const range = parseElementRange(elementRange);
+    if (!range) return formTargets;
+    // Bereichs-Messfall: Elementfelder nur innerhalb des Bereichs.
+    return formTargets.filter((t) => {
+      const ek = targetElementKey(t);
+      return !ek || elementInRange(ek, range);
+    });
+  }
+  const byElement = new Map<string, TargetCandidate>();
+  for (const t of formTargets) {
+    const ek = targetElementKey(t);
+    if (ek && !byElement.has(ek)) byElement.set(ek, t);
+  }
+  const out: TargetCandidate[] = [];
+  for (const s of spec) {
+    const k = elementKey(s.key) ?? s.key;
+    const t = byElement.get(k);
+    out.push(
+      t
+        ? { ...t, element_key: k }
+        : { field_key: elementValueKey(k), display_name: s.label || formatElementKey(k), unit: null, element_key: k }
+    );
+  }
+  for (const t of formTargets) if (!targetElementKey(t)) out.push(t);
+  return out;
+}
+
+/** Virtuelle Ziele für dynamisch zugeordnete Bereichs-Elemente ergänzen (Anzeige). */
+export function withDynamicTargets(rows: MappedRow[], targets: TargetCandidate[]): TargetCandidate[] {
+  const known = new Set(targets.map((t) => t.field_key));
+  const extra: TargetCandidate[] = [];
+  for (const r of rows) {
+    const k = r.targetFieldKey;
+    if (!k || known.has(k)) continue;
+    const el = elementFromValueKey(k);
+    if (!el) continue;
+    known.add(k);
+    extra.push({ field_key: k, display_name: formatElementKey(el), unit: r.unit ?? null, element_key: el });
+  }
+  return extra.length ? [...targets, ...extra] : targets;
 }
 
 /** Ordnet gelesene Werte den Formularfeldern zu (Profil zuerst, dann Element-Schlüssel). */
@@ -289,6 +364,7 @@ export function mapReadings(
     const ek = elementKey(String(raw ?? ""));
     if (ek) caseKeys.set(ek, String(raw));
   }
+  const range = parseElementRange(options.elementRange);
 
   return readings.map((r) => {
     const m = findMapping(r.sourceName, mappings);
@@ -301,7 +377,7 @@ export function mapReadings(
     // Spaltenüberschrift normalisieren und das Element bestimmen.
     const bareName = splitNameUnit(r.sourceName).name;
     const detected = elementKey(bareName) ?? elementKey(r.sourceName);
-    const caseElementKey = detected && caseKeys.has(detected) ? detected : null;
+    const caseElementKey = detected && (caseKeys.has(detected) || elementInRange(detected, range)) ? detected : null;
 
     if (m && byKey.has(m.target_field_key)) {
       targetFieldKey = m.target_field_key;
@@ -313,7 +389,11 @@ export function mapReadings(
       // erkannt. Ob es ein offizielles Ergebnis ist, entscheidet der Messfall.
       const t = byElement.get(detected) ?? canon.get(detected.toLowerCase());
       if (t) { targetFieldKey = t.field_key; origin = "auto"; matchedBy = "element"; }
-      else matchNote = `Element ${detected} erkannt, aber kein passendes Ergebnisfeld im Messfall.`;
+      else if (elementInRange(detected, range)) {
+        // Bereichs-Messfall (z. B. Standardlos „B-U“): dynamisches Ziel.
+        targetFieldKey = elementValueKey(detected); origin = "auto"; matchedBy = "element";
+      }
+      else matchNote = `Element ${detected} erkannt, im Messfall aber nicht als Ergebnis konfiguriert.`;
     } else {
       const t = (detected ? byElement.get(detected) : undefined) ?? canon.get(canonicalParameter(r.sourceName));
       if (t) {

@@ -132,6 +132,8 @@ export interface MeasurementInstance {
    * Leer = keine Vorgabe (z. B. standardlose Messung).
    */
   elementSpec: CaseElementSpec[];
+  /** Vom Messfall vorgegebener Elementbereich (z. B. „B-U“), sonst null. */
+  elementRange: string | null;
   index: number;
 }
 
@@ -180,6 +182,10 @@ export function readInstances(
       context,
       values,
       elementSpec: readCaseElementSpec(e[CASE_ELEMENT_SPEC_KEY]),
+      elementRange:
+        typeof e[CASE_ELEMENT_RANGE_KEY] === "string" && (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
+          ? (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
+          : null,
       index,
     };
 
@@ -305,6 +311,24 @@ export const CASE_ELEMENTS_KEY = "__case_elements";
  */
 export const CASE_ELEMENT_SPEC_KEY = "__case_element_spec";
 
+/**
+ * Optionaler Elementbereich des Messfalls (z. B. „B-U“ für die standardlose
+ * RFA): alle importierten Elemente innerhalb des Bereichs sind Ergebnisse.
+ */
+export const CASE_ELEMENT_RANGE_KEY = "__case_element_range";
+
+/**
+ * Speicherschlüssel eines Messfall-Elements OHNE eigenes Formularfeld.
+ * Der Wert wird direkt im Messblock-Eintrag abgelegt (`element:SiO2`), damit
+ * ein Messfall Elemente vorgeben kann, ohne dass das Formular für jedes
+ * Element ein eigenes Feld besitzen muss.
+ */
+export const ELEMENT_VALUE_PREFIX = "element:";
+export const elementValueKey = (key: string) => `${ELEMENT_VALUE_PREFIX}${key}`;
+export const isElementValueKey = (k: string) => k.startsWith(ELEMENT_VALUE_PREFIX);
+export const elementFromValueKey = (k: string) =>
+  isElementValueKey(k) ? k.slice(ELEMENT_VALUE_PREFIX.length) : null;
+
 export interface CaseElementSpec {
   key: string;
   label: string;
@@ -360,6 +384,8 @@ export interface CaseTemplate {
    * Elementbibliothek). Sie ist unabhängig vom Messkontext.
    */
   elements?: Array<{ element_key: string; label?: string | null; is_official?: boolean }>;
+  /** Optionaler Elementbereich („B-U“) – ergänzt bzw. ersetzt die feste Liste. */
+  element_range?: string | null;
   instances: Array<{
     id: string;
     label: string;
@@ -406,6 +432,7 @@ export function buildEntriesFromCase(
       // Ausschließlich die Ergebnisliste des Messfalls. Der Messkontext bzw.
       // eine Import-Unterkategorie bestimmt die Ergebnisse NIEMALS.
       [CASE_ELEMENTS_KEY]: spec.map((s) => s.key),
+      [CASE_ELEMENT_RANGE_KEY]: caseDef.element_range?.trim() || null,
 
 
       [CASE_CURVE_KEY]: hasCurveConfig(readCaseCurveConfig(inst.curve_config))

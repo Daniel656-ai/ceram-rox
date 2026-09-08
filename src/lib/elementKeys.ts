@@ -291,3 +291,79 @@ export function libraryElement(key: string): LibraryElement {
     }
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Elementbereiche (z. B. „B–U“ für die standardlose RFA)               */
+/* ------------------------------------------------------------------ */
+
+const SYMBOLS_BY_Z = (
+  "H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn " +
+  "Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce " +
+  "Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn " +
+  "Fr Ra Ac Th Pa U"
+).split(" ");
+
+/** Ordnungszahl eines Elementsymbols (1 … 92), sonst null. */
+export function atomicNumber(symbol: string): number | null {
+  const i = SYMBOLS_BY_Z.indexOf(String(symbol ?? "").trim());
+  return i >= 0 ? i + 1 : null;
+}
+
+/**
+ * Leitelement eines Schlüssels: bei Verbindungen das erste Elementsymbol,
+ * das nicht Sauerstoff ist („Na2O“ → „Na“, „V2O5“ → „V“, „As“ → „As“).
+ * Nicht-chemische Schlüssel (z. B. „LOI“) liefern null.
+ */
+export function leadingElement(key: string): string | null {
+  const k = elementKey(key) ?? String(key ?? "").trim();
+  // Nur echte Formeln: jedes Buchstaben-Token muss ein Elementsymbol sein
+  // („LOI“ ist keine Formel und liefert null).
+  const syms: string[] = [];
+  const re = /([A-Z][a-z]?)|([0-9().·*]+)|(.)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(k))) {
+    if (m[1]) {
+      if (atomicNumber(m[1]) == null) return null;
+      syms.push(m[1]);
+    } else if (m[3]) return null;
+  }
+  if (!syms.length) return null;
+  return syms.find((s) => s !== "O" && s !== "H") ?? syms[0];
+}
+
+export interface ElementRange {
+  from: number;
+  to: number;
+  fromSymbol: string;
+  toSymbol: string;
+}
+
+/** Liest einen Elementbereich („B-U“, „B–U“, „Na … U“); ungültig = null. */
+export function parseElementRange(raw: string | null | undefined): ElementRange | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  const m = s.match(/^([A-Za-z]{1,2})\s*(?:-|–|—|…|\.\.\.?|bis|to)\s*([A-Za-z]{1,2})$/i);
+  if (!m) return null;
+  const a = SYMBOLS_BY_Z.find((x) => x.toLowerCase() === m[1].toLowerCase());
+  const b = SYMBOLS_BY_Z.find((x) => x.toLowerCase() === m[2].toLowerCase());
+  if (!a || !b) return null;
+  const za = atomicNumber(a) as number;
+  const zb = atomicNumber(b) as number;
+  return za <= zb
+    ? { from: za, to: zb, fromSymbol: a, toSymbol: b }
+    : { from: zb, to: za, fromSymbol: b, toSymbol: a };
+}
+
+/** Liegt ein Element-/Verbindungsschlüssel im Bereich (über das Leitelement)? */
+export function elementInRange(key: string, range: ElementRange | null | undefined): boolean {
+  if (!range) return false;
+  const lead = leadingElement(key);
+  const z = lead ? atomicNumber(lead) : null;
+  return z != null && z >= range.from && z <= range.to;
+}
+
+/** Sortierwert für Bereichsergebnisse: Ordnungszahl des Leitelements, dann Schlüssel. */
+export function elementSortValue(key: string): number {
+  const lead = leadingElement(key);
+  return (lead ? atomicNumber(lead) : null) ?? 999;
+}

@@ -3,7 +3,9 @@ import type { FormField } from "@/lib/api/formFields";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import { evaluateLocalCalculations } from "@/lib/localCalculations";
 import { evaluateFormula } from "@/lib/formulaEngine";
-import { fieldElementKey, formatElementKey } from "@/lib/elementKeys";
+import {
+  fieldElementKey, formatElementKey, parseElementRange, elementInRange, elementSortValue,
+} from "@/lib/elementKeys";
 import {
   readResultConditions, collectResultConditions, buildConditionLabel, conditionsToContext,
 } from "@/lib/fieldLinks";
@@ -13,6 +15,8 @@ import {
   instanceResultKey,
   toBlockChildDefs,
   readBlockChildRole,
+  elementValueKey,
+  elementFromValueKey,
 } from "@/lib/measurementBlocks";
 
 export interface OfficialResultCandidate {
@@ -90,33 +94,78 @@ export function buildLinkedFormResultCandidates(
         if (ek && !byElement.has(ek)) byElement.set(ek, c);
       }
       const spec = instance.elementSpec;
+      const range = parseElementRange(instance.elementRange);
       const usedIds = new Set<string>();
+      const usedElementKeys = new Set<string>();
 
       // Der Messfall gibt Auswahl UND Reihenfolge der Ergebnis-Elemente vor.
       // Ein Element ohne Messwert bleibt als leere Ergebnisposition erhalten.
+      // Fehlt ein Formularfeld für das Element, liegt der Wert direkt im
+      // Messblock-Eintrag (`element:<Key>`).
       for (const item of spec) {
         const child = byElement.get(item.key);
         if (child) usedIds.add(child.id);
+        usedElementKeys.add(item.key);
+        const stored = instance.values[elementValueKey(item.key)];
+        const childValue = child ? instance.values[child.field_key] : undefined;
+        const value = childValue != null && childValue !== "" ? childValue : stored ?? null;
         instanceCandidates.push({
           ...base,
           key: instanceResultKey(
             prefix, storageKey, instance.instanceId,
-            child ? child.field_key : `element:${item.key}`
+            child ? child.field_key : elementValueKey(item.key)
           ),
           label: child
             ? child.result_label || child.display_name || child.field_key
             : item.label || formatElementKey(item.key),
           unit: (child as any)?.unit ?? null,
-          value: child ? instance.values[child.field_key] : null,
+          value,
           official: item.official,
         });
+      }
+
+      // Bereichs-Messfall (z. B. Standardlos „B-U“): alle importierten
+      // Elemente innerhalb des Bereichs sind Ergebnisse – sortiert nach
+      // Ordnungszahl, ohne feste Liste.
+      if (range) {
+        const dyn: Array<{ key: string; child: FormField | null }> = [];
+        for (const [k, v] of Object.entries(instance.values)) {
+          const el = elementFromValueKey(k);
+          if (!el || usedElementKeys.has(el) || !elementInRange(el, range)) continue;
+          if (v == null || v === "") continue;
+          dyn.push({ key: el, child: null });
+        }
+        for (const child of valueChildren) {
+          if (usedIds.has(child.id)) continue;
+          const ek = fieldElementKey(child as any);
+          if (!ek || usedElementKeys.has(ek) || !elementInRange(ek, range)) continue;
+          usedIds.add(child.id);
+          dyn.push({ key: ek, child });
+        }
+        dyn.sort((a, b) => elementSortValue(a.key) - elementSortValue(b.key) || a.key.localeCompare(b.key));
+        for (const d of dyn) {
+          usedElementKeys.add(d.key);
+          instanceCandidates.push({
+            ...base,
+            key: instanceResultKey(
+              prefix, storageKey, instance.instanceId,
+              d.child ? d.child.field_key : elementValueKey(d.key)
+            ),
+            label: d.child
+              ? d.child.result_label || d.child.display_name || d.child.field_key
+              : formatElementKey(d.key),
+            unit: (d.child as any)?.unit ?? null,
+            value: d.child ? instance.values[d.child.field_key] : instance.values[elementValueKey(d.key)],
+            official: true,
+          });
+        }
       }
 
       for (const child of valueChildren) {
         if (usedIds.has(child.id)) continue;
         // Elementfelder außerhalb der Messfall-Liste sind erkannt/verfügbar,
         // aber niemals offizielles Ergebnis dieses Messfalls.
-        const isElement = spec.length > 0 && !!fieldElementKey(child as any);
+        const isElement = (spec.length > 0 || !!range) && !!fieldElementKey(child as any);
         instanceCandidates.push({
           ...base,
           key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),

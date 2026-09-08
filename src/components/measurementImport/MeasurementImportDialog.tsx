@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import type { MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import {
   parseMeasurementText, mapReadings, allSourceNames, outputValue, rowStatus, openTargets, mappingReport,
-  type MappedRow, type TargetCandidate, type DecimalSeparator,
+  withDynamicTargets, type MappedRow, type TargetCandidate, type DecimalSeparator,
 } from "@/lib/measurementImport";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,10 +54,12 @@ interface Props {
   /** Aktuelle Werte der Zielfelder – für Konflikterkennung beim Dateiimport. */
   currentValues?: Record<string, unknown>;
   /**
-   * Vom Messfall vorgegebene Element-Schlüssel (Messkontext). Ist die Liste
-   * gefüllt, werden ausschließlich diese Elemente übernommen.
+   * Ergebnis-Elemente des Messfalls (Kennzeichnung; die Zielliste `targets`
+   * ist bereits aus der Messfall-Konfiguration aufgebaut).
    */
   caseElementKeys?: string[] | null;
+  /** Elementbereich des Messfalls (z. B. Standardlos „B-U“). */
+  elementRange?: string | null;
   /** Zulässige Datei-Importer (leer = alle registrierten). */
   allowedImporters?: string[] | null;
   /** Zuordnung für die dauerhafte Speicherung importierter Messkurven. */
@@ -76,8 +78,8 @@ interface Props {
 
 
 export default function MeasurementImportDialog({
-  open, onOpenChange, defaultProfileId, targets, currentValues, allowedImporters, caseElementKeys,
-  curveContext, curveDefaults, allowedEvaluations, enableEvaluation = false,
+  open, onOpenChange, defaultProfileId, targets: baseTargets, currentValues, allowedImporters, caseElementKeys,
+  elementRange, curveContext, curveDefaults, allowedEvaluations, enableEvaluation = false,
   onApply, canManageProfiles = true,
 }: Props) {
   const [profileId, setProfileId] = useState<string>(defaultProfileId ?? "");
@@ -139,15 +141,18 @@ export default function MeasurementImportDialog({
     const base = mapReadings(
       measurementReadings.map((c) => ({ ...c.reading, sourceName: c.cls.parameter, unit: c.reading.unit ?? c.cls.unit })),
       profile,
-      targets,
-      { caseElementKeys }
+      baseTargets,
+      { caseElementKeys, elementRange }
     );
     return base.map((r, i) => {
       const o = overrides[i];
       if (o === undefined) return r;
       return { ...r, targetFieldKey: o === "__none__" ? null : o, origin: "manual" as const };
     });
-  }, [measurementReadings, profile, targets, overrides, caseElementKeys]);
+  }, [measurementReadings, profile, baseTargets, overrides, caseElementKeys, elementRange]);
+
+  /** Zielliste inkl. dynamischer Bereichs-Elemente (Standardlos). */
+  const targets = useMemo(() => withDynamicTargets(rows, baseTargets), [rows, baseTargets]);
 
   const assigned = rows.filter((r) => r.targetFieldKey);
   const unassigned = rows.filter((r) => !r.targetFieldKey);

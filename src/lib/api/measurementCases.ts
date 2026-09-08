@@ -60,6 +60,8 @@ export interface MeasurementCase {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  /** Optionaler Elementbereich (z. B. „B-U“ für die standardlose RFA). */
+  element_range?: string | null;
   instances?: MeasurementCaseInstance[];
   elements?: MeasurementCaseElement[];
 }

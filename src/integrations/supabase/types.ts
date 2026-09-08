@@ -1987,6 +1987,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          element_range: string | null
           id: string
           is_active: boolean
           method: string | null
@@ -1998,6 +1999,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          element_range?: string | null
           id?: string
           is_active?: boolean
           method?: string | null
@@ -2009,6 +2011,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          element_range?: string | null
           id?: string
           is_active?: boolean
           method?: string | null

@@ -1,0 +1,2 @@
+ALTER TABLE public.measurement_cases ADD COLUMN IF NOT EXISTS element_range text NULL;
+COMMENT ON COLUMN public.measurement_cases.element_range IS 'Optionaler Elementbereich (z. B. "B-U"): alle importierten Elemente innerhalb dieses Bereichs werden als Ergebnisse übernommen. Ergänzt die feste Ergebnisliste (measurement_case_elements).';
