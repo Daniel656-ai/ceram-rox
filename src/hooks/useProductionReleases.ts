@@ -143,6 +143,22 @@ export function useReleaseRevision() {
   });
 }
 
+/** „Abschließen“: Prüfung erledigt + Status abgeschlossen + Revision aktuell (atomar im Backend). */
+export function useCompleteRelease() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (releaseId: string) => api.productionReleases.completeRevision(releaseId),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["production-releases"] });
+      qc.invalidateQueries({ queryKey: ["production-release", res.release_id] });
+      const prev = res.promotion?.previous_release_id;
+      if (prev) qc.invalidateQueries({ queryKey: ["production-release", prev] });
+      qc.invalidateQueries({ queryKey: ["production-release-revisions"] });
+    },
+  });
+}
+
+
 /**
  * Löst einen unsicheren Prüfpunkt auf: übernehmen, korrigieren oder als
  * unverändert markieren. Sind keine offenen Punkte mehr vorhanden, wechselt
