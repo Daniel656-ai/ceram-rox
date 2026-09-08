@@ -22,7 +22,9 @@ import {
   type ReleaseAnalysis, type DetectedChange,
 } from "@/lib/productionRelease/importPipeline";
 import { useReleaseSettings } from "@/hooks/useProductionReleases";
-import type { ProductionReleaseTestParameter } from "@/lib/api/productionReleases";
+import type { ProductionReleaseTestParameter, ProductionReleaseSpecSet } from "@/lib/api/productionReleases";
+import { releaseTypeLabel } from "@/lib/productionRelease/releaseTypes";
+import { SpecSetsEditor } from "./SpecSetsEditor";
 
 interface Props {
   open: boolean;
@@ -65,13 +67,14 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [tests, setTests] = useState<ProductionReleaseTestParameter[]>([]);
   const [changes, setChanges] = useState<DetectedChange[]>([]);
+  const [specSets, setSpecSets] = useState<ProductionReleaseSpecSet[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const dragDepth = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
-    setFile(null); setValues({}); setTests([]); setChanges([]); setAnalysis(null);
+    setFile(null); setValues({}); setTests([]); setChanges([]); setAnalysis(null); setSpecSets([]);
     setFileError(null); setDragActive(false); dragDepth.current = 0;
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -84,6 +87,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
       setAnalysis(res);
       setValues(res.rawValues);
       setTests(res.testParameters);
+      setSpecSets(res.specSets);
       setChanges(res.changes);
       if (!res.coverage.complete) {
         const msg =
@@ -141,7 +145,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
     }
     setFileError(null);
     setFile(f);
-    setAnalysis(null); setValues({}); setTests([]); setChanges([]);
+    setAnalysis(null); setValues({}); setTests([]); setChanges([]); setSpecSets([]);
     void analyze(f);
   };
 
@@ -160,8 +164,16 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
 
 
 
+  const openSpecValues = specSets.flatMap((x) => x.values).filter((v) => v.needs_review && !v.confirmed_at).length;
+
   const apply = async () => {
     if (!analysis) return;
+    if (openSpecValues > 0) {
+      toast.error(
+        `${openSpecValues} unsicher erkannte Vorgabe${openSpecValues === 1 ? "" : "n"} müssen zuerst bestätigt oder korrigiert werden.`
+      );
+      return;
+    }
     setSaving(true);
     try {
       const out: Record<string, unknown> = {};
@@ -175,6 +187,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
         values: out,
         testParameters: tests,
         changes,
+        specSets,
         userId: user?.id ?? null,
         defaultFormDefinitionId: settings?.default_form_definition_id ?? null,
       });
@@ -444,6 +457,19 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
               );
             })}
 
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <h4 className="text-sm font-semibold">Vorgaben</h4>
+                <Badge variant="secondary">{releaseTypeLabel(analysis.releaseType)}</Badge>
+              </div>
+              <SpecSetsEditor
+                releaseType={analysis.releaseType}
+                sets={specSets}
+                onChange={setSpecSets}
+                userId={user?.id ?? null}
+              />
+            </div>
+
             {tests.length > 0 && (
               <div>
                 <h4 className="text-sm font-semibold mb-2">Prüf- und Messvorgaben (Beiblatt)</h4>
@@ -495,7 +521,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-          <Button onClick={apply} disabled={!analysis || saving}>
+          <Button onClick={apply} disabled={!analysis || saving || openSpecValues > 0}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileUp className="h-4 w-4 mr-2" />}
             {analysis?.isRevision ? "Revision anlegen" : "Werte übernehmen"}
           </Button>
