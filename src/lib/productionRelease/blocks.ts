@@ -26,6 +26,8 @@ export interface BlockResult {
   testParameters: ProductionReleaseTestParameter[];
   document: Record<string, unknown>;
   changes: Record<string, unknown>[];
+  releaseType?: string | null;
+  specSets?: Record<string, unknown>[];
 }
 
 /**
@@ -84,6 +86,8 @@ export function mergeBlockResults(results: { block: Block; res: BlockResult }[])
   document: Record<string, unknown>;
   changes: Record<string, unknown>[];
   conflicts: DetectedChange[];
+  releaseType: string | null;
+  specSets: Record<string, unknown>[];
 } {
   const fields: Record<string, unknown> = {};
   const fieldPage: Record<string, number> = {};
@@ -91,6 +95,9 @@ export function mergeBlockResults(results: { block: Block; res: BlockResult }[])
   const document: Record<string, unknown> = {};
   const changes: Record<string, unknown>[] = [];
   const tests = new Map<string, ProductionReleaseTestParameter>();
+  const specSets: Record<string, unknown>[] = [];
+  const specSigs = new Set<string>();
+  let releaseType: string | null = null;
   let bestRevision = Number.NEGATIVE_INFINITY;
 
   for (const { block, res } of results) {
@@ -131,6 +138,20 @@ export function mergeBlockResults(results: { block: Block; res: BlockResult }[])
       changes.push({ ...c, page });
     }
 
+    if (!releaseType && asText(res.releaseType)) releaseType = asText(res.releaseType);
+    // Vorgabensätze aller Blöcke sammeln; identische Sätze (gleiche Werte)
+    // aus überlappenden Erkennungen nur einmal übernehmen.
+    for (const s of res.specSets ?? []) {
+      const params = Array.isArray(s.parameters) ? (s.parameters as Record<string, unknown>[]) : [];
+      const sig = params
+        .map((p) => `${asText(p.key)}=${asText(p.value)}${asText(p.unit)}`)
+        .sort()
+        .join("|");
+      if (!sig || specSigs.has(sig)) continue;
+      specSigs.add(sig);
+      specSets.push({ ...s, page: typeof s.page === "number" ? s.page : firstPage });
+    }
+
     const d = (res.document ?? {}) as Record<string, unknown>;
     for (const [k, v] of Object.entries(d)) {
       if (k === "revision_number" || k === "revision_date" || k === "is_revision") continue;
@@ -154,5 +175,7 @@ export function mergeBlockResults(results: { block: Block; res: BlockResult }[])
     document,
     changes,
     conflicts,
+    releaseType,
+    specSets,
   };
 }

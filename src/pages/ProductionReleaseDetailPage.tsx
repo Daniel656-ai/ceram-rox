@@ -28,8 +28,11 @@ import {
 import {
   useProductionRelease, useReleaseTestParameters, useProductionReleasePermissions,
   useSaveRelease, useDeleteRelease, useCustomers, useReleaseChanges, useReleaseRevisions,
+  useReleaseSpecSets,
 } from "@/hooks/useProductionReleases";
 import { ReviewChangesDialog } from "@/components/productionRelease/ReviewChangesDialog";
+import { SpecSetsEditor } from "@/components/productionRelease/SpecSetsEditor";
+import { releaseTypeLabel } from "@/lib/productionRelease/releaseTypes";
 import type { ProductionReleaseTestParameter } from "@/lib/api/productionReleases";
 
 const NONE = "__none__";
@@ -41,6 +44,7 @@ export default function ProductionReleaseDetailPage() {
   const perms = useProductionReleasePermissions();
   const { data: release, isLoading } = useProductionRelease(id);
   const { data: storedTests = [] } = useReleaseTestParameters(id);
+  const { data: specSets = [] } = useReleaseSpecSets(id);
   const { data: customers = [] } = useCustomers();
   const save = useSaveRelease();
   const del = useDeleteRelease();
@@ -172,6 +176,7 @@ export default function ProductionReleaseDetailPage() {
               {!!release.release_number && (
                 <span className="font-mono">{String(release.release_number)}</span>
               )}
+              <Badge variant="secondary">{releaseTypeLabel(release.release_type as string | null)}</Badge>
               <Badge variant="outline">Rev. {Number(release.revision_number) || 0}</Badge>
               <Badge variant="outline" className={release.is_current === false ? "text-muted-foreground" : ""}>
                 {release.is_current === false ? "historische Revision" : "aktuelle Revision"}
@@ -273,7 +278,21 @@ export default function ProductionReleaseDetailPage() {
           ))}
         </TabsContent>
 
-        <TabsContent value="tests" className="pt-4">
+        <TabsContent value="tests" className="pt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">
+                Vorgaben – {releaseTypeLabel(release.release_type as string | null)} (Rev. {Number(release.revision_number) || 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SpecSetsEditor
+                releaseType={(release.release_type as string | null) ?? ""}
+                sets={specSets}
+                readOnly
+              />
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">Prüf- und Messvorgaben (Beiblatt)</CardTitle>

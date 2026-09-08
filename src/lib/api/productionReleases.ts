@@ -53,6 +53,34 @@ export interface ProductionReleaseTestParameter {
   source_type?: string;
 }
 
+/** Einzelne Vorgabe eines Vorgabensatzes (Wert und Einheit getrennt). */
+export interface ProductionReleaseSpecValue {
+  id?: string;
+  spec_set_id?: string;
+  parameter_key: string;
+  parameter_label?: string | null;
+  value_num?: number | null;
+  value_text?: string | null;
+  unit?: string | null;
+  confidence?: "high" | "medium" | "low";
+  needs_review?: boolean;
+  confirmed_at?: string | null;
+  confirmed_by?: string | null;
+  sort_order?: number;
+}
+
+/** Vorgabensatz (z. B. ein Temperatur-/Messpunkt) einer Revision. */
+export interface ProductionReleaseSpecSet {
+  id?: string;
+  release_id?: string;
+  release_type: string;
+  label?: string | null;
+  sort_order?: number;
+  source_type?: string;
+  page?: number | null;
+  values: ProductionReleaseSpecValue[];
+}
+
 /** Erkannte Änderung einer Revision (Fall A–D). */
 export interface ProductionReleaseChange {
   id?: string;
@@ -390,6 +418,92 @@ export const productionReleases = {
     );
   },
 
+  // ---- Vorgabensätze (typabhängig, je Revision) -----------------------------
+  async specSets(releaseId: string): Promise<ProductionReleaseSpecSet[]> {
+    const sets = (await unwrap(
+      db
+        .from("production_release_spec_sets")
+        .select("*")
+        .eq("release_id", releaseId)
+        .order("sort_order")
+    )) as Omit<ProductionReleaseSpecSet, "values">[];
+    if (!sets?.length) return [];
+    const vals = (await unwrap(
+      db
+        .from("production_release_spec_values")
+        .select("*")
+        .in("spec_set_id", sets.map((s) => s.id))
+        .order("sort_order")
+    )) as ProductionReleaseSpecValue[];
+    return sets.map((s) => ({ ...s, values: (vals ?? []).filter((v) => v.spec_set_id === s.id) }));
+  },
+
+  /**
+   * Vorgaben der AKTUELLEN Revision eines Stammsatzes – Einstieg für die
+   * spätere m³-Liste (keine erneute PDF-Analyse nötig).
+   */
+  async currentSpecSets(rootId: string): Promise<{ releaseId: string | null; sets: ProductionReleaseSpecSet[] }> {
+    const rows = (await unwrap(
+      db
+        .from("production_releases")
+        .select("id")
+        .eq("root_release_id", rootId)
+        .eq("is_current", true)
+        .limit(1)
+    )) as { id: string }[];
+    const releaseId = rows?.[0]?.id ?? null;
+    if (!releaseId) return { releaseId: null, sets: [] };
+    return { releaseId, sets: await productionReleases.specSets(releaseId) };
+  },
+
+  /** Ersetzt alle Vorgabensätze EINER Revision (andere Revisionen bleiben unberührt). */
+  async replaceSpecSets(
+    releaseId: string,
+    sets: ProductionReleaseSpecSet[],
+    userId: string | null
+  ): Promise<void> {
+    await run(db.from("production_release_spec_sets").delete().eq("release_id", releaseId));
+    for (let i = 0; i < sets.length; i++) {
+      const s = sets[i];
+      const inserted = (await unwrap(
+        db
+          .from("production_release_spec_sets")
+          .insert({
+            release_id: releaseId,
+            release_type: s.release_type,
+            label: s.label ?? null,
+            sort_order: s.sort_order ?? i,
+            source_type: s.source_type ?? "pdf",
+            page: s.page ?? null,
+            created_by: userId,
+          })
+          .select("id")
+          .single()
+      )) as { id: string };
+      const vals = (s.values ?? []).filter(
+        (v) => v.parameter_key && ((v.value_text ?? "").trim() !== "" || v.value_num !== null && v.value_num !== undefined)
+      );
+      if (!vals.length) continue;
+      await run(
+        db.from("production_release_spec_values").insert(
+          vals.map((v, j) => ({
+            spec_set_id: inserted.id,
+            parameter_key: v.parameter_key,
+            parameter_label: v.parameter_label ?? null,
+            value_num: v.value_num ?? null,
+            value_text: v.value_text ?? null,
+            unit: v.unit ?? null,
+            confidence: v.confidence ?? "high",
+            needs_review: v.needs_review ?? false,
+            confirmed_at: v.confirmed_at ?? null,
+            confirmed_by: v.confirmed_by ?? null,
+            sort_order: v.sort_order ?? j,
+          }))
+        )
+      );
+    }
+  },
+
   // ---- PDF-Import ----------------------------------------------------------
   /** Original-PDF unverändert ablegen (wird nie überschrieben). */
   async uploadDocument(file: Blob, fileName?: string): Promise<string> {
@@ -426,6 +540,10 @@ export const productionReleases = {
     testParameters: ProductionReleaseTestParameter[];
     document: Record<string, unknown>;
     changes: Record<string, unknown>[];
+    /** erkannter Fertigungsfreigabe-Typ (Schlüssel der Typ-Registry) */
+    releaseType?: string | null;
+    /** erkannte Vorgabensätze (typabhängig) */
+    specSets?: Record<string, unknown>[];
   }> {
     let call: Awaited<ReturnType<typeof callImportService>>;
     try {
@@ -443,6 +561,8 @@ export const productionReleases = {
           testParameters?: unknown;
           document?: unknown;
           changes?: unknown;
+          releaseType?: unknown;
+          specSets?: unknown;
         }
       | null;
 
@@ -475,6 +595,8 @@ export const productionReleases = {
       testParameters: (data?.testParameters ?? []) as ProductionReleaseTestParameter[],
       document: (data?.document ?? {}) as Record<string, unknown>,
       changes: (data?.changes ?? []) as Record<string, unknown>[],
+      releaseType: typeof data?.releaseType === "string" ? data.releaseType : null,
+      specSets: Array.isArray(data?.specSets) ? (data.specSets as Record<string, unknown>[]) : [],
     };
   },
 
