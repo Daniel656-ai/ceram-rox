@@ -98,10 +98,16 @@ export interface MatchDecision {
  */
 export function decideMatch(
   identity: ReleaseDocumentIdentity,
-  existing: { revision_number?: number | null; release_number?: string | null } | null,
+  existingRow: Record<string, unknown> | null,
 ): MatchDecision {
   const warnings: string[] = [];
-  const currentRev = existing ? Number(existing.revision_number) || 0 : null;
+  const existing = existingRow
+    ? {
+        revision_number: Number(existingRow.revision_number) || 0,
+        release_number: (existingRow.release_number as string | null) ?? null,
+      }
+    : null;
+  const currentRev = existing ? existing.revision_number : null;
 
   if (identity.hasRevisionTag) {
     const tagged = identity.revisionNumber ?? 0;
