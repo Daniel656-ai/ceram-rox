@@ -9,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileSpreadsheet, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useRawMaterials, useStorageLocations, useAddRawMaterial, useAddBatch, useAddMovement } from "@/hooks/useRawMaterials";
+import { useRawMaterials, useStorageLocations, useAddRawMaterial, useAddBatch, useAddMovement, useAddContainer, useAddBatchToContainer, useFindBatch } from "@/hooks/useRawMaterials";
 import { useUpdateRawMaterial } from "@/hooks/useRawMaterials";
 import { useUsers } from "@/hooks/useUsers";
+import { normalizeQuantity, parseQuantity, formatQuantity } from "@/lib/formatQuantity";
 
 type Mode = "update" | "skip";
 
@@ -23,6 +24,7 @@ interface ParsedRow {
   quantity?: number;
   lot?: string;
   supplier?: string;
+  manufacturer?: string;
   delivery_date?: string;
   location?: string;
   cas?: string;
@@ -31,21 +33,28 @@ interface ParsedRow {
 }
 
 const COLUMN_ALIASES: Record<keyof Omit<ParsedRow, "__raw">, string[]> = {
-  mrs: ["mrs", "mrs-nr", "mrs nr", "mrsnummer"],
-  rk_code: ["rk-code", "rk code", "rk", "rkcode"],
-  name: ["name", "produktname", "rohstoff", "bezeichnung"],
-  other_designation: ["sonstige bezeichnung", "sonstigebezeichnung", "alternative"],
-  quantity: ["lagermenge", "lagermenge kg/l", "menge", "bestand"],
-  lot: ["lot-nummer", "lot nummer", "lot", "lotnummer", "lot, bigbag, lieferung"],
-  supplier: ["lieferant", "hersteller/lieferant", "hersteller"],
-  delivery_date: ["lieferdatum", "datum"],
-  location: ["lagerort", "ort", "lager"],
-  cas: ["cas-nr", "cas nr", "casnummer", "cas"],
-  responsible: ["verantwortlicher", "verantwortlich"],
+  mrs: ["mrs", "mrs-nr", "mrs nr", "mrsnummer", "mrs-nummer"],
+  rk_code: ["rk-code", "rk code", "rk", "rkcode", "rk-nr"],
+  name: ["name", "produktname", "rohstoff", "bezeichnung", "rohstoffname", "material"],
+  other_designation: ["sonstige bezeichnung", "sonstigebezeichnung", "alternative", "zusatzbezeichnung"],
+  quantity: ["lagermenge", "lagermenge kg/l", "menge", "bestand", "liefermenge", "lagermenge kg", "menge kg"],
+  lot: ["lot-nummer", "lot nummer", "lot", "lotnummer", "lot, bigbag, lieferung", "charge", "chargennummer", "lot-nr"],
+  supplier: ["lieferant", "hersteller/lieferant", "hersteller / lieferant", "lieferant/hersteller"],
+  manufacturer: ["hersteller"],
+  delivery_date: ["lieferdatum", "datum", "wareneingang", "wareneingangsdatum", "we-datum", "we datum", "eingangsdatum"],
+  location: ["lagerort", "ort", "lager", "lagerplatz"],
+  cas: ["cas-nr", "cas nr", "casnummer", "cas", "cas-nummer"],
+  responsible: ["verantwortlicher", "verantwortlich", "verantw."],
 };
 
+/** Spaltenüberschrift normalisieren: Kleinschreibung, Leerraum, Einheiten in Klammern entfernen. */
 function normalizeKey(k: string) {
-  return String(k || "").trim().toLowerCase().replace(/\s+/g, " ");
+  return String(k || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*/g, " ") // "Lagermenge (kg)" → "lagermenge"
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function mapHeader(header: string): keyof Omit<ParsedRow, "__raw"> | null {
@@ -58,6 +67,9 @@ function mapHeader(header: string): keyof Omit<ParsedRow, "__raw"> | null {
 
 function parseExcelDate(v: any): string | undefined {
   if (v == null || v === "") return undefined;
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`;
+  }
   if (typeof v === "number") {
     // Excel serial date
     const d = XLSX.SSF.parse_date_code(v);
@@ -65,19 +77,23 @@ function parseExcelDate(v: any): string | undefined {
   }
   const s = String(v).trim();
   // dd.mm.yyyy
-  const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if (m) {
+    const y = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  }
   const d = new Date(s);
   if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return undefined;
 }
 
+/**
+ * Liefermenge: Dezimalpunkt oder -komma korrekt interpretieren und auf
+ * max. 3 Nachkommastellen runden (gilt ausdrücklich nur für die Liefermenge).
+ */
 function parseNumber(v: any): number | undefined {
-  if (v == null || v === "") return undefined;
-  if (typeof v === "number") return v;
-  const s = String(v).replace(/\./g, "").replace(",", ".").replace(/[^\d.\-]/g, "");
-  const n = parseFloat(s);
-  return isNaN(n) ? undefined : n;
+  const n = normalizeQuantity(parseQuantity(v));
+  return n === null ? undefined : n;
 }
 
 export function ImportRawMaterialsDialog() {
@@ -94,6 +110,9 @@ export function ImportRawMaterialsDialog() {
   const addMaterial = useAddRawMaterial();
   const updateMaterial = useUpdateRawMaterial();
   const addBatch = useAddBatch();
+  const findBatch = useFindBatch();
+  const addContainer = useAddContainer();
+  const addBatchToContainer = useAddBatchToContainer();
   const addMovement = useAddMovement();
 
   const reset = () => {
@@ -138,12 +157,17 @@ export function ImportRawMaterialsDialog() {
 
   const matchLocationId = (name?: string): string | undefined => {
     if (!name || !locations) return undefined;
-    const n = name.toLowerCase().trim();
-    const loc = locations.find(
-      (l: any) =>
-        (l.name || "").toLowerCase() === n ||
-        [l.hall, l.room, l.shelf, l.position].filter(Boolean).join(" › ").toLowerCase() === n
-    );
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+    const n = norm(name);
+    const parts = (l: any) => [l.hall, l.room, l.shelf, l.position].filter(Boolean).map(String);
+    const loc =
+      locations.find((l: any) => norm(l.name || "") === n || norm(parts(l).join(" › ")) === n) ||
+      locations.find((l: any) => norm(parts(l).join(" ")) === n || norm(parts(l).join(" / ")) === n) ||
+      // Nur Halle angegeben und eindeutig zuordenbar
+      (() => {
+        const hits = locations.filter((l: any) => parts(l).length === 1 && norm(String(l.hall || "")) === n);
+        return hits.length === 1 ? hits[0] : undefined;
+      })();
     return loc?.id;
   };
 
@@ -182,6 +206,7 @@ export function ImportRawMaterialsDialog() {
         }
 
         let materialId: string;
+        let materialLocationId: string | null;
         if (existing) {
           await updateMaterial.mutateAsync({
             id: existing.id,
@@ -190,10 +215,12 @@ export function ImportRawMaterialsDialog() {
             cas_number: row.cas ?? undefined,
             mrs_number: row.mrs ?? undefined,
             supplier: row.supplier ?? undefined,
+            manufacturer: row.manufacturer ?? undefined,
             default_location_id: locationId ?? undefined,
             responsible_user_id: responsibleId ?? undefined,
           });
           materialId = existing.id;
+          materialLocationId = locationId ?? existing.default_location_id ?? null;
           r.updated++;
         } else {
           const created: any = await addMaterial.mutateAsync({
@@ -203,44 +230,68 @@ export function ImportRawMaterialsDialog() {
             cas_number: row.cas || null,
             mrs_number: row.mrs || null,
             supplier: row.supplier || undefined,
+            manufacturer: row.manufacturer || null,
             unit: "kg",
             default_location_id: locationId || undefined,
             responsible_user_id: responsibleId || null,
           });
           materialId = created.id;
+          materialLocationId = locationId ?? null;
           r.imported++;
         }
 
-        // Optional batch with lot info
+        // Liefermenge ist bereits beim Einlesen auf max. 3 Nachkommastellen normalisiert.
+        const qty = row.quantity && row.quantity > 0 ? row.quantity : 0;
+
         if (row.lot) {
-          try {
-            await addBatch.mutateAsync({
+          // Dieselbe Datenstruktur wie „LOT anlegen“ in der Detailansicht:
+          // LOT (mit Lieferant/Wareneingang/Liefermenge) → Gebinde am Lagerort → Wareneingang verknüpft mit LOT.
+          // Bestehende LOT desselben Rohstoffs wird wiederverwendet (keine Duplikate).
+          let batch: any = await findBatch.mutateAsync({ raw_material_id: materialId, batch_number: row.lot });
+          const batchIsNew = !batch;
+          if (!batch) {
+            batch = await addBatch.mutateAsync({
               raw_material_id: materialId,
               batch_number: row.lot,
               delivery_date: row.delivery_date,
-              delivery_quantity: row.quantity,
+              goods_receipt_date: row.delivery_date ?? null,
+              delivery_quantity: qty || undefined,
               supplier: row.supplier,
             });
-          } catch {
-            /* batch may already exist – ignore */
           }
-        }
 
-        // Initial stock as inventory movement
-        if (row.quantity && row.quantity > 0) {
-          try {
-            await addMovement.mutateAsync({
+          if (qty > 0 && batchIsNew) {
+            const unit = (existing as any)?.unit || "kg";
+            const container: any = await addContainer.mutateAsync({
               raw_material_id: materialId,
-              movement_type: "eingang",
-              quantity: row.quantity,
-              movement_date: row.delivery_date,
-              supplier: row.supplier,
-              comment: row.lot ? `Import – Lot ${row.lot}` : "Import",
+              batch_id: batch.id,
+              container_code: null,
+              kind: "big_bag",
+              initial_quantity: qty,
+              current_quantity: 0, // wird durch Positions-Sync gesetzt
+              unit,
+              status: "verfuegbar",
+              location_id: materialLocationId,
             });
-          } catch (e: any) {
-            // don't fail the row for movement issues
-            console.warn("Movement failed for", row.name, e?.message);
+            await addBatchToContainer.mutateAsync({
+              raw_material_id: materialId,
+              container_id: container.id,
+              batch_id: batch.id,
+              quantity: qty,
+              movement_date: row.delivery_date,
+              comment: `Import – Wareneingang LOT ${row.lot}`,
+            });
           }
+        } else if (qty > 0) {
+          // Ohne LOT-Nummer: Bestand als einfacher Wareneingang (bisheriges Verhalten).
+          await addMovement.mutateAsync({
+            raw_material_id: materialId,
+            movement_type: "eingang",
+            quantity: qty,
+            movement_date: row.delivery_date,
+            supplier: row.supplier,
+            comment: "Import",
+          });
         }
       } catch (e: any) {
         r.errors.push({ row: i + 2, name: row.name, message: e?.message || "Unbekannter Fehler" });
@@ -275,7 +326,7 @@ export function ImportRawMaterialsDialog() {
           </div>
 
           <div className="text-xs text-muted-foreground">
-            Erwartete Spalten: MRS, RK-Code, Name, Sonstige Bezeichnung, Lagermenge, Lot-Nummer, Lieferant, Lieferdatum, Lagerort, CAS-Nr, Verantwortlicher
+            Erwartete Spalten: MRS, RK-Code, Name, Sonstige Bezeichnung, Lagermenge (max. 3 Nachkommastellen), Lot-Nummer, Lieferant, Hersteller, Lieferdatum/Wareneingang, Lagerort, CAS-Nr, Verantwortlicher. Pro LOT wird wie beim manuellen Anlegen ein Gebinde am Lagerort mit verknüpftem Wareneingang erzeugt.
           </div>
 
           {rows.length > 0 && (
@@ -319,7 +370,7 @@ export function ImportRawMaterialsDialog() {
                           <TableCell className="text-xs">{r.mrs || "–"}</TableCell>
                           <TableCell className="text-xs">{r.cas || "–"}</TableCell>
                           <TableCell className="text-xs">{r.lot || "–"}</TableCell>
-                          <TableCell className="text-right font-mono text-xs">{r.quantity ?? "–"}</TableCell>
+                          <TableCell className="text-right font-mono text-xs">{r.quantity != null ? formatQuantity(r.quantity) : "–"}</TableCell>
                           <TableCell className="text-xs">{r.supplier || "–"}</TableCell>
                           <TableCell className="text-xs">{r.delivery_date || "–"}</TableCell>
                           <TableCell className="text-xs">{r.location || "–"} {!locOk && <Badge variant="outline" className="ml-1 text-[10px]">nicht gefunden</Badge>}</TableCell>

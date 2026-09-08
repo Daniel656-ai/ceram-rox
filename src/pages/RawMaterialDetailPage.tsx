@@ -29,7 +29,7 @@ import { PsaSymbolSelector } from "@/components/PsaSymbolSelector";
 import { PsaSymbolList } from "@/components/PsaSymbolList";
 import { normalizeHazardClasses, type HazardClassKey } from "@/lib/hazardClasses";
 import { DerivedSamples } from "@/components/DerivedSamples";
-import { formatQuantity } from "@/lib/formatQuantity";
+import { formatQuantity, normalizeQuantity, parseQuantity } from "@/lib/formatQuantity";
 import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import { PrintLabelDialog } from "@/components/labels/PrintLabelDialog";
 import { History as HistoryIcon, Tag, ChevronDown, ChevronRight } from "lucide-react";
@@ -338,7 +338,8 @@ export default function RawMaterialDetailPage() {
 
   const handleAddBatch = async () => {
     if (!bNum) { toast.error("LOT-Nummer ist Pflicht"); return; }
-    const qty = bQty ? Number(bQty) : 0;
+    // Liefermenge: Komma/Punkt tolerant, systemweit max. 3 Nachkommastellen
+    const qty = normalizeQuantity(parseQuantity(bQty)) ?? 0;
     if (!qty || qty <= 0) { toast.error("Liefermenge muss > 0 sein"); return; }
     const moisture = bMoisture.trim() ? Number(bMoisture.replace(",", ".")) : null;
     const ph = bPh.trim() ? Number(bPh.replace(",", ".")) : null;
@@ -756,7 +757,7 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="font-mono text-sm">{b.batch_number}</TableCell>
                         <TableCell className="font-mono text-xs">{b.manufacturer_batch || "–"}</TableCell>
                         <TableCell className="text-xs">{b.goods_receipt_date ? new Date(b.goods_receipt_date).toLocaleDateString("de-DE") : (b.delivery_date ? new Date(b.delivery_date).toLocaleDateString("de-DE") : "–")}</TableCell>
-                        <TableCell>{b.delivery_quantity != null ? `${b.delivery_quantity} ${mat.unit}` : "–"}</TableCell>
+                        <TableCell>{b.delivery_quantity != null ? `${formatQuantity(b.delivery_quantity)} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || "–"}</TableCell>
                         <TableCell>
                           {canManageBatches ? (
@@ -1308,7 +1309,7 @@ export default function RawMaterialDetailPage() {
                       <TableCell className="text-sm">{new Date(m.movement_date).toLocaleDateString("de-DE")}</TableCell>
                       <TableCell><Badge variant={m.movement_type === "eingang" ? "default" : "destructive"} className="text-xs">{m.movement_type === "eingang" ? "Eingang" : "Verbrauch"}</Badge></TableCell>
                       <TableCell className="text-xs">{m.raw_material_batches?.batch_number || "–"}</TableCell>
-                      <TableCell className="text-right font-mono">{m.movement_type === "eingang" ? "+" : "−"}{m.quantity} {mat.unit}</TableCell>
+                      <TableCell className="text-right font-mono">{m.movement_type === "eingang" ? "+" : "−"}{formatQuantity(m.quantity)} {mat.unit}</TableCell>
                       <TableCell className="text-xs">{m.supplier || m.project_reference || "–"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{m.comment || "–"}</TableCell>
                     </TableRow>
