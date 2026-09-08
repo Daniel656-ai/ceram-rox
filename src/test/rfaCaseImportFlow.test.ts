@@ -111,7 +111,11 @@ describe("RFA: Messfall → Import → Ergebnis (Akzeptanztests)", () => {
     // LOI (kein Element) und H2O (Leitelement H, Z=1) liegen außerhalb
     expect(rows.find((r) => r.sourceName.startsWith("LOI"))!.targetFieldKey).toBeNull();
     expect(rows.find((r) => r.sourceName.startsWith("H2O"))!.targetFieldKey).toBeNull();
-    expect(official.map((c) => c.label)).toEqual(["B₂O₃", "Na₂O", "SiO2", "Fe2O3", "As", "Pb", "U"]);
+    // Importierte Bereichs-Elemente nach Ordnungszahl; das (leere) Formularfeld
+    // Al2O3 bleibt als Position erhalten, wird ohne Wert aber nicht gespeichert.
+    expect(official.map((c) => c.label)).toEqual(["B₂O₃", "Na₂O", "Al2O3", "SiO2", "Fe2O3", "As", "Pb", "U"]);
+    expect(official.filter((c) => c.value != null).map((c) => c.label))
+      .toEqual(["B₂O₃", "Na₂O", "SiO2", "Fe2O3", "As", "Pb", "U"]);
   });
 
   it("Test D: Messfall 17, Import 16 → 16 gespeichert, 1 leere Position, kein Abbruch", () => {
