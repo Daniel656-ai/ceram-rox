@@ -102,13 +102,9 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
           : `${Object.keys(res.rawValues).length} Felder und ${res.testParameters.length} Prüfwerte erkannt.`
       );
     } catch (e) {
-      // Der Text der Ausnahme enthält bereits den Einleitungssatz, sobald die
-      // blockweise Verarbeitung fehlschlägt – nicht doppelt voranstellen.
       const detail = e instanceof Error ? e.message : "Unbekannte Ursache.";
-      const prefix = "Fertigungsfreigabe konnte nicht verarbeitet werden.";
-      const msg = detail.startsWith(prefix) ? detail : `${prefix} ${detail}`;
-      setFileError(msg);
-      toast.error(msg, { duration: 12000 });
+      setFileError(`Fertigungsfreigabe konnte nicht verarbeitet werden. ${detail}`);
+      toast.error(`Fertigungsfreigabe konnte nicht verarbeitet werden. ${detail}`, { duration: 12000 });
     } finally {
       setBusy(false);
     }

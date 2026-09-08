@@ -23,55 +23,16 @@ function envValue(key: string): string {
 const rawUrl = envValue("VITE_SUPABASE_URL");
 const rawKey = envValue("VITE_SUPABASE_PUBLISHABLE_KEY");
 
-/** Loopback-, LAN- bzw. Docker-Adresse (z. B. lokales Supabase auf Port 54321)? */
-function isLocalHost(host: string): boolean {
-  return (
-    host === "localhost" ||
-    host === "0.0.0.0" ||
-    host === "[::1]" ||
-    host.endsWith(".local") ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
-  );
-}
-
-/**
- * Eine gebaute Adresse ist nur brauchbar, wenn sie absolut ist UND nicht auf
- * einen Rechner im lokalen Netz zeigt, den die laufende Anwendung gar nicht
- * erreichen kann. Genau das war die Ursache des Desktop-Fehlers: im Build war
- * eine lokale Supabase-Instanz (…:54321) hinterlegt, auf der die Edge Function
- * nicht existiert. Läuft die Anwendung selbst auf demselben lokalen Host
- * (klassische lokale Entwicklung im Browser), bleibt die Adresse gültig.
- */
-function usableUrl(value: string): boolean {
-  if (!/^https?:\/\//i.test(value)) return false;
-  let host = "";
-  try {
-    host = new URL(value).hostname;
-  } catch {
-    return false;
-  }
-  if (!isLocalHost(host)) return true;
-  const ownHost = typeof location !== "undefined" ? location.hostname : "";
-  return !!ownHost && ownHost === host;
-}
-
-const envUrlUsable = usableUrl(rawUrl);
-
-/** Basis-URL des Backends – immer absolut und immer erreichbar. */
-export const BACKEND_URL = (envUrlUsable ? rawUrl : FALLBACK_URL).replace(/\/+$/, "");
-/** Öffentlicher Publishable/Anon-Key – passend zur tatsächlich genutzten URL. */
-export const BACKEND_ANON_KEY = envUrlUsable ? rawKey || FALLBACK_KEY : FALLBACK_KEY;
+/** Basis-URL des Backends – immer absolut. */
+export const BACKEND_URL = (/^https?:\/\//i.test(rawUrl) ? rawUrl : FALLBACK_URL).replace(/\/+$/, "");
+/** Öffentlicher Publishable/Anon-Key. */
+export const BACKEND_ANON_KEY = rawKey || FALLBACK_KEY;
 /** Basis-Adresse aller Edge Functions. */
 export const FUNCTIONS_BASE_URL = `${BACKEND_URL}/functions/v1`;
 /** Projekt-Referenz aus der Backend-URL (Diagnosezweck). */
 export const BACKEND_PROJECT_REF = BACKEND_URL.replace(/^https?:\/\//, "").split(".")[0] ?? "";
 /** true, wenn die Werte aus dem Build stammen (statt aus dem Fallback). */
-export const BACKEND_FROM_ENV = envUrlUsable && !!rawKey;
-/** true, wenn eine unbrauchbare lokale Build-Adresse ersetzt wurde. */
-export const BACKEND_URL_OVERRIDDEN = !!rawUrl && !envUrlUsable;
+export const BACKEND_FROM_ENV = /^https?:\/\//i.test(rawUrl) && !!rawKey;
 
 /** Laufzeitumgebung – hilft, Web und Desktop in Protokollen zu unterscheiden. */
 export function runtimeKind(): "desktop" | "web" {
@@ -92,7 +53,6 @@ export function backendDiagnostics() {
     projektRef: BACKEND_PROJECT_REF,
     functionsBasis: FUNCTIONS_BASE_URL,
     konfigAusBuild: BACKEND_FROM_ENV,
-    lokaleBuildAdresseErsetzt: BACKEND_URL_OVERRIDDEN,
     keyLaenge: BACKEND_ANON_KEY.length,
   };
 }

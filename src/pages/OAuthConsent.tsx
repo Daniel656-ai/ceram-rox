@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-// Eine einzige Client-Instanz für die gesamte Anwendung (Web und Desktop).
-import { dbClient as supabase } from "@/lib/api/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlaskConical } from "lucide-react";
