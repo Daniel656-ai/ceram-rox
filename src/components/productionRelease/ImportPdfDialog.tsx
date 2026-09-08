@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { filesFromClipboard, filesFromDrop, NO_FILE_MESSAGE } from "@/lib/fileTransfer";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -144,6 +145,19 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
     void analyze(f);
   };
 
+  /** Zusätzlicher Eingang: Strg+V (z. B. aus Outlook kopierter Anhang). */
+  useEffect(() => {
+    if (!open) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const files = filesFromClipboard(e);
+      if (!files.length) return;
+      e.preventDefault();
+      acceptFiles(files);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  });
+
 
 
   const apply = async () => {
@@ -227,7 +241,13 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
             e.preventDefault(); e.stopPropagation();
             dragDepth.current = 0;
             setDragActive(false);
-            acceptFiles(e.dataTransfer?.files);
+            const dropped = filesFromDrop(e);
+            if (!dropped.length) {
+              setFileError(NO_FILE_MESSAGE);
+              toast.error(NO_FILE_MESSAGE, { duration: 10000 });
+              return;
+            }
+            acceptFiles(dropped);
           }}
           className={`flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
             dragActive ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:bg-muted/40"
@@ -239,6 +259,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
           </p>
           <p className="text-xs text-muted-foreground">
             Nur PDF, max. 50 MB. Das Original-PDF wird unverändert gespeichert.
+            E-Mail-Anhänge können auch mit Strg+V eingefügt werden.
           </p>
           <input
             ref={inputRef}
