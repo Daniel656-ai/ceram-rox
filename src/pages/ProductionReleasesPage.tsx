@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import { Plus, Search, FileUp, Settings2, FileText } from "lucide-react";
 import {
-  RELEASE_STATUS_LABEL, RELEASE_STATUS_COLOR, RELEASE_STATUSES,
+  RELEASE_STATUS_LABEL, RELEASE_STATUS_COLOR, RELEASE_STATUSES, isReviewRequired,
 } from "@/lib/productionRelease/fields";
 import {
   useProductionReleases, useProductionReleasePermissions, useSaveRelease, useReleaseSettings,
@@ -216,7 +216,7 @@ export default function ProductionReleasesPage() {
                       <Badge variant="outline" className={RELEASE_STATUS_COLOR[r.status]}>
                         {RELEASE_STATUS_LABEL[r.status] ?? r.status}
                       </Badge>
-                      {r.import_status === "review_required" && (
+                      {isReviewRequired(r) && (
                         <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
                           Prüfung erforderlich
                         </Badge>
