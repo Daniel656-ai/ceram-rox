@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { FileUp, Loader2, Sparkles, AlertTriangle, History, UploadCloud } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
 import {
   RELEASE_FIELDS, RELEASE_FIELD_GROUPS, TEST_SECTION_LABEL, TEST_PARAMETER_LABEL,
   coerceFieldValue, RELEASE_FIELD_BY_KEY,
