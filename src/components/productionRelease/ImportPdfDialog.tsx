@@ -259,6 +259,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
           </p>
           <p className="text-xs text-muted-foreground">
             Nur PDF, max. 50 MB. Das Original-PDF wird unverändert gespeichert.
+            E-Mail-Anhänge können auch mit Strg+V eingefügt werden.
           </p>
           <input
             ref={inputRef}
