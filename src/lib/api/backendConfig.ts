@@ -92,6 +92,7 @@ export function backendDiagnostics() {
     projektRef: BACKEND_PROJECT_REF,
     functionsBasis: FUNCTIONS_BASE_URL,
     konfigAusBuild: BACKEND_FROM_ENV,
+    lokaleBuildAdresseErsetzt: BACKEND_URL_OVERRIDDEN,
     keyLaenge: BACKEND_ANON_KEY.length,
   };
 }
