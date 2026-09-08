@@ -431,6 +431,10 @@ export interface CommitResult {
 /**
  * Schritt 3 – Ergebnis speichern: Neuanlage oder neue Revision.
  * Bestehende Revisionen werden niemals überschrieben.
+ *
+ * Eine neue Revision wird als NICHT aktueller Datensatz angelegt; der bisherige
+ * Stand bleibt gültig, bis die Revision explizit freigegeben wird
+ * (`api.productionReleases.releaseRevision`, atomar in der Datenbank).
  */
 export async function commitReleaseImport(args: {
   analysis: ReleaseAnalysis;
@@ -447,7 +451,21 @@ export async function commitReleaseImport(args: {
   } catch (e) {
     // Backend-Fehler kommen als einfache Objekte ({message, code, details, hint}),
     // nicht als Error – deshalb hier vollständig protokollieren und beschreiben.
-    console.error("[Fertigungsfreigabe-Import] Speichern fehlgeschlagen", e);
+    const prev = args.analysis.existing;
+    console.error("[Fertigungsfreigabe-Import] Speichern fehlgeschlagen", {
+      zeitpunkt: new Date().toISOString(),
+      benutzer: args.userId,
+      datei: args.analysis.fileName,
+      bestehendeFreigabeId: prev?.id ?? null,
+      stammsatzId: prev ? (prev.root_release_id ?? prev.id) : null,
+      bisherigeRevision: prev?.revision_number ?? null,
+      erkannteRevision: args.analysis.document.revision_number ?? null,
+      erkannteFreigabeNr: args.analysis.document.release_number ?? null,
+      schritt: (e as { step?: string } | null)?.step ?? null,
+      feld: (e as { field?: string } | null)?.field ?? null,
+      fehler: describeSaveError(e),
+      rohfehler: e,
+    });
     throw new Error(`Fehler beim Speichern der erkannten Daten. ${describeSaveError(e)}`);
   }
 }
