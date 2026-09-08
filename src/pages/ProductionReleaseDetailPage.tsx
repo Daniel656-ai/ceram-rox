@@ -19,7 +19,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Save, Trash2, FileDown, Plus, AlertTriangle, History } from "lucide-react";
+import { ArrowLeft, Save, Trash2, FileDown, Plus, AlertTriangle, History, ShieldCheck } from "lucide-react";
 import {
   RELEASE_FIELDS, RELEASE_FIELD_GROUPS, RELEASE_STATUS_LABEL, RELEASE_STATUS_COLOR,
   RELEASE_STATUS_FLOW, TEST_SECTIONS, TEST_PARAMETERS, TEST_SECTION_LABEL,
@@ -28,8 +28,9 @@ import {
 import {
   useProductionRelease, useReleaseTestParameters, useProductionReleasePermissions,
   useSaveRelease, useDeleteRelease, useCustomers, useReleaseChanges, useReleaseRevisions,
-  useReleaseSpecSets,
+  useReleaseSpecSets, useReleaseRevision,
 } from "@/hooks/useProductionReleases";
+import { describeSaveError } from "@/lib/productionRelease/specSets";
 import { ReviewChangesDialog } from "@/components/productionRelease/ReviewChangesDialog";
 import { SpecSetsEditor } from "@/components/productionRelease/SpecSetsEditor";
 import { releaseTypeLabel } from "@/lib/productionRelease/releaseTypes";
@@ -58,8 +59,23 @@ export default function ProductionReleaseDetailPage() {
   const rootId = (release?.root_release_id as string | undefined) ?? release?.id;
   const { data: changes = [] } = useReleaseChanges(id);
   const { data: revisions = [] } = useReleaseRevisions(rootId);
+  const releaseRev = useReleaseRevision();
   const pendingChanges = changes.filter((c) => c.status === "pending");
   const appliedChanges = changes.filter((c) => c.status !== "pending" && c.status !== "dismissed");
+  const openSpecValues = specSets.flatMap((s) => s.values).filter((v) => v.needs_review && !v.confirmed_at).length;
+  /** Revision importiert, aber noch nicht als gültiger Stand freigegeben */
+  const awaitingRelease = !!release && release.is_current === false && !release.superseded_at;
+  const canReleaseNow = awaitingRelease && !pendingChanges.length && !openSpecValues;
+
+  const handleReleaseRevision = async () => {
+    if (!id) return;
+    try {
+      const res = await releaseRev.mutateAsync(id);
+      toast.success(`Revision ${Number(res.revision_number) || 0} freigegeben – sie ist jetzt der aktuelle Stand.`);
+    } catch (e) {
+      toast.error(`Revision konnte nicht freigegeben werden. ${describeSaveError(e)}`, { duration: 12000 });
+    }
+  };
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects-lookup-release"],
@@ -160,6 +176,26 @@ export default function ProductionReleaseDetailPage() {
         </Alert>
       )}
 
+      {awaitingRelease && (
+        <Alert className={canReleaseNow ? "border-primary/60" : "border-amber-500/60 bg-amber-50 dark:bg-amber-900/20"}>
+          <ShieldCheck className="h-4 w-4" />
+          <AlertTitle>Revision noch nicht freigegeben</AlertTitle>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              {canReleaseNow
+                ? "Alle Prüfpunkte sind erledigt. Mit der Freigabe wird diese Revision zum aktuellen gültigen Stand; die bisherige Revision bleibt als Historie erhalten."
+                : `Der bisherige Stand bleibt gültig, bis diese Revision freigegeben wird. Offen: ${pendingChanges.length} Prüfpunkt(e)${openSpecValues ? `, ${openSpecValues} unsichere Vorgabe(n)` : ""}.`}
+            </span>
+            {perms.canApprove && (
+              <Button size="sm" onClick={handleReleaseRevision} disabled={!canReleaseNow || releaseRev.isPending}>
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                {releaseRev.isPending ? "Wird freigegeben …" : "Revision freigeben"}
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/fertigungsfreigaben")}>
@@ -178,8 +214,17 @@ export default function ProductionReleaseDetailPage() {
               )}
               <Badge variant="secondary">{releaseTypeLabel(release.release_type as string | null)}</Badge>
               <Badge variant="outline">Rev. {Number(release.revision_number) || 0}</Badge>
-              <Badge variant="outline" className={release.is_current === false ? "text-muted-foreground" : ""}>
-                {release.is_current === false ? "historische Revision" : "aktuelle Revision"}
+              <Badge
+                variant="outline"
+                className={
+                  awaitingRelease
+                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                    : release.is_current === false ? "text-muted-foreground" : ""
+                }
+              >
+                {awaitingRelease
+                  ? "Revision – Freigabe ausstehend"
+                  : release.is_current === false ? "historische Revision" : "aktuelle Revision"}
               </Badge>
               {release.import_status === "review_required" && (
                 <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
@@ -424,6 +469,14 @@ export default function ProductionReleaseDetailPage() {
                         Rev. {Number(rev.revision_number) || 0}
                         {rev.is_current !== false && (
                           <Badge variant="outline" className="ml-2">aktuell</Badge>
+                        )}
+                        {rev.is_current === false && !rev.superseded_at && (
+                          <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                            Freigabe ausstehend
+                          </Badge>
+                        )}
+                        {rev.is_current === false && !!rev.superseded_at && (
+                          <Badge variant="outline" className="ml-2 text-muted-foreground">Historie</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-sm">

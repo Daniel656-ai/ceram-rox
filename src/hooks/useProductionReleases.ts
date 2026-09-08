@@ -127,6 +127,23 @@ export function useReleaseChanges(releaseId: string | undefined) {
 }
 
 /**
+ * Gibt eine geprüfte Revision frei: atomar in der Datenbank wird die bisherige
+ * Revision zur Historie und diese Revision zum aktuellen gültigen Stand.
+ */
+export function useReleaseRevision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (releaseId: string) => api.productionReleases.releaseRevision(releaseId),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["production-releases"] });
+      qc.invalidateQueries({ queryKey: ["production-release", res.release_id] });
+      if (res.previous_release_id) qc.invalidateQueries({ queryKey: ["production-release", res.previous_release_id] });
+      qc.invalidateQueries({ queryKey: ["production-release-revisions", res.root_release_id] });
+    },
+  });
+}
+
+/**
  * Löst einen unsicheren Prüfpunkt auf: übernehmen, korrigieren oder als
  * unverändert markieren. Sind keine offenen Punkte mehr vorhanden, wechselt
  * die Fertigungsfreigabe automatisch auf „Geprüft".

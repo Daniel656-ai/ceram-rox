@@ -10797,6 +10797,10 @@ export type Database = {
         Returns: string
       }
       release_mixture_batch: { Args: { _batch_id: string }; Returns: undefined }
+      release_production_release_revision: {
+        Args: { _release_id: string }
+        Returns: Json
+      }
       rename_form_definition: {
         Args: { _form_id: string; _new_name: string }
         Returns: undefined

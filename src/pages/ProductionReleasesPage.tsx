@@ -195,7 +195,12 @@ export default function ProductionReleasesPage() {
                     <div className="font-mono">{(r.release_number as string) || "–"}</div>
                     <div className="flex items-center gap-1 mt-1">
                       <Badge variant="outline">Rev. {Number(r.revision_number) || 0}</Badge>
-                      {r.is_current === false && (
+                      {r.is_current === false && !r.superseded_at && (
+                        <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                          Freigabe ausstehend
+                        </Badge>
+                      )}
+                      {r.is_current === false && !!r.superseded_at && (
                         <Badge variant="outline" className="text-muted-foreground">historisch</Badge>
                       )}
                     </div>
@@ -237,8 +242,9 @@ export default function ProductionReleasesPage() {
         onImported={({ releaseId, isRevision, revisionNumber, pendingCount }) => {
           toast.success(
             isRevision
-              ? `Revision ${revisionNumber} angelegt.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen eine Prüfung.` : ""}`
-              : `Fertigungsfreigabe aus PDF erstellt.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen eine Prüfung.` : ""}`
+              ? `Revision ${revisionNumber} angelegt – der bisherige Stand bleibt gültig, bis Sie die Revision freigeben.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen zuvor eine Prüfung.` : ""}`
+              : `Fertigungsfreigabe aus PDF erstellt.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen eine Prüfung.` : ""}`,
+            { duration: 8000 }
           );
           navigate(`/fertigungsfreigaben/${releaseId}`);
         }}

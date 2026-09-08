@@ -431,6 +431,10 @@ export interface CommitResult {
 /**
  * Schritt 3 – Ergebnis speichern: Neuanlage oder neue Revision.
  * Bestehende Revisionen werden niemals überschrieben.
+ *
+ * Eine neue Revision wird als NICHT aktueller Datensatz angelegt; der bisherige
+ * Stand bleibt gültig, bis die Revision explizit freigegeben wird
+ * (`api.productionReleases.releaseRevision`, atomar in der Datenbank).
  */
 export async function commitReleaseImport(args: {
   analysis: ReleaseAnalysis;
@@ -447,7 +451,21 @@ export async function commitReleaseImport(args: {
   } catch (e) {
     // Backend-Fehler kommen als einfache Objekte ({message, code, details, hint}),
     // nicht als Error – deshalb hier vollständig protokollieren und beschreiben.
-    console.error("[Fertigungsfreigabe-Import] Speichern fehlgeschlagen", e);
+    const prev = args.analysis.existing;
+    console.error("[Fertigungsfreigabe-Import] Speichern fehlgeschlagen", {
+      zeitpunkt: new Date().toISOString(),
+      benutzer: args.userId,
+      datei: args.analysis.fileName,
+      bestehendeFreigabeId: prev?.id ?? null,
+      stammsatzId: prev ? (prev.root_release_id ?? prev.id) : null,
+      bisherigeRevision: prev?.revision_number ?? null,
+      erkannteRevision: args.analysis.document.revision_number ?? null,
+      erkannteFreigabeNr: args.analysis.document.release_number ?? null,
+      schritt: (e as { step?: string } | null)?.step ?? null,
+      feld: (e as { field?: string } | null)?.field ?? null,
+      fehler: describeSaveError(e),
+      rohfehler: e,
+    });
     throw new Error(`Fehler beim Speichern der erkannten Daten. ${describeSaveError(e)}`);
   }
 }
@@ -529,6 +547,16 @@ async function saveReleaseImport(args: {
   const base: Record<string, unknown> = {};
   const prev = analysis.existing;
   if (prev) {
+    // Es darf immer nur EINE noch nicht freigegebene Revision je Stammsatz geben.
+    const rootId = (prev.root_release_id ?? prev.id) as string;
+    const openRev = await step("Offene Revision prüfen", () =>
+      api.productionReleases.pendingRevision(rootId));
+    if (openRev) {
+      throw new Error(
+        `Für diese Fertigungsfreigabe wartet bereits Revision ${Number(openRev.revision_number) || 0} auf Prüfung und Freigabe. ` +
+          `Bitte diese zuerst freigeben oder löschen, bevor eine weitere Revision importiert wird. Fehlercode: REVISION_PENDING.`
+      );
+    }
     // Revision baut auf dem bisherigen Stand auf
     for (const f of RELEASE_FIELDS) {
       const v = prev[f.key];
@@ -580,7 +608,9 @@ async function saveReleaseImport(args: {
     revision_date: revisionDate,
     root_release_id: prev ? (prev.root_release_id ?? prev.id) : null,
     previous_release_id: prev?.id ?? null,
-    is_current: true,
+    // Eine Revision wird erst mit der expliziten Freigabe zum aktuellen Stand;
+    // bis dahin bleibt die bisherige Revision gültig (kein paralleler Datenstand).
+    is_current: !prev,
     source_type: "pdf",
     import_source: analysis.source,
     import_status: pending.length || incomplete || openSpecValues ? "review_required" : "imported",
@@ -607,9 +637,6 @@ async function saveReleaseImport(args: {
 
   if (!prev) {
     await step("Stammsatz verknüpfen", () => api.productionReleases.update(row.id, { root_release_id: row.id }));
-  } else {
-    await step("Vorherige Revision ablösen", () =>
-      api.productionReleases.update(prev.id, { is_current: false, superseded_at: now }));
   }
 
   // Vorgabensätze: gehören eindeutig zu DIESER Revision. Liefert die neue

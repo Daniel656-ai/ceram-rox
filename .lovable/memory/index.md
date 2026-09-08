@@ -1,4 +1,5 @@
 - [Change Safety Standard](mem://constraints/change-safety-standard) — VERBINDLICH: Bestandsschutz Infrastruktur/Daten, additive Lösungen, STOP vor destruktiven Änderungen, Fehler an Ursache beheben, Testpflicht Web+Desktop
+- [Fertigungsfreigabe-Revisionen](mem://features/production-release-revisions) — Revision je Zeile, alter Stand bleibt bis expliziter atomarer Freigabe gültig
 - [Geometrie-Auslegung](mem://features/geometry-design-calculation) — AP, ε, Bauteillänge, AV/SV/FR, Zelligkeitsempfehlung aus Stammdaten
 - [Element-Keys Import](mem://features/element-keys-import-mapping) — Stabile Element-Schlüssel verbinden Importdaten mit Ergebnisfeldern des Messfalls
 - [RFA-Zuordnung](mem://features/rfa-case-element-mapping) — Messkontext-Schlüssel steuern Import-Zuordnung, Einheiten werden ignoriert
