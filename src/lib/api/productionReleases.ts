@@ -540,6 +540,10 @@ export const productionReleases = {
     testParameters: ProductionReleaseTestParameter[];
     document: Record<string, unknown>;
     changes: Record<string, unknown>[];
+    /** erkannter Fertigungsfreigabe-Typ (Schlüssel der Typ-Registry) */
+    releaseType?: string | null;
+    /** erkannte Vorgabensätze (typabhängig) */
+    specSets?: Record<string, unknown>[];
   }> {
     let call: Awaited<ReturnType<typeof callImportService>>;
     try {
@@ -557,6 +561,8 @@ export const productionReleases = {
           testParameters?: unknown;
           document?: unknown;
           changes?: unknown;
+          releaseType?: unknown;
+          specSets?: unknown;
         }
       | null;
 
@@ -589,6 +595,8 @@ export const productionReleases = {
       testParameters: (data?.testParameters ?? []) as ProductionReleaseTestParameter[],
       document: (data?.document ?? {}) as Record<string, unknown>,
       changes: (data?.changes ?? []) as Record<string, unknown>[],
+      releaseType: typeof data?.releaseType === "string" ? data.releaseType : null,
+      specSets: Array.isArray(data?.specSets) ? (data.specSets as Record<string, unknown>[]) : [],
     };
   },
 
