@@ -26,6 +26,8 @@ const PARAMS = [
   "target_k", "flowrate", "no_concentration", "alpha",
   "so2_concentration", "h2o", "o2", "temperature", "av",
 ];
+// Fertigungsfreigabe-Typen (erweiterbar; weitere Typen später ergänzen).
+const RELEASE_TYPES = ["nox_aktivitaetsmessung"];
 
 const fieldProps: Record<string, unknown> = {};
 for (const k of FIELD_KEYS) fieldProps[k] = { type: "string", description: `Wert für ${k}, leer lassen wenn nicht im Dokument` };
@@ -86,6 +88,45 @@ const tool = {
               note: { type: "string", description: "Warum unsicher (nur bei confidence medium/low)" },
             },
             required: ["detection", "confidence"],
+            additionalProperties: false,
+          },
+        },
+        releaseType: {
+          type: "string",
+          enum: RELEASE_TYPES,
+          description: "Typ der Fertigungsfreigabe. nox_aktivitaetsmessung = Wabenkatalysator mit NOx-Aktivitätsprüfung (Soll K, AV, Flowrate, NO, alpha, H2O, O2, Temperatur).",
+        },
+        specSets: {
+          type: "array",
+          description:
+            "Vorgabensätze (Messpunkte) der Aktivitätsprüfung. Pro Temperatur-/Messpunktkombination EIN Satz. Alle Sätze aufnehmen, die im Dokument stehen – keine Begrenzung. Jeder Parameter mit Zahlenwert und Einheit GETRENNT.",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string", description: "Bezeichnung im Dokument, z. B. 'Messpunkt 1' oder 'Bench 1'" },
+              page: { type: "number" },
+              parameters: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    key: {
+                      type: "string",
+                      description:
+                        "Parameterschlüssel: temperature, av, sv, flowrate, fr, no_concentration, no, nox, nh3, alpha, h2o, o2, target_k – oder ein anderer kurzer Bezeichner für weitere Vorgaben",
+                    },
+                    label: { type: "string", description: "Bezeichnung wie im Dokument" },
+                    value: { type: "string", description: "NUR der Wert, ohne Einheit, Dezimaltrennzeichen wie im Dokument" },
+                    unit: { type: "string", description: "Einheit wie im Dokument (°C, m/h, Nm³/h, ppm, %, 1/h); leer wenn einheitenlos" },
+                    confidence: { type: "string", enum: ["high", "medium", "low"] },
+                    note: { type: "string", description: "Warum unsicher (nur bei medium/low)" },
+                  },
+                  required: ["key", "value", "confidence"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["parameters"],
             additionalProperties: false,
           },
         },
