@@ -287,7 +287,7 @@ export const productionReleases = {
     let q = db
       .from("production_releases")
       .select(
-        "id,status,project_id,project_name,customer_id,customer_name,article_number,completion_date,delivery_date,piece_count,source_type,created_at,updated_at,release_number,revision_number,is_current,import_status,root_release_id"
+        "id,status,project_id,project_name,customer_id,customer_name,article_number,completion_date,delivery_date,piece_count,source_type,created_at,updated_at,release_number,revision_number,is_current,import_status,root_release_id,superseded_at"
       )
       .order("created_at", { ascending: false });
     if (opts.onlyCurrent) q = q.eq("is_current", true);
