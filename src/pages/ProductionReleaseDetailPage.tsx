@@ -214,8 +214,17 @@ export default function ProductionReleaseDetailPage() {
               )}
               <Badge variant="secondary">{releaseTypeLabel(release.release_type as string | null)}</Badge>
               <Badge variant="outline">Rev. {Number(release.revision_number) || 0}</Badge>
-              <Badge variant="outline" className={release.is_current === false ? "text-muted-foreground" : ""}>
-                {release.is_current === false ? "historische Revision" : "aktuelle Revision"}
+              <Badge
+                variant="outline"
+                className={
+                  awaitingRelease
+                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                    : release.is_current === false ? "text-muted-foreground" : ""
+                }
+              >
+                {awaitingRelease
+                  ? "Revision – Freigabe ausstehend"
+                  : release.is_current === false ? "historische Revision" : "aktuelle Revision"}
               </Badge>
               {release.import_status === "review_required" && (
                 <Badge variant="outline" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
@@ -460,6 +469,14 @@ export default function ProductionReleaseDetailPage() {
                         Rev. {Number(rev.revision_number) || 0}
                         {rev.is_current !== false && (
                           <Badge variant="outline" className="ml-2">aktuell</Badge>
+                        )}
+                        {rev.is_current === false && !rev.superseded_at && (
+                          <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                            Freigabe ausstehend
+                          </Badge>
+                        )}
+                        {rev.is_current === false && !!rev.superseded_at && (
+                          <Badge variant="outline" className="ml-2 text-muted-foreground">Historie</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-sm">
