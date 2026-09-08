@@ -59,7 +59,6 @@ export default function ProductionReleaseDetailPage() {
   const rootId = (release?.root_release_id as string | undefined) ?? release?.id;
   const { data: changes = [] } = useReleaseChanges(id);
   const { data: revisions = [] } = useReleaseRevisions(rootId);
-  const releaseRev = useReleaseRevision();
   const completeRel = useCompleteRelease();
   const pendingChanges = changes.filter((c) => c.status === "pending");
   const appliedChanges = changes.filter((c) => c.status !== "pending" && c.status !== "dismissed");
@@ -67,16 +66,6 @@ export default function ProductionReleaseDetailPage() {
   /** Revision importiert, aber noch nicht als gültiger Stand freigegeben */
   const awaitingRelease = !!release && release.is_current === false && !release.superseded_at;
   const canReleaseNow = awaitingRelease && !pendingChanges.length && !openSpecValues;
-
-  const handleReleaseRevision = async () => {
-    if (!id) return;
-    try {
-      const res = await releaseRev.mutateAsync(id);
-      toast.success(`Revision ${Number(res.revision_number) || 0} freigegeben – sie ist jetzt der aktuelle Stand.`);
-    } catch (e) {
-      toast.error(`Revision konnte nicht freigegeben werden. ${describeSaveError(e)}`, { duration: 12000 });
-    }
-  };
 
   const { data: projects = [] } = useQuery({
     queryKey: ["projects-lookup-release"],
@@ -195,17 +184,17 @@ export default function ProductionReleaseDetailPage() {
       {awaitingRelease && (
         <Alert className={canReleaseNow ? "border-primary/60" : "border-amber-500/60 bg-amber-50 dark:bg-amber-900/20"}>
           <ShieldCheck className="h-4 w-4" />
-          <AlertTitle>Revision noch nicht freigegeben</AlertTitle>
+          <AlertTitle>Revision noch nicht abgeschlossen</AlertTitle>
           <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
             <span>
               {canReleaseNow
-                ? "Alle Prüfpunkte sind erledigt. Mit der Freigabe wird diese Revision zum aktuellen gültigen Stand; die bisherige Revision bleibt als Historie erhalten."
-                : `Der bisherige Stand bleibt gültig, bis diese Revision freigegeben wird. Offen: ${pendingChanges.length} Prüfpunkt(e)${openSpecValues ? `, ${openSpecValues} unsichere Vorgabe(n)` : ""}.`}
+                ? "Alle Prüfpunkte sind erledigt. Mit „Abschließen“ wird diese Revision zum aktuellen gültigen Stand und die Prüfung als erledigt markiert; die bisherige Revision bleibt als Historie erhalten."
+                : `Der bisherige Stand bleibt gültig, bis diese Revision abgeschlossen wird. Offen: ${pendingChanges.length} Prüfpunkt(e)${openSpecValues ? `, ${openSpecValues} unsichere Vorgabe(n)` : ""}.`}
             </span>
             {perms.canApprove && (
-              <Button size="sm" onClick={handleReleaseRevision} disabled={!canReleaseNow || releaseRev.isPending}>
+              <Button size="sm" onClick={() => setStatus("abgeschlossen")} disabled={!canReleaseNow || completeRel.isPending}>
                 <ShieldCheck className="h-4 w-4 mr-2" />
-                {releaseRev.isPending ? "Wird freigegeben …" : "Revision freigeben"}
+                {completeRel.isPending ? "Wird abgeschlossen …" : "Abschließen"}
               </Button>
             )}
           </AlertDescription>
