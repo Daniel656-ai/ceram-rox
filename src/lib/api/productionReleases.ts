@@ -380,8 +380,23 @@ export const productionReleases = {
 
 
   /**
-   * Sucht eine bestehende (aktuelle) Fertigungsfreigabe anhand stabiler
-   * Dokumentkennungen. Reihenfolge = Priorität der Merkmale.
+   * Aktueller Stand einer Fertigungsfreigabe zur Kennung "Variante-Auftrag"
+   * (z. B. 0075-6106). Exakter Vergleich – 0075-6107 ist ein anderer Auftrag.
+   */
+  async findCurrentByReleaseNumber(releaseNumber: string | null | undefined): Promise<ProductionReleaseRow | null> {
+    const rn = (releaseNumber ?? "").trim();
+    if (!rn) return null;
+    const rows = (await unwrap(
+      db.from("production_releases").select("*").eq("is_current", true).ilike("release_number", rn).limit(2)
+    )) as ProductionReleaseRow[];
+    return rows?.length === 1 ? rows[0] : null;
+  },
+
+  /**
+   * Sucht eine bestehende (aktuelle) Fertigungsfreigabe anhand der Dokumentkennung.
+   * Bewusst NUR über die Kennung (Variante + Auftrag): Artikelnummer, Zeichnung
+   * oder Kostenstelle sind bei neuen Bestellungen desselben Serienartikels identisch
+   * und würden fälschlich eine Revision annehmen.
    */
   async findExisting(keys: {
     release_number?: string | null;
@@ -390,18 +405,7 @@ export const productionReleases = {
     cost_center_code?: string | null;
     project_name?: string | null;
   }): Promise<ProductionReleaseRow | null> {
-    const attempts: [string, string][] = [];
-    if (keys.release_number?.trim()) attempts.push(["release_number", keys.release_number.trim()]);
-    if (keys.article_number?.trim()) attempts.push(["article_number", keys.article_number.trim()]);
-    if (keys.drawing_approval?.trim()) attempts.push(["drawing_approval", keys.drawing_approval.trim()]);
-    if (keys.cost_center_code?.trim()) attempts.push(["cost_center_code", keys.cost_center_code.trim()]);
-    for (const [col, val] of attempts) {
-      const rows = (await unwrap(
-        db.from("production_releases").select("*").eq("is_current", true).ilike(col, val).limit(2)
-      )) as ProductionReleaseRow[];
-      if (rows?.length === 1) return rows[0];
-    }
-    return null;
+    return this.findCurrentByReleaseNumber(keys.release_number);
   },
 
   async get(id: string): Promise<ProductionReleaseRow> {
