@@ -159,7 +159,19 @@ REVISIONEN:
 - confidence "high" nur, wenn Feldzuordnung, alter und neuer Wert eindeutig sind.
 - Wenn unklar ist, welches Feld betroffen ist oder welcher Wert gilt: confidence "low" oder "medium"
   setzen und den Wert NICHT in "fields" schreiben. Niemals raten.
-- Erkenne Fertigungsfreigabenummer, Revisionsnummer und Änderungsdatum, sofern vorhanden.`;
+- Erkenne Fertigungsfreigabenummer, Revisionsnummer und Änderungsdatum, sofern vorhanden.
+
+TYP UND VORGABENSÄTZE:
+- Bestimme den Typ der Fertigungsfreigabe (releaseType). Enthält das Dokument NOx-/DeNOx-Aktivitätsvorgaben
+  (Soll K, AV, Flowrate, NO, alpha, H2O, O2, Temperatur), ist der Typ "nox_aktivitaetsmessung".
+- Eine NOx-Freigabe kann MEHRERE Temperatur-/Messpunktkombinationen enthalten (z. B. Tabellenzeilen oder
+  Spalten "Punkt 1/2/3", "Bench/Micro", unterschiedliche Temperaturen). Lege je Kombination EINEN Eintrag in
+  "specSets" an, mit allen dort angegebenen Parametern. Nichts zusammenfassen, nichts weglassen, keine Obergrenze.
+- Wert und Einheit immer TRENNEN: value = "205", unit = "°C". Fehlende Einheit leer lassen, nicht erfinden.
+- Fehlende Parameter einfach weglassen (nicht mit 0 oder "-" füllen).
+- Ist ein Wert oder seine Zuordnung nicht eindeutig (verdeckt, mehrdeutig, schlecht lesbar): confidence
+  "medium" oder "low" setzen und im note-Feld begründen. Niemals raten.
+- "testParameters" (Beiblatt-Struktur) weiterhin zusätzlich befüllen, wie bisher.`;
 
 /** Kurzform einer beliebigen Ausnahme für Log und Diagnosefeld. */
 function describe(e: unknown): string {
@@ -361,11 +373,21 @@ Deno.serve(async (req) => {
         (c?.new_value && String(c.new_value).trim() !== ""),
     );
 
+    const specSets = ((parsed.specSets ?? []) as { parameters?: { value?: unknown }[] }[])
+      .map((s) => ({
+        ...s,
+        parameters: (s?.parameters ?? []).filter((p) => p && String(p.value ?? "").trim() !== ""),
+      }))
+      .filter((s) => s.parameters.length > 0);
+    const releaseType = typeof parsed.releaseType === "string" && RELEASE_TYPES.includes(parsed.releaseType)
+      ? parsed.releaseType
+      : null;
+
     const doc = (parsed.document ?? {}) as Record<string, unknown>;
     const docHasIdentifiers = ["release_number", "revision_number", "order_number", "project_number", "drawing_number"]
       .some((k) => doc[k] !== undefined && String(doc[k] ?? "").trim() !== "");
 
-    if (!Object.keys(fields).length && !testParameters.length && !changes.length && !docHasIdentifiers) {
+    if (!Object.keys(fields).length && !testParameters.length && !changes.length && !docHasIdentifiers && !specSets.length) {
       if (partial) {
         console.log(`[parse-production-release] Block ohne Daten (Seiten ${pageNumbers.join(",")}) – kein Fehler.`);
         return new Response(
@@ -382,7 +404,9 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, fields, testParameters, document: parsed.document ?? {}, changes }),
+      JSON.stringify({
+        success: true, fields, testParameters, document: parsed.document ?? {}, changes, releaseType, specSets,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
