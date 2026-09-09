@@ -188,7 +188,7 @@ export function readInstances(
       elementRange:
         typeof e[CASE_ELEMENT_RANGE_KEY] === "string" && (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
           ? (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
-          : effectiveElementRange(null, explicit, ...Object.values(context)),
+          : effectiveElementRange(null, [explicit], Object.values(context)),
       index,
     };
 
@@ -424,10 +424,8 @@ export function caseElementRangeFor(
 ): string | null {
   return effectiveElementRange(
     caseDef.element_range,
-    caseDef.name,
-    inst?.label,
-    inst?.method,
-    ...Object.values(inst?.context ?? {})
+    [caseDef.name, inst?.label, inst?.method],
+    Object.values(inst?.context ?? {})
   );
 }
 

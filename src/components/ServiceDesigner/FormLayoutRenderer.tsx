@@ -481,8 +481,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
     const ctx = read(INSTANCE_CONTEXT_KEY);
     return effectiveElementRange(
       null,
-      instanceLabel,
-      ...(ctx && typeof ctx === "object" ? Object.values(ctx as Record<string, unknown>) : [])
+      [instanceLabel],
+      ctx && typeof ctx === "object" ? Object.values(ctx as Record<string, unknown>) : []
     );
   }, [read, instanceLabel]);
 
