@@ -102,20 +102,38 @@ describe("RFA: Messfall → Import → Ergebnis (Akzeptanztests)", () => {
     expect(official.every((c) => c.value != null)).toBe(true);
   });
 
-  it("Test C: Standardlos „B-U“ ohne feste Liste → alle Bereichs-Elemente des Imports", () => {
+  it("Test C: Standardlos „B-U“ → feste 17 Elemente, danach nur Werte > 0", () => {
     const imported = ["B2O3", "Na2O", "SiO2", "Fe2O3", "As", "Pb", "U", "LOI", "H2O"];
     const { rows, official, allTargets } = runFlow([], imported, "B-U");
-    // Bereichszuordnung dynamisch (kein Formularfeld nötig)
     expect(rows.find((r) => r.sourceName.startsWith("Pb"))!.targetFieldKey).toBe(elementValueKey("Pb"));
     expect(allTargets.some((t) => t.field_key === elementValueKey("Pb"))).toBe(true);
     // LOI (kein Element) und H2O (Leitelement H, Z=1) liegen außerhalb
     expect(rows.find((r) => r.sourceName.startsWith("LOI"))!.targetFieldKey).toBeNull();
     expect(rows.find((r) => r.sourceName.startsWith("H2O"))!.targetFieldKey).toBeNull();
-    // Importierte Bereichs-Elemente nach Ordnungszahl; das (leere) Formularfeld
-    // Al2O3 bleibt als Position erhalten, wird ohne Wert aber nicht gespeichert.
-    expect(official.map((c) => c.label)).toEqual(["B₂O₃", "Na₂O", "Al2O3", "SiO2", "Fe2O3", "As", "Pb", "U"]);
-    expect(official.filter((c) => c.value != null).map((c) => c.label))
-      .toEqual(["B₂O₃", "Na₂O", "SiO2", "Fe2O3", "As", "Pb", "U"]);
+    // Die ersten 17 Positionen entsprechen exakt „Kalibrierte Elemente“
+    expect(official.slice(0, 17).map((c) => c.key.includes("element:")
+      ? c.key.split("element:")[1] : c.label)).toEqual(
+        ["SiO2", "Al2O3", "Fe2O3", "TiO2", "CaO", "MgO", "BaO", "Na2O", "K2O",
+         "SO3", "P2O5", "V2O5", "WO3", "MoO3", "As", "Pb", "Nb"]);
+    // danach nur zusätzlich gemessene Elemente > 0, nach Ordnungszahl
+    expect(official.slice(17).map((c) => c.label)).toEqual(["B₂O₃", "U"]);
+  });
+
+  it("Standardlos: Elemente mit 0, leer oder null erscheinen nicht", () => {
+    const caseDef = makeCase([], "B-U");
+    const entry = buildEntriesFromCase(caseDef, childDefs)[0];
+    entry[elementValueKey("Rb")] = 0.014;
+    entry[elementValueKey("SrO")] = "0,049";
+    entry[elementValueKey("ZrO2")] = 0;
+    entry[elementValueKey("Cr2O3")] = "0,000";
+    entry[elementValueKey("Ni")] = "";
+    entry[elementValueKey("Cu")] = null;
+    const official = buildLinkedFormResultCandidates("f1", [block, ...formChildren, importField], [], {
+      "form:f1:messungen": [entry],
+    }).filter((c) => c.official);
+    expect(official.slice(17).map((c) => c.label)).toEqual(["Rb", "SrO"]);
+    // As/Pb behalten ppm
+    expect(official.find((c) => c.label === "As")!.unit).toBe("ppm");
   });
 
   it("Test D: Messfall 17, Import 16 → 16 gespeichert, 1 leere Position, kein Abbruch", () => {
