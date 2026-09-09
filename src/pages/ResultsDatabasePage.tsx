@@ -518,6 +518,16 @@ export default function ResultsDatabasePage() {
         </div>
       </div>
 
+      {/* Ergebnisse konnten nicht geladen werden – nie stillschweigend leer bleiben. */}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="py-4 text-sm text-destructive">
+            Die Ergebnisse konnten nicht geladen werden: {(error as Error)?.message || "Unbekannter Fehler"}
+          </CardContent>
+        </Card>
+      )}
+      {isLoading && <Skeleton className="h-24" />}
+
       {/* Filters */}
       <Card>
         <CardHeader className="pb-3">
