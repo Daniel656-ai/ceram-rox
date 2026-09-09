@@ -9,3 +9,4 @@ type: feature
 - Prüfung immer auf dem Zahlenwert (0, „0,000“, leer, null → nicht übernehmen), nie auf dem Anzeigetext.
 - Messfälle ohne `element_range` („Qualitätskontrolle“, „Kalibrierte Elemente“) bleiben unverändert.
 - Verwendet in `buildCaseTargets` (`measurementImport.ts`) und `buildLinkedFormResultCandidates` (`officialResults.ts`). Tests: `src/test/rfaCaseImportFlow.test.ts`.
+- Fehlt am Messfall ein `element_range`, entscheidet die Bezeichnung: Messfall-/Messungsname mit „Standardlos“ oder „Oberfläche“ (auch als Messung der Steuerung „Externe Analyse“) → Bereich `B-U`. Kontextwerte lösen nur bei „Standardlos“ aus (Präparation „Oberfläche“ bleibt wirkungslos). Zentral in `effectiveElementRange`/`caseElementRangeFor`, angewandt in `readInstances` und im Import (`FormLayoutRenderer`).
