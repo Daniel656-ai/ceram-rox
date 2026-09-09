@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatResultLabel } from "@/lib/resultLabels";
+import { orderElementResults } from "@/lib/rfaFixedElements";
 
 
 export interface ResultRecord {
@@ -87,8 +88,6 @@ export function expandByMeasurementInstance(records: ResultRecord[]): ResultReco
   }
   return out;
 }
-
-import { orderElementResults } from "@/lib/rfaFixedElements";
 
 export function useResultsDatabase() {
   const { user, role } = useAuth();
