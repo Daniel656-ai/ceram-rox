@@ -91,7 +91,9 @@ export function orderElementResults<T extends { display_label?: string | null; r
     const label = (r.display_label || r.result_name || "").trim();
     const key = elementKey(label);
     // Nur Elemente der globalen Elementbibliothek werden umsortiert.
-    if (!key || norm(key) !== norm(label) || !known.has(key)) return null;
+    const looksChemical =
+      known.has(key) || (key.length <= 6 && !/[a-z]{3}/.test(label));
+    if (!key || norm(key) !== norm(label) || !looksChemical) return null;
     const fixed = RFA_FIXED_ELEMENTS.findIndex((e) => e.key === key);
     return fixed >= 0 ? fixed : 1000 + elementSortValue(key);
   };
