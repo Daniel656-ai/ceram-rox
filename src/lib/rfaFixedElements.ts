@@ -81,10 +81,15 @@ export function withFixedRfaElements(spec: CaseElementSpec[]): CaseElementSpec[]
 export function orderElementResults<T extends { display_label?: string | null; result_name: string }>(
   rows: T[],
 ): T[] {
+  /** Nur echte chemische Bezeichnungen werden umsortiert („Feuchte“ bleibt stehen). */
+  const norm = (v: string) =>
+    v.toLowerCase()
+      .replace(/[\u2080-\u2089]/g, (c) => String(c.charCodeAt(0) - 0x2080))
+      .replace(/[^a-z0-9]/g, "");
   const rank = (r: T): number | null => {
     const label = (r.display_label || r.result_name || "").trim();
-    const key = elementKey(label) ?? elementKey(label.split(".").pop() ?? "");
-    if (!key) return null;
+    const key = elementKey(label);
+    if (!key || norm(key) !== norm(label)) return null;
     const fixed = RFA_FIXED_ELEMENTS.findIndex((e) => e.key === key);
     return fixed >= 0 ? fixed : 1000 + elementSortValue(key);
   };
