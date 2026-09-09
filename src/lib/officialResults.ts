@@ -6,7 +6,7 @@ import { evaluateFormula } from "@/lib/formulaEngine";
 import {
   fieldElementKey, formatElementKey, parseElementRange, elementInRange, elementSortValue,
 } from "@/lib/elementKeys";
-import { withFixedRfaElements, isPositiveMeasurement } from "@/lib/rfaFixedElements";
+import { withFixedRfaElements, isPositiveMeasurement, fixedElementUnit } from "@/lib/rfaFixedElements";
 import {
   readResultConditions, collectResultConditions, buildConditionLabel, conditionsToContext,
 } from "@/lib/fieldLinks";
@@ -98,6 +98,22 @@ export function buildLinkedFormResultCandidates(
       // Bereichs-Messfälle („Standardlos“, „Oberfläche“): feste 17er-Struktur
       // zuerst, danach dynamisch die tatsächlich gemessenen Elemente (> 0).
       const spec = range ? withFixedRfaElements(instance.elementSpec) : instance.elementSpec;
+      // Einheiten des Messdatenimports je Zielfeld – dadurch behalten auch
+      // Ergebnisse ohne eigenes Formularfeld ihre originale Einheit (z. B. ppm).
+      const importUnits: Record<string, string | null> = {};
+      for (const c of children.filter((c) => c.field_type === "measurement_import")) {
+        const raw = instance.values[c.field_key];
+        if (typeof raw !== "string" || !raw.trim().startsWith("{")) continue;
+        try {
+          const parsed = JSON.parse(raw) as { units?: Record<string, string | null> };
+          if (parsed?.units) Object.assign(importUnits, parsed.units);
+        } catch { /* unlesbare Importinformation ändert keine Ergebnisse */ }
+      }
+      const unitFor = (key: string, child: FormField | null, fallback?: string | null) =>
+        ((child as any)?.unit as string | null) ??
+        importUnits[child ? child.field_key : elementValueKey(key)] ??
+        fallback ??
+        fixedElementUnit(key);
       const usedIds = new Set<string>();
       const usedElementKeys = new Set<string>();
 
@@ -121,7 +137,7 @@ export function buildLinkedFormResultCandidates(
           label: child
             ? child.result_label || child.display_name || child.field_key
             : item.label || formatElementKey(item.key),
-          unit: (child as any)?.unit ?? item.unit ?? null,
+          unit: unitFor(item.key, child ?? null, item.unit ?? null),
           value,
           official: item.official,
         });
@@ -159,7 +175,7 @@ export function buildLinkedFormResultCandidates(
             label: d.child
               ? d.child.result_label || d.child.display_name || d.child.field_key
               : formatElementKey(d.key),
-            unit: (d.child as any)?.unit ?? null,
+            unit: unitFor(d.key, d.child),
             value: d.child ? instance.values[d.child.field_key] : instance.values[elementValueKey(d.key)],
             official: true,
           });
