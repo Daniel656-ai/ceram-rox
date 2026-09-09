@@ -10,9 +10,10 @@ import {
   readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
   CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, CASE_CURVE_KEY, CASE_ELEMENTS_KEY,
   readCaseCurveConfig, hasCurveConfig, type CaseTemplate,
-  CASE_ELEMENT_SPEC_KEY, CASE_ELEMENT_RANGE_KEY, caseElementSpec, readCaseElementSpec, elementFromValueKey,
+  CASE_ELEMENT_SPEC_KEY, CASE_ELEMENT_RANGE_KEY, caseElementSpec, caseElementRangeFor, readCaseElementSpec, elementFromValueKey,
 } from "@/lib/measurementBlocks";
 import { buildCaseTargets } from "@/lib/measurementImport";
+import { effectiveElementRange } from "@/lib/rfaFixedElements";
 
 
 import {
@@ -475,8 +476,15 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   /** Elementbereich des Messfalls (z. B. Standardlos „B-U“). */
   const caseRange = useMemo(() => {
     const v = read(CASE_ELEMENT_RANGE_KEY);
-    return typeof v === "string" && v.trim() ? v.trim() : null;
-  }, [read]);
+    if (typeof v === "string" && v.trim()) return v.trim();
+    // Altbestand ohne gepflegten Bereich: Bezeichnung der Messung entscheidet.
+    const ctx = read(INSTANCE_CONTEXT_KEY);
+    return effectiveElementRange(
+      null,
+      [instanceLabel],
+      ctx && typeof ctx === "object" ? Object.values(ctx as Record<string, unknown>) : []
+    );
+  }, [read, instanceLabel]);
 
   const instanceProfile = read(IMPORT_PROFILE_KEY);
   const effectiveProfileId =
@@ -1389,21 +1397,26 @@ function MeasurementBlockField({
   useEffect(() => {
     if (!caseCfg.enabled || !interactive || readonly || !activeCase || entries.length === 0) return;
     const spec = caseElementSpec(activeCase);
-    const range = (activeCase as CaseTemplate).element_range?.trim() || null;
+    const rangeOf = (e: Record<string, any>) =>
+      caseElementRangeFor(
+        activeCase,
+        activeCase.instances.find((i) => i.id === e?.[CASE_INSTANCE_KEY]) ?? null
+      );
     const same = (e: Record<string, any>) =>
       JSON.stringify(e?.[CASE_ELEMENT_SPEC_KEY] ?? []) === JSON.stringify(spec) &&
-      ((e?.[CASE_ELEMENT_RANGE_KEY] ?? null) || null) === range;
+      ((e?.[CASE_ELEMENT_RANGE_KEY] ?? null) || null) === rangeOf(e);
     const relevant = entries.filter((e) => e?.[CASE_ID_KEY] === activeCase.id);
     if (relevant.length === 0 || relevant.every(same)) return;
     updateEntries(
       entries.map((e) =>
         e?.[CASE_ID_KEY] === activeCase.id
-          ? { ...e, [CASE_ELEMENT_SPEC_KEY]: spec, [CASE_ELEMENTS_KEY]: spec.map((x) => x.key), [CASE_ELEMENT_RANGE_KEY]: range }
+          ? { ...e, [CASE_ELEMENT_SPEC_KEY]: spec, [CASE_ELEMENTS_KEY]: spec.map((x) => x.key), [CASE_ELEMENT_RANGE_KEY]: rangeOf(e) }
           : e
       )
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseCfg.enabled, interactive, readonly, activeCase, entries]);
+
 
   // Vorgegebener Messfall: Messungen automatisch anlegen, solange nichts erfasst ist.
   useEffect(() => {

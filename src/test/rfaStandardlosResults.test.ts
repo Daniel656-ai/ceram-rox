@@ -80,3 +80,84 @@ describe("Standardlos/Oberfläche: Ergebnisse speichern und anzeigen", () => {
     expect(isPositiveMeasurement("")).toBe(false);
   });
 });
+
+/**
+ * Messfälle ohne gepflegten Elementbereich: „Standardlos“/„Oberfläche“ – auch
+ * als Messung der Messfallsteuerung „Externe Analyse“ – erzeugen immer die 17
+ * Standardelemente und danach die zusätzlich gemessenen Elemente (> 0).
+ */
+describe("Standardlos/Oberfläche ohne gepflegten Elementbereich", () => {
+  const childDefs = [{ field_key: "import", field_type: "measurement_import", role: "value" as const }];
+  const run = (c: CaseTemplate, extra: Record<string, unknown>) => {
+    const entry = buildEntriesFromCase(c, childDefs as any)[0];
+    Object.assign(entry, extra);
+    return buildLinkedFormResultCandidates("f1", [block, importField], [], {
+      "form:f1:messungen": [entry],
+    }).filter((x) => x.official);
+  };
+  const measured = {
+    [elementValueKey("SiO2")]: 8.2,
+    [elementValueKey("As")]: 452,
+    [elementValueKey("Rb")]: 0.014,
+    [elementValueKey("SrO")]: 0.049,
+    [elementValueKey("ZrO2")]: 0.31,
+    [elementValueKey("Tl")]: 0.002,
+    [elementValueKey("Cr2O3")]: 0,
+  };
+  const first17 = [
+    "SiO2", "Al2O3", "Fe2O3", "TiO2", "CaO", "MgO", "BaO", "Na2O", "K2O",
+    "SO3", "P2O5", "V2O5", "WO3", "MoO3", "As", "Pb", "Nb",
+  ];
+
+  it("Messfall „RFA – Standardlos“ ohne Bereich: 17 fest + zusätzliche > 0", () => {
+    const official = run(
+      { id: "c1", name: "RFA – Standardlos", element_range: null, elements: [], instances: [{ id: "i1", label: "Messung", context: {} }] },
+      measured,
+    );
+    expect(official.slice(0, 17).map((c) => c.key.split("element:")[1])).toEqual(first17);
+    expect(official.slice(17).map((c) => c.label)).toEqual(["Rb", "SrO", "ZrO₂", "Tl"]);
+  });
+
+  it("Messfall „RFA – Oberfläche“ ohne Bereich verhält sich gleich", () => {
+    const official = run(
+      { id: "c2", name: "RFA – Oberfläche", element_range: null, elements: [], instances: [{ id: "i1", label: "Messung", context: {} }] },
+      measured,
+    );
+    expect(official).toHaveLength(21);
+  });
+
+  it("„Externe Analyse“: nur die Messung „Standardlos“ ist dynamisch, „Kalibriert“ nicht", () => {
+    const externe: CaseTemplate = {
+      id: "c3", name: "Externe Analyse", element_range: null,
+      elements: [{ element_key: "SiO2", is_official: true }, { element_key: "Al2O3", is_official: true }],
+      instances: [
+        { id: "i1", label: "Standardlos", context: {} },
+        { id: "i2", label: "Kalibriert", context: {} },
+      ],
+    };
+    const entries = buildEntriesFromCase(externe, childDefs as any);
+    Object.assign(entries[0], measured);
+    Object.assign(entries[1], { [elementValueKey("SiO2")]: 8.2, [elementValueKey("Rb")]: 0.014 });
+    const official = buildLinkedFormResultCandidates("f1", [block, importField], [], {
+      "form:f1:messungen": entries,
+    }).filter((c) => c.official);
+    const std = official.filter((c) => c.instanceLabel === "Standardlos");
+    const kal = official.filter((c) => c.instanceLabel === "Kalibriert");
+    expect(std.slice(0, 17).map((c) => c.key.split("element:")[1])).toEqual(first17);
+    expect(std.slice(17).map((c) => c.label)).toEqual(["Rb", "SrO", "ZrO₂", "Tl"]);
+    // Kalibriert bleibt bei der konfigurierten Ergebnisliste
+    expect(kal.map((c) => c.label)).toEqual(["SiO2", "Al2O3"]);
+  });
+
+  it("Qualitätskontrolle bleibt unverändert bei ihrer konfigurierten Liste", () => {
+    const official = run(
+      {
+        id: "c4", name: "RFA – Qualitätskontrolle", element_range: null,
+        elements: ["SiO2", "Al2O3", "Fe2O3", "TiO2", "CaO", "MgO", "V2O5"].map((k) => ({ element_key: k, is_official: true })),
+        instances: [{ id: "i1", label: "Messung", context: {} }],
+      },
+      measured,
+    );
+    expect(official).toHaveLength(7);
+  });
+});

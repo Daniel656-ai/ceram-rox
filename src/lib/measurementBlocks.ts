@@ -14,6 +14,7 @@
  */
 import type { FormField } from "@/lib/api/formFields";
 import { elementKey } from "@/lib/elementKeys";
+import { effectiveElementRange } from "@/lib/rfaFixedElements";
 
 export const INSTANCE_ID_KEY = "__instance_id";
 export const INSTANCE_LABEL_KEY = "__label";
@@ -182,10 +183,12 @@ export function readInstances(
       context,
       values,
       elementSpec: readCaseElementSpec(e[CASE_ELEMENT_SPEC_KEY]),
+      // Ohne gepflegten Bereich entscheidet die Bezeichnung der Messung
+      // („Standardlos“, „Oberfläche“ – auch aus der Messfallsteuerung).
       elementRange:
         typeof e[CASE_ELEMENT_RANGE_KEY] === "string" && (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
           ? (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
-          : null,
+          : effectiveElementRange(null, [explicit], Object.values(context)),
       index,
     };
 
@@ -410,6 +413,23 @@ export function caseElementSpec(caseDef: CaseTemplate): CaseElementSpec[] {
 }
 
 /**
+ * Wirksamer Elementbereich einer einzelnen Messung eines Messfalls.
+ * „Standardlos“/„Oberfläche“ erhalten auch dann den dynamischen Bereich, wenn
+ * am Messfall nichts gepflegt ist – egal ob die Bezeichnung am Messfall selbst
+ * oder an der Messung („Externe Analyse“ → „Standardlos“) steht.
+ */
+export function caseElementRangeFor(
+  caseDef: CaseTemplate,
+  inst?: CaseTemplate["instances"][number] | null
+): string | null {
+  return effectiveElementRange(
+    caseDef.element_range,
+    [caseDef.name, inst?.label, inst?.method],
+    Object.values(inst?.context ?? {})
+  );
+}
+
+/**
  * Erzeugt die Einträge des Messblocks aus einem Messfall. Kontextwerte werden
  * – wo vorhanden – in echte Kontext-Unterfelder geschrieben, sonst in den
  * generischen Kontextspeicher der Instanz.
@@ -434,7 +454,7 @@ export function buildEntriesFromCase(
       // Ausschließlich die Ergebnisliste des Messfalls. Der Messkontext bzw.
       // eine Import-Unterkategorie bestimmt die Ergebnisse NIEMALS.
       [CASE_ELEMENTS_KEY]: spec.map((s) => s.key),
-      [CASE_ELEMENT_RANGE_KEY]: caseDef.element_range?.trim() || null,
+      [CASE_ELEMENT_RANGE_KEY]: caseElementRangeFor(caseDef, inst),
 
 
       [CASE_CURVE_KEY]: hasCurveConfig(readCaseCurveConfig(inst.curve_config))
