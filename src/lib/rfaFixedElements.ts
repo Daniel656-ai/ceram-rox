@@ -13,7 +13,7 @@
  */
 
 import type { CaseElementSpec } from "@/lib/measurementBlocks";
-import { elementKey, elementSortValue, formatElementKey } from "@/lib/elementKeys";
+import { elementKey, elementLibrary, elementSortValue, formatElementKey } from "@/lib/elementKeys";
 
 /** Feste Ergebnisstruktur (Position 1–17) inklusive originaler Einheit. */
 export const RFA_FIXED_ELEMENTS: ReadonlyArray<{ key: string; unit: string }> = [
@@ -86,10 +86,12 @@ export function orderElementResults<T extends { display_label?: string | null; r
     v.toLowerCase()
       .replace(/[\u2080-\u2089]/g, (c) => String(c.charCodeAt(0) - 0x2080))
       .replace(/[^a-z0-9]/g, "");
+  const known = new Set(elementLibrary.map((e) => e.key));
   const rank = (r: T): number | null => {
     const label = (r.display_label || r.result_name || "").trim();
     const key = elementKey(label);
-    if (!key || norm(key) !== norm(label)) return null;
+    // Nur Elemente der globalen Elementbibliothek werden umsortiert.
+    if (!key || norm(key) !== norm(label) || !known.has(key)) return null;
     const fixed = RFA_FIXED_ELEMENTS.findIndex((e) => e.key === key);
     return fixed >= 0 ? fixed : 1000 + elementSortValue(key);
   };
