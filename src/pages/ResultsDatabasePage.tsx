@@ -494,7 +494,9 @@ export default function ResultsDatabasePage() {
             Ergebnisdatenbank
           </h1>
           <p className="text-muted-foreground">
-            {filteredRecords.length} von {records.length} Messungen mit offiziellem Ergebnis
+            {isLoading
+              ? "Ergebnisse werden geladen …"
+              : `${filteredRecords.length} von ${records.length} Messungen mit offiziellem Ergebnis`}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Die Ergebnisdatenbank zeigt ausschließlich Ergebnisse an, die ausdrücklich als
