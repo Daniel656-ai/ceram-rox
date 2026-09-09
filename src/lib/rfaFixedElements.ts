@@ -138,10 +138,13 @@ export function orderElementResults<T extends { display_label?: string | null; r
   const rank = (r: T): number | null => {
     const label = (r.display_label || r.result_name || "").trim();
     const key = elementKey(label);
+    // Bezeichnungen ohne Element-Schlüssel (z. B. „Porenvolumen“) bleiben
+    // unverändert an ihrer Position.
+    if (!key) return null;
     // Nur Elemente der globalen Elementbibliothek werden umsortiert.
     const looksChemical =
       known.has(key) || (key.length <= 6 && !/[a-z]{3}/.test(label));
-    if (!key || norm(key) !== norm(label) || !looksChemical) return null;
+    if (norm(key) !== norm(label) || !looksChemical) return null;
     const fixed = RFA_FIXED_ELEMENTS.findIndex((e) => e.key === key);
     return fixed >= 0 ? fixed : 1000 + elementSortValue(key);
   };
