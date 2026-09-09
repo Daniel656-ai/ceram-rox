@@ -13,7 +13,7 @@
  */
 
 import type { CaseElementSpec } from "@/lib/measurementBlocks";
-import { formatElementKey } from "@/lib/elementKeys";
+import { elementKey, elementSortValue, formatElementKey } from "@/lib/elementKeys";
 
 /** Feste Ergebnisstruktur (Position 1–17) inklusive originaler Einheit. */
 export const RFA_FIXED_ELEMENTS: ReadonlyArray<{ key: string; unit: string }> = [
@@ -69,5 +69,36 @@ export function withFixedRfaElements(spec: CaseElementSpec[]): CaseElementSpec[]
       : { key, label: formatElementKey(key), official: true, unit };
   });
   for (const s of spec) if (configured.has(s.key)) out.push(s);
+  return out;
+}
+
+/**
+ * Reihenfolge der Ergebnisse für Anzeige/Export: erst die 17 Standardelemente
+ * in fester Reihenfolge, danach weitere Elemente nach Ordnungszahl. Nicht-
+ * chemische Ergebnisse behalten ihre bisherige Position – bestehende
+ * Ergebnisdarstellungen ändern sich dadurch nicht.
+ */
+export function orderElementResults<T extends { display_label?: string | null; result_name: string }>(
+  rows: T[],
+): T[] {
+  const rank = (r: T): number | null => {
+    const label = (r.display_label || r.result_name || "").trim();
+    const key = elementKey(label) ?? elementKey(label.split(".").pop() ?? "");
+    if (!key) return null;
+    const fixed = RFA_FIXED_ELEMENTS.findIndex((e) => e.key === key);
+    return fixed >= 0 ? fixed : 1000 + elementSortValue(key);
+  };
+  const slots: number[] = [];
+  const elements: Array<{ row: T; rank: number }> = [];
+  rows.forEach((row, i) => {
+    const r = rank(row);
+    if (r == null) return;
+    slots.push(i);
+    elements.push({ row, rank: r });
+  });
+  if (elements.length < 2) return rows;
+  elements.sort((a, b) => a.rank - b.rank);
+  const out = [...rows];
+  slots.forEach((slot, i) => { out[slot] = elements[i].row; });
   return out;
 }

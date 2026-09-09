@@ -88,6 +88,8 @@ export function expandByMeasurementInstance(records: ResultRecord[]): ResultReco
   return out;
 }
 
+import { orderElementResults } from "@/lib/rfaFixedElements";
+
 export function useResultsDatabase() {
   const { user, role } = useAuth();
 
@@ -171,7 +173,9 @@ export function useResultsDatabase() {
           // Nur ausdrücklich als „Offizielles Ergebnis" freigegebene Werte
           // gehören in die Ergebnisdatenbank – alle anderen Formularwerte und
           // Messwerte bleiben ausschließlich in den Arbeitsansichten sichtbar.
-          outputResults: (m.measurement_results || []).filter((r: any) => r.is_official === true),
+          outputResults: orderElementResults(
+            (m.measurement_results || []).filter((r: any) => r.is_official === true)
+          ),
           remarks: order?.notes || "",
         };
       });
