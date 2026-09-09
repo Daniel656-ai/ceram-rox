@@ -183,10 +183,12 @@ export function readInstances(
       context,
       values,
       elementSpec: readCaseElementSpec(e[CASE_ELEMENT_SPEC_KEY]),
+      // Ohne gepflegten Bereich entscheidet die Bezeichnung der Messung
+      // („Standardlos“, „Oberfläche“ – auch aus der Messfallsteuerung).
       elementRange:
         typeof e[CASE_ELEMENT_RANGE_KEY] === "string" && (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
           ? (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
-          : null,
+          : effectiveElementRange(null, explicit, ...Object.values(context)),
       index,
     };
 

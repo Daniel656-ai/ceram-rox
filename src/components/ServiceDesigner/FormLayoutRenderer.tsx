@@ -475,8 +475,15 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   /** Elementbereich des Messfalls (z. B. Standardlos „B-U“). */
   const caseRange = useMemo(() => {
     const v = read(CASE_ELEMENT_RANGE_KEY);
-    return typeof v === "string" && v.trim() ? v.trim() : null;
-  }, [read]);
+    if (typeof v === "string" && v.trim()) return v.trim();
+    // Altbestand ohne gepflegten Bereich: Bezeichnung der Messung entscheidet.
+    const ctx = read(INSTANCE_CONTEXT_KEY);
+    return effectiveElementRange(
+      null,
+      instanceLabel,
+      ...(ctx && typeof ctx === "object" ? Object.values(ctx as Record<string, unknown>) : [])
+    );
+  }, [read, instanceLabel]);
 
   const instanceProfile = read(IMPORT_PROFILE_KEY);
   const effectiveProfileId =
