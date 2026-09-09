@@ -37,7 +37,7 @@ const CHART_COLORS = [
 ];
 
 export default function ResultsDatabasePage() {
-  const { data: records = [], isLoading, error } = useResultsDatabase();
+  const { data: records = [], isLoading } = useResultsDatabase();
   const { data: paramDefs = [] } = useAllServiceParameterDefs();
 
   /**
@@ -481,9 +481,14 @@ export default function ResultsDatabasePage() {
 
 
 
-  // Die Oberfläche erscheint sofort; die Ergebnisse werden anschließend
-  // nachgeladen (Ladehinweis bzw. Fehlermeldung direkt im Inhalt).
-
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-[400px]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -494,9 +499,7 @@ export default function ResultsDatabasePage() {
             Ergebnisdatenbank
           </h1>
           <p className="text-muted-foreground">
-            {isLoading
-              ? "Ergebnisse werden geladen …"
-              : `${filteredRecords.length} von ${records.length} Messungen mit offiziellem Ergebnis`}
+            {filteredRecords.length} von {records.length} Messungen mit offiziellem Ergebnis
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Die Ergebnisdatenbank zeigt ausschließlich Ergebnisse an, die ausdrücklich als
@@ -517,16 +520,6 @@ export default function ResultsDatabasePage() {
           </Button>
         </div>
       </div>
-
-      {/* Ergebnisse konnten nicht geladen werden – nie stillschweigend leer bleiben. */}
-      {error && (
-        <Card className="border-destructive">
-          <CardContent className="py-4 text-sm text-destructive">
-            Die Ergebnisse konnten nicht geladen werden: {(error as Error)?.message || "Unbekannter Fehler"}
-          </CardContent>
-        </Card>
-      )}
-      {isLoading && <Skeleton className="h-24" />}
 
       {/* Filters */}
       <Card>

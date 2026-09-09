@@ -138,8 +138,6 @@ export function orderElementResults<T extends { display_label?: string | null; r
   const rank = (r: T): number | null => {
     const label = (r.display_label || r.result_name || "").trim();
     const key = elementKey(label);
-    // Bezeichnungen ohne Element-Schlüssel (z. B. „Porenvolumen“) bleiben
-    // unverändert an ihrer Position.
     if (!key) return null;
     // Nur Elemente der globalen Elementbibliothek werden umsortiert.
     const looksChemical =

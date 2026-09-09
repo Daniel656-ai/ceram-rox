@@ -66,10 +66,13 @@ describe("Standardlos/Oberfläche: Ergebnisse speichern und anzeigen", () => {
   it("Nicht-chemische Ergebnisse bleiben an ihrer Position", () => {
     const rows = [
       { result_name: "x", display_label: "Feuchte" },
+      { result_name: "y", display_label: "Porenvolumen (Mittelwert)" },
       { result_name: "b", display_label: "Al2O3" },
       { result_name: "a", display_label: "SiO2" },
     ];
-    expect(orderElementResults(rows).map((r) => r.display_label)).toEqual(["Feuchte", "SiO2", "Al2O3"]);
+    expect(orderElementResults(rows).map((r) => r.display_label)).toEqual([
+      "Feuchte", "Porenvolumen (Mittelwert)", "SiO2", "Al2O3",
+    ]);
   });
 
   it("Wert-Prüfung erfolgt numerisch", () => {
@@ -159,17 +162,5 @@ describe("Standardlos/Oberfläche ohne gepflegten Elementbereich", () => {
       measured,
     );
     expect(official).toHaveLength(7);
-  });
-});
-
-describe("Sortierung der Ergebnisse", () => {
-  it("nicht-chemische Bezeichnungen ohne Element-Schlüssel führen zu keinem Fehler", () => {
-    const rows = [
-      { result_name: "porenvolumen", display_label: "Porenvolumen (Mittelwert)" },
-      { result_name: "feuchte", display_label: "Feuchte" },
-    ];
-    expect(orderElementResults(rows).map((r) => r.display_label)).toEqual([
-      "Porenvolumen (Mittelwert)", "Feuchte",
-    ]);
   });
 });

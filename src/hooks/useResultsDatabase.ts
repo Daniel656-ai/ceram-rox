@@ -186,12 +186,6 @@ export function useResultsDatabase() {
 
     },
     enabled: !!user,
-    // Die Ergebnisdatenbank ändert sich nicht sekündlich: bereits geladene
-    // Daten werden wiederverwendet, statt bei jedem Öffnen neu zu laden.
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    retry: 1,
   });
 }
 
