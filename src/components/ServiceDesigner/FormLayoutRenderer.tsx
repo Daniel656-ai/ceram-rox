@@ -698,6 +698,9 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
               count: meta.count,
               source: meta.source ?? null,
               keys: Object.keys(values),
+              // Einheiten des Imports je Zielfeld – Grundlage für Ergebnisse
+              // ohne eigenes Formularfeld (dynamische Elemente).
+              units: meta.units ?? {},
               unassigned: meta.unassigned ?? [],
               metadata: meta.metadata ?? [],
               // Rohdaten bleiben getrennt von Ergebnissen; hier nur der Nachweis,

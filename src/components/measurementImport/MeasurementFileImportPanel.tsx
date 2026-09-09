@@ -54,6 +54,8 @@ export interface FileImportMeta {
   hasCurves?: boolean;
   /** Gespeicherte Signal-/Achsenzuordnung des Messtechnikers. */
   signalMapping?: CurveSignalMapping | null;
+  /** Einheit je übernommenem Zielfeld – bleibt originalgetreu erhalten. */
+  units?: Record<string, string | null>;
 
 }
 
@@ -268,6 +270,7 @@ export default function MeasurementFileImportPanel({
 
   const apply = async () => {
     const values: Record<string, number | string> = {};
+    const units: Record<string, string | null> = {};
     const unmapped: string[] = [];
     const unassignedValues: UnassignedMeasurementValue[] = [];
     for (const r of rows) {
@@ -287,6 +290,7 @@ export default function MeasurementFileImportPanel({
       if (!selected[r.normalizedName]) continue;
       if (r.value == null) continue;
       values[r.targetFieldKey] = r.value;
+      units[r.targetFieldKey] = r.unit ?? r.targetUnit ?? null;
     }
     const info = measurement?.sampleInformation;
     const metadata: ImportMetadataEntry[] = [
@@ -344,6 +348,7 @@ export default function MeasurementFileImportPanel({
       datasetId: savedDatasetId,
       hasCurves,
       signalMapping: hasCurves && measurement ? buildSignalMapping(measurement) : null,
+      units,
     });
   };
 

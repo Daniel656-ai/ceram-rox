@@ -296,6 +296,7 @@ export default function MeasurementImportDialog({
                       datasetId: meta.datasetId ?? null,
                       hasCurves: meta.hasCurves ?? false,
                       signalMapping: (meta.signalMapping ?? null) as any,
+                      units: meta.units,
                     });
                     onOpenChange(false);
                   }}
