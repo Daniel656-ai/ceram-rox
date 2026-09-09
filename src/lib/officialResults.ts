@@ -93,8 +93,10 @@ export function buildLinkedFormResultCandidates(
         const ek = fieldElementKey(c as any);
         if (ek && !byElement.has(ek)) byElement.set(ek, c);
       }
-      const spec = instance.elementSpec;
       const range = parseElementRange(instance.elementRange);
+      // Bereichs-Messfälle („Standardlos“, „Oberfläche“): feste 17er-Struktur
+      // zuerst, danach dynamisch die tatsächlich gemessenen Elemente (> 0).
+      const spec = range ? withFixedRfaElements(instance.elementSpec) : instance.elementSpec;
       const usedIds = new Set<string>();
       const usedElementKeys = new Set<string>();
 
