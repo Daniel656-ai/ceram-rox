@@ -42,6 +42,40 @@ export function fixedElementUnit(key: string): string | null {
 }
 
 /**
+ * Standardbereich der dynamischen RFA-Messfälle. Er wird nur verwendet, wenn
+ * am Messfall kein eigener Elementbereich gepflegt ist.
+ */
+export const DEFAULT_RFA_ELEMENT_RANGE = "B-U";
+
+/** Bezeichnungen, die einen dynamischen RFA-Messfall kennzeichnen. */
+const DYNAMIC_RFA_PATTERN = /standard\s*-?\s*los|oberfl(ä|ae)che/i;
+
+/**
+ * Erkennt „Standardlos“ bzw. „Oberfläche“ – auch dann, wenn die Bezeichnung
+ * aus der Messfallsteuerung stammt (z. B. Messfall „Externe Analyse“ mit der
+ * Messung „Standardlos“). „Kalibrierte Elemente“ und „Qualitätskontrolle“
+ * werden bewusst NICHT erfasst.
+ */
+export function isDynamicRfaScope(...texts: Array<unknown>): boolean {
+  return texts.some((t) => typeof t === "string" && DYNAMIC_RFA_PATTERN.test(t));
+}
+
+/**
+ * Wirksamer Elementbereich einer Messung: gepflegter Bereich des Messfalls,
+ * sonst der Standardbereich für „Standardlos“/„Oberfläche“. Alle anderen
+ * Messfälle behalten ihre feste Ergebnisliste (kein Bereich).
+ */
+export function effectiveElementRange(
+  configured: string | null | undefined,
+  ...texts: Array<unknown>
+): string | null {
+  const explicit = typeof configured === "string" ? configured.trim() : "";
+  if (explicit) return explicit;
+  return isDynamicRfaScope(...texts) ? DEFAULT_RFA_ELEMENT_RANGE : null;
+}
+
+
+/**
  * Numerischer Messwert > 0? Die Prüfung erfolgt immer auf dem Zahlenwert,
  * niemals auf dem formatierten Anzeigetext („0,000“ ist nicht > 0).
  */
