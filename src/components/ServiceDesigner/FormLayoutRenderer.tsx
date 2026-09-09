@@ -10,7 +10,7 @@ import {
   readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
   CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, CASE_CURVE_KEY, CASE_ELEMENTS_KEY,
   readCaseCurveConfig, hasCurveConfig, type CaseTemplate,
-  CASE_ELEMENT_SPEC_KEY, CASE_ELEMENT_RANGE_KEY, caseElementSpec, readCaseElementSpec, elementFromValueKey,
+  CASE_ELEMENT_SPEC_KEY, CASE_ELEMENT_RANGE_KEY, caseElementSpec, caseElementRangeFor, readCaseElementSpec, elementFromValueKey,
 } from "@/lib/measurementBlocks";
 import { buildCaseTargets } from "@/lib/measurementImport";
 
