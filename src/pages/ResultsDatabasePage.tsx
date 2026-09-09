@@ -481,14 +481,9 @@ export default function ResultsDatabasePage() {
 
 
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-[400px]" />
-      </div>
-    );
-  }
+  // Die Oberfläche erscheint sofort; die Ergebnisse werden anschließend
+  // nachgeladen (Ladehinweis bzw. Fehlermeldung direkt im Inhalt).
+
 
   return (
     <div className="space-y-6">
