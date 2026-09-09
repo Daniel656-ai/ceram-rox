@@ -1389,21 +1389,26 @@ function MeasurementBlockField({
   useEffect(() => {
     if (!caseCfg.enabled || !interactive || readonly || !activeCase || entries.length === 0) return;
     const spec = caseElementSpec(activeCase);
-    const range = (activeCase as CaseTemplate).element_range?.trim() || null;
+    const rangeOf = (e: Record<string, any>) =>
+      caseElementRangeFor(
+        activeCase,
+        activeCase.instances.find((i) => i.id === e?.[CASE_INSTANCE_KEY]) ?? null
+      );
     const same = (e: Record<string, any>) =>
       JSON.stringify(e?.[CASE_ELEMENT_SPEC_KEY] ?? []) === JSON.stringify(spec) &&
-      ((e?.[CASE_ELEMENT_RANGE_KEY] ?? null) || null) === range;
+      ((e?.[CASE_ELEMENT_RANGE_KEY] ?? null) || null) === rangeOf(e);
     const relevant = entries.filter((e) => e?.[CASE_ID_KEY] === activeCase.id);
     if (relevant.length === 0 || relevant.every(same)) return;
     updateEntries(
       entries.map((e) =>
         e?.[CASE_ID_KEY] === activeCase.id
-          ? { ...e, [CASE_ELEMENT_SPEC_KEY]: spec, [CASE_ELEMENTS_KEY]: spec.map((x) => x.key), [CASE_ELEMENT_RANGE_KEY]: range }
+          ? { ...e, [CASE_ELEMENT_SPEC_KEY]: spec, [CASE_ELEMENTS_KEY]: spec.map((x) => x.key), [CASE_ELEMENT_RANGE_KEY]: rangeOf(e) }
           : e
       )
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseCfg.enabled, interactive, readonly, activeCase, entries]);
+
 
   // Vorgegebener Messfall: Messungen automatisch anlegen, solange nichts erfasst ist.
   useEffect(() => {
