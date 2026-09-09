@@ -37,7 +37,7 @@ const CHART_COLORS = [
 ];
 
 export default function ResultsDatabasePage() {
-  const { data: records = [], isLoading } = useResultsDatabase();
+  const { data: records = [], isLoading, error } = useResultsDatabase();
   const { data: paramDefs = [] } = useAllServiceParameterDefs();
 
   /**
