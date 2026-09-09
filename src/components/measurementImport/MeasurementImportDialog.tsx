@@ -42,6 +42,8 @@ export interface ImportApplyMeta {
   hasCurves?: boolean;
   /** Signal-/Achsenzuordnung des Messtechnikers. */
   signalMapping?: Record<string, unknown> | null;
+  /** Einheit je übernommenem Zielfeld (z. B. „element:Rb“ → „%“, As → „ppm“). */
+  units?: Record<string, string | null>;
 }
 
 interface Props {
@@ -193,10 +195,13 @@ export default function MeasurementImportDialog({
 
   const apply = () => {
     const values: Record<string, number | string | null> = {};
+    // Die Einheit des Imports bleibt erhalten (As/Pb in PPM ≠ Prozentwerte).
+    const units: Record<string, string | null> = {};
     for (const r of assigned) {
       const v = outputValue(r);
       if (v == null) continue;
       values[r.targetFieldKey as string] = v;
+      units[r.targetFieldKey as string] = r.unit ?? r.targetUnit ?? null;
     }
     // Echte Messwerte ohne Zielfeld gehen nicht verloren – sie werden als
     // „nicht zugeordnet“ mitgeführt und können später zugeordnet werden.
