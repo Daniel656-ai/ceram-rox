@@ -8,6 +8,7 @@
 import type { ImportMapping, MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import { canonicalParameter, splitNameUnit } from "@/lib/measurementClassification";
 import { elementKey, fieldElementKey, formatElementKey, parseElementRange, elementInRange } from "@/lib/elementKeys";
+import { withFixedRfaElements } from "@/lib/rfaFixedElements";
 import { elementValueKey, elementFromValueKey } from "@/lib/measurementBlocks";
 
 export type DecimalSeparator = "auto" | "," | ".";
@@ -309,13 +310,18 @@ export function buildCaseTargets(
     if (ek && !byElement.has(ek)) byElement.set(ek, t);
   }
   const out: TargetCandidate[] = [];
-  for (const s of spec) {
+  for (const s of spec2) {
     const k = elementKey(s.key) ?? s.key;
     const t = byElement.get(k);
     out.push(
       t
         ? { ...t, element_key: k }
-        : { field_key: elementValueKey(k), display_name: s.label || formatElementKey(k), unit: null, element_key: k }
+        : {
+            field_key: elementValueKey(k),
+            display_name: s.label || formatElementKey(k),
+            unit: s.unit ?? null,
+            element_key: k,
+          }
     );
   }
   for (const t of formTargets) if (!targetElementKey(t)) out.push(t);
