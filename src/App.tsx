@@ -22,6 +22,7 @@ import AdminServiceDesignerPage from "./pages/AdminServiceDesignerPage";
 import AdminServicePackagesPage from "./pages/AdminServicePackagesPage";
 import PortfoliosPage from "./pages/PortfoliosPage";
 import ProductionReleasesPage from "./pages/ProductionReleasesPage";
+import ProductionDocumentsPage from "./pages/ProductionDocumentsPage";
 import ProductionReleaseDetailPage from "./pages/ProductionReleaseDetailPage";
 import PortfolioDetailPage from "./pages/PortfolioDetailPage";
 import AdminWorkPackageCategoriesPage from "./pages/AdminWorkPackageCategoriesPage";
@@ -100,7 +101,8 @@ const App = () => (
               <Route path="/projekte/:id" element={<ProjectDetailPage />} />
               <Route path="/portfolios" element={<PortfoliosPage />} />
               <Route path="/portfolios/:id" element={<PortfolioDetailPage />} />
-              <Route path="/fertigungsfreigaben" element={<ProductionReleasesPage />} />
+              <Route path="/fertigungsunterlagen" element={<ProductionDocumentsPage />} />
+              <Route path="/fertigungsfreigaben" element={<Navigate to="/fertigungsunterlagen" replace />} />
               <Route path="/fertigungsfreigaben/:id" element={<ProductionReleaseDetailPage />} />
               <Route path="/proben" element={<SamplesPage />} />
               <Route path="/proben/:id" element={<SampleDetailPage />} />

@@ -36,6 +36,7 @@ import { ProcessOrderTabs } from "@/components/workflow/ProcessOrderTabs";
 import CompletedResultForm from "@/components/CompletedResultForm";
 import OrderResultsOverview from "@/components/OrderResultsOverview";
 import OrderHeaderSummary from "@/components/order/OrderHeaderSummary";
+import OrderProductionDocuments from "@/components/order/OrderProductionDocuments";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -303,6 +304,8 @@ function OrderDetailPageInner() {
       )}
 
       <OrderHeaderSummary order={order} creatorName={creatorName} />
+
+      <OrderProductionDocuments order={order} />
 
       {order.notes && (
         <Card>

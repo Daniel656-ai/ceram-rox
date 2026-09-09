@@ -77,7 +77,7 @@ export function AppSidebar() {
     { title: "Projektportfolio", url: "/portfolios", icon: Briefcase, show: hasPerm("portfolios.view") || role === "master", nav: "nav.portfolios" },
     // Sichtbarkeit über Berechtigung + Navigationsfreigabe; Master sieht den
     // Punkt auch dann, wenn die neue Navigationsfreigabe noch nicht gesetzt ist.
-    { title: "Fertigungsfreigaben", url: "/fertigungsfreigaben", icon: FileCheck2, show: (hasPerm("production_releases.view") || hasPerm("production_releases.create") || role === "master") && (role === "master" || hasNavPerm("nav.production_releases")), nav: null as string | null },
+    { title: "Fertigungsunterlagen", url: "/fertigungsunterlagen", icon: FileCheck2, show: (hasPerm("production_releases.view") || hasPerm("production_releases.create") || role === "master") && (role === "master" || hasNavPerm("nav.production_releases")), nav: null as string | null },
     { title: t("navigation:samples"), url: "/proben", icon: FlaskConical, show: hasPerm("samples.view") || hasPerm("samples.create"), nav: "nav.samples" },
     { title: t("navigation:results_database"), url: "/ergebnisse", icon: Database, show: hasPerm("measurements.view") || hasPerm("samples.view"), nav: "nav.results_database" },
     { title: t("navigation:raw_materials"), url: "/rohstoffe", icon: Gem, show: hasPerm("raw_materials.manage") || hasPerm("samples.view"), nav: "nav.raw_materials" },

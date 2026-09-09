@@ -5609,6 +5609,66 @@ export type Database = {
         }
         Relationships: []
       }
+      production_document_requests: {
+        Row: {
+          based_on_release_id: string | null
+          completed_at: string | null
+          created_at: string
+          doc_kind: string
+          id: string
+          missing: Json
+          notes: string | null
+          order_id: string
+          requested_at: string
+          requested_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          based_on_release_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          doc_kind: string
+          id?: string
+          missing?: Json
+          notes?: string | null
+          order_id: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          based_on_release_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          doc_kind?: string
+          id?: string
+          missing?: Json
+          notes?: string | null
+          order_id?: string
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_document_requests_based_on_release_id_fkey"
+            columns: ["based_on_release_id"]
+            isOneToOne: false
+            referencedRelation: "production_releases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_document_requests_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_release_changes: {
         Row: {
           confidence: string
@@ -5954,6 +6014,7 @@ export type Database = {
           module_material: string | null
           module_numbering: string | null
           normal_modules: number | null
+          order_id: string | null
           packaging: string | null
           piece_count: number | null
           previous_release_id: string | null
@@ -6031,6 +6092,7 @@ export type Database = {
           module_material?: string | null
           module_numbering?: string | null
           normal_modules?: number | null
+          order_id?: string | null
           packaging?: string | null
           piece_count?: number | null
           previous_release_id?: string | null
@@ -6108,6 +6170,7 @@ export type Database = {
           module_material?: string | null
           module_numbering?: string | null
           normal_modules?: number | null
+          order_id?: string | null
           packaging?: string | null
           piece_count?: number | null
           previous_release_id?: string | null
@@ -6164,6 +6227,13 @@ export type Database = {
             columns: ["form_definition_id"]
             isOneToOne: false
             referencedRelation: "form_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_releases_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_orders"
             referencedColumns: ["id"]
           },
           {
