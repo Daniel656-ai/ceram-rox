@@ -181,6 +181,7 @@ import { systemContext } from "./systemContext";
 import { workflowContext } from "./workflowContext";
 import { orderPreparation } from "./orderPreparation";
 import { productionReleases, customers } from "./productionReleases";
+import { productionDocuments } from "./productionDocuments";
 
 
 
@@ -370,6 +371,7 @@ export const api = {
 
   // ---- Fertigungsfreigaben & Kundenstamm ----
   productionReleases,
+  productionDocuments,
   customers,
 
 
