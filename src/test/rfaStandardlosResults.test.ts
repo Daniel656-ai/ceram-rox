@@ -161,3 +161,15 @@ describe("Standardlos/Oberfläche ohne gepflegten Elementbereich", () => {
     expect(official).toHaveLength(7);
   });
 });
+
+describe("Sortierung der Ergebnisse", () => {
+  it("nicht-chemische Bezeichnungen ohne Element-Schlüssel führen zu keinem Fehler", () => {
+    const rows = [
+      { result_name: "porenvolumen", display_label: "Porenvolumen (Mittelwert)" },
+      { result_name: "feuchte", display_label: "Feuchte" },
+    ];
+    expect(orderElementResults(rows).map((r) => r.display_label)).toEqual([
+      "Porenvolumen (Mittelwert)", "Feuchte",
+    ]);
+  });
+});
