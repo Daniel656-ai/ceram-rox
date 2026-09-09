@@ -6,6 +6,7 @@ import { evaluateFormula } from "@/lib/formulaEngine";
 import {
   fieldElementKey, formatElementKey, parseElementRange, elementInRange, elementSortValue,
 } from "@/lib/elementKeys";
+import { withFixedRfaElements, isPositiveMeasurement } from "@/lib/rfaFixedElements";
 import {
   readResultConditions, collectResultConditions, buildConditionLabel, conditionsToContext,
 } from "@/lib/fieldLinks";
@@ -93,8 +94,10 @@ export function buildLinkedFormResultCandidates(
         const ek = fieldElementKey(c as any);
         if (ek && !byElement.has(ek)) byElement.set(ek, c);
       }
-      const spec = instance.elementSpec;
       const range = parseElementRange(instance.elementRange);
+      // Bereichs-Messfälle („Standardlos“, „Oberfläche“): feste 17er-Struktur
+      // zuerst, danach dynamisch die tatsächlich gemessenen Elemente (> 0).
+      const spec = range ? withFixedRfaElements(instance.elementSpec) : instance.elementSpec;
       const usedIds = new Set<string>();
       const usedElementKeys = new Set<string>();
 
@@ -118,7 +121,7 @@ export function buildLinkedFormResultCandidates(
           label: child
             ? child.result_label || child.display_name || child.field_key
             : item.label || formatElementKey(item.key),
-          unit: (child as any)?.unit ?? null,
+          unit: (child as any)?.unit ?? item.unit ?? null,
           value,
           official: item.official,
         });
@@ -132,13 +135,15 @@ export function buildLinkedFormResultCandidates(
         for (const [k, v] of Object.entries(instance.values)) {
           const el = elementFromValueKey(k);
           if (!el || usedElementKeys.has(el) || !elementInRange(el, range)) continue;
-          if (v == null || v === "") continue;
+          // Nur tatsächlich gemessene Elemente (> 0) werden Ergebnisfelder.
+          if (!isPositiveMeasurement(v)) continue;
           dyn.push({ key: el, child: null });
         }
         for (const child of valueChildren) {
           if (usedIds.has(child.id)) continue;
           const ek = fieldElementKey(child as any);
           if (!ek || usedElementKeys.has(ek) || !elementInRange(ek, range)) continue;
+          if (!isPositiveMeasurement(instance.values[child.field_key])) continue;
           usedIds.add(child.id);
           dyn.push({ key: ek, child });
         }

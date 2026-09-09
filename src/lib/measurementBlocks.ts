@@ -333,6 +333,8 @@ export interface CaseElementSpec {
   key: string;
   label: string;
   official: boolean;
+  /** Originale Einheit des Ergebnisfeldes (z. B. „%“, „ppm“), sofern bekannt. */
+  unit?: string | null;
 }
 
 /** Liest die Ergebnisliste eines Messfalls aus einem Messblock-Eintrag. */

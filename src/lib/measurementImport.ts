@@ -8,6 +8,7 @@
 import type { ImportMapping, MeasurementImportProfile } from "@/lib/api/measurementImportProfiles";
 import { canonicalParameter, splitNameUnit } from "@/lib/measurementClassification";
 import { elementKey, fieldElementKey, formatElementKey, parseElementRange, elementInRange } from "@/lib/elementKeys";
+import { withFixedRfaElements } from "@/lib/rfaFixedElements";
 import { elementValueKey, elementFromValueKey } from "@/lib/measurementBlocks";
 
 export type DecimalSeparator = "auto" | "," | ".";
@@ -281,12 +282,20 @@ export function targetElementKey(t: TargetCandidate): string | null {
  * Ohne Messfall-Liste bleibt die Formularliste unverändert.
  */
 export function buildCaseTargets(
-  spec: Array<{ key: string; label?: string | null }>,
+  spec: Array<{ key: string; label?: string | null; unit?: string | null }>,
   formTargets: TargetCandidate[],
   elementRange?: string | null
 ): TargetCandidate[] {
-  if (!spec.length) {
-    const range = parseElementRange(elementRange);
+  const parsedRange = parseElementRange(elementRange);
+  // Bereichs-Messfall („Standardlos“, „Oberfläche“): die 17 Standardelemente
+  // sind immer Ziele – in fester Reihenfolge, unabhängig vom Import.
+  const effective = parsedRange
+    ? withFixedRfaElements(
+        spec.map((s) => ({ key: s.key, label: s.label ?? s.key, official: true, unit: s.unit ?? null }))
+      )
+    : spec;
+  if (!effective.length) {
+    const range = parsedRange;
     if (!range) return formTargets;
     // Bereichs-Messfall: Elementfelder nur innerhalb des Bereichs.
     return formTargets.filter((t) => {
@@ -294,19 +303,25 @@ export function buildCaseTargets(
       return !ek || elementInRange(ek, range);
     });
   }
+  const spec2 = effective;
   const byElement = new Map<string, TargetCandidate>();
   for (const t of formTargets) {
     const ek = targetElementKey(t);
     if (ek && !byElement.has(ek)) byElement.set(ek, t);
   }
   const out: TargetCandidate[] = [];
-  for (const s of spec) {
+  for (const s of spec2) {
     const k = elementKey(s.key) ?? s.key;
     const t = byElement.get(k);
     out.push(
       t
         ? { ...t, element_key: k }
-        : { field_key: elementValueKey(k), display_name: s.label || formatElementKey(k), unit: null, element_key: k }
+        : {
+            field_key: elementValueKey(k),
+            display_name: s.label || formatElementKey(k),
+            unit: s.unit ?? null,
+            element_key: k,
+          }
     );
   }
   for (const t of formTargets) if (!targetElementKey(t)) out.push(t);
