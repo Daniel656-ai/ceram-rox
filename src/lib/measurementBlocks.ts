@@ -14,6 +14,7 @@
  */
 import type { FormField } from "@/lib/api/formFields";
 import { elementKey } from "@/lib/elementKeys";
+import { effectiveElementRange } from "@/lib/rfaFixedElements";
 
 export const INSTANCE_ID_KEY = "__instance_id";
 export const INSTANCE_LABEL_KEY = "__label";
