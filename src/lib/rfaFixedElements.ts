@@ -51,6 +51,12 @@ export const DEFAULT_RFA_ELEMENT_RANGE = "B-U";
 const DYNAMIC_RFA_PATTERN = /standard\s*-?\s*los|oberfl(ä|ae)che/i;
 
 /**
+ * Im Messkontext (z. B. Präparation „Oberfläche“) darf nur die eindeutige
+ * Bezeichnung „Standardlos“ die dynamische Elementlogik auslösen.
+ */
+const DYNAMIC_RFA_CONTEXT_PATTERN = /standard\s*-?\s*los/i;
+
+/**
  * Erkennt „Standardlos“ bzw. „Oberfläche“ – auch dann, wenn die Bezeichnung
  * aus der Messfallsteuerung stammt (z. B. Messfall „Externe Analyse“ mit der
  * Messung „Standardlos“). „Kalibrierte Elemente“ und „Qualitätskontrolle“
@@ -60,18 +66,26 @@ export function isDynamicRfaScope(...texts: Array<unknown>): boolean {
   return texts.some((t) => typeof t === "string" && DYNAMIC_RFA_PATTERN.test(t));
 }
 
+/** Wie `isDynamicRfaScope`, aber nur für eindeutige Kontextangaben. */
+export function isDynamicRfaContext(...texts: Array<unknown>): boolean {
+  return texts.some((t) => typeof t === "string" && DYNAMIC_RFA_CONTEXT_PATTERN.test(t));
+}
+
 /**
  * Wirksamer Elementbereich einer Messung: gepflegter Bereich des Messfalls,
- * sonst der Standardbereich für „Standardlos“/„Oberfläche“. Alle anderen
- * Messfälle behalten ihre feste Ergebnisliste (kein Bereich).
+ * sonst der Standardbereich für „Standardlos“/„Oberfläche“. Namen von Messfall
+ * und Messung entscheiden breit, Kontextwerte nur bei „Standardlos“.
  */
 export function effectiveElementRange(
   configured: string | null | undefined,
-  ...texts: Array<unknown>
+  names: Array<unknown>,
+  contextValues: Array<unknown> = []
 ): string | null {
   const explicit = typeof configured === "string" ? configured.trim() : "";
   if (explicit) return explicit;
-  return isDynamicRfaScope(...texts) ? DEFAULT_RFA_ELEMENT_RANGE : null;
+  return isDynamicRfaScope(...names) || isDynamicRfaContext(...contextValues)
+    ? DEFAULT_RFA_ELEMENT_RANGE
+    : null;
 }
 
 
