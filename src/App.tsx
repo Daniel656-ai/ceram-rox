@@ -137,7 +137,7 @@ const App = () => (
                     <ResultsDatabasePage />
                   </Suspense>
                 }
-              />>
+              />
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
               <Route path="/rohstoffe/scan" element={<ContainerScanPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
