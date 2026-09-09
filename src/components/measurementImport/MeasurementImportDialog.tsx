@@ -224,6 +224,7 @@ export default function MeasurementImportDialog({
       count: Object.keys(values).length,
       unassigned: keep,
       metadata: metadataRows,
+      units,
     });
     onOpenChange(false);
   };
