@@ -13,6 +13,7 @@ import {
   CASE_ELEMENT_SPEC_KEY, CASE_ELEMENT_RANGE_KEY, caseElementSpec, caseElementRangeFor, readCaseElementSpec, elementFromValueKey,
 } from "@/lib/measurementBlocks";
 import { buildCaseTargets } from "@/lib/measurementImport";
+import { effectiveElementRange } from "@/lib/rfaFixedElements";
 
 
 import {
