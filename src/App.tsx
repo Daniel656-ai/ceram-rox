@@ -1,3 +1,5 @@
+import { lazy, Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -37,7 +39,9 @@ import AdminCompanySettingsPage from "./pages/AdminCompanySettingsPage";
 import CalendarPage from "./pages/CalendarPage";
 import SamplesPage from "./pages/SamplesPage";
 import SampleDetailPage from "./pages/SampleDetailPage";
-import ResultsDatabasePage from "./pages/ResultsDatabasePage";
+// Die Ergebnisdatenbank bringt umfangreiche Diagramm-/Exportbibliotheken mit.
+// Sie wird erst beim Öffnen der Seite geladen, damit die Oberfläche schnell erscheint.
+const ResultsDatabasePage = lazy(() => import("./pages/ResultsDatabasePage"));
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import RawMaterialDetailPage from "./pages/RawMaterialDetailPage";
 import ContainerScanPage from "./pages/ContainerScanPage";
@@ -126,7 +130,14 @@ const App = () => (
               <Route path="/admin/ap-kategorien" element={<AdminWorkPackageCategoriesPage />} />
 
               <Route path="/kalender" element={<CalendarPage />} />
-              <Route path="/ergebnisse" element={<ResultsDatabasePage />} />
+              <Route
+                path="/ergebnisse"
+                element={
+                  <Suspense fallback={<div className="space-y-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-[400px]" /></div>}>
+                    <ResultsDatabasePage />
+                  </Suspense>
+                }
+              />>
               <Route path="/rohstoffe" element={<RawMaterialsPage />} />
               <Route path="/rohstoffe/scan" element={<ContainerScanPage />} />
               <Route path="/rohstoffe/:id" element={<RawMaterialDetailPage />} />
