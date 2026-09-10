@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart } from "lucide-react";
 import CurveViewer from "./CurveViewer";
+import BjhChartsPanel from "./BjhChartsPanel";
+
 import CurvePointEvaluations from "./CurvePointEvaluations";
 
 interface Props {
@@ -108,7 +110,9 @@ export default function MeasurementCurvesCard({ measurementId }: Props) {
               Kontrolle der gespeicherten Rohdaten und Signalzuordnung. Die Auswertung
               erfolgt später im Auftrag durch den Auftragsersteller.
             </p>
+            <BjhChartsPanel dataset={dataset} />
             <CurveViewer dataset={dataset} defaults={defaults} markers={markers} />
+
             <CurvePointEvaluations
               datasetId={currentId}
               dataset={dataset}

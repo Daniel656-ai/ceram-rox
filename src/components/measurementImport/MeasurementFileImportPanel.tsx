@@ -14,6 +14,8 @@ import { AlertTriangle, FileUp, Info } from "lucide-react";
 import type { ImportMetadataEntry, UnassignedMeasurementValue } from "@/lib/measurementClassification";
 import { toast } from "sonner";
 import CurveViewer, { type CurveSelection } from "@/components/curves/CurveViewer";
+import BjhChartsPanel from "@/components/curves/BjhChartsPanel";
+
 import CurveEvaluationPanel, { type CurveEvaluationProvenance } from "@/components/curves/CurveEvaluationPanel";
 import { api } from "@/lib/api";
 import type { CurveSignalMapping } from "@/lib/api/measurementRawData";
