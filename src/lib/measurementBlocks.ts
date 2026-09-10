@@ -13,7 +13,7 @@
  * nutzbar – der Import schreibt weiterhin in den Eintrags-Scope.
  */
 import type { FormField } from "@/lib/api/formFields";
-import { elementKey } from "@/lib/elementKeys";
+import { elementKey, formatElementKey } from "@/lib/elementKeys";
 import { effectiveElementRange } from "@/lib/rfaFixedElements";
 
 export const INSTANCE_ID_KEY = "__instance_id";
