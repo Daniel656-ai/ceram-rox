@@ -441,12 +441,31 @@ export const productionReleases = {
 
   async addChanges(releaseId: string, rows: ProductionReleaseChange[]): Promise<void> {
     if (!rows.length) return;
+    // `id` bewusst nicht mitsenden (auch nicht als `undefined`), damit der
+    // UUID-Default der Tabelle greift.
     await run(
-      db
-        .from("production_release_changes")
-        .insert(rows.map((r) => ({ ...r, id: undefined, release_id: releaseId })))
+      db.from("production_release_changes").insert(
+        rows.map((r) => ({
+          release_id: releaseId,
+          scope: r.scope ?? "field",
+          field_key: r.field_key,
+          field_label: r.field_label ?? null,
+          old_value: r.old_value ?? null,
+          new_value: r.new_value ?? null,
+          detection: r.detection,
+          confidence: r.confidence,
+          status: r.status,
+          page: r.page ?? null,
+          note: r.note ?? null,
+          evidence: r.evidence ?? {},
+          resolved_value: r.resolved_value ?? null,
+          reviewed_by: r.reviewed_by ?? null,
+          reviewed_at: r.reviewed_at ?? null,
+        }))
+      )
     );
   },
+
 
   async updateChange(id: string, values: Partial<ProductionReleaseChange>): Promise<void> {
     await run(db.from("production_release_changes").update(values).eq("id", id));
@@ -487,12 +506,28 @@ export const productionReleases = {
   ): Promise<void> {
     await run(db.from("production_release_test_parameters").delete().eq("release_id", releaseId));
     if (!rows.length) return;
+    // Wichtig: `id` (und andere von der Datenbank verwaltete Spalten) NICHT
+    // mitsenden – auch nicht als `undefined`. Der Client füllt fehlende
+    // Schlüssel bei Mehrfach-Inserts sonst mit `null` auf und verhindert damit
+    // den vorhandenen UUID-Default der Tabelle (Fehler 23502).
     await run(
-      db
-        .from("production_release_test_parameters")
-        .insert(rows.map((r, i) => ({ ...r, id: undefined, release_id: releaseId, sort_order: r.sort_order ?? i })))
+      db.from("production_release_test_parameters").insert(
+        rows.map((r, i) => ({
+          release_id: releaseId,
+          section: r.section,
+          section_label: r.section_label ?? null,
+          parameter_key: r.parameter_key,
+          parameter_label: r.parameter_label ?? null,
+          value_num: r.value_num ?? null,
+          value_text: r.value_text ?? null,
+          unit: r.unit ?? null,
+          sort_order: r.sort_order ?? i,
+          source_type: r.source_type ?? "pdf",
+        }))
+      )
     );
   },
+
 
   // ---- Vorgabensätze (typabhängig, je Revision) -----------------------------
   async specSets(releaseId: string): Promise<ProductionReleaseSpecSet[]> {
