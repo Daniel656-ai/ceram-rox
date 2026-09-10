@@ -305,15 +305,22 @@ function TaskExecutionPageInner() {
 
 
       if (typeof raw === "string" || typeof raw === "number") {
-        const num = typeof raw === "number" ? raw : parseFloat(raw);
-        if (typeof raw === "number" || (!isNaN(num) && String(num) === String(raw).trim())) {
-          payload.value = num;
+        if (typeof raw === "number") {
+          payload.value = raw;
         } else {
-          payload.remarks = String(raw);
+          // Zahlenwerte aus Messdatenimporten kommen auch in deutscher
+          // Schreibweise („0,293“). Sie müssen als Zahl gespeichert werden,
+          // sonst fehlen sie in der Ergebnisdatenbank.
+          const text = raw.trim();
+          const numeric = /^[+-]?(\d+([.,]\d+)?|[.,]\d+)([eE][+-]?\d+)?$/.test(text);
+          const num = numeric ? parseFloat(text.replace(",", ".")) : NaN;
+          if (numeric && !isNaN(num)) payload.value = num;
+          else payload.remarks = raw;
         }
       } else {
         payload.remarks = JSON.stringify(raw);
       }
+
 
       const prev = existingByName.get(resultName);
       if (prev) {
