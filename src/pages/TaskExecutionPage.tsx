@@ -390,6 +390,33 @@ function TaskExecutionPageInner() {
     }
   };
 
+  /**
+   * Direkt nach einem Messdatenimport werden die erkannten Ergebnisse sofort
+   * über den bestehenden Ergebnispfad (`persistResults`) gespeichert. Dadurch
+   * entsteht genau eine Datenquelle: dieselben Ergebnisse erscheinen im
+   * Auftrag und in der Ergebnisdatenbank, ohne zusätzlichen Speichern-Klick.
+   */
+  const [persistRequest, setPersistRequest] = useState(0);
+  const handledPersist = useRef(0);
+  useEffect(() => {
+    if (persistRequest === 0 || handledPersist.current === persistRequest) return;
+    handledPersist.current = persistRequest;
+    void (async () => {
+      try {
+        await persistResults();
+        toast.success("Importierte Ergebnisse gespeichert");
+        qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
+        qc.invalidateQueries({ queryKey: ["measurement-results"] });
+        qc.invalidateQueries({ queryKey: ["results-database"] });
+      } catch (err: any) {
+        toast.error("Ergebnisse konnten nicht gespeichert werden", {
+          description: err?.message,
+        });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistRequest, values]);
+
   const handleSaveDraft = async () => {
     setSubmitting(true);
     try {
