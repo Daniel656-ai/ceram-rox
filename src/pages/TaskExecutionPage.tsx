@@ -200,9 +200,15 @@ function TaskExecutionPageInner() {
 
   const persistResults = async (requireOfficialCalculations = false) => {
     if (!measurementId) return;
-    const existing = ((measurement as any).measurement_results ?? []) as any[];
+    // Immer den aktuellen Stand der gespeicherten Ergebnisse lesen: nach einem
+    // Import direkt gefolgt vom Speichern wäre eine Momentaufnahme veraltet und
+    // würde Ergebnisse doppelt anlegen.
+    const existing = ((await api.measurementResults.list(measurementId)) ??
+      (measurement as any).measurement_results ??
+      []) as any[];
     const existingByName = new Map(existing.map((r) => [r.result_name, r]));
     const measuredAt = new Date().toISOString().slice(0, 10);
+
 
     // Fetch authoritative definitions at save time. Completion must never
     // depend on whether a metadata query or a calculation render effect has
