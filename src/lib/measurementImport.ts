@@ -310,8 +310,13 @@ export function buildCaseTargets(
     if (ek && !byElement.has(ek)) byElement.set(ek, t);
   }
   const out: TargetCandidate[] = [];
+  // Derselbe chemische Parameter darf nur EIN Ziel besitzen – unabhängig
+  // davon, in welcher Schreibweise er im Messfall gepflegt wurde.
+  const usedKeys = new Set<string>();
   for (const s of spec2) {
     const k = elementKey(s.key) ?? s.key;
+    if (usedKeys.has(k)) continue;
+    usedKeys.add(k);
     const t = byElement.get(k);
     out.push(
       t
@@ -324,8 +329,10 @@ export function buildCaseTargets(
           }
     );
   }
-  for (const t of formTargets) if (!targetElementKey(t)) out.push(t);
+  const usedFieldKeys = new Set(out.map((t) => t.field_key));
+  for (const t of formTargets) if (!targetElementKey(t) && !usedFieldKeys.has(t.field_key)) out.push(t);
   return out;
+
 }
 
 /** Virtuelle Ziele für dynamisch zugeordnete Bereichs-Elemente ergänzen (Anzeige). */
