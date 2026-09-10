@@ -14,6 +14,8 @@ import { AlertTriangle, FileUp, Info } from "lucide-react";
 import type { ImportMetadataEntry, UnassignedMeasurementValue } from "@/lib/measurementClassification";
 import { toast } from "sonner";
 import CurveViewer, { type CurveSelection } from "@/components/curves/CurveViewer";
+import BjhChartsPanel from "@/components/curves/BjhChartsPanel";
+
 import CurveEvaluationPanel, { type CurveEvaluationProvenance } from "@/components/curves/CurveEvaluationPanel";
 import { api } from "@/lib/api";
 import type { CurveSignalMapping } from "@/lib/api/measurementRawData";
@@ -526,11 +528,13 @@ export default function MeasurementFileImportPanel({
                 Zuordnung wird mit den Rohdaten gespeichert. Ein fertiges Diagramm oder eine
                 Auswertung ist hier nicht erforderlich – das erfolgt später im Auftrag.
               </p>
+              <BjhChartsPanel dataset={measurement.dataset} />
               <CurveViewer
                 dataset={measurement.dataset}
                 defaults={curveDefaults ?? undefined}
                 onSelectionChange={setSelection}
               />
+
               {enableEvaluation && (
                 <CurveEvaluationPanel
                   dataset={measurement.dataset}
