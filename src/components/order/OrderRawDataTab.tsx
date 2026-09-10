@@ -111,14 +111,28 @@ export default function OrderRawDataTab({ orderId, canEvaluate }: { orderId: str
   }
 
   return (
-    <Card className="border-0 shadow-none">
+    <div className="space-y-6">
+      {/* Fertige Auswertung: automatisch erkannt, ohne manuelle Diagrammerstellung. */}
+      <Card className="border-0 shadow-none">
+        <CardHeader className="px-0 py-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <LineChart className="h-4 w-4" /> Messergebnisse
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-0">
+          <MeasurementAnalysisResults datasets={datasets as any} />
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-none">
       <CardHeader className="px-0 py-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <LineChart className="h-4 w-4" /> Rohdaten &amp; Auswertung
+          <LineChart className="h-4 w-4" /> Rohdaten &amp; Detailauswertung
         </CardTitle>
       </CardHeader>
       <CardContent className="px-0 space-y-4">
         <Select value={currentId} onValueChange={(v) => { setActiveId(v); setSelection(null); }}>
+
           <SelectTrigger className="h-8 max-w-2xl"><SelectValue /></SelectTrigger>
           <SelectContent>
             {datasets.map((d: any) => (
