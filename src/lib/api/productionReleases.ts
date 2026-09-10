@@ -487,12 +487,28 @@ export const productionReleases = {
   ): Promise<void> {
     await run(db.from("production_release_test_parameters").delete().eq("release_id", releaseId));
     if (!rows.length) return;
+    // Wichtig: `id` (und andere von der Datenbank verwaltete Spalten) NICHT
+    // mitsenden – auch nicht als `undefined`. Der Client füllt fehlende
+    // Schlüssel bei Mehrfach-Inserts sonst mit `null` auf und verhindert damit
+    // den vorhandenen UUID-Default der Tabelle (Fehler 23502).
     await run(
-      db
-        .from("production_release_test_parameters")
-        .insert(rows.map((r, i) => ({ ...r, id: undefined, release_id: releaseId, sort_order: r.sort_order ?? i })))
+      db.from("production_release_test_parameters").insert(
+        rows.map((r, i) => ({
+          release_id: releaseId,
+          section: r.section,
+          section_label: r.section_label ?? null,
+          parameter_key: r.parameter_key,
+          parameter_label: r.parameter_label ?? null,
+          value_num: r.value_num ?? null,
+          value_text: r.value_text ?? null,
+          unit: r.unit ?? null,
+          sort_order: r.sort_order ?? i,
+          source_type: r.source_type ?? "pdf",
+        }))
+      )
     );
   },
+
 
   // ---- Vorgabensätze (typabhängig, je Revision) -----------------------------
   async specSets(releaseId: string): Promise<ProductionReleaseSpecSet[]> {
