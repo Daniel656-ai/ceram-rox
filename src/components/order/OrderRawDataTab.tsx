@@ -12,6 +12,8 @@ import CurvePointEvaluations from "@/components/curves/CurvePointEvaluations";
 import { downloadText, rawDataCsv, evaluationCsv, exportEvaluationPdf } from "@/lib/curves/export";
 import CurveViewer, { type CurveSelection } from "@/components/curves/CurveViewer";
 import CurveEvaluationPanel from "@/components/curves/CurveEvaluationPanel";
+import MeasurementAnalysisResults from "@/components/curves/MeasurementAnalysisResults";
+
 
 /**
  * Auswertung der Rohdaten durch den Auftragsersteller.
@@ -244,6 +246,8 @@ export default function OrderRawDataTab({ orderId, canEvaluate }: { orderId: str
           </div>
         )}
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
+
 }
