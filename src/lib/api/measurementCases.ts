@@ -1,5 +1,32 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { elementKey } from "@/lib/elementKeys";
+
+/**
+ * Kanonische Ergebnisliste eines Messfalls: unterschiedliche Schreibweisen
+ * desselben chemischen Parameters („K2O“ / „K₂O“) werden auf denselben
+ * Schlüssel abgebildet; jeder Parameter erscheint genau einmal.
+ */
+const canonicalElements = <T extends { element_key: string; is_official?: boolean }>(
+  rows: T[]
+): T[] => {
+  const out: T[] = [];
+  const byKey = new Map<string, T>();
+  for (const row of rows) {
+    const key = elementKey(row.element_key) ?? String(row.element_key ?? "").trim();
+    if (!key) continue;
+    const prev = byKey.get(key);
+    if (prev) {
+      if (row.is_official) (prev as any).is_official = true;
+      continue;
+    }
+    const next = { ...row, element_key: key };
+    byKey.set(key, next);
+    out.push(next);
+  }
+  return out;
+};
+
 
 /**
  * Messfall / Analyseschema.
