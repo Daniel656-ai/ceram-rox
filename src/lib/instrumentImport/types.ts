@@ -15,6 +15,7 @@ export type Confidence = "high" | "medium" | "low";
 
 export type AnalysisType =
   | "BET"
+  | "BJH"
   | "BJH_ADSORPTION"
   | "BJH_DESORPTION"
   | "LANGMUIR"

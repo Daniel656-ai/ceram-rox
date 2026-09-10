@@ -208,6 +208,7 @@ export function mapImportedResults(
 export const analysisLabel = (t: ImportedResult["analysis"]) => {
   switch (t) {
     case "BET": return "BET";
+    case "BJH": return "BJH";
     case "BJH_ADSORPTION": return "BJH Adsorption";
     case "BJH_DESORPTION": return "BJH Desorption";
     case "LANGMUIR": return "Langmuir";
