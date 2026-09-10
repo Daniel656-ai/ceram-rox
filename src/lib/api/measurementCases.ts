@@ -1,5 +1,32 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { elementKey } from "@/lib/elementKeys";
+
+/**
+ * Kanonische Ergebnisliste eines Messfalls: unterschiedliche Schreibweisen
+ * desselben chemischen Parameters („K2O“ / „K₂O“) werden auf denselben
+ * Schlüssel abgebildet; jeder Parameter erscheint genau einmal.
+ */
+const canonicalElements = <T extends { element_key: string; is_official?: boolean }>(
+  rows: T[]
+): T[] => {
+  const out: T[] = [];
+  const byKey = new Map<string, T>();
+  for (const row of rows) {
+    const key = elementKey(row.element_key) ?? String(row.element_key ?? "").trim();
+    if (!key) continue;
+    const prev = byKey.get(key);
+    if (prev) {
+      if (row.is_official) (prev as any).is_official = true;
+      continue;
+    }
+    const next = { ...row, element_key: key };
+    byKey.set(key, next);
+    out.push(next);
+  }
+  return out;
+};
+
 
 /**
  * Messfall / Analyseschema.
@@ -84,9 +111,12 @@ export const measurementCases = {
       instances: ((r.measurement_case_instances ?? []) as MeasurementCaseInstance[])
         .slice()
         .sort((a, b) => a.position - b.position),
-      elements: ((r.measurement_case_elements ?? []) as MeasurementCaseElement[])
-        .slice()
-        .sort((a, b) => a.position - b.position),
+      elements: canonicalElements(
+        ((r.measurement_case_elements ?? []) as MeasurementCaseElement[])
+          .slice()
+          .sort((a, b) => a.position - b.position)
+      ),
+
     })) as MeasurementCase[];
   },
 
@@ -116,41 +146,56 @@ export const measurementCases = {
 
   removeInstance: (id: string) => run(dbClient.from(INSTANCES).delete().eq("id", id)),
 
-  /** Ergebnis-Elemente eines Messfalls (sortiert). */
+  /** Ergebnis-Elemente eines Messfalls (sortiert, kanonische Schlüssel). */
   listElements: async (caseId: string): Promise<MeasurementCaseElement[]> =>
-    ((await unwrap(
-      dbClient.from(ELEMENTS).select("*").eq("case_id", caseId).order("position", { ascending: true })
-    )) ?? []) as unknown as MeasurementCaseElement[],
+    canonicalElements(
+      ((await unwrap(
+        dbClient.from(ELEMENTS).select("*").eq("case_id", caseId).order("position", { ascending: true })
+      )) ?? []) as unknown as MeasurementCaseElement[]
+    ),
 
   /**
    * Ersetzt die Ergebnisliste eines Messfalls vollständig (Reihenfolge = Index).
-   * Bestehende Elemente bleiben über ihren Schlüssel erhalten.
+   * Bestehende Elemente bleiben über ihren Schlüssel erhalten. Schreibweisen
+   * werden auf den kanonischen Parameter abgebildet („K2O“ → „K2O“ = „K₂O“),
+   * damit derselbe chemische Parameter nur einmal geführt wird.
    */
   replaceElements: async (
     caseId: string,
     elements: Array<{ element_key: string; label?: string | null; is_official?: boolean }>
   ): Promise<void> => {
-    const keys = elements.map((e) => e.element_key);
+    const wanted = canonicalElements(
+      elements.map((e) => ({ ...e, is_official: e.is_official !== false }))
+    );
+    const keys = wanted.map((e) => e.element_key);
     const existing = (await unwrap(
       dbClient.from(ELEMENTS).select("id, element_key").eq("case_id", caseId)
     )) as unknown as Array<{ id: string; element_key: string }>;
+    const canon = (k: string) => elementKey(k) ?? String(k ?? "").trim();
+    // Ein bestehender Datensatz je kanonischem Parameter bleibt erhalten.
+    const keep = new Map<string, string>();
     for (const row of existing ?? []) {
-      if (!keys.includes(row.element_key)) await run(dbClient.from(ELEMENTS).delete().eq("id", row.id));
+      const k = canon(row.element_key);
+      if (keys.includes(k) && !keep.has(k)) keep.set(k, row.id);
     }
-    for (let i = 0; i < elements.length; i++) {
-      const e = elements[i];
-      const found = (existing ?? []).find((x) => x.element_key === e.element_key);
+    for (const row of existing ?? []) {
+      if (keep.get(canon(row.element_key)) !== row.id) {
+        await run(dbClient.from(ELEMENTS).delete().eq("id", row.id));
+      }
+    }
+    for (let i = 0; i < wanted.length; i++) {
+      const e = wanted[i];
+      const foundId = keep.get(e.element_key);
       const payload = {
+        element_key: e.element_key,
         label: e.label ?? null,
         position: i,
         is_official: e.is_official !== false,
         updated_at: new Date().toISOString(),
       };
-      if (found) await run(dbClient.from(ELEMENTS).update(payload as any).eq("id", found.id));
-      else
-        await run(
-          dbClient.from(ELEMENTS).insert({ case_id: caseId, element_key: e.element_key, ...payload } as any)
-        );
+      if (foundId) await run(dbClient.from(ELEMENTS).update(payload as any).eq("id", foundId));
+      else await run(dbClient.from(ELEMENTS).insert({ case_id: caseId, ...payload } as any));
     }
   },
+
 };

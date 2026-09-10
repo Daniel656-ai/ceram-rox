@@ -122,9 +122,13 @@ export function buildLinkedFormResultCandidates(
       // Fehlt ein Formularfeld für das Element, liegt der Wert direkt im
       // Messblock-Eintrag (`element:<Key>`).
       for (const item of spec) {
+        // Derselbe chemische Parameter darf pro Messung nur einmal als
+        // Ergebnis entstehen (K2O und K₂O sind derselbe Parameter).
+        if (usedElementKeys.has(item.key)) continue;
         const child = byElement.get(item.key);
         if (child) usedIds.add(child.id);
         usedElementKeys.add(item.key);
+
         const stored = instance.values[elementValueKey(item.key)];
         const childValue = child ? instance.values[child.field_key] : undefined;
         const value = childValue != null && childValue !== "" ? childValue : stored ?? null;
@@ -186,7 +190,9 @@ export function buildLinkedFormResultCandidates(
         if (usedIds.has(child.id)) continue;
         // Elementfelder außerhalb der Messfall-Liste sind erkannt/verfügbar,
         // aber niemals offizielles Ergebnis dieses Messfalls.
-        const isElement = (spec.length > 0 || !!range) && !!fieldElementKey(child as any);
+        const ek = fieldElementKey(child as any);
+        if (ek && usedElementKeys.has(ek)) continue; // bereits als Messfall-Ergebnis geführt
+        const isElement = (spec.length > 0 || !!range) && !!ek;
         instanceCandidates.push({
           ...base,
           key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
@@ -196,10 +202,29 @@ export function buildLinkedFormResultCandidates(
           official: isElement ? false : child.is_result === true,
         });
       }
+
+      // Importierte Elementwerte ohne Messfall-Zuordnung gehen nicht verloren:
+      // sie werden mitgespeichert (nicht offiziell), damit kein erkannter
+      // Messwert nur im Formular sichtbar bleibt.
+      for (const [k, v] of Object.entries(instance.values)) {
+        const el = elementFromValueKey(k);
+        if (!el || usedElementKeys.has(el)) continue;
+        if (v == null || v === "") continue;
+        usedElementKeys.add(el);
+        instanceCandidates.push({
+          ...base,
+          key: instanceResultKey(prefix, storageKey, instance.instanceId, elementValueKey(el)),
+          label: formatElementKey(el),
+          unit: unitFor(el, null),
+          value: v,
+          official: false,
+        });
+      }
+
     }
   }
 
-  return [
+  const all: OfficialResultCandidate[] = [
     ...fields
       .filter((field) => !blockChildIds.has(field.id) && field.field_type !== "measurement_block")
       .map((field) => {
@@ -231,7 +256,24 @@ export function buildLinkedFormResultCandidates(
       error: calculated[calculation.calc_key]?.error ?? null,
     })),
   ];
+
+  // Sicherheitsnetz: ein Ergebnisschlüssel erscheint genau einmal. Ein Wert
+  // gewinnt gegenüber einer leeren Position desselben Schlüssels.
+  const byKey = new Map<string, OfficialResultCandidate>();
+  const order: string[] = [];
+  for (const c of all) {
+    const prev = byKey.get(c.key);
+    if (!prev) { byKey.set(c.key, c); order.push(c.key); continue; }
+    const prevEmpty = prev.value == null || prev.value === "";
+    const nextEmpty = c.value == null || c.value === "";
+    byKey.set(c.key, {
+      ...(prevEmpty && !nextEmpty ? c : prev),
+      official: prev.official || c.official,
+    });
+  }
+  return order.map((k) => byKey.get(k)!);
 }
+
 
 
 /**

@@ -149,7 +149,7 @@ describe("Standardlos/Oberfläche ohne gepflegten Elementbereich", () => {
     expect(std.slice(0, 17).map((c) => c.key.split("element:")[1])).toEqual(first17);
     expect(std.slice(17).map((c) => c.label)).toEqual(["Rb", "SrO", "ZrO₂", "Tl"]);
     // Kalibriert bleibt bei der konfigurierten Ergebnisliste
-    expect(kal.map((c) => c.label)).toEqual(["SiO2", "Al2O3"]);
+    expect(kal.map((c) => c.label)).toEqual(["SiO₂", "Al₂O₃"]);
   });
 
   it("Qualitätskontrolle bleibt unverändert bei ihrer konfigurierten Liste", () => {

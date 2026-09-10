@@ -200,9 +200,15 @@ function TaskExecutionPageInner() {
 
   const persistResults = async (requireOfficialCalculations = false) => {
     if (!measurementId) return;
-    const existing = ((measurement as any).measurement_results ?? []) as any[];
+    // Immer den aktuellen Stand der gespeicherten Ergebnisse lesen: nach einem
+    // Import direkt gefolgt vom Speichern wäre eine Momentaufnahme veraltet und
+    // würde Ergebnisse doppelt anlegen.
+    const existing = ((await api.measurementResults.list(measurementId)) ??
+      (measurement as any).measurement_results ??
+      []) as any[];
     const existingByName = new Map(existing.map((r) => [r.result_name, r]));
     const measuredAt = new Date().toISOString().slice(0, 10);
+
 
     // Fetch authoritative definitions at save time. Completion must never
     // depend on whether a metadata query or a calculation render effect has
@@ -305,15 +311,22 @@ function TaskExecutionPageInner() {
 
 
       if (typeof raw === "string" || typeof raw === "number") {
-        const num = typeof raw === "number" ? raw : parseFloat(raw);
-        if (typeof raw === "number" || (!isNaN(num) && String(num) === String(raw).trim())) {
-          payload.value = num;
+        if (typeof raw === "number") {
+          payload.value = raw;
         } else {
-          payload.remarks = String(raw);
+          // Zahlenwerte aus Messdatenimporten kommen auch in deutscher
+          // Schreibweise („0,293“). Sie müssen als Zahl gespeichert werden,
+          // sonst fehlen sie in der Ergebnisdatenbank.
+          const text = raw.trim();
+          const numeric = /^[+-]?(\d+([.,]\d+)?|[.,]\d+)([eE][+-]?\d+)?$/.test(text);
+          const num = numeric ? parseFloat(text.replace(",", ".")) : NaN;
+          if (numeric && !isNaN(num)) payload.value = num;
+          else payload.remarks = raw;
         }
       } else {
         payload.remarks = JSON.stringify(raw);
       }
+
 
       const prev = existingByName.get(resultName);
       if (prev) {
