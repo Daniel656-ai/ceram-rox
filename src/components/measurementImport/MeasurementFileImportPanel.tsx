@@ -526,11 +526,13 @@ export default function MeasurementFileImportPanel({
                 Zuordnung wird mit den Rohdaten gespeichert. Ein fertiges Diagramm oder eine
                 Auswertung ist hier nicht erforderlich – das erfolgt später im Auftrag.
               </p>
+              <BjhChartsPanel dataset={measurement.dataset} />
               <CurveViewer
                 dataset={measurement.dataset}
                 defaults={curveDefaults ?? undefined}
                 onSelectionChange={setSelection}
               />
+
               {enableEvaluation && (
                 <CurveEvaluationPanel
                   dataset={measurement.dataset}
