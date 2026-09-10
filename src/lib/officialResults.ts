@@ -224,7 +224,7 @@ export function buildLinkedFormResultCandidates(
     }
   }
 
-  return [
+  const all: OfficialResultCandidate[] = [
     ...fields
       .filter((field) => !blockChildIds.has(field.id) && field.field_type !== "measurement_block")
       .map((field) => {
@@ -256,7 +256,24 @@ export function buildLinkedFormResultCandidates(
       error: calculated[calculation.calc_key]?.error ?? null,
     })),
   ];
+
+  // Sicherheitsnetz: ein Ergebnisschlüssel erscheint genau einmal. Ein Wert
+  // gewinnt gegenüber einer leeren Position desselben Schlüssels.
+  const byKey = new Map<string, OfficialResultCandidate>();
+  const order: string[] = [];
+  for (const c of all) {
+    const prev = byKey.get(c.key);
+    if (!prev) { byKey.set(c.key, c); order.push(c.key); continue; }
+    const prevEmpty = prev.value == null || prev.value === "";
+    const nextEmpty = c.value == null || c.value === "";
+    byKey.set(c.key, {
+      ...(prevEmpty && !nextEmpty ? c : prev),
+      official: prev.official || c.official,
+    });
+  }
+  return order.map((k) => byKey.get(k)!);
 }
+
 
 
 /**
