@@ -122,9 +122,13 @@ export function buildLinkedFormResultCandidates(
       // Fehlt ein Formularfeld für das Element, liegt der Wert direkt im
       // Messblock-Eintrag (`element:<Key>`).
       for (const item of spec) {
+        // Derselbe chemische Parameter darf pro Messung nur einmal als
+        // Ergebnis entstehen (K2O und K₂O sind derselbe Parameter).
+        if (usedElementKeys.has(item.key)) continue;
         const child = byElement.get(item.key);
         if (child) usedIds.add(child.id);
         usedElementKeys.add(item.key);
+
         const stored = instance.values[elementValueKey(item.key)];
         const childValue = child ? instance.values[child.field_key] : undefined;
         const value = childValue != null && childValue !== "" ? childValue : stored ?? null;
