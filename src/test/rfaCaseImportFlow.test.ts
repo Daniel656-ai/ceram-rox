@@ -7,7 +7,10 @@ import {
   buildCaseTargets, mapReadings, outputValue, openTargets, rowStatus, withDynamicTargets,
   type TargetCandidate,
 } from "@/lib/measurementImport";
-import { parseElementRange, elementInRange } from "@/lib/elementKeys";
+import { parseElementRange, elementInRange, formatElementKey } from "@/lib/elementKeys";
+
+/** Formularfelder behalten ihre Bezeichnung; Messfall-Elemente werden kanonisch angezeigt. */
+const disp = (k: string) => (["SiO2", "Al2O3", "Fe2O3"].includes(k) ? k : formatElementKey(k));
 import type { FormField } from "@/lib/api/formFields";
 
 /**
@@ -89,16 +92,16 @@ describe("RFA: Messfall → Import → Ergebnis (Akzeptanztests)", () => {
     expect(rows.filter((r) => rowStatus(r) === "assigned")).toHaveLength(7);
     expect(rows.filter((r) => rowStatus(r) === "not_needed")).toHaveLength(10);
     expect(official).toHaveLength(7);
-    expect(official.map((c) => c.label)).toEqual(QK);
+    expect(official.map((c) => c.label)).toEqual(QK.map(disp));
     expect(official.every((c) => c.value != null)).toBe(true);
     // Elemente ohne Formularfeld werden trotzdem gespeichert (element:<Key>)
-    expect(official.find((c) => c.label === "K2O")!.key).toContain(elementValueKey("K2O"));
+    expect(official.find((c) => c.label === "K₂O")!.key).toContain(elementValueKey("K2O"));
   });
 
   it("Test B: Kalibrierte Elemente 17, Import 17 → 17 Ergebnisse", () => {
     const { official } = runFlow(KAL, KAL);
     expect(official).toHaveLength(17);
-    expect(official.map((c) => c.label)).toEqual(KAL);
+    expect(official.map((c) => c.label)).toEqual(KAL.map(disp));
     expect(official.every((c) => c.value != null)).toBe(true);
   });
 
@@ -174,7 +177,7 @@ describe("RFA: Messfall → Import → Ergebnis (Akzeptanztests)", () => {
   it("Änderung im Messfall (7 → 8 Elemente) wirkt ohne Code-Änderung am Import", () => {
     const { official } = runFlow([...QK, "V2O5"], KAL);
     expect(official).toHaveLength(8);
-    expect(official.at(-1)!.label).toBe("V2O5");
+    expect(official.at(-1)!.label).toBe("V₂O₅");
   });
 
   it("Elementbereich: Leitelement entscheidet, Formate werden toleriert", () => {
