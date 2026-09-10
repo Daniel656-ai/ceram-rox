@@ -241,6 +241,12 @@ export default function ProductionReleasesPage() {
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={({ releaseId, isRevision, revisionNumber, pendingCount }) => {
+          // Erst NACH erfolgreicher Speicherung: bestehende Listen-Query
+          // invalidieren, damit die neue/aktualisierte Freigabe sofort
+          // erscheint – ohne Browser-Reload und ohne zweite Datenquelle.
+          queryClient.invalidateQueries({ queryKey: ["production-releases"] });
+          queryClient.invalidateQueries({ queryKey: ["production-release", releaseId] });
+          queryClient.invalidateQueries({ queryKey: ["production-release-revisions"] });
           toast.success(
             isRevision
               ? `Revision ${revisionNumber} angelegt – der bisherige Stand bleibt gültig, bis Sie die Revision freigeben.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen zuvor eine Prüfung.` : ""}`
