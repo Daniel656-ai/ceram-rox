@@ -111,9 +111,12 @@ export const measurementCases = {
       instances: ((r.measurement_case_instances ?? []) as MeasurementCaseInstance[])
         .slice()
         .sort((a, b) => a.position - b.position),
-      elements: ((r.measurement_case_elements ?? []) as MeasurementCaseElement[])
-        .slice()
-        .sort((a, b) => a.position - b.position),
+      elements: canonicalElements(
+        ((r.measurement_case_elements ?? []) as MeasurementCaseElement[])
+          .slice()
+          .sort((a, b) => a.position - b.position)
+      ),
+
     })) as MeasurementCase[];
   },
 
