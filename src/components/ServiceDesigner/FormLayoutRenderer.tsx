@@ -717,6 +717,10 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
               has_curves: meta.hasCurves ?? false,
               signal_mapping: meta.signalMapping ?? null,
             }));
+            // Importierte Ergebnisse sofort über den bestehenden Ergebnispfad
+            // dauerhaft speichern – dieselbe Datenquelle für Auftrag und
+            // Ergebnisdatenbank, ohne zusätzlichen Speichern-Klick.
+            runtime?.persistResults?.();
           }}
 
         />
