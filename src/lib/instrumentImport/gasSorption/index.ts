@@ -333,7 +333,11 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
   // vorhanden – Isothermen-Rohdaten werden immer aus ihr gelesen.
   const smp = binary || ext(file.name) === ".smp" ? extractSmp(file.buffer, lines) : null;
   const isotherm = smp?.isotherm.length ? smp.isotherm : readIsothermPoints(lines);
-  const dataset = isothermDataset(isotherm);
+
+  // Tabellenreport einer BJH-Auswertung: Kennwerte + Porengrößenverteilung.
+  const workbook = SPREADSHEET.includes(ext(file.name)) ? parseBjhWorkbook(file) : null;
+  const dataset = isothermDataset(isotherm) ?? workbook?.dataset ?? null;
+
 
   if (found.length === 0) {
     warnings.push(
