@@ -441,12 +441,31 @@ export const productionReleases = {
 
   async addChanges(releaseId: string, rows: ProductionReleaseChange[]): Promise<void> {
     if (!rows.length) return;
+    // `id` bewusst nicht mitsenden (auch nicht als `undefined`), damit der
+    // UUID-Default der Tabelle greift.
     await run(
-      db
-        .from("production_release_changes")
-        .insert(rows.map((r) => ({ ...r, id: undefined, release_id: releaseId })))
+      db.from("production_release_changes").insert(
+        rows.map((r) => ({
+          release_id: releaseId,
+          scope: r.scope ?? "field",
+          field_key: r.field_key,
+          field_label: r.field_label ?? null,
+          old_value: r.old_value ?? null,
+          new_value: r.new_value ?? null,
+          detection: r.detection,
+          confidence: r.confidence,
+          status: r.status,
+          page: r.page ?? null,
+          note: r.note ?? null,
+          evidence: r.evidence ?? {},
+          resolved_value: r.resolved_value ?? null,
+          reviewed_by: r.reviewed_by ?? null,
+          reviewed_at: r.reviewed_at ?? null,
+        }))
+      )
     );
   },
+
 
   async updateChange(id: string, values: Partial<ProductionReleaseChange>): Promise<void> {
     await run(db.from("production_release_changes").update(values).eq("id", id));
