@@ -122,7 +122,7 @@ export default function OrderRawDataTab({ orderId, canEvaluate }: { orderId: str
           </CardTitle>
         </CardHeader>
         <CardContent className="px-0">
-          <MeasurementAnalysisResults datasets={datasets as any} />
+          <MeasurementAnalysisResults datasets={datasets} />
         </CardContent>
       </Card>
 
