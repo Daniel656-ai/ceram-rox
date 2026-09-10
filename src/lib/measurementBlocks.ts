@@ -340,28 +340,50 @@ export interface CaseElementSpec {
   unit?: string | null;
 }
 
-/** Liest die Ergebnisliste eines Messfalls aus einem Messblock-Eintrag. */
+/**
+ * Liest die Ergebnisliste eines Messfalls aus einem Messblock-Eintrag.
+ * Unterschiedliche Schreibweisen desselben chemischen Parameters („K2O“ und
+ * „K₂O“) werden auf den kanonischen Schlüssel abgebildet und erscheinen nur
+ * EINMAL – sonst entstünden zwei Ergebnisse für denselben Parameter.
+ */
 export function readCaseElementSpec(raw: unknown): CaseElementSpec[] {
   if (!Array.isArray(raw)) return [];
   const out: CaseElementSpec[] = [];
+  const seen = new Map<string, CaseElementSpec>();
+  const add = (key: string, label: string | null, official: boolean) => {
+    const existing = seen.get(key);
+    // Kanonische Anzeige (tiefgestellte Ziffern), sofern keine eigene
+    // fachliche Bezeichnung gepflegt ist.
+    const isCustom = !!label && !elementKey(label);
+    const display = isCustom ? (label as string) : formatElementKey(key);
+    if (existing) {
+      if (isCustom) existing.label = display;
+      if (official) existing.official = true;
+      return;
+    }
+    const item: CaseElementSpec = { key, label: display, official };
+    seen.set(key, item);
+    out.push(item);
+  };
   for (const item of raw) {
     if (typeof item === "string") {
       const k = elementKey(item) ?? item.trim();
-      if (k) out.push({ key: k, label: k, official: true });
+      if (k) add(k, null, true);
       continue;
     }
     const o = (item ?? {}) as Record<string, unknown>;
     const rawKey = typeof o.key === "string" ? o.key : "";
     const k = elementKey(rawKey) ?? rawKey.trim();
     if (!k) continue;
-    out.push({
-      key: k,
-      label: typeof o.label === "string" && o.label.trim() ? o.label.trim() : k,
-      official: o.official !== false,
-    });
+    add(
+      k,
+      typeof o.label === "string" && o.label.trim() ? o.label.trim() : null,
+      o.official !== false
+    );
   }
   return out;
 }
+
 
 
 
