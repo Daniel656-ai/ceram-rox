@@ -15,6 +15,14 @@ export interface RuntimeMeasurementContext {
   serviceId?: string | null;
   /** public.profiles.id – nicht die Auth-Benutzer-ID. */
   profileId?: string | null;
+  /**
+   * Speichert die aktuell erfassten Formularwerte als offizielle Ergebnisse
+   * (`measurement_results`). Wird u. a. direkt nach einem Messdatenimport
+   * aufgerufen, damit importierte Ergebnisse ohne zusätzlichen Klick
+   * persistent sind und sofort im Auftrag und in der Ergebnisdatenbank
+   * erscheinen. Es entsteht dabei KEIN zweiter Speicherort.
+   */
+  persistResults?: () => void;
 }
 
 const Ctx = createContext<RuntimeMeasurementContext | null>(null);

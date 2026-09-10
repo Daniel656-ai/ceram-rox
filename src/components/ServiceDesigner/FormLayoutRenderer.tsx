@@ -106,6 +106,13 @@ const LocalCalcsCtx = createContext<FormCalculation[]>([]);
 const EntryScopeCtx = createContext<{
   get: (key: string) => any;
   set: (key: string, v: any) => void;
+  /**
+   * Mehrere Werte in EINEM Schreibvorgang. Notwendig für den Messdatenimport:
+   * Einzelaufrufe würden jeweils auf denselben (noch nicht aktualisierten)
+   * Eintrag angewandt, wodurch nur der zuletzt geschriebene Messwert erhalten
+   * bliebe.
+   */
+  setMany: (patch: Record<string, any>) => void;
 } | null>(null);
 
 const useBinding = (fieldKey: string) => {
@@ -251,6 +258,23 @@ const useScopeWriter = () => {
   const root = useContext(ValuesCtx);
   return useCallback(
     (key: string, v: any) => (entry ? entry.set(key, v) : root?.set(key, v)),
+    [entry, root]
+  );
+};
+
+/**
+ * Schreibt mehrere Werte gemeinsam. Innerhalb einer Messung (Messblock) ist das
+ * zwingend, damit ein Messdatenimport alle Messwerte behält und nicht nur den
+ * zuletzt geschriebenen Wert.
+ */
+const useScopeBatchWriter = () => {
+  const entry = useContext(EntryScopeCtx);
+  const root = useContext(ValuesCtx);
+  return useCallback(
+    (patch: Record<string, any>) => {
+      if (entry) entry.setMany(patch);
+      else for (const [k, v] of Object.entries(patch)) root?.set(k, v);
+    },
     [entry, root]
   );
 };
@@ -444,6 +468,7 @@ export const readImportMeta = (
 function MeasurementImportControl({ field, allFields, readonly }: { field: FormField; allFields: FormField[]; readonly: boolean }) {
   const { value, setValue, interactive } = useBinding(field.field_key);
   const write = useScopeWriter();
+  const writeMany = useScopeBatchWriter();
   const read = useScopeReader();
   const [open, setOpen] = useState(false);
   const cfg = readImportMeta(field);
@@ -574,14 +599,17 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   const assignLater = (idx: number, fieldKey: string) => {
     const row = unassigned[idx];
     if (!row) return;
-    write(fieldKey, row.value ?? row.raw ?? null);
     const rest = unassigned.filter((_, i) => i !== idx);
-    persist({
-      ...last,
-      unassigned: rest,
-      keys: [...new Set([...(importedKeys ?? []), fieldKey])],
-      count: (last?.count ?? 0) + 1,
+    writeMany({
+      [fieldKey]: row.value ?? row.raw ?? null,
+      [field.field_key]: JSON.stringify({
+        ...last,
+        unassigned: rest,
+        keys: [...new Set([...(importedKeys ?? []), fieldKey])],
+        count: (last?.count ?? 0) + 1,
+      }),
     });
+    runtime?.persistResults?.();
   };
 
   return (
@@ -698,8 +726,9 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           }
           allowedEvaluations={curveCfg?.allowed_evaluations.length ? curveCfg.allowed_evaluations : null}
           onApply={(values, meta) => {
-            for (const [k, v] of Object.entries(values)) write(k, v);
-            setValue(JSON.stringify({
+            // Messwerte UND Importprotokoll in einem Schreibvorgang – sonst
+            // überschreibt der letzte Schreibvorgang die vorherigen Messwerte.
+            const protocol = JSON.stringify({
               imported_at: new Date().toISOString(),
               profile: meta.profileName,
               sample: meta.sampleLabel,
@@ -716,7 +745,12 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
               raw_dataset_id: meta.datasetId ?? null,
               has_curves: meta.hasCurves ?? false,
               signal_mapping: meta.signalMapping ?? null,
-            }));
+            });
+            writeMany({ ...values, [field.field_key]: protocol });
+            // Importierte Ergebnisse sofort über den bestehenden Ergebnispfad
+            // dauerhaft speichern – dieselbe Datenquelle für Auftrag und
+            // Ergebnisdatenbank, ohne zusätzlichen Speichern-Klick.
+            runtime?.persistResults?.();
           }}
 
         />
@@ -1092,9 +1126,10 @@ function RepeaterEntry({
   onDuplicate: () => void;
 }) {
 
-  const scope = useMemo<{ get: (k: string) => any; set: (k: string, v: any) => void }>(() => ({
-    get: (k) => entry?.[k],
-    set: (k, v) => onChange({ ...(entry ?? {}), [k]: v }),
+  const scope = useMemo(() => ({
+    get: (k: string) => entry?.[k],
+    set: (k: string, v: any) => onChange({ ...(entry ?? {}), [k]: v }),
+    setMany: (patch: Record<string, any>) => onChange({ ...(entry ?? {}), ...patch }),
   }), [entry, onChange]);
 
   const keys = useMemo(() => children.map((c) => c.field_key), [children]);
