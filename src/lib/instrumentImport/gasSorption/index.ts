@@ -17,6 +17,8 @@ import * as XLSX from "xlsx";
 import { extractStrings, scanDoubles } from "../binaryText";
 import { micromeriticsPairLines } from "./micromeriticsRecords";
 import { extractSmp, isothermDataset, readIsothermPoints } from "./smp";
+import { parseBjhWorkbook } from "./bjhWorkbook";
+
 
 import type {
   AnalysisType, Confidence, FileImporter, ImportedAnalysis,
@@ -333,9 +335,13 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
   // vorhanden – Isothermen-Rohdaten werden immer aus ihr gelesen.
   const smp = binary || ext(file.name) === ".smp" ? extractSmp(file.buffer, lines) : null;
   const isotherm = smp?.isotherm.length ? smp.isotherm : readIsothermPoints(lines);
-  const dataset = isothermDataset(isotherm);
 
-  if (found.length === 0) {
+  // Tabellenreport einer BJH-Auswertung: Kennwerte + Porengrößenverteilung.
+  const workbook = SPREADSHEET.includes(ext(file.name)) ? parseBjhWorkbook(file) : null;
+  const dataset = isothermDataset(isotherm) ?? workbook?.dataset ?? null;
+
+
+  if (found.length === 0 && !workbook?.results.length) {
     warnings.push(
       ext(file.name) === ".smp"
         ? "In dieser Messdatei (.SMP) sind keine bereits ausgewerteten Kennwerte (z. B. BET-Oberfläche, Porenvolumen) enthalten – " +
@@ -350,11 +356,22 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
   if (found.some((f) => f.confidence === "low")) {
     warnings.push("Einzelne Werte konnten nur unsicher gelesen werden und sind nicht vorausgewählt.");
   }
+  warnings.push(...(workbook?.warnings ?? []));
 
   const byAnalysis = new Map<AnalysisType, ImportedAnalysis>();
+  const addResult = (r: ImportedResult) => {
+    const a = byAnalysis.get(r.analysis) ?? { type: r.analysis, results: [], series: [] };
+    a.results.push(r);
+    byAnalysis.set(r.analysis, a);
+  };
+
+  // Der Tabellenreport ist für BJH die genauere Quelle und hat Vorrang.
+  const workbookNames = new Set((workbook?.results ?? []).map((r) => r.normalizedName));
+  for (const r of workbook?.results ?? []) addResult(r);
+
   for (const f of found) {
-    const a = byAnalysis.get(f.analysis) ?? { type: f.analysis, results: [], series: [] };
-    const r: ImportedResult = {
+    if (workbookNames.has(f.normalizedName)) continue;
+    addResult({
       sourceName: f.sourceName,
       normalizedName: f.normalizedName,
       aliases: f.aliases,
@@ -362,10 +379,15 @@ export function parseGasSorptionFile(file: { name: string; buffer: ArrayBuffer }
       unit: f.unit,
       confidence: f.confidence,
       analysis: f.analysis,
-    };
-    a.results.push(r);
-    byAnalysis.set(f.analysis, a);
+    });
   }
+
+  if (workbook?.series.length) {
+    const a = byAnalysis.get("BJH") ?? { type: "BJH" as AnalysisType, results: [], series: [] };
+    a.series.push(...workbook.series);
+    byAnalysis.set("BJH", a);
+  }
+
 
   const instrument = detectInstrument(lines);
   const info = sampleInfo(lines);
