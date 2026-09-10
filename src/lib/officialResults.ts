@@ -186,7 +186,9 @@ export function buildLinkedFormResultCandidates(
         if (usedIds.has(child.id)) continue;
         // Elementfelder außerhalb der Messfall-Liste sind erkannt/verfügbar,
         // aber niemals offizielles Ergebnis dieses Messfalls.
-        const isElement = (spec.length > 0 || !!range) && !!fieldElementKey(child as any);
+        const ek = fieldElementKey(child as any);
+        if (ek && usedElementKeys.has(ek)) continue; // bereits als Messfall-Ergebnis geführt
+        const isElement = (spec.length > 0 || !!range) && !!ek;
         instanceCandidates.push({
           ...base,
           key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
@@ -196,6 +198,25 @@ export function buildLinkedFormResultCandidates(
           official: isElement ? false : child.is_result === true,
         });
       }
+
+      // Importierte Elementwerte ohne Messfall-Zuordnung gehen nicht verloren:
+      // sie werden mitgespeichert (nicht offiziell), damit kein erkannter
+      // Messwert nur im Formular sichtbar bleibt.
+      for (const [k, v] of Object.entries(instance.values)) {
+        const el = elementFromValueKey(k);
+        if (!el || usedElementKeys.has(el)) continue;
+        if (v == null || v === "") continue;
+        usedElementKeys.add(el);
+        instanceCandidates.push({
+          ...base,
+          key: instanceResultKey(prefix, storageKey, instance.instanceId, elementValueKey(el)),
+          label: formatElementKey(el),
+          unit: unitFor(el, null),
+          value: v,
+          official: false,
+        });
+      }
+
     }
   }
 
