@@ -574,6 +574,10 @@ function TaskExecutionPageInner() {
                     sampleId: sample?.id ?? null,
                     serviceId: serviceId ?? null,
                     profileId: profile?.id ?? null,
+                    persistResults:
+                      canEdit && !isCompleted
+                        ? () => setPersistRequest((n) => n + 1)
+                        : undefined,
                   }
                 : null
             }
