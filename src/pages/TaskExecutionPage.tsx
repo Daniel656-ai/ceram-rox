@@ -19,6 +19,7 @@ import { ArrowLeft, CheckCircle2, ClipboardList } from "lucide-react";
 import OrderUploadedFiles from "@/components/OrderUploadedFiles";
 import RichText from "@/components/forms/RichText";
 import ServiceLinkedForms, { linkedFormValueKey } from "@/components/ServiceLinkedForms";
+import SampleGeometryCard from "@/components/geometry/SampleGeometryCard";
 import { toast } from "sonner";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
 import { ORDER_PRIORITY_LABELS, type OrderPriority } from "@/lib/types";
@@ -625,6 +626,16 @@ function TaskExecutionPageInner() {
           </MeasurementContextProvider>
         </CardContent>
       </Card>
+
+      {/* Platten-Geometrie der Probe (BENCH NOx / BENCH SOx) – gemeinsam genutzt,
+          getrennt von der bestehenden Wabenkörper-Geometrie. */}
+      {sample?.id && (
+        <SampleGeometryCard
+          sampleId={sample.id}
+          profileId={profile?.id ?? null}
+          readOnly={!canEdit || isCompleted}
+        />
+      )}
 
       <MeasurementCurvesCard measurementId={m.id} readOnly={!canEdit || isCompleted} />
 
