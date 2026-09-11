@@ -201,6 +201,7 @@ export const api = {
   samples,
   sampleHistory,
   sampleDocuments,
+  sampleGeometry,
   consumables,
   measurementResults,
   resultCorrections,
