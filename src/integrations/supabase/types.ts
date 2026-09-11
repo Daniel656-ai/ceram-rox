@@ -8445,6 +8445,44 @@ export type Database = {
           },
         ]
       }
+      sample_geometry_datasets: {
+        Row: {
+          created_at: string
+          data: Json
+          geometry_kind: string
+          id: string
+          sample_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          geometry_kind: string
+          id?: string
+          sample_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          geometry_kind?: string
+          id?: string
+          sample_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_geometry_datasets_sample_id_fkey"
+            columns: ["sample_id"]
+            isOneToOne: false
+            referencedRelation: "samples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sample_history: {
         Row: {
           action: string
