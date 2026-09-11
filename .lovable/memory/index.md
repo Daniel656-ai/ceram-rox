@@ -5,3 +5,4 @@
 - [Element-Keys Import](mem://features/element-keys-import-mapping) — Stabile Element-Schlüssel verbinden Importdaten mit Ergebnisfeldern des Messfalls
 - [RFA-Zuordnung](mem://features/rfa-case-element-mapping) — Messkontext-Schlüssel steuern Import-Zuordnung, Einheiten werden ignoriert
 - [Fertigungsfreigabe-Identifikation](mem://features/production-release-identity) — Neu vs. Revision nur über Dateinamen-Kennung 0075-6106 + _RevX, nie über Inhalte
+- [Plattengeometrie](mem://features/plate-geometry) — Gemeinsame Platten-Geometrievermessung für BENCH NOx/SOx, getrennt vom Wabenkörper
