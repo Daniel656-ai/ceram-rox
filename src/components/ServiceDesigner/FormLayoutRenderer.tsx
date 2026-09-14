@@ -2022,6 +2022,7 @@ export default function FormLayoutRenderer({
       </ValuesCtx.Provider>
       </LocalCalcsCtx.Provider>
       </CalcResultsCtx.Provider>
+      </FormDataCtx.Provider>
       </StepDataCtx.Provider>
     </PermissionsCtx.Provider>
   );
