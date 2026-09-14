@@ -1907,6 +1907,7 @@ export default function FormLayoutRenderer({
   formId,
   localCalculations,
   stepData,
+  formData,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
