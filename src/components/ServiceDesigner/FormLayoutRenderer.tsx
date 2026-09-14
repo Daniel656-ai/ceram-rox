@@ -2012,6 +2012,7 @@ export default function FormLayoutRenderer({
   return (
     <PermissionsCtx.Provider value={permissions ?? null}>
       <StepDataCtx.Provider value={stepData ?? EMPTY_STEP_DATA}>
+      <FormDataCtx.Provider value={formData ?? EMPTY_FORM_DATA}>
       <CalcResultsCtx.Provider value={calcResults}>
       <LocalCalcsCtx.Provider value={localCalcs}>
       <ValuesCtx.Provider value={bind}>
