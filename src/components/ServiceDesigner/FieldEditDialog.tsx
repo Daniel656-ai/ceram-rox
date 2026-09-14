@@ -320,8 +320,40 @@ export default function FieldEditDialog({
                       Feld aus diesem Formular: {f.display_name}
                     </SelectItem>
                   ))}
+                  <SelectItem value={LINKED_FORM_OPTION}>Wert aus verknüpftem Formular</SelectItem>
                 </SelectContent>
               </Select>
+              {linkKey === LINKED_FORM_OPTION && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-xs">Verknüpftes Formular</Label>
+                    <Select
+                      value={srcFormId}
+                      onValueChange={(v) => { setSrcFormId(v); setSrcFieldKey(""); }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Formular wählen" /></SelectTrigger>
+                      <SelectContent>
+                        {(allFormDefinitions as Array<{ id: string; name: string }>)
+                          .filter(f => f.id !== field.form_id)
+                          .map(f => (
+                            <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Quellfeld</Label>
+                    <Select value={srcFieldKey} onValueChange={setSrcFieldKey} disabled={!srcFormId}>
+                      <SelectTrigger><SelectValue placeholder="Feld wählen" /></SelectTrigger>
+                      <SelectContent>
+                        {srcOptions.map(o => (
+                          <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Ein verknüpftes Feld zeigt „🔗 Wert aus …“ und übernimmt den zentralen Wert.
                 Es entsteht keine zweite, unabhängige Kopie; Änderungen der Quelle wirken sofort.
