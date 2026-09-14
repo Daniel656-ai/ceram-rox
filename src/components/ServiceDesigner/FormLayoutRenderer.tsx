@@ -863,9 +863,10 @@ function LinkedFieldControl({ field, valueSource }: { field: FormField; valueSou
   const { setValue, interactive } = useBinding(field.field_key);
   const read = useScopeReader();
   const stepData = useStepData();
+  const formData = useLinkedFormData();
   const srcRaw = valueSource && valueSource.source.kind === "form_field"
     ? read(valueSource.source.field_key)
-    : resolveLinkedValue(valueSource, { stepData });
+    : resolveLinkedValue(valueSource, { stepData, formData });
   const ownRaw = read(field.field_key);
 
   useEffect(() => {
