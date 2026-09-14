@@ -44,7 +44,8 @@ export function readValueSource(field: Pick<FormField, "id"> & { data_source?: u
   if (!ds || typeof ds !== "object") return null;
   const src = (ds as any).source;
   if (!src || typeof src !== "object" || !src.field_key) return null;
-  const kind: ValueSourceKind = src.kind === "form_field" ? "form_field" : "workflow_step";
+  const kind: ValueSourceKind =
+    src.kind === "form_field" ? "form_field" : src.kind === "linked_form" ? "linked_form" : "workflow_step";
   return {
     mode: (["display", "copy", "calc"].includes((ds as any).mode) ? (ds as any).mode : "copy") as ValueSourceMode,
     source: {
@@ -52,6 +53,7 @@ export function readValueSource(field: Pick<FormField, "id"> & { data_source?: u
       field_key: String(src.field_key),
       step_key: src.step_key ? String(src.step_key) : undefined,
       service_id: src.service_id ? String(src.service_id) : undefined,
+      form_id: src.form_id ? String(src.form_id) : undefined,
       label: src.label ? String(src.label) : undefined,
     },
   };
@@ -60,6 +62,11 @@ export function readValueSource(field: Pick<FormField, "id"> & { data_source?: u
 /** Verknüpfung mit einem Feld desselben Formulars? */
 export function isSameFormLink(vs: ValueSource | null): boolean {
   return !!vs && vs.source.kind === "form_field";
+}
+
+/** Verknüpfung mit einem Feld eines anderen, bereits verknüpften Formulars? */
+export function isLinkedFormLink(vs: ValueSource | null): boolean {
+  return !!vs && vs.source.kind === "linked_form" && !!vs.source.form_id;
 }
 
 /**
