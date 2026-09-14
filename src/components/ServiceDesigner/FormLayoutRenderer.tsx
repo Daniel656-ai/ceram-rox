@@ -1921,6 +1921,8 @@ export default function FormLayoutRenderer({
   localCalculations?: FormCalculation[];
   /** Werte vorangegangener Workflow-Schritte für verknüpfte Felder. */
   stepData?: StepData;
+  /** Werte anderer verknüpfter Formulare desselben Vorgangs (form_id -> Werte). */
+  formData?: LinkedFormData;
 }) {
   const interactive = !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
