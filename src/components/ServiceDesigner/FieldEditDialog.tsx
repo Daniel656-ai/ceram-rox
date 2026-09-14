@@ -85,8 +85,46 @@ export default function FieldEditDialog({
   // keine Kopie). Layout-Eigenschaften bleiben davon unberührt.
   const initialLink = readValueSource(field as any);
   const [linkKey, setLinkKey] = useState<string>(
-    initialLink?.source.kind === "form_field" ? initialLink.source.field_key : "__none__"
+    initialLink?.source.kind === "form_field"
+      ? initialLink.source.field_key
+      : initialLink?.source.kind === "linked_form"
+        ? LINKED_FORM_OPTION
+        : "__none__"
   );
+
+  // Wertquelle „Wert aus verknüpftem Formular“: Quellformular + Quellfeld.
+  // Die Auswahl ist vollständig dynamisch – keine fest codierten Formulare.
+  const [srcFormId, setSrcFormId] = useState<string>(
+    initialLink?.source.kind === "linked_form" ? (initialLink.source.form_id ?? "") : ""
+  );
+  const [srcFieldKey, setSrcFieldKey] = useState<string>(
+    initialLink?.source.kind === "linked_form" ? initialLink.source.field_key : ""
+  );
+  const { data: allFormDefinitions = [] } = useQuery({
+    queryKey: ["form-definitions"],
+    queryFn: () => api.formDefinitions.list(),
+    enabled: linkKey === LINKED_FORM_OPTION,
+  });
+  const { data: srcFormFields = [] } = useQuery({
+    queryKey: ["form-fields", srcFormId],
+    queryFn: () => api.formFields.listForForm(srcFormId),
+    enabled: !!srcFormId,
+  });
+  const { data: srcFormCalculations = [] } = useQuery({
+    queryKey: ["form-calculations", srcFormId],
+    queryFn: () => api.formCalculations.listForForm(srcFormId),
+    enabled: !!srcFormId,
+  });
+  /** Quellgrößen des anderen Formulars: Felder UND dort berechnete Werte. */
+  const srcOptions = [
+    ...(srcFormFields as FormField[])
+      .filter((f) => !["repeater", "measurement_block", "measurement_import"].includes(f.field_type))
+      .map((f) => ({ key: f.field_key, label: f.display_name || f.field_key })),
+    ...(srcFormCalculations as Array<{ calc_key: string; display_name: string }>).map((c) => ({
+      key: c.calc_key,
+      label: `${c.display_name || c.calc_key} (Berechnung)`,
+    })),
+  ].filter((o, i, arr) => arr.findIndex((x) => x.key === o.key) === i);
   // Ergebnisbedingungen (z. B. Temperatur) für dynamische Ergebnisbezeichnungen.
   const [conditionKeys, setConditionKeys] = useState<string[]>(readResultConditions(field));
 
