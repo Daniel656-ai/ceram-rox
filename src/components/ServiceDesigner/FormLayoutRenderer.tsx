@@ -53,7 +53,7 @@ import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
 import { walkNodes } from "@/lib/api/formDefinitionLayout";
-import { readValueSource, isSameFormLink, isPreviousServiceLink, resolveLinkedValue, linkOriginLabel, numericValue, type StepData } from "@/lib/fieldLinks";
+import { readValueSource, isSameFormLink, isPreviousServiceLink, isLinkedFormLink, resolveLinkedValue, linkOriginLabel, numericValue, type StepData, type LinkedFormData } from "@/lib/fieldLinks";
 import { createContext as createReactContext } from "react";
 
 /**
@@ -63,6 +63,15 @@ import { createContext as createReactContext } from "react";
 const EMPTY_STEP_DATA: StepData = {};
 const StepDataCtx = createReactContext<StepData>(EMPTY_STEP_DATA);
 export const useStepData = () => useContext(StepDataCtx);
+
+/**
+ * Werte anderer, bereits verknüpfter Formulare desselben Vorgangs
+ * (form_id -> Feldwerte). Rein lesend – erfasst werden die Werte weiterhin
+ * ausschließlich im Ursprungsformular.
+ */
+const EMPTY_FORM_DATA: LinkedFormData = {};
+const FormDataCtx = createReactContext<LinkedFormData>(EMPTY_FORM_DATA);
+export const useLinkedFormData = () => useContext(FormDataCtx);
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -803,7 +812,7 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
   // Formulars. Es entsteht KEINE zweite unabhängige Kopie – der Wert wird bei
   // jeder Änderung der Quelle nachgeführt.
   const vs = readValueSource(field as any);
-  if (isSameFormLink(vs) || isPreviousServiceLink(vs)) {
+  if (isSameFormLink(vs) || isPreviousServiceLink(vs) || isLinkedFormLink(vs)) {
     const src = allFields.find((f) => f.field_key === vs!.source.field_key) ?? null;
     return (
       <FormItemShell
@@ -854,9 +863,10 @@ function LinkedFieldControl({ field, valueSource }: { field: FormField; valueSou
   const { setValue, interactive } = useBinding(field.field_key);
   const read = useScopeReader();
   const stepData = useStepData();
+  const formData = useLinkedFormData();
   const srcRaw = valueSource && valueSource.source.kind === "form_field"
     ? read(valueSource.source.field_key)
-    : resolveLinkedValue(valueSource, { stepData });
+    : resolveLinkedValue(valueSource, { stepData, formData });
   const ownRaw = read(field.field_key);
 
   useEffect(() => {
@@ -1897,6 +1907,7 @@ export default function FormLayoutRenderer({
   formId,
   localCalculations,
   stepData,
+  formData,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
@@ -1910,6 +1921,8 @@ export default function FormLayoutRenderer({
   localCalculations?: FormCalculation[];
   /** Werte vorangegangener Workflow-Schritte für verknüpfte Felder. */
   stepData?: StepData;
+  /** Werte anderer verknüpfter Formulare desselben Vorgangs (form_id -> Werte). */
+  formData?: LinkedFormData;
 }) {
   const interactive = !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
@@ -1999,6 +2012,7 @@ export default function FormLayoutRenderer({
   return (
     <PermissionsCtx.Provider value={permissions ?? null}>
       <StepDataCtx.Provider value={stepData ?? EMPTY_STEP_DATA}>
+      <FormDataCtx.Provider value={formData ?? EMPTY_FORM_DATA}>
       <CalcResultsCtx.Provider value={calcResults}>
       <LocalCalcsCtx.Provider value={localCalcs}>
       <ValuesCtx.Provider value={bind}>
@@ -2008,6 +2022,7 @@ export default function FormLayoutRenderer({
       </ValuesCtx.Provider>
       </LocalCalcsCtx.Provider>
       </CalcResultsCtx.Provider>
+      </FormDataCtx.Provider>
       </StepDataCtx.Provider>
     </PermissionsCtx.Provider>
   );

@@ -17,7 +17,7 @@
 
 import type { FormField } from "@/lib/api/formFields";
 
-export type ValueSourceKind = "form_field" | "workflow_step";
+export type ValueSourceKind = "form_field" | "workflow_step" | "linked_form";
 export type ValueSourceMode = "display" | "copy" | "calc";
 
 export interface ValueSourceRef {
@@ -27,6 +27,8 @@ export interface ValueSourceRef {
   /** Nur bei `workflow_step`: Schritt bzw. vorangegangene Dienstleistung. */
   step_key?: string;
   service_id?: string;
+  /** Nur bei `linked_form`: Quellformular (`form_definitions.id`). */
+  form_id?: string;
   /** Sprechende Herkunftsbezeichnung für die Anzeige („🔗 Wert aus …“). */
   label?: string;
 }
@@ -42,7 +44,8 @@ export function readValueSource(field: Pick<FormField, "id"> & { data_source?: u
   if (!ds || typeof ds !== "object") return null;
   const src = (ds as any).source;
   if (!src || typeof src !== "object" || !src.field_key) return null;
-  const kind: ValueSourceKind = src.kind === "form_field" ? "form_field" : "workflow_step";
+  const kind: ValueSourceKind =
+    src.kind === "form_field" ? "form_field" : src.kind === "linked_form" ? "linked_form" : "workflow_step";
   return {
     mode: (["display", "copy", "calc"].includes((ds as any).mode) ? (ds as any).mode : "copy") as ValueSourceMode,
     source: {
@@ -50,6 +53,7 @@ export function readValueSource(field: Pick<FormField, "id"> & { data_source?: u
       field_key: String(src.field_key),
       step_key: src.step_key ? String(src.step_key) : undefined,
       service_id: src.service_id ? String(src.service_id) : undefined,
+      form_id: src.form_id ? String(src.form_id) : undefined,
       label: src.label ? String(src.label) : undefined,
     },
   };
@@ -58,6 +62,11 @@ export function readValueSource(field: Pick<FormField, "id"> & { data_source?: u
 /** Verknüpfung mit einem Feld desselben Formulars? */
 export function isSameFormLink(vs: ValueSource | null): boolean {
   return !!vs && vs.source.kind === "form_field";
+}
+
+/** Verknüpfung mit einem Feld eines anderen, bereits verknüpften Formulars? */
+export function isLinkedFormLink(vs: ValueSource | null): boolean {
+  return !!vs && vs.source.kind === "linked_form" && !!vs.source.form_id;
 }
 
 /**
@@ -187,6 +196,13 @@ export function isLinkedField(field: { data_source?: unknown } | null | undefine
   return !!readValueSource((field ?? {}) as any);
 }
 
+/**
+ * Werte anderer, bereits verknüpfter Formulare desselben Auftrags/derselben
+ * Probe: form_id -> { field_key: Wert }. Rein lesend – die Werte werden
+ * weiterhin ausschließlich in ihrem Ursprungsformular erfasst.
+ */
+export type LinkedFormData = Record<string, Record<string, unknown> | undefined>;
+
 /** Sprechende Herkunft für die Anzeige im Berechnungs-/Formeleditor. */
 export function linkOriginLabel(vs: ValueSource | null): string | null {
   if (!vs) return null;
@@ -200,11 +216,14 @@ export function linkOriginLabel(vs: ValueSource | null): string | null {
  */
 export function resolveLinkedValue(
   vs: ValueSource | null,
-  ctx: { formValues?: Record<string, unknown>; stepData?: StepData },
+  ctx: { formValues?: Record<string, unknown>; stepData?: StepData; formData?: LinkedFormData },
 ): unknown {
   if (!vs) return null;
-  const raw = vs.source.kind === "form_field"
-    ? ctx.formValues?.[vs.source.field_key]
-    : ctx.stepData?.[vs.source.step_key ?? ""]?.[vs.source.field_key];
+  const raw =
+    vs.source.kind === "form_field"
+      ? ctx.formValues?.[vs.source.field_key]
+      : vs.source.kind === "linked_form"
+        ? ctx.formData?.[vs.source.form_id ?? ""]?.[vs.source.field_key]
+        : ctx.stepData?.[vs.source.step_key ?? ""]?.[vs.source.field_key];
   return raw === undefined || raw === "" ? null : raw;
 }

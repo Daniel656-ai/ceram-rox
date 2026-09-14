@@ -37,6 +37,9 @@ import { Link2 } from "lucide-react";
  * verwendet. Es existiert bewusst kein zweites Konfigurationssystem.
  * ============================================================== */
 
+/** Auswahlwert der Wertquelle „Wert aus verknüpftem Formular“. */
+const LINKED_FORM_OPTION = "__linked_form__";
+
 export default function FieldEditDialog({
   field, allFields, onClose, onSaved,
 }: {
@@ -85,8 +88,46 @@ export default function FieldEditDialog({
   // keine Kopie). Layout-Eigenschaften bleiben davon unberührt.
   const initialLink = readValueSource(field as any);
   const [linkKey, setLinkKey] = useState<string>(
-    initialLink?.source.kind === "form_field" ? initialLink.source.field_key : "__none__"
+    initialLink?.source.kind === "form_field"
+      ? initialLink.source.field_key
+      : initialLink?.source.kind === "linked_form"
+        ? LINKED_FORM_OPTION
+        : "__none__"
   );
+
+  // Wertquelle „Wert aus verknüpftem Formular“: Quellformular + Quellfeld.
+  // Die Auswahl ist vollständig dynamisch – keine fest codierten Formulare.
+  const [srcFormId, setSrcFormId] = useState<string>(
+    initialLink?.source.kind === "linked_form" ? (initialLink.source.form_id ?? "") : ""
+  );
+  const [srcFieldKey, setSrcFieldKey] = useState<string>(
+    initialLink?.source.kind === "linked_form" ? initialLink.source.field_key : ""
+  );
+  const { data: allFormDefinitions = [] } = useQuery({
+    queryKey: ["form-definitions"],
+    queryFn: () => api.formDefinitions.list(),
+    enabled: linkKey === LINKED_FORM_OPTION,
+  });
+  const { data: srcFormFields = [] } = useQuery({
+    queryKey: ["form-fields", srcFormId],
+    queryFn: () => api.formFields.listForForm(srcFormId),
+    enabled: !!srcFormId,
+  });
+  const { data: srcFormCalculations = [] } = useQuery({
+    queryKey: ["form-calculations", srcFormId],
+    queryFn: () => api.formCalculations.listForForm(srcFormId),
+    enabled: !!srcFormId,
+  });
+  /** Quellgrößen des anderen Formulars: Felder UND dort berechnete Werte. */
+  const srcOptions = [
+    ...(srcFormFields as FormField[])
+      .filter((f) => !["repeater", "measurement_block", "measurement_import"].includes(f.field_type))
+      .map((f) => ({ key: f.field_key, label: f.display_name || f.field_key })),
+    ...(srcFormCalculations as Array<{ calc_key: string; display_name: string }>).map((c) => ({
+      key: c.calc_key,
+      label: `${c.display_name || c.calc_key} (Berechnung)`,
+    })),
+  ].filter((o, i, arr) => arr.findIndex((x) => x.key === o.key) === i);
   // Ergebnisbedingungen (z. B. Temperatur) für dynamische Ergebnisbezeichnungen.
   const [conditionKeys, setConditionKeys] = useState<string[]>(readResultConditions(field));
 
@@ -174,6 +215,22 @@ export default function FieldEditDialog({
         is_result: isResult,
         result_label: isResult ? (resultLabel.trim() || null) : null,
         data_source: (() => {
+          // Wert aus einem anderen, bereits verknüpften Formular.
+          if (linkKey === LINKED_FORM_OPTION) {
+            if (!srcFormId || !srcFieldKey) return {};
+            const form = (allFormDefinitions as Array<{ id: string; name: string }>)
+              .find(f => f.id === srcFormId);
+            const opt = srcOptions.find(o => o.key === srcFieldKey);
+            return {
+              mode: "copy",
+              source: {
+                kind: "linked_form",
+                form_id: srcFormId,
+                field_key: srcFieldKey,
+                label: `${form?.name ?? "Formular"} → ${opt?.label ?? srcFieldKey}`,
+              },
+            };
+          }
           // Verknüpfung innerhalb desselben Formulars hat Vorrang.
           if (linkKey !== "__none__") {
             const src = allFields.find(f => f.field_key === linkKey);
@@ -279,8 +336,40 @@ export default function FieldEditDialog({
                       Feld aus diesem Formular: {f.display_name}
                     </SelectItem>
                   ))}
+                  <SelectItem value={LINKED_FORM_OPTION}>Wert aus verknüpftem Formular</SelectItem>
                 </SelectContent>
               </Select>
+              {linkKey === LINKED_FORM_OPTION && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-xs">Verknüpftes Formular</Label>
+                    <Select
+                      value={srcFormId}
+                      onValueChange={(v) => { setSrcFormId(v); setSrcFieldKey(""); }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Formular wählen" /></SelectTrigger>
+                      <SelectContent>
+                        {(allFormDefinitions as Array<{ id: string; name: string }>)
+                          .filter(f => f.id !== field.form_id)
+                          .map(f => (
+                            <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Quellfeld</Label>
+                    <Select value={srcFieldKey} onValueChange={setSrcFieldKey} disabled={!srcFormId}>
+                      <SelectTrigger><SelectValue placeholder="Feld wählen" /></SelectTrigger>
+                      <SelectContent>
+                        {srcOptions.map(o => (
+                          <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Ein verknüpftes Feld zeigt „🔗 Wert aus …“ und übernimmt den zentralen Wert.
                 Es entsteht keine zweite, unabhängige Kopie; Änderungen der Quelle wirken sofort.
