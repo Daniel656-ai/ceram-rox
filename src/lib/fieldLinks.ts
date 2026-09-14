@@ -17,7 +17,7 @@
 
 import type { FormField } from "@/lib/api/formFields";
 
-export type ValueSourceKind = "form_field" | "workflow_step";
+export type ValueSourceKind = "form_field" | "workflow_step" | "linked_form";
 export type ValueSourceMode = "display" | "copy" | "calc";
 
 export interface ValueSourceRef {
@@ -27,6 +27,8 @@ export interface ValueSourceRef {
   /** Nur bei `workflow_step`: Schritt bzw. vorangegangene Dienstleistung. */
   step_key?: string;
   service_id?: string;
+  /** Nur bei `linked_form`: Quellformular (`form_definitions.id`). */
+  form_id?: string;
   /** Sprechende Herkunftsbezeichnung für die Anzeige („🔗 Wert aus …“). */
   label?: string;
 }
