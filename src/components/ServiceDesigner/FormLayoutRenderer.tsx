@@ -812,7 +812,7 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
   // Formulars. Es entsteht KEINE zweite unabhängige Kopie – der Wert wird bei
   // jeder Änderung der Quelle nachgeführt.
   const vs = readValueSource(field as any);
-  if (isSameFormLink(vs) || isPreviousServiceLink(vs)) {
+  if (isSameFormLink(vs) || isPreviousServiceLink(vs) || isLinkedFormLink(vs)) {
     const src = allFields.find((f) => f.field_key === vs!.source.field_key) ?? null;
     return (
       <FormItemShell
