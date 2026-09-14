@@ -37,6 +37,9 @@ import { Link2 } from "lucide-react";
  * verwendet. Es existiert bewusst kein zweites Konfigurationssystem.
  * ============================================================== */
 
+/** Auswahlwert der Wertquelle „Wert aus verknüpftem Formular“. */
+const LINKED_FORM_OPTION = "__linked_form__";
+
 export default function FieldEditDialog({
   field, allFields, onClose, onSaved,
 }: {
