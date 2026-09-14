@@ -196,6 +196,13 @@ export function isLinkedField(field: { data_source?: unknown } | null | undefine
   return !!readValueSource((field ?? {}) as any);
 }
 
+/**
+ * Werte anderer, bereits verknüpfter Formulare desselben Auftrags/derselben
+ * Probe: form_id -> { field_key: Wert }. Rein lesend – die Werte werden
+ * weiterhin ausschließlich in ihrem Ursprungsformular erfasst.
+ */
+export type LinkedFormData = Record<string, Record<string, unknown> | undefined>;
+
 /** Sprechende Herkunft für die Anzeige im Berechnungs-/Formeleditor. */
 export function linkOriginLabel(vs: ValueSource | null): string | null {
   if (!vs) return null;
@@ -209,11 +216,14 @@ export function linkOriginLabel(vs: ValueSource | null): string | null {
  */
 export function resolveLinkedValue(
   vs: ValueSource | null,
-  ctx: { formValues?: Record<string, unknown>; stepData?: StepData },
+  ctx: { formValues?: Record<string, unknown>; stepData?: StepData; formData?: LinkedFormData },
 ): unknown {
   if (!vs) return null;
-  const raw = vs.source.kind === "form_field"
-    ? ctx.formValues?.[vs.source.field_key]
-    : ctx.stepData?.[vs.source.step_key ?? ""]?.[vs.source.field_key];
+  const raw =
+    vs.source.kind === "form_field"
+      ? ctx.formValues?.[vs.source.field_key]
+      : vs.source.kind === "linked_form"
+        ? ctx.formData?.[vs.source.form_id ?? ""]?.[vs.source.field_key]
+        : ctx.stepData?.[vs.source.step_key ?? ""]?.[vs.source.field_key];
   return raw === undefined || raw === "" ? null : raw;
 }
