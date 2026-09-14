@@ -64,6 +64,19 @@ function TaskExecutionPageInner() {
   });
 
   /**
+   * Wertquelle „Wert aus verknüpftem Formular": Werte der Globalen Formulare
+   * anderer Dienstleistungen desselben Auftrags (und derselben Probe).
+   * Rein lesend aus den bestehenden Messergebnissen – es entsteht kein
+   * zweiter Speicherort und keine zusätzliche Zuordnungslogik.
+   */
+  const sampleId: string | undefined = (measurement as any)?.sample_id ?? undefined;
+  const { data: linkedFormData = {} } = useQuery({
+    queryKey: ["order-linked-form-values", orderId, sampleId, measurementId],
+    queryFn: () => api.measurementResults.listFormValuesForOrder(orderId!, sampleId, measurementId),
+    enabled: !!orderId,
+  });
+
+  /**
    * Strikte Rollentrennung: Der Messdienstleister sieht ausschließlich das
    * Messdienstleisterformular der Dienstleistung. Kein Fallback auf das
    * Auftraggeberformular und kein pauschales „Ergebnisformular".
@@ -618,6 +631,7 @@ function TaskExecutionPageInner() {
                 serviceId={serviceId}
                 context="employee"
                 stepData={stepData as any}
+                formData={linkedFormData as any}
                 values={values}
                 onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
               />
