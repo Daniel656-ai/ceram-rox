@@ -64,6 +64,15 @@ const EMPTY_STEP_DATA: StepData = {};
 const StepDataCtx = createReactContext<StepData>(EMPTY_STEP_DATA);
 export const useStepData = () => useContext(StepDataCtx);
 
+/**
+ * Werte anderer, bereits verknüpfter Formulare desselben Vorgangs
+ * (form_id -> Feldwerte). Rein lesend – erfasst werden die Werte weiterhin
+ * ausschließlich im Ursprungsformular.
+ */
+const EMPTY_FORM_DATA: LinkedFormData = {};
+const FormDataCtx = createReactContext<LinkedFormData>(EMPTY_FORM_DATA);
+export const useLinkedFormData = () => useContext(FormDataCtx);
+
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
  * ---------------------------------------------------------------- */
