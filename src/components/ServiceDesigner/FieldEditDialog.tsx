@@ -215,6 +215,22 @@ export default function FieldEditDialog({
         is_result: isResult,
         result_label: isResult ? (resultLabel.trim() || null) : null,
         data_source: (() => {
+          // Wert aus einem anderen, bereits verknüpften Formular.
+          if (linkKey === LINKED_FORM_OPTION) {
+            if (!srcFormId || !srcFieldKey) return {};
+            const form = (allFormDefinitions as Array<{ id: string; name: string }>)
+              .find(f => f.id === srcFormId);
+            const opt = srcOptions.find(o => o.key === srcFieldKey);
+            return {
+              mode: "copy",
+              source: {
+                kind: "linked_form",
+                form_id: srcFormId,
+                field_key: srcFieldKey,
+                label: `${form?.name ?? "Formular"} → ${opt?.label ?? srcFieldKey}`,
+              },
+            };
+          }
           // Verknüpfung innerhalb desselben Formulars hat Vorrang.
           if (linkKey !== "__none__") {
             const src = allFields.find(f => f.field_key === linkKey);
