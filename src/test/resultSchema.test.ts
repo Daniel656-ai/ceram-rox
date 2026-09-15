@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildServiceSchemas, flattenSchemas, exportCell, resultCell, paramKey } from "@/lib/resultSchema";
+import { buildServiceSchemas, flattenSchemas, exportCell, resultCell, paramKey, columnHeader } from "@/lib/resultSchema";
 import { buildOrderResultStructure, buildComparison } from "@/lib/orderResultsStructure";
 
 const rec = (over: any) =>
@@ -84,5 +84,14 @@ describe("Zuordnung über Elementschlüssel", () => {
     expect(paramKey("% V₂O₅")).toBe("V2O5");
     expect(paramKey("V2O5 (%)")).toBe("V2O5");
     expect(paramKey("Vanadiumpentoxid")).toBe("V2O5");
+  });
+
+  it("formatiert Oxidnamen nur für die Anzeige und behält technische Schlüssel", () => {
+    expect(columnHeader({ key: "Na2O", label: "Na2O", unit: "%", group: null })).toBe("Na₂O [%]");
+    expect(columnHeader({ key: "K2O", label: "K2O", unit: "%", group: null })).toBe("K₂O [%]");
+    expect(columnHeader({ key: "TiO2", label: "TiO₂", unit: "%", group: null })).toBe("TiO₂ [%]");
+    expect(columnHeader({ key: "SO3", label: "SO₃", unit: "%", group: null })).toBe("SO₃ [%]");
+    expect(paramKey("Na₂O")).toBe("Na2O");
+    expect(paramKey("K₂O")).toBe("K2O");
   });
 });
