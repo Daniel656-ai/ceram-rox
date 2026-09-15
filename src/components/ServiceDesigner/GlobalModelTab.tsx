@@ -26,6 +26,13 @@ import {
   type GlobalField,
   type GlobalObject,
 } from "@/lib/api/globalModel";
+import {
+  readMasterDataRef,
+  writeMasterDataRef,
+  resolveMasterDataRef,
+  type MasterDataRef,
+} from "@/lib/masterDataRef";
+import { runtimeKind } from "@/lib/api/backendConfig";
 
 const slug = (s: string) =>
   // Auszeichnung (_{...} / ^{...}) fließt nie in technische Schlüssel ein.
@@ -50,6 +57,8 @@ type FieldDraft = {
   validation_ids: string[];
   is_repeatable: boolean;
   select_options: Array<{ label: string; value: string }>;
+  /** Desktop: Wert stammt direkt aus den Stammdaten (hat Vorrang vor Standardwert). */
+  master_ref: MasterDataRef | null;
   repeater: GlobalRepeaterMeta;
   subfields: GlobalRepeaterSubfield[];
 };
@@ -60,6 +69,7 @@ const emptyField: FieldDraft = {
   category: "", unit: "", default_value: "", data_source: "manual",
   list_id: null, calculation_id: null, validation_ids: [], is_repeatable: false,
   select_options: [],
+  master_ref: null,
   repeater: { min_entries: 0, item_label: "Eintrag", add_label: "Eintrag hinzufügen" },
   subfields: [],
 };
