@@ -113,7 +113,16 @@ export default function GlobalModelTab() {
   const [fieldOpen, setFieldOpen] = useState(false);
   const [fieldDraft, setFieldDraft] = useState<FieldDraft>(emptyField);
 
+  // Stammdatenreferenz ist ausschließlich Bestandteil der Desktop-Variante.
+  const isDesktop = runtimeKind() === "desktop";
+
   const { data: lists = [] } = useQuery({ queryKey: ["global-lists"], queryFn: () => api.globalLists.list() });
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["master-data-catalog"],
+    queryFn: () => api.masterData.catalog(),
+    enabled: isDesktop,
+    staleTime: 5 * 60 * 1000,
+  });
   const { data: calcs = [] } = useQuery({ queryKey: ["global-calculations"], queryFn: () => api.globalCalculations.list() });
   const { data: validations = [] } = useQuery({ queryKey: ["global-validations"], queryFn: () => api.globalValidations.list() });
 
