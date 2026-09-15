@@ -811,6 +811,23 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
   // Datenfunktion: Feld bezieht seinen Wert aus einem anderen Feld desselben
   // Formulars. Es entsteht KEINE zweite unabhängige Kopie – der Wert wird bei
   // jeder Änderung der Quelle nachgeführt.
+  // Stammdatenreferenz (Desktop-Variante): der Wert kommt direkt aus den
+  // Stammdaten und hat Vorrang vor einem Standardwert.
+  const mdRef = readMasterDataRef(field.metadata as any);
+  if (mdRef && runtimeKind() === "desktop") {
+    return (
+      <FormItemShell
+        label={label}
+        required={required}
+        unit={field.unit}
+        highlight={highlight}
+        icon={<Link2 className="h-3 w-3 text-primary shrink-0 mt-[1px]" />}
+        control={<MasterDataFieldControl field={field} mdRef={mdRef} />}
+        footer={desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
+      />
+    );
+  }
+
   const vs = readValueSource(field as any);
   if (isSameFormLink(vs) || isPreviousServiceLink(vs) || isLinkedFormLink(vs)) {
     const src = allFields.find((f) => f.field_key === vs!.source.field_key) ?? null;
@@ -885,6 +902,49 @@ function LinkedFieldControl({ field, valueSource }: { field: FormField; valueSou
 }
 
 
+
+/**
+ * Stammdatenreferenz (nur Desktop-Variante).
+ *
+ * Der aktuelle Stammdatenwert wird gelesen und in den eigenen Feldschlüssel
+ * gespiegelt, damit Berechnungen und Ergebnisse unverändert weiterarbeiten.
+ * Fehlt der Wert in den Stammdaten, wird ein klarer Hinweis angezeigt – es
+ * wird KEIN Standardwert oder alter Wert ersatzweise verwendet.
+ */
+function MasterDataFieldControl({ field, mdRef }: { field: FormField; mdRef: MasterDataRef }) {
+  const { setValue, interactive } = useBinding(field.field_key);
+  const read = useScopeReader();
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["master-data-catalog"],
+    queryFn: () => api.masterData.catalog(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const res = useMemo(() => resolveMasterDataRef(mdRef, catalog), [mdRef, catalog]);
+  const ownRaw = read(field.field_key);
+  const next = res.status === "ok" ? String(res.value) : "";
+
+  useEffect(() => {
+    if (!interactive) return;
+    if ((ownRaw ?? "") !== next) setValue(next);
+  }, [next, ownRaw, interactive, setValue]);
+
+  if (res.status !== "ok") {
+    return (
+      <div className="flex min-h-9 items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/50 bg-destructive/5 text-xs text-destructive">
+        <span>{res.reason}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex h-9 items-center gap-2 px-3 rounded-md border bg-muted/40 text-sm">
+      <Link2 className="h-3 w-3 text-primary shrink-0" />
+      <span className="truncate">
+        {next}
+        {res.unit ? ` ${res.unit}` : ""}
+      </span>
+    </div>
+  );
+}
 
 /**
  * Zeigt Verstöße gegen zentral definierte globale Validierungen an.
