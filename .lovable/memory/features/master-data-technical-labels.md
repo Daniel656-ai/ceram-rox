@@ -1,7 +1,7 @@
 ---
 name: Technische Stammdaten-Bezeichnungen
- description: Desktop-only Rich-Text-Anzeigen für Stammdaten; technische Schlüssel stabil, Web-Verhalten unverändert
- type: feature
+description: Desktop-only Rich-Text-Anzeigen für Stammdaten; technische Schlüssel stabil, Web-Verhalten unverändert
+type: feature
 ---
 Stammdaten-Kategorien, Eigenschaften, Eintragsbezeichnungen und Einheiten unterstützen in der Desktop-/Tauri-Variante die zentrale ROX-Auszeichnung `_{…}` und `^{…}`.
 
