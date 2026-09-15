@@ -167,6 +167,10 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
             is_repeatable: isRepeater ? true : !!gf.is_repeatable,
             usage_index: usageIndex,
             instance_key: fieldKey,
+            // Stammdatenreferenz der globalen Variable übernehmen (falls vorhanden).
+            ...(readMasterDataRef(gf.metadata)
+              ? { master_data_ref: readMasterDataRef(gf.metadata) }
+              : {}),
             ...(isRepeater
               ? {
                   repeater: {
