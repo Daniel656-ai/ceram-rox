@@ -6,6 +6,8 @@ import MasterDataSection from "@/components/ServiceDesigner/MasterDataSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { GlobalList } from "@/lib/api/globalLibrary";
+import RichText from "@/components/forms/RichText";
+import { runtimeKind } from "@/lib/api/backendConfig";
 
 /**
  * Zentraler Navigationsbereich „Stammdaten“.
@@ -17,6 +19,7 @@ import type { GlobalList } from "@/lib/api/globalLibrary";
  */
 export default function MasterDataPage() {
   const { listKey } = useParams<{ listKey?: string }>();
+  const isDesktop = runtimeKind() === "desktop";
 
   const { data: lists = [], isLoading } = useQuery({
     queryKey: ["global-lists"],
@@ -33,7 +36,9 @@ export default function MasterDataPage() {
       <div className="space-y-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {current?.display_name ?? "Stammdaten"}
+             {current?.display_name
+               ? (isDesktop ? <RichText value={current.display_name} /> : current.display_name)
+               : "Stammdaten"}
           </h1>
           <p className="text-sm text-muted-foreground">
             {current?.description ||
@@ -69,7 +74,7 @@ export default function MasterDataPage() {
             <Card className="h-full transition-colors hover:border-primary/50">
               <CardHeader className="py-3">
                 <CardTitle className="flex items-center justify-between gap-2 text-base">
-                  {l.display_name}
+                   {isDesktop ? <RichText value={l.display_name} /> : l.display_name}
                   <Badge variant="outline" className="font-mono text-[10px]">
                     {l.list_key}
                   </Badge>
