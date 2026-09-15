@@ -538,9 +538,20 @@ export default function GlobalModelTab() {
               <SymbolInput value={fieldDraft.unit} onChange={(v) => setFieldDraft({ ...fieldDraft, unit: v })} />
             </div>
             <div className="sm:col-span-2">
-              <Label className="text-xs">Standardwert</Label>
+              <Label className="text-xs">
+                Standardwert {fieldDraft.master_ref ? "(nicht erforderlich – Stammdaten haben Vorrang)" : "(optional)"}
+              </Label>
               <SymbolInput value={fieldDraft.default_value} onChange={(v) => setFieldDraft({ ...fieldDraft, default_value: v })} />
             </div>
+            {isDesktop && (
+              <div className="sm:col-span-2">
+                <MasterDataRefPicker
+                  catalog={catalog}
+                  value={fieldDraft.master_ref}
+                  onChange={(ref) => setFieldDraft({ ...fieldDraft, master_ref: ref, data_source: ref ? "reference" : fieldDraft.data_source })}
+                />
+              </div>
+            )}
             <div>
               <Label className="text-xs">Globale Liste (Auswahlwerte)</Label>
               <Select
