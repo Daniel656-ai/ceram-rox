@@ -30,6 +30,8 @@ import {
   readMasterDataRef,
   writeMasterDataRef,
   resolveMasterDataRef,
+  masterDataAttributeDisplayName,
+  masterDataItemDisplayName,
   type MasterDataRef,
 } from "@/lib/masterDataRef";
 import { runtimeKind } from "@/lib/api/backendConfig";
@@ -963,7 +965,7 @@ function MasterDataRefPicker({
           <SelectContent>
             <SelectItem value={NONE}>Keine Stammdatenreferenz</SelectItem>
             {catalog.map((c) => (
-              <SelectItem key={c.list.id} value={c.list.list_key}>{c.list.display_name}</SelectItem>
+              <SelectItem key={c.list.id} value={c.list.list_key}><RichText value={c.list.display_name} /></SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -978,7 +980,7 @@ function MasterDataRefPicker({
           <SelectContent>
             <SelectItem value={NONE}>Eintrag wählen</SelectItem>
             {(cat?.items ?? []).map((i) => (
-              <SelectItem key={i.id} value={i.item_value}>{i.label}</SelectItem>
+              <SelectItem key={i.id} value={i.item_value}><RichText value={masterDataItemDisplayName(i.item_value, i.label, true)} /></SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -994,7 +996,8 @@ function MasterDataRefPicker({
             <SelectItem value={NONE}>Bezeichnung des Eintrags</SelectItem>
             {(cat?.attributes ?? []).map((a) => (
               <SelectItem key={a.id} value={a.attribute_key}>
-                {a.unit ? `${a.display_name} (${a.unit})` : a.display_name}
+                <RichText value={masterDataAttributeDisplayName(a.attribute_key, a.display_name, true)} />
+                {a.unit && <> (<RichText value={a.unit} />)</>}
               </SelectItem>
             ))}
           </SelectContent>
@@ -1002,9 +1005,9 @@ function MasterDataRefPicker({
       </div>
       {value && item && preview && (
         <p className={preview.status === "ok" ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>
-          {preview.status === "ok"
-            ? `Aktueller Stammdatenwert: ${String(preview.value)}${preview.unit ? ` ${preview.unit}` : ""}`
-            : preview.reason}
+          {preview.status === "ok" ? (
+            <>Aktueller Stammdatenwert: {String(preview.value)}{preview.unit && <> <RichText value={preview.unit} /></>}</>
+          ) : preview.reason}
         </p>
       )}
     </div>

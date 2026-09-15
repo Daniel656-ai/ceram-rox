@@ -14,6 +14,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Copy } from "lucide-react";
+import RichText from "@/components/forms/RichText";
+import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
+import { runtimeKind } from "@/lib/api/backendConfig";
+import {
+  masterDataAttributeDisplayName,
+  masterDataItemDisplayName,
+} from "@/lib/masterDataRef";
+import { toPlain } from "@/lib/richText";
 import {
   MASTER_DATA_ATTRIBUTE_TYPES,
   type GlobalList,
@@ -27,6 +35,9 @@ const slug = (s: string) =>
     .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+
+const technicalSlug = (value: string, desktop: boolean) =>
+  slug(desktop ? toPlain(value) : value);
 
 type AttrDraft = {
   id?: string;
@@ -90,6 +101,7 @@ export default function MasterDataSection({
   showCategoryList = true,
 }: { focusListKey?: string; showCategoryList?: boolean } = {}) {
   const qc = useQueryClient();
+  const isDesktop = runtimeKind() === "desktop";
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
 
@@ -138,7 +150,7 @@ export default function MasterDataSection({
   const saveList = useMutation({
     mutationFn: async () => {
       const payload = {
-        list_key: listDraft.list_key || slug(listDraft.display_name),
+        list_key: listDraft.list_key || technicalSlug(listDraft.display_name, isDesktop),
         display_name: listDraft.display_name.trim(),
         description: listDraft.description.trim() || null,
         category: listDraft.category.trim() || null,
@@ -176,7 +188,7 @@ export default function MasterDataSection({
       if (!selectedId) throw new Error("Keine Kategorie ausgewählt");
       const payload = {
         list_id: selectedId,
-        attribute_key: attrDraft.attribute_key || slug(attrDraft.display_name),
+        attribute_key: attrDraft.attribute_key || technicalSlug(attrDraft.display_name, isDesktop),
         display_name: attrDraft.display_name.trim(),
         data_type: attrDraft.data_type,
         unit: attrDraft.unit.trim() || null,
@@ -243,10 +255,10 @@ export default function MasterDataSection({
       // Technischen Schlüssel eindeutig machen: Basis-Slug aus Bezeichnung,
       // bei Kollision (z. B. gleiche Bezeichnung, anderer Messtyp) den
       // Messtyp anhängen, danach notfalls nummerieren.
-      let itemValue = itemDraft.item_value.trim() || slug(label);
+      let itemValue = itemDraft.item_value.trim() || technicalSlug(label, isDesktop);
       const taken = new Set(items.filter((it) => it.id !== itemDraft.id).map((it) => it.item_value));
       if (taken.has(itemValue) && messtyp) {
-        itemValue = `${itemValue}-${slug(messtyp)}`;
+        itemValue = `${itemValue}-${technicalSlug(messtyp, isDesktop)}`;
       }
       if (taken.has(itemValue)) {
         let n = 2;
@@ -309,7 +321,7 @@ export default function MasterDataSection({
               onClick={() => setSelectedId(l.id)}
               className={`w-full rounded px-2 py-1.5 text-left text-sm ${selectedId === l.id ? "bg-primary/10 font-medium text-primary" : "hover:bg-muted"}`}
             >
-              {l.display_name}
+              {isDesktop ? <RichText value={l.display_name} /> : l.display_name}
               <span className="ml-2 font-mono text-[10px] text-muted-foreground">{l.list_key}</span>
             </button>
           ))}
@@ -344,7 +356,7 @@ export default function MasterDataSection({
             <TabsContent value="entries">
               <Card>
                 <CardHeader className="flex-row items-center justify-between space-y-0 py-3">
-                  <CardTitle className="text-sm">{selected.display_name}</CardTitle>
+                   <CardTitle className="text-sm">{isDesktop ? <RichText value={selected.display_name} /> : selected.display_name}</CardTitle>
                   <Button size="sm" onClick={() => { openNewItem(); setItemOpen(true); }}>
                     <Plus className="mr-1 h-3.5 w-3.5" />Neuer Eintrag
                   </Button>
@@ -355,7 +367,11 @@ export default function MasterDataSection({
                       <TableRow>
                         <TableHead>Bezeichnung</TableHead>
                         {tableAttrs.map((a) => (
-                          <TableHead key={a.id}>{a.display_name}{a.unit ? ` (${a.unit})` : ""}</TableHead>
+                           <TableHead key={a.id}>
+                             {isDesktop ? (
+                               <><RichText value={masterDataAttributeDisplayName(a.attribute_key, a.display_name, true)} />{a.unit && <> (<RichText value={a.unit} />)</>}</>
+                             ) : <>{a.display_name}{a.unit ? ` (${a.unit})` : ""}</>}
+                           </TableHead>
                         ))}
                         <TableHead>Status</TableHead>
                         <TableHead className="w-24" />
@@ -368,12 +384,14 @@ export default function MasterDataSection({
                       {items.map((it: GlobalListItem) => (
                         <TableRow key={it.id}>
                           <TableCell>
-                            {it.label}
+                             {isDesktop ? <RichText value={masterDataItemDisplayName(it.item_value, it.label, true)} /> : it.label}
                             <span className="ml-2 font-mono text-[10px] text-muted-foreground">{it.item_value}</span>
                           </TableCell>
-                          {tableAttrs.map((a) => (
-                            <TableCell key={a.id} className="text-sm">{formatValue(a, (it.metadata ?? {})[a.attribute_key])}</TableCell>
-                          ))}
+                           {tableAttrs.map((a) => (
+                             <TableCell key={a.id} className="text-sm">
+                               {isDesktop && a.unit ? <>{formatValue({ ...a, unit: null }, (it.metadata ?? {})[a.attribute_key])} <RichText value={a.unit} /></> : formatValue(a, (it.metadata ?? {})[a.attribute_key])}
+                             </TableCell>
+                           ))}
                           <TableCell>
                             <Badge variant={it.is_active === false ? "outline" : "secondary"}>
                               {it.is_active === false ? "Inaktiv" : "Aktiv"}
@@ -405,7 +423,7 @@ export default function MasterDataSection({
             <TabsContent value="schema">
               <Card>
                 <CardHeader className="flex-row items-center justify-between space-y-0 py-3">
-                  <CardTitle className="text-sm">Eigenschaften von „{selected.display_name}“</CardTitle>
+                   <CardTitle className="text-sm">Eigenschaften von „{isDesktop ? <RichText value={selected.display_name} /> : selected.display_name}“</CardTitle>
                   <Button size="sm" onClick={() => { setAttrDraft({ ...emptyAttr, sort_order: attributes.length }); setAttrOpen(true); }}>
                     <Plus className="mr-1 h-3.5 w-3.5" />Eigenschaft
                   </Button>
@@ -432,7 +450,7 @@ export default function MasterDataSection({
                       )}
                       {attributes.map((a) => (
                         <TableRow key={a.id}>
-                          <TableCell>{a.display_name}</TableCell>
+                           <TableCell>{isDesktop ? <RichText value={masterDataAttributeDisplayName(a.attribute_key, a.display_name, true)} /> : a.display_name}</TableCell>
                           <TableCell className="font-mono text-xs">
                             <button
                               className="hover:text-primary"
@@ -446,7 +464,7 @@ export default function MasterDataSection({
                             </button>
                           </TableCell>
                           <TableCell className="text-xs">{MASTER_DATA_ATTRIBUTE_TYPES.find((t) => t.value === a.data_type)?.label ?? a.data_type}</TableCell>
-                          <TableCell className="text-xs">{a.unit ?? "–"}</TableCell>
+                           <TableCell className="text-xs">{a.unit ? (isDesktop ? <RichText value={a.unit} /> : a.unit) : "–"}</TableCell>
                           <TableCell className="text-xs">{a.is_required ? "Ja" : "Nein"}</TableCell>
                           <TableCell className="text-right whitespace-nowrap">
                             <Button size="icon" variant="ghost" onClick={() => {
@@ -483,13 +501,13 @@ export default function MasterDataSection({
             <DialogDescription>Zentrale Datenquelle für Formulare, Workflows, Berichte und Berechnungen.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div><Label>Bezeichnung</Label><Input value={listDraft.display_name} onChange={(e) => setListDraft((d) => ({ ...d, display_name: e.target.value }))} placeholder="z.B. Mundstücke" /></div>
+             <div><Label>Bezeichnung</Label>{isDesktop ? <SymbolInput value={listDraft.display_name} onChange={(value) => setListDraft((d) => ({ ...d, display_name: value }))} placeholder="z.B. Mundstücke" /> : <Input value={listDraft.display_name} onChange={(e) => setListDraft((d) => ({ ...d, display_name: e.target.value }))} placeholder="z.B. Mundstücke" />}</div>
             <div>
               <Label>Schlüssel</Label>
-              <Input value={listDraft.list_key} disabled={!!listDraft.id} onChange={(e) => setListDraft((d) => ({ ...d, list_key: slug(e.target.value) }))} placeholder={slug(listDraft.display_name) || "mundstuecke"} />
+               <Input value={listDraft.list_key} disabled={!!listDraft.id} onChange={(e) => setListDraft((d) => ({ ...d, list_key: slug(e.target.value) }))} placeholder={technicalSlug(listDraft.display_name, isDesktop) || "mundstuecke"} />
             </div>
             <div><Label>Kategorie</Label><Input value={listDraft.category} onChange={(e) => setListDraft((d) => ({ ...d, category: e.target.value }))} /></div>
-            <div><Label>Beschreibung</Label><Textarea rows={2} value={listDraft.description} onChange={(e) => setListDraft((d) => ({ ...d, description: e.target.value }))} /></div>
+             <div><Label>Beschreibung</Label>{isDesktop ? <SymbolTextarea rows={2} value={listDraft.description} onChange={(value) => setListDraft((d) => ({ ...d, description: value }))} /> : <Textarea rows={2} value={listDraft.description} onChange={(e) => setListDraft((d) => ({ ...d, description: e.target.value }))} />}</div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setListOpen(false)}>Abbrechen</Button>
@@ -503,10 +521,10 @@ export default function MasterDataSection({
         <DialogContent>
           <DialogHeader><DialogTitle>{attrDraft.id ? "Eigenschaft bearbeiten" : "Neue Eigenschaft"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><Label>Bezeichnung</Label><Input value={attrDraft.display_name} onChange={(e) => setAttrDraft((d) => ({ ...d, display_name: e.target.value }))} placeholder="z.B. Schlitzbreite" /></div>
+             <div><Label>Bezeichnung</Label>{isDesktop ? <SymbolInput value={attrDraft.display_name} onChange={(value) => setAttrDraft((d) => ({ ...d, display_name: value }))} placeholder="z.B. Schlitzbreite" /> : <Input value={attrDraft.display_name} onChange={(e) => setAttrDraft((d) => ({ ...d, display_name: e.target.value }))} placeholder="z.B. Schlitzbreite" />}</div>
             <div>
               <Label>Schlüssel</Label>
-              <Input value={attrDraft.attribute_key} disabled={!!attrDraft.id} onChange={(e) => setAttrDraft((d) => ({ ...d, attribute_key: slug(e.target.value) }))} placeholder={slug(attrDraft.display_name) || "schlitzbreite"} />
+               <Input value={attrDraft.attribute_key} disabled={!!attrDraft.id} onChange={(e) => setAttrDraft((d) => ({ ...d, attribute_key: slug(e.target.value) }))} placeholder={technicalSlug(attrDraft.display_name, isDesktop) || "schlitzbreite"} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -518,12 +536,12 @@ export default function MasterDataSection({
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Einheit</Label><Input value={attrDraft.unit} onChange={(e) => setAttrDraft((d) => ({ ...d, unit: e.target.value }))} placeholder="mm, cpsi, …" /></div>
+               <div><Label>Einheit</Label>{isDesktop ? <SymbolInput value={attrDraft.unit} onChange={(value) => setAttrDraft((d) => ({ ...d, unit: value }))} placeholder="mm, cpsi, …" /> : <Input value={attrDraft.unit} onChange={(e) => setAttrDraft((d) => ({ ...d, unit: e.target.value }))} placeholder="mm, cpsi, …" />}</div>
             </div>
             {attrDraft.data_type === "select" && (
               <div><Label>Auswahloptionen (Komma-getrennt)</Label><Input value={attrDraft.options} onChange={(e) => setAttrDraft((d) => ({ ...d, options: e.target.value }))} placeholder="rund, quadratisch, wabenförmig" /></div>
             )}
-            <div><Label>Hilfetext</Label><Input value={attrDraft.description} onChange={(e) => setAttrDraft((d) => ({ ...d, description: e.target.value }))} /></div>
+             <div><Label>Hilfetext</Label>{isDesktop ? <SymbolInput value={attrDraft.description} onChange={(value) => setAttrDraft((d) => ({ ...d, description: value }))} /> : <Input value={attrDraft.description} onChange={(e) => setAttrDraft((d) => ({ ...d, description: e.target.value }))} />}</div>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 text-sm">
                 <Switch checked={attrDraft.is_required} onCheckedChange={(c) => setAttrDraft((d) => ({ ...d, is_required: c }))} />
@@ -548,16 +566,18 @@ export default function MasterDataSection({
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{itemDraft.id ? "Stammdatensatz bearbeiten" : "Neuer Stammdatensatz"}</DialogTitle>
-            {selected && <DialogDescription>{selected.display_name}</DialogDescription>}
+             {selected && <DialogDescription>{isDesktop ? <RichText value={selected.display_name} /> : selected.display_name}</DialogDescription>}
           </DialogHeader>
           <div className="space-y-3">
-            <div><Label>Bezeichnung</Label><Input value={itemDraft.label} onChange={(e) => setItemDraft((d) => ({ ...d, label: e.target.value }))} /></div>
-            <div><Label>Wert / Schlüssel</Label><Input value={itemDraft.item_value} onChange={(e) => setItemDraft((d) => ({ ...d, item_value: e.target.value }))} placeholder={slug(itemDraft.label)} /></div>
+             <div><Label>Bezeichnung</Label>{isDesktop ? <SymbolInput value={itemDraft.label} onChange={(value) => setItemDraft((d) => ({ ...d, label: value }))} /> : <Input value={itemDraft.label} onChange={(e) => setItemDraft((d) => ({ ...d, label: e.target.value }))} />}</div>
+             <div><Label>Wert / Schlüssel</Label><Input value={itemDraft.item_value} onChange={(e) => setItemDraft((d) => ({ ...d, item_value: e.target.value }))} placeholder={technicalSlug(itemDraft.label, isDesktop)} /></div>
             {attributes.map((a) => (
               <div key={a.id}>
-                <Label>
-                  {a.display_name}{a.unit ? ` (${a.unit})` : ""}{a.is_required && <span className="text-destructive"> *</span>}
-                </Label>
+                 <Label>
+                   {isDesktop ? <RichText value={masterDataAttributeDisplayName(a.attribute_key, a.display_name, true)} /> : a.display_name}
+                   {a.unit && (isDesktop ? <> (<RichText value={a.unit} />)</> : ` (${a.unit})`)}
+                   {a.is_required && <span className="text-destructive"> *</span>}
+                 </Label>
                 <AttributeValueInput
                   attr={a}
                   value={itemDraft.metadata[a.attribute_key]}
@@ -566,7 +586,7 @@ export default function MasterDataSection({
                 {a.description && <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>}
               </div>
             ))}
-            <div><Label>Bemerkung</Label><Textarea rows={2} value={itemDraft.description} onChange={(e) => setItemDraft((d) => ({ ...d, description: e.target.value }))} /></div>
+             <div><Label>Bemerkung</Label>{isDesktop ? <SymbolTextarea rows={2} value={itemDraft.description} onChange={(value) => setItemDraft((d) => ({ ...d, description: value }))} /> : <Textarea rows={2} value={itemDraft.description} onChange={(e) => setItemDraft((d) => ({ ...d, description: e.target.value }))} />}</div>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 text-sm">
                 <Switch checked={itemDraft.is_active} onCheckedChange={(c) => setItemDraft((d) => ({ ...d, is_active: c }))} />

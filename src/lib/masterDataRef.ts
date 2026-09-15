@@ -19,6 +19,43 @@
  */
 
 import type { MasterDataCategory } from "@/lib/api/globalLibrary";
+import { toPlain } from "@/lib/richText";
+
+const DESKTOP_ITEM_LABELS: Record<string, string> = {
+  N2: "N_{2}",
+  H2O: "H_{2}O",
+  CO2: "CO_{2}",
+  O2: "O_{2}",
+};
+
+/**
+ * Rein darstellungsbezogene Desktop-Aliasse. Die technischen Schlüssel und die
+ * gespeicherten Bezeichnungen bleiben dabei unverändert.
+ */
+export function masterDataAttributeDisplayName(
+  attributeKey: string,
+  displayName: string,
+  desktop: boolean
+): string {
+  if (!desktop) return displayName;
+  const plain = toPlain(displayName).trim();
+  const normalized = plain.toLocaleLowerCase("de");
+  if (normalized === "zusammensetzung") return "Volumsanteil";
+  if (attributeKey === "cp" && normalized === "cp") return "c_{p}";
+  if (attributeKey === "cv" && normalized === "cv") return "c_{v}";
+  return displayName;
+}
+
+/** Desktop-Anzeige häufiger Gasformeln; item_value bleibt stets unverändert. */
+export function masterDataItemDisplayName(
+  itemValue: string,
+  label: string,
+  desktop: boolean
+): string {
+  if (!desktop) return label;
+  const plain = toPlain(label).trim();
+  return DESKTOP_ITEM_LABELS[plain] ?? DESKTOP_ITEM_LABELS[itemValue] ?? label;
+}
 
 export interface MasterDataRef {
   /** Schlüssel der Stammdaten-Kategorie (global_lists.list_key). */
