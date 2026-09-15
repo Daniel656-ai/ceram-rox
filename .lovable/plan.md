@@ -1,22 +1,23 @@
-# Globale Datenquelle „Konstante“
+# Lotnummer in der Gebindeübersicht korrigieren
 
-## Ziel
-Die bestehende Bibliothek globaler Felder erhält additiv die Datenquelle **Konstante**. Ein zentral hinterlegter Wert wird in Web und Desktop automatisch in Formeln bereitgestellt, im Messformular schreibgeschützt angezeigt und nicht als Messwert gespeichert.
+## Analyseergebnis
+- Die fachliche Lotnummer wird ausschließlich als `batch_number` der bestehenden Rohstoffcharge gespeichert.
+- Manuelles Anlegen und Excel-Import erzeugen bzw. finden diese Charge korrekt und verknüpfen sie über die bestehenden Gebinde-Positionen.
+- Ein Gebinde kann mehrere Lots enthalten; maßgeblich ist daher die bestehende FIFO-Zuordnung der Gebinde-Positionen. Der direkte Charge-Verweis am Gebinde dient nur als Kompatibilitätswert für ältere Daten.
+- Die Detailansicht der Gebinde liest die Lotnummern bereits korrekt aus den FIFO-Positionen und fällt nur bei Altdaten auf den direkten Gebinde-Verweis zurück.
+- Die fehlerhafte Übersicht ist die Gebinde-Scanansicht: Sie zeigt Rohstoff, Bestand, Charge und Lagerort gemeinsam, liest die Charge aber ausschließlich aus dem veraltbaren direkten Gebinde-Verweis. Die Rohstoff-Detailansicht verwendet bereits korrekt die FIFO-Positionen.
+- Es gibt keine zweite fachliche Lotnummer. `manufacturer_batch` ist die separate Hersteller-/BigBag-Nummer und bleibt unverändert.
 
 ## Umsetzung
-1. Das bestehende globale Feldmodell um `constant` ergänzen. Der feste Wert bleibt im vorhandenen Feld `default_value`; es gibt keine neue Tabelle oder Migration.
-2. Im Editor bei „Konstante“ ein eindeutig bezeichnetes Wertefeld anzeigen. Stammdaten-, Listen- und Berechnungsoptionen bleiben ausgeblendet; Einheit und Beschreibung bleiben nutzbar.
-3. Beim Einfügen eines konstanten globalen Feldes dessen Herkunft in den vorhandenen Formular-Metadaten mitführen. Die zentrale globale Definition bleibt maßgeblich, sodass spätere Wertänderungen ohne Kopierlogik wirksam werden.
-4. Eine gemeinsame Auflösung für globale Konstanten ergänzen: Typgerechte Werte (insbesondere deutsche Dezimalzahlen wie `0,972`) werden zentral gelesen und in Formular- und Formelkontexte eingespeist.
-5. Konstante Felder im Formular automatisch schreibgeschützt darstellen. Sie werden nicht in die Messwert-Persistierung aufgenommen; Berechnungen können sie dennoch über den stabilen Feldschlüssel verwenden.
-6. Bestehende Datenquellen und die Stammdatenreferenz unverändert lassen. Keine BENCH-NOx-Formel und keine konkrete Venturi-Konstante hardcodieren.
+1. In der Gebinde-Scanansicht die bereits vorhandene Lotpositions-Anzeige wiederverwenden, die aktive FIFO-Positionen lädt.
+2. Für reine Altdaten den dort bereits vorgesehenen direkten Charge-Verweis als Rückfall beibehalten.
+3. Detailansicht, zentrale Abfragen, Lagerort-/Gebinde-, Lieferanten- und FIFO-Logik unverändert lassen.
 
 ## Prüfung
-- Automatisierte Tests für `C = 0,972`, typgerechte Auflösung, Formelauswertung und Schreibschutz-/Persistierungsfilter.
-- Bestehende Tests vollständig ausführen und Typprüfung durchführen.
-- Webansicht sowie Desktop/Tauri-Buildpfad auf unverändertes Verhalten bestehender Quellen prüfen.
+- Mehrere Lots in einem gescannten Gebinde werden vollständig und ohne Duplikate angezeigt.
+- Aufgebrauchte Lotpositionen erscheinen nicht als aktueller Bestand.
+- Altdaten ohne Position bleiben über den bestehenden Rückfall sichtbar.
+- Bestehende Tests sowie eine Sichtprüfung der Scan- und Detailansicht bestätigen die Korrektur.
 
 ## Technische Grenzen
-- Keine Backend-Adresse, Datenbankstruktur, Storage-, Edge-Function-, Auth- oder Secret-Änderung.
-- Keine Migration bestehender globaler Felder.
-- Technische Schlüssel bleiben stabil; `epsilon_venturi` bleibt fachlich getrennt vom Geometrie-Schlüssel `epsilon`.
+Keine neue Tabelle, Migration oder Datenkopie; keine Änderungen an Backend-Adresse, Storage, Funktionen, Authentifizierung oder Secrets.
