@@ -920,3 +920,93 @@ function SelectOptionsEditor({
     </div>
   );
 }
+
+/* ----------------------------------------------------------------
+ * Stammdatenreferenz (nur Desktop-Variante)
+ *
+ * Wählt Kategorie -> Eintrag -> Eigenschaft aus den bestehenden Stammdaten.
+ * Der Wert wird zur Laufzeit aus den Stammdaten gelesen und hat Vorrang vor
+ * einem Standardwert. Fehlt der Wert, wird das im Formular als Hinweis
+ * angezeigt – es gibt keinen stillen Rückfall auf den Standardwert.
+ * ---------------------------------------------------------------- */
+function MasterDataRefPicker({
+  catalog,
+  value,
+  onChange,
+}: {
+  catalog: import("@/lib/api/globalLibrary").MasterDataCategory[];
+  value: MasterDataRef | null;
+  onChange: (ref: MasterDataRef | null) => void;
+}) {
+  const cat = catalog.find((c) => c.list.list_key === value?.list_key);
+  const item = cat?.items.find((i) => i.item_value === value?.item_value);
+  const preview = value ? resolveMasterDataRef(value, catalog) : null;
+
+  return (
+    <div className="rounded-md border p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Datenquelle: Stammdaten (Desktop)</Label>
+        {value && (
+          <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => onChange(null)}>
+            Referenz entfernen
+          </Button>
+        )}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Select
+          value={value?.list_key ?? NONE}
+          onValueChange={(v) =>
+            onChange(v === NONE ? null : { list_key: v, item_value: "", attribute_key: "" })
+          }
+        >
+          <SelectTrigger><SelectValue placeholder="Kategorie" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>Keine Stammdatenreferenz</SelectItem>
+            {catalog.map((c) => (
+              <SelectItem key={c.list.id} value={c.list.list_key}>{c.list.display_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={value?.item_value || NONE}
+          onValueChange={(v) =>
+            value && onChange({ ...value, item_value: v === NONE ? "" : v })
+          }
+          disabled={!cat}
+        >
+          <SelectTrigger><SelectValue placeholder="Eintrag" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>Eintrag wählen</SelectItem>
+            {(cat?.items ?? []).map((i) => (
+              <SelectItem key={i.id} value={i.item_value}>{i.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={value?.attribute_key || NONE}
+          onValueChange={(v) =>
+            value && onChange({ ...value, attribute_key: v === NONE ? "" : v })
+          }
+          disabled={!cat}
+        >
+          <SelectTrigger><SelectValue placeholder="Eigenschaft" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>Bezeichnung des Eintrags</SelectItem>
+            {(cat?.attributes ?? []).map((a) => (
+              <SelectItem key={a.id} value={a.attribute_key}>
+                {a.unit ? `${a.display_name} (${a.unit})` : a.display_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {value && item && preview && (
+        <p className={preview.status === "ok" ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>
+          {preview.status === "ok"
+            ? `Aktueller Stammdatenwert: ${String(preview.value)}${preview.unit ? ` ${preview.unit}` : ""}`
+            : preview.reason}
+        </p>
+      )}
+    </div>
+  );
+}
