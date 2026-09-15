@@ -55,6 +55,8 @@ import { runCalculation } from "@/lib/calculationBindings";
 import { walkNodes } from "@/lib/api/formDefinitionLayout";
 import { readValueSource, isSameFormLink, isPreviousServiceLink, isLinkedFormLink, resolveLinkedValue, linkOriginLabel, numericValue, type StepData, type LinkedFormData } from "@/lib/fieldLinks";
 import { createContext as createReactContext } from "react";
+import { readMasterDataRef, resolveMasterDataRef, type MasterDataRef } from "@/lib/masterDataRef";
+import { runtimeKind } from "@/lib/api/backendConfig";
 
 /**
  * Werte vorangegangener Workflow-Schritte (step_key -> Feldwerte).
