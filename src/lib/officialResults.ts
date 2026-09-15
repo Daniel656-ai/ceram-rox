@@ -19,6 +19,7 @@ import {
   elementValueKey,
   elementFromValueKey,
 } from "@/lib/measurementBlocks";
+import { globalConstantScope, isGlobalConstant, type GlobalConstantLike } from "@/lib/globalConstants";
 
 export interface OfficialResultCandidate {
   key: string;
@@ -47,6 +48,7 @@ export function buildLinkedFormResultCandidates(
   fields: FormField[],
   calculations: FormCalculation[],
   taskValues: Record<string, unknown>,
+  globalConstants: GlobalConstantLike[] = [],
 ): OfficialResultCandidate[] {
   const prefix = `form:${formId}:`;
   const localValues: Record<string, unknown> = {};
@@ -62,10 +64,11 @@ export function buildLinkedFormResultCandidates(
       .map((f) => f.id)
   );
 
+  const constantValues = globalConstantScope(globalConstants);
   const calculated = evaluateLocalCalculations(
     calculations,
-    localValues,
-    fields.map((field) => field.field_key),
+    { ...localValues, ...constantValues },
+    [...fields.map((field) => field.field_key), ...Object.keys(constantValues)],
   );
 
   // Messdatenblöcke: jede Messung erzeugt eigenständige, eindeutig
@@ -226,7 +229,11 @@ export function buildLinkedFormResultCandidates(
 
   const all: OfficialResultCandidate[] = [
     ...fields
-      .filter((field) => !blockChildIds.has(field.id) && field.field_type !== "measurement_block")
+      .filter((field) =>
+        !blockChildIds.has(field.id) &&
+        field.field_type !== "measurement_block" &&
+        (field.metadata as any)?.global_field_source !== "constant"
+      )
       .map((field) => {
         // Dynamische Ergebnisbezeichnung: Basisname + verknüpfte Messbedingungen.
         // Die Bedingungen bleiben zusätzlich strukturiert erhalten und werden

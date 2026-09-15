@@ -121,7 +121,7 @@ export const formFields = {
       const globals = (await unwrap(
         dbClient
           .from("global_fields" as any)
-          .select("id,field_key,display_name,description,unit,is_repeatable,data_type")
+          .select("id,field_key,display_name,description,unit,is_repeatable,data_type,data_source,default_value")
           .in("id", ids)
       )) as unknown as GlobalDefinitionLike[];
       return applyGlobalDefinitions(fields, globals);

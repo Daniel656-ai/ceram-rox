@@ -29,7 +29,7 @@ export type GlobalFieldDataType =
   | "ref_material";
 
 
-export type GlobalFieldSource = "manual" | "system" | "calculated" | "reference" | "device";
+export type GlobalFieldSource = "manual" | "system" | "calculated" | "reference" | "device" | "constant";
 
 
 export interface GlobalField {
@@ -133,6 +133,7 @@ export const GLOBAL_FIELD_SOURCES: { value: GlobalFieldSource; label: string }[]
   { value: "calculated", label: "Berechnet" },
   { value: "reference", label: "Referenz (Stammdaten)" },
   { value: "device", label: "Maschine / Messgerät" },
+  { value: "constant", label: "Konstante" },
 ];
 
 export const globalObjects = {

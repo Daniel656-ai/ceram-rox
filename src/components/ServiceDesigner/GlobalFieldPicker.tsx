@@ -164,6 +164,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
           metadata: {
             global_list_id: gf.list_id ?? null,
             global_calculation_id: gf.calculation_id ?? null,
+            global_field_source: gf.data_source,
             validation_ids: gf.validation_ids ?? [],
             is_repeatable: isRepeater ? true : !!gf.is_repeatable,
             usage_index: usageIndex,
@@ -181,6 +182,7 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
                 }
               : {}),
           },
+          readonly: gf.data_source === "constant",
         } as any);
 
 

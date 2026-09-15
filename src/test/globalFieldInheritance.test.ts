@@ -55,4 +55,16 @@ describe("globale Felddefinition", () => {
     expect(f.field_key).toBe("temperatur");
     expect(f.global_field_id).toBe("g1");
   });
+
+  it("übernimmt eine globale Konstante verbindlich und schreibgeschützt", () => {
+    const [f] = applyGlobalDefinitions([mk({ metadata: { local: true } })], [{
+      ...gf,
+      data_source: "constant",
+      default_value: "0,972",
+      data_type: "decimal",
+    }]);
+    expect((f as any).default_value).toBe("0,972");
+    expect((f as any).readonly).toBe(true);
+    expect(f.metadata).toEqual({ local: true, global_field_source: "constant" });
+  });
 });

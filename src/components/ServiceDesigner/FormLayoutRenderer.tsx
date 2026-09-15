@@ -57,6 +57,7 @@ import { readValueSource, isSameFormLink, isPreviousServiceLink, isLinkedFormLin
 import { createContext as createReactContext } from "react";
 import { readMasterDataRef, resolveMasterDataRef, type MasterDataRef } from "@/lib/masterDataRef";
 import { runtimeKind } from "@/lib/api/backendConfig";
+import { globalConstantScope, isGlobalConstant, parseGlobalConstantValue } from "@/lib/globalConstants";
 
 /**
  * Werte vorangegangener Workflow-Schritte (step_key -> Feldwerte).
@@ -325,6 +326,21 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
   const { value, setValue, interactive } = useBinding(field.field_key);
   const disabled = readonly || !interactive;
   const renderTokens = useSystemTextRenderer();
+
+  if ((field.metadata as any)?.global_field_source === "constant") {
+    const constant = parseGlobalConstantValue({
+      field_key: field.field_key,
+      data_type: field.field_type,
+      default_value: field.default_value,
+      data_source: "constant",
+    });
+    return (
+      <div className="flex h-9 items-center gap-2 px-3 rounded-md border bg-muted/40 text-sm">
+        <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+        <span className="truncate">{constant == null ? "—" : String(constant).replace(".", ",")}</span>
+      </div>
+    );
+  }
 
   // Systemvariablen sind read-only: enthält der Standardwert ein {{...}}-Token,
   // wird der aktuelle Kontextwert angezeigt statt eines Eingabefeldes.
@@ -807,6 +823,7 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
   const label = renderTokens(node.label_override || field.display_name);
   const desc = renderTokens(node.description_override ?? field.description ?? "") || null;
   const readonly = node.readonly || field.readonly || perm.visibility === "read" ||
+    (field.metadata as any)?.global_field_source === "constant" ||
     containsSystemToken(field.default_value);
   const required = perm.required || field.is_required;
 
@@ -2016,11 +2033,21 @@ export default function FormLayoutRenderer({
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: globalFields = [] } = useQuery({
+    queryKey: ["global-fields", "constants"],
+    queryFn: () => api.globalFields.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const constants = useMemo(
+    () => globalConstantScope((globalFields as any[]).filter(isGlobalConstant)),
+    [globalFields],
+  );
+
   const calcResults = useMemo(() => {
     const out: Record<string, CalcDisplayResult> = {};
     // Werte des Formulars + Listen aus Wiederholbereichen (rein zur Auswertung).
     const aggregates = repeaterAggregateScope(fields, values ?? {});
-    const vals = { ...(values ?? {}), ...aggregates };
+    const vals = { ...(values ?? {}), ...constants, ...aggregates };
     const local = evaluateLocalCalculations(localCalcs, vals, [
       ...fields.map((f) => f.field_key),
       ...Object.keys(aggregates),
@@ -2055,7 +2082,7 @@ export default function FormLayoutRenderer({
       }
     }
     return out;
-  }, [localCalcs, globalCalcs, values, hasGlobalNodes, fields]);
+  }, [localCalcs, globalCalcs, values, hasGlobalNodes, fields, constants]);
 
   /** Ergebnisse in die Formularwerte zurückschreiben – für Speicherung & Folgeberechnungen. */
   useEffect(() => {

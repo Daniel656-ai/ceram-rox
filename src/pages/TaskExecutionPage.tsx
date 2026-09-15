@@ -227,7 +227,7 @@ function TaskExecutionPageInner() {
     // Fetch authoritative definitions at save time. Completion must never
     // depend on whether a metadata query or a calculation render effect has
     // already finished in the UI.
-    const [freshServiceFields, linkedDefinitions] = await Promise.all([
+    const [freshServiceFields, linkedDefinitions, globalConstants] = await Promise.all([
       serviceId ? api.serviceDataFields.listForService(serviceId) : Promise.resolve([]),
       Promise.all(formIds.map(async (formId) => {
         const [fields, calculations] = await Promise.all([
@@ -236,6 +236,7 @@ function TaskExecutionPageInner() {
         ]);
         return { formId, fields, calculations };
       })),
+      api.globalFields.list().then((fields) => fields.filter((field) => field.data_source === "constant")),
     ]);
 
     const candidates = new Map<string, OfficialResultCandidate>();
@@ -248,6 +249,7 @@ function TaskExecutionPageInner() {
         definition.fields,
         definition.calculations,
         values,
+        globalConstants,
       )) {
         candidates.set(candidate.key, candidate);
       }

@@ -185,6 +185,9 @@ export default function GlobalModelTab() {
 
   const saveField = useMutation({
     mutationFn: async () => {
+      if (fieldDraft.data_source === "constant" && !fieldDraft.default_value.trim()) {
+        throw new Error("Bitte einen verbindlichen Wert für die Konstante eingeben.");
+      }
       const payload = {
         display_name: fieldDraft.display_name,
         description: fieldDraft.description || null,
@@ -524,7 +527,13 @@ export default function GlobalModelTab() {
             </div>
             <div>
               <Label className="text-xs">Datenquelle</Label>
-              <Select value={fieldDraft.data_source} onValueChange={(v) => setFieldDraft({ ...fieldDraft, data_source: v })}>
+              <Select value={fieldDraft.data_source} onValueChange={(v) => setFieldDraft({
+                ...fieldDraft,
+                data_source: v,
+                master_ref: v === "reference" ? fieldDraft.master_ref : null,
+                list_id: v === "constant" ? null : fieldDraft.list_id,
+                calculation_id: v === "constant" ? null : fieldDraft.calculation_id,
+              })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {GLOBAL_FIELD_SOURCES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
@@ -541,11 +550,21 @@ export default function GlobalModelTab() {
             </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">
-                Standardwert {fieldDraft.master_ref ? "(nicht erforderlich – Stammdaten haben Vorrang)" : "(optional)"}
+                {fieldDraft.data_source === "constant"
+                  ? "Wert der Konstanten *"
+                  : `Standardwert ${fieldDraft.master_ref ? "(nicht erforderlich – Stammdaten haben Vorrang)" : "(optional)"}`}
               </Label>
-              <SymbolInput value={fieldDraft.default_value} onChange={(v) => setFieldDraft({ ...fieldDraft, default_value: v })} />
+              <Input
+                type={fieldDraft.data_source === "constant" && ["number", "decimal", "percent"].includes(fieldDraft.data_type) ? "text" : "text"}
+                inputMode={fieldDraft.data_source === "constant" && ["number", "decimal", "percent"].includes(fieldDraft.data_type) ? "decimal" : undefined}
+                value={fieldDraft.default_value}
+                onChange={(e) => setFieldDraft({ ...fieldDraft, default_value: e.target.value })}
+              />
+              {fieldDraft.data_source === "constant" && (
+                <p className="mt-1 text-[11px] text-muted-foreground">Verbindlicher, zentral gepflegter Wert; im Formular automatisch schreibgeschützt.</p>
+              )}
             </div>
-            {isDesktop && (
+            {isDesktop && fieldDraft.data_source !== "constant" && (
               <div className="sm:col-span-2">
                 <MasterDataRefPicker
                   catalog={catalog}
@@ -554,7 +573,7 @@ export default function GlobalModelTab() {
                 />
               </div>
             )}
-            <div>
+            {fieldDraft.data_source !== "constant" && <div>
               <Label className="text-xs">Globale Liste (Auswahlwerte)</Label>
               <Select
                 value={fieldDraft.list_id ?? NONE}
@@ -566,8 +585,8 @@ export default function GlobalModelTab() {
                   {lists.map((l) => <SelectItem key={l.id} value={l.id}>{l.display_name}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </div>}
+            {fieldDraft.data_source !== "constant" && <div>
               <Label className="text-xs">Globale Berechnung</Label>
               <Select
                 value={fieldDraft.calculation_id ?? NONE}
@@ -579,7 +598,7 @@ export default function GlobalModelTab() {
                   {calcs.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
+            </div>}
             <div className="sm:col-span-2">
               <Label className="text-xs">Globale Validierungen</Label>
               <div className="mt-1 flex flex-wrap gap-1.5">

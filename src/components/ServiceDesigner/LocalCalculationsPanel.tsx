@@ -29,6 +29,7 @@ import { extractReferences, FORMULA_FUNCTIONS, formulaFunctionLabel } from "@/li
 import { readValueSource, isLinkedField, linkOriginLabel } from "@/lib/fieldLinks";
 import { repeaterAggregateRefs } from "@/lib/repeaterAggregation";
 import { GEOMETRY_CALCULATIONS, type GeometryCalcDefinition } from "@/lib/geometry/calculations";
+import { globalConstantScope, isGlobalConstant } from "@/lib/globalConstants";
 
 
 const OPERATORS: { v: CalcOperator; l: string }[] = [
@@ -173,6 +174,15 @@ export default function LocalCalculationsPanel({
     queryKey: ["form-calculations", form.id],
     queryFn: () => api.formCalculations.listForForm(form.id),
   });
+  const { data: globalFields = [] } = useQuery({
+    queryKey: ["global-fields", "constants"],
+    queryFn: () => api.globalFields.list(),
+  });
+  const globalConstants = useMemo(
+    () => (globalFields as any[]).filter(isGlobalConstant),
+    [globalFields],
+  );
+  const constantValues = useMemo(() => globalConstantScope(globalConstants), [globalConstants]);
 
   /**
    * Rechenbare Größen des Formulars: numerische Felder UND verknüpfte Felder
@@ -202,10 +212,11 @@ export default function LocalCalculationsPanel({
   const knownRefs = useMemo(
     () => new Set<string>([
       ...fields.map((f) => f.field_key),
+      ...globalConstants.map((f) => f.field_key),
       ...aggregateRefs.map((a) => a.key),
       ...(calcs as FormCalculation[]).map((c) => c.calc_key),
     ]),
-    [fields, calcs, aggregateRefs]
+    [fields, calcs, aggregateRefs, globalConstants]
   );
   const isKnownRef = (key: string) => knownRefs.has(key);
 
@@ -238,9 +249,12 @@ export default function LocalCalculationsPanel({
       ...(calcs as FormCalculation[]).filter((c) => c.calc_key !== key),
       { ...(emptyStub()), id: "draft", form_id: form.id, calc_key: key, display_name: draft.display_name, formula, decimals: draft.decimals, rounding: draft.rounding } as FormCalculation,
     ];
-    const res = evaluateLocalCalculations(merged, testValues, fields.map((f) => f.field_key));
+    const res = evaluateLocalCalculations(merged, { ...testValues, ...constantValues }, [
+      ...fields.map((f) => f.field_key),
+      ...globalConstants.map((f) => f.field_key),
+    ]);
     return res[key];
-  }, [calcs, draft, formula, testValues, form.id, fields]);
+  }, [calcs, draft, formula, testValues, form.id, fields, globalConstants, constantValues]);
 
   const referenced = useMemo(
     () => extractReferences(formula).filter((r) => !FORMULA_FUNCTIONS.includes(r)),
@@ -576,6 +590,16 @@ export default function LocalCalculationsPanel({
                                   ))}
                                 </SelectGroup>
                               )}
+                              {globalConstants.length > 0 && (
+                                <SelectGroup>
+                                  <SelectLabel>Globale Konstanten</SelectLabel>
+                                  {globalConstants.map((f) => (
+                                    <SelectItem key={f.id} value={f.field_key}>
+                                      {f.display_name}{f.unit ? ` [${f.unit}]` : ""}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              )}
                               {aggregateRefs.length > 0 && (
                                 <SelectGroup>
                                   <SelectLabel>Messreihen (über alle Einträge)</SelectLabel>
@@ -671,6 +695,19 @@ export default function LocalCalculationsPanel({
                                 onClick={() => setDraft((d) => ({ ...d, formula: appendRef(d.formula, f.field_key) }))}>
                                 🔗 {f.display_name}
                                 {originOf(f) ? <span className="ml-1 text-[10px] text-muted-foreground">aus {originOf(f)}</span> : null}
+                                <span className="ml-2 font-mono text-[10px] text-muted-foreground">{f.field_key}</span>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                        {globalConstants.length > 0 && (
+                          <>
+                            <p className="text-[11px] text-muted-foreground px-1 py-1">Globale Konstanten</p>
+                            {globalConstants.map((f) => (
+                              <button key={f.id} type="button"
+                                className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted"
+                                onClick={() => setDraft((d) => ({ ...d, formula: appendRef(d.formula, f.field_key) }))}>
+                                {f.display_name}
                                 <span className="ml-2 font-mono text-[10px] text-muted-foreground">{f.field_key}</span>
                               </button>
                             ))}

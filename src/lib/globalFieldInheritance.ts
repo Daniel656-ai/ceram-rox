@@ -20,6 +20,8 @@ export interface GlobalDefinitionLike {
   unit: string | null;
   is_repeatable?: boolean;
   data_type?: string;
+  data_source?: string;
+  default_value?: string | null;
 }
 
 export interface InheritingField {
@@ -59,6 +61,16 @@ export function applyGlobalDefinition<T extends InheritingField>(
     display_name: `${global.display_name}${suffix}`,
     description: global.description ?? null,
     unit: global.unit ?? null,
+    ...(global.data_source === "constant"
+      ? {
+          default_value: global.default_value ?? null,
+          readonly: true,
+          metadata: {
+            ...(field.metadata ?? {}),
+            global_field_source: "constant",
+          },
+        }
+      : {}),
   };
 }
 
