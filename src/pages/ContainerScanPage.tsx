@@ -13,6 +13,7 @@ import { ContainerActionsDialog } from "@/components/ContainerActionsDialog";
 import type { ContainerMovementType } from "@/lib/api/containerMovements";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { PsaSymbolList } from "@/components/PsaSymbolList";
+import { ContainerPositions } from "@/components/ContainerPositions";
 
 // Erlaubt: Buchstaben, Ziffern, - _ . / (typische Barcode-Symbologien)
 const barcodeSchema = z.string()
@@ -229,7 +230,12 @@ export default function ContainerScanPage() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground uppercase tracking-wide">Charge</div>
-                  <div className="font-mono text-sm">{container.raw_material_batches?.batch_number || "–"}</div>
+                  <ContainerPositions
+                    containerId={container.id}
+                    unit={container.unit}
+                    fallbackBatchNumber={container.raw_material_batches?.batch_number}
+                    variant="block"
+                  />
                 </div>
                 <div className="md:col-span-2">
                   <div className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1"><MapPin className="h-3 w-3" />Lagerort</div>
