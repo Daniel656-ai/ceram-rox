@@ -428,11 +428,7 @@ export default function ProjectDetailPage() {
           </div>
         </div>
         <div className="flex gap-2 print:hidden">
-          {canManagePlanning && !isProjectCompleted && (
-            <Button variant="outline" onClick={() => { handleUpdateProject({ project_status: "completed" }); toast.success(t("project_completed")); }}>
-              <CheckCircle2 className="h-4 w-4 mr-2" />{t("complete_project")}
-            </Button>
-          )}
+          
           {canManagePlanning && isProjectCompleted && (
             <Button variant="outline" onClick={() => { handleUpdateProject({ project_status: "active" }); toast.success(t("project_reopened")); }}>
               <RotateCcw className="h-4 w-4 mr-2" />{t("reopen_project")}
