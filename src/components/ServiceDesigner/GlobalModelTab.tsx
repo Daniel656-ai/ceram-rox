@@ -192,7 +192,11 @@ export default function GlobalModelTab() {
         is_repeatable: fieldDraft.data_type === "repeater" ? true : fieldDraft.is_repeatable,
         metadata: (() => {
           const current = (fields.find((f) => f.id === fieldDraft.id)?.metadata ?? {}) as Record<string, unknown>;
-          const next = { ...current };
+          // Stammdatenreferenz nur in der Desktop-Variante pflegbar; im Web
+          // bleibt eine bestehende Referenz unverändert erhalten.
+          const next = isDesktop
+            ? writeMasterDataRef(current, fieldDraft.master_ref)
+            : { ...current };
           if (fieldDraft.data_type === "repeater") {
             next.repeater = fieldDraft.repeater;
             next.subfields = fieldDraft.subfields;
@@ -411,6 +415,7 @@ export default function GlobalModelTab() {
                         select_options: (f.select_options ?? []).map((o: any) =>
                           typeof o === "string" ? { label: o, value: o } : { label: o.label ?? o.value, value: o.value ?? o.label }
                         ),
+                        master_ref: readMasterDataRef(f.metadata),
                         repeater: readGlobalRepeaterMeta(f),
                         subfields: readGlobalRepeaterSubfields(f),
                       });
