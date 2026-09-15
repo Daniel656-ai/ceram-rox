@@ -193,7 +193,12 @@ export default function LocalCalculationsPanel({
     () => fields.filter((f) => isCalcInputFieldDef(f as any)),
     [fields]
   );
-  const localFields = useMemo(() => numericFields.filter((f) => !isLinkedField(f as any)), [numericFields]);
+  const localFields = useMemo(
+    () => numericFields.filter((f) =>
+      !isLinkedField(f as any) && (f.metadata as any)?.global_field_source !== "constant"
+    ),
+    [numericFields],
+  );
   const linkedFields = useMemo(() => numericFields.filter((f) => isLinkedField(f as any)), [numericFields]);
   const originOf = (f: FormField) => linkOriginLabel(readValueSource(f as any));
   const fieldLabel = (key: string) =>

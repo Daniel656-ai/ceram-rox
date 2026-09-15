@@ -121,4 +121,39 @@ describe("official result candidates", () => {
       error: null,
     })]);
   });
+
+  it("uses a global constant in a formula without storing it as a measurement result", () => {
+    const constantField = {
+      ...field("c", "C"),
+      default_value: "0,972",
+      readonly: true,
+      global_field_id: "global-c",
+      metadata: { global_field_source: "constant" },
+    };
+    const result: FormCalculation = {
+      ...average,
+      id: "calc-with-c",
+      calc_key: "result_with_c",
+      display_name: "Ergebnis mit C",
+      formula: "input * c",
+      inputs: ["input", "c"],
+    };
+
+    const candidates = buildLinkedFormResultCandidates(
+      formId,
+      [field("input", "Eingang"), constantField],
+      [result],
+      { [`form:${formId}:input`]: 2 },
+      [{
+        field_key: "c",
+        display_name: "C",
+        data_source: "constant",
+        data_type: "decimal",
+        default_value: "0,972",
+      }],
+    );
+
+    expect(candidates.find((candidate) => candidate.key.endsWith("result_with_c"))?.value).toBeCloseTo(1.944);
+    expect(candidates.some((candidate) => candidate.key.endsWith(":c"))).toBe(false);
+  });
 });

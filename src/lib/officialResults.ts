@@ -19,7 +19,7 @@ import {
   elementValueKey,
   elementFromValueKey,
 } from "@/lib/measurementBlocks";
-import { globalConstantScope, isGlobalConstant, type GlobalConstantLike } from "@/lib/globalConstants";
+import { globalConstantScope, type GlobalConstantLike } from "@/lib/globalConstants";
 
 export interface OfficialResultCandidate {
   key: string;
