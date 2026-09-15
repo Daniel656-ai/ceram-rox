@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -99,6 +99,7 @@ function RequiredStepsHint({ serviceId }: { serviceId: string }) {
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
   const canViewRates = hasPermission("costs.view_hourly_rates");
@@ -621,6 +622,14 @@ export default function CreateOrderPage() {
       // Auftrag wurde eingereicht → Entwurf wird entfernt (kein Datenverlust,
       // die Daten leben ab jetzt im produktiven Auftrag).
       await autosave.discard();
+
+      // Den endgültig gespeicherten Auftrag einschließlich der serverseitig
+      // vergebenen Auftragsnummer vor dem Seitenwechsel in den Detail-Cache
+      // übernehmen. Die Nummer wird hier ausschließlich gelesen, nie erzeugt.
+      const persistedOrder = await api.orders.get(order.id);
+      if (persistedOrder) {
+        queryClient.setQueryData(["order", order.id], persistedOrder);
+      }
       toast.success(t("orders:created_success"));
       navigate(`/auftraege/${order.id}`);
     } catch (err: any) {
