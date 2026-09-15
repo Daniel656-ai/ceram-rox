@@ -26,6 +26,13 @@ import {
   type GlobalField,
   type GlobalObject,
 } from "@/lib/api/globalModel";
+import {
+  readMasterDataRef,
+  writeMasterDataRef,
+  resolveMasterDataRef,
+  type MasterDataRef,
+} from "@/lib/masterDataRef";
+import { runtimeKind } from "@/lib/api/backendConfig";
 
 const slug = (s: string) =>
   // Auszeichnung (_{...} / ^{...}) fließt nie in technische Schlüssel ein.
@@ -50,6 +57,8 @@ type FieldDraft = {
   validation_ids: string[];
   is_repeatable: boolean;
   select_options: Array<{ label: string; value: string }>;
+  /** Desktop: Wert stammt direkt aus den Stammdaten (hat Vorrang vor Standardwert). */
+  master_ref: MasterDataRef | null;
   repeater: GlobalRepeaterMeta;
   subfields: GlobalRepeaterSubfield[];
 };
@@ -60,6 +69,7 @@ const emptyField: FieldDraft = {
   category: "", unit: "", default_value: "", data_source: "manual",
   list_id: null, calculation_id: null, validation_ids: [], is_repeatable: false,
   select_options: [],
+  master_ref: null,
   repeater: { min_entries: 0, item_label: "Eintrag", add_label: "Eintrag hinzufügen" },
   subfields: [],
 };
@@ -103,7 +113,16 @@ export default function GlobalModelTab() {
   const [fieldOpen, setFieldOpen] = useState(false);
   const [fieldDraft, setFieldDraft] = useState<FieldDraft>(emptyField);
 
+  // Stammdatenreferenz ist ausschließlich Bestandteil der Desktop-Variante.
+  const isDesktop = runtimeKind() === "desktop";
+
   const { data: lists = [] } = useQuery({ queryKey: ["global-lists"], queryFn: () => api.globalLists.list() });
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["master-data-catalog"],
+    queryFn: () => api.masterData.catalog(),
+    enabled: isDesktop,
+    staleTime: 5 * 60 * 1000,
+  });
   const { data: calcs = [] } = useQuery({ queryKey: ["global-calculations"], queryFn: () => api.globalCalculations.list() });
   const { data: validations = [] } = useQuery({ queryKey: ["global-validations"], queryFn: () => api.globalValidations.list() });
 
@@ -182,7 +201,11 @@ export default function GlobalModelTab() {
         is_repeatable: fieldDraft.data_type === "repeater" ? true : fieldDraft.is_repeatable,
         metadata: (() => {
           const current = (fields.find((f) => f.id === fieldDraft.id)?.metadata ?? {}) as Record<string, unknown>;
-          const next = { ...current };
+          // Stammdatenreferenz nur in der Desktop-Variante pflegbar; im Web
+          // bleibt eine bestehende Referenz unverändert erhalten.
+          const next = isDesktop
+            ? writeMasterDataRef(current, fieldDraft.master_ref)
+            : { ...current };
           if (fieldDraft.data_type === "repeater") {
             next.repeater = fieldDraft.repeater;
             next.subfields = fieldDraft.subfields;
@@ -401,6 +424,7 @@ export default function GlobalModelTab() {
                         select_options: (f.select_options ?? []).map((o: any) =>
                           typeof o === "string" ? { label: o, value: o } : { label: o.label ?? o.value, value: o.value ?? o.label }
                         ),
+                        master_ref: readMasterDataRef(f.metadata),
                         repeater: readGlobalRepeaterMeta(f),
                         subfields: readGlobalRepeaterSubfields(f),
                       });
@@ -514,9 +538,20 @@ export default function GlobalModelTab() {
               <SymbolInput value={fieldDraft.unit} onChange={(v) => setFieldDraft({ ...fieldDraft, unit: v })} />
             </div>
             <div className="sm:col-span-2">
-              <Label className="text-xs">Standardwert</Label>
+              <Label className="text-xs">
+                Standardwert {fieldDraft.master_ref ? "(nicht erforderlich – Stammdaten haben Vorrang)" : "(optional)"}
+              </Label>
               <SymbolInput value={fieldDraft.default_value} onChange={(v) => setFieldDraft({ ...fieldDraft, default_value: v })} />
             </div>
+            {isDesktop && (
+              <div className="sm:col-span-2">
+                <MasterDataRefPicker
+                  catalog={catalog}
+                  value={fieldDraft.master_ref}
+                  onChange={(ref) => setFieldDraft({ ...fieldDraft, master_ref: ref, data_source: ref ? "reference" : fieldDraft.data_source })}
+                />
+              </div>
+            )}
             <div>
               <Label className="text-xs">Globale Liste (Auswahlwerte)</Label>
               <Select
@@ -881,6 +916,96 @@ function SelectOptionsEditor({
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------
+ * Stammdatenreferenz (nur Desktop-Variante)
+ *
+ * Wählt Kategorie -> Eintrag -> Eigenschaft aus den bestehenden Stammdaten.
+ * Der Wert wird zur Laufzeit aus den Stammdaten gelesen und hat Vorrang vor
+ * einem Standardwert. Fehlt der Wert, wird das im Formular als Hinweis
+ * angezeigt – es gibt keinen stillen Rückfall auf den Standardwert.
+ * ---------------------------------------------------------------- */
+function MasterDataRefPicker({
+  catalog,
+  value,
+  onChange,
+}: {
+  catalog: import("@/lib/api/globalLibrary").MasterDataCategory[];
+  value: MasterDataRef | null;
+  onChange: (ref: MasterDataRef | null) => void;
+}) {
+  const cat = catalog.find((c) => c.list.list_key === value?.list_key);
+  const item = cat?.items.find((i) => i.item_value === value?.item_value);
+  const preview = value ? resolveMasterDataRef(value, catalog) : null;
+
+  return (
+    <div className="rounded-md border p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Datenquelle: Stammdaten (Desktop)</Label>
+        {value && (
+          <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => onChange(null)}>
+            Referenz entfernen
+          </Button>
+        )}
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Select
+          value={value?.list_key ?? NONE}
+          onValueChange={(v) =>
+            onChange(v === NONE ? null : { list_key: v, item_value: "", attribute_key: "" })
+          }
+        >
+          <SelectTrigger><SelectValue placeholder="Kategorie" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>Keine Stammdatenreferenz</SelectItem>
+            {catalog.map((c) => (
+              <SelectItem key={c.list.id} value={c.list.list_key}>{c.list.display_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={value?.item_value || NONE}
+          onValueChange={(v) =>
+            value && onChange({ ...value, item_value: v === NONE ? "" : v })
+          }
+          disabled={!cat}
+        >
+          <SelectTrigger><SelectValue placeholder="Eintrag" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>Eintrag wählen</SelectItem>
+            {(cat?.items ?? []).map((i) => (
+              <SelectItem key={i.id} value={i.item_value}>{i.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={value?.attribute_key || NONE}
+          onValueChange={(v) =>
+            value && onChange({ ...value, attribute_key: v === NONE ? "" : v })
+          }
+          disabled={!cat}
+        >
+          <SelectTrigger><SelectValue placeholder="Eigenschaft" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>Bezeichnung des Eintrags</SelectItem>
+            {(cat?.attributes ?? []).map((a) => (
+              <SelectItem key={a.id} value={a.attribute_key}>
+                {a.unit ? `${a.display_name} (${a.unit})` : a.display_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {value && item && preview && (
+        <p className={preview.status === "ok" ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>
+          {preview.status === "ok"
+            ? `Aktueller Stammdatenwert: ${String(preview.value)}${preview.unit ? ` ${preview.unit}` : ""}`
+            : preview.reason}
+        </p>
       )}
     </div>
   );
