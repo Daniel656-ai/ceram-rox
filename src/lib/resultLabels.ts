@@ -7,9 +7,11 @@
  * Feldname stehen (niemals leere Klammern).
  */
 
+import { formatElementLabel } from "@/lib/elementKeys";
+
 /** Einheitliche Anzeige: `Feldname [Einheit]` bzw. `Feldname` ohne Einheit. */
 export function formatResultLabel(label: string, unit?: string | null): string {
-  const name = (label ?? "").trim();
+  const name = formatElementLabel(label);
   const u = (unit ?? "").trim();
   if (!u) return name;
   // Ist die Einheit bereits im Namen enthalten (Altdaten/Import), nicht doppeln.

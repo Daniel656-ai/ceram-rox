@@ -191,6 +191,18 @@ export function formatElementKey(key: string): string {
   return String(key ?? "").replace(/\d/g, (d) => SUB[Number(d)]);
 }
 
+/**
+ * Reine Anzeigeformatierung für eine chemische Formel.
+ * Klartextbezeichnungen bleiben unverändert; ein technischer Schlüssel wie
+ * `Na2O` wird ausschließlich für die Ausgabe zu `Na₂O` formatiert.
+ */
+export function formatElementLabel(label: string): string {
+  const raw = String(label ?? "").trim();
+  if (!raw) return "";
+  const formula = canonicalFormula(raw) ?? canonicalFormula(recase(raw));
+  return formula ? formatElementKey(formula) : raw;
+}
+
 /* ------------------------------------------------------------------ */
 /* Element-Zuordnung eines Ergebnisfeldes                              */
 /* ------------------------------------------------------------------ */
