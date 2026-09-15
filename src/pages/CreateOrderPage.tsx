@@ -432,6 +432,7 @@ export default function CreateOrderPage() {
             template_snapshot: snapshot,
             project_id: projectId,
             legacy_order_id: order.id,
+            order_number: order.order_number,
             title: tpl?.name ?? null,
             status: "planned",
             sample_ids: selectedSampleIds.length > 0 ? selectedSampleIds : null,
