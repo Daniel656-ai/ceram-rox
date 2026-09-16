@@ -29,7 +29,8 @@ import { FIELD_TYPE_GROUPS, ALL_FIELD_TYPES as ALL_TYPES, slugify } from "@/lib/
 import LocalCalculationsPanel from "@/components/ServiceDesigner/LocalCalculationsPanel";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
-import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
+import { normalizeLayout, type FormLayoutTree } from "@/lib/api/formDefinitionLayout";
+import { autoLayout } from "@/components/OrderKindDynamicForm";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
 import GlobalModelTab from "@/components/ServiceDesigner/GlobalModelTab";
 import GlobalLibraryTab from "@/components/ServiceDesigner/GlobalLibraryTab";
@@ -775,7 +776,11 @@ function FormPreviewTab({ form }: { form: FormDefinition }) {
     queryKey: ["form-fields", form.id],
     queryFn: () => api.formFields.listForForm(form.id),
   });
-  const layout = normalizeLayout((form as any).layout);
+  const typedFields = fields as FormField[];
+  const layout = useMemo<FormLayoutTree>(() => {
+    const normalized = normalizeLayout(form.layout);
+    return normalized.nodes.length ? normalized : autoLayout(typedFields);
+  }, [form.layout, typedFields]);
   return (
     <div className="border rounded p-4 bg-background">
       <FormLayoutRenderer layout={layout} fields={fields} formId={form.id} />
