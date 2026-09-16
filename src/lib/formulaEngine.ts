@@ -110,11 +110,49 @@ const FUNCTIONS: Record<string, FnImpl> = {
   /** Umrechnung zwischen Grad und Bogenmaß. */
   RADIANS: unary((x) => (x * Math.PI) / 180),
   DEGREES: unary((x) => (x * 180) / Math.PI),
+  /**
+   * Bedingung. Wird im Parser zusätzlich „faul“ ausgewertet (nur der
+   * zutreffende Zweig), diese Implementierung bleibt als Rückfall erhalten.
+   */
   IF: (a) => {
-    const f = flat(a);
-    return f[0] ? f[1] : f[2] ?? 0;
+    const c = scalar(a[0] ?? NaN);
+    if (!Number.isFinite(c)) return NaN;
+    const branch = c ? a[1] : a[2];
+    if (branch === undefined) return 0;
+    return scalar(branch);
   },
 };
+
+/** Vergleichsoperatoren, die in Bedingungen verwendet werden dürfen. */
+export const COMPARISON_OPERATORS = ["=", "==", "!=", "<", "<=", ">", ">="] as const;
+export type ComparisonOperator = (typeof COMPARISON_OPERATORS)[number];
+
+/** Anzeigetexte für die Auswahl im Formeleditor. */
+export const COMPARISON_OPERATOR_INFO: Record<string, string> = {
+  "=": "gleich",
+  "==": "gleich",
+  "!=": "ungleich",
+  "<": "kleiner als",
+  "<=": "kleiner oder gleich",
+  ">": "größer als",
+  ">=": "größer oder gleich",
+};
+
+/** Ergebnis eines Vergleichs: 1 = wahr, 0 = falsch, NaN = Wert fehlt. */
+function compare(op: string, a: number, b: number): number {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return NaN;
+  switch (op) {
+    case "=":
+    case "==": return a === b ? 1 : 0;
+    case "!=":
+    case "<>": return a !== b ? 1 : 0;
+    case "<": return a < b ? 1 : 0;
+    case "<=": return a <= b ? 1 : 0;
+    case ">": return a > b ? 1 : 0;
+    case ">=": return a >= b ? 1 : 0;
+    default: return NaN;
+  }
+}
 
 /** Konstanten, die in Formeln direkt verwendet werden dürfen. */
 const CONSTANTS: Record<string, number> = {
