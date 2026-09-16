@@ -778,9 +778,9 @@ function FormPreviewTab({ form }: { form: FormDefinition }) {
   });
   const typedFields = fields as FormField[];
   const layout = useMemo<FormLayoutTree>(() => {
-    const normalized = normalizeLayout((form as any).layout);
+    const normalized = normalizeLayout(form.layout);
     return normalized.nodes.length ? normalized : autoLayout(typedFields);
-  }, [(form as any).layout, typedFields]);
+  }, [form.layout, typedFields]);
   return (
     <div className="border rounded p-4 bg-background">
       <FormLayoutRenderer layout={layout} fields={fields} formId={form.id} />
