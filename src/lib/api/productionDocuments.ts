@@ -60,18 +60,19 @@ export const productionDocuments = {
   }): Promise<ProductionDocumentRequest> {
     const payload = {
       order_id: args.orderId,
-            doc_kind: args.kind,
-            status: args.status,
-            based_on_release_id: args.basedOnReleaseId,
-            missing: args.missing,
-            requested_by: args.requestedBy,
-            ...(args.formDefinitionId ? { form_definition_id: args.formDefinitionId } : {}),
-          },
-          { onConflict: "order_id,doc_kind" }
-        )
-        .select(SELECT)
-        .single()
-    )) as ProductionDocumentRequest;
+      doc_kind: args.kind,
+      status: args.status,
+      based_on_release_id: args.basedOnReleaseId,
+      missing: args.missing,
+      requested_by: args.requestedBy,
+      ...(args.formDefinitionId ? { form_definition_id: args.formDefinitionId } : {}),
+    };
+    // Ohne Auftrag (order_id = null) greift der Unique-Index (order_id, doc_kind)
+    // nicht – dann bewusst als einfacher Insert statt Upsert.
+    const q = args.orderId
+      ? db.from("production_document_requests").upsert(payload, { onConflict: "order_id,doc_kind" })
+      : db.from("production_document_requests").insert(payload);
+    return (await unwrap(q.select(SELECT).single())) as ProductionDocumentRequest;
   },
 
   async update(
