@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import ProductionReleasesPage from "@/pages/ProductionReleasesPage";
 import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/productionDocuments/ReleaseRevisionPicker";
 import ReleaseSourceValues from "@/components/productionDocuments/ReleaseSourceValues";
+import M3ListForm from "@/components/productionDocuments/M3ListForm";
+import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
@@ -50,6 +52,8 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
       return;
     }
     try {
+      // Formularvorlage der m³-Liste (im Formulardesigner anpassbar) verknüpfen.
+      const formDefinitionId = await ensureM3Template();
       await request.mutateAsync({
         orderId: selected.order_id,
         kind: "m3_list",
@@ -57,6 +61,7 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
         basedOnReleaseId: selected.id,
         missing: [],
         requestedBy: user?.id ?? null,
+        formDefinitionId,
       });
       toast.success(`m³-Liste erstellt – Quelle: ${releaseRevisionLabel(selected)}`);
       onOpenChange(false);
@@ -111,6 +116,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
   const [search, setSearch] = useState("");
   const [newOpen, setNewOpen] = useState(false);
   const [sourceId, setSourceId] = useState<string | null>(null);
+  const [formRequestId, setFormRequestId] = useState<string | null>(null);
   const { data: requests = [], isLoading } = useProductionDocumentRequests({ kind });
   const { data: orders = [] } = useOrders();
   const releases = useReleaseRevisionList();
@@ -221,6 +227,11 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
                     {new Date(r.requested_at).toLocaleDateString("de-AT")}
                   </TableCell>
                   <TableCell className="text-right space-x-1">
+                    {isM3 && (
+                      <Button variant="secondary" size="sm" onClick={() => setFormRequestId(r.id)}>
+                        m³-Liste öffnen
+                      </Button>
+                    )}
                     {isM3 && r.based_on_release_id && (
                       <Button variant="ghost" size="sm" onClick={() => setSourceId(r.based_on_release_id)}>
                         Quellwerte
@@ -248,6 +259,19 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
             </DialogDescription>
           </DialogHeader>
           <ReleaseSourceValues releaseId={sourceId} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!formRequestId} onOpenChange={(v) => !v && setFormRequestId(null)}>
+        <DialogContent className="max-w-5xl max-h-[88vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>m³-Liste</DialogTitle>
+            <DialogDescription>
+              Graue Werte stammen aus der hinterlegten Fertigungsfreigabe-Revision, gelbe Felder werden
+              geprüft, berechnete Werte ermittelt ROX.
+            </DialogDescription>
+          </DialogHeader>
+          {formRequestId && <M3ListForm requestId={formRequestId} />}
         </DialogContent>
       </Dialog>
     </Card>

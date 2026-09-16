@@ -17,11 +17,15 @@ export interface ProductionDocumentRequest {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Verwendete ROX-Formularvorlage (m³-Liste) – im Formulardesigner anpassbar. */
+  form_definition_id: string | null;
+  /** Erfasste Formularwerte inkl. dynamischer m³-Zeilen. */
+  form_values: Record<string, unknown>;
   measurement_orders?: { id: string; order_number: string | null } | null;
 }
 
 const SELECT =
-  "id,order_id,doc_kind,status,based_on_release_id,missing,notes,requested_by,requested_at,completed_at,created_at,updated_at";
+  "id,order_id,doc_kind,status,based_on_release_id,missing,notes,requested_by,requested_at,completed_at,created_at,updated_at,form_definition_id,form_values";
 
 export const productionDocuments = {
   /** Alle Folgeprozesse (optional gefiltert nach Auftrag oder Art). */
@@ -35,6 +39,13 @@ export const productionDocuments = {
     return (await unwrap(q)) as ProductionDocumentRequest[];
   },
 
+  /** Eine Anforderung (z. B. eine m³-Liste) inkl. Formularinstanz. */
+  async get(id: string): Promise<ProductionDocumentRequest | null> {
+    return (await unwrap(
+      db.from("production_document_requests").select(SELECT).eq("id", id).maybeSingle()
+    )) as ProductionDocumentRequest | null;
+  },
+
   /** Anfordern – bestehende Anforderung bleibt erhalten (Upsert je Auftrag/Art). */
   async request(args: {
     orderId: string;
@@ -43,6 +54,7 @@ export const productionDocuments = {
     basedOnReleaseId: string | null;
     missing: string[];
     requestedBy: string | null;
+    formDefinitionId?: string | null;
   }): Promise<ProductionDocumentRequest> {
     return (await unwrap(
       db
@@ -55,6 +67,7 @@ export const productionDocuments = {
             based_on_release_id: args.basedOnReleaseId,
             missing: args.missing,
             requested_by: args.requestedBy,
+            ...(args.formDefinitionId ? { form_definition_id: args.formDefinitionId } : {}),
           },
           { onConflict: "order_id,doc_kind" }
         )
@@ -71,6 +84,8 @@ export const productionDocuments = {
       missing: string[];
       notes: string | null;
       completed_at: string | null;
+      form_definition_id: string | null;
+      form_values: Record<string, unknown>;
     }>
   ): Promise<void> {
     await unwrap(db.from("production_document_requests").update(fields).eq("id", id));

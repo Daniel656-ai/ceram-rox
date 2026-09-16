@@ -5615,6 +5615,8 @@ export type Database = {
           completed_at: string | null
           created_at: string
           doc_kind: string
+          form_definition_id: string | null
+          form_values: Json
           id: string
           missing: Json
           notes: string | null
@@ -5629,6 +5631,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           doc_kind: string
+          form_definition_id?: string | null
+          form_values?: Json
           id?: string
           missing?: Json
           notes?: string | null
@@ -5643,6 +5647,8 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           doc_kind?: string
+          form_definition_id?: string | null
+          form_values?: Json
           id?: string
           missing?: Json
           notes?: string | null
@@ -5658,6 +5664,13 @@ export type Database = {
             columns: ["based_on_release_id"]
             isOneToOne: false
             referencedRelation: "production_releases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_document_requests_form_definition_id_fkey"
+            columns: ["form_definition_id"]
+            isOneToOne: false
+            referencedRelation: "form_definitions"
             referencedColumns: ["id"]
           },
           {
