@@ -776,7 +776,11 @@ function FormPreviewTab({ form }: { form: FormDefinition }) {
     queryKey: ["form-fields", form.id],
     queryFn: () => api.formFields.listForForm(form.id),
   });
-  const layout = normalizeLayout((form as any).layout);
+  const typedFields = fields as FormField[];
+  const layout = useMemo<FormLayoutTree>(() => {
+    const normalized = normalizeLayout((form as any).layout);
+    return normalized.nodes.length ? normalized : autoLayout(typedFields);
+  }, [(form as any).layout, typedFields]);
   return (
     <div className="border rounded p-4 bg-background">
       <FormLayoutRenderer layout={layout} fields={fields} formId={form.id} />
