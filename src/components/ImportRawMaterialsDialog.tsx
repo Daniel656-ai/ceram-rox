@@ -248,14 +248,21 @@ export function ImportRawMaterialsDialog() {
           let batch: any = await findBatch.mutateAsync({ raw_material_id: materialId, batch_number: row.lot });
           const batchIsNew = !batch;
           if (!batch) {
-            batch = await addBatch.mutateAsync({
+            // MRS-Nummer gehört zum LOT. Ist sie bereits einem anderen LOT zugeordnet,
+            // wird das LOT ohne MRS angelegt statt den Import abzubrechen.
+            const baseBatch = {
               raw_material_id: materialId,
               batch_number: row.lot,
               delivery_date: row.delivery_date,
               goods_receipt_date: row.delivery_date ?? null,
               delivery_quantity: qty || undefined,
               supplier: row.supplier,
-            });
+            };
+            try {
+              batch = await addBatch.mutateAsync({ ...baseBatch, mrs_number: row.mrs || null } as any);
+            } catch {
+              batch = await addBatch.mutateAsync(baseBatch);
+            }
           }
 
           if (qty > 0 && batchIsNew) {
