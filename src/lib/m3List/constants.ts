@@ -57,21 +57,21 @@ export function readM3Constants(
  * Bestehende Konstanten werden nie überschrieben.
  */
 export async function ensureM3Constants(): Promise<void> {
-  const objects = await api.globalModel.globalObjects.list();
+  const objects = await api.globalObjects.list();
   let object = objects.find((o) => o.object_key === M3_CONSTANT_OBJECT_KEY) ?? null;
   if (!object) {
-    object = await api.globalModel.globalObjects.create({
+    object = await api.globalObjects.create({
       object_key: M3_CONSTANT_OBJECT_KEY,
       display_name: "m³-Liste",
       description: "Technische Konstanten der m³-Liste (fachliche Vorlage: Excel „m³-Liste“).",
       category: "Fertigung",
     });
   }
-  const existing = await api.globalModel.globalFields.list({ objectId: object.id, includeArchived: true });
+  const existing = await api.globalFields.list({ objectId: object.id, includeArchived: true });
   const keys = new Set(existing.map((f) => f.field_key));
   for (const def of M3_CONSTANTS) {
     if (keys.has(def.field_key)) continue;
-    await api.globalModel.globalFields.create({
+    await api.globalFields.create({
       object_id: object.id,
       field_key: def.field_key,
       display_name: def.display_name,
