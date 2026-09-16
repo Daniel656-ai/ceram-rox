@@ -52,6 +52,8 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
       return;
     }
     try {
+      // Formularvorlage der m³-Liste (im Formulardesigner anpassbar) verknüpfen.
+      const formDefinitionId = await ensureM3Template();
       await request.mutateAsync({
         orderId: selected.order_id,
         kind: "m3_list",
@@ -59,6 +61,7 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
         basedOnReleaseId: selected.id,
         missing: [],
         requestedBy: user?.id ?? null,
+        formDefinitionId,
       });
       toast.success(`m³-Liste erstellt – Quelle: ${releaseRevisionLabel(selected)}`);
       onOpenChange(false);
