@@ -65,7 +65,7 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
       // sie wird nur gesetzt, solange noch keine hinterlegt ist. Eine später
       // importierte Revision darf eine bestehende Unterlage nicht stillschweigend
       // auf einen neuen Stand umhängen.
-      const frozenReleaseId = (row.based_on_release_id ?? null) ?? ev.basedOnReleaseId;
+      const frozenReleaseId: string | null = row.based_on_release_id ? String(row.based_on_release_id) : ev.basedOnReleaseId;
       const releaseChanged = (row.based_on_release_id ?? null) !== frozenReleaseId;
       if (target !== row.status || missingChanged || releaseChanged) {
         update.mutate({
