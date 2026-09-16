@@ -32,21 +32,15 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
   const request = useRequestProductionDocument();
   const options = useReleaseRevisionList();
   const [selected, setSelected] = useState<ReleaseRevisionOption | null>(null);
-  const [autoSuggested, setAutoSuggested] = useState(false);
+  const [notLatest, setNotLatest] = useState(false);
 
-  // Fachlicher Standard: Bei der Erstellung wird immer die letzte vorhandene
-  // Revision der Fertigungsfreigabe vorgeschlagen. Wählt der Mitarbeiter eine
-  // ältere Revision, wird auf die letzte umgestellt und dies sichtbar gemacht –
-  // eine bewusste Auswahl einer älteren Revision bleibt über die Suche möglich.
+  // Fachlicher Standard: Die letzte vorhandene Revision ist die Vorschlag
+  // (im Auswahldialog als „Letzte Revision“ gekennzeichnet). Die Auswahl des
+  // Mitarbeiters wird nie überschrieben – wählt er bewusst eine ältere
+  // Revision, erscheint lediglich ein Prüfhinweis.
   const handleSelect = (o: ReleaseRevisionOption | null) => {
-    if (!o) {
-      setSelected(null);
-      setAutoSuggested(false);
-      return;
-    }
-    const latest = latestRevisionInGroup(options, o);
-    setSelected(latest);
-    setAutoSuggested(latest.id !== o.id);
+    setSelected(o);
+    setNotLatest(!!o && latestRevisionInGroup(options, o).id !== o.id);
   };
 
   const create = async () => {
