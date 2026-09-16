@@ -519,7 +519,7 @@ export default function RawMaterialDetailPage() {
             <GhsPictogramList hazardClasses={(mat as any).hazard_categories} size="md" />
             <PsaSymbolList psaSymbols={(mat as any).psa_symbols} size="md" />
           </h1>
-          <p className="text-sm text-muted-foreground">{mat.material_number || "—"}{(mat as any).other_designation ? ` · ${(mat as any).other_designation}` : ""} · {mat.supplier || "Kein Lieferant"} · Preis: {(mat as any).price_per_kg || 0} €/kg{(mat as any).cas_number ? ` · CAS: ${(mat as any).cas_number}` : ""}{(mat as any).mrs_number ? ` · MRS: ${(mat as any).mrs_number}` : ""}{(mat as any).eg_number ? ` · EG: ${(mat as any).eg_number}` : ""}{(mat as any).manufacturer ? ` · Hersteller: ${(mat as any).manufacturer}` : ""}</p>
+          <p className="text-sm text-muted-foreground">{mat.material_number || "—"}{(mat as any).other_designation ? ` · ${(mat as any).other_designation}` : ""} · {mat.supplier || "Kein Lieferant"} · Preis: {(mat as any).price_per_kg || 0} €/kg{(mat as any).cas_number ? ` · CAS: ${(mat as any).cas_number}` : ""}{(mat as any).eg_number ? ` · EG: ${(mat as any).eg_number}` : ""}{(mat as any).manufacturer ? ` · Hersteller: ${(mat as any).manufacturer}` : ""}</p>
           <p className="text-sm mt-1">
             <span className="text-muted-foreground">Lagerorte: </span>
             {containerLocations.length
@@ -590,7 +590,7 @@ export default function RawMaterialDetailPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div><Label>{t("raw_materials:cas_number")}</Label><Input value={editCasNumber} onChange={(e) => setEditCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
-              <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={editMrsNumber} onChange={(e) => setEditMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
+              {/* MRS-Nummer gehört fachlich zum LOT und wird im Reiter „LOT/Chargen" gepflegt. */}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>EG-Nummer</Label><Input value={editEgNumber} onChange={(e) => setEditEgNumber(e.target.value)} placeholder="z.B. 200-578-6" /></div>
