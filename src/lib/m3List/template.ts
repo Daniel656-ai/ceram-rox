@@ -3,12 +3,12 @@
  *
  * Die m³-Liste ist eine ganz normale ROX-Formularvorlage (`form_definitions` +
  * `form_fields`) und daher im bestehenden Formulardesigner anpassbar. Sie wird
- * einmalig angelegt; danach ist die Vorlage frei änderbar und wird hier nicht
- * mehr überschrieben. Dargestellt wird sie überall (Web und ROX Desktop) mit
+ * gezielt vervollständigt; vorhandene Felder und Benutzeränderungen werden
+ * dabei nie überschrieben. Dargestellt wird sie überall (Web und ROX Desktop) mit
  * dem gemeinsamen `FormLayoutRenderer`.
  */
 import { api } from "@/lib/api";
-import type { FormFieldType } from "@/lib/api/formFields";
+import type { FormField, FormFieldType } from "@/lib/api/formFields";
 
 export const M3_FORM_NAME = "m³-Liste";
 
@@ -129,70 +129,113 @@ export async function findM3Template(): Promise<string | null> {
 }
 
 
-/** Feldstruktur einmalig in eine (leere) Vorlage einspielen. */
-async function seedM3Fields(formId: string): Promise<number> {
-  let created = 0;
-  let sort = 0;
-  for (const spec of [...M3_HEADER_FIELDS, ...M3_CONTROL_FIELDS, ...M3_CALC_FIELDS]) {
-    await api.formFields.create(fieldPayload(formId, spec, sort++) as never);
-    created++;
+export interface M3TemplateSeedResult {
+  formId: string;
+  existingKeys: string[];
+  createdKeys: string[];
+}
+
+const errorText = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const value = error as { message?: unknown; details?: unknown; code?: unknown };
+    return [value.message, value.details, value.code]
+      .filter((part): part is string => typeof part === "string" && part.length > 0)
+      .join(" · ") || "Unbekannter Backend-Fehler";
   }
+  return String(error || "Unbekannter Fehler");
+};
 
-  const repeater = await api.formFields.create({
-    form_id: formId,
-    field_key: M3_ROWS_KEY,
-    display_name: "m³-Tabelle",
-    field_type: "repeater",
-    category: "m³-Tabelle",
-    sort_order: sort++,
-    metadata: {
-      m3_role: "rows",
-      repeater: {
-        item_label: "m³-Zeile",
-        add_label: "m³-Zeile hinzufügen",
-        table_view: true,
-        min_entries: 1,
-      },
-    },
-  } as never);
-  created++;
-
-  let childSort = 0;
-  for (const spec of M3_ROW_FIELDS) {
-    await api.formFields.create(fieldPayload(formId, spec, childSort++, repeater.id) as never);
-    created++;
+async function createM3Field(
+  formId: string,
+  key: string,
+  payload: Parameters<typeof api.formFields.create>[0]
+): Promise<FormField> {
+  try {
+    return await api.formFields.create(payload);
+  } catch (error) {
+    const detail = errorText(error);
+    console.error(`[m³-Liste] Feld „${key}“ konnte in Vorlage ${formId} nicht ergänzt werden: ${detail}`, error);
+    throw new Error(`m³-Vorlage: Feld „${key}“ konnte nicht ergänzt werden: ${detail}`);
   }
-
-  for (const spec of M3_CONFIRM_FIELDS) {
-    await api.formFields.create(fieldPayload(formId, spec, sort++) as never);
-    created++;
-  }
-
-  return created;
 }
 
 /**
- * Vorlage sicherstellen: vorhandene Vorlage wird weiterverwendet (gleiche ID).
- * Nur wenn sie noch komplett leer ist, wird die m³-Feldstruktur einmalig
- * eingespielt. Vorhandene Felder werden nie überschrieben.
+ * Ergänzt ausschließlich fehlende Teile der definierten m³-Struktur.
+ * Der Abgleich erfolgt pro technischem Schlüssel und ist damit nach einem
+ * abgebrochenen Teil-Seed beim nächsten Aufruf fortsetzbar.
+ */
+export async function seedMissingM3Fields(formId: string, initialFields?: FormField[]): Promise<M3TemplateSeedResult> {
+  const fields = initialFields ?? await api.formFields.listForForm(formId);
+  const byKey = new Map(fields.map((field) => [field.field_key, field]));
+  const existingKeys = Array.from(byKey.keys());
+  const createdKeys: string[] = [];
+  let sort = Math.max(-1, ...fields.filter((field) => field.parent_field_id == null).map((field) => field.sort_order)) + 1;
+
+  for (const spec of [...M3_HEADER_FIELDS, ...M3_CONTROL_FIELDS, ...M3_CALC_FIELDS]) {
+    if (byKey.has(spec.field_key)) continue;
+    const created = await createM3Field(formId, spec.field_key, fieldPayload(formId, spec, sort++));
+    byKey.set(spec.field_key, created);
+    createdKeys.push(spec.field_key);
+  }
+
+  let repeater = byKey.get(M3_ROWS_KEY);
+  if (!repeater) {
+    repeater = await createM3Field(formId, M3_ROWS_KEY, {
+      form_id: formId,
+      field_key: M3_ROWS_KEY,
+      display_name: "m³-Tabelle",
+      field_type: "repeater",
+      category: "m³-Tabelle",
+      sort_order: sort++,
+      metadata: {
+        m3_role: "rows",
+        repeater: {
+          item_label: "m³-Zeile",
+          add_label: "m³-Zeile hinzufügen",
+          table_view: true,
+          min_entries: 1,
+        },
+      },
+    });
+    byKey.set(M3_ROWS_KEY, repeater);
+    createdKeys.push(M3_ROWS_KEY);
+  }
+
+  let childSort = Math.max(-1, ...fields.filter((field) => field.parent_field_id === repeater.id).map((field) => field.sort_order)) + 1;
+  for (const spec of M3_ROW_FIELDS) {
+    if (byKey.has(spec.field_key)) continue;
+    const created = await createM3Field(formId, spec.field_key, fieldPayload(formId, spec, childSort++, repeater.id));
+    byKey.set(spec.field_key, created);
+    createdKeys.push(spec.field_key);
+  }
+
+  for (const spec of M3_CONFIRM_FIELDS) {
+    if (byKey.has(spec.field_key)) continue;
+    const created = await createM3Field(formId, spec.field_key, fieldPayload(formId, spec, sort++));
+    byKey.set(spec.field_key, created);
+    createdKeys.push(spec.field_key);
+  }
+
+  console.info(
+    `[m³-Liste] Vorlage ${formId}: ${existingKeys.length} Schlüssel vorhanden, ${createdKeys.length} ergänzt.`,
+    { existingKeys, createdKeys }
+  );
+  return { formId, existingKeys, createdKeys };
+}
+
+/**
+ * Vorlage sicherstellen: Die vorhandene Vorlage wird weiterverwendet (gleiche
+ * ID) und ausschließlich um fehlende m³-Schlüssel ergänzt. Diese Laufzeitlogik
+ * erzeugt bewusst keine zweite Vorlage.
  */
 export async function ensureM3Template(): Promise<string> {
   const existing = await findM3Template();
   if (existing) {
     const fields = await api.formFields.listForForm(existing);
-    if (!fields.length) await seedM3Fields(existing);
+    await seedMissingM3Fields(existing, fields);
     return existing;
   }
-
-  const form = await api.formDefinitions.create({
-    name: M3_FORM_NAME,
-    scope: "global",
-    description:
-      "m³-Liste (fachliche Vorlage: Excel „m³-Liste“, F5 Rev. 4-11/23). Graue Werte stammen aus der verknüpften Fertigungsfreigabe-Revision, gelbe Felder werden geprüft, berechnete Felder ermittelt ROX.",
-    layout: {},
-  });
-
-  await seedM3Fields(form.id);
-  return form.id;
+  throw new Error(`Die bestehende Formularvorlage „${M3_FORM_NAME}“ wurde nicht gefunden. Es wurde keine neue Vorlage erzeugt.`);
 }
 

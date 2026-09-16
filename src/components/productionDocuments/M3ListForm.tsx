@@ -10,11 +10,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, Save } from "lucide-react";
+import { AlertCircle, AlertTriangle, Save } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import { autoLayout } from "@/components/OrderKindDynamicForm";
 import { normalizeLayout, type FormLayoutTree } from "@/lib/api/formDefinitionLayout";
@@ -38,13 +39,18 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
 
   const { data: release } = useProductionReleaseRevision(request?.based_on_release_id ?? null);
 
-  /** Vorlage + Konstanten einmalig sicherstellen (bestehende werden nie überschrieben). */
-  const { data: formId } = useQuery({
+  /** Die Vorlagenstruktur muss auch ohne verfügbare Konstanten sichtbar sein. */
+  const { data: formId, error: templateError, isLoading: templateLoading } = useQuery({
     queryKey: ["m3-form-template"],
-    queryFn: async () => {
-      await ensureM3Constants();
-      return ensureM3Template();
-    },
+    queryFn: ensureM3Template,
+    refetchOnMount: "always",
+  });
+
+  /** Fehlende Konstanten betreffen ausschließlich die Berechnungen. */
+  const { error: constantsSetupError } = useQuery({
+    queryKey: ["m3-constants-setup"],
+    queryFn: ensureM3Constants,
+    retry: false,
   });
 
   const { data: form } = useQuery({
@@ -131,6 +137,28 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           Fest hinterlegte Revision – eine spätere Revision verändert diese m³-Liste nicht.
         </span>
       </div>
+
+      {templateLoading && <p className="text-sm text-muted-foreground">Formularstruktur wird geprüft …</p>}
+
+      {templateError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>m³-Formularstruktur konnte nicht ergänzt werden</AlertTitle>
+          <AlertDescription>
+            {templateError instanceof Error ? templateError.message : "Unbekannter Fehler beim Ergänzen der m³-Vorlage."}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {constantsSetupError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>m³-Konstanten konnten nicht geprüft werden</AlertTitle>
+          <AlertDescription>
+            Die Formularstruktur bleibt verfügbar; nur die Berechnungen sind momentan nicht ausführbar.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {constantsState.missing.length > 0 && (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
