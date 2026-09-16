@@ -227,7 +227,6 @@ export function ImportRawMaterialsDialog() {
             material_number: row.rk_code || null,
             other_designation: row.other_designation || null,
             cas_number: row.cas || null,
-            mrs_number: row.mrs || null,
             supplier: row.supplier || undefined,
             manufacturer: row.manufacturer || null,
             unit: "kg",
