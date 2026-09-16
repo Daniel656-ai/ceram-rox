@@ -116,6 +116,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
   const [search, setSearch] = useState("");
   const [newOpen, setNewOpen] = useState(false);
   const [sourceId, setSourceId] = useState<string | null>(null);
+  const [formRequestId, setFormRequestId] = useState<string | null>(null);
   const { data: requests = [], isLoading } = useProductionDocumentRequests({ kind });
   const { data: orders = [] } = useOrders();
   const releases = useReleaseRevisionList();
