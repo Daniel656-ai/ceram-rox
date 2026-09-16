@@ -47,15 +47,13 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
 
   const create = async () => {
     if (!selected) return;
-    if (!selected.order_id) {
-      toast.error("Diese Fertigungsfreigabe ist noch keinem Auftrag zugeordnet.");
-      return;
-    }
+    // Eine m³-Liste darf auch ohne zugeordneten ROX-Auftrag erstellt werden –
+    // maßgeblich ist ausschließlich die konkrete Fertigungsfreigabe-Revision.
     try {
       // Formularvorlage der m³-Liste (im Formulardesigner anpassbar) verknüpfen.
       const formDefinitionId = await ensureM3Template();
       await request.mutateAsync({
-        orderId: selected.order_id,
+        orderId: selected.order_id ?? null,
         kind: "m3_list",
         status: "angefordert",
         basedOnReleaseId: selected.id,
@@ -202,7 +200,11 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
               const rel = r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null;
               return (
                 <TableRow key={r.id}>
-                  <TableCell className="font-mono text-xs">{o?.order_number ?? r.order_id.slice(0, 8)}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {r.order_id
+                      ? (o?.order_number ?? r.order_id.slice(0, 8))
+                      : <span className="text-muted-foreground">nicht zugeordnet</span>}
+                  </TableCell>
                   {isM3 && (
                     <TableCell className="text-xs">
                       {rel ? (
@@ -237,9 +239,11 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
                         Quellwerte
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/auftraege/${r.order_id}`)}>
-                      Auftrag öffnen
-                    </Button>
+                    {r.order_id && (
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/auftraege/${r.order_id}`)}>
+                        Auftrag öffnen
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               );

@@ -6,7 +6,8 @@ const db = dbClient as any; // eslint-disable-line @typescript-eslint/no-explici
 
 export interface ProductionDocumentRequest {
   id: string;
-  order_id: string;
+  /** Auftrag – bei m³-Listen optional (Erstellung vor Auftragszuordnung möglich). */
+  order_id: string | null;
   doc_kind: DocKind;
   status: Exclude<DocStatus, "nicht_angefordert">;
   based_on_release_id: string | null;
@@ -48,7 +49,8 @@ export const productionDocuments = {
 
   /** Anfordern – bestehende Anforderung bleibt erhalten (Upsert je Auftrag/Art). */
   async request(args: {
-    orderId: string;
+    /** null = m³-Liste ohne zugeordneten Auftrag (Auftrag kann später entstehen). */
+    orderId: string | null;
     kind: DocKind;
     status: Exclude<DocStatus, "nicht_angefordert">;
     basedOnReleaseId: string | null;
@@ -56,24 +58,21 @@ export const productionDocuments = {
     requestedBy: string | null;
     formDefinitionId?: string | null;
   }): Promise<ProductionDocumentRequest> {
-    return (await unwrap(
-      db
-        .from("production_document_requests")
-        .upsert(
-          {
-            order_id: args.orderId,
-            doc_kind: args.kind,
-            status: args.status,
-            based_on_release_id: args.basedOnReleaseId,
-            missing: args.missing,
-            requested_by: args.requestedBy,
-            ...(args.formDefinitionId ? { form_definition_id: args.formDefinitionId } : {}),
-          },
-          { onConflict: "order_id,doc_kind" }
-        )
-        .select(SELECT)
-        .single()
-    )) as ProductionDocumentRequest;
+    const payload = {
+      order_id: args.orderId,
+      doc_kind: args.kind,
+      status: args.status,
+      based_on_release_id: args.basedOnReleaseId,
+      missing: args.missing,
+      requested_by: args.requestedBy,
+      ...(args.formDefinitionId ? { form_definition_id: args.formDefinitionId } : {}),
+    };
+    // Ohne Auftrag (order_id = null) greift der Unique-Index (order_id, doc_kind)
+    // nicht – dann bewusst als einfacher Insert statt Upsert.
+    const q = args.orderId
+      ? db.from("production_document_requests").upsert(payload, { onConflict: "order_id,doc_kind" })
+      : db.from("production_document_requests").insert(payload);
+    return (await unwrap(q.select(SELECT).single())) as ProductionDocumentRequest;
   },
 
   async update(
