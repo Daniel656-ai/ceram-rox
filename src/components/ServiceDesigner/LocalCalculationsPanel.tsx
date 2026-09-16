@@ -30,6 +30,7 @@ import { readValueSource, isLinkedField, linkOriginLabel } from "@/lib/fieldLink
 import { repeaterAggregateRefs } from "@/lib/repeaterAggregation";
 import { GEOMETRY_CALCULATIONS, type GeometryCalcDefinition } from "@/lib/geometry/calculations";
 import { globalConstantScope, isGlobalConstant } from "@/lib/globalConstants";
+import ConditionInsertPopover, { type ConditionOption } from "./ConditionInsertPopover";
 
 
 const OPERATORS: { v: CalcOperator; l: string }[] = [
@@ -91,6 +92,16 @@ function FormulaSyntaxHelp() {
         <p className="text-muted-foreground">
           <Code>+</Code> <Code>-</Code> <Code>*</Code> <Code>/</Code> <Code>%</Code> sowie Klammern
           zur Gruppierung: <Code>(a - b) / b</Code>
+        </p>
+      </div>
+      <div>
+        <p className="font-medium">Bedingungen (Vergleiche)</p>
+        <p className="text-muted-foreground">
+          <Code>=</Code> <Code>==</Code> <Code>!=</Code> <Code>&lt;</Code> <Code>&lt;=</Code>{" "}
+          <Code>&gt;</Code> <Code>&gt;=</Code> – verwendbar als Bedingung von{" "}
+          <Code>IF(Bedingung, Dann, Sonst)</Code>, z. B.{" "}
+          <Code>IF(Alpha &lt;= 1, 100, 200)</Code>. Der Vergleichswert darf eine Zahl oder ein
+          anderes Feld sein. Über die Schaltfläche „Bedingung“ auch ohne Tippen zusammenstellbar.
         </p>
       </div>
       <div>
