@@ -250,6 +250,30 @@ export default function LocalCalculationsPanel({
     [calcs]
   );
 
+  /** Auswählbare Größen für den Bedingungs-Baukasten (IF/WENN). */
+  const conditionOptions = useMemo<ConditionOption[]>(() => [
+    ...localFields.map((f: FormField) => ({
+      value: f.field_key,
+      label: `${f.display_name}${f.unit ? ` [${f.unit}]` : ""}`,
+      group: "Formularfelder",
+    })),
+    ...linkedFields.map((f: FormField) => ({
+      value: f.field_key,
+      label: `🔗 ${f.display_name}${f.unit ? ` [${f.unit}]` : ""}`,
+      group: "Verknüpfte Felder",
+    })),
+    ...globalConstants.map((f: any) => ({
+      value: f.field_key,
+      label: `${f.display_name}${f.unit ? ` [${f.unit}]` : ""}`,
+      group: "Globale Konstanten",
+    })),
+    ...selectableCalcs.map((c) => ({
+      value: c.calc_key,
+      label: c.display_name,
+      group: "Andere Berechnungen",
+    })),
+  ], [localFields, linkedFields, globalConstants, selectableCalcs]);
+
 
   const formula = draft.advanced ? draft.formula : buildFormulaFromTokens(draft.tokens);
 
