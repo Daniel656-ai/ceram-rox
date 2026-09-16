@@ -248,6 +248,8 @@ type Tok = TokBase & (
   | { t: "num"; v: number }
   | { t: "id"; v: string }
   | { t: "op"; v: string }
+  /** Vergleichsoperator (=, ==, !=, <, <=, >, >=) – nur in Bedingungen. */
+  | { t: "cmp"; v: string }
   | { t: "lp" } | { t: "rp" } | { t: "comma" }
 );
 
@@ -270,6 +272,15 @@ function tokenize(src: string): Tok[] {
     if (c === "(") { out.push({ t: "lp", p: i }); i++; continue; }
     if (c === ")") { out.push({ t: "rp", p: i }); i++; continue; }
     if (c === "," || c === ";") { out.push({ t: "comma", p: i }); i++; continue; }
+    // Vergleichsoperatoren zuerst prüfen (zweistellige vor einstelligen).
+    if ("=!<>".includes(c)) {
+      const two = src.slice(i, i + 2);
+      if (["==", "!=", "<=", ">=", "<>"].includes(two)) {
+        out.push({ t: "cmp", v: two, p: i }); i += 2; continue;
+      }
+      if (c === "!") throw new Error(`Unerwartetes Zeichen: '!'${at(i)} – für „ungleich“ bitte != verwenden.`);
+      out.push({ t: "cmp", v: c, p: i }); i++; continue;
+    }
     if ("+-*/%".includes(c)) { out.push({ t: "op", v: c, p: i }); i++; continue; }
     if (/[0-9.]/.test(c)) {
       let j = i;
