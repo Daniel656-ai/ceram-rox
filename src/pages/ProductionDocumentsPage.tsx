@@ -61,7 +61,7 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
       toast.success(`m³-Liste erstellt – Quelle: ${releaseRevisionLabel(selected)}`);
       onOpenChange(false);
       setSelected(null);
-      setAutoSuggested(false);
+      setNotLatest(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "m³-Liste konnte nicht erstellt werden.");
     }
@@ -79,10 +79,11 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
         </DialogHeader>
         <div className="space-y-3">
           <ReleaseRevisionPicker value={selected?.id ?? null} onChange={handleSelect} />
-          {autoSuggested && selected && (
+          {notLatest && selected && (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-              Es wurde automatisch die letzte vorhandene Revision ({`Rev${Number(selected.revision_number) || 0}`})
-              vorgeschlagen. Bei Bedarf kann über die Suche bewusst eine ältere Revision gewählt werden.
+              Sie haben nicht die letzte Revision ausgewählt (letzte vorhandene Revision:{" "}
+              {`Rev${Number(latestRevisionInGroup(options, selected).revision_number) || 0}`}). Bitte prüfen Sie,
+              ob dies beabsichtigt ist.
             </div>
           )}
           {selected && (
