@@ -8041,6 +8041,7 @@ export type Database = {
           inspection_status: Database["public"]["Enums"]["raw_batch_inspection_status"]
           manufacturer_batch: string | null
           moisture_percent: number | null
+          mrs_number: string | null
           notes: string | null
           ph_value: number | null
           raw_material_id: string
@@ -8060,6 +8061,7 @@ export type Database = {
           inspection_status?: Database["public"]["Enums"]["raw_batch_inspection_status"]
           manufacturer_batch?: string | null
           moisture_percent?: number | null
+          mrs_number?: string | null
           notes?: string | null
           ph_value?: number | null
           raw_material_id: string
@@ -8079,6 +8081,7 @@ export type Database = {
           inspection_status?: Database["public"]["Enums"]["raw_batch_inspection_status"]
           manufacturer_batch?: string | null
           moisture_percent?: number | null
+          mrs_number?: string | null
           notes?: string | null
           ph_value?: number | null
           raw_material_id?: string
