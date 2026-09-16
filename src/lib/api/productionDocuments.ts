@@ -58,12 +58,8 @@ export const productionDocuments = {
     requestedBy: string | null;
     formDefinitionId?: string | null;
   }): Promise<ProductionDocumentRequest> {
-    return (await unwrap(
-      db
-        .from("production_document_requests")
-        .upsert(
-          {
-            order_id: args.orderId,
+    const payload = {
+      order_id: args.orderId,
             doc_kind: args.kind,
             status: args.status,
             based_on_release_id: args.basedOnReleaseId,
