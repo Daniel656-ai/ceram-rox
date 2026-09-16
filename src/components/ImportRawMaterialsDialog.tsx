@@ -213,7 +213,6 @@ export function ImportRawMaterialsDialog() {
             material_number: row.rk_code ?? undefined,
             other_designation: row.other_designation ?? undefined,
             cas_number: row.cas ?? undefined,
-            mrs_number: row.mrs ?? undefined,
             supplier: row.supplier ?? undefined,
             manufacturer: row.manufacturer ?? undefined,
             default_location_id: locationId ?? undefined,
