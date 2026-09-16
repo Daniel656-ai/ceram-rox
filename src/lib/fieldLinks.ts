@@ -17,7 +17,7 @@
 
 import type { FormField } from "@/lib/api/formFields";
 
-export type ValueSourceKind = "form_field" | "workflow_step" | "linked_form";
+export type ValueSourceKind = "form_field" | "workflow_step" | "linked_form" | "production_release_field";
 export type ValueSourceMode = "display" | "copy" | "calc";
 
 export interface ValueSourceRef {
