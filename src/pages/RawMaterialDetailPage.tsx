@@ -754,8 +754,9 @@ export default function RawMaterialDetailPage() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>LOT-Nummer</TableHead>
-                  <TableHead>BigBag Nr.</TableHead>
+                   <TableHead>LOT-Nummer</TableHead>
+                   <TableHead>MRS-Nummer</TableHead>
+                   <TableHead>BigBag Nr.</TableHead>
                   <TableHead>Wareneingang</TableHead>
                   <TableHead>Liefermenge</TableHead>
                   <TableHead>Lieferant</TableHead>
@@ -766,13 +767,23 @@ export default function RawMaterialDetailPage() {
                 </TableRow></TableHeader>
                 <TableBody>
                   {batches.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Keine Chargen</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">Keine Chargen</TableCell></TableRow>
                   ) : batches.map((b: any) => {
                     const batchContainers = (containers || []).filter((c: any) => c.batch_id === b.id);
                     return (
                       <TableRow key={b.id}>
-                        <TableCell className="font-mono text-sm">{b.batch_number}</TableCell>
-                        <TableCell className="font-mono text-xs">{b.manufacturer_batch || "–"}</TableCell>
+                         <TableCell className="font-mono text-sm">{b.batch_number}</TableCell>
+                         <TableCell className="font-mono text-xs">
+                           {canManageBatches ? (
+                             <Input
+                               defaultValue={b.mrs_number ?? ""}
+                               className="h-7 w-28 text-xs font-mono"
+                               placeholder="–"
+                               onBlur={(e) => handleBatchMrsEdit(b, e.target.value)}
+                             />
+                           ) : (b.mrs_number || "–")}
+                         </TableCell>
+                         <TableCell className="font-mono text-xs">{b.manufacturer_batch || "–"}</TableCell>
                         <TableCell className="text-xs">{b.goods_receipt_date ? new Date(b.goods_receipt_date).toLocaleDateString("de-DE") : (b.delivery_date ? new Date(b.delivery_date).toLocaleDateString("de-DE") : "–")}</TableCell>
                         <TableCell>{b.delivery_quantity != null ? `${formatQuantity(b.delivery_quantity)} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || "–"}</TableCell>
