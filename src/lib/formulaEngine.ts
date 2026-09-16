@@ -397,6 +397,8 @@ class Parser {
             `Unbekannte Funktion: ${name}${at(t.p)} – verfügbar: ${Object.keys(FUNCTIONS).join(", ")}`
           );
         }
+        // IF wird „faul“ ausgewertet: nur der zutreffende Zweig.
+        if (name.toUpperCase() === "IF") return this.ifCall();
         const args: Val[] = [];
         if (this.peek()?.t !== "rp") {
           args.push(this.arg());
