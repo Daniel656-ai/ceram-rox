@@ -102,16 +102,18 @@ describe("m³-Vorlagenstruktur", () => {
   });
 
   it("ändert eine vollständige Vorlage nicht", async () => {
-    const keys = [
+    const repeater = existingField(M3_ROWS_KEY, { id: "complete-repeater" });
+    const regularFields = [
       ...M3_HEADER_FIELDS,
       ...M3_CONTROL_FIELDS,
       ...M3_CALC_FIELDS,
-      { field_key: M3_ROWS_KEY },
-      ...M3_ROW_FIELDS,
       ...M3_CONFIRM_FIELDS,
-    ].map((field) => field.field_key);
+    ].map((field) => existingField(field.field_key));
+    const rowFields = M3_ROW_FIELDS.map((field) =>
+      existingField(field.field_key, { parent_field_id: repeater.id })
+    );
 
-    const result = await seedMissingM3Fields(formId, keys.map((key) => existingField(key)));
+    const result = await seedMissingM3Fields(formId, [...regularFields, repeater, ...rowFields]);
 
     expect(result.createdKeys).toEqual([]);
     expect(createField).not.toHaveBeenCalled();
