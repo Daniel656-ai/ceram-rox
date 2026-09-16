@@ -5620,7 +5620,7 @@ export type Database = {
           id: string
           missing: Json
           notes: string | null
-          order_id: string
+          order_id: string | null
           requested_at: string
           requested_by: string | null
           status: string
@@ -5636,7 +5636,7 @@ export type Database = {
           id?: string
           missing?: Json
           notes?: string | null
-          order_id: string
+          order_id?: string | null
           requested_at?: string
           requested_by?: string | null
           status?: string
@@ -5652,7 +5652,7 @@ export type Database = {
           id?: string
           missing?: Json
           notes?: string | null
-          order_id?: string
+          order_id?: string | null
           requested_at?: string
           requested_by?: string | null
           status?: string

@@ -22,6 +22,13 @@
       "when": 1789564229465,
       "tag": "0002_m3_list_form_instance_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789565932076,
+      "tag": "0003_m3_list_optional_order",
+      "breakpoints": true
     }
   ]
 }
