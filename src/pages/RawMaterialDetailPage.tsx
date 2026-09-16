@@ -871,7 +871,7 @@ export default function RawMaterialDetailPage() {
                         <TableCell className="font-mono text-xs text-muted-foreground">{c.barcode || "–"}</TableCell>
                         <TableCell className="text-xs"><ContainerPositions containerId={c.id} unit={c.unit} fallbackBatchNumber={c.raw_material_batches?.batch_number} /></TableCell>
                         <TableCell><Badge variant="outline" className="text-xs">{kindLabel[c.kind] || c.kind}</Badge></TableCell>
-                        <TableCell className="text-right font-mono text-sm">{formatQuantity(c.current_quantity)} / {formatQuantity(c.initial_quantity)} {c.unit}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">{formatQuantity(c.current_quantity)} {c.unit}</TableCell>
                         <TableCell className="text-xs">{formatLocation(c.storage_locations)}{c.location_note ? ` (${c.location_note})` : ""}</TableCell>
                         <TableCell><Badge variant={statusVariant as any} className="text-xs">{statusLabel[c.status] || c.status}</Badge></TableCell>
                         {(canManage || canManageBatches) && (
@@ -910,7 +910,7 @@ export default function RawMaterialDetailPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Gebinde-ID</Label>
-                    <Input value={cCode} onChange={(e) => setCCode(e.target.value)} placeholder="Auto: GEB-<Charge>-NNN" />
+                    <Input value={cCode} onChange={(e) => setCCode(e.target.value)} placeholder="Auto: GEB-NNN" />
                   </div>
                   <div>
                     <Label>Gebindebezeichnung</Label>
@@ -970,14 +970,10 @@ export default function RawMaterialDetailPage() {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Ursprüngl. Menge *</Label>
-                    <Input type="number" step="0.001" value={cInitial} onChange={(e) => setCInitial(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Aktueller Bestand</Label>
-                    <Input type="number" step="0.001" value={cCurrent} onChange={(e) => setCCurrent(e.target.value)} placeholder="= Ursprüngl." />
+                    <Label>Aktueller Bestand *</Label>
+                    <Input type="number" step="0.001" value={cCurrent} onChange={(e) => setCCurrent(e.target.value)} />
                   </div>
                   <div>
                     <Label>Einheit</Label>
