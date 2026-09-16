@@ -75,6 +75,8 @@ export const productionDocuments = {
       missing: string[];
       notes: string | null;
       completed_at: string | null;
+      form_definition_id: string | null;
+      form_values: Record<string, unknown>;
     }>
   ): Promise<void> {
     await unwrap(db.from("production_document_requests").update(fields).eq("id", id));
