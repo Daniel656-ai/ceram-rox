@@ -37,7 +37,17 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
   /** Nur aktuell gültige Revision ist Grundlage für Folgeprozesse. */
   const currentRelease = useMemo<ReleaseLike | null>(() => {
     const rows = releases as any[];
-    return (rows.find((r) => r.is_current) as ReleaseLike | undefined) ?? (rows[rows.length - 1] as ReleaseLike) ?? null;
+    // „Letzte vorhandene Revision“ = höchste Revisionsnummer; `is_current`
+    // gewinnt bei Gleichstand. Eine reine Lieferterminänderung erzeugt keine
+    // neue Revision und hat daher keinen Einfluss auf diese Ermittlung.
+    const byRevisionDesc = [...rows].sort(
+      (a, b) => (Number(b?.revision_number) || 0) - (Number(a?.revision_number) || 0)
+    );
+    return (
+      (byRevisionDesc.find((r) => r?.is_current) as ReleaseLike | undefined) ??
+      (byRevisionDesc[0] as ReleaseLike | undefined) ??
+      null
+    );
   }, [releases]);
 
   const byKind = (kind: DocKind) => (requests as any[]).find((r) => r.doc_kind === kind) ?? null;

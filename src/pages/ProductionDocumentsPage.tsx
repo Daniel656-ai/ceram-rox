@@ -15,7 +15,7 @@ import ReleaseSourceValues from "@/components/productionDocuments/ReleaseSourceV
 import { useAuth } from "@/contexts/AuthContext";
 import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
-import { releaseRevisionLabel, type ReleaseRevisionOption } from "@/lib/productionReleaseRef";
+import { latestRevisionInGroup, releaseRevisionLabel, type ReleaseRevisionOption } from "@/lib/productionReleaseRef";
 import {
   DOC_KIND_LABEL, DOC_STATUS_COLOR, DOC_STATUS_LABEL, type DocKind, type DocStatus,
 } from "@/lib/productionDocuments/requirements";
