@@ -215,7 +215,7 @@ export default function RawMaterialsPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("raw_materials:cas_number")}</Label><Input value={casNumber} onChange={(e) => setCasNumber(e.target.value)} placeholder={t("raw_materials:cas_number_placeholder")} /></div>
-                      <div><Label>{t("raw_materials:mrs_number")}</Label><Input value={mrsNumber} onChange={(e) => setMrsNumber(e.target.value)} placeholder={t("raw_materials:mrs_number_placeholder")} /></div>
+                      {/* MRS-Nummer gehört fachlich zum LOT und wird beim jeweiligen LOT gepflegt. */}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label>{t("common:supplier")}</Label><Input value={supplier} onChange={(e) => setSupplier(e.target.value)} /></div>
