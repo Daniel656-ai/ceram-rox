@@ -123,6 +123,8 @@ export const rawMaterialBatches = {
     inspection_status?: "ausstehend" | "laufend" | "bestanden" | "nicht_bestanden";
     moisture_percent?: number | null;
     ph_value?: number | null;
+    /** MRS-Nummer gehört fachlich zum LOT (nur wenn dieses LOT beprobt wurde). */
+    mrs_number?: string | null;
   }) =>
     unwrap(dbClient.from("raw_material_batches").insert(withNormalizedDeliveryQuantity(b) as any).select().single()),
 
@@ -153,6 +155,7 @@ export const rawMaterialBatches = {
       released_at: string | null;
       moisture_percent: number | null;
       ph_value: number | null;
+      mrs_number: string | null;
     }>
   ) => run(dbClient.from("raw_material_batches").update(withNormalizedDeliveryQuantity(updates) as any).eq("id", id)),
 

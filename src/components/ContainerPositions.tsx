@@ -46,13 +46,12 @@ export function ContainerPositions({
     );
   }
 
-  // inline: comma-separated LOTs with qty
+  // inline: nur die LOT-Nummern (Mengen erscheinen in der Detailansicht)
   return (
     <div className="flex flex-wrap gap-1">
       {positions.map((p: any) => (
         <Badge key={p.position_id} variant="outline" className="text-xs font-mono">
           {p.batch_number}
-          <span className="ml-1 text-muted-foreground">{formatQuantity(p.quantity)}{unit ? ` ${unit}` : ""}</span>
         </Badge>
       ))}
     </div>
