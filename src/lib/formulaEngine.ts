@@ -326,7 +326,7 @@ class Parser {
   }
 
   parse(): number {
-    const v = this.expr();
+    const v = this.comparison();
     if (this.pos < this.toks.length) {
       const t = this.peek()!;
       throw new Error(
@@ -334,6 +334,21 @@ class Parser {
       );
     }
     return scalar(v);
+  }
+  /**
+   * Vergleich (=, ==, !=, <, <=, >, >=) – niedrigste Priorität, damit
+   * `Alpha <= 1` und `a + b > c` wie erwartet ausgewertet werden.
+   * Ergebnis: 1 (wahr) oder 0 (falsch); fehlt ein Wert, bleibt es NaN.
+   */
+  comparison(): Val {
+    const left = this.expr();
+    const p = this.peek();
+    if (p?.t === "cmp") {
+      this.eat();
+      const right = this.expr();
+      return compare((p as any).v, scalar(left), scalar(right));
+    }
+    return left;
   }
   expr(): Val { // +, -
     let v = scalar(this.term());
@@ -367,7 +382,7 @@ class Parser {
     if (!t) throw new Error("Unerwartetes Ende der Formel – der Ausdruck ist unvollständig.");
     if (t.t === "num") return t.v;
     if (t.t === "lp") {
-      const v = this.expr();
+      const v = this.comparison();
       this.expect((x) => x.t === "rp", `Schließende Klammer ')' fehlt${at(t.p)}`);
       return v;
     }
@@ -431,7 +446,55 @@ class Parser {
       }
     }
     this.pos = start;
-    return this.expr();
+    return this.comparison();
+  }
+
+  /**
+   * IF(Bedingung, Dann, Sonst) – die Zweige werden erst ausgewertet, wenn sie
+   * tatsächlich benötigt werden. So kann ein nicht zutreffender Zweig (z. B.
+   * LN() eines ungültigen Werts) die Berechnung nicht stören.
+   */
+  ifCall(): Val {
+    const spans: Tok[][] = [];
+    if (this.peek()?.t !== "rp") {
+      for (;;) {
+        spans.push(this.captureArg());
+        const n = this.peek();
+        if (!n) throw new Error("Schließende Klammer ')' für IF( fehlt.");
+        if (n.t === "rp") break;
+        if (n.t === "comma") { this.eat(); continue; }
+        throw new Error(
+          `Zwischen den Parametern von IF() fehlt ein Komma${at(n.p)} – Schreibweise: IF(Bedingung, Dann, Sonst)`
+        );
+      }
+    }
+    this.eat(); // consume )
+    if (spans.length < 2) throw new Error("IF() erwartet: IF(Bedingung, Dann, Sonst)");
+    const cond = this.evalSpan(spans[0]);
+    if (!Number.isFinite(cond)) return NaN;
+    const branch = cond ? spans[1] : spans[2];
+    if (!branch) return 0;
+    return this.evalSpan(branch);
+  }
+
+  /** Sammelt die Tokens eines Funktionsparameters (klammer-bewusst). */
+  private captureArg(): Tok[] {
+    const start = this.pos;
+    let depth = 0;
+    for (;;) {
+      const t = this.peek();
+      if (!t) break;
+      if (t.t === "lp") depth++;
+      if (t.t === "rp") { if (depth === 0) break; depth--; }
+      if (t.t === "comma" && depth === 0) break;
+      this.eat();
+    }
+    return this.toks.slice(start, this.pos);
+  }
+
+  private evalSpan(toks: Tok[]): number {
+    if (!toks.length) return NaN;
+    return new Parser(toks, this.ctx, this.known).parse();
   }
 }
 
