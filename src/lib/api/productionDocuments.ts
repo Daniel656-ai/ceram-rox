@@ -39,6 +39,13 @@ export const productionDocuments = {
     return (await unwrap(q)) as ProductionDocumentRequest[];
   },
 
+  /** Eine Anforderung (z. B. eine m³-Liste) inkl. Formularinstanz. */
+  async get(id: string): Promise<ProductionDocumentRequest | null> {
+    return (await unwrap(
+      db.from("production_document_requests").select(SELECT).eq("id", id).maybeSingle()
+    )) as ProductionDocumentRequest | null;
+  },
+
   /** Anfordern – bestehende Anforderung bleibt erhalten (Upsert je Auftrag/Art). */
   async request(args: {
     orderId: string;
@@ -47,6 +54,7 @@ export const productionDocuments = {
     basedOnReleaseId: string | null;
     missing: string[];
     requestedBy: string | null;
+    formDefinitionId?: string | null;
   }): Promise<ProductionDocumentRequest> {
     return (await unwrap(
       db
@@ -59,6 +67,7 @@ export const productionDocuments = {
             based_on_release_id: args.basedOnReleaseId,
             missing: args.missing,
             requested_by: args.requestedBy,
+            ...(args.formDefinitionId ? { form_definition_id: args.formDefinitionId } : {}),
           },
           { onConflict: "order_id,doc_kind" }
         )
