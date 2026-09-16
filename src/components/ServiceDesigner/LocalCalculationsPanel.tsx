@@ -757,6 +757,10 @@ export default function LocalCalculationsPanel({
                         ))}
                       </PopoverContent>
                     </Popover>
+                    <ConditionInsertPopover
+                      options={conditionOptions}
+                      onInsert={(text) => setDraft((d) => ({ ...d, formula: appendRef(d.formula, text) }))}
+                    />
                     <span className="text-[11px] text-muted-foreground">
                       Parameter mit Komma trennen: AVERAGE(a, b, c)
                     </span>
