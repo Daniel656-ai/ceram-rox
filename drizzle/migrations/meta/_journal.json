@@ -15,6 +15,13 @@
       "when": 1789545131059,
       "tag": "0001_lot_mrs_number_and_sequential_container_code",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789564229465,
+      "tag": "0002_m3_list_form_instance_columns",
+      "breakpoints": true
     }
   ]
 }
