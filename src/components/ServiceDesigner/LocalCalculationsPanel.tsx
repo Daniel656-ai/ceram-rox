@@ -30,6 +30,7 @@ import { readValueSource, isLinkedField, linkOriginLabel } from "@/lib/fieldLink
 import { repeaterAggregateRefs } from "@/lib/repeaterAggregation";
 import { GEOMETRY_CALCULATIONS, type GeometryCalcDefinition } from "@/lib/geometry/calculations";
 import { globalConstantScope, isGlobalConstant } from "@/lib/globalConstants";
+import ConditionInsertPopover, { type ConditionOption } from "./ConditionInsertPopover";
 
 
 const OPERATORS: { v: CalcOperator; l: string }[] = [
@@ -91,6 +92,16 @@ function FormulaSyntaxHelp() {
         <p className="text-muted-foreground">
           <Code>+</Code> <Code>-</Code> <Code>*</Code> <Code>/</Code> <Code>%</Code> sowie Klammern
           zur Gruppierung: <Code>(a - b) / b</Code>
+        </p>
+      </div>
+      <div>
+        <p className="font-medium">Bedingungen (Vergleiche)</p>
+        <p className="text-muted-foreground">
+          <Code>=</Code> <Code>==</Code> <Code>!=</Code> <Code>&lt;</Code> <Code>&lt;=</Code>{" "}
+          <Code>&gt;</Code> <Code>&gt;=</Code> – verwendbar als Bedingung von{" "}
+          <Code>IF(Bedingung, Dann, Sonst)</Code>, z. B.{" "}
+          <Code>IF(Alpha &lt;= 1, 100, 200)</Code>. Der Vergleichswert darf eine Zahl oder ein
+          anderes Feld sein. Über die Schaltfläche „Bedingung“ auch ohne Tippen zusammenstellbar.
         </p>
       </div>
       <div>
@@ -238,6 +249,30 @@ export default function LocalCalculationsPanel({
     () => (calcs as FormCalculation[]).filter((c) => !c.calc_key),
     [calcs]
   );
+
+  /** Auswählbare Größen für den Bedingungs-Baukasten (IF/WENN). */
+  const conditionOptions = useMemo<ConditionOption[]>(() => [
+    ...localFields.map((f: FormField) => ({
+      value: f.field_key,
+      label: `${f.display_name}${f.unit ? ` [${f.unit}]` : ""}`,
+      group: "Formularfelder",
+    })),
+    ...linkedFields.map((f: FormField) => ({
+      value: f.field_key,
+      label: `🔗 ${f.display_name}${f.unit ? ` [${f.unit}]` : ""}`,
+      group: "Verknüpfte Felder",
+    })),
+    ...globalConstants.map((f: any) => ({
+      value: f.field_key,
+      label: `${f.display_name}${f.unit ? ` [${f.unit}]` : ""}`,
+      group: "Globale Konstanten",
+    })),
+    ...selectableCalcs.map((c) => ({
+      value: c.calc_key,
+      label: c.display_name,
+      group: "Andere Berechnungen",
+    })),
+  ], [localFields, linkedFields, globalConstants, selectableCalcs]);
 
 
   const formula = draft.advanced ? draft.formula : buildFormulaFromTokens(draft.tokens);
@@ -746,6 +781,10 @@ export default function LocalCalculationsPanel({
                         ))}
                       </PopoverContent>
                     </Popover>
+                    <ConditionInsertPopover
+                      options={conditionOptions}
+                      onInsert={(text) => setDraft((d) => ({ ...d, formula: appendRef(d.formula, text) }))}
+                    />
                     <span className="text-[11px] text-muted-foreground">
                       Parameter mit Komma trennen: AVERAGE(a, b, c)
                     </span>

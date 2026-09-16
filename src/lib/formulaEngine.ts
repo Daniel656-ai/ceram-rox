@@ -110,11 +110,49 @@ const FUNCTIONS: Record<string, FnImpl> = {
   /** Umrechnung zwischen Grad und Bogenmaß. */
   RADIANS: unary((x) => (x * Math.PI) / 180),
   DEGREES: unary((x) => (x * 180) / Math.PI),
+  /**
+   * Bedingung. Wird im Parser zusätzlich „faul“ ausgewertet (nur der
+   * zutreffende Zweig), diese Implementierung bleibt als Rückfall erhalten.
+   */
   IF: (a) => {
-    const f = flat(a);
-    return f[0] ? f[1] : f[2] ?? 0;
+    const c = scalar(a[0] ?? NaN);
+    if (!Number.isFinite(c)) return NaN;
+    const branch = c ? a[1] : a[2];
+    if (branch === undefined) return 0;
+    return scalar(branch);
   },
 };
+
+/** Vergleichsoperatoren, die in Bedingungen verwendet werden dürfen. */
+export const COMPARISON_OPERATORS = ["=", "==", "!=", "<", "<=", ">", ">="] as const;
+export type ComparisonOperator = (typeof COMPARISON_OPERATORS)[number];
+
+/** Anzeigetexte für die Auswahl im Formeleditor. */
+export const COMPARISON_OPERATOR_INFO: Record<string, string> = {
+  "=": "gleich",
+  "==": "gleich",
+  "!=": "ungleich",
+  "<": "kleiner als",
+  "<=": "kleiner oder gleich",
+  ">": "größer als",
+  ">=": "größer oder gleich",
+};
+
+/** Ergebnis eines Vergleichs: 1 = wahr, 0 = falsch, NaN = Wert fehlt. */
+function compare(op: string, a: number, b: number): number {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return NaN;
+  switch (op) {
+    case "=":
+    case "==": return a === b ? 1 : 0;
+    case "!=":
+    case "<>": return a !== b ? 1 : 0;
+    case "<": return a < b ? 1 : 0;
+    case "<=": return a <= b ? 1 : 0;
+    case ">": return a > b ? 1 : 0;
+    case ">=": return a >= b ? 1 : 0;
+    default: return NaN;
+  }
+}
 
 /** Konstanten, die in Formeln direkt verwendet werden dürfen. */
 const CONSTANTS: Record<string, number> = {
@@ -210,6 +248,8 @@ type Tok = TokBase & (
   | { t: "num"; v: number }
   | { t: "id"; v: string }
   | { t: "op"; v: string }
+  /** Vergleichsoperator (=, ==, !=, <, <=, >, >=) – nur in Bedingungen. */
+  | { t: "cmp"; v: string }
   | { t: "lp" } | { t: "rp" } | { t: "comma" }
 );
 
@@ -232,6 +272,15 @@ function tokenize(src: string): Tok[] {
     if (c === "(") { out.push({ t: "lp", p: i }); i++; continue; }
     if (c === ")") { out.push({ t: "rp", p: i }); i++; continue; }
     if (c === "," || c === ";") { out.push({ t: "comma", p: i }); i++; continue; }
+    // Vergleichsoperatoren zuerst prüfen (zweistellige vor einstelligen).
+    if ("=!<>".includes(c)) {
+      const two = src.slice(i, i + 2);
+      if (["==", "!=", "<=", ">=", "<>"].includes(two)) {
+        out.push({ t: "cmp", v: two, p: i }); i += 2; continue;
+      }
+      if (c === "!") throw new Error(`Unerwartetes Zeichen: '!'${at(i)} – für „ungleich“ bitte != verwenden.`);
+      out.push({ t: "cmp", v: c, p: i }); i++; continue;
+    }
     if ("+-*/%".includes(c)) { out.push({ t: "op", v: c, p: i }); i++; continue; }
     if (/[0-9.]/.test(c)) {
       let j = i;
@@ -277,7 +326,7 @@ class Parser {
   }
 
   parse(): number {
-    const v = this.expr();
+    const v = this.comparison();
     if (this.pos < this.toks.length) {
       const t = this.peek()!;
       throw new Error(
@@ -285,6 +334,21 @@ class Parser {
       );
     }
     return scalar(v);
+  }
+  /**
+   * Vergleich (=, ==, !=, <, <=, >, >=) – niedrigste Priorität, damit
+   * `Alpha <= 1` und `a + b > c` wie erwartet ausgewertet werden.
+   * Ergebnis: 1 (wahr) oder 0 (falsch); fehlt ein Wert, bleibt es NaN.
+   */
+  comparison(): Val {
+    const left = this.expr();
+    const p = this.peek();
+    if (p?.t === "cmp") {
+      this.eat();
+      const right = this.expr();
+      return compare((p as any).v, scalar(left), scalar(right));
+    }
+    return left;
   }
   expr(): Val { // +, -
     let v = scalar(this.term());
@@ -318,7 +382,7 @@ class Parser {
     if (!t) throw new Error("Unerwartetes Ende der Formel – der Ausdruck ist unvollständig.");
     if (t.t === "num") return t.v;
     if (t.t === "lp") {
-      const v = this.expr();
+      const v = this.comparison();
       this.expect((x) => x.t === "rp", `Schließende Klammer ')' fehlt${at(t.p)}`);
       return v;
     }
@@ -333,6 +397,8 @@ class Parser {
             `Unbekannte Funktion: ${name}${at(t.p)} – verfügbar: ${Object.keys(FUNCTIONS).join(", ")}`
           );
         }
+        // IF wird „faul“ ausgewertet: nur der zutreffende Zweig.
+        if (name.toUpperCase() === "IF") return this.ifCall();
         const args: Val[] = [];
         if (this.peek()?.t !== "rp") {
           args.push(this.arg());
@@ -382,7 +448,55 @@ class Parser {
       }
     }
     this.pos = start;
-    return this.expr();
+    return this.comparison();
+  }
+
+  /**
+   * IF(Bedingung, Dann, Sonst) – die Zweige werden erst ausgewertet, wenn sie
+   * tatsächlich benötigt werden. So kann ein nicht zutreffender Zweig (z. B.
+   * LN() eines ungültigen Werts) die Berechnung nicht stören.
+   */
+  ifCall(): Val {
+    const spans: Tok[][] = [];
+    if (this.peek()?.t !== "rp") {
+      for (;;) {
+        spans.push(this.captureArg());
+        const n = this.peek();
+        if (!n) throw new Error("Schließende Klammer ')' für IF( fehlt.");
+        if (n.t === "rp") break;
+        if (n.t === "comma") { this.eat(); continue; }
+        throw new Error(
+          `Zwischen den Parametern von IF() fehlt ein Komma${at(n.p)} – Schreibweise: IF(Bedingung, Dann, Sonst)`
+        );
+      }
+    }
+    this.eat(); // consume )
+    if (spans.length < 2) throw new Error("IF() erwartet: IF(Bedingung, Dann, Sonst)");
+    const cond = this.evalSpan(spans[0]);
+    if (!Number.isFinite(cond)) return NaN;
+    const branch = cond ? spans[1] : spans[2];
+    if (!branch) return 0;
+    return this.evalSpan(branch);
+  }
+
+  /** Sammelt die Tokens eines Funktionsparameters (klammer-bewusst). */
+  private captureArg(): Tok[] {
+    const start = this.pos;
+    let depth = 0;
+    for (;;) {
+      const t = this.peek();
+      if (!t) break;
+      if (t.t === "lp") depth++;
+      if (t.t === "rp") { if (depth === 0) break; depth--; }
+      if (t.t === "comma" && depth === 0) break;
+      this.eat();
+    }
+    return this.toks.slice(start, this.pos);
+  }
+
+  private evalSpan(toks: Tok[]): number {
+    if (!toks.length) return NaN;
+    return new Parser(toks, this.ctx, this.known).parse();
   }
 }
 
