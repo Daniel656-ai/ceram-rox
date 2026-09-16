@@ -30,7 +30,24 @@ import {
 function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const { user } = useAuth();
   const request = useRequestProductionDocument();
+  const options = useReleaseRevisionList();
   const [selected, setSelected] = useState<ReleaseRevisionOption | null>(null);
+  const [autoSuggested, setAutoSuggested] = useState(false);
+
+  // Fachlicher Standard: Bei der Erstellung wird immer die letzte vorhandene
+  // Revision der Fertigungsfreigabe vorgeschlagen. Wählt der Mitarbeiter eine
+  // ältere Revision, wird auf die letzte umgestellt und dies sichtbar gemacht –
+  // eine bewusste Auswahl einer älteren Revision bleibt über die Suche möglich.
+  const handleSelect = (o: ReleaseRevisionOption | null) => {
+    if (!o) {
+      setSelected(null);
+      setAutoSuggested(false);
+      return;
+    }
+    const latest = latestRevisionInGroup(options, o);
+    setSelected(latest);
+    setAutoSuggested(latest.id !== o.id);
+  };
 
   const create = async () => {
     if (!selected) return;
@@ -66,7 +83,13 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <ReleaseRevisionPicker value={selected?.id ?? null} onChange={setSelected} />
+          <ReleaseRevisionPicker value={selected?.id ?? null} onChange={handleSelect} />
+          {autoSuggested && selected && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+              Es wurde automatisch die letzte vorhandene Revision ({`Rev${Number(selected.revision_number) || 0}`})
+              vorgeschlagen. Bei Bedarf kann über die Suche bewusst eine ältere Revision gewählt werden.
+            </div>
+          )}
           {selected && (
             <div className="rounded-md border p-3 text-sm space-y-1">
               <div className="font-medium">{releaseRevisionLabel(selected)}</div>
