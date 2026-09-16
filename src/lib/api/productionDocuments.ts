@@ -6,7 +6,8 @@ const db = dbClient as any; // eslint-disable-line @typescript-eslint/no-explici
 
 export interface ProductionDocumentRequest {
   id: string;
-  order_id: string;
+  /** Auftrag – bei m³-Listen optional (Erstellung vor Auftragszuordnung möglich). */
+  order_id: string | null;
   doc_kind: DocKind;
   status: Exclude<DocStatus, "nicht_angefordert">;
   based_on_release_id: string | null;
@@ -48,7 +49,8 @@ export const productionDocuments = {
 
   /** Anfordern – bestehende Anforderung bleibt erhalten (Upsert je Auftrag/Art). */
   async request(args: {
-    orderId: string;
+    /** null = m³-Liste ohne zugeordneten Auftrag (Auftrag kann später entstehen). */
+    orderId: string | null;
     kind: DocKind;
     status: Exclude<DocStatus, "nicht_angefordert">;
     basedOnReleaseId: string | null;
