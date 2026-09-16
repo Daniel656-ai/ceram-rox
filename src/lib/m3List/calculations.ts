@@ -57,9 +57,8 @@ export function elementCountForRow(
 
 /** Excel M5: zu kennzeichnende Elemente = (Ersatzelemente + Einbaurahmen) + 10 %. */
 export function markingElements(spareElements: number, mountingFrames: number): number {
-  return excelRound((Number(spareElements) || 0) + (Number(mountingFrames) || 0)) === 0
-    ? 0
-    : excelRound(((Number(spareElements) || 0) + (Number(mountingFrames) || 0)) * 1.1);
+  const sum = (Number(spareElements) || 0) + (Number(mountingFrames) || 0);
+  return excelRound(sum * 1.1);
 }
 
 /** Excel N6: Anzahl der zu kennzeichnenden m³-Zeilen. */
