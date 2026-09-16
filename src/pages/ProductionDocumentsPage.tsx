@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import ProductionReleasesPage from "@/pages/ProductionReleasesPage";
 import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/productionDocuments/ReleaseRevisionPicker";
 import ReleaseSourceValues from "@/components/productionDocuments/ReleaseSourceValues";
+import M3ListForm from "@/components/productionDocuments/M3ListForm";
+import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
