@@ -66,7 +66,8 @@ export function resolveField(key: string, ctx: LabelDataContext): string {
     case "material.other_designation": return m.other_designation ?? "";
     case "material.description": return m.description ?? "";
     case "material.material_number": return m.material_number ?? "";
-    case "material.mrs_number": return m.mrs_number ?? "";
+    // MRS-Nummer gehört zum LOT; der Rohstoffwert dient nur noch als Rückfall für Altdaten.
+    case "material.mrs_number": return (b as any).mrs_number ?? m.mrs_number ?? "";
     case "material.supplier": return m.supplier ?? "";
     case "material.cas_number": return m.cas_number ?? "";
     case "batch.lot_number": return b.lot_number ?? b.batch_number ?? "";
