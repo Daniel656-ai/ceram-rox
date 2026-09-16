@@ -61,10 +61,15 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
       const ev = evaluations[kind];
       const target = nextStatus(row.status as DocStatus, ev.missing.length);
       const missingChanged = JSON.stringify(row.missing ?? []) !== JSON.stringify(ev.missing);
-      const releaseChanged = (row.based_on_release_id ?? null) !== ev.basedOnReleaseId;
+      // Die einmal gewählte Fertigungsfreigabe-Revision ist die feste Quelle:
+      // sie wird nur gesetzt, solange noch keine hinterlegt ist. Eine später
+      // importierte Revision darf eine bestehende Unterlage nicht stillschweigend
+      // auf einen neuen Stand umhängen.
+      const frozenReleaseId = (row.based_on_release_id ?? null) ?? ev.basedOnReleaseId;
+      const releaseChanged = (row.based_on_release_id ?? null) !== frozenReleaseId;
       if (target !== row.status || missingChanged || releaseChanged) {
         update.mutate({
-          id: row.id, status: target as any, missing: ev.missing, based_on_release_id: ev.basedOnReleaseId,
+          id: row.id, status: target as any, missing: ev.missing, based_on_release_id: frozenReleaseId,
         });
       }
     }
