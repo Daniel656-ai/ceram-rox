@@ -117,6 +117,16 @@ describe("m³-Vorlagenstruktur", () => {
     expect(createField).not.toHaveBeenCalled();
   });
 
+  it("überschreibt keine strukturell abweichenden vorhandenen Repeater-Felder", async () => {
+    const repeater = existingField(M3_ROWS_KEY, { id: "existing-repeater" });
+    const misplaced = existingField("volume_m3", { parent_field_id: null });
+
+    await expect(seedMissingM3Fields(formId, [repeater, misplaced])).rejects.toThrow(
+      /volume_m3.*nicht zum Repeater.*nicht verschoben/
+    );
+    expect(createField.mock.calls.some(([payload]) => payload.field_key === "volume_m3")).toBe(false);
+  });
+
   it("meldet den konkreten Feldschlüssel und kann beim nächsten Aufruf fortsetzen", async () => {
     createField.mockRejectedValueOnce({ message: "insert denied", code: "42501" });
     await expect(seedMissingM3Fields(formId, [])).rejects.toThrow(/order_number.*insert denied.*42501/);

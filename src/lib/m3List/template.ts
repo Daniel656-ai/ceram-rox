@@ -180,6 +180,11 @@ export async function seedMissingM3Fields(formId: string, initialFields?: FormFi
   }
 
   let repeater = byKey.get(M3_ROWS_KEY);
+  if (repeater && repeater.field_type !== "repeater") {
+    throw new Error(
+      `m³-Vorlage: Das vorhandene Feld „${M3_ROWS_KEY}“ ist kein Repeater. Es wurde zum Schutz der Benutzerkonfiguration nicht verändert.`
+    );
+  }
   if (!repeater) {
     repeater = await createM3Field(formId, M3_ROWS_KEY, {
       form_id: formId,
@@ -204,7 +209,15 @@ export async function seedMissingM3Fields(formId: string, initialFields?: FormFi
 
   let childSort = Math.max(-1, ...fields.filter((field) => field.parent_field_id === repeater.id).map((field) => field.sort_order)) + 1;
   for (const spec of M3_ROW_FIELDS) {
-    if (byKey.has(spec.field_key)) continue;
+    const existingRowField = byKey.get(spec.field_key);
+    if (existingRowField) {
+      if (existingRowField.parent_field_id !== repeater.id) {
+        throw new Error(
+          `m³-Vorlage: Das vorhandene Feld „${spec.field_key}“ gehört nicht zum Repeater „${M3_ROWS_KEY}“. Es wurde zum Schutz der Benutzerkonfiguration nicht verschoben.`
+        );
+      }
+      continue;
+    }
     const created = await createM3Field(formId, spec.field_key, fieldPayload(formId, spec, childSort++, repeater.id));
     byKey.set(spec.field_key, created);
     createdKeys.push(spec.field_key);
