@@ -29,7 +29,8 @@ import { FIELD_TYPE_GROUPS, ALL_FIELD_TYPES as ALL_TYPES, slugify } from "@/lib/
 import LocalCalculationsPanel from "@/components/ServiceDesigner/LocalCalculationsPanel";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
-import { normalizeLayout } from "@/lib/api/formDefinitionLayout";
+import { normalizeLayout, type FormLayoutTree } from "@/lib/api/formDefinitionLayout";
+import { autoLayout } from "@/components/OrderKindDynamicForm";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
 import GlobalModelTab from "@/components/ServiceDesigner/GlobalModelTab";
 import GlobalLibraryTab from "@/components/ServiceDesigner/GlobalLibraryTab";
