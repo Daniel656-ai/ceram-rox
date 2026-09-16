@@ -196,6 +196,8 @@ export function resolveProductionReleaseField(
 
 export interface ReleaseRevisionOption {
   id: string;
+  /** Stammsatz der Fertigungsfreigabe – gruppiert alle Revisionen derselben Freigabe. */
+  root_release_id: string | null;
   release_number: string | null;
   revision_number: number | null;
   project_name: string | null;
@@ -247,4 +249,39 @@ export function matchesReleaseSearch(o: ReleaseRevisionOption, query: string): b
     .join(" ")
     .toLowerCase();
   return q.split(/\s+/).every((term) => haystack.includes(term));
+}
+
+/**
+ * Gruppenschlüssel: Alle Revisionen derselben Fertigungsfreigabe teilen den
+ * Stammsatz (`root_release_id`). Fällt dieser weg (ältere Datensätze), dient
+ * die Freigabekennung, danach die Artikelnummer als Gruppierungsmerkmal.
+ */
+export function releaseGroupKey(o: ReleaseRevisionOption): string {
+  return (
+    o.root_release_id ??
+    (o.release_number ? `release:${o.release_number}` : null) ??
+    (o.article_number ? `article:${o.article_number}` : null) ??
+    `single:${o.id}`
+  );
+}
+
+/**
+ * Letzte vorhandene Revision einer Fertigungsfreigabe = höchste
+ * Revisionsnummer innerhalb derselben Gruppe. Gleichstand: `is_current`
+ * gewinnt. Eine reine Lieferterminänderung erzeugt keine neue Revision und
+ * ist hier daher ohne Wirkung.
+ */
+export function latestRevisionInGroup<T extends ReleaseRevisionOption>(options: T[], ref: T): T {
+  const key = releaseGroupKey(ref);
+  const group = options.filter((o) => releaseGroupKey(o) === key);
+  let best = ref;
+  let bestRev = Number(ref.revision_number) || 0;
+  for (const o of group) {
+    const rev = Number(o.revision_number) || 0;
+    if (rev > bestRev || (rev === bestRev && o.is_current && !best.is_current)) {
+      best = o;
+      bestRev = rev;
+    }
+  }
+  return best;
 }
