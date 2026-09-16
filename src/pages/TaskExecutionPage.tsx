@@ -212,6 +212,45 @@ function TaskExecutionPageInner() {
     setCompleteOpen(true);
   };
 
+  /**
+   * Stundenaufzeichnung am Ende der Dienstleistung nur bei F&E-Aufträgen:
+   * Der Dialog zur tatsächlichen Messdauer wird ausschließlich geöffnet, wenn
+   * der übergeordnete Auftrag den Typ „F&E-Auftrag" (rnd) hat. Bei allen
+   * anderen Typen (oder wenn der Typ nicht ermittelt werden kann) wird die
+   * Messung ohne Zeitangabe und ohne Dialog abgeschlossen – es wird kein
+   * Stundenaufzeichnungsdatensatz (actual_duration_hours) erzeugt.
+   */
+  const isRndOrder =
+    (measurement as any)?.measurement_orders?.order_type === "rnd";
+
+  const handleCompleteClick = () => {
+    if (isRndOrder) {
+      openCompleteDialog();
+      return;
+    }
+    void completeWithoutTimeLog();
+  };
+
+  const completeWithoutTimeLog = async () => {
+    if (!measurementId) return;
+    setSubmitting(true);
+    try {
+      await persistResults(true);
+      // Nur Status setzen – bewusst kein actual_duration_hours schreiben.
+      await api.measurements.updateStatus(measurementId, "completed");
+      toast.success("Messung abgeschlossen und Ergebnisse gespeichert");
+      qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
+      qc.invalidateQueries({ queryKey: ["measurement-results"] });
+      qc.invalidateQueries({ queryKey: ["measurements"] });
+      qc.invalidateQueries({ queryKey: ["order"] });
+      navigate("/auftraege");
+    } catch (err: any) {
+      toast.error("Fehler", { description: err.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const persistResults = async (requireOfficialCalculations = false) => {
     if (!measurementId) return;
     // Immer den aktuellen Stand der gespeicherten Ergebnisse lesen: nach einem
@@ -660,7 +699,7 @@ function TaskExecutionPageInner() {
           <Button variant="outline" onClick={handleSaveDraft} disabled={submitting}>
             Zwischenstand speichern
           </Button>
-          <Button onClick={openCompleteDialog} disabled={submitting}>
+          <Button onClick={handleCompleteClick} disabled={submitting}>
             <CheckCircle2 className="h-4 w-4 mr-2" /> Messung abschließen
           </Button>
         </div>
