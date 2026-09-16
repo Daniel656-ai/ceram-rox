@@ -66,7 +66,15 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
       setSelected(null);
       setNotLatest(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "m³-Liste konnte nicht erstellt werden.");
+      // Backend-Fehler sind einfache Objekte (kein `Error`); die eigentliche
+      // Ursache (z. B. eine verletzte Datenbank-Regel) wurde bisher verworfen.
+      const err = e as { message?: string; details?: string; hint?: string; code?: string } | null;
+      const detail = [err?.message, err?.details, err?.code && `Code ${err.code}`]
+        .filter(Boolean)
+        .join(" · ");
+      // eslint-disable-next-line no-console
+      console.error("[m3-list] Erstellung fehlgeschlagen:", e);
+      toast.error(detail ? `m³-Liste konnte nicht erstellt werden: ${detail}` : "m³-Liste konnte nicht erstellt werden.");
     }
   };
 
