@@ -29,6 +29,8 @@ export interface ValueSourceRef {
   service_id?: string;
   /** Nur bei `linked_form`: Quellformular (`form_definitions.id`). */
   form_id?: string;
+  /** Nur bei `production_release_field`: konkrete Revision (`production_releases.id`). */
+  release_id?: string;
   /** Sprechende Herkunftsbezeichnung für die Anzeige („🔗 Wert aus …“). */
   label?: string;
 }
