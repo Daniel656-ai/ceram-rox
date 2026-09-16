@@ -294,6 +294,23 @@ export const productionReleases = {
     return (await unwrap(q)) as ProductionReleaseRow[];
   },
 
+  /**
+   * Auswahlliste für die Quellenauswahl: JEDE Revision ist ein eigener,
+   * auswählbarer Datensatz (Rev1 und Rev2 sind unterschiedliche Treffer).
+   * Rein lesend – es werden keine Daten verändert.
+   */
+  async listRevisionsForSelection(): Promise<ProductionReleaseRow[]> {
+    return (await unwrap(
+      db
+        .from("production_releases")
+        .select(
+          "id,release_number,revision_number,revision_date,project_name,customer_name,article_number,order_id,is_current,superseded_at,status,import_status,created_at"
+        )
+        .order("release_number", { ascending: true })
+        .order("revision_number", { ascending: true })
+    )) as ProductionReleaseRow[];
+  },
+
   /** Alle Revisionen eines Stammsatzes – älteste zuerst. */
   async revisions(rootId: string): Promise<ProductionReleaseRow[]> {
     return (await unwrap(

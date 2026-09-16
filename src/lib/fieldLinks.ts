@@ -17,7 +17,7 @@
 
 import type { FormField } from "@/lib/api/formFields";
 
-export type ValueSourceKind = "form_field" | "workflow_step" | "linked_form";
+export type ValueSourceKind = "form_field" | "workflow_step" | "linked_form" | "production_release_field";
 export type ValueSourceMode = "display" | "copy" | "calc";
 
 export interface ValueSourceRef {
@@ -29,6 +29,8 @@ export interface ValueSourceRef {
   service_id?: string;
   /** Nur bei `linked_form`: Quellformular (`form_definitions.id`). */
   form_id?: string;
+  /** Nur bei `production_release_field`: konkrete Revision (`production_releases.id`). */
+  release_id?: string;
   /** Sprechende Herkunftsbezeichnung für die Anzeige („🔗 Wert aus …“). */
   label?: string;
 }
@@ -45,7 +47,13 @@ export function readValueSource(field: Pick<FormField, "id"> & { data_source?: u
   const src = (ds as any).source;
   if (!src || typeof src !== "object" || !src.field_key) return null;
   const kind: ValueSourceKind =
-    src.kind === "form_field" ? "form_field" : src.kind === "linked_form" ? "linked_form" : "workflow_step";
+    src.kind === "form_field"
+      ? "form_field"
+      : src.kind === "linked_form"
+        ? "linked_form"
+        : src.kind === "production_release_field"
+          ? "production_release_field"
+          : "workflow_step";
   return {
     mode: (["display", "copy", "calc"].includes((ds as any).mode) ? (ds as any).mode : "copy") as ValueSourceMode,
     source: {
@@ -54,6 +62,7 @@ export function readValueSource(field: Pick<FormField, "id"> & { data_source?: u
       step_key: src.step_key ? String(src.step_key) : undefined,
       service_id: src.service_id ? String(src.service_id) : undefined,
       form_id: src.form_id ? String(src.form_id) : undefined,
+      release_id: src.release_id ? String(src.release_id) : undefined,
       label: src.label ? String(src.label) : undefined,
     },
   };

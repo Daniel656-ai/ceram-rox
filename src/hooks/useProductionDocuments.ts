@@ -18,6 +18,24 @@ export function useOrderReleases(orderId: string | undefined) {
   });
 }
 
+/** Alle Fertigungsfreigabe-Revisionen als auswählbare Quellen (lesend). */
+export function useReleaseRevisionOptions(enabled = true) {
+  return useQuery({
+    queryKey: ["production-releases", "revision-options"],
+    queryFn: () => api.productionReleases.listRevisionsForSelection(),
+    enabled,
+  });
+}
+
+/** Genau eine Revision – Grundlage der Wertauflösung einer m³-Liste. */
+export function useProductionReleaseRevision(releaseId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["production-release", releaseId],
+    queryFn: () => api.productionReleases.get(releaseId!),
+    enabled: !!releaseId,
+  });
+}
+
 function useInvalidate() {
   const qc = useQueryClient();
   return () => {
