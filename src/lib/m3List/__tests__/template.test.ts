@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FormField } from "@/lib/api/formFields";
 
-const listForms = vi.fn();
-const listFields = vi.fn();
-const createField = vi.fn();
-const createForm = vi.fn();
+const { listForms, listFields, createField, createForm } = vi.hoisted(() => ({
+  listForms: vi.fn(),
+  listFields: vi.fn(),
+  createField: vi.fn(),
+  createForm: vi.fn(),
+}));
 
 vi.mock("@/lib/api", () => ({
   api: {
