@@ -137,7 +137,10 @@ function OrderDetailPageInner() {
   }, 0);
 
   const handleStatusChange = async (measurementId: string, newStatus: string) => {
-    if (newStatus === "completed") {
+    // Stundenaufzeichnung (Dauer-Dialog) nur bei F&E-Aufträgen. Bei allen
+    // anderen Auftragstypen – oder wenn der Typ nicht ermittelt werden kann –
+    // wird ohne Dialog und ohne Zeitdatensatz abgeschlossen.
+    if (newStatus === "completed" && (order as any)?.order_type === "rnd") {
       // Find the measurement to get standard duration
       const m = measurements.find((m: any) => m.id === measurementId);
       const stdDuration = m?.measurement_services?.standard_duration_hours ?? 1;
