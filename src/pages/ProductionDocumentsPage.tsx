@@ -227,6 +227,11 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
                     {new Date(r.requested_at).toLocaleDateString("de-AT")}
                   </TableCell>
                   <TableCell className="text-right space-x-1">
+                    {isM3 && (
+                      <Button variant="secondary" size="sm" onClick={() => setFormRequestId(r.id)}>
+                        m³-Liste öffnen
+                      </Button>
+                    )}
                     {isM3 && r.based_on_release_id && (
                       <Button variant="ghost" size="sm" onClick={() => setSourceId(r.based_on_release_id)}>
                         Quellwerte
