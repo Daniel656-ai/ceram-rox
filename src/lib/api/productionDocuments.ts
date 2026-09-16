@@ -17,11 +17,15 @@ export interface ProductionDocumentRequest {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Verwendete ROX-Formularvorlage (m³-Liste) – im Formulardesigner anpassbar. */
+  form_definition_id: string | null;
+  /** Erfasste Formularwerte inkl. dynamischer m³-Zeilen. */
+  form_values: Record<string, unknown>;
   measurement_orders?: { id: string; order_number: string | null } | null;
 }
 
 const SELECT =
-  "id,order_id,doc_kind,status,based_on_release_id,missing,notes,requested_by,requested_at,completed_at,created_at,updated_at";
+  "id,order_id,doc_kind,status,based_on_release_id,missing,notes,requested_by,requested_at,completed_at,created_at,updated_at,form_definition_id,form_values";
 
 export const productionDocuments = {
   /** Alle Folgeprozesse (optional gefiltert nach Auftrag oder Art). */
