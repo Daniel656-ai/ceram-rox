@@ -24,7 +24,7 @@ const rev2 = { ...rev1, id: "rev2-id", revision_number: 2, length_mm: 1500 };
 const option = (o: Partial<ReleaseRevisionOption>): ReleaseRevisionOption => ({
   id: "x", release_number: "0020-6047", revision_number: 1, project_name: "UBE #6 (2027)",
   customer_name: "Kunde AG", article_number: "0020-6047-125-0998", order_id: null,
-  order_number: "0020-6047", is_current: true, superseded_at: null, ...o,
+  order_number: "0020-6047", is_current: true, superseded_at: null, root_release_id: "root-1", ...o,
 });
 
 describe("Quelle: konkrete Fertigungsfreigabe-Revision", () => {
