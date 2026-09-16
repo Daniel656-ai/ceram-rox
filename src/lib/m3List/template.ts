@@ -115,29 +115,17 @@ export async function findM3Template(): Promise<string | null> {
   return forms.find((f) => f.name === M3_FORM_NAME)?.id ?? null;
 }
 
-/**
- * Vorlage sicherstellen: vorhandene Vorlage wird unverändert verwendet,
- * andernfalls einmalig angelegt.
- */
-export async function ensureM3Template(): Promise<string> {
-  const existing = await findM3Template();
-  if (existing) return existing;
-
-  const form = await api.formDefinitions.create({
-    name: M3_FORM_NAME,
-    scope: "global",
-    description:
-      "m³-Liste (fachliche Vorlage: Excel „m³-Liste“, F5 Rev. 4-11/23). Graue Werte stammen aus der verknüpften Fertigungsfreigabe-Revision, gelbe Felder werden geprüft, berechnete Felder ermittelt ROX.",
-    layout: {},
-  });
-
+/** Feldstruktur einmalig in eine (leere) Vorlage einspielen. */
+async function seedM3Fields(formId: string): Promise<number> {
+  let created = 0;
   let sort = 0;
   for (const spec of [...M3_HEADER_FIELDS, ...M3_CONTROL_FIELDS, ...M3_CALC_FIELDS]) {
-    await api.formFields.create(fieldPayload(form.id, spec, sort++) as never);
+    await api.formFields.create(fieldPayload(formId, spec, sort++) as never);
+    created++;
   }
 
   const repeater = await api.formFields.create({
-    form_id: form.id,
+    form_id: formId,
     field_key: M3_ROWS_KEY,
     display_name: "m³-Tabelle",
     field_type: "repeater",
@@ -153,15 +141,44 @@ export async function ensureM3Template(): Promise<string> {
       },
     },
   } as never);
+  created++;
 
   let childSort = 0;
   for (const spec of M3_ROW_FIELDS) {
-    await api.formFields.create(fieldPayload(form.id, spec, childSort++, repeater.id) as never);
+    await api.formFields.create(fieldPayload(formId, spec, childSort++, repeater.id) as never);
+    created++;
   }
 
   for (const spec of M3_CONFIRM_FIELDS) {
-    await api.formFields.create(fieldPayload(form.id, spec, sort++) as never);
+    await api.formFields.create(fieldPayload(formId, spec, sort++) as never);
+    created++;
   }
 
+  return created;
+}
+
+/**
+ * Vorlage sicherstellen: vorhandene Vorlage wird weiterverwendet (gleiche ID).
+ * Nur wenn sie noch komplett leer ist, wird die m³-Feldstruktur einmalig
+ * eingespielt. Vorhandene Felder werden nie überschrieben.
+ */
+export async function ensureM3Template(): Promise<string> {
+  const existing = await findM3Template();
+  if (existing) {
+    const fields = await api.formFields.listForForm(existing);
+    if (!fields.length) await seedM3Fields(existing);
+    return existing;
+  }
+
+  const form = await api.formDefinitions.create({
+    name: M3_FORM_NAME,
+    scope: "global",
+    description:
+      "m³-Liste (fachliche Vorlage: Excel „m³-Liste“, F5 Rev. 4-11/23). Graue Werte stammen aus der verknüpften Fertigungsfreigabe-Revision, gelbe Felder werden geprüft, berechnete Felder ermittelt ROX.",
+    layout: {},
+  });
+
+  await seedM3Fields(form.id);
   return form.id;
 }
+
