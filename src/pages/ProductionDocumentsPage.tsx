@@ -261,6 +261,19 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
           <ReleaseSourceValues releaseId={sourceId} />
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!formRequestId} onOpenChange={(v) => !v && setFormRequestId(null)}>
+        <DialogContent className="max-w-5xl max-h-[88vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>m³-Liste</DialogTitle>
+            <DialogDescription>
+              Graue Werte stammen aus der hinterlegten Fertigungsfreigabe-Revision, gelbe Felder werden
+              geprüft, berechnete Werte ermittelt ROX.
+            </DialogDescription>
+          </DialogHeader>
+          {formRequestId && <M3ListForm requestId={formRequestId} />}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
