@@ -67,6 +67,7 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
       toast.success(`m³-Liste erstellt – Quelle: ${releaseRevisionLabel(selected)}`);
       onOpenChange(false);
       setSelected(null);
+      setAutoSuggested(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "m³-Liste konnte nicht erstellt werden.");
     }
