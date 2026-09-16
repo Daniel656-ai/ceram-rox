@@ -304,7 +304,7 @@ export const productionReleases = {
       db
         .from("production_releases")
         .select(
-          "id,release_number,revision_number,revision_date,project_name,customer_name,article_number,order_id,is_current,superseded_at,status,import_status,created_at"
+          "id,release_number,revision_number,revision_date,project_name,customer_name,article_number,order_id,is_current,superseded_at,status,import_status,created_at,root_release_id"
         )
         .order("release_number", { ascending: true })
         .order("revision_number", { ascending: true })

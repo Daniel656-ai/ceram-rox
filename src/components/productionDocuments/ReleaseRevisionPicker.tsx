@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { useOrders } from "@/hooks/useOrders";
 import { useReleaseRevisionOptions } from "@/hooks/useProductionDocuments";
 import {
-  matchesReleaseSearch, releaseRevisionLabel, releaseRevisionState, type ReleaseRevisionOption,
+  latestRevisionInGroup, matchesReleaseSearch, releaseRevisionLabel, releaseRevisionState,
+  type ReleaseRevisionOption,
 } from "@/lib/productionReleaseRef";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -28,6 +29,7 @@ export function useReleaseRevisionList(): ReleaseRevisionOption[] {
     for (const o of orders as any[]) orderNumber.set(o.id, String(o.order_number ?? ""));
     return (rows as any[]).map((r) => ({
       id: String(r.id),
+      root_release_id: r.root_release_id ?? null,
       release_number: r.release_number ?? null,
       revision_number: r.revision_number ?? null,
       project_name: r.project_name ?? null,
@@ -54,6 +56,7 @@ export default function ReleaseRevisionPicker({ value, onChange, disabled, place
   const [query, setQuery] = useState("");
 
   const selected = options.find((o) => o.id === value) ?? null;
+  const isLatest = (o: ReleaseRevisionOption) => latestRevisionInGroup(options, o).id === o.id;
   const filtered = useMemo(
     () => options.filter((o) => matchesReleaseSearch(o, query)).slice(0, 80),
     [options, query]
@@ -100,9 +103,14 @@ export default function ReleaseRevisionPicker({ value, onChange, disabled, place
                       {[o.customer_name, o.order_number, o.release_number].filter(Boolean).join(" · ") || "–"}
                     </div>
                   </div>
-                  <Badge variant="outline" className="ml-2 shrink-0 text-[10px]">
-                    {releaseRevisionState(o)}
-                  </Badge>
+                  <div className="ml-2 flex shrink-0 flex-col items-end gap-1">
+                    {isLatest(o) && (
+                      <Badge className="text-[10px]">Letzte Revision</Badge>
+                    )}
+                    <Badge variant="outline" className="text-[10px]">
+                      {releaseRevisionState(o)}
+                    </Badge>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
