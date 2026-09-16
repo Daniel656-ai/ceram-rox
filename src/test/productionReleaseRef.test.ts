@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildProductionReleaseSource,
+  latestRevisionInGroup,
   matchesReleaseSearch,
   readProductionReleaseSource,
   releaseRevisionLabel,
@@ -79,5 +80,20 @@ describe("Quelle: konkrete Fertigungsfreigabe-Revision", () => {
   it("macht die Revision im Treffer eindeutig sichtbar", () => {
     expect(releaseRevisionLabel(option({ revision_number: 1 }))).toContain("Rev1");
     expect(releaseRevisionLabel(option({ revision_number: 2 }))).toContain("Rev2");
+  });
+
+  it("schlägt standardmäßig die letzte vorhandene Revision vor", () => {
+    const r1 = option({ id: "rev1-id", revision_number: 1, is_current: false, superseded_at: "2026-01-01" });
+    const r2 = option({ id: "rev2-id", revision_number: 2, is_current: false, superseded_at: "2026-02-01" });
+    const r3 = option({ id: "rev3-id", revision_number: 3, is_current: true });
+    const all = [r1, r2, r3];
+    expect(latestRevisionInGroup(all, r1).id).toBe("rev3-id");
+    expect(latestRevisionInGroup(all, r3).id).toBe("rev3-id");
+  });
+
+  it("gruppiert Revisionen verschiedener Fertigungsfreigaben getrennt", () => {
+    const a2 = option({ id: "a-rev2", revision_number: 2 });
+    const b1 = option({ id: "b-rev1", revision_number: 1, root_release_id: "root-2", release_number: "0030-7000" });
+    expect(latestRevisionInGroup([a2, b1], b1).id).toBe("b-rev1");
   });
 });
