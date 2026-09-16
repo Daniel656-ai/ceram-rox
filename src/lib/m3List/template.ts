@@ -109,11 +109,25 @@ const fieldPayload = (formId: string, spec: FieldSpec, sort: number, parentId: s
   },
 });
 
-/** Vorhandene Vorlage suchen (Name ist die fachliche Identität). */
+/**
+ * Vorhandene Vorlage suchen (Name ist die fachliche Identität).
+ *
+ * Es wird über alle Bereiche gesucht (global und Vorlagen) und der Name
+ * unempfindlich gegen Schreibweise, Leerzeichen sowie „m3“/„m³“ verglichen.
+ * Damit wird auch eine im ROX-Desktop angelegte Vorlage gefunden und
+ * weiterverwendet, statt eine zweite zu erzeugen.
+ */
+const normalizeName = (v: string) =>
+  v.trim().toLowerCase().replace(/³/g, "3").replace(/\s+/g, " ");
+
 export async function findM3Template(): Promise<string | null> {
-  const forms = await api.formDefinitions.list({ scope: "global" });
-  return forms.find((f) => f.name === M3_FORM_NAME)?.id ?? null;
+  const forms = await api.formDefinitions.list();
+  const target = normalizeName(M3_FORM_NAME);
+  const matches = forms.filter((f) => normalizeName(f.name) === target);
+  if (!matches.length) return null;
+  return (matches.find((f) => f.scope === "global") ?? matches[0]).id;
 }
+
 
 /** Feldstruktur einmalig in eine (leere) Vorlage einspielen. */
 async function seedM3Fields(formId: string): Promise<number> {
