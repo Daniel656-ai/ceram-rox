@@ -271,7 +271,7 @@ export default function RawMaterialDetailPage() {
 
   const handleSaveContainer = async () => {
     if (!id) return;
-    if (!cInitial || Number(cInitial) <= 0) { toast.error("Ursprüngliche Menge muss > 0 sein"); return; }
+    if (!cCurrent || Number(cCurrent) <= 0) { toast.error("Aktueller Bestand muss > 0 sein"); return; }
     const payload = {
       raw_material_id: id,
       batch_id: cBatchId || null,
@@ -279,8 +279,9 @@ export default function RawMaterialDetailPage() {
       container_name: cName.trim() || null,
       barcode: cBarcode.trim() || null,
       kind: cKind,
-      initial_quantity: Number(cInitial),
-      current_quantity: Number(cCurrent || cInitial),
+      // Ursprungsmenge bleibt intern erhalten: beim Anlegen = Bestand, beim Bearbeiten unverändert.
+      initial_quantity: cEditId ? Number(cInitial || cCurrent) : Number(cCurrent),
+      current_quantity: Number(cCurrent),
       unit: cUnit,
       status: cStatus,
       location_id: cLocationId || null,
@@ -403,6 +404,22 @@ export default function RawMaterialDetailPage() {
       setBContainerKind("big_bag"); setBContainerCode("");
       setBMergeIntoExisting(false); setBTargetContainerId("");
     } catch (e: any) { toast.error(e.message); }
+  };
+
+  /** MRS-Nummer gehört zum LOT: leer = nicht beprobt, sonst genau eine Nummer je LOT. */
+  const handleBatchMrsEdit = async (batch: any, raw: string) => {
+    const val = raw.trim() || null;
+    if ((batch.mrs_number ?? null) === val) return;
+    try {
+      await updateBatch.mutateAsync({ id: batch.id, raw_material_id: id!, mrs_number: val } as any);
+      toast.success("MRS-Nummer gespeichert");
+    } catch (e: any) {
+      if (String(e?.message || "").includes("raw_material_batches_mrs_number_uniq")) {
+        toast.error("Diese MRS-Nummer ist bereits einem anderen LOT zugeordnet");
+      } else {
+        toast.error(e.message);
+      }
+    }
   };
 
   const handleBatchQualityEdit = async (batch: any, field: "moisture_percent" | "ph_value", raw: string) => {
