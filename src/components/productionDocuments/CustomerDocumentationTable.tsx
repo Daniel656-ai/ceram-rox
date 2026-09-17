@@ -23,8 +23,11 @@ import { useListSort } from "@/lib/list/listSorting";
 import { useProductionDocumentRequests } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
 import {
-  DOC_STATUS_COLOR, DOC_STATUS_LABEL, DOC_STATUSES, type DocStatus,
+  DOC_STATUS_COLOR, DOC_STATUS_LABEL, type DocStatus,
 } from "@/lib/productionDocuments/requirements";
+
+/** Statuswerte aus der bestehenden Statuslogik – keine eigene Liste. */
+const DOC_STATUSES = Object.keys(DOC_STATUS_LABEL) as DocStatus[];
 import CustomerDocumentationPreview, {
   useBuiltCustomerDocumentation,
 } from "@/components/productionDocuments/CustomerDocumentationPreview";
