@@ -1,22 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { FileCheck2, Link2 } from "lucide-react";
+import { FileCheck2 } from "lucide-react";
 import {
   DOC_KIND_LABEL, DOC_STATUS_COLOR, DOC_STATUS_LABEL, evaluateRequirements, nextStatus,
   type DocKind, type DocStatus, type ReleaseLike,
 } from "@/lib/productionDocuments/requirements";
 import {
   useOrderReleases, useProductionDocumentRequests, useRequestProductionDocument,
-  useUpdateProductionDocument, useLinkReleaseToOrder,
+  useUpdateProductionDocument,
 } from "@/hooks/useProductionDocuments";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -31,8 +28,6 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
   const { data: requests = [] } = useProductionDocumentRequests({ orderId });
   const request = useRequestProductionDocument();
   const update = useUpdateProductionDocument();
-  const link = useLinkReleaseToOrder();
-  const [linkId, setLinkId] = useState("__none__");
 
   /** Nur aktuell gültige Revision ist Grundlage für Folgeprozesse. */
   const currentRelease = useMemo<ReleaseLike | null>(() => {
@@ -85,11 +80,6 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evaluations, requests]);
-
-  const { data: allCurrent = [] } = useQuery({
-    queryKey: ["production-releases", "current-for-linking"],
-    queryFn: () => api.productionReleases.list({ onlyCurrent: true }),
-  });
 
   const onRequest = async (kind: DocKind) => {
     const ev = evaluations[kind];
