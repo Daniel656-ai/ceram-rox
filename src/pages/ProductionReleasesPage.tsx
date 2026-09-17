@@ -89,7 +89,7 @@ export default function ProductionReleasesPage() {
     // Sortierung wie in der Rohstoffliste (gemeinsame Logik).
     return sort.sortRows(
       rows,
-      (r: any, key) => {
+      (r: Record<string, unknown>, key) => {
         if (key === "release") return `${r.release_number ?? ""} ${String(r.revision_number ?? 0).padStart(4, "0")}`;
         if (key === "status") return RELEASE_STATUS_LABEL[r.status] ?? r.status;
         return r[key];
