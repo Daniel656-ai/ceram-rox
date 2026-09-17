@@ -68,3 +68,26 @@ describe("globale Felddefinition", () => {
     expect(f.metadata).toEqual({ local: true, global_field_source: "constant" });
   });
 });
+
+describe("Auswahlwerte globaler Felder", () => {
+  it("übernimmt nachträglich gepflegte Optionen in bestehende Formularfelder", () => {
+    const global: GlobalDefinitionLike = {
+      ...gf,
+      data_type: "multiselect",
+      select_options: [
+        { label: "Option 1", value: "option_1" },
+        { label: "Option 2", value: "option_2" },
+      ],
+    };
+    const [f] = applyGlobalDefinitions([mk({ select_options: [] })], [global]);
+    expect(f.select_options).toEqual([
+      { label: "Option 1", value: "option_1" },
+      { label: "Option 2", value: "option_2" },
+    ]);
+  });
+
+  it("lässt gespeicherte Optionen unverändert, wenn das globale Feld keine hat", () => {
+    const [f] = applyGlobalDefinitions([mk({ select_options: ["A"] })], [{ ...gf, select_options: [] }]);
+    expect(f.select_options).toEqual(["A"]);
+  });
+});
