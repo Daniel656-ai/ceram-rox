@@ -61,6 +61,11 @@ export default function ProductionReleasesPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const sort = useListSort<ReleaseSortKey>({
+    initialKey: "updated_at",
+    initialDir: "desc",
+    storageKey: "productionReleases.listPrefs",
+  });
   const [importOpen, setImportOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [noFormOpen, setNoFormOpen] = useState(false);
