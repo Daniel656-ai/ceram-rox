@@ -195,6 +195,12 @@ export default function CustomerDocumentationTable() {
             Kundendokumentationen konnten nicht automatisch abgeglichen werden: {syncError.message}
           </div>
         )}
+        {!releasesLoading && !linkedReleases.length && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+            Keine Fertigungsfreigabe ist einem Auftrag zugeordnet. Die Kundendokumentation entsteht
+            automatisch, sobald eine Fertigungsfreigabe einem Auftrag zugeordnet wurde.
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
