@@ -16,6 +16,8 @@ interface Props {
   onChange: (patch: Record<string, any>) => void;
   /** Called with the resolved form_definition_id once (or null if none). Optional. */
   onTemplateResolved?: (formId: string | null) => void;
+  /** Called with the loaded template fields (e.g. to read a service selection). */
+  onFieldsResolved?: (fields: FormField[]) => void;
 }
 
 /**
@@ -28,7 +30,7 @@ interface Props {
  *
  * If no template is mapped for this order kind, the component renders nothing.
  */
-export default function OrderKindDynamicForm({ orderKind, values, onChange, onTemplateResolved }: Props) {
+export default function OrderKindDynamicForm({ orderKind, values, onChange, onTemplateResolved, onFieldsResolved }: Props) {
   const { role } = useAuth();
 
   const { data: mapping, isLoading: mapLoading } = useQuery({
@@ -55,6 +57,10 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
   });
 
   const typedFields = fields as FormField[];
+
+  useEffect(() => {
+    onFieldsResolved?.(typedFields);
+  }, [typedFields, onFieldsResolved]);
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);
