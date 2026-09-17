@@ -79,3 +79,21 @@ describe("m³-Liste – Ableitung der Formularwerte", () => {
     expect(stripped.m3_rows).toEqual([{ volume_m3: 4 }]);
   });
 });
+
+describe("manuelle Beprobungsauswahl", () => {
+  const base = { release: null, orderNumber: null, constants: null };
+  it("nutzt den automatischen Vorschlag, solange nichts gespeichert ist", () => {
+    const r = deriveM3Values({ ...base, stored: {} });
+    expect(r.values.lab_tests).toBe(r.values.lab_tests_auto);
+  });
+  it("gespeicherte Auswahl ist maßgeblich", () => {
+    const r = deriveM3Values({ ...base, stored: { lab_tests_selected: ["Geo", "SOx", "Bench"] } });
+    expect(r.values.lab_tests).toBe("Geo, SOx, Bench");
+  });
+  it("Auswahl bleibt beim Speichern erhalten, Automatik nicht", () => {
+    const stripped = stripDerivedValues({ lab_tests: "Geo", lab_tests_auto: "Geo, NOx", lab_tests_selected: ["Geo"] });
+    expect(stripped.lab_tests).toBeUndefined();
+    expect(stripped.lab_tests_auto).toBeUndefined();
+    expect(stripped.lab_tests_selected).toEqual(["Geo"]);
+  });
+});
