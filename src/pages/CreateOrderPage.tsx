@@ -843,6 +843,7 @@ export default function CreateOrderPage() {
           values={dynamicValues}
           onChange={(patch) => setDynamicValues((prev) => ({ ...prev, ...patch }))}
           onTemplateResolved={setDynamicFormId}
+          onFieldsResolved={setTemplateFields}
         />
 
 
