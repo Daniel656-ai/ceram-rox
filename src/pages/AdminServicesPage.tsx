@@ -562,6 +562,18 @@ function EditServiceDialog({
             )}
           </div>
           <div>
+            <Label>Beprobungskürzel (m³-Liste)</Label>
+            <Input
+              value={form.sampling_code ?? ""}
+              placeholder="z. B. Geo, DP, CA"
+              onChange={e => setForm((f: any) => ({ ...f, sampling_code: e.target.value }))}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Kürzel, mit dem die m³-Liste diese Dienstleistung im Beprobungsaufwand anfordert.
+              Jedes Kürzel darf nur einer aktiven Dienstleistung zugeordnet sein.
+            </p>
+          </div>
+          <div>
             <Label>Workflow (Prozessvorlage)</Label>
             <Select value={form.process_template_id ?? "__none__"} onValueChange={v => setForm((f: any) => ({ ...f, process_template_id: v }))}>
               <SelectTrigger><SelectValue placeholder="Kein Workflow" /></SelectTrigger>
