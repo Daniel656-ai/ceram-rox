@@ -132,7 +132,7 @@ export function stripDerivedValues(values: Record<string, unknown>): Record<stri
     ...M3_HEADER_FIELDS.map((f) => f.field_key),
     "release_label", "cell_count", "elements_per_m3", "marking_elements", "marking_rows",
     "laborkat_length_mm", "required_length_mm", "labor_kat_count", "micro_nox", "micro_sox",
-    "length_tolerance", "diameter_tolerance", "inner_wall_tolerance", "lab_tests",
+    "length_tolerance", "diameter_tolerance", "inner_wall_tolerance", "lab_tests", "lab_tests_auto",
   ]);
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(values)) {
