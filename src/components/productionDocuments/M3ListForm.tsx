@@ -168,7 +168,18 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       await qc.invalidateQueries({ queryKey: ["production-document-request", requestId] });
       await qc.invalidateQueries({ queryKey: ["production-document-requests"] });
       await qc.invalidateQueries({ queryKey: ["orders"] });
-      toast.success(`Beprobungsauftrag ${created.order_number ?? ""} erstellt und zugeordnet.`);
+      toast.success(`Beprobungsauftrag ${created.order_number ?? ""} erstellt und zugeordnet.`, {
+        description:
+          `Übernommene Dienstleistungen: ${matched.length}` +
+          (missing.length ? ` · Nicht zugeordnet: ${missing.join(", ")}` : ""),
+      });
+      if (missing.length) {
+        toast.warning(
+          missing.length === 1
+            ? `Für das Beprobungskürzel ${missing[0]} ist noch keine Dienstleistung hinterlegt.`
+            : `Für die Beprobungskürzel ${missing.join(", ")} ist noch keine Dienstleistung hinterlegt.`
+        );
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Beprobungsauftrag konnte nicht erstellt werden.");
     } finally {
