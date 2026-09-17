@@ -153,6 +153,18 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       })) as { id: string; order_number?: string | null };
       await api.productionDocuments.update(requestId, { order_id: created.id });
       await api.productionDocuments.linkReleaseToOrder(request.based_on_release_id, created.id);
+
+      // Beprobungsaufwand der m³-Liste → bestehende Dienstleistungen.
+      // Die Zuordnung Kürzel → Dienstleistung liegt ausschließlich in den
+      // Dienstleistungs-Stammdaten (Feld „Beprobungskürzel“), nicht hier.
+      const codes = String(derived.values.lab_tests ?? "")
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
+      const { matched, missing } = await api.measurementServices.resolveSamplingCodes(codes);
+      for (const m of matched) {
+        await api.measurements.add({ order_id: created.id, service_id: m.id });
+      }
       await qc.invalidateQueries({ queryKey: ["production-document-request", requestId] });
       await qc.invalidateQueries({ queryKey: ["production-document-requests"] });
       await qc.invalidateQueries({ queryKey: ["orders"] });
