@@ -30,6 +30,7 @@ import {
   useSaveRelease, useDeleteRelease, useCustomers, useReleaseChanges, useReleaseRevisions,
   useReleaseSpecSets, useCompleteRelease,
 } from "@/hooks/useProductionReleases";
+import { useLinkReleaseToOrder } from "@/hooks/useProductionDocuments";
 import { describeSaveError } from "@/lib/productionRelease/specSets";
 import { ReviewChangesDialog } from "@/components/productionRelease/ReviewChangesDialog";
 import { SpecSetsEditor } from "@/components/productionRelease/SpecSetsEditor";
@@ -72,6 +73,27 @@ export default function ProductionReleaseDetailPage() {
     queryFn: () => api.projects.list(),
   });
 
+  /** Auftragszuordnung – nutzt die bestehende Funktion `linkReleaseToOrder`. */
+  const { data: orderOptions = [] } = useQuery({
+    queryKey: ["orders-lookup-release"],
+    queryFn: () => api.orders.list(),
+  });
+  const linkOrder = useLinkReleaseToOrder();
+  const [orderId, setOrderId] = useState<string>(NONE);
+
+  const handleLinkOrder = async (next: string) => {
+    if (!id) return;
+    const prev = orderId;
+    setOrderId(next);
+    try {
+      await linkOrder.mutateAsync({ releaseId: id, orderId: next === NONE ? null : next });
+      toast.success(next === NONE ? "Auftragszuordnung entfernt" : "Auftrag zugeordnet");
+    } catch (e) {
+      setOrderId(prev);
+      toast.error(`Zuordnung fehlgeschlagen: ${(e as Error).message}`);
+    }
+  };
+
   useEffect(() => {
     if (!release) return;
     const next: Record<string, string> = {};
@@ -81,6 +103,7 @@ export default function ProductionReleaseDetailPage() {
     }
     setValues(next);
     setCustomerId(release.customer_id ?? NONE);
+    setOrderId((release.order_id as string | null) ?? NONE);
     setProjectId(release.project_id ?? NONE);
   }, [release]);
 
@@ -624,6 +647,28 @@ export default function ProductionReleaseDetailPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Erkannter Name: {values.customer_name || "–"}. Solange kein Kundenstammsatz
                   existiert, bleibt der Name erhalten und kann später zugeordnet werden.
+                </p>
+              </div>
+              <div>
+                <Label>Auftrag</Label>
+                <Select
+                  value={orderId}
+                  disabled={readOnly || linkOrder.isPending}
+                  onValueChange={handleLinkOrder}
+                >
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Nicht zugeordnet" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Nicht zugeordnet</SelectItem>
+                    {(orderOptions as Array<Record<string, any>>).map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.order_number ?? o.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Die Zuordnung gilt für alle Revisionen dieser Fertigungsfreigabe und ist
+                  Grundlage für m³-Liste und Kundendokumentation.
                 </p>
               </div>
               <div>
