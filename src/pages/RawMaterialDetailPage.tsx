@@ -180,7 +180,6 @@ export default function RawMaterialDetailPage() {
   const [bNum, setBNum] = useState("");                       // LOT-Nummer
   const [bDate, setBDate] = useState("");                     // Lieferdatum
   const [bQty, setBQty] = useState("");                       // Liefermenge
-  const [bSupplier, setBSupplier] = useState("");
   const [bNotes, setBNotes] = useState("");
   const [bManufacturerBatch, setBManufacturerBatch] = useState(""); // BigBag Nr.
   const [bGoodsReceiptDate, setBGoodsReceiptDate] = useState("");
