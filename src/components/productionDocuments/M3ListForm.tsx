@@ -130,6 +130,40 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     }
   };
 
+  /**
+   * Fachlicher Ablauf: Fertigungsfreigabe → m³-Liste → Beprobung → Laborauftrag.
+   * Der Auftrag entsteht ausschließlich hier, aus genau dieser m³-Liste, und wird
+   * anschließend über die bestehende Funktion `linkReleaseToOrder` der
+   * Fertigungsfreigabe (allen Revisionen) zugeordnet. Eine freie Auswahl eines
+   * fachfremden Auftrags ist damit ausgeschlossen.
+   */
+  const createSamplingOrder = async () => {
+    if (!user?.id || !request.based_on_release_id) return;
+    setCreatingOrder(true);
+    try {
+      const rel = (release ?? {}) as Record<string, unknown>;
+      const created = (await api.orders.create({
+        project_id: (rel.project_id as string | null) ?? null,
+        order_type: "customer",
+        order_kind: "labor",
+        created_by: user.id,
+        notes: `Beprobung zur Fertigungsfreigabe ${String(rel.release_number ?? "")} · Rev${
+          Number(rel.revision_number) || 0
+        } (aus m³-Liste)`,
+      })) as { id: string; order_number?: string | null };
+      await api.productionDocuments.update(requestId, { order_id: created.id });
+      await api.productionDocuments.linkReleaseToOrder(request.based_on_release_id, created.id);
+      await qc.invalidateQueries({ queryKey: ["production-document-request", requestId] });
+      await qc.invalidateQueries({ queryKey: ["production-document-requests"] });
+      await qc.invalidateQueries({ queryKey: ["orders"] });
+      toast.success(`Beprobungsauftrag ${created.order_number ?? ""} erstellt und zugeordnet.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Beprobungsauftrag konnte nicht erstellt werden.");
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -137,6 +171,22 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         <span className="text-muted-foreground">
           Fest hinterlegte Revision – eine spätere Revision verändert diese m³-Liste nicht.
         </span>
+      </div>
+
+      <div className="rounded-md border p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="font-medium">Beprobungsauftrag</div>
+          <div className="text-xs text-muted-foreground">
+            {request.order_id
+              ? `Vorhanden: ${String(derived.values.order_number ?? request.order_id.slice(0, 8))} – Grundlage der Kundendokumentation.`
+              : "Noch keiner. Der Laborauftrag zur Beprobung wird aus dieser m³-Liste erzeugt und der Fertigungsfreigabe zugeordnet."}
+          </div>
+        </div>
+        {!request.order_id && (
+          <Button variant="outline" onClick={createSamplingOrder} disabled={creatingOrder}>
+            Beprobungsauftrag erstellen
+          </Button>
+        )}
       </div>
 
       {templateLoading && <p className="text-sm text-muted-foreground">Formularstruktur wird geprüft …</p>}
