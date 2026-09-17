@@ -143,7 +143,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (requests as any[]).filter((r) => {
+    const filtered = (requests as any[]).filter((r) => {
       if (!q) return true;
       const o = orderById.get(r.order_id);
       const rel = r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null;
@@ -151,7 +151,21 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
         .filter(Boolean).join(" ").toLowerCase();
       return hay.includes(q);
     });
-  }, [requests, search, orderById, releaseById]);
+    // Sortierung wie in der Rohstoffliste (gemeinsame Logik).
+    return sort.sortRows(
+      filtered,
+      (r: any, key) => {
+        if (key === "order") return orderById.get(r.order_id)?.order_number ?? "";
+        if (key === "source") {
+          const rel = r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null;
+          return rel ? releaseRevisionLabel(rel) : "";
+        }
+        if (key === "status") return DOC_STATUS_LABEL[r.status as DocStatus] ?? "";
+        return r.requested_at ?? "";
+      },
+      (key) => (key === "requested" ? "date" : "text")
+    );
+  }, [requests, search, orderById, releaseById, sort]);
 
   return (
     <Card>
