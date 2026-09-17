@@ -43,6 +43,13 @@
       "when": 1789634428984,
       "tag": "0005_archive_containers_and_batches",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789643202377,
+      "tag": "0006_add_container_batch_archive_fields",
+      "breakpoints": true
     }
   ]
 }
