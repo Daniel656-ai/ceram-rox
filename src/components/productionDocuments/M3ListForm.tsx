@@ -224,7 +224,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </Alert>
       )}
 
-      {constantsSetupError && (
+      {constantsSetupError && constantsState.missing.length > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>m³-Konstanten konnten nicht geprüft werden</AlertTitle>
