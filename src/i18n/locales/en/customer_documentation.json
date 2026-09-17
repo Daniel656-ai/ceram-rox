@@ -1,0 +1,69 @@
+{
+  "document_title": "Customer documentation",
+  "tab_short": "Customer doc",
+  "toc": "Table of contents",
+  "generated_on": "Created on",
+  "page": "Page",
+  "language": "Language",
+  "no_content": "No chapters are available for this order yet.",
+  "chapters": {
+    "header": "Document header",
+    "toc": "Table of contents",
+    "test_conditions": "Test conditions for activity and conversion",
+    "activity_conversion": "Activity and SO₂/SO₃ conversion",
+    "physical_properties": "Physical properties",
+    "geometry": "Geometry",
+    "material_certificates": "Material test certificates",
+    "welder_certificates": "Welder qualification certificate",
+    "lifting_beam": "Lifting beam inspection report",
+    "drawings": "List of drawings",
+    "spare_elements": "Spare elements",
+    "module_packing_lists": "Module packing lists",
+    "attachments": "List of documents and attachments"
+  },
+  "fields": {
+    "customer": "Customer",
+    "order_number": "Order number",
+    "customer_reference": "CERAM order number",
+    "project": "Project",
+    "date": "Date",
+    "due_date": "Delivery date",
+    "spare_elements": "Spare elements",
+    "mounting_frames": "Mounting frames"
+  },
+  "table": {
+    "chapter": "Chapter",
+    "section": "Section",
+    "parameter": "Parameter",
+    "value": "Value",
+    "unit": "Unit",
+    "document": "Document",
+    "kind": "Type",
+    "reference": "Reference"
+  },
+  "doc_kinds": {
+    "production_release": "Production release",
+    "measurement_document": "Measurement document"
+  },
+  "ui": {
+    "title": "Customer documentation",
+    "subtitle": "Compiled automatically from the existing order data.",
+    "search": "Search order, customer or reference",
+    "all_status": "All statuses",
+    "reset_filters": "Reset filters",
+    "order": "Order",
+    "customer": "Customer",
+    "reference": "CERAM order number",
+    "project": "Project",
+    "date": "Date",
+    "status": "Status",
+    "chapters": "Chapters",
+    "actions": "Actions",
+    "preview": "Preview",
+    "export_pdf": "PDF",
+    "export_csv": "CSV",
+    "open_order": "Open order",
+    "no_rows": "No customer documentation requested yet.",
+    "loading": "Loading …"
+  }
+}
