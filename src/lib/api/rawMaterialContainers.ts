@@ -32,16 +32,35 @@ export interface RawMaterialContainer {
   updated_at: string;
 }
 
+/**
+ * Manche Datenbestände (z. B. Desktop/Firmenbestand) haben die Spalte
+ * `archived_at` noch nicht. Der Filter darf dort NICHT dazu führen, dass
+ * die komplette Gebindeliste leer bleibt — in diesem Fall wird ohne Filter
+ * geladen (alle Gebinde bleiben sichtbar).
+ */
+function isMissingArchivedColumn(e: any): boolean {
+  const msg = `${e?.message || ""} ${e?.details || ""} ${e?.hint || ""}`.toLowerCase();
+  return e?.code === "42703" || (msg.includes("archived_at") && (msg.includes("does not exist") || msg.includes("could not find")));
+}
+
 export const rawMaterialContainers = {
   /** Aktuelle Gebinde. Archivierte Gebinde sind standardmäßig ausgeblendet. */
-  list: (rawMaterialId?: string, opts?: { includeArchived?: boolean }) => {
-    let q = db
-      .from("raw_material_containers")
-      .select("*, storage_locations(*), raw_material_batches(batch_number)")
-      .order("created_at", { ascending: false });
-    if (rawMaterialId) q = q.eq("raw_material_id", rawMaterialId);
-    if (!opts?.includeArchived) q = q.is("archived_at", null);
-    return unwrap<any[]>(q);
+  list: async (rawMaterialId?: string, opts?: { includeArchived?: boolean }) => {
+    const base = () => {
+      let q = db
+        .from("raw_material_containers")
+        .select("*, storage_locations(*), raw_material_batches(batch_number)")
+        .order("created_at", { ascending: false });
+      if (rawMaterialId) q = q.eq("raw_material_id", rawMaterialId);
+      return q;
+    };
+    if (opts?.includeArchived) return unwrap<any[]>(base());
+    try {
+      return await unwrap<any[]>(base().is("archived_at", null));
+    } catch (e: any) {
+      if (isMissingArchivedColumn(e)) return await unwrap<any[]>(base());
+      throw e;
+    }
   },
 
   get: (id: string) =>
