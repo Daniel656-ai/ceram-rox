@@ -38,6 +38,7 @@ import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalVali
 import { useSystemTextRenderer } from "@/context/ProcessContextProvider";
 import { containsSystemToken } from "@/lib/systemVariables";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
+import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
 import MeasurementImportDialog from "@/components/measurementImport/MeasurementImportDialog";
 import { useRuntimeMeasurementContext } from "@/components/curves/measurementContext";
 import ImageGalleryField from "@/components/forms/ImageGalleryField";
