@@ -103,6 +103,7 @@ export default function ProductionReleaseDetailPage() {
     }
     setValues(next);
     setCustomerId(release.customer_id ?? NONE);
+    setOrderId((release.order_id as string | null) ?? NONE);
     setProjectId(release.project_id ?? NONE);
   }, [release]);
 
