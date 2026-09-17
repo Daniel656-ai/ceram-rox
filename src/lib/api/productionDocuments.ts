@@ -151,11 +151,25 @@ export const productionDocuments = {
     return { created: plan.creates.length, updated: plan.updates.length };
   },
 
-  /** Zuordnung einer Fertigungsfreigabe (Stammsatz inkl. Revisionen) zum Auftrag. */
+  /**
+   * Zuordnung einer Fertigungsfreigabe (Stammsatz inkl. Revisionen) zum Auftrag.
+   * Fachlich gültig ist ausschließlich der aus der m³-Liste erzeugte
+   * Beprobungsauftrag. Eine bereits bestehende Zuordnung wird daher nicht durch
+   * einen anderen Auftrag überschrieben (Lösen mit `null` bleibt möglich).
+   */
   async linkReleaseToOrder(releaseId: string, orderId: string | null): Promise<void> {
     const row = (await unwrap(
-      db.from("production_releases").select("id,root_release_id").eq("id", releaseId).maybeSingle()
-    )) as { id: string; root_release_id: string | null } | null;
+      db
+        .from("production_releases")
+        .select("id,root_release_id,order_id")
+        .eq("id", releaseId)
+        .maybeSingle()
+    )) as { id: string; root_release_id: string | null; order_id: string | null } | null;
+    if (orderId && row?.order_id && row.order_id !== orderId) {
+      throw new Error(
+        "Dieser Fertigungsfreigabe ist bereits ein Beprobungsauftrag zugeordnet. Eine andere Zuordnung ist fachlich nicht zulässig."
+      );
+    }
     const rootId = row?.root_release_id ?? releaseId;
     await unwrap(
       db.from("production_releases").update({ order_id: orderId }).or(`id.eq.${rootId},root_release_id.eq.${rootId}`)
