@@ -28,9 +28,10 @@ import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
   const qc = useQueryClient();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [stored, setStored] = useState<Record<string, unknown> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
 
   const { data: request, isLoading } = useQuery({
     queryKey: ["production-document-request", requestId],
