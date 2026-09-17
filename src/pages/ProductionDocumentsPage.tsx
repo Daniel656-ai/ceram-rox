@@ -334,6 +334,37 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
       </CardContent>
 
       {isM3 && <NewM3Dialog open={newOpen} onOpenChange={setNewOpen} />}
+
+      <AlertDialog open={!!deleteRow} onOpenChange={(v) => !v && setDeleteRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Doppelte m³-Liste entfernen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Es wird ausschließlich dieser doppelte, leere Eintrag entfernt. Die gültige m³-Liste
+              derselben Fertigungsfreigabe/Revision bleibt unverändert erhalten.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                const row = deleteRow;
+                setDeleteRow(null);
+                if (!row) return;
+                try {
+                  await removeRequest.mutateAsync(row.id);
+                  toast.success("Doppelte m³-Liste entfernt");
+                } catch (e: any) {
+                  toast.error(`Entfernen fehlgeschlagen: ${e?.message ?? e}`);
+                }
+              }}
+            >
+              Entfernen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Dialog open={!!sourceId} onOpenChange={(v) => !v && setSourceId(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
