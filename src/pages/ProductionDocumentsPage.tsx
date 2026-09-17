@@ -22,7 +22,7 @@ import { SortableHead } from "@/components/list/SortableHead";
 import { useListSort } from "@/lib/list/listSorting";
 import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
+import { useProductionDocumentRequests, useRequestProductionDocument, useRemoveProductionDocument } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
 import { latestRevisionInGroup, releaseRevisionLabel, type ReleaseRevisionOption } from "@/lib/productionReleaseRef";
 import {
