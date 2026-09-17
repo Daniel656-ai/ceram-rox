@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import type { DocKind } from "@/lib/productionDocuments/requirements";
 import type { ProductionDocumentRequest } from "@/lib/api/productionDocuments";
 
@@ -70,6 +72,31 @@ export function useLinkReleaseToOrder() {
       api.productionDocuments.linkReleaseToOrder(releaseId, orderId),
     onSuccess: invalidate,
   });
+}
+
+/**
+ * Läuft einmal beim Öffnen der Kundendoku-Ansicht: legt fehlende Kundendokus an
+ * und führt bestehende auf die aktuelle Fertigungsfreigabe-Revision nach.
+ */
+export function useEnsureCustomerDocumentation() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const ran = useRef(false);
+  const [error, setError] = useState<Error | null>(null);
+  useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
+    api.productionDocuments
+      .syncCustomerDocumentation(user?.id ?? null)
+      .then(({ created, updated }) => {
+        if (created || updated) qc.invalidateQueries({ queryKey: ["production-document-requests"] });
+      })
+      .catch((e: unknown) => {
+        console.error("[kundendoku] Abgleich fehlgeschlagen:", e);
+        setError(e instanceof Error ? e : new Error(String(e)));
+      });
+  }, [qc, user?.id]);
+  return { error };
 }
 
 export type { ProductionDocumentRequest };
