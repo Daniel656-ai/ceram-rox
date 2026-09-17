@@ -121,9 +121,38 @@ export const formFields = {
       const globals = (await unwrap(
         dbClient
           .from("global_fields" as any)
-          .select("id,field_key,display_name,description,unit,is_repeatable,data_type,data_source,default_value")
+          .select(
+            "id,field_key,display_name,description,unit,is_repeatable,data_type,data_source,default_value,select_options,list_id"
+          )
           .in("id", ids)
       )) as unknown as GlobalDefinitionLike[];
+      // Auswahlwerte aus einer verknüpften globalen Liste auflösen (wie beim Einfügen).
+      const listIds = Array.from(
+        new Set(globals.map((g) => g.list_id).filter(Boolean) as string[])
+      );
+      if (listIds.length) {
+        try {
+          const items = (await unwrap(
+            dbClient
+              .from("global_list_items" as any)
+              .select("list_id,label,item_value,sort_order")
+              .in("list_id", listIds)
+              .order("sort_order")
+          )) as unknown as Array<{ list_id: string; label: string; item_value: string }>;
+          const byList = new Map<string, Array<{ label: string; value: string }>>();
+          for (const it of items) {
+            const arr = byList.get(it.list_id) ?? [];
+            arr.push({ label: it.label, value: it.item_value });
+            byList.set(it.list_id, arr);
+          }
+          for (const g of globals) {
+            const opts = g.list_id ? byList.get(g.list_id) : undefined;
+            if (opts?.length) g.select_options = opts;
+          }
+        } catch {
+          // Liste nicht lesbar: gespeicherte Auswahlwerte des Formularfelds verwenden.
+        }
+      }
       return applyGlobalDefinitions(fields, globals);
     } catch {
       // Zentrale Definition nicht lesbar (z.B. Berechtigungen): Kopie verwenden.
