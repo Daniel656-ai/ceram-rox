@@ -134,6 +134,27 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
   const { data: orders = [] } = useOrders();
   const releases = useReleaseRevisionList();
   const isM3 = kind === "m3_list";
+  const removeRequest = useRemoveProductionDocument();
+  const [deleteRow, setDeleteRow] = useState<any>(null);
+
+  /** Anzahl m³-Listen je Fertigungsfreigabe-Revision – Grundlage der Duplikat-Erkennung. */
+  const countByRelease = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of requests as any[]) {
+      if (!r.based_on_release_id) continue;
+      map.set(r.based_on_release_id, (map.get(r.based_on_release_id) ?? 0) + 1);
+    }
+    return map;
+  }, [requests]);
+
+  /** Nur eine doppelte, inhaltlich leere und keinem Auftrag zugeordnete m³-Liste darf entfernt werden. */
+  const isRemovableDuplicate = (r: any) =>
+    isM3 &&
+    !!r.based_on_release_id &&
+    (countByRelease.get(r.based_on_release_id) ?? 0) > 1 &&
+    !r.order_id &&
+    !r.completed_at &&
+    Object.keys((r.form_values as Record<string, unknown>) ?? {}).length === 0;
   const sort = useListSort<"order" | "source" | "status" | "requested">({
     initialKey: "requested",
     initialDir: "desc",
@@ -291,6 +312,17 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
                     {r.order_id && (
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/auftraege/${r.order_id}`)}>
                         Auftrag öffnen
+                      </Button>
+                    )}
+                    {isRemovableDuplicate(r) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        title="Doppelte, leere m³-Liste entfernen"
+                        onClick={() => setDeleteRow(r)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </TableCell>
