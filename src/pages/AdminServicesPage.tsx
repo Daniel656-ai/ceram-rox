@@ -1,3 +1,4 @@
+import { samplingCodeForServiceName } from "@/lib/samplingCodeMap";
 import { useTranslation } from "react-i18next";
 import {
   useAllServices,
@@ -153,13 +154,11 @@ export default function AdminServicesPage() {
   const handleCreate = async () => {
     if (!newName) { toast.error(t("admin:name_required")); return; }
     try {
-      await api.measurementServices.assertSamplingCodeFree(newSamplingCode);
       await createService.mutateAsync({
         service_name: newName,
         category: newCategory,
         hourly_rate: parseFloat(newRate),
         standard_duration_hours: parseFloat(newDuration),
-        sampling_code: newSamplingCode.trim() || null,
       } as any);
       toast.success(t("admin:service_created"));
       setNewOpen(false);
@@ -365,10 +364,10 @@ export default function AdminServicesPage() {
                 </div>
                 <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
                 {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
-                <div>
-                  <Label>Beprobungskürzel (m³-Liste)</Label>
-                  <Input value={newSamplingCode} placeholder="z. B. Geo, DP, CA" onChange={e => setNewSamplingCode(e.target.value)} />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Das Beprobungskürzel der m³-Liste ergibt sich zentral aus dem
+                  Dienstleistungsnamen und wird hier nicht gepflegt.
+                </p>
                 <Button onClick={handleCreate}>{t("common:create")}</Button>
               </div>
             </DialogContent>
@@ -510,7 +509,7 @@ function EditServiceDialog({
         standard_duration_hours: service.standard_duration_hours ?? 1,
         hourly_rate: service.hourly_rate ?? 0,
         work_instructions: service.work_instructions ?? "",
-        sampling_code: service.sampling_code ?? "",
+        
         process_template_id: service.process_template_id ?? "__none__",
         active: !!service.active,
       });
@@ -572,14 +571,11 @@ function EditServiceDialog({
           </div>
           <div>
             <Label>Beprobungskürzel (m³-Liste)</Label>
-            <Input
-              value={form.sampling_code ?? ""}
-              placeholder="z. B. Geo, DP, CA"
-              onChange={e => setForm((f: any) => ({ ...f, sampling_code: e.target.value }))}
-            />
+            <Input value={samplingCodeForServiceName(form.service_name) ?? "—"} readOnly disabled />
             <p className="text-xs text-muted-foreground mt-1">
-              Kürzel, mit dem die m³-Liste diese Dienstleistung im Beprobungsaufwand anfordert.
-              Jedes Kürzel darf nur einer aktiven Dienstleistung zugeordnet sein.
+              Das Kürzel ergibt sich zentral aus dem Dienstleistungsnamen und wird nicht
+              in den Stammdaten gespeichert. Steht hier „—“, ist für diese Dienstleistung
+              noch kein Kürzel hinterlegt.
             </p>
           </div>
           <div>
@@ -635,15 +631,8 @@ function EditServiceDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
           <Button onClick={async () => {
-            try {
-              await api.measurementServices.assertSamplingCodeFree(form.sampling_code, service.id);
-            } catch (err: any) {
-              toast.error(err.message);
-              return;
-            }
             await api.serviceDependencies.setForService(service.id, depIds);
             await onSave(service.id, {
-            sampling_code: (form.sampling_code ?? "").trim() || null,
             service_name: form.service_name,
             category: form.category,
             description: form.description || null,
