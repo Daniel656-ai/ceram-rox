@@ -38,6 +38,7 @@ import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalVali
 import { useSystemTextRenderer } from "@/context/ProcessContextProvider";
 import { containsSystemToken } from "@/lib/systemVariables";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
+import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
 import MeasurementImportDialog from "@/components/measurementImport/MeasurementImportDialog";
 import { useRuntimeMeasurementContext } from "@/components/curves/measurementContext";
 import ImageGalleryField from "@/components/forms/ImageGalleryField";
@@ -448,6 +449,15 @@ function FieldControl({ field, readonly }: { field: FormField; readonly: boolean
           value={value}
           disabled={disabled}
           onChange={(v) => setValue(v)}
+        />
+      );
+    case "raw_material_recipe":
+      // Rezeptur/Rohstoffliste: Positionen referenzieren bestehende Rohstoffe.
+      return (
+        <RawMaterialRecipeField
+          value={Array.isArray(value) ? value : undefined}
+          readonly={disabled}
+          onChange={(rows) => setValue(rows)}
         />
       );
     case "image":
