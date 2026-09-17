@@ -25,11 +25,30 @@ import {
   useProductionReleases, useProductionReleasePermissions, useSaveRelease, useReleaseSettings,
 } from "@/hooks/useProductionReleases";
 import { ImportPdfDialog } from "@/components/productionRelease/ImportPdfDialog";
+import { SortableHead } from "@/components/list/SortableHead";
+import { useListSort } from "@/lib/list/listSorting";
 
 function fmtDate(v?: string | null) {
   if (!v) return "–";
   return new Date(v).toLocaleDateString("de-AT");
 }
+
+type ReleaseSortKey =
+  | "release" | "project_name" | "customer_name" | "article_number"
+  | "completion_date" | "delivery_date" | "piece_count" | "status" | "created_at" | "updated_at";
+
+const RELEASE_SORT_TYPE: Record<ReleaseSortKey, "text" | "number" | "date"> = {
+  release: "text",
+  project_name: "text",
+  customer_name: "text",
+  article_number: "text",
+  completion_date: "date",
+  delivery_date: "date",
+  piece_count: "number",
+  status: "text",
+  created_at: "date",
+  updated_at: "date",
+};
 
 export default function ProductionReleasesPage() {
   const navigate = useNavigate();
