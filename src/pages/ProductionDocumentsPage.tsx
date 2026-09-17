@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search } from "lucide-react";
+import { Plus, RotateCcw, Search } from "lucide-react";
 import { toast } from "sonner";
 import ProductionReleasesPage from "@/pages/ProductionReleasesPage";
 import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/productionDocuments/ReleaseRevisionPicker";
@@ -192,23 +192,38 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder={isM3 ? "Auftrag, Projekt, Kunde, Artikelnummer …" : "Auftragsnummer suchen"}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder={isM3 ? "Auftrag, Projekt, Kunde, Artikelnummer …" : "Auftragsnummer suchen"}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" size="sm" disabled={!search} onClick={() => setSearch("")}>
+            <RotateCcw className="h-4 w-4 mr-1" /> Filter zurücksetzen
+          </Button>
         </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Auftrag</TableHead>
-              {isM3 && <TableHead>Quelle (Fertigungsfreigabe / Revision)</TableHead>}
-              <TableHead>Status</TableHead>
+              <SortableHead columnKey="order" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
+                Auftrag
+              </SortableHead>
+              {isM3 && (
+                <SortableHead columnKey="source" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
+                  Quelle (Fertigungsfreigabe / Revision)
+                </SortableHead>
+              )}
+              <SortableHead columnKey="status" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
+                Status
+              </SortableHead>
               <TableHead>Fehlende Daten</TableHead>
-              <TableHead>Angefordert</TableHead>
+              <SortableHead columnKey="requested" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
+                Angefordert
+              </SortableHead>
               <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
