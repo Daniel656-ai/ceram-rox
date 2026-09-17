@@ -187,7 +187,16 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
                   <TableCell className="text-xs text-muted-foreground">{ev.basis}</TableCell>
                   <TableCell className="text-right space-x-2">
                     {!row && (
-                      <Button size="sm" onClick={() => onRequest(kind)}>
+                      <Button
+                        size="sm"
+                        disabled={!currentRelease}
+                        title={
+                          currentRelease
+                            ? undefined
+                            : "Nur möglich, wenn dieser Auftrag der Beprobungsauftrag einer Fertigungsfreigabe ist."
+                        }
+                        onClick={() => onRequest(kind)}
+                      >
                         {DOC_KIND_LABEL[kind]} anfordern
                       </Button>
                     )}
