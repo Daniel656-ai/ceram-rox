@@ -153,17 +153,20 @@ export default function AdminServicesPage() {
   const handleCreate = async () => {
     if (!newName) { toast.error(t("admin:name_required")); return; }
     try {
+      await api.measurementServices.assertSamplingCodeFree(newSamplingCode);
       await createService.mutateAsync({
         service_name: newName,
         category: newCategory,
         hourly_rate: parseFloat(newRate),
         standard_duration_hours: parseFloat(newDuration),
+        sampling_code: newSamplingCode.trim() || null,
       } as any);
       toast.success(t("admin:service_created"));
       setNewOpen(false);
       setNewName("");
       setNewRate("75");
       setNewDuration("1");
+      setNewSamplingCode("");
     } catch (err: any) {
       toast.error(t("common:error"), { description: err.message });
     }
