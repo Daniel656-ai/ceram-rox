@@ -100,3 +100,12 @@ export function useEnsureCustomerDocumentation() {
 }
 
 export type { ProductionDocumentRequest };
+
+/** Entfernt eine Fertigungsunterlagen-Anforderung (z. B. eine doppelt angelegte m³-Liste). */
+export function useRemoveProductionDocument() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.productionDocuments.remove(id),
+    onSuccess: invalidate,
+  });
+}

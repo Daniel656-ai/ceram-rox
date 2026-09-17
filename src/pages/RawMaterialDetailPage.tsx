@@ -354,7 +354,8 @@ export default function RawMaterialDetailPage() {
         batch_number: bNum,
         delivery_date: bDate || undefined,
         delivery_quantity: qty,
-        supplier: bSupplier || undefined,
+        // Lieferant wird vom Rohstoff geerbt – keine zweite Pflege am LOT.
+        supplier: mat.supplier || undefined,
         notes: bNotes || undefined,
         manufacturer_batch: bManufacturerBatch.trim() || null,
         goods_receipt_date: bGoodsReceiptDate || bDate || null,
@@ -680,7 +681,11 @@ export default function RawMaterialDetailPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div><Label>Liefermenge ({mat.unit}) *</Label><Input type="number" step="0.001" value={bQty} onChange={(e) => setBQty(e.target.value)} /></div>
-                        <div><Label>Lieferant</Label><Input value={bSupplier} onChange={(e) => setBSupplier(e.target.value)} /></div>
+                        <div>
+                          <Label>Lieferant</Label>
+                          <Input value={mat.supplier || ""} readOnly disabled placeholder="Kein Lieferant am Rohstoff hinterlegt" />
+                          <p className="text-xs text-muted-foreground mt-1">Wird automatisch vom Rohstoff übernommen.</p>
+                        </div>
                       </div>
                       {/* Optional: In vorhandenes Gebinde einfüllen */}
                       {(containers && containers.filter((c: any) => c.status !== "entsorgt" && c.status !== "gesperrt").length > 0) && (
@@ -787,7 +792,7 @@ export default function RawMaterialDetailPage() {
                          <TableCell className="font-mono text-xs">{b.manufacturer_batch || "–"}</TableCell>
                         <TableCell className="text-xs">{b.goods_receipt_date ? new Date(b.goods_receipt_date).toLocaleDateString("de-DE") : (b.delivery_date ? new Date(b.delivery_date).toLocaleDateString("de-DE") : "–")}</TableCell>
                         <TableCell>{b.delivery_quantity != null ? `${formatQuantity(b.delivery_quantity)} ${mat.unit}` : "–"}</TableCell>
-                        <TableCell>{b.supplier || "–"}</TableCell>
+                        <TableCell>{b.supplier || mat.supplier || "–"}</TableCell>
                         <TableCell>
                           {canManageBatches ? (
                             <Input
