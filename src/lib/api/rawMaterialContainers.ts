@@ -28,16 +28,19 @@ export interface RawMaterialContainer {
   expiry_date: string | null;
   created_by: string;
   created_at: string;
+  archived_at: string | null;
   updated_at: string;
 }
 
 export const rawMaterialContainers = {
-  list: (rawMaterialId?: string) => {
+  /** Aktuelle Gebinde. Archivierte Gebinde sind standardmäßig ausgeblendet. */
+  list: (rawMaterialId?: string, opts?: { includeArchived?: boolean }) => {
     let q = db
       .from("raw_material_containers")
       .select("*, storage_locations(*), raw_material_batches(batch_number)")
       .order("created_at", { ascending: false });
     if (rawMaterialId) q = q.eq("raw_material_id", rawMaterialId);
+    if (!opts?.includeArchived) q = q.is("archived_at", null);
     return unwrap<any[]>(q);
   },
 
@@ -112,18 +115,63 @@ export const rawMaterialContainers = {
   ) => run(db.from("raw_material_containers").update(updates).eq("id", id)),
 
   /**
-   * Delete a container. Returns an explicit error when nothing was deleted
-   * (e.g. blocked by row level security) so the UI can show a real message
-   * instead of silently doing nothing.
+   * "Löschen" aus der aktuellen Verwaltung = Archivieren.
+   * Historische Buchungen, Einwaagen und Bewegungen bleiben unverändert erhalten
+   * und verweisen weiterhin auf das archivierte Gebinde.
+   * Zusätzlich werden LOTs archiviert, die danach kein aktives Gebinde mehr haben.
    */
   delete: async (id: string) => {
     const rows = await unwrap<any[]>(
-      db.from("raw_material_containers").delete().eq("id", id).select("id")
+      db
+        .from("raw_material_containers")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", id)
+        .is("archived_at", null)
+        .select("id, batch_id")
     );
     if (!rows || rows.length === 0) {
-      throw new Error(
-        "Gebinde konnte nicht gelöscht werden – keine Berechtigung oder Gebinde nicht mehr vorhanden."
+      const still = await unwrap<any[]>(
+        db.from("raw_material_containers").select("id, archived_at").eq("id", id)
       );
+      if (still && still.length && still[0].archived_at) return; // bereits archiviert
+      throw new Error(
+        "Gebinde konnte nicht archiviert werden – keine Berechtigung oder Gebinde nicht mehr vorhanden."
+      );
+    }
+
+    // Betroffene LOTs ermitteln (direkter Bezug + LOT-Positionen im Gebinde)
+    const batchIds = new Set<string>();
+    if (rows[0].batch_id) batchIds.add(rows[0].batch_id);
+    try {
+      const positions = await unwrap<any[]>(
+        db.from("container_batch_positions").select("batch_id").eq("container_id", id)
+      );
+      for (const p of positions || []) if (p?.batch_id) batchIds.add(p.batch_id);
+    } catch {
+      /* Positionen optional – Archivierung des Gebindes bleibt gültig */
+    }
+
+    for (const batchId of batchIds) {
+      try {
+        const active = await unwrap<any[]>(
+          db
+            .from("raw_material_containers")
+            .select("id")
+            .eq("batch_id", batchId)
+            .is("archived_at", null)
+            .limit(1)
+        );
+        if (active && active.length) continue;
+        await run(
+          db
+            .from("raw_material_batches")
+            .update({ archived_at: new Date().toISOString() })
+            .eq("id", batchId)
+            .is("archived_at", null)
+        );
+      } catch {
+        /* LOT-Archivierung darf die Gebinde-Archivierung nicht verhindern */
+      }
     }
   },
 
