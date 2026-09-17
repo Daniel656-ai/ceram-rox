@@ -12,6 +12,8 @@
  * Verknüpfungen und Layout – diese bleiben unverändert.
  */
 
+export type SelectOption = string | { label: string; value: string };
+
 export interface GlobalDefinitionLike {
   id: string;
   field_key: string;
@@ -22,6 +24,9 @@ export interface GlobalDefinitionLike {
   data_type?: string;
   data_source?: string;
   default_value?: string | null;
+  /** Auswahlwerte der zentralen Definition (Auswahl / Mehrfachauswahl). */
+  select_options?: SelectOption[] | null;
+  list_id?: string | null;
 }
 
 export interface InheritingField {
@@ -31,6 +36,7 @@ export interface InheritingField {
   unit: string | null;
   global_field_id: string | null;
   metadata?: Record<string, unknown> | null;
+  select_options?: SelectOption[] | null;
 }
 
 /**
