@@ -17,7 +17,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Search, FileUp, Settings2, FileText } from "lucide-react";
+import { Plus, RotateCcw, Search, FileUp, Settings2, FileText } from "lucide-react";
 import {
   RELEASE_STATUS_LABEL, RELEASE_STATUS_COLOR, RELEASE_STATUSES, isReviewRequired,
 } from "@/lib/productionRelease/fields";
@@ -25,11 +25,30 @@ import {
   useProductionReleases, useProductionReleasePermissions, useSaveRelease, useReleaseSettings,
 } from "@/hooks/useProductionReleases";
 import { ImportPdfDialog } from "@/components/productionRelease/ImportPdfDialog";
+import { SortableHead } from "@/components/list/SortableHead";
+import { useListSort } from "@/lib/list/listSorting";
 
 function fmtDate(v?: string | null) {
   if (!v) return "–";
   return new Date(v).toLocaleDateString("de-AT");
 }
+
+type ReleaseSortKey =
+  | "release" | "project_name" | "customer_name" | "article_number"
+  | "completion_date" | "delivery_date" | "piece_count" | "status" | "created_at" | "updated_at";
+
+const RELEASE_SORT_TYPE: Record<ReleaseSortKey, "text" | "number" | "date"> = {
+  release: "text",
+  project_name: "text",
+  customer_name: "text",
+  article_number: "text",
+  completion_date: "date",
+  delivery_date: "date",
+  piece_count: "number",
+  status: "text",
+  created_at: "date",
+  updated_at: "date",
+};
 
 export default function ProductionReleasesPage() {
   const navigate = useNavigate();
@@ -42,6 +61,11 @@ export default function ProductionReleasesPage() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const sort = useListSort<ReleaseSortKey>({
+    initialKey: "updated_at",
+    initialDir: "desc",
+    storageKey: "productionReleases.listPrefs",
+  });
   const [importOpen, setImportOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [noFormOpen, setNoFormOpen] = useState(false);
@@ -55,14 +79,27 @@ export default function ProductionReleasesPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return releases.filter((r) => {
+    const rows = releases.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (!q) return true;
       return [r.project_name, r.customer_name, r.article_number]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [releases, search, statusFilter]);
+    // Sortierung wie in der Rohstoffliste (gemeinsame Logik).
+    return sort.sortRows(
+      rows,
+      (r, key) => {
+        const rec = r as unknown as Record<string, unknown>;
+        if (key === "release") {
+          return `${rec.release_number ?? ""} ${String(rec.revision_number ?? 0).padStart(4, "0")}`;
+        }
+        if (key === "status") return RELEASE_STATUS_LABEL[r.status] ?? r.status;
+        return rec[key];
+      },
+      (key) => RELEASE_SORT_TYPE[key]
+    );
+  }, [releases, search, statusFilter, sort]);
 
   const createRelease = async (
     extra?: { values: Record<string, unknown>; testParameters?: never[] }
@@ -158,21 +195,42 @@ export default function ProductionReleasesPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!search && statusFilter === "all"}
+              onClick={() => { setSearch(""); setStatusFilter("all"); }}
+            >
+              <RotateCcw className="h-4 w-4 mr-1" /> Filter zurücksetzen
+            </Button>
           </div>
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Freigabe / Rev.</TableHead>
-                <TableHead>Projekt</TableHead>
-                <TableHead>Kunde</TableHead>
-                <TableHead>Artikelnummer</TableHead>
-                <TableHead>Fertigstellung</TableHead>
-                <TableHead>Liefertermin</TableHead>
-                <TableHead className="text-right">Stückzahl</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Erstellt</TableHead>
-                <TableHead>Bearbeitet</TableHead>
+                {([
+                  ["release", "Freigabe / Rev.", ""],
+                  ["project_name", "Projekt", ""],
+                  ["customer_name", "Kunde", ""],
+                  ["article_number", "Artikelnummer", ""],
+                  ["completion_date", "Fertigstellung", ""],
+                  ["delivery_date", "Liefertermin", ""],
+                  ["piece_count", "Stückzahl", "text-right"],
+                  ["status", "Status", ""],
+                  ["created_at", "Erstellt", ""],
+                  ["updated_at", "Bearbeitet", ""],
+                ] as Array<[ReleaseSortKey, string, string]>).map(([key, label, cls]) => (
+                  <SortableHead
+                    key={key}
+                    columnKey={key}
+                    sortKey={sort.sortKey}
+                    sortDir={sort.sortDir}
+                    onToggle={sort.toggleSort}
+                    className={cls}
+                  >
+                    {label}
+                  </SortableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>

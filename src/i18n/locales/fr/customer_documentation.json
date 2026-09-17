@@ -1,0 +1,69 @@
+{
+  "document_title": "Documentation client",
+  "tab_short": "Doc. client",
+  "toc": "Table des matières",
+  "generated_on": "Créé le",
+  "page": "Page",
+  "language": "Langue",
+  "no_content": "Aucun chapitre n'est encore disponible pour cette commande.",
+  "chapters": {
+    "header": "En-tête du document",
+    "toc": "Table des matières",
+    "test_conditions": "Conditions d'essai pour l'activité et la conversion",
+    "activity_conversion": "Activité et conversion SO₂/SO₃",
+    "physical_properties": "Propriétés physiques",
+    "geometry": "Géométrie",
+    "material_certificates": "Certificats de contrôle matière",
+    "welder_certificates": "Certificat de qualification de soudeur",
+    "lifting_beam": "Rapport de contrôle du palonnier",
+    "drawings": "Liste des plans",
+    "spare_elements": "Éléments de rechange",
+    "module_packing_lists": "Listes de colisage des modules",
+    "attachments": "Liste des documents et annexes"
+  },
+  "fields": {
+    "customer": "Client",
+    "order_number": "Numéro de commande",
+    "customer_reference": "Numéro de commande CERAM",
+    "project": "Projet",
+    "date": "Date",
+    "due_date": "Date de livraison",
+    "spare_elements": "Éléments de rechange",
+    "mounting_frames": "Cadres de montage"
+  },
+  "table": {
+    "chapter": "Chapitre",
+    "section": "Section",
+    "parameter": "Paramètre",
+    "value": "Valeur",
+    "unit": "Unité",
+    "document": "Document",
+    "kind": "Type",
+    "reference": "Référence"
+  },
+  "doc_kinds": {
+    "production_release": "Autorisation de fabrication",
+    "measurement_document": "Document de mesure"
+  },
+  "ui": {
+    "title": "Documentation client",
+    "subtitle": "Compilée automatiquement à partir des données de commande existantes.",
+    "search": "Rechercher commande, client ou référence",
+    "all_status": "Tous les statuts",
+    "reset_filters": "Réinitialiser les filtres",
+    "order": "Commande",
+    "customer": "Client",
+    "reference": "Numéro de commande CERAM",
+    "project": "Projet",
+    "date": "Date",
+    "status": "Statut",
+    "chapters": "Chapitres",
+    "actions": "Actions",
+    "preview": "Aperçu",
+    "export_pdf": "PDF",
+    "export_csv": "CSV",
+    "open_order": "Ouvrir la commande",
+    "no_rows": "Aucune documentation client demandée pour le moment.",
+    "loading": "Chargement …"
+  }
+}

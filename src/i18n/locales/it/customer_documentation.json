@@ -1,0 +1,69 @@
+{
+  "document_title": "Documentazione cliente",
+  "tab_short": "Doc. cliente",
+  "toc": "Indice",
+  "generated_on": "Creato il",
+  "page": "Pagina",
+  "language": "Lingua",
+  "no_content": "Per questo ordine non sono ancora disponibili capitoli.",
+  "chapters": {
+    "header": "Intestazione del documento",
+    "toc": "Indice",
+    "test_conditions": "Condizioni di prova per attività e conversione",
+    "activity_conversion": "Attività e conversione SO₂/SO₃",
+    "physical_properties": "Proprietà fisiche",
+    "geometry": "Geometria",
+    "material_certificates": "Certificati di collaudo materiale",
+    "welder_certificates": "Certificato di qualifica del saldatore",
+    "lifting_beam": "Rapporto di controllo del bilancino",
+    "drawings": "Elenco dei disegni",
+    "spare_elements": "Elementi di ricambio",
+    "module_packing_lists": "Liste di imballaggio dei moduli",
+    "attachments": "Elenco dei documenti e degli allegati"
+  },
+  "fields": {
+    "customer": "Cliente",
+    "order_number": "Numero d'ordine",
+    "customer_reference": "Numero d'ordine CERAM",
+    "project": "Progetto",
+    "date": "Data",
+    "due_date": "Data di consegna",
+    "spare_elements": "Elementi di ricambio",
+    "mounting_frames": "Telai di montaggio"
+  },
+  "table": {
+    "chapter": "Capitolo",
+    "section": "Sezione",
+    "parameter": "Parametro",
+    "value": "Valore",
+    "unit": "Unità",
+    "document": "Documento",
+    "kind": "Tipo",
+    "reference": "Riferimento"
+  },
+  "doc_kinds": {
+    "production_release": "Nulla osta di produzione",
+    "measurement_document": "Documento di misura"
+  },
+  "ui": {
+    "title": "Documentazione cliente",
+    "subtitle": "Composta automaticamente dai dati d'ordine esistenti.",
+    "search": "Cerca ordine, cliente o riferimento",
+    "all_status": "Tutti gli stati",
+    "reset_filters": "Reimposta filtri",
+    "order": "Ordine",
+    "customer": "Cliente",
+    "reference": "Numero d'ordine CERAM",
+    "project": "Progetto",
+    "date": "Data",
+    "status": "Stato",
+    "chapters": "Capitoli",
+    "actions": "Azioni",
+    "preview": "Anteprima",
+    "export_pdf": "PDF",
+    "export_csv": "CSV",
+    "open_order": "Apri ordine",
+    "no_rows": "Nessuna documentazione cliente richiesta finora.",
+    "loading": "Caricamento …"
+  }
+}

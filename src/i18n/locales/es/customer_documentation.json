@@ -1,0 +1,69 @@
+{
+  "document_title": "Documentación para el cliente",
+  "tab_short": "Doc. cliente",
+  "toc": "Índice",
+  "generated_on": "Creado el",
+  "page": "Página",
+  "language": "Idioma",
+  "no_content": "Todavía no hay capítulos disponibles para este pedido.",
+  "chapters": {
+    "header": "Encabezado del documento",
+    "toc": "Índice",
+    "test_conditions": "Condiciones de ensayo para actividad y conversión",
+    "activity_conversion": "Actividad y conversión SO₂/SO₃",
+    "physical_properties": "Propiedades físicas",
+    "geometry": "Geometría",
+    "material_certificates": "Certificados de ensayo de material",
+    "welder_certificates": "Certificado de cualificación del soldador",
+    "lifting_beam": "Informe de inspección del balancín",
+    "drawings": "Índice de planos",
+    "spare_elements": "Elementos de repuesto",
+    "module_packing_lists": "Listas de embalaje de módulos",
+    "attachments": "Índice de documentos y anexos"
+  },
+  "fields": {
+    "customer": "Cliente",
+    "order_number": "Número de pedido",
+    "customer_reference": "Número de pedido CERAM",
+    "project": "Proyecto",
+    "date": "Fecha",
+    "due_date": "Fecha de entrega",
+    "spare_elements": "Elementos de repuesto",
+    "mounting_frames": "Marcos de montaje"
+  },
+  "table": {
+    "chapter": "Capítulo",
+    "section": "Sección",
+    "parameter": "Parámetro",
+    "value": "Valor",
+    "unit": "Unidad",
+    "document": "Documento",
+    "kind": "Tipo",
+    "reference": "Referencia"
+  },
+  "doc_kinds": {
+    "production_release": "Autorización de fabricación",
+    "measurement_document": "Documento de medición"
+  },
+  "ui": {
+    "title": "Documentación para el cliente",
+    "subtitle": "Compilada automáticamente a partir de los datos de pedido existentes.",
+    "search": "Buscar pedido, cliente o referencia",
+    "all_status": "Todos los estados",
+    "reset_filters": "Restablecer filtros",
+    "order": "Pedido",
+    "customer": "Cliente",
+    "reference": "Número de pedido CERAM",
+    "project": "Proyecto",
+    "date": "Fecha",
+    "status": "Estado",
+    "chapters": "Capítulos",
+    "actions": "Acciones",
+    "preview": "Vista previa",
+    "export_pdf": "PDF",
+    "export_csv": "CSV",
+    "open_order": "Abrir pedido",
+    "no_rows": "Todavía no se ha solicitado documentación para el cliente.",
+    "loading": "Cargando …"
+  }
+}

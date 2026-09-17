@@ -7,12 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search } from "lucide-react";
+import { Plus, RotateCcw, Search } from "lucide-react";
 import { toast } from "sonner";
 import ProductionReleasesPage from "@/pages/ProductionReleasesPage";
 import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/productionDocuments/ReleaseRevisionPicker";
 import ReleaseSourceValues from "@/components/productionDocuments/ReleaseSourceValues";
 import M3ListForm from "@/components/productionDocuments/M3ListForm";
+import CustomerDocumentationTable from "@/components/productionDocuments/CustomerDocumentationTable";
+import { SortableHead } from "@/components/list/SortableHead";
+import { useListSort } from "@/lib/list/listSorting";
 import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
@@ -127,6 +130,11 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
   const { data: orders = [] } = useOrders();
   const releases = useReleaseRevisionList();
   const isM3 = kind === "m3_list";
+  const sort = useListSort<"order" | "source" | "status" | "requested">({
+    initialKey: "requested",
+    initialDir: "desc",
+    storageKey: `productionDocuments.listPrefs.${kind}`,
+  });
 
   const orderById = useMemo(() => {
     const map = new Map<string, any>();
@@ -142,7 +150,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (requests as any[]).filter((r) => {
+    const filtered = (requests as any[]).filter((r) => {
       if (!q) return true;
       const o = orderById.get(r.order_id);
       const rel = r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null;
@@ -150,7 +158,21 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
         .filter(Boolean).join(" ").toLowerCase();
       return hay.includes(q);
     });
-  }, [requests, search, orderById, releaseById]);
+    // Sortierung wie in der Rohstoffliste (gemeinsame Logik).
+    return sort.sortRows(
+      filtered,
+      (r: any, key) => {
+        if (key === "order") return orderById.get(r.order_id)?.order_number ?? "";
+        if (key === "source") {
+          const rel = r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null;
+          return rel ? releaseRevisionLabel(rel) : "";
+        }
+        if (key === "status") return DOC_STATUS_LABEL[r.status as DocStatus] ?? "";
+        return r.requested_at ?? "";
+      },
+      (key) => (key === "requested" ? "date" : "text")
+    );
+  }, [requests, search, orderById, releaseById, sort]);
 
   return (
     <Card>
@@ -170,23 +192,38 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder={isM3 ? "Auftrag, Projekt, Kunde, Artikelnummer …" : "Auftragsnummer suchen"}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-8"
+              placeholder={isM3 ? "Auftrag, Projekt, Kunde, Artikelnummer …" : "Auftragsnummer suchen"}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" size="sm" disabled={!search} onClick={() => setSearch("")}>
+            <RotateCcw className="h-4 w-4 mr-1" /> Filter zurücksetzen
+          </Button>
         </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Auftrag</TableHead>
-              {isM3 && <TableHead>Quelle (Fertigungsfreigabe / Revision)</TableHead>}
-              <TableHead>Status</TableHead>
+              <SortableHead columnKey="order" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
+                Auftrag
+              </SortableHead>
+              {isM3 && (
+                <SortableHead columnKey="source" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
+                  Quelle (Fertigungsfreigabe / Revision)
+                </SortableHead>
+              )}
+              <SortableHead columnKey="status" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
+                Status
+              </SortableHead>
               <TableHead>Fehlende Daten</TableHead>
-              <TableHead>Angefordert</TableHead>
+              <SortableHead columnKey="requested" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
+                Angefordert
+              </SortableHead>
               <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
@@ -307,7 +344,7 @@ export default function ProductionDocumentsPage() {
         <TabsList>
           <TabsTrigger value="freigaben">Fertigungsfreigaben</TabsTrigger>
           <TabsTrigger value="m3">m³-Liste</TabsTrigger>
-          <TabsTrigger value="dokumentation">Dokumentation</TabsTrigger>
+          <TabsTrigger value="dokumentation">Kundendoku</TabsTrigger>
         </TabsList>
 
         <TabsContent value="freigaben" className="mt-4">
@@ -322,7 +359,8 @@ export default function ProductionDocumentsPage() {
         </TabsContent>
 
         <TabsContent value="dokumentation" className="mt-4">
-          <FollowUpTable kind="documentation" />
+          {/* Eigene Ansicht der Kundendokumentation – die m³-Liste bleibt unverändert. */}
+          <CustomerDocumentationTable />
         </TabsContent>
       </Tabs>
     </div>

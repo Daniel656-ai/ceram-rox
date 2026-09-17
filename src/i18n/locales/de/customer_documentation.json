@@ -1,0 +1,69 @@
+{
+  "document_title": "Kundendokumentation",
+  "tab_short": "Kundendoku",
+  "toc": "Inhaltsverzeichnis",
+  "generated_on": "Erstellt am",
+  "page": "Seite",
+  "language": "Sprache",
+  "no_content": "Für diesen Auftrag sind noch keine Kapitel vorhanden.",
+  "chapters": {
+    "header": "Dokumentationskopf",
+    "toc": "Inhaltsverzeichnis",
+    "test_conditions": "Testbedingungen für Aktivität und Konvertierung",
+    "activity_conversion": "Aktivität und SO₂/SO₃-Konvertierung",
+    "physical_properties": "Physikalische Eigenschaften",
+    "geometry": "Geometrie",
+    "material_certificates": "Materialprüfzeugnisse",
+    "welder_certificates": "Schweißer-Prüfbescheinigung",
+    "lifting_beam": "Prüfbefund Hebetraverse",
+    "drawings": "Zeichnungsverzeichnis",
+    "spare_elements": "Ersatzelemente",
+    "module_packing_lists": "Modulpacklisten",
+    "attachments": "Dokument- und Anhangsverzeichnis"
+  },
+  "fields": {
+    "customer": "Kunde",
+    "order_number": "Auftragsnummer",
+    "customer_reference": "CERAM-Auftragsnummer",
+    "project": "Projekt",
+    "date": "Datum",
+    "due_date": "Liefertermin",
+    "spare_elements": "Ersatzelemente",
+    "mounting_frames": "Einbaurahmen"
+  },
+  "table": {
+    "chapter": "Kapitel",
+    "section": "Abschnitt",
+    "parameter": "Parameter",
+    "value": "Wert",
+    "unit": "Einheit",
+    "document": "Dokument",
+    "kind": "Art",
+    "reference": "Referenz"
+  },
+  "doc_kinds": {
+    "production_release": "Fertigungsfreigabe",
+    "measurement_document": "Messdokument"
+  },
+  "ui": {
+    "title": "Kundendokumentation",
+    "subtitle": "Automatisch aus den vorhandenen Auftragsdaten zusammengestellt.",
+    "search": "Auftrag, Kunde oder Referenz suchen",
+    "all_status": "Alle Status",
+    "reset_filters": "Filter zurücksetzen",
+    "order": "Auftrag",
+    "customer": "Kunde",
+    "reference": "CERAM-Auftragsnummer",
+    "project": "Projekt",
+    "date": "Datum",
+    "status": "Status",
+    "chapters": "Kapitel",
+    "actions": "Aktionen",
+    "preview": "Vorschau",
+    "export_pdf": "PDF",
+    "export_csv": "CSV",
+    "open_order": "Auftrag öffnen",
+    "no_rows": "Noch keine Kundendokumentation angefordert.",
+    "loading": "Wird geladen …"
+  }
+}
