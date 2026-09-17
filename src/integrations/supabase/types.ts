@@ -8045,6 +8045,7 @@ export type Database = {
       }
       raw_material_batches: {
         Row: {
+          archived_at: string | null
           batch_number: string
           created_at: string
           delivery_date: string | null
@@ -8065,6 +8066,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           batch_number: string
           created_at?: string
           delivery_date?: string | null
@@ -8085,6 +8087,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           batch_number?: string
           created_at?: string
           delivery_date?: string | null
@@ -8116,6 +8119,7 @@ export type Database = {
       }
       raw_material_containers: {
         Row: {
+          archived_at: string | null
           barcode: string | null
           batch_id: string | null
           container_code: string
@@ -8140,6 +8144,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           barcode?: string | null
           batch_id?: string | null
           container_code: string
@@ -8164,6 +8169,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           barcode?: string | null
           batch_id?: string | null
           container_code?: string
