@@ -502,6 +502,7 @@ function EditServiceDialog({
         standard_duration_hours: service.standard_duration_hours ?? 1,
         hourly_rate: service.hourly_rate ?? 0,
         work_instructions: service.work_instructions ?? "",
+        sampling_code: service.sampling_code ?? "",
         process_template_id: service.process_template_id ?? "__none__",
         active: !!service.active,
       });
