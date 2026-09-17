@@ -148,6 +148,9 @@ export default function CreateOrderPage() {
   // from order_kind_form_templates). No hardcoded field list.
   const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
   const [dynamicFormId, setDynamicFormId] = useState<string | null>(null);
+  // Felder der Formularvorlage – daraus wird die Mehrfachauswahl
+  // "Dienstleistungen" gelesen (keine feste Feldliste im Code).
+  const [templateFields, setTemplateFields] = useState<FormField[]>([]);
 
   // ---------------------------------------------------------------------
   // Entwürfe & Vorlagen (additiv, über Berechtigungen deaktivierbar)
@@ -280,9 +283,59 @@ export default function CreateOrderPage() {
     if (!svc) return;
     setMeasurements((prev) => [
       ...prev,
-      { uid: newUid(), service_id: serviceId, service_name: svc.service_name },
+      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, origin: "manual" },
     ]);
   };
+
+  // ---------------------------------------------------------------------
+  // Auswahl "Dienstleistungen" im Auftraggeberformular -> echte Positionen
+  // ---------------------------------------------------------------------
+  const measurementsRef = useRef(measurements);
+  measurementsRef.current = measurements;
+  const formValuesRef = useRef(measurementFormValues);
+  formValuesRef.current = measurementFormValues;
+  const [unresolvedSelection, setUnresolvedSelection] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (templateFields.length === 0 || services.length === 0) return;
+    const selection = readServiceSelection(dynamicValues, templateFields as any);
+    const plan = planServiceSync({
+      selection,
+      services: services as any,
+      measurements: measurementsRef.current,
+      isEdited: (uid) =>
+        Object.values(formValuesRef.current[uid] || {}).some(
+          (v) => v !== undefined && v !== null && v !== ""
+        ),
+    });
+    setUnresolvedSelection(plan.unresolved);
+    if (plan.add.length === 0 && plan.remove.length === 0 && plan.keep.length === 0) return;
+
+    if (plan.add.length > 0 || plan.remove.length > 0) {
+      setMeasurements((prev) => {
+        const kept = prev.filter((m) => !plan.remove.includes(m.uid));
+        const additions: SelectedMeasurement[] = plan.add.map((a) => ({
+          uid: newUid(),
+          service_id: a.service.id,
+          service_name: a.service.service_name,
+          origin: "template",
+          selection_token: a.token,
+        }));
+        return [...kept, ...additions];
+      });
+    }
+    if (plan.keep.length > 0) {
+      // Bereits bearbeitete Positionen bleiben erhalten und werden nur aus der
+      // automatischen Steuerung entlassen.
+      setMeasurements((prev) =>
+        prev.map((m) => (plan.keep.includes(m.uid) ? { ...m, origin: "manual", selection_token: null } : m))
+      );
+      toast.info("Bereits ausgefüllte Dienstleistungen bleiben erhalten", {
+        description: "Sie stehen jetzt unter „Zusätzliche Dienstleistungen“ und können dort entfernt werden.",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dynamicValues, templateFields, services]);
 
   const applyServicePackage = (packageId: string) => {
     const pkg = servicePackages.find((p: any) => p.id === packageId);
