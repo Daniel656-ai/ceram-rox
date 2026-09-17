@@ -34,56 +34,31 @@ export const measurementServices = {
     ),
 
   /**
-   * Prüft, ob ein Beprobungskürzel bereits einer anderen aktiven Dienstleistung
-   * gehört. Die Datenbank sichert dies zusätzlich über einen eindeutigen Index ab;
-   * hier entsteht nur die verständliche Meldung für die Oberfläche.
-   */
-  async assertSamplingCodeFree(code: string | null | undefined, exceptId?: string) {
-    const trimmed = (code ?? "").trim();
-    if (!trimmed) return;
-    const rows = (await unwrap(
-      dbClient
-        .from("measurement_services")
-        .select("id, service_name, sampling_code")
-        .eq("active", true)
-        .is("archived_at", null)
-    )) as { id: string; service_name: string; sampling_code: string | null }[];
-    const clash = rows.find(
-      (r) =>
-        r.id !== exceptId &&
-        (r.sampling_code ?? "").trim().toLowerCase() === trimmed.toLowerCase()
-    );
-    if (clash) {
-      throw new Error(
-        `Das Beprobungskürzel ${trimmed} ist bereits der Dienstleistung ${clash.service_name} zugeordnet.`
-      );
-    }
-  },
-
-  /**
-   * Löst die in der m³-Liste berechneten Beprobungskürzel über die gepflegten
-   * Stammdaten auf. Es wird ausschließlich exakt (ohne Groß-/Kleinschreibung)
-   * verglichen – keine Namensähnlichkeit, keine Ersatzdienstleistung.
+   * Löst die in der m³-Liste berechneten Beprobungskürzel über die zentrale
+   * Zuordnung (src/lib/samplingCodeMap.ts) auf. Verglichen wird ausschließlich
+   * der Dienstleistungsname – exakt, ohne Groß-/Kleinschreibung, ohne
+   * Namensähnlichkeit und ohne Ersatzdienstleistung. Es wird nichts angelegt.
    */
   async resolveSamplingCodes(codes: string[]) {
     const rows = (await unwrap(
       dbClient
         .from("measurement_services")
-        .select("id, service_name, sampling_code")
+        .select("id, service_name")
         .eq("active", true)
         .is("archived_at", null)
-    )) as { id: string; service_name: string; sampling_code: string | null }[];
-    const byCode = new Map(
-      rows
-        .filter((r) => (r.sampling_code ?? "").trim())
-        .map((r) => [(r.sampling_code as string).trim().toLowerCase(), r])
+    )) as { id: string; service_name: string }[];
+    const byName = new Map(
+      rows.map((r) => [normalizeSamplingKey(r.service_name), r])
     );
     const matched: { code: string; id: string; service_name: string }[] = [];
     const missing: string[] = [];
     for (const raw of codes) {
       const code = raw.trim();
       if (!code) continue;
-      const hit = byCode.get(code.toLowerCase());
+      const names = serviceNamesForCode(code);
+      const hit = names
+        .map((n) => byName.get(normalizeSamplingKey(n)))
+        .find(Boolean);
       if (hit) matched.push({ code, id: hit.id, service_name: hit.service_name });
       else missing.push(code);
     }
