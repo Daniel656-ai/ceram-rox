@@ -20,7 +20,7 @@ import { Eye, FileDown, RotateCcw, Search, Table2 } from "lucide-react";
 import { toast } from "sonner";
 import { SortableHead } from "@/components/list/SortableHead";
 import { useListSort } from "@/lib/list/listSorting";
-import { useProductionDocumentRequests } from "@/hooks/useProductionDocuments";
+import { useEnsureCustomerDocumentation, useProductionDocumentRequests } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
 import {
   DOC_STATUS_COLOR, DOC_STATUS_LABEL, type DocStatus,
@@ -112,6 +112,9 @@ function ExportButtons({
 export default function CustomerDocumentationTable() {
   const navigate = useNavigate();
   const { t } = useTranslation("customer_documentation");
+  // Jede Fertigungsfreigabe erhält automatisch genau eine Kundendoku je Auftrag;
+  // die Grundlage wird dabei auf die aktuell gültige Revision nachgeführt.
+  useEnsureCustomerDocumentation();
   const { data: requests = [], isLoading } = useProductionDocumentRequests({ kind: "documentation" });
   const { data: orders = [] } = useOrders();
 
