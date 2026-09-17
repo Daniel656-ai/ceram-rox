@@ -111,8 +111,21 @@ export const rawMaterialContainers = {
     }>
   ) => run(db.from("raw_material_containers").update(updates).eq("id", id)),
 
-  delete: (id: string) =>
-    run(db.from("raw_material_containers").delete().eq("id", id)),
+  /**
+   * Delete a container. Returns an explicit error when nothing was deleted
+   * (e.g. blocked by row level security) so the UI can show a real message
+   * instead of silently doing nothing.
+   */
+  delete: async (id: string) => {
+    const rows = await unwrap<any[]>(
+      db.from("raw_material_containers").delete().eq("id", id).select("id")
+    );
+    if (!rows || rows.length === 0) {
+      throw new Error(
+        "Gebinde konnte nicht gelöscht werden – keine Berechtigung oder Gebinde nicht mehr vorhanden."
+      );
+    }
+  },
 
   /**
    * List the LOT positions inside a container, in FIFO order (oldest entry first).

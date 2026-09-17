@@ -879,7 +879,46 @@ export default function RawMaterialDetailPage() {
                             {canManage && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Bewegungen & Historie" onClick={() => setActionsContainer(c)}><HistoryIcon className="h-3.5 w-3.5" /></Button>}
                             {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Etikett drucken" onClick={() => setLabelContainer(c)}><Tag className="h-3.5 w-3.5" /></Button>}
                             {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => openContainerDialog(c)}><Pencil className="h-3.5 w-3.5" /></Button>}
-                            {canManageBatches && <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Gebinde ${c.container_code} löschen?`)) deleteContainer.mutate({ id: c.id, raw_material_id: id! }); }}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>}
+                            {canManageBatches && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Gebinde löschen"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Gebinde {c.container_code} löschen?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Das Gebinde wird dauerhaft entfernt. Buchungen auf den Rohstoff bleiben erhalten.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        deleteContainer.mutate(
+                                          { id: c.id, raw_material_id: id! },
+                                          {
+                                            onSuccess: () => toast.success(`Gebinde ${c.container_code} gelöscht`),
+                                            onError: (err: any) => {
+                                              const msg = String(err?.message || "");
+                                              if (err?.code === "23503" || msg.includes("foreign key")) {
+                                                toast.error(`Gebinde ${c.container_code} kann nicht gelöscht werden: Es bestehen abhängige Daten (z. B. Buchungen oder Einwaagen).`);
+                                              } else if (err?.code === "42501" || msg.toLowerCase().includes("policy")) {
+                                                toast.error("Keine Berechtigung zum Löschen von Gebinden.");
+                                              } else {
+                                                toast.error(`Gebinde konnte nicht gelöscht werden: ${msg || "Unbekannter Fehler"}`);
+                                              }
+                                            },
+                                          }
+                                        )
+                                      }
+                                    >
+                                      Löschen
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                           </TableCell>
                         )}
                       </TableRow>
