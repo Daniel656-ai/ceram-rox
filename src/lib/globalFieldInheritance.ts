@@ -67,6 +67,12 @@ export function applyGlobalDefinition<T extends InheritingField>(
     display_name: `${global.display_name}${suffix}`,
     description: global.description ?? null,
     unit: global.unit ?? null,
+    // Auswahlwerte folgen der zentralen Definition: Werden sie am globalen Feld
+    // nachträglich gepflegt, erscheinen sie in allen Formularen. Sind dort keine
+    // hinterlegt, bleibt die im Formular gespeicherte Kopie unverändert.
+    ...(Array.isArray(global.select_options) && global.select_options.length
+      ? { select_options: global.select_options }
+      : {}),
     ...(global.data_source === "constant"
       ? {
           default_value: global.default_value ?? null,
