@@ -153,13 +153,11 @@ export default function AdminServicesPage() {
   const handleCreate = async () => {
     if (!newName) { toast.error(t("admin:name_required")); return; }
     try {
-      await api.measurementServices.assertSamplingCodeFree(newSamplingCode);
       await createService.mutateAsync({
         service_name: newName,
         category: newCategory,
         hourly_rate: parseFloat(newRate),
         standard_duration_hours: parseFloat(newDuration),
-        sampling_code: newSamplingCode.trim() || null,
       } as any);
       toast.success(t("admin:service_created"));
       setNewOpen(false);
@@ -365,10 +363,10 @@ export default function AdminServicesPage() {
                 </div>
                 <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
                 {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
-                <div>
-                  <Label>Beprobungskürzel (m³-Liste)</Label>
-                  <Input value={newSamplingCode} placeholder="z. B. Geo, DP, CA" onChange={e => setNewSamplingCode(e.target.value)} />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Das Beprobungskürzel der m³-Liste ergibt sich zentral aus dem
+                  Dienstleistungsnamen und wird hier nicht gepflegt.
+                </p>
                 <Button onClick={handleCreate}>{t("common:create")}</Button>
               </div>
             </DialogContent>
