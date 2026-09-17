@@ -119,6 +119,7 @@ export default function AdminServicesPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState("");
   const [newDuration, setNewDuration] = useState("1");
+  const [newSamplingCode, setNewSamplingCode] = useState("");
   const [paramEditorServiceId, setParamEditorServiceId] = useState<string | null>(null);
   const [paramEditorServiceName, setParamEditorServiceName] = useState("");
   const [previewServiceId, setPreviewServiceId] = useState<string | null>(null);
