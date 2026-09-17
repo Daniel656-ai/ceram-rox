@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import type { DocKind } from "@/lib/productionDocuments/requirements";
 import type { ProductionDocumentRequest } from "@/lib/api/productionDocuments";
@@ -73,3 +75,26 @@ export function useLinkReleaseToOrder() {
 }
 
 export type { ProductionDocumentRequest };
+
+/**
+ * Stellt beim Öffnen der Kundendokumentation sicher, dass jeder Auftrag mit
+ * Fertigungsfreigabe genau eine Kundendoku besitzt und diese auf die aktuell
+ * gültige Freigabe-Revision verweist. Es entsteht nie ein zweites Dokument.
+ */
+export function useEnsureCustomerDocumentation() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const ran = useRef(false);
+  useEffect(() => {
+    if (ran.current) return;
+    ran.current = true;
+    api.productionDocuments
+      .syncCustomerDocumentation(user?.id ?? null)
+      .then((res) => {
+        if (res.created || res.updated) {
+          qc.invalidateQueries({ queryKey: ["production-document-requests"] });
+        }
+      })
+      .catch((e) => console.error("[kundendoku] Abgleich fehlgeschlagen:", e));
+  }, [qc, user?.id]);
+}
