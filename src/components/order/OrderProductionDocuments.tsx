@@ -206,32 +206,11 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
         </Table>
 
         {!currentRelease && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Select value={linkId} onValueChange={setLinkId}>
-              <SelectTrigger className="w-[320px]">
-                <SelectValue placeholder="Fertigungsfreigabe zuordnen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Fertigungsfreigabe wählen</SelectItem>
-                {(allCurrent as any[]).map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {(r.release_number as string) || r.id.slice(0, 8)} · Rev. {Number(r.revision_number) || 0}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={linkId === "__none__" || link.isPending}
-              onClick={async () => {
-                await link.mutateAsync({ releaseId: linkId, orderId });
-                toast.success("Fertigungsfreigabe dem Auftrag zugeordnet.");
-              }}
-            >
-              <Link2 className="h-4 w-4 mr-2" /> Zuordnen
-            </Button>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Diesem Auftrag ist keine Fertigungsfreigabe zugeordnet. Die Zuordnung entsteht
+            ausschließlich über die m³-Liste der Fertigungsfreigabe („Beprobungsauftrag erstellen“);
+            eine freie Auswahl ist fachlich nicht zulässig.
+          </p>
         )}
       </CardContent>
     </Card>
