@@ -22,13 +22,14 @@ export type SamplingCodeMapping = {
 
 export const SAMPLING_CODE_MAP: SamplingCodeMapping[] = [
   { code: "Geo", serviceNames: ["Geometrievermessung"] },
-  { code: "NOx", serviceNames: ["NOX-Messung", "BENCH NOx"] },
-  { code: "SOx", serviceNames: ["BENCH SOx"] },
+  { code: "NOx", serviceNames: ["NOX-Messung"] },
+  { code: "SOx", serviceNames: ["SOX-Messung"] },
   { code: "BET", serviceNames: ["BET"] },
-  { code: "PV", serviceNames: ["Porenvolumen", "PGV (Hg)"] },
-  { code: "A", serviceNames: ["Abrieb", "Aktivitätsmessung Mikroreaktor"] },
-  { code: "DP", serviceNames: ["Druckprüfung"] },
-  { code: "CA", serviceNames: ["Chemische Analyse", "RFA"] },
+  { code: "PV", serviceNames: ["Porenvolumen"] },
+  { code: "DP", serviceNames: ["DP"] },
+  { code: "A", serviceNames: ["Abrieb"] },
+  { code: "CA", serviceNames: ["CA"] },
+  { code: "Bench", serviceNames: ["BENCH NOx", "BENCH SOx"] },
 ];
 
 /** Vergleichsform: ohne Groß-/Kleinschreibung und ohne Randleerzeichen. */
