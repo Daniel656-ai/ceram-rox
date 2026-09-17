@@ -22,7 +22,7 @@ async function loadSources(orderId: string): Promise<CustomerDocumentationSource
   const [order, resultRows, releases, m3Requests] = await Promise.all([
     api.orders.get(orderId) as Promise<any>,
     api.orderSamples.resultsOverview(orderId) as Promise<RawMeasurementRow[]>,
-    api.productionDocuments.releasesForOrder(orderId) as Promise<ReleaseRef[]>,
+    api.productionDocuments.releasesForOrder(orderId) as unknown as Promise<ReleaseRef[]>,
     api.productionDocuments.list({ orderId, kind: "m3_list" }),
   ]);
 
