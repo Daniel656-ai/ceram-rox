@@ -33,15 +33,30 @@ export interface M3ConstantsState {
   missing: string[];
 }
 
+/** Vergleichsform für Bezeichnungen (Groß-/Kleinschreibung, Leerzeichen, Klammern egal). */
+const normalizeName = (v: string): string =>
+  v.toLowerCase().replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
+
 /** Baut die Konstanten aus bereits geladenen globalen Feldern. */
 export function readM3Constants(
-  fields: Array<{ field_key: string; data_type?: string | null; default_value?: string | null; data_source?: string | null }>
+  fields: Array<{
+    field_key: string;
+    display_name?: string | null;
+    data_type?: string | null;
+    default_value?: string | null;
+    data_source?: string | null;
+  }>
 ): M3ConstantsState {
   const byKey = new Map(fields.map((f) => [f.field_key, f]));
+  // Manuell angelegte Konstanten können einen abweichenden technischen
+  // Schlüssel haben – dann greift die Erkennung über die Bezeichnung.
+  const byName = new Map(
+    fields.filter((f) => f.display_name).map((f) => [normalizeName(String(f.display_name)), f])
+  );
   const result: Partial<M3Constants> = {};
   const missing: string[] = [];
   for (const def of M3_CONSTANTS) {
-    const field = byKey.get(def.field_key);
+    const field = byKey.get(def.field_key) ?? byName.get(normalizeName(def.display_name));
     const value = field ? parseGlobalConstantValue(field) : undefined;
     if (typeof value === "number" && Number.isFinite(value)) result[def.target] = value;
     else missing.push(def.display_name);
