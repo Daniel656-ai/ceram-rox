@@ -627,6 +627,28 @@ export default function ProductionReleaseDetailPage() {
                 </p>
               </div>
               <div>
+                <Label>Auftrag</Label>
+                <Select
+                  value={orderId}
+                  disabled={readOnly || linkOrder.isPending}
+                  onValueChange={handleLinkOrder}
+                >
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Nicht zugeordnet" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Nicht zugeordnet</SelectItem>
+                    {(orderOptions as Array<Record<string, any>>).map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.order_number ?? o.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Die Zuordnung gilt für alle Revisionen dieser Fertigungsfreigabe und ist
+                  Grundlage für m³-Liste und Kundendokumentation.
+                </p>
+              </div>
+              <div>
                 <Label>Projekt</Label>
                 <Select value={projectId} disabled={readOnly} onValueChange={setProjectId}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Nicht zugeordnet" /></SelectTrigger>
