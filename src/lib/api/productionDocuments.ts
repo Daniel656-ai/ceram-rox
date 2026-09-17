@@ -52,6 +52,19 @@ export const productionDocuments = {
     )) as ProductionDocumentRequest | null;
   },
 
+  /** Existiert bereits eine m³-Liste zu genau dieser Freigabe-Revision? */
+  async findM3ForRelease(releaseId: string): Promise<ProductionDocumentRequest | null> {
+    const rows = (await unwrap(
+      db
+        .from("production_document_requests")
+        .select(SELECT)
+        .eq("doc_kind", "m3_list")
+        .eq("based_on_release_id", releaseId)
+        .limit(1)
+    )) as ProductionDocumentRequest[];
+    return rows?.[0] ?? null;
+  },
+
   /** Anfordern – bestehende Anforderung bleibt erhalten (Upsert je Auftrag/Art). */
   async request(args: {
     /** null = m³-Liste ohne zugeordneten Auftrag (Auftrag kann später entstehen). */
@@ -63,6 +76,18 @@ export const productionDocuments = {
     requestedBy: string | null;
     formDefinitionId?: string | null;
   }): Promise<ProductionDocumentRequest> {
+    // Fachregel: je Fertigungsfreigabe-Revision genau eine m³-Liste. Die Prüfung
+    // erfolgt auf Anwendungsebene und greift auch ohne zugeordneten Auftrag.
+    if (args.kind === "m3_list" && args.basedOnReleaseId) {
+      const existing = await this.findM3ForRelease(args.basedOnReleaseId);
+      // Eine erneute Anforderung derselben m³-Liste desselben Auftrags
+      // aktualisiert nur den bestehenden Eintrag (kein Duplikat).
+      const sameRecord = !!args.orderId && existing?.order_id === args.orderId;
+      if (existing && !sameRecord) {
+        throw new Error("Für diese Fertigungsfreigabe / Revision existiert bereits eine m³-Liste.");
+      }
+    }
+
     const payload = {
       order_id: args.orderId,
       doc_kind: args.kind,
