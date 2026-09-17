@@ -1,6 +1,11 @@
 import { dbClient } from "./client";
 import { unwrap } from "./_helpers";
 import type { DocKind, DocStatus } from "@/lib/productionDocuments/requirements";
+import {
+  planCustomerDocumentationSync,
+  type ExistingDoc,
+  type ReleaseAssignment,
+} from "@/lib/customerDocumentation/releaseSync";
 
 const db = dbClient as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -105,6 +110,43 @@ export const productionDocuments = {
         .eq("order_id", orderId)
         .order("revision_number", { ascending: true })
     )) as Array<Record<string, unknown>>;
+  },
+
+  /** Alle Fertigungsfreigaben mit zugeordnetem Auftrag (lesend). */
+  async releasesWithOrder(): Promise<ReleaseAssignment[]> {
+    return (await unwrap(
+      db
+        .from("production_releases")
+        .select("id,order_id,revision_number,is_current")
+        .not("order_id", "is", null)
+    )) as ReleaseAssignment[];
+  },
+
+  /**
+   * Stellt sicher: 1 Auftrag + mindestens 1 Fertigungsfreigabe = genau 1 Kundendoku.
+   * Bestehende Dokumente werden nie dupliziert, nur auf die aktuelle Revision nachgeführt.
+   */
+  async syncCustomerDocumentation(
+    requestedBy: string | null
+  ): Promise<{ created: number; updated: number }> {
+    const releases = await this.releasesWithOrder();
+    if (!releases.length) return { created: 0, updated: 0 };
+    const existing = await this.list({ kind: "documentation" });
+    const plan = planCustomerDocumentationSync(releases, existing as unknown as ExistingDoc[]);
+    for (const c of plan.creates) {
+      await this.request({
+        orderId: c.orderId,
+        kind: "documentation",
+        status: "wartet_auf_daten",
+        basedOnReleaseId: c.releaseId,
+        missing: [],
+        requestedBy,
+      });
+    }
+    for (const u of plan.updates) {
+      await this.update(u.id, { based_on_release_id: u.releaseId });
+    }
+    return { created: plan.creates.length, updated: plan.updates.length };
   },
 
   /** Zuordnung einer Fertigungsfreigabe (Stammsatz inkl. Revisionen) zum Auftrag. */
