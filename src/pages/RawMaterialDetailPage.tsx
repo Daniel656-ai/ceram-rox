@@ -333,7 +333,8 @@ export default function RawMaterialDetailPage() {
   if (isLoading) return <div className="p-8 text-muted-foreground">Laden...</div>;
   if (!mat) return <div className="p-8 text-muted-foreground">Rohstoff nicht gefunden</div>;
 
-  const batches = mat.raw_material_batches || [];
+  // Archivierte LOTs erscheinen nicht mehr in der aktuellen Übersicht (Historie bleibt erhalten).
+  const batches = (mat.raw_material_batches || []).filter((b: any) => !b.archived_at);
   const documents = mat.raw_material_documents || [];
   const analyses = mat.raw_material_analyses || [];
 
@@ -888,7 +889,8 @@ export default function RawMaterialDetailPage() {
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Gebinde {c.container_code} löschen?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Das Gebinde wird dauerhaft entfernt. Buchungen auf den Rohstoff bleiben erhalten.
+                                      Das Gebinde wird aus der aktuellen Verwaltung entfernt (archiviert). Buchungen,
+                                      Einwaagen und die gesamte Historie bleiben unverändert erhalten.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -898,15 +900,13 @@ export default function RawMaterialDetailPage() {
                                         deleteContainer.mutate(
                                           { id: c.id, raw_material_id: id! },
                                           {
-                                            onSuccess: () => toast.success(`Gebinde ${c.container_code} gelöscht`),
+                                            onSuccess: () => toast.success(`Gebinde ${c.container_code} entfernt (archiviert)`),
                                             onError: (err: any) => {
                                               const msg = String(err?.message || "");
-                                              if (err?.code === "23503" || msg.includes("foreign key")) {
-                                                toast.error(`Gebinde ${c.container_code} kann nicht gelöscht werden: Es bestehen abhängige Daten (z. B. Buchungen oder Einwaagen).`);
-                                              } else if (err?.code === "42501" || msg.toLowerCase().includes("policy")) {
-                                                toast.error("Keine Berechtigung zum Löschen von Gebinden.");
+                                              if (err?.code === "42501" || msg.toLowerCase().includes("policy")) {
+                                                toast.error("Keine Berechtigung zum Entfernen von Gebinden.");
                                               } else {
-                                                toast.error(`Gebinde konnte nicht gelöscht werden: ${msg || "Unbekannter Fehler"}`);
+                                                toast.error(`Gebinde konnte nicht entfernt werden: ${msg || "Unbekannter Fehler"}`);
                                               }
                                             },
                                           }
