@@ -75,8 +75,6 @@ export const measurementServices = {
     color?: string | null;
     department?: string | null;
     price?: number | null;
-    /** Kürzel der m³-/Beprobungslogik, z. B. „Geo“. */
-    sampling_code?: string | null;
   }) =>
     unwrap(
       dbClient.from("measurement_services").insert(service as any).select().single()
@@ -97,8 +95,6 @@ export const measurementServices = {
       price?: number | null;
       work_instructions?: string | null;
       archived_at?: string | null;
-      /** Kürzel der m³-/Beprobungslogik, z. B. „Geo“. */
-      sampling_code?: string | null;
       /** Prozessvorlage, die beim Buchen dieser Dienstleistung ausgeführt wird. */
       process_template_id?: string | null;
     }
