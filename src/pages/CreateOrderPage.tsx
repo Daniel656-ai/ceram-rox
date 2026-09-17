@@ -102,6 +102,56 @@ function RequiredStepsHint({ serviceId }: { serviceId: string }) {
   );
 }
 
+/**
+ * Eine gebuchte Dienstleistung des Auftrags samt ihrem Auftraggeberformular.
+ * Identische Darstellung für Positionen aus der Auswahl und für zusätzlich
+ * gebuchte Dienstleistungen – es gibt nur eine Datenhaltung.
+ */
+function MeasurementRow({
+  m, index, t, formValues, onFormChange, onDuplicate, onRemove,
+}: {
+  m: SelectedMeasurement;
+  index: number;
+  t: (key: string, opts?: any) => string;
+  formValues: Record<string, any>;
+  onFormChange: (key: string, value: any) => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="p-3 border rounded-md space-y-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-[120px]">
+          <p className="font-medium text-sm flex items-center gap-2 flex-wrap">
+            <span className="text-muted-foreground">#{index + 1}</span>
+            <span>{m.service_name}</span>
+            {m.source_package_name ? (
+              <Badge variant="secondary" className="font-normal">
+                <Layers className="h-3 w-3 mr-1" /> {m.source_package_name}
+              </Badge>
+            ) : m.origin === "template" ? (
+              <Badge variant="secondary" className="font-normal">aus Auswahl</Badge>
+            ) : (
+              <Badge variant="outline" className="font-normal">manuell</Badge>
+            )}
+          </p>
+          <RequiredStepsHint serviceId={m.service_id} />
+        </div>
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
+      </div>
+      <ServiceCustomerForm serviceId={m.service_id} formValues={formValues} onFormChange={onFormChange} />
+      <ServiceLinkedForms
+        serviceId={m.service_id}
+        context="customer"
+        values={formValues}
+        onChange={onFormChange}
+      />
+    </div>
+  );
+}
+
+
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
