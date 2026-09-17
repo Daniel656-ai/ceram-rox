@@ -72,6 +72,27 @@ export default function ProductionReleaseDetailPage() {
     queryFn: () => api.projects.list(),
   });
 
+  /** Auftragszuordnung – nutzt die bestehende Funktion `linkReleaseToOrder`. */
+  const { data: orderOptions = [] } = useQuery({
+    queryKey: ["orders-lookup-release"],
+    queryFn: () => api.orders.list(),
+  });
+  const linkOrder = useLinkReleaseToOrder();
+  const [orderId, setOrderId] = useState<string>(NONE);
+
+  const handleLinkOrder = async (next: string) => {
+    if (!id) return;
+    const prev = orderId;
+    setOrderId(next);
+    try {
+      await linkOrder.mutateAsync({ releaseId: id, orderId: next === NONE ? null : next });
+      toast.success(next === NONE ? "Auftragszuordnung entfernt" : "Auftrag zugeordnet");
+    } catch (e) {
+      setOrderId(prev);
+      toast.error(`Zuordnung fehlgeschlagen: ${(e as Error).message}`);
+    }
+  };
+
   useEffect(() => {
     if (!release) return;
     const next: Record<string, string> = {};
