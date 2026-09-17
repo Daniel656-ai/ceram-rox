@@ -17,7 +17,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Search, FileUp, Settings2, FileText } from "lucide-react";
+import { Plus, RotateCcw, Search, FileUp, Settings2, FileText } from "lucide-react";
 import {
   RELEASE_STATUS_LABEL, RELEASE_STATUS_COLOR, RELEASE_STATUSES, isReviewRequired,
 } from "@/lib/productionRelease/fields";
@@ -192,21 +192,42 @@ export default function ProductionReleasesPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!search && statusFilter === "all"}
+              onClick={() => { setSearch(""); setStatusFilter("all"); }}
+            >
+              <RotateCcw className="h-4 w-4 mr-1" /> Filter zurücksetzen
+            </Button>
           </div>
 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Freigabe / Rev.</TableHead>
-                <TableHead>Projekt</TableHead>
-                <TableHead>Kunde</TableHead>
-                <TableHead>Artikelnummer</TableHead>
-                <TableHead>Fertigstellung</TableHead>
-                <TableHead>Liefertermin</TableHead>
-                <TableHead className="text-right">Stückzahl</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Erstellt</TableHead>
-                <TableHead>Bearbeitet</TableHead>
+                {([
+                  ["release", "Freigabe / Rev.", ""],
+                  ["project_name", "Projekt", ""],
+                  ["customer_name", "Kunde", ""],
+                  ["article_number", "Artikelnummer", ""],
+                  ["completion_date", "Fertigstellung", ""],
+                  ["delivery_date", "Liefertermin", ""],
+                  ["piece_count", "Stückzahl", "text-right"],
+                  ["status", "Status", ""],
+                  ["created_at", "Erstellt", ""],
+                  ["updated_at", "Bearbeitet", ""],
+                ] as Array<[ReleaseSortKey, string, string]>).map(([key, label, cls]) => (
+                  <SortableHead
+                    key={key}
+                    columnKey={key}
+                    sortKey={sort.sortKey}
+                    sortDir={sort.sortDir}
+                    onToggle={sort.toggleSort}
+                    className={cls}
+                  >
+                    {label}
+                  </SortableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
