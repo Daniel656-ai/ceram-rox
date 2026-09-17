@@ -14,6 +14,8 @@ import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/prod
 import ReleaseSourceValues from "@/components/productionDocuments/ReleaseSourceValues";
 import M3ListForm from "@/components/productionDocuments/M3ListForm";
 import CustomerDocumentationTable from "@/components/productionDocuments/CustomerDocumentationTable";
+import { SortableHead } from "@/components/list/SortableHead";
+import { useListSort } from "@/lib/list/listSorting";
 import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
@@ -128,6 +130,11 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
   const { data: orders = [] } = useOrders();
   const releases = useReleaseRevisionList();
   const isM3 = kind === "m3_list";
+  const sort = useListSort<"order" | "source" | "status" | "requested">({
+    initialKey: "requested",
+    initialDir: "desc",
+    storageKey: `productionDocuments.listPrefs.${kind}`,
+  });
 
   const orderById = useMemo(() => {
     const map = new Map<string, any>();
