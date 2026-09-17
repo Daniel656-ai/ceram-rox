@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -32,11 +32,17 @@ import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
 import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
 import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
+import type { FormField } from "@/lib/api/formFields";
+import { planServiceSync, readServiceSelection } from "@/lib/orderServiceSelection";
 
 interface SelectedMeasurement {
   uid: string;
   service_id: string;
   service_name: string;
+  /** "template" = aus der Auswahl im Auftraggeberformular, "manual" = zusätzlich gebucht. */
+  origin?: "template" | "manual";
+  /** Auswahlwert, aus dem die Position entstanden ist. */
+  selection_token?: string | null;
   source_package_id?: string | null;
   source_package_name?: string | null;
 }
@@ -96,6 +102,56 @@ function RequiredStepsHint({ serviceId }: { serviceId: string }) {
   );
 }
 
+/**
+ * Eine gebuchte Dienstleistung des Auftrags samt ihrem Auftraggeberformular.
+ * Identische Darstellung für Positionen aus der Auswahl und für zusätzlich
+ * gebuchte Dienstleistungen – es gibt nur eine Datenhaltung.
+ */
+function MeasurementRow({
+  m, index, t, formValues, onFormChange, onDuplicate, onRemove,
+}: {
+  m: SelectedMeasurement;
+  index: number;
+  t: (key: string, opts?: any) => string;
+  formValues: Record<string, any>;
+  onFormChange: (key: string, value: any) => void;
+  onDuplicate: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="p-3 border rounded-md space-y-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-[120px]">
+          <p className="font-medium text-sm flex items-center gap-2 flex-wrap">
+            <span className="text-muted-foreground">#{index + 1}</span>
+            <span>{m.service_name}</span>
+            {m.source_package_name ? (
+              <Badge variant="secondary" className="font-normal">
+                <Layers className="h-3 w-3 mr-1" /> {m.source_package_name}
+              </Badge>
+            ) : m.origin === "template" ? (
+              <Badge variant="secondary" className="font-normal">aus Auswahl</Badge>
+            ) : (
+              <Badge variant="outline" className="font-normal">manuell</Badge>
+            )}
+          </p>
+          <RequiredStepsHint serviceId={m.service_id} />
+        </div>
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
+      </div>
+      <ServiceCustomerForm serviceId={m.service_id} formValues={formValues} onFormChange={onFormChange} />
+      <ServiceLinkedForms
+        serviceId={m.service_id}
+        context="customer"
+        values={formValues}
+        onChange={onFormChange}
+      />
+    </div>
+  );
+}
+
+
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
@@ -142,6 +198,9 @@ export default function CreateOrderPage() {
   // from order_kind_form_templates). No hardcoded field list.
   const [dynamicValues, setDynamicValues] = useState<Record<string, any>>({});
   const [dynamicFormId, setDynamicFormId] = useState<string | null>(null);
+  // Felder der Formularvorlage – daraus wird die Mehrfachauswahl
+  // "Dienstleistungen" gelesen (keine feste Feldliste im Code).
+  const [templateFields, setTemplateFields] = useState<FormField[]>([]);
 
   // ---------------------------------------------------------------------
   // Entwürfe & Vorlagen (additiv, über Berechtigungen deaktivierbar)
@@ -274,9 +333,59 @@ export default function CreateOrderPage() {
     if (!svc) return;
     setMeasurements((prev) => [
       ...prev,
-      { uid: newUid(), service_id: serviceId, service_name: svc.service_name },
+      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, origin: "manual" },
     ]);
   };
+
+  // ---------------------------------------------------------------------
+  // Auswahl "Dienstleistungen" im Auftraggeberformular -> echte Positionen
+  // ---------------------------------------------------------------------
+  const measurementsRef = useRef(measurements);
+  measurementsRef.current = measurements;
+  const formValuesRef = useRef(measurementFormValues);
+  formValuesRef.current = measurementFormValues;
+  const [unresolvedSelection, setUnresolvedSelection] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (templateFields.length === 0 || services.length === 0) return;
+    const selection = readServiceSelection(dynamicValues, templateFields as any);
+    const plan = planServiceSync({
+      selection,
+      services: services as any,
+      measurements: measurementsRef.current,
+      isEdited: (uid) =>
+        Object.values(formValuesRef.current[uid] || {}).some(
+          (v) => v !== undefined && v !== null && v !== ""
+        ),
+    });
+    setUnresolvedSelection(plan.unresolved);
+    if (plan.add.length === 0 && plan.remove.length === 0 && plan.keep.length === 0) return;
+
+    if (plan.add.length > 0 || plan.remove.length > 0) {
+      setMeasurements((prev) => {
+        const kept = prev.filter((m) => !plan.remove.includes(m.uid));
+        const additions: SelectedMeasurement[] = plan.add.map((a) => ({
+          uid: newUid(),
+          service_id: a.service.id,
+          service_name: a.service.service_name,
+          origin: "template",
+          selection_token: a.token,
+        }));
+        return [...kept, ...additions];
+      });
+    }
+    if (plan.keep.length > 0) {
+      // Bereits bearbeitete Positionen bleiben erhalten und werden nur aus der
+      // automatischen Steuerung entlassen.
+      setMeasurements((prev) =>
+        prev.map((m) => (plan.keep.includes(m.uid) ? { ...m, origin: "manual", selection_token: null } : m))
+      );
+      toast.info("Bereits ausgefüllte Dienstleistungen bleiben erhalten", {
+        description: "Sie stehen jetzt unter „Zusätzliche Dienstleistungen“ und können dort entfernt werden.",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dynamicValues, templateFields, services]);
 
   const applyServicePackage = (packageId: string) => {
     const pkg = servicePackages.find((p: any) => p.id === packageId);
@@ -639,6 +748,10 @@ export default function CreateOrderPage() {
   };
 
   const laborServices = services.filter((s) => s.category === "labor");
+  // Aus der Auswahl im Auftraggeberformular entstandene Positionen vs.
+  // zusätzlich gebuchte Dienstleistungen (gleiche Datenhaltung, nur Anzeige).
+  const templateMeasurements = measurements.filter((m) => m.origin === "template");
+  const extraMeasurements = measurements.filter((m) => m.origin !== "template");
   const pilotServices = services.filter((s) => s.category === "pilot_plant");
 
   const orderTypeLabels: Record<string, string> = {
@@ -784,6 +897,7 @@ export default function CreateOrderPage() {
           values={dynamicValues}
           onChange={(patch) => setDynamicValues((prev) => ({ ...prev, ...patch }))}
           onTemplateResolved={setDynamicFormId}
+          onFieldsResolved={setTemplateFields}
         />
 
 
@@ -849,8 +963,36 @@ export default function CreateOrderPage() {
               </div>
             )}
 
+            {templateMeasurements.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Aus der Auswahl übernommen</p>
+                {templateMeasurements.map((m, idx) => (
+                  <MeasurementRow
+                    key={m.uid}
+                    m={m}
+                    index={idx}
+                    t={t}
+                    formValues={measurementFormValues[m.uid] || {}}
+                    onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
+                    onDuplicate={() => duplicateMeasurement(m.uid)}
+                    onRemove={() => removeMeasurement(m.uid)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {unresolvedSelection.length > 0 && (
+              <p className="text-xs text-amber-700">
+                Keine passende Dienstleistung hinterlegt für: {unresolvedSelection.join(", ")}
+              </p>
+            )}
+
             <div>
-              <Label>{t("orders:add_measurement")}</Label>
+              <Label>
+                {templateMeasurements.length > 0 || orderKind === "pilot_plant"
+                  ? "Zusätzliche Dienstleistungen"
+                  : t("orders:add_measurement")}
+              </Label>
               <Popover open={servicePickerOpen} onOpenChange={setServicePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -908,38 +1050,17 @@ export default function CreateOrderPage() {
               <p className="text-sm text-muted-foreground">{t("orders:no_measurements_hint")}</p>
             ) : (
               <div className="space-y-3">
-                {measurements.map((m, idx) => (
-                  <div key={m.uid} className="p-3 border rounded-md space-y-2">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div className="flex-1 min-w-[120px]">
-                        <p className="font-medium text-sm flex items-center gap-2 flex-wrap">
-                          <span className="text-muted-foreground">#{idx + 1}</span>
-                          <span>{m.service_name}</span>
-                          {m.source_package_name ? (
-                            <Badge variant="secondary" className="font-normal">
-                              <Layers className="h-3 w-3 mr-1" /> {m.source_package_name}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="font-normal">manuell</Badge>
-                          )}
-                        </p>
-                        <RequiredStepsHint serviceId={m.service_id} />
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateMeasurement(m.uid)} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(m.uid)}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                    <ServiceCustomerForm
-                      serviceId={m.service_id}
-                      formValues={measurementFormValues[m.uid] || {}}
-                      onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
-                    />
-                    <ServiceLinkedForms
-                      serviceId={m.service_id}
-                      context="customer"
-                      values={measurementFormValues[m.uid] || {}}
-                      onChange={(key, value) => updateFormValue(m.uid, key, value)}
-                    />
-                  </div>
+                {extraMeasurements.map((m, idx) => (
+                  <MeasurementRow
+                    key={m.uid}
+                    m={m}
+                    index={templateMeasurements.length + idx}
+                    t={t}
+                    formValues={measurementFormValues[m.uid] || {}}
+                    onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
+                    onDuplicate={() => duplicateMeasurement(m.uid)}
+                    onRemove={() => removeMeasurement(m.uid)}
+                  />
                 ))}
               </div>
             )}
