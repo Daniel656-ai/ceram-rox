@@ -18,7 +18,7 @@ export type DocStatus =
 
 export const DOC_KIND_LABEL: Record<DocKind, string> = {
   m3_list: "m³-Liste",
-  documentation: "Dokumentation",
+  documentation: "Kundendokumentation",
 };
 
 export const DOC_STATUS_LABEL: Record<DocStatus, string> = {
