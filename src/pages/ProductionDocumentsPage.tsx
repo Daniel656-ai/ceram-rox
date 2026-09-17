@@ -13,6 +13,7 @@ import ProductionReleasesPage from "@/pages/ProductionReleasesPage";
 import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/productionDocuments/ReleaseRevisionPicker";
 import ReleaseSourceValues from "@/components/productionDocuments/ReleaseSourceValues";
 import M3ListForm from "@/components/productionDocuments/M3ListForm";
+import CustomerDocumentationTable from "@/components/productionDocuments/CustomerDocumentationTable";
 import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
@@ -307,7 +308,7 @@ export default function ProductionDocumentsPage() {
         <TabsList>
           <TabsTrigger value="freigaben">Fertigungsfreigaben</TabsTrigger>
           <TabsTrigger value="m3">m³-Liste</TabsTrigger>
-          <TabsTrigger value="dokumentation">Dokumentation</TabsTrigger>
+          <TabsTrigger value="dokumentation">Kundendoku</TabsTrigger>
         </TabsList>
 
         <TabsContent value="freigaben" className="mt-4">
@@ -322,7 +323,8 @@ export default function ProductionDocumentsPage() {
         </TabsContent>
 
         <TabsContent value="dokumentation" className="mt-4">
-          <FollowUpTable kind="documentation" />
+          {/* Eigene Ansicht der Kundendokumentation – die m³-Liste bleibt unverändert. */}
+          <CustomerDocumentationTable />
         </TabsContent>
       </Tabs>
     </div>
