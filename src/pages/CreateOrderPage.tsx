@@ -913,8 +913,36 @@ export default function CreateOrderPage() {
               </div>
             )}
 
+            {templateMeasurements.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Aus der Auswahl übernommen</p>
+                {templateMeasurements.map((m, idx) => (
+                  <MeasurementRow
+                    key={m.uid}
+                    m={m}
+                    index={idx}
+                    t={t}
+                    formValues={measurementFormValues[m.uid] || {}}
+                    onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
+                    onDuplicate={() => duplicateMeasurement(m.uid)}
+                    onRemove={() => removeMeasurement(m.uid)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {unresolvedSelection.length > 0 && (
+              <p className="text-xs text-amber-700">
+                Keine passende Dienstleistung hinterlegt für: {unresolvedSelection.join(", ")}
+              </p>
+            )}
+
             <div>
-              <Label>{t("orders:add_measurement")}</Label>
+              <Label>
+                {templateMeasurements.length > 0 || orderKind === "pilot_plant"
+                  ? "Zusätzliche Dienstleistungen"
+                  : t("orders:add_measurement")}
+              </Label>
               <Popover open={servicePickerOpen} onOpenChange={setServicePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -972,38 +1000,17 @@ export default function CreateOrderPage() {
               <p className="text-sm text-muted-foreground">{t("orders:no_measurements_hint")}</p>
             ) : (
               <div className="space-y-3">
-                {measurements.map((m, idx) => (
-                  <div key={m.uid} className="p-3 border rounded-md space-y-2">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div className="flex-1 min-w-[120px]">
-                        <p className="font-medium text-sm flex items-center gap-2 flex-wrap">
-                          <span className="text-muted-foreground">#{idx + 1}</span>
-                          <span>{m.service_name}</span>
-                          {m.source_package_name ? (
-                            <Badge variant="secondary" className="font-normal">
-                              <Layers className="h-3 w-3 mr-1" /> {m.source_package_name}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="font-normal">manuell</Badge>
-                          )}
-                        </p>
-                        <RequiredStepsHint serviceId={m.service_id} />
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateMeasurement(m.uid)} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeMeasurement(m.uid)}><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                    <ServiceCustomerForm
-                      serviceId={m.service_id}
-                      formValues={measurementFormValues[m.uid] || {}}
-                      onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
-                    />
-                    <ServiceLinkedForms
-                      serviceId={m.service_id}
-                      context="customer"
-                      values={measurementFormValues[m.uid] || {}}
-                      onChange={(key, value) => updateFormValue(m.uid, key, value)}
-                    />
-                  </div>
+                {extraMeasurements.map((m, idx) => (
+                  <MeasurementRow
+                    key={m.uid}
+                    m={m}
+                    index={templateMeasurements.length + idx}
+                    t={t}
+                    formValues={measurementFormValues[m.uid] || {}}
+                    onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
+                    onDuplicate={() => duplicateMeasurement(m.uid)}
+                    onRemove={() => removeMeasurement(m.uid)}
+                  />
                 ))}
               </div>
             )}
