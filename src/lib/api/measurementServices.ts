@@ -33,6 +33,63 @@ export const measurementServices = {
         .order("service_name")
     ),
 
+  /**
+   * Prüft, ob ein Beprobungskürzel bereits einer anderen aktiven Dienstleistung
+   * gehört. Die Datenbank sichert dies zusätzlich über einen eindeutigen Index ab;
+   * hier entsteht nur die verständliche Meldung für die Oberfläche.
+   */
+  async assertSamplingCodeFree(code: string | null | undefined, exceptId?: string) {
+    const trimmed = (code ?? "").trim();
+    if (!trimmed) return;
+    const rows = (await unwrap(
+      dbClient
+        .from("measurement_services")
+        .select("id, service_name, sampling_code")
+        .eq("active", true)
+        .is("archived_at", null)
+    )) as { id: string; service_name: string; sampling_code: string | null }[];
+    const clash = rows.find(
+      (r) =>
+        r.id !== exceptId &&
+        (r.sampling_code ?? "").trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (clash) {
+      throw new Error(
+        `Das Beprobungskürzel ${trimmed} ist bereits der Dienstleistung ${clash.service_name} zugeordnet.`
+      );
+    }
+  },
+
+  /**
+   * Löst die in der m³-Liste berechneten Beprobungskürzel über die gepflegten
+   * Stammdaten auf. Es wird ausschließlich exakt (ohne Groß-/Kleinschreibung)
+   * verglichen – keine Namensähnlichkeit, keine Ersatzdienstleistung.
+   */
+  async resolveSamplingCodes(codes: string[]) {
+    const rows = (await unwrap(
+      dbClient
+        .from("measurement_services")
+        .select("id, service_name, sampling_code")
+        .eq("active", true)
+        .is("archived_at", null)
+    )) as { id: string; service_name: string; sampling_code: string | null }[];
+    const byCode = new Map(
+      rows
+        .filter((r) => (r.sampling_code ?? "").trim())
+        .map((r) => [(r.sampling_code as string).trim().toLowerCase(), r])
+    );
+    const matched: { code: string; id: string; service_name: string }[] = [];
+    const missing: string[] = [];
+    for (const raw of codes) {
+      const code = raw.trim();
+      if (!code) continue;
+      const hit = byCode.get(code.toLowerCase());
+      if (hit) matched.push({ code, id: hit.id, service_name: hit.service_name });
+      else missing.push(code);
+    }
+    return { matched, missing };
+  },
+
   create: (service: {
     service_name: string;
     category: string;
@@ -42,6 +99,8 @@ export const measurementServices = {
     color?: string | null;
     department?: string | null;
     price?: number | null;
+    /** Kürzel der m³-/Beprobungslogik, z. B. „Geo“. */
+    sampling_code?: string | null;
   }) =>
     unwrap(
       dbClient.from("measurement_services").insert(service as any).select().single()
@@ -62,6 +121,8 @@ export const measurementServices = {
       price?: number | null;
       work_instructions?: string | null;
       archived_at?: string | null;
+      /** Kürzel der m³-/Beprobungslogik, z. B. „Geo“. */
+      sampling_code?: string | null;
       /** Prozessvorlage, die beim Buchen dieser Dienstleistung ausgeführt wird. */
       process_template_id?: string | null;
     }

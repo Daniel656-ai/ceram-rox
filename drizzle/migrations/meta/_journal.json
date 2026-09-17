@@ -50,6 +50,13 @@
       "when": 1789643202377,
       "tag": "0006_add_container_batch_archive_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789646333143,
+      "tag": "0007_add_service_sampling_code",
+      "breakpoints": true
     }
   ]
 }

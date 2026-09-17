@@ -2645,6 +2645,7 @@ export type Database = {
           price: number | null
           process_template_id: string | null
           responsible_user_id: string | null
+          sampling_code: string | null
           service_name: string
           standard_duration_hours: number
           updated_at: string
@@ -2665,6 +2666,7 @@ export type Database = {
           price?: number | null
           process_template_id?: string | null
           responsible_user_id?: string | null
+          sampling_code?: string | null
           service_name: string
           standard_duration_hours?: number
           updated_at?: string
@@ -2685,6 +2687,7 @@ export type Database = {
           price?: number | null
           process_template_id?: string | null
           responsible_user_id?: string | null
+          sampling_code?: string | null
           service_name?: string
           standard_duration_hours?: number
           updated_at?: string
