@@ -13,6 +13,9 @@ import {
 } from "./calculations";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 
+/** Gespeicherte, manuell änderbare Beprobungsauswahl (Kürzel-Liste). */
+export const M3_LAB_SELECTION_KEY = "lab_tests_selected";
+
 export interface M3DeriveInput {
   release: Record<string, unknown> | null;
   orderNumber: string | null;
@@ -77,7 +80,14 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
     deliveryVolumeM3: num(stored.delivery_volume_m3),
     cells: cellCount,
   });
-  values.lab_tests = scope.text;
+  // Automatik = nur Vorschlag. Sobald der Benutzer die Auswahl gespeichert hat,
+  // ist ausschließlich diese Auswahl maßgeblich (auch eine leere Auswahl).
+  const manual = Array.isArray(stored[M3_LAB_SELECTION_KEY])
+    ? (stored[M3_LAB_SELECTION_KEY] as unknown[]).map((c) => String(c).trim()).filter(Boolean)
+    : null;
+  values.lab_tests_auto = scope.text;
+  values[M3_LAB_SELECTION_KEY] = manual;
+  values.lab_tests = (manual ?? scope.tests).join(", ");
   if (scope.soxDroppedByVolume) {
     notices.push("SOx ist gefordert, entfällt aber laut Fachlogik, weil die Liefermenge über 20 m³ liegt. Bitte bestätigen.");
   }
