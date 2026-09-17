@@ -23,5 +23,7 @@ describe("samplingCodeMap", () => {
     expect(samplingCodeForServiceName("BET")).toBe("BET");
     expect(samplingCodeForServiceName("Geometrievermessung")).toBe("Geo");
     expect(samplingCodeForServiceName("Schulung")).toBeNull();
+    expect(samplingCodeForServiceName("BENCH NOx")).toBe("Bench");
+    expect(samplingCodeForServiceName("BENCH SOx")).toBe("Bench");
   });
 });
