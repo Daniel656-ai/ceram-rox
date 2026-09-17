@@ -20,7 +20,10 @@ import { Eye, FileDown, RotateCcw, Search, Table2 } from "lucide-react";
 import { toast } from "sonner";
 import { SortableHead } from "@/components/list/SortableHead";
 import { useListSort } from "@/lib/list/listSorting";
-import { useEnsureCustomerDocumentation, useProductionDocumentRequests } from "@/hooks/useProductionDocuments";
+import {
+  useEnsureCustomerDocumentation,
+  useProductionDocumentRequests,
+} from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
 import {
   DOC_STATUS_COLOR, DOC_STATUS_LABEL, type DocStatus,
@@ -112,9 +115,7 @@ function ExportButtons({
 export default function CustomerDocumentationTable() {
   const navigate = useNavigate();
   const { t } = useTranslation("customer_documentation");
-  // Jede Fertigungsfreigabe erhält automatisch genau eine Kundendoku je Auftrag;
-  // die Grundlage wird dabei auf die aktuell gültige Revision nachgeführt.
-  useEnsureCustomerDocumentation();
+  const { error: syncError } = useEnsureCustomerDocumentation();
   const { data: requests = [], isLoading } = useProductionDocumentRequests({ kind: "documentation" });
   const { data: orders = [] } = useOrders();
 
@@ -182,6 +183,11 @@ export default function CustomerDocumentationTable() {
         <p className="text-sm text-muted-foreground">{t("ui.subtitle")}</p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {syncError && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            Kundendokumentationen konnten nicht automatisch abgeglichen werden: {syncError.message}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

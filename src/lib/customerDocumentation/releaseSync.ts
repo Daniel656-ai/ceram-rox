@@ -1,10 +1,7 @@
 /**
- * Zuordnungslogik der Kundendokumentation (rein rechnend, ohne Backendzugriff).
+ * Reine Regel-Logik: „1 Auftrag + mindestens 1 Fertigungsfreigabe = genau 1 Kundendoku".
  *
- * - Genau eine Kundendoku je Auftrag.
- * - Grundlage ist immer die aktuell gültige Freigabe-Revision
- *   (`is_current`, bei Gleichstand die höchste Revisionsnummer).
- * - Ältere Revisionen bleiben unangetastet erhalten.
+ * Bewusst ohne Datenbankzugriff, damit die Regel testbar bleibt.
  */
 
 export interface ReleaseAssignment {
@@ -21,41 +18,48 @@ export interface ExistingDoc {
 }
 
 export interface SyncPlan {
-  /** Aufträge ohne Kundendoku – je Auftrag genau ein neues Dokument. */
   creates: Array<{ orderId: string; releaseId: string }>;
-  /** Bestehende Kundendokus, deren Grundlage nachgeführt werden muss. */
   updates: Array<{ id: string; releaseId: string }>;
 }
 
-/** Aktuell gültige Revision je Auftrag. */
+/** Aktuelle Revision je Auftrag: `is_current`, sonst höchste Revisionsnummer. */
 export function currentReleaseByOrder(releases: ReleaseAssignment[]): Map<string, string> {
-  const best = new Map<string, { id: string; rev: number; isCurrent: boolean }>();
+  const best = new Map<string, ReleaseAssignment>();
   for (const r of releases) {
     if (!r.order_id) continue;
-    const cand = { id: r.id, rev: Number(r.revision_number) || 0, isCurrent: r.is_current === true };
     const prev = best.get(r.order_id);
-    const better =
-      !prev ||
-      (cand.isCurrent && !prev.isCurrent) ||
-      (cand.isCurrent === prev.isCurrent && cand.rev > prev.rev);
-    if (better) best.set(r.order_id, cand);
+    if (!prev) {
+      best.set(r.order_id, r);
+      continue;
+    }
+    const rCurrent = r.is_current === true;
+    const pCurrent = prev.is_current === true;
+    if (rCurrent !== pCurrent) {
+      if (rCurrent) best.set(r.order_id, r);
+      continue;
+    }
+    if ((r.revision_number ?? 0) > (prev.revision_number ?? 0)) best.set(r.order_id, r);
   }
-  return new Map([...best].map(([orderId, v]) => [orderId, v.id]));
+  const out = new Map<string, string>();
+  for (const [orderId, r] of best) out.set(orderId, r.id);
+  return out;
 }
 
 export function planCustomerDocumentationSync(
   releases: ReleaseAssignment[],
   existing: ExistingDoc[]
 ): SyncPlan {
+  const current = currentReleaseByOrder(releases);
   const byOrder = new Map<string, ExistingDoc>();
-  for (const d of existing) if (d.order_id && !byOrder.has(d.order_id)) byOrder.set(d.order_id, d);
-
-  const creates: SyncPlan["creates"] = [];
-  const updates: SyncPlan["updates"] = [];
-  for (const [orderId, releaseId] of currentReleaseByOrder(releases)) {
-    const doc = byOrder.get(orderId);
-    if (!doc) creates.push({ orderId, releaseId });
-    else if (doc.based_on_release_id !== releaseId) updates.push({ id: doc.id, releaseId });
+  for (const d of existing) {
+    if (!d.order_id) continue;
+    if (!byOrder.has(d.order_id)) byOrder.set(d.order_id, d);
   }
-  return { creates, updates };
+  const plan: SyncPlan = { creates: [], updates: [] };
+  for (const [orderId, releaseId] of current) {
+    const doc = byOrder.get(orderId);
+    if (!doc) plan.creates.push({ orderId, releaseId });
+    else if (doc.based_on_release_id !== releaseId) plan.updates.push({ id: doc.id, releaseId });
+  }
+  return plan;
 }
