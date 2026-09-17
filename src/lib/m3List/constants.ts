@@ -33,17 +33,39 @@ export interface M3ConstantsState {
   missing: string[];
 }
 
+/** Vergleichsform für Bezeichnungen (Groß-/Kleinschreibung, Leerzeichen, Klammern egal). */
+const normalizeName = (v: string): string =>
+  v.toLowerCase().replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
+
 /** Baut die Konstanten aus bereits geladenen globalen Feldern. */
 export function readM3Constants(
-  fields: Array<{ field_key: string; data_type?: string | null; default_value?: string | null; data_source?: string | null }>
+  fields: Array<{
+    field_key: string;
+    display_name?: string | null;
+    data_type?: string | null;
+    default_value?: string | null;
+    data_source?: string | null;
+  }>
 ): M3ConstantsState {
   const byKey = new Map(fields.map((f) => [f.field_key, f]));
+  // Manuell angelegte Konstanten können einen abweichenden technischen
+  // Schlüssel haben – dann greift die Erkennung über die Bezeichnung.
+  const byName = new Map(
+    fields.filter((f) => f.display_name).map((f) => [normalizeName(String(f.display_name)), f])
+  );
   const result: Partial<M3Constants> = {};
   const missing: string[] = [];
   for (const def of M3_CONSTANTS) {
-    const field = byKey.get(def.field_key);
+    const field = byKey.get(def.field_key) ?? byName.get(normalizeName(def.display_name));
     const value = field ? parseGlobalConstantValue(field) : undefined;
-    if (typeof value === "number" && Number.isFinite(value)) result[def.target] = value;
+    // Zahlenwert auch dann verwenden, wenn das Feld als Text angelegt wurde.
+    const numeric =
+      typeof value === "number"
+        ? value
+        : field?.default_value != null && String(field.default_value).trim() !== ""
+          ? Number(String(field.default_value).trim().replace(/\s/g, "").replace(",", "."))
+          : NaN;
+    if (Number.isFinite(numeric)) result[def.target] = numeric as number;
     else missing.push(def.display_name);
   }
   return {
@@ -57,6 +79,14 @@ export function readM3Constants(
  * Bestehende Konstanten werden nie überschrieben.
  */
 export async function ensureM3Constants(): Promise<void> {
+  // Sind alle Konstanten bereits gepflegt – egal unter welchem Objekt oder
+  // Schlüssel –, wird nichts angelegt und nichts geschrieben.
+  try {
+    const all = await api.globalFields.list();
+    if (!readM3Constants(all as never[]).missing.length) return;
+  } catch {
+    // Lesen nicht möglich: normaler Weg unten versuchen.
+  }
   const objects = await api.globalObjects.list();
   let object = objects.find((o) => o.object_key === M3_CONSTANT_OBJECT_KEY) ?? null;
   if (!object) {
