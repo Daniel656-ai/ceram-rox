@@ -80,7 +80,10 @@ export const productionDocuments = {
     // erfolgt auf Anwendungsebene und greift auch ohne zugeordneten Auftrag.
     if (args.kind === "m3_list" && args.basedOnReleaseId) {
       const existing = await this.findM3ForRelease(args.basedOnReleaseId);
-      if (existing) {
+      // Eine erneute Anforderung derselben m³-Liste desselben Auftrags
+      // aktualisiert nur den bestehenden Eintrag (kein Duplikat).
+      const sameRecord = !!args.orderId && existing?.order_id === args.orderId;
+      if (existing && !sameRecord) {
         throw new Error("Für diese Fertigungsfreigabe / Revision existiert bereits eine m³-Liste.");
       }
     }
