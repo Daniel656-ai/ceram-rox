@@ -77,6 +77,21 @@ export async function exportCustomerDocumentationPdf(opts: {
   const locale = docLocale(lang);
   const { default: jsPDF } = await import("jspdf");
 
+  // Die Standardschriften von jsPDF kennen keine Tief-/Hochstellungen. Für das
+  // PDF werden sie durch normale Ziffern ersetzt; Anzeige und CSV bleiben
+  // unverändert.
+  const SUBSCRIPTS: Record<string, string> = {
+    "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
+    "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
+    "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
+  };
+  const safe = (v: unknown) =>
+    String(v ?? "").replace(/[₀-₉⁰¹²³⁴]/g, (c) => SUBSCRIPTS[c] ?? c);
+  const clip = (v: unknown, max: number) => {
+    const s = safe(v);
+    return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+  };
+
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const margin = 48;
   const pageW = pdf.internal.pageSize.getWidth();
@@ -91,10 +106,11 @@ export async function exportCustomerDocumentationPdf(opts: {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const text = (value: string, x: number, size: number, style: "normal" | "bold" = "normal") => {
     pdf.setFontSize(size);
     pdf.setFont("helvetica", style);
-    pdf.text(value, x, y);
+    pdf.text(safe(value), x, y);
   };
 
   // Titel
@@ -147,17 +163,17 @@ export async function exportCustomerDocumentationPdf(opts: {
       ensureSpace(14);
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "bold");
-      pdf.text(String(t("table.parameter")), margin + 8, y);
-      pdf.text(String(t("table.value")), margin + 280, y);
-      pdf.text(String(t("table.unit")), margin + 400, y);
+      pdf.text(safe(t("table.parameter")), margin + 8, y);
+      pdf.text(safe(t("table.value")), margin + 280, y);
+      pdf.text(safe(t("table.unit")), margin + 400, y);
       y += 12;
       pdf.setFont("helvetica", "normal");
       for (const row of table.rows) {
         ensureSpace(13);
         pdf.setFontSize(9);
-        pdf.text(String(fieldLabel(t, row)).slice(0, 60), margin + 8, y);
-        pdf.text(String(row.value).slice(0, 30), margin + 280, y);
-        pdf.text(String(row.unit ?? ""), margin + 400, y);
+        pdf.text(clip(fieldLabel(t, row), 46), margin + 8, y);
+        pdf.text(clip(row.value, 24), margin + 280, y);
+        pdf.text(safe(row.unit ?? ""), margin + 400, y);
         y += 12;
       }
       y += 8;
@@ -167,16 +183,16 @@ export async function exportCustomerDocumentationPdf(opts: {
       ensureSpace(14);
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "bold");
-      pdf.text(String(t("table.document")), margin + 8, y);
-      pdf.text(String(t("table.kind")), margin + 280, y);
-      pdf.text(String(t("table.reference")), margin + 400, y);
+      pdf.text(safe(t("table.document")), margin + 8, y);
+      pdf.text(safe(t("table.kind")), margin + 250, y);
+      pdf.text(safe(t("table.reference")), margin + 400, y);
       y += 12;
       pdf.setFont("helvetica", "normal");
       for (const d of chapter.documents) {
         ensureSpace(13);
-        pdf.text(String(d.name).slice(0, 60), margin + 8, y);
-        pdf.text(String(t(`doc_kinds.${d.kindKey}`)).slice(0, 25), margin + 280, y);
-        pdf.text(String(d.reference ?? "").slice(0, 30), margin + 400, y);
+        pdf.text(clip(d.name, 42), margin + 8, y);
+        pdf.text(clip(t(`doc_kinds.${d.kindKey}`), 34), margin + 250, y);
+        pdf.text(clip(d.reference ?? "", 30), margin + 400, y);
         y += 12;
       }
       y += 8;
