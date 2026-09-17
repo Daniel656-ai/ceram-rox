@@ -106,7 +106,6 @@ export async function exportCustomerDocumentationPdf(opts: {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-shadow
   const text = (value: string, x: number, size: number, style: "normal" | "bold" = "normal") => {
     pdf.setFontSize(size);
     pdf.setFont("helvetica", style);
