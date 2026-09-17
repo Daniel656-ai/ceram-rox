@@ -698,6 +698,10 @@ export default function CreateOrderPage() {
   };
 
   const laborServices = services.filter((s) => s.category === "labor");
+  // Aus der Auswahl im Auftraggeberformular entstandene Positionen vs.
+  // zusätzlich gebuchte Dienstleistungen (gleiche Datenhaltung, nur Anzeige).
+  const templateMeasurements = measurements.filter((m) => m.origin === "template");
+  const extraMeasurements = measurements.filter((m) => m.origin !== "template");
   const pilotServices = services.filter((s) => s.category === "pilot_plant");
 
   const orderTypeLabels: Record<string, string> = {
