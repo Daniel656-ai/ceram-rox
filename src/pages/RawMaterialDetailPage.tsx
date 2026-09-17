@@ -399,7 +399,7 @@ export default function RawMaterialDetailPage() {
       }
 
       setBatchOpen(false);
-      setBNum(""); setBDate(""); setBQty(""); setBSupplier(""); setBNotes("");
+      setBNum(""); setBDate(""); setBQty(""); setBNotes("");
       setBManufacturerBatch(""); setBGoodsReceiptDate("");
       setBMoisture(""); setBPh("");
       setBContainerKind("big_bag"); setBContainerCode("");
