@@ -58,7 +58,14 @@ export function readM3Constants(
   for (const def of M3_CONSTANTS) {
     const field = byKey.get(def.field_key) ?? byName.get(normalizeName(def.display_name));
     const value = field ? parseGlobalConstantValue(field) : undefined;
-    if (typeof value === "number" && Number.isFinite(value)) result[def.target] = value;
+    // Zahlenwert auch dann verwenden, wenn das Feld als Text angelegt wurde.
+    const numeric =
+      typeof value === "number"
+        ? value
+        : field?.default_value != null && String(field.default_value).trim() !== ""
+          ? Number(String(field.default_value).trim().replace(/\s/g, "").replace(",", "."))
+          : NaN;
+    if (Number.isFinite(numeric)) result[def.target] = numeric as number;
     else missing.push(def.display_name);
   }
   return {
