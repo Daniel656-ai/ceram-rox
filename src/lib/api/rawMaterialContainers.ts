@@ -140,14 +140,24 @@ export const rawMaterialContainers = {
    * Zusätzlich werden LOTs archiviert, die danach kein aktives Gebinde mehr haben.
    */
   delete: async (id: string) => {
-    const rows = await unwrap<any[]>(
-      db
-        .from("raw_material_containers")
-        .update({ archived_at: new Date().toISOString() })
-        .eq("id", id)
-        .is("archived_at", null)
-        .select("id, batch_id")
-    );
+    let rows: any[] | null = null;
+    try {
+      rows = await unwrap<any[]>(
+        db
+          .from("raw_material_containers")
+          .update({ archived_at: new Date().toISOString() })
+          .eq("id", id)
+          .is("archived_at", null)
+          .select("id, batch_id")
+      );
+    } catch (e: any) {
+      if (!isMissingArchivedColumn(e)) throw e;
+      // Datenbestand ohne Archiv-Feld: Gebinde bleibt erhalten, kann aber nicht
+      // ausgeblendet werden. Klare Meldung statt technischem Fehler.
+      throw new Error(
+        "Gebinde kann in diesem Datenbestand noch nicht archiviert werden – das Archiv-Feld fehlt in der Datenbank. Bitte die ausstehende Datenbank-Ergänzung einspielen."
+      );
+    }
     if (!rows || rows.length === 0) {
       const still = await unwrap<any[]>(
         db.from("raw_material_containers").select("id, archived_at").eq("id", id)
