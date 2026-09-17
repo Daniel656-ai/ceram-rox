@@ -107,6 +107,73 @@ export const productionDocuments = {
     )) as Array<Record<string, unknown>>;
   },
 
+  /** Alle Freigabe-Revisionen, die einem Auftrag zugeordnet sind (lesend). */
+  async releasesWithOrder(): Promise<
+    Array<{ id: string; order_id: string; revision_number: number | null; is_current: boolean | null }>
+  > {
+    return (await unwrap(
+      db
+        .from("production_releases")
+        .select("id,order_id,revision_number,is_current")
+        .not("order_id", "is", null)
+    )) as Array<{ id: string; order_id: string; revision_number: number | null; is_current: boolean | null }>;
+  },
+
+  /**
+   * Kundendokumentation je Auftrag sicherstellen.
+   *
+   * Regeln:
+   * - Jeder Auftrag mit mindestens einer zugeordneten Fertigungsfreigabe hat
+   *   automatisch genau eine Kundendokumentation (keine Anforderung nötig).
+   * - Eindeutigkeit über den bestehenden Unique-Index (order_id, doc_kind);
+   *   neue Revisionen erzeugen daher nie ein zweites Dokument.
+   * - Die Grundlage (`based_on_release_id`) wird auf die aktuell gültige
+   *   Revision nachgeführt (is_current, sonst höchste Revisionsnummer).
+   */
+  async syncCustomerDocumentation(requestedBy: string | null): Promise<{
+    created: number;
+    updated: number;
+  }> {
+    const releases = await this.releasesWithOrder();
+    if (!releases.length) return { created: 0, updated: 0 };
+
+    const currentByOrder = new Map<string, { id: string; rev: number; isCurrent: boolean }>();
+    for (const r of releases) {
+      const cand = { id: r.id, rev: Number(r.revision_number) || 0, isCurrent: r.is_current === true };
+      const prev = currentByOrder.get(r.order_id);
+      const better =
+        !prev ||
+        (cand.isCurrent && !prev.isCurrent) ||
+        (cand.isCurrent === prev.isCurrent && cand.rev > prev.rev);
+      if (better) currentByOrder.set(r.order_id, cand);
+    }
+
+    const existing = await this.list({ kind: "documentation" });
+    const byOrder = new Map<string, ProductionDocumentRequest>();
+    for (const d of existing) if (d.order_id) byOrder.set(d.order_id, d);
+
+    let created = 0;
+    let updated = 0;
+    for (const [orderId, rel] of currentByOrder) {
+      const doc = byOrder.get(orderId);
+      if (!doc) {
+        await this.request({
+          orderId,
+          kind: "documentation",
+          status: "wartet_auf_daten",
+          basedOnReleaseId: rel.id,
+          missing: [],
+          requestedBy,
+        });
+        created++;
+      } else if (doc.based_on_release_id !== rel.id) {
+        await this.update(doc.id, { based_on_release_id: rel.id });
+        updated++;
+      }
+    }
+    return { created, updated };
+  },
+
   /** Zuordnung einer Fertigungsfreigabe (Stammsatz inkl. Revisionen) zum Auftrag. */
   async linkReleaseToOrder(releaseId: string, orderId: string | null): Promise<void> {
     const row = (await unwrap(
