@@ -361,6 +361,10 @@ export default function AdminServicesPage() {
                 </div>
                 <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
                 {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
+                <div>
+                  <Label>Beprobungskürzel (m³-Liste)</Label>
+                  <Input value={newSamplingCode} placeholder="z. B. Geo, DP, CA" onChange={e => setNewSamplingCode(e.target.value)} />
+                </div>
                 <Button onClick={handleCreate}>{t("common:create")}</Button>
               </div>
             </DialogContent>
