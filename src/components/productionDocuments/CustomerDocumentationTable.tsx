@@ -118,6 +118,11 @@ export default function CustomerDocumentationTable() {
   const { error: syncError } = useEnsureCustomerDocumentation();
   const { data: requests = [], isLoading } = useProductionDocumentRequests({ kind: "documentation" });
   const { data: orders = [] } = useOrders();
+  /** Nur zur Hinweisanzeige: gibt es überhaupt zuordenbare Fertigungsfreigaben? */
+  const { data: linkedReleases = [], isLoading: releasesLoading } = useQuery({
+    queryKey: ["production-releases-with-order"],
+    queryFn: () => api.productionDocuments.releasesWithOrder(),
+  });
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
