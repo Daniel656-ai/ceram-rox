@@ -32,11 +32,17 @@ import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
 import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
 import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
+import type { FormField } from "@/lib/api/formFields";
+import { planServiceSync, readServiceSelection } from "@/lib/orderServiceSelection";
 
 interface SelectedMeasurement {
   uid: string;
   service_id: string;
   service_name: string;
+  /** "template" = aus der Auswahl im Auftraggeberformular, "manual" = zusätzlich gebucht. */
+  origin?: "template" | "manual";
+  /** Auswahlwert, aus dem die Position entstanden ist. */
+  selection_token?: string | null;
   source_package_id?: string | null;
   source_package_name?: string | null;
 }
