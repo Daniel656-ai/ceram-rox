@@ -55,14 +55,24 @@ export default function ProductionReleasesPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return releases.filter((r) => {
+    const rows = releases.filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (!q) return true;
       return [r.project_name, r.customer_name, r.article_number]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [releases, search, statusFilter]);
+    // Sortierung wie in der Rohstoffliste (gemeinsame Logik).
+    return sort.sortRows(
+      rows,
+      (r: any, key) => {
+        if (key === "release") return `${r.release_number ?? ""} ${String(r.revision_number ?? 0).padStart(4, "0")}`;
+        if (key === "status") return RELEASE_STATUS_LABEL[r.status] ?? r.status;
+        return r[key];
+      },
+      (key) => RELEASE_SORT_TYPE[key]
+    );
+  }, [releases, search, statusFilter, sort]);
 
   const createRelease = async (
     extra?: { values: Record<string, unknown>; testParameters?: never[] }
