@@ -83,6 +83,8 @@ export const productionDocuments = {
   async update(
     id: string,
     fields: Partial<{
+      /** Beprobungsauftrag der m³-Liste (entsteht aus der Beprobung). */
+      order_id: string | null;
       status: Exclude<DocStatus, "nicht_angefordert">;
       based_on_release_id: string | null;
       missing: string[];

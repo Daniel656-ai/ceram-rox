@@ -30,7 +30,7 @@ import {
   useSaveRelease, useDeleteRelease, useCustomers, useReleaseChanges, useReleaseRevisions,
   useReleaseSpecSets, useCompleteRelease,
 } from "@/hooks/useProductionReleases";
-import { useLinkReleaseToOrder } from "@/hooks/useProductionDocuments";
+
 import { describeSaveError } from "@/lib/productionRelease/specSets";
 import { ReviewChangesDialog } from "@/components/productionRelease/ReviewChangesDialog";
 import { SpecSetsEditor } from "@/components/productionRelease/SpecSetsEditor";
@@ -73,26 +73,17 @@ export default function ProductionReleaseDetailPage() {
     queryFn: () => api.projects.list(),
   });
 
-  /** Auftragszuordnung – nutzt die bestehende Funktion `linkReleaseToOrder`. */
-  const { data: orderOptions = [] } = useQuery({
-    queryKey: ["orders-lookup-release"],
-    queryFn: () => api.orders.list(),
-  });
-  const linkOrder = useLinkReleaseToOrder();
+  /**
+   * Der Beprobungsauftrag wird NICHT manuell gewählt: Er entsteht aus der
+   * m³-Liste dieser Fertigungsfreigabe (Fertigungsfreigabe → m³-Liste →
+   * Beprobung → Auftrag). Hier wird er ausschließlich angezeigt.
+   */
   const [orderId, setOrderId] = useState<string>(NONE);
-
-  const handleLinkOrder = async (next: string) => {
-    if (!id) return;
-    const prev = orderId;
-    setOrderId(next);
-    try {
-      await linkOrder.mutateAsync({ releaseId: id, orderId: next === NONE ? null : next });
-      toast.success(next === NONE ? "Auftragszuordnung entfernt" : "Auftrag zugeordnet");
-    } catch (e) {
-      setOrderId(prev);
-      toast.error(`Zuordnung fehlgeschlagen: ${(e as Error).message}`);
-    }
-  };
+  const { data: linkedOrder } = useQuery({
+    queryKey: ["release-linked-order", orderId],
+    queryFn: () => api.orders.get(orderId),
+    enabled: orderId !== NONE,
+  });
 
   useEffect(() => {
     if (!release) return;
@@ -650,25 +641,16 @@ export default function ProductionReleaseDetailPage() {
                 </p>
               </div>
               <div>
-                <Label>Auftrag</Label>
-                <Select
-                  value={orderId}
-                  disabled={readOnly || linkOrder.isPending}
-                  onValueChange={handleLinkOrder}
-                >
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Nicht zugeordnet" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>Nicht zugeordnet</SelectItem>
-                    {(orderOptions as Array<Record<string, any>>).map((o) => (
-                      <SelectItem key={o.id} value={o.id}>
-                        {o.order_number ?? o.id}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Beprobungsauftrag</Label>
+                <div className="mt-1 text-sm">
+                  {orderId !== NONE
+                    ? ((linkedOrder as Record<string, any> | null)?.order_number ?? orderId.slice(0, 8))
+                    : "Noch nicht vorhanden"}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Die Zuordnung gilt für alle Revisionen dieser Fertigungsfreigabe und ist
-                  Grundlage für m³-Liste und Kundendokumentation.
+                  Der Auftrag wird nicht hier ausgewählt: Er entsteht aus der m³-Liste dieser
+                  Fertigungsfreigabe (Beprobung). Die Zuordnung gilt dann für alle Revisionen und
+                  ist Grundlage der Kundendokumentation.
                 </p>
               </div>
               <div>
