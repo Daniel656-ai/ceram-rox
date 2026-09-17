@@ -1,6 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap } from "./_helpers";
 import type { DocKind, DocStatus } from "@/lib/productionDocuments/requirements";
+import { planCustomerDocumentationSync } from "@/lib/customerDocumentation/releaseSync";
 
 const db = dbClient as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -137,40 +138,24 @@ export const productionDocuments = {
     const releases = await this.releasesWithOrder();
     if (!releases.length) return { created: 0, updated: 0 };
 
-    const currentByOrder = new Map<string, { id: string; rev: number; isCurrent: boolean }>();
-    for (const r of releases) {
-      const cand = { id: r.id, rev: Number(r.revision_number) || 0, isCurrent: r.is_current === true };
-      const prev = currentByOrder.get(r.order_id);
-      const better =
-        !prev ||
-        (cand.isCurrent && !prev.isCurrent) ||
-        (cand.isCurrent === prev.isCurrent && cand.rev > prev.rev);
-      if (better) currentByOrder.set(r.order_id, cand);
-    }
-
     const existing = await this.list({ kind: "documentation" });
-    const byOrder = new Map<string, ProductionDocumentRequest>();
-    for (const d of existing) if (d.order_id) byOrder.set(d.order_id, d);
+    const plan = planCustomerDocumentationSync(releases, existing);
 
-    let created = 0;
-    let updated = 0;
-    for (const [orderId, rel] of currentByOrder) {
-      const doc = byOrder.get(orderId);
-      if (!doc) {
-        await this.request({
-          orderId,
-          kind: "documentation",
-          status: "wartet_auf_daten",
-          basedOnReleaseId: rel.id,
-          missing: [],
-          requestedBy,
-        });
-        created++;
-      } else if (doc.based_on_release_id !== rel.id) {
-        await this.update(doc.id, { based_on_release_id: rel.id });
-        updated++;
-      }
+    for (const c of plan.creates) {
+      await this.request({
+        orderId: c.orderId,
+        kind: "documentation",
+        status: "wartet_auf_daten",
+        basedOnReleaseId: c.releaseId,
+        missing: [],
+        requestedBy,
+      });
     }
+    for (const u of plan.updates) {
+      await this.update(u.id, { based_on_release_id: u.releaseId });
+    }
+    const created = plan.creates.length;
+    const updated = plan.updates.length;
     return { created, updated };
   },
 
