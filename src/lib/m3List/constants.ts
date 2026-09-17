@@ -79,6 +79,14 @@ export function readM3Constants(
  * Bestehende Konstanten werden nie überschrieben.
  */
 export async function ensureM3Constants(): Promise<void> {
+  // Sind alle Konstanten bereits gepflegt – egal unter welchem Objekt oder
+  // Schlüssel –, wird nichts angelegt und nichts geschrieben.
+  try {
+    const all = await api.globalFields.list();
+    if (!readM3Constants(all as never[]).missing.length) return;
+  } catch {
+    // Lesen nicht möglich: normaler Weg unten versuchen.
+  }
   const objects = await api.globalObjects.list();
   let object = objects.find((o) => o.object_key === M3_CONSTANT_OBJECT_KEY) ?? null;
   if (!object) {
