@@ -627,8 +627,15 @@ function EditServiceDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
           <Button onClick={async () => {
+            try {
+              await api.measurementServices.assertSamplingCodeFree(form.sampling_code, service.id);
+            } catch (err: any) {
+              toast.error(err.message);
+              return;
+            }
             await api.serviceDependencies.setForService(service.id, depIds);
             await onSave(service.id, {
+            sampling_code: (form.sampling_code ?? "").trim() || null,
             service_name: form.service_name,
             category: form.category,
             description: form.description || null,
