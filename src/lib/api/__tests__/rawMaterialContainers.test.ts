@@ -15,26 +15,25 @@ const MISSING_COL_ERROR = {
 
 const ROWS = [{ id: "c1", container_code: "GEB-1" }];
 
-function makeBuilder() {
+function makeQuery() {
   let failOnAwait = false;
-  const builder: any = {
-    from: () => builder,
-    select: () => builder,
-    order: () => builder,
-    eq: () => builder,
+  const query: any = {
+    select: () => query,
+    order: () => query,
+    eq: () => query,
     is: (col: string) => {
       if (col === "archived_at") failOnAwait = true;
-      return builder;
+      return query;
     },
     then: (resolve: any, reject: any) =>
       Promise.resolve(
         failOnAwait ? { data: null, error: MISSING_COL_ERROR } : { data: ROWS, error: null }
       ).then(resolve, reject),
   };
-  return builder;
+  return query;
 }
 
-vi.mock("../client", () => ({ dbClient: makeBuilder() }));
+vi.mock("../client", () => ({ dbClient: { from: () => makeQuery() } }));
 
 const { rawMaterialContainers } = await import("../rawMaterialContainers");
 
