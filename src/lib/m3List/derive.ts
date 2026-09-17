@@ -13,6 +13,9 @@ import {
 } from "./calculations";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 
+/** Gespeicherte, manuell änderbare Beprobungsauswahl (Kürzel-Liste). */
+export const M3_LAB_SELECTION_KEY = "lab_tests_selected";
+
 export interface M3DeriveInput {
   release: Record<string, unknown> | null;
   orderNumber: string | null;
@@ -77,7 +80,14 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
     deliveryVolumeM3: num(stored.delivery_volume_m3),
     cells: cellCount,
   });
-  values.lab_tests = scope.text;
+  // Automatik = nur Vorschlag. Sobald der Benutzer die Auswahl gespeichert hat,
+  // ist ausschließlich diese Auswahl maßgeblich (auch eine leere Auswahl).
+  const manual = Array.isArray(stored[M3_LAB_SELECTION_KEY])
+    ? (stored[M3_LAB_SELECTION_KEY] as unknown[]).map((c) => String(c).trim()).filter(Boolean)
+    : null;
+  values.lab_tests_auto = scope.text;
+  values[M3_LAB_SELECTION_KEY] = manual;
+  values.lab_tests = (manual ?? scope.tests).join(", ");
   if (scope.soxDroppedByVolume) {
     notices.push("SOx ist gefordert, entfällt aber laut Fachlogik, weil die Liefermenge über 20 m³ liegt. Bitte bestätigen.");
   }
@@ -122,7 +132,7 @@ export function stripDerivedValues(values: Record<string, unknown>): Record<stri
     ...M3_HEADER_FIELDS.map((f) => f.field_key),
     "release_label", "cell_count", "elements_per_m3", "marking_elements", "marking_rows",
     "laborkat_length_mm", "required_length_mm", "labor_kat_count", "micro_nox", "micro_sox",
-    "length_tolerance", "diameter_tolerance", "inner_wall_tolerance", "lab_tests",
+    "length_tolerance", "diameter_tolerance", "inner_wall_tolerance", "lab_tests", "lab_tests_auto",
   ]);
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(values)) {

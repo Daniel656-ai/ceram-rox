@@ -25,6 +25,9 @@ import { ensureM3Template } from "@/lib/m3List/template";
 import { ensureM3Constants, readM3Constants } from "@/lib/m3List/constants";
 import { deriveM3Values, stripDerivedValues } from "@/lib/m3List/derive";
 import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
+import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
+import { SAMPLING_CODE_MAP } from "@/lib/samplingCodeMap";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
   const qc = useQueryClient();
@@ -91,6 +94,30 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       }),
     [release, request, stored, constantsState.constants]
   );
+
+  /** Aktuelle Auswahl: gespeicherte Auswahl, sonst der automatische Vorschlag. */
+  const selectedCodes = useMemo(
+    () =>
+      String(derived.values.lab_tests ?? "")
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean),
+    [derived.values.lab_tests]
+  );
+
+  const toggleCode = (code: string, checked: boolean) => {
+    const next = checked
+      ? [...selectedCodes, code]
+      : selectedCodes.filter((c) => c.toLowerCase() !== code.toLowerCase());
+    // Reihenfolge der zentralen Zuordnung beibehalten.
+    const ordered = SAMPLING_CODE_MAP.map((m) => m.code).filter((c) =>
+      next.some((n) => n.toLowerCase() === c.toLowerCase())
+    );
+    const unknown = next.filter(
+      (n) => !SAMPLING_CODE_MAP.some((m) => m.code.toLowerCase() === n.toLowerCase())
+    );
+    setStored((prev) => ({ ...(prev ?? {}), [M3_LAB_SELECTION_KEY]: [...ordered, ...unknown] }));
+  };
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);
@@ -249,6 +276,25 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           {n}
         </div>
       ))}
+
+      <div className="rounded-md border p-3 space-y-2">
+        <div className="text-sm font-medium">Beprobung</div>
+        <div className="text-xs text-muted-foreground">
+          Automatischer Vorschlag: {String(derived.values.lab_tests_auto ?? "–")}. Die Auswahl kann
+          hier frei geändert werden – maßgeblich für den Beprobungsauftrag ist diese Auswahl.
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          {SAMPLING_CODE_MAP.map((m) => (
+            <label key={m.code} className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={selectedCodes.includes(m.code)}
+                onCheckedChange={(v) => toggleCode(m.code, v === true)}
+              />
+              <span>{m.code}</span>
+            </label>
+          ))}
+        </div>
+      </div>
 
       {!!typedFields.length && (
         <FormLayoutRenderer
