@@ -352,43 +352,43 @@ export default function CreateOrderPage() {
       selection: readServiceSelectionEntries(dynamicValues, templateFields as any),
       services: services as any,
       measurements: current,
-      isEdited: (uid) =>
-        Object.values(formValuesRef.current[uid] || {}).some(
-          (v) => v !== undefined && v !== null && v !== ""
-        ),
+      // Vor dem Speichern existiert noch keine Dienstleistung: Abwählen
+      // entfernt die Position samt erfassten Eingaben aus dem Entwurf.
     });
 
   useEffect(() => {
     if (templateFields.length === 0 || services.length === 0) return;
     const plan = buildServicePlan(measurementsRef.current);
     setUnresolvedSelection(plan.unresolved);
-    if (plan.add.length === 0 && plan.remove.length === 0 && plan.keep.length === 0) return;
+    if (plan.add.length === 0 && plan.remove.length === 0) return;
 
-    if (plan.add.length > 0 || plan.remove.length > 0) {
-      setMeasurements((prev) => {
-        const kept = prev.filter((m) => !plan.remove.includes(m.uid));
-        const additions: SelectedMeasurement[] = plan.add.map((a) => ({
-          uid: newUid(),
-          service_id: a.service.id,
-          service_name: a.service.service_name,
-          origin: "template",
-          selection_token: a.token,
-        }));
-        return [...kept, ...additions];
+    setMeasurements((prev) => {
+      const kept = prev.filter((m) => !plan.remove.includes(m.uid));
+      const additions: SelectedMeasurement[] = plan.add.map((a) => ({
+        uid: newUid(),
+        service_id: a.service.id,
+        service_name: a.service.service_name,
+        origin: "template",
+        selection_token: a.token,
+      }));
+      return [...kept, ...additions];
+    });
+    if (plan.remove.length > 0) {
+      // Nur der noch nicht gespeicherte Formularzustand wird geleert.
+      setMeasurementFormValues((prev) => {
+        const next = { ...prev };
+        plan.remove.forEach((uid) => delete next[uid]);
+        return next;
       });
-    }
-    if (plan.keep.length > 0) {
-      // Bereits bearbeitete Positionen bleiben erhalten und werden nur aus der
-      // automatischen Steuerung entlassen.
-      setMeasurements((prev) =>
-        prev.map((m) => (plan.keep.includes(m.uid) ? { ...m, origin: "manual", selection_token: null } : m))
-      );
-      toast.info("Bereits ausgefüllte Dienstleistungen bleiben erhalten", {
-        description: "Sie stehen jetzt unter „Zusätzliche Dienstleistungen“ und können dort entfernt werden.",
+      setMeasurementParams((prev) => {
+        const next = { ...prev };
+        plan.remove.forEach((uid) => delete next[uid]);
+        return next;
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dynamicValues, templateFields, services]);
+
 
   const applyServicePackage = (packageId: string) => {
     const pkg = servicePackages.find((p: any) => p.id === packageId);
@@ -923,6 +923,38 @@ export default function CreateOrderPage() {
           onFieldsResolved={setTemplateFields}
         />
 
+        {/* Die im Auftraggeberformular ausgewählten Dienstleistungen erscheinen
+            sofort mit ihrem bestehenden Auftraggeberformular – noch ohne
+            Speicherung. Erst „Auftrag erstellen“ legt sie dauerhaft an. */}
+        {(templateMeasurements.length > 0 || unresolvedSelection.length > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Ausgewählte Dienstleistungen</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {templateMeasurements.map((m, idx) => (
+                <MeasurementRow
+                  key={m.uid}
+                  m={m}
+                  index={idx}
+                  t={t}
+                  formValues={measurementFormValues[m.uid] || {}}
+                  onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
+                  onDuplicate={() => duplicateMeasurement(m.uid)}
+                  onRemove={() => removeMeasurement(m.uid)}
+                />
+              ))}
+              {unresolvedSelection.length > 0 && (
+                <p className="text-xs text-amber-700">
+                  Keine passende Dienstleistung hinterlegt für: {unresolvedSelection.join(", ")}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+
+
 
 
 
@@ -986,29 +1018,6 @@ export default function CreateOrderPage() {
               </div>
             )}
 
-            {templateMeasurements.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-sm font-medium">Aus der Auswahl übernommen</p>
-                {templateMeasurements.map((m, idx) => (
-                  <MeasurementRow
-                    key={m.uid}
-                    m={m}
-                    index={idx}
-                    t={t}
-                    formValues={measurementFormValues[m.uid] || {}}
-                    onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
-                    onDuplicate={() => duplicateMeasurement(m.uid)}
-                    onRemove={() => removeMeasurement(m.uid)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {unresolvedSelection.length > 0 && (
-              <p className="text-xs text-amber-700">
-                Keine passende Dienstleistung hinterlegt für: {unresolvedSelection.join(", ")}
-              </p>
-            )}
 
             <div>
               <Label>
