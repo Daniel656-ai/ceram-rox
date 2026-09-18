@@ -24,6 +24,7 @@ import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProductionDocumentRequests, useRequestProductionDocument, useRemoveProductionDocument } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
+import { useProductionReleasePermissions } from "@/hooks/useProductionReleases";
 import { latestRevisionInGroup, releaseRevisionLabel, type ReleaseRevisionOption } from "@/lib/productionReleaseRef";
 import {
   DOC_KIND_LABEL, DOC_STATUS_COLOR, DOC_STATUS_LABEL, type DocKind, type DocStatus,
@@ -397,6 +398,19 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
 export default function ProductionDocumentsPage() {
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "freigaben";
+  const permissions = useProductionReleasePermissions();
+
+  if (!permissions.canView) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            Für Fertigungsunterlagen fehlt die Berechtigung.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-4">
