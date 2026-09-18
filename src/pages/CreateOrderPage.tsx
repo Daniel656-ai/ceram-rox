@@ -570,13 +570,33 @@ export default function CreateOrderPage() {
         }
       }
 
+      // Sicherheitsnetz: Auswahl im Auftraggeberformular auch beim Speichern
+      // abgleichen, falls der laufende Abgleich (z.B. direkt nach dem Laden
+      // eines Entwurfs) noch nicht gegriffen hat. Gleiche Logik, keine zweite.
+      const submitPlan = buildServicePlan(measurements);
+      const effectiveMeasurements: SelectedMeasurement[] = [
+        ...measurements,
+        ...submitPlan.add.map((a) => ({
+          uid: newUid(),
+          service_id: a.service.id,
+          service_name: a.service.service_name,
+          origin: "template" as const,
+          selection_token: a.token,
+        })),
+      ];
+      if (submitPlan.unresolved.length > 0) {
+        toast.warning("Nicht zugeordnete Auswahl", {
+          description: `Ohne passende Dienstleistung: ${submitPlan.unresolved.join(", ")}`,
+        });
+      }
+
       // Je Probe und Dienstleistung entsteht eine eigene Aufgabe, damit
       // Ergebnisse eindeutig der jeweiligen Probe zugeordnet bleiben.
       const sampleTargets: Array<string | null> =
         selectedSampleIds.length > 0 ? selectedSampleIds : [null];
 
-      for (let idx = 0; idx < measurements.length * sampleTargets.length; idx++) {
-        const m = measurements[Math.floor(idx / sampleTargets.length)];
+      for (let idx = 0; idx < effectiveMeasurements.length * sampleTargets.length; idx++) {
+        const m = effectiveMeasurements[Math.floor(idx / sampleTargets.length)];
         const sampleTarget = sampleTargets[idx % sampleTargets.length];
         const createdMeasurement = await addMeasurement.mutateAsync({
           order_id: order.id, service_id: m.service_id,
