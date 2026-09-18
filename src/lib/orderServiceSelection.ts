@@ -54,12 +54,28 @@ const SERVICE_FIELD_NAMES = new Set([
   "service",
 ]);
 
-const isServiceField = (f: SelectionField): boolean => {
+const isServiceField = (f: SelectionField, services?: SelectableService[]): boolean => {
   const type = (f.field_type ?? "").toLowerCase();
   if (type && type !== "multiselect" && type !== "select") return false;
   const byName = normalizeToken(f.display_name);
   const byKey = normalizeToken(f.field_key);
-  return SERVICE_FIELD_NAMES.has(byName) || SERVICE_FIELD_NAMES.has(byKey);
+  if (SERVICE_FIELD_NAMES.has(byName) || SERVICE_FIELD_NAMES.has(byKey)) return true;
+  // Felder mit frei gewähltem Namen (z.B. "Analyse PPP") werden über ihren
+  // Inhalt erkannt: Mindestens ein Eintrag (Wert oder Bezeichnung) muss exakt
+  // einer bestehenden Dienstleistung entsprechen. So steuert dieselbe
+  // Checkbox-Auswahl sofort die Formularanzeige – ohne zweite Modulliste.
+  if (services?.length) {
+    const serviceNames = new Set(services.map((s) => normalizeToken(s.service_name)));
+    return (f.select_options ?? []).some((o) => {
+      if (!o) return false;
+      if (typeof o === "string") return serviceNames.has(normalizeToken(o));
+      return (
+        serviceNames.has(normalizeToken(o.value)) ||
+        serviceNames.has(normalizeToken(o.label))
+      );
+    });
+  }
+  return false;
 };
 
 /**
@@ -70,12 +86,13 @@ const isServiceField = (f: SelectionField): boolean => {
  */
 export function readServiceSelectionEntries(
   values: Record<string, any>,
-  fields: SelectionField[]
+  fields: SelectionField[],
+  services?: SelectableService[]
 ): SelectionEntry[] {
   const out: SelectionEntry[] = [];
   const seen = new Set<string>();
 
-  for (const f of fields.filter(isServiceField)) {
+  for (const f of fields.filter((f) => isServiceField(f, services))) {
     const labelByValue = new Map<string, string>();
     for (const o of f.select_options ?? []) {
       if (!o || typeof o === "string") continue;

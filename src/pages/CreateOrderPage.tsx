@@ -349,7 +349,7 @@ export default function CreateOrderPage() {
   /** Aktueller Abgleich Auswahl -> echte Positionen (eine einzige Quelle). */
   const buildServicePlan = (current: SelectedMeasurement[]) =>
     planServiceSync({
-      selection: readServiceSelectionEntries(dynamicValues, templateFields as any),
+      selection: readServiceSelectionEntries(dynamicValues, templateFields as any, services as any),
       services: services as any,
       measurements: current,
       // Vor dem Speichern existiert noch keine Dienstleistung: Abwählen

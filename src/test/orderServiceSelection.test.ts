@@ -129,3 +129,87 @@ describe("Stammdatenliste mit technischem Wert", () => {
     expect(plan.remove).toEqual([]);
   });
 });
+
+describe("Frei benanntes Auswahlfeld (Erkennung über Inhalt)", () => {
+  // Feld heißt nicht "Dienstleistungen", sondern z.B. "Analyse PPP".
+  // Es wird erkannt, weil ein Eintrag exakt einer Dienstleistung entspricht.
+  const pppFields = [
+    {
+      field_key: "analyse_ppp",
+      display_name: "Analyse PPP",
+      field_type: "multiselect",
+      select_options: [
+        { label: "Knetung", value: "knetung" },
+        { label: "Extrusion", value: "extrusion" },
+      ],
+    },
+  ];
+
+  it("Test 1: Knetung-Checkbox zeigt sofort die Knetung-Position", () => {
+    const entries = readServiceSelectionEntries({ analyse_ppp: ["knetung"] }, pppFields, services);
+    const plan = planServiceSync({ selection: entries, services, measurements: [] });
+    expect(plan.add.map((a) => a.service.service_name)).toEqual(["Knetung"]);
+    expect(plan.unresolved).toEqual([]);
+  });
+
+  it("Test 2: Extrusion-Checkbox zeigt sofort die Extrusion-Position", () => {
+    const entries = readServiceSelectionEntries({ analyse_ppp: ["extrusion"] }, pppFields, services);
+    const plan = planServiceSync({ selection: entries, services, measurements: [] });
+    expect(plan.add.map((a) => a.service.service_name)).toEqual(["Extrusion"]);
+  });
+
+  it("Test 3: beide Checkboxen ergeben beide Positionen; Abwahl entfernt sie wieder", () => {
+    const entries = readServiceSelectionEntries(
+      { analyse_ppp: ["knetung", "extrusion"] },
+      pppFields,
+      services
+    );
+    const added = planServiceSync({ selection: entries, services, measurements: [] });
+    expect(added.add.map((a) => a.service.id)).toEqual(["s1", "s2"]);
+    const current = added.add.map((a, i) => ({
+      uid: `u${i}`,
+      service_id: a.service.id,
+      service_name: a.service.service_name,
+      origin: "template" as const,
+      selection_token: a.token,
+    }));
+    const removed = planServiceSync({ selection: [], services, measurements: current });
+    expect(removed.remove).toEqual(["u0", "u1"]);
+  });
+
+  it("meldet Einträge ohne exakt passende Dienstleistung transparent (keine Namensähnlichkeit)", () => {
+    const fields = [
+      {
+        field_key: "analyse_ppp",
+        display_name: "Analyse PPP",
+        field_type: "multiselect",
+        select_options: [
+          { label: "Kneten", value: "kneten" },
+          { label: "Extrusion", value: "extrusion" },
+        ],
+      },
+    ];
+    const entries = readServiceSelectionEntries({ analyse_ppp: ["kneten"] }, fields, services);
+    const plan = planServiceSync({ selection: entries, services, measurements: [] });
+    expect(plan.add).toEqual([]);
+    expect(plan.unresolved).toEqual(["kneten"]);
+  });
+
+  it("ignoriert Mehrfachauswahlen ohne Dienstleistungsbezug (z.B. Versuchsziel)", () => {
+    const fields = [
+      {
+        field_key: "versuchsziel",
+        display_name: "Versuchsziel",
+        field_type: "multiselect",
+        select_options: ["Knetverhalten", "Extrusionsverhalten", "Sonstiges"],
+      },
+    ];
+    expect(
+      readServiceSelectionEntries({ versuchsziel: ["Knetverhalten"] }, fields, services)
+    ).toEqual([]);
+  });
+
+  it("ohne Dienstleistungskatalog bleibt die namenbasierte Erkennung unverändert", () => {
+    expect(readServiceSelectionEntries({ analyse_ppp: ["knetung"] }, pppFields)).toEqual([]);
+  });
+});
