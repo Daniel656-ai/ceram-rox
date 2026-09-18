@@ -30,6 +30,7 @@ import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
 import { readValueSource, readResultConditions, writeResultConditions } from "@/lib/fieldLinks";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link2 } from "lucide-react";
+import { parseMultiSelectDefault, serializeMultiSelectDefault } from "@/lib/multiSelectDefaults";
 
 /* ==============================================================
  * Feld bearbeiten – zentraler Feldeditor des Formulardesigners.
