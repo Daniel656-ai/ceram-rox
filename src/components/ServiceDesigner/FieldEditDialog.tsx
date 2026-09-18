@@ -61,6 +61,10 @@ export default function FieldEditDialog({
   const [minV, setMinV] = useState(field.min_value?.toString() ?? "");
   const [maxV, setMaxV] = useState(field.max_value?.toString() ?? "");
   const [fieldType, setFieldType] = useState<FormFieldType>(field.field_type);
+  // Mehrfach-Vorauswahl (nur Datentyp „Mehrfachauswahl“) – liegt im bestehenden default_value.
+  const [multiDefaults, setMultiDefaults] = useState<string[]>(
+    field.field_type === "multiselect" ? parseMultiSelectDefault(field.default_value) : []
+  );
   const [isResult, setIsResult] = useState(!!(field as any).is_result);
   const [importProfileId, setImportProfileId] = useState<string>(
     (((field.metadata ?? {}) as any)?.measurement_import?.profile_id as string) ?? ""
