@@ -352,43 +352,43 @@ export default function CreateOrderPage() {
       selection: readServiceSelectionEntries(dynamicValues, templateFields as any),
       services: services as any,
       measurements: current,
-      isEdited: (uid) =>
-        Object.values(formValuesRef.current[uid] || {}).some(
-          (v) => v !== undefined && v !== null && v !== ""
-        ),
+      // Vor dem Speichern existiert noch keine Dienstleistung: Abwählen
+      // entfernt die Position samt erfassten Eingaben aus dem Entwurf.
     });
 
   useEffect(() => {
     if (templateFields.length === 0 || services.length === 0) return;
     const plan = buildServicePlan(measurementsRef.current);
     setUnresolvedSelection(plan.unresolved);
-    if (plan.add.length === 0 && plan.remove.length === 0 && plan.keep.length === 0) return;
+    if (plan.add.length === 0 && plan.remove.length === 0) return;
 
-    if (plan.add.length > 0 || plan.remove.length > 0) {
-      setMeasurements((prev) => {
-        const kept = prev.filter((m) => !plan.remove.includes(m.uid));
-        const additions: SelectedMeasurement[] = plan.add.map((a) => ({
-          uid: newUid(),
-          service_id: a.service.id,
-          service_name: a.service.service_name,
-          origin: "template",
-          selection_token: a.token,
-        }));
-        return [...kept, ...additions];
+    setMeasurements((prev) => {
+      const kept = prev.filter((m) => !plan.remove.includes(m.uid));
+      const additions: SelectedMeasurement[] = plan.add.map((a) => ({
+        uid: newUid(),
+        service_id: a.service.id,
+        service_name: a.service.service_name,
+        origin: "template",
+        selection_token: a.token,
+      }));
+      return [...kept, ...additions];
+    });
+    if (plan.remove.length > 0) {
+      // Nur der noch nicht gespeicherte Formularzustand wird geleert.
+      setMeasurementFormValues((prev) => {
+        const next = { ...prev };
+        plan.remove.forEach((uid) => delete next[uid]);
+        return next;
       });
-    }
-    if (plan.keep.length > 0) {
-      // Bereits bearbeitete Positionen bleiben erhalten und werden nur aus der
-      // automatischen Steuerung entlassen.
-      setMeasurements((prev) =>
-        prev.map((m) => (plan.keep.includes(m.uid) ? { ...m, origin: "manual", selection_token: null } : m))
-      );
-      toast.info("Bereits ausgefüllte Dienstleistungen bleiben erhalten", {
-        description: "Sie stehen jetzt unter „Zusätzliche Dienstleistungen“ und können dort entfernt werden.",
+      setMeasurementParams((prev) => {
+        const next = { ...prev };
+        plan.remove.forEach((uid) => delete next[uid]);
+        return next;
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dynamicValues, templateFields, services]);
+
 
   const applyServicePackage = (packageId: string) => {
     const pkg = servicePackages.find((p: any) => p.id === packageId);
