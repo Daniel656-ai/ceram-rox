@@ -181,16 +181,32 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       await api.productionDocuments.update(requestId, { order_id: created.id });
       await api.productionDocuments.linkReleaseToOrder(request.based_on_release_id, created.id);
 
-      // Beprobungsaufwand der m³-Liste → bestehende Dienstleistungen.
-      // Die Zuordnung Kürzel → Dienstleistung liegt ausschließlich in den
-      // Dienstleistungs-Stammdaten (Feld „Beprobungskürzel“), nicht hier.
-      const codes = String(derived.values.lab_tests ?? "")
-        .split(",")
-        .map((c) => c.trim())
-        .filter(Boolean);
-      const { matched, missing } = await api.measurementServices.resolveSamplingCodes(codes);
+      // Maßgeblich ist ausschließlich die in der m³-Liste gesetzte
+      // Beprobungsauswahl (Benutzerauswahl, sonst der automatische Vorschlag) –
+      // nicht erneut die Automatik. „Bench“ ergibt dabei BENCH NOx + BENCH SOx.
+      const { matched, missing } = await api.measurementServices.resolveSamplingCodes(selectedCodes);
+      const noxHandover = buildNoxHandover(derived.values);
       for (const m of matched) {
-        await api.measurements.add({ order_id: created.id, service_id: m.id });
+        const createdMeasurement = (await api.measurements.add({
+          order_id: created.id,
+          service_id: m.id,
+        })) as { id: string };
+        // NOx-Vorgaben stammen aus der Fertigungsfreigabe/Revision dieser
+        // m³-Liste und werden in bereits vorhandene Felder der Dienstleistung
+        // übernommen – ohne neue Felder und ohne erneute Eingabe.
+        if (normalizeSamplingKey(m.code) === "nox" && noxHandover.length) {
+          try {
+            const fields = await api.serviceDataFields.listForService(m.id);
+            const rows = mapNoxHandoverToParameters(
+              fields as unknown as { field_key: string; display_name: string; unit?: string | null }[],
+              noxHandover,
+              createdMeasurement.id
+            );
+            if (rows.length) await api.measurementParameters.bulkInsert(rows);
+          } catch {
+            toast.warning("Die NOx-Vorgaben konnten nicht automatisch übernommen werden.");
+          }
+        }
       }
       await qc.invalidateQueries({ queryKey: ["production-document-request", requestId] });
       await qc.invalidateQueries({ queryKey: ["production-document-requests"] });
