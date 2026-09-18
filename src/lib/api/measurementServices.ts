@@ -48,26 +48,7 @@ export const measurementServices = {
         .eq("active", true)
         .is("archived_at", null)
     )) as { id: string; service_name: string }[];
-    const byName = new Map(
-      rows.map((r) => [normalizeSamplingKey(r.service_name), r])
-    );
-    const matched: { code: string; id: string; service_name: string }[] = [];
-    const missing: string[] = [];
-    for (const raw of codes) {
-      const code = raw.trim();
-      if (!code) continue;
-      const names = serviceNamesForCode(code);
-      // Ein Kürzel kann mehrere bestehende Dienstleistungen bedeuten
-      // (z. B. „Bench“ → BENCH NOx + BENCH SOx). Es werden alle im Katalog
-      // vorhandenen Treffer übernommen.
-      const hits = names
-        .map((n) => byName.get(normalizeSamplingKey(n)))
-        .filter(Boolean) as { id: string; service_name: string }[];
-      if (hits.length) {
-        for (const hit of hits) matched.push({ code, id: hit.id, service_name: hit.service_name });
-      } else missing.push(code);
-    }
-    return { matched, missing };
+    return matchSamplingCodes(codes, rows);
   },
 
   create: (service: {
