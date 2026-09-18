@@ -986,29 +986,6 @@ export default function CreateOrderPage() {
               </div>
             )}
 
-            {templateMeasurements.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-sm font-medium">Aus der Auswahl übernommen</p>
-                {templateMeasurements.map((m, idx) => (
-                  <MeasurementRow
-                    key={m.uid}
-                    m={m}
-                    index={idx}
-                    t={t}
-                    formValues={measurementFormValues[m.uid] || {}}
-                    onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
-                    onDuplicate={() => duplicateMeasurement(m.uid)}
-                    onRemove={() => removeMeasurement(m.uid)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {unresolvedSelection.length > 0 && (
-              <p className="text-xs text-amber-700">
-                Keine passende Dienstleistung hinterlegt für: {unresolvedSelection.join(", ")}
-              </p>
-            )}
 
             <div>
               <Label>
