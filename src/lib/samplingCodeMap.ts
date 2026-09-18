@@ -51,3 +51,29 @@ export function samplingCodeForServiceName(serviceName: string | null | undefine
   );
   return hit?.code ?? null;
 }
+
+/**
+ * Ordnet Beprobungskürzel den bereits vorhandenen Dienstleistungen zu.
+ * Verglichen wird ausschließlich der Dienstleistungsname – exakt, ohne
+ * Namensähnlichkeit. Ein Kürzel kann mehrere Dienstleistungen bedeuten
+ * („Bench“ → BENCH NOx + BENCH SOx); dann werden alle vorhandenen übernommen.
+ */
+export function matchSamplingCodes<T extends { id: string; service_name: string }>(
+  codes: string[],
+  services: T[]
+): { matched: { code: string; id: string; service_name: string }[]; missing: string[] } {
+  const byName = new Map(services.map((s) => [normalizeSamplingKey(s.service_name), s]));
+  const matched: { code: string; id: string; service_name: string }[] = [];
+  const missing: string[] = [];
+  for (const raw of codes) {
+    const code = (raw ?? "").trim();
+    if (!code) continue;
+    const hits = serviceNamesForCode(code)
+      .map((n) => byName.get(normalizeSamplingKey(n)))
+      .filter(Boolean) as T[];
+    if (hits.length) {
+      for (const hit of hits) matched.push({ code, id: hit.id, service_name: hit.service_name });
+    } else missing.push(code);
+  }
+  return { matched, missing };
+}
