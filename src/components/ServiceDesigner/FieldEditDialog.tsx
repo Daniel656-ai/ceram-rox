@@ -217,7 +217,9 @@ export default function FieldEditDialog({
         unit: unit.trim() || null,
         is_required: required,
         readonly,
-        default_value: defaultValue.trim() || null,
+        default_value: isMultiSelect
+          ? serializeMultiSelectDefault(multiDefaults)
+          : (defaultValue.trim() || null),
         formula: isComputed ? (formula.trim() || null) : null,
         select_options: isSelect ? selectOptions.split("\n").map(l => l.trim()).filter(Boolean) : [],
         decimal_places: isNumeric && decimalPlaces ? parseInt(decimalPlaces, 10) : null,
