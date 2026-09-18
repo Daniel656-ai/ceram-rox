@@ -57,6 +57,7 @@ import { walkNodes } from "@/lib/api/formDefinitionLayout";
 import { readValueSource, isSameFormLink, isPreviousServiceLink, isLinkedFormLink, resolveLinkedValue, linkOriginLabel, numericValue, type StepData, type LinkedFormData } from "@/lib/fieldLinks";
 import { createContext as createReactContext } from "react";
 import { readMasterDataRef, resolveMasterDataRef, type MasterDataRef } from "@/lib/masterDataRef";
+import { multiSelectInitialValue } from "@/lib/multiSelectDefaults";
 import { runtimeKind } from "@/lib/api/backendConfig";
 import { globalConstantScope, isGlobalConstant, parseGlobalConstantValue } from "@/lib/globalConstants";
 
