@@ -131,36 +131,47 @@ export interface SyncPlan {
  * Berechnet den Abgleich. Es wird ausschließlich exakt (ohne Groß-/
  * Kleinschreibung) über den Dienstleistungsnamen abgeglichen – keine
  * Namensähnlichkeit, keine Ersatzdienstleistung, keine Neuanlage.
+ * Geprüft werden der gespeicherte Auswahlwert und die Bezeichnung aus der
+ * Stammdatenliste, da Stammdaten technische Werte speichern können.
  */
 export function planServiceSync(params: {
-  selection: string[];
+  selection: Array<string | SelectionEntry>;
   services: SelectableService[];
   measurements: SelectionMeasurement[];
   /** Liefert true, wenn zu dieser Position bereits Formulardaten erfasst wurden. */
   isEdited?: (uid: string) => boolean;
 }): SyncPlan {
-  const { selection, services, measurements, isEdited } = params;
+  const { services, measurements, isEdited } = params;
+  const selection: SelectionEntry[] = params.selection.map((s) =>
+    typeof s === "string" ? { token: s, aliases: [] } : { token: s.token, aliases: s.aliases ?? [] }
+  );
+
   const byName = new Map<string, SelectableService>();
   for (const s of services) {
     const key = normalizeToken(s.service_name);
     if (!byName.has(key)) byName.set(key, s);
   }
 
-  const selectedTokens = selection.map((s) => normalizeToken(s)).filter(Boolean);
-  const selectedSet = new Set(selectedTokens);
+  const selectedSet = new Set(selection.map((s) => normalizeToken(s.token)).filter(Boolean));
 
   const fromTemplate = measurements.filter((m) => m.origin === "template");
   const presentTokens = new Set(fromTemplate.map((m) => normalizeToken(m.selection_token ?? m.service_name)));
 
   const add: SyncPlan["add"] = [];
   const unresolved: string[] = [];
-  selection.forEach((raw) => {
-    const token = normalizeToken(raw);
+  selection.forEach((entry) => {
+    const token = normalizeToken(entry.token);
     if (!token || presentTokens.has(token)) return;
-    const service = byName.get(token);
-    if (!service) { unresolved.push(raw.trim()); return; }
-    if (add.some((a) => normalizeToken(a.token) === token)) return;
-    add.push({ service, token: raw.trim() });
+    let service = byName.get(token);
+    if (!service) {
+      for (const alias of entry.aliases) {
+        service = byName.get(normalizeToken(alias));
+        if (service) break;
+      }
+    }
+    if (!service) { unresolved.push(entry.token.trim()); return; }
+    if (add.some((a) => normalizeToken(a.token) === token || a.service.id === service!.id)) return;
+    add.push({ service, token: entry.token.trim() });
   });
 
   const remove: string[] = [];
