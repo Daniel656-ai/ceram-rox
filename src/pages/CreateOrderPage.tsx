@@ -33,7 +33,7 @@ import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
 import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
 import type { FormField } from "@/lib/api/formFields";
-import { planServiceSync, readServiceSelection } from "@/lib/orderServiceSelection";
+import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
 
 interface SelectedMeasurement {
   uid: string;
