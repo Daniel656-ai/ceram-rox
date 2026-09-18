@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { rawMaterialSearchHaystack } from "@/lib/rawMaterialSearch";
 import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { rawMaterialSearchHaystack } from "@/lib/rawMaterialSearch";
 import { useQuery } from "@tanstack/react-query";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { matchesRawMaterialSearch } from "@/lib/rawMaterialSearch";
 import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation, useDeleteRawMaterial, useAllContainers } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
