@@ -48,21 +48,21 @@ export const rawMaterials = {
    * Rohstoffe inkl. ihrer LOT-Kennungen (LOT-Nummer + LOT-bezogene MRS-Nummer),
    * damit die zentrale Rohstoffsuche auch über die MRS-Nummer findet.
    */
-  list: async () => {
+  list: async (): Promise<any[]> => {
     const q = (batchSelect: string | null) =>
-      dbClient
+      (dbClient as any)
         .from("raw_materials")
         .select(batchSelect ? `${RAW_MATERIAL_BASE}, ${batchSelect}` : RAW_MATERIAL_BASE)
         .order("material_name");
     try {
-      return await unwrap(q("raw_material_batches(id, batch_number, mrs_number)"));
+      return await unwrap<any[]>(q("raw_material_batches(id, batch_number, mrs_number)"));
     } catch (e: any) {
       if (!isMissingColumn(e)) throw e;
       try {
-        return await unwrap(q("raw_material_batches(id, batch_number)"));
+        return await unwrap<any[]>(q("raw_material_batches(id, batch_number)"));
       } catch (e2: any) {
         if (!isMissingColumn(e2)) throw e2;
-        return await unwrap(q(null));
+        return await unwrap<any[]>(q(null));
       }
     }
   },
