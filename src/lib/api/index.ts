@@ -183,6 +183,7 @@ import { workflowContext } from "./workflowContext";
 import { orderPreparation } from "./orderPreparation";
 import { productionReleases, customers } from "./productionReleases";
 import { productionDocuments } from "./productionDocuments";
+import { usageEvents } from "./usageEvents";
 
 
 
@@ -375,6 +376,9 @@ export const api = {
   productionReleases,
   productionDocuments,
   customers,
+
+  // ---- technisches Nutzungs-Tracking (entkoppelt von Fachdaten) ----
+  usageEvents,
 
 
 
