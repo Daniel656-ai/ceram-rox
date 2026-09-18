@@ -323,6 +323,65 @@ export function toStringArray(v: unknown): string[] {
   return s.split(",").map((x) => x.trim()).filter(Boolean);
 }
 
+/**
+ * Mehrfachauswahl inkl. optionaler Mehrfach-Vorauswahl aus dem Formulardesigner.
+ * Die Vorauswahl greift nur, solange für das Feld noch kein Wert gespeichert
+ * ist; danach ist allein die gespeicherte Auswahl des Benutzers maßgeblich.
+ */
+function MultiSelectControl({
+  field, value, setValue, disabled, interactive,
+}: {
+  field: FormField;
+  value: any;
+  setValue: (v: any) => void;
+  disabled: boolean;
+  interactive: boolean;
+}) {
+  const options = field.select_options ?? [];
+  const optionValues = useMemo(
+    () => options.map((o, i) => (typeof o === "string" ? o : o.value) || String(i)),
+    [options]
+  );
+
+  useEffect(() => {
+    if (!interactive || disabled) return;
+    if (!optionValues.length) return;
+    const init = multiSelectInitialValue(value, field.default_value, optionValues);
+    if (init.apply) setValue(init.value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interactive, disabled, optionValues.join("|"), field.default_value, value === undefined]);
+
+  const selected = toStringArray(value);
+  const toggle = (v: string, on: boolean) => {
+    const next = on ? [...selected.filter((s) => s !== v), v] : selected.filter((s) => s !== v);
+    setValue(next);
+  };
+  return (
+    <div className="rounded-md border px-3 py-2 space-y-1.5 min-h-9">
+      {options.length === 0 ? (
+        <span className="text-xs text-muted-foreground">Keine Optionen konfiguriert</span>
+      ) : (
+        options.map((o, i) => {
+          const v = optionValues[i];
+          const l = typeof o === "string" ? o : o.label;
+          const id = `${field.id}-ms-${i}`;
+          return (
+            <div key={i} className="flex items-center gap-2">
+              <Checkbox
+                id={id}
+                checked={selected.includes(v)}
+                disabled={disabled}
+                onCheckedChange={(c) => toggle(v, c === true)}
+              />
+              <Label htmlFor={id} className="text-sm font-normal cursor-pointer">{l}</Label>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 function FieldControl({ field, readonly }: { field: FormField; readonly: boolean }) {
   const { value, setValue, interactive } = useBinding(field.field_key);
   const disabled = readonly || !interactive;
