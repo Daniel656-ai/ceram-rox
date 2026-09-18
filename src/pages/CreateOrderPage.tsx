@@ -346,18 +346,21 @@ export default function CreateOrderPage() {
   formValuesRef.current = measurementFormValues;
   const [unresolvedSelection, setUnresolvedSelection] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (templateFields.length === 0 || services.length === 0) return;
-    const selection = readServiceSelection(dynamicValues, templateFields as any);
-    const plan = planServiceSync({
-      selection,
+  /** Aktueller Abgleich Auswahl -> echte Positionen (eine einzige Quelle). */
+  const buildServicePlan = (current: SelectedMeasurement[]) =>
+    planServiceSync({
+      selection: readServiceSelectionEntries(dynamicValues, templateFields as any),
       services: services as any,
-      measurements: measurementsRef.current,
+      measurements: current,
       isEdited: (uid) =>
         Object.values(formValuesRef.current[uid] || {}).some(
           (v) => v !== undefined && v !== null && v !== ""
         ),
     });
+
+  useEffect(() => {
+    if (templateFields.length === 0 || services.length === 0) return;
+    const plan = buildServicePlan(measurementsRef.current);
     setUnresolvedSelection(plan.unresolved);
     if (plan.add.length === 0 && plan.remove.length === 0 && plan.keep.length === 0) return;
 
