@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { matchesRawMaterialSearch } from "@/lib/rawMaterialSearch";
 import { useRawMaterials, useAddRawMaterial, useStorageLocations, useAddStorageLocation, useDeleteRawMaterial, useAllContainers } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -110,7 +111,8 @@ export default function RawMaterialsPage() {
 
   const filtered = materials?.filter((m) => {
     const q = search.toLowerCase();
-    const matchSearch = !q || m.material_name.toLowerCase().includes(q) || (m.material_number || "").toLowerCase().includes(q) || ((m as any).cas_number || "").toLowerCase().includes(q) || ((m as any).mrs_number || "").toLowerCase().includes(q) || (m.supplier || "").toLowerCase().includes(q);
+    // Zentrale Suchlogik: Rohstoffdaten + LOT-Nummer + LOT-bezogene MRS-Nummer
+    const matchSearch = matchesRawMaterialSearch(m as any, q);
     const matchSupplier = !filterSupplier || m.supplier === filterSupplier;
     const matContainers = containersByMaterial.get(m.id) || [];
     const matchLocation =

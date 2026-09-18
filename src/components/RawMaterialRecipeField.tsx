@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { rawMaterialSearchHaystack } from "@/lib/rawMaterialSearch";
 import { useQuery } from "@tanstack/react-query";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -148,10 +149,8 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
         other: (m.other_designation ?? null) as string | null,
         unit: (m.unit ?? null) as string | null,
         supplier: (m.supplier ?? null) as string | null,
-        haystack: [
-          m.material_name, m.material_number, m.other_designation, m.cas_number,
-          m.mrs_number, m.eg_number, m.manufacturer, m.supplier, m.description,
-        ].filter(Boolean).join(" "),
+        // Zentrale Suchlogik inkl. LOT-Nummern und LOT-bezogener MRS-Nummern
+        haystack: rawMaterialSearchHaystack(m),
       })),
     [materials]
   );

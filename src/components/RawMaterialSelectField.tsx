@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { rawMaterialSearchHaystack } from "@/lib/rawMaterialSearch";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,8 @@ export default function RawMaterialSelectField({ value, onChange, disabled, clas
         id: m.id as string,
         name: (m.material_name ?? "") as string,
         number: (m.material_number ?? null) as string | null,
+        // Zentrale Suchlogik inkl. LOT-Nummer und LOT-bezogener MRS-Nummer
+        haystack: rawMaterialSearchHaystack(m),
       })),
     [materials]
   );
@@ -118,14 +121,14 @@ export default function RawMaterialSelectField({ value, onChange, disabled, clas
           <Command
             filter={(v, s) => (v.toLowerCase().includes(s.toLowerCase()) ? 1 : 0)}
           >
-            <CommandInput placeholder="Suche nach Rohstoff / Rohstoffcode…" />
+            <CommandInput placeholder="Suche nach Rohstoff / Rohstoffcode / LOT / MRS…" />
             <CommandList>
               <CommandEmpty>Kein Rohstoff gefunden.</CommandEmpty>
               <CommandGroup>
                 {options.map((o) => (
                   <CommandItem
                     key={o.id}
-                    value={`${o.name} ${o.number ?? ""}`}
+                    value={`${o.name} ${o.number ?? ""} ${o.haystack}`}
                     onSelect={() => {
                       onChange({
                         mode: "db",

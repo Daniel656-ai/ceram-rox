@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { rawMaterialSearchHaystack } from "@/lib/rawMaterialSearch";
 import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,8 @@ export function SampleParametersFields({ value, onChange, idPrefix = "sp" }: Pro
         id: m.id as string,
         code: (m.material_number || m.material_name) as string,
         name: m.material_name as string,
+        // Zentrale Suchlogik inkl. LOT-Nummer und LOT-bezogener MRS-Nummer
+        haystack: rawMaterialSearchHaystack(m),
       })),
     [rawMaterials]
   );
@@ -49,9 +52,7 @@ export function SampleParametersFields({ value, onChange, idPrefix = "sp" }: Pro
   const filtered = useMemo(() => {
     const q = rmQuery.trim().toLowerCase();
     if (!q) return options.slice(0, 50);
-    return options
-      .filter((o) => o.code?.toLowerCase().includes(q) || o.name?.toLowerCase().includes(q))
-      .slice(0, 50);
+    return options.filter((o) => o.haystack.includes(q)).slice(0, 50);
   }, [options, rmQuery]);
 
   const selectedLabel = value.raw_material_code || t("raw_material_code_placeholder");

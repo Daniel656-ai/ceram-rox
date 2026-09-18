@@ -30,14 +30,42 @@ export const storageLocations = {
 };
 
 
+/**
+ * Manche Datenbestände kennen `raw_material_batches.mrs_number` noch nicht.
+ * Die Rohstoffliste darf deshalb nicht komplett fehlschlagen – in dem Fall
+ * wird ohne das MRS-Feld geladen.
+ */
+function isMissingColumn(e: any): boolean {
+  const msg = `${e?.message || ""} ${e?.details || ""} ${e?.hint || ""}`.toLowerCase();
+  return e?.code === "42703" || msg.includes("does not exist") || msg.includes("could not find");
+}
+
+const RAW_MATERIAL_BASE =
+  "*, storage_locations(*), responsible:profiles!raw_materials_responsible_user_id_fkey(user_id, first_name, last_name, short_code)";
+
 export const rawMaterials = {
-  list: () =>
-    unwrap(
-      dbClient
+  /**
+   * Rohstoffe inkl. ihrer LOT-Kennungen (LOT-Nummer + LOT-bezogene MRS-Nummer),
+   * damit die zentrale Rohstoffsuche auch über die MRS-Nummer findet.
+   */
+  list: async (): Promise<any[]> => {
+    const q = (batchSelect: string | null) =>
+      (dbClient as any)
         .from("raw_materials")
-        .select("*, storage_locations(*), responsible:profiles!raw_materials_responsible_user_id_fkey(user_id, first_name, last_name, short_code)")
-        .order("material_name")
-    ),
+        .select(batchSelect ? `${RAW_MATERIAL_BASE}, ${batchSelect}` : RAW_MATERIAL_BASE)
+        .order("material_name");
+    try {
+      return await unwrap<any[]>(q("raw_material_batches(id, batch_number, mrs_number)"));
+    } catch (e: any) {
+      if (!isMissingColumn(e)) throw e;
+      try {
+        return await unwrap<any[]>(q("raw_material_batches(id, batch_number)"));
+      } catch (e2: any) {
+        if (!isMissingColumn(e2)) throw e2;
+        return await unwrap<any[]>(q(null));
+      }
+    }
+  },
 
   get: (id: string) =>
     unwrap(
