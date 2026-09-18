@@ -48,7 +48,13 @@ export function useUsageTracking() {
       variant: runtimeVariant(),
     });
 
-    if (buffer.current.length >= MAX_BUFFER) void flush.current();
+    if (buffer.current.length >= MAX_BUFFER) {
+      void flush.current();
+      return;
+    }
+    // kurz sammeln, dann gebündelt übertragen (nicht blockierend)
+    const t = window.setTimeout(() => void flush.current(), 3000);
+    return () => window.clearTimeout(t);
   }, [location.pathname, userId]);
 
   useEffect(() => {
@@ -58,6 +64,7 @@ export function useUsageTracking() {
       if (document.visibilityState === "hidden") void flush.current();
     };
     document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", () => void flush.current());
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onHide);
