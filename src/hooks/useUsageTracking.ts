@@ -63,11 +63,13 @@ export function useUsageTracking() {
     const onHide = () => {
       if (document.visibilityState === "hidden") void flush.current();
     };
+    const onPageHide = () => void flush.current();
     document.addEventListener("visibilitychange", onHide);
-    window.addEventListener("pagehide", () => void flush.current());
+    window.addEventListener("pagehide", onPageHide);
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", onPageHide);
       void flush.current();
     };
   }, [userId]);
