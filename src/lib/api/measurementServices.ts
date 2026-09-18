@@ -57,11 +57,15 @@ export const measurementServices = {
       const code = raw.trim();
       if (!code) continue;
       const names = serviceNamesForCode(code);
-      const hit = names
+      // Ein Kürzel kann mehrere bestehende Dienstleistungen bedeuten
+      // (z. B. „Bench“ → BENCH NOx + BENCH SOx). Es werden alle im Katalog
+      // vorhandenen Treffer übernommen.
+      const hits = names
         .map((n) => byName.get(normalizeSamplingKey(n)))
-        .find(Boolean);
-      if (hit) matched.push({ code, id: hit.id, service_name: hit.service_name });
-      else missing.push(code);
+        .filter(Boolean) as { id: string; service_name: string }[];
+      if (hits.length) {
+        for (const hit of hits) matched.push({ code, id: hit.id, service_name: hit.service_name });
+      } else missing.push(code);
     }
     return { matched, missing };
   },
