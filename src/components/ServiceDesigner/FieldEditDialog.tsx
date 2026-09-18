@@ -143,6 +143,12 @@ export default function FieldEditDialog({
   const isNumeric = ["number", "decimal", "percent"].includes(fieldType);
   const isGlobalRef = !!field.global_field_id;
   const isSelect = ["select", "multiselect"].includes(fieldType);
+  const isMultiSelect = fieldType === "multiselect";
+  /** Auswahlmöglichkeiten inkl. gespeicherter Werte (z. B. Stammdaten-Einträge). */
+  const multiOptions = (field.select_options ?? []).map((o, i) => ({
+    value: (typeof o === "string" ? o : o.value) || String(i),
+    label: typeof o === "string" ? o : o.label,
+  }));
   const isComputed = fieldType === "computed";
   const isRepeater = fieldType === "repeater";
   const isBlock = fieldType === "measurement_block";
