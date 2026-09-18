@@ -121,14 +121,14 @@ export default function RawMaterialSelectField({ value, onChange, disabled, clas
           <Command
             filter={(v, s) => (v.toLowerCase().includes(s.toLowerCase()) ? 1 : 0)}
           >
-            <CommandInput placeholder="Suche nach Rohstoff / Rohstoffcode…" />
+            <CommandInput placeholder="Suche nach Rohstoff / Rohstoffcode / LOT / MRS…" />
             <CommandList>
               <CommandEmpty>Kein Rohstoff gefunden.</CommandEmpty>
               <CommandGroup>
                 {options.map((o) => (
                   <CommandItem
                     key={o.id}
-                    value={`${o.name} ${o.number ?? ""}`}
+                    value={`${o.name} ${o.number ?? ""} ${o.haystack}`}
                     onSelect={() => {
                       onChange({
                         mode: "db",
