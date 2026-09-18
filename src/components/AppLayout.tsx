@@ -2,8 +2,12 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PrintHeader } from "@/components/PrintHeader";
 import { Outlet } from "react-router-dom";
+import { useUsageTracking } from "@/hooks/useUsageTracking";
 
 export function AppLayout() {
+  // Rein technisches Nutzungs-Tracking (module_opened), ohne fachliche Logik.
+  useUsageTracking();
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full max-w-full overflow-x-hidden">
@@ -22,4 +26,3 @@ export function AppLayout() {
     </SidebarProvider>
   );
 }
-

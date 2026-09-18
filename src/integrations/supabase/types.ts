@@ -9721,6 +9721,33 @@ export type Database = {
         }
         Relationships: []
       }
+      usage_events: {
+        Row: {
+          action: string
+          id: string
+          module: string
+          occurred_at: string
+          user_id: string | null
+          variant: string
+        }
+        Insert: {
+          action: string
+          id?: string
+          module: string
+          occurred_at?: string
+          user_id?: string | null
+          variant?: string
+        }
+        Update: {
+          action?: string
+          id?: string
+          module?: string
+          occurred_at?: string
+          user_id?: string | null
+          variant?: string
+        }
+        Relationships: []
+      }
       user_absences: {
         Row: {
           absence_type: Database["public"]["Enums"]["absence_type"]
