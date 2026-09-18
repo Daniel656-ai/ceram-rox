@@ -26,7 +26,8 @@ import { ensureM3Constants, readM3Constants } from "@/lib/m3List/constants";
 import { deriveM3Values, stripDerivedValues } from "@/lib/m3List/derive";
 import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
 import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
-import { SAMPLING_CODE_MAP } from "@/lib/samplingCodeMap";
+import { SAMPLING_CODE_MAP, normalizeSamplingKey } from "@/lib/samplingCodeMap";
+import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
