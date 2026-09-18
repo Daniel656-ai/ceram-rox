@@ -923,6 +923,38 @@ export default function CreateOrderPage() {
           onFieldsResolved={setTemplateFields}
         />
 
+        {/* Die im Auftraggeberformular ausgewählten Dienstleistungen erscheinen
+            sofort mit ihrem bestehenden Auftraggeberformular – noch ohne
+            Speicherung. Erst „Auftrag erstellen“ legt sie dauerhaft an. */}
+        {(templateMeasurements.length > 0 || unresolvedSelection.length > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Ausgewählte Dienstleistungen</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {templateMeasurements.map((m, idx) => (
+                <MeasurementRow
+                  key={m.uid}
+                  m={m}
+                  index={idx}
+                  t={t}
+                  formValues={measurementFormValues[m.uid] || {}}
+                  onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
+                  onDuplicate={() => duplicateMeasurement(m.uid)}
+                  onRemove={() => removeMeasurement(m.uid)}
+                />
+              ))}
+              {unresolvedSelection.length > 0 && (
+                <p className="text-xs text-amber-700">
+                  Keine passende Dienstleistung hinterlegt für: {unresolvedSelection.join(", ")}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+
+
 
 
 
