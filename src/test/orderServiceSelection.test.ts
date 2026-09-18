@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { planServiceSync, readServiceSelection } from "@/lib/orderServiceSelection";
+import { planServiceSync, readServiceSelection, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
 
 const services = [
   { id: "s1", service_name: "Knetung", category: "pilot_plant" },
@@ -70,5 +70,62 @@ describe("planServiceSync", () => {
   it("meldet Auswahlwerte ohne Dienstleistung", () => {
     const plan = planServiceSync({ selection: ["Extrabeprobung"], services, measurements: [] });
     expect(plan.unresolved).toEqual(["Extrabeprobung"]);
+  });
+});
+
+describe("Stammdatenliste mit technischem Wert", () => {
+  const fields = [
+    {
+      field_key: "dienstleistungen",
+      display_name: "Dienstleistungen",
+      field_type: "multiselect",
+      select_options: [
+        { label: "Knetung", value: "knetung" },
+        { label: "Extrusion", value: "extrusion" },
+        { label: "Trocknung", value: "trocknung" },
+      ],
+    },
+  ];
+
+  it("Fall 1: nur Knetung", () => {
+    const entries = readServiceSelectionEntries({ dienstleistungen: ["knetung"] }, fields);
+    const plan = planServiceSync({ selection: entries, services, measurements: [] });
+    expect(plan.add.map((a) => a.service.service_name)).toEqual(["Knetung"]);
+    expect(plan.unresolved).toEqual([]);
+  });
+
+  it("Fall 2: nur Extrusion", () => {
+    const entries = readServiceSelectionEntries({ dienstleistungen: ["extrusion"] }, fields);
+    const plan = planServiceSync({ selection: entries, services, measurements: [] });
+    expect(plan.add.map((a) => a.service.service_name)).toEqual(["Extrusion"]);
+  });
+
+  it("Fall 3: Knetung + Extrusion ergeben zwei Positionen", () => {
+    const entries = readServiceSelectionEntries(
+      { dienstleistungen: ["knetung", "extrusion"] },
+      fields
+    );
+    const plan = planServiceSync({ selection: entries, services, measurements: [] });
+    expect(plan.add.map((a) => a.service.id)).toEqual(["s1", "s2"]);
+  });
+
+  it("meldet Auswahl ohne Dienstleistung weiterhin als nicht zugeordnet", () => {
+    const entries = readServiceSelectionEntries({ dienstleistungen: ["trocknung"] }, fields);
+    const plan = planServiceSync({ selection: entries, services, measurements: [] });
+    expect(plan.add).toEqual([]);
+    expect(plan.unresolved).toEqual(["trocknung"]);
+  });
+
+  it("legt vorhandene Positionen nicht doppelt an", () => {
+    const entries = readServiceSelectionEntries({ dienstleistungen: ["knetung"] }, fields);
+    const plan = planServiceSync({
+      selection: entries,
+      services,
+      measurements: [
+        { uid: "u1", service_id: "s1", service_name: "Knetung", origin: "template", selection_token: "knetung" },
+      ],
+    });
+    expect(plan.add).toEqual([]);
+    expect(plan.remove).toEqual([]);
   });
 });
