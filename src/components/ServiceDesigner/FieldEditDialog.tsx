@@ -486,7 +486,39 @@ export default function FieldEditDialog({
               )}
             </div>
           )}
-          {!isComputed && !isRepeater && !isBlock && <div><Label>Standardwert</Label><Input value={defaultValue} onChange={e => setDefaultValue(e.target.value)} /></div>}
+          {!isComputed && !isRepeater && !isBlock && !isMultiSelect && <div><Label>Standardwert</Label><Input value={defaultValue} onChange={e => setDefaultValue(e.target.value)} /></div>}
+          {isMultiSelect && (
+            <div>
+              <Label>Vorauswahl (Standard)</Label>
+              {multiOptions.length === 0 ? (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Keine Auswahlmöglichkeiten vorhanden – zuerst Optionen bzw. Stammdatenliste hinterlegen.
+                </p>
+              ) : (
+                <div className="mt-1 rounded-md border px-3 py-2 space-y-1.5 max-h-48 overflow-auto">
+                  {multiOptions.map((o) => (
+                    <label key={o.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Checkbox
+                        checked={multiDefaults.includes(o.value)}
+                        onCheckedChange={(c) =>
+                          setMultiDefaults(
+                            c === true
+                              ? [...multiDefaults.filter((v) => v !== o.value), o.value]
+                              : multiDefaults.filter((v) => v !== o.value)
+                          )
+                        }
+                      />
+                      {o.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Diese Einträge sind beim erstmaligen Öffnen angekreuzt. Der Benutzer kann sie
+                jederzeit ändern; die gespeicherte Auswahl bleibt anschließend maßgeblich.
+              </p>
+            </div>
+          )}
           {isNumeric && (
             <div className="grid grid-cols-3 gap-3">
               <div><Label>Min</Label><Input value={minV} onChange={e => setMinV(e.target.value)} type="number" /></div>
