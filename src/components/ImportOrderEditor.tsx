@@ -1,6 +1,7 @@
 import { type ImportedOrderRow, type RowFieldErrors } from "@/lib/excel-import";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { Trash2, Plus, AlertCircle } from "lucide-react";
 
 const ORDER_TYPE_OPTIONS = [
@@ -64,7 +65,7 @@ export default function ImportOrderEditor({ rows, onRowsChange, services, fieldE
 
   return (
     <div className="space-y-3 px-4">
-      <div className="overflow-x-auto border rounded-lg">
+      <HorizontalScrollArea className="border rounded-lg">
         <table className="w-full text-sm" style={{ minWidth: 1300 }}>
           <thead>
             <tr className="border-b bg-muted/50 text-left">
@@ -252,7 +253,7 @@ export default function ImportOrderEditor({ rows, onRowsChange, services, fieldE
             })}
           </tbody>
         </table>
-      </div>
+      </HorizontalScrollArea>
       <Button variant="outline" size="sm" onClick={add}>
         <Plus className="h-4 w-4 mr-1" /> Zeile hinzufügen
       </Button>

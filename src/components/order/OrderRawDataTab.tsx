@@ -13,6 +13,7 @@ import { downloadText, rawDataCsv, evaluationCsv, exportEvaluationPdf } from "@/
 import CurveViewer, { type CurveSelection } from "@/components/curves/CurveViewer";
 import CurveEvaluationPanel from "@/components/curves/CurveEvaluationPanel";
 import MeasurementAnalysisResults from "@/components/curves/MeasurementAnalysisResults";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 
 
 /**
@@ -217,7 +218,7 @@ export default function OrderRawDataTab({ orderId, canEvaluate }: { orderId: str
         )}
 
         {evaluations.some((e) => e.kind !== "point") && (
-          <div className="rounded border">
+          <HorizontalScrollArea className="rounded border">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
                 <tr>
@@ -243,7 +244,7 @@ export default function OrderRawDataTab({ orderId, canEvaluate }: { orderId: str
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
         )}
       </CardContent>
       </Card>

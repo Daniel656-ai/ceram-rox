@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalValidation";
@@ -700,7 +701,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
       {importedRows.length > 0 && (
         <div className="rounded border bg-muted/20 p-2">
           <p className="text-[11px] font-medium mb-1">Zugeordnete Ergebnisse</p>
-          <table className="w-full text-[11px]">
+          <HorizontalScrollArea>
+            <table className="w-full text-[11px]">
             <tbody>
               {importedRows.map((r, i) => (
                 <tr key={i}>
@@ -709,7 +711,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </HorizontalScrollArea>
         </div>
       )}
       {last?.imported_at && missingCaseElements.length > 0 && (
@@ -750,7 +753,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
       {metadata.length > 0 && (
         <div className="rounded border bg-muted/10 p-2">
           <p className="text-[11px] font-medium mb-1">Importinformationen</p>
-          <table className="w-full text-[11px]">
+          <HorizontalScrollArea>
+            <table className="w-full text-[11px]">
             <tbody>
               {metadata.map((m, i) => (
                 <tr key={i}>
@@ -759,7 +763,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </HorizontalScrollArea>
         </div>
       )}
 
@@ -1190,7 +1195,7 @@ function RepeaterTable({
   }));
 
   return (
-    <div className="overflow-auto max-h-[65vh] rounded border">
+    <HorizontalScrollArea className="rounded border" viewportClassName="max-h-[65vh]">
       <table className="w-full text-xs border-separate border-spacing-0">
         <thead className="sticky top-0 z-20 bg-muted">
           <tr>
@@ -1227,7 +1232,7 @@ function RepeaterTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </HorizontalScrollArea>
   );
 }
 

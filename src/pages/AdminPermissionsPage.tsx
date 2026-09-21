@@ -3,6 +3,7 @@ import { useAllServices } from "@/hooks/useMeasurements";
 import { useDurchfuehrer } from "@/hooks/useMeasurements";
 import { useServicePermissions, useToggleServicePermission, usePermissionAuditLog } from "@/hooks/useServicePermissions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -116,7 +117,7 @@ export default function AdminPermissionsPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border relative overflow-auto max-h-[75vh]">
+              <HorizontalScrollArea className="rounded-md border" viewportClassName="max-h-[75vh]">
                 <table className="caption-bottom text-sm border-separate border-spacing-0">
                   <thead>
                     <tr>
@@ -155,7 +156,7 @@ export default function AdminPermissionsPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </HorizontalScrollArea>
             </div>
           )}
         </TabsContent>

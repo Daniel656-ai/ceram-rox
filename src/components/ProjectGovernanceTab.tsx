@@ -21,6 +21,7 @@ import {
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { PersonSelect } from "@/components/PersonSelect";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 
 interface Props {
   projectId: string;
@@ -405,8 +406,9 @@ function StakeholdersSection({ projectId, canEdit }: { projectId: string; canEdi
         <Card><CardContent className="p-8 text-center text-muted-foreground">Keine Stakeholder</CardContent></Card>
       ) : (
         <Card>
-          <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full text-sm">
+          <CardContent className="p-0">
+            <HorizontalScrollArea>
+              <table className="w-full text-sm">
               <thead className="border-b text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="p-3">Name / Org.</th>
@@ -447,7 +449,8 @@ function StakeholdersSection({ projectId, canEdit }: { projectId: string; canEdi
                   );
                 })}
               </tbody>
-            </table>
+              </table>
+            </HorizontalScrollArea>
           </CardContent>
         </Card>
       )}
