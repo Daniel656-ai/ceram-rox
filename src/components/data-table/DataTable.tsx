@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useRef } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { SyncedHorizontalScrollbar } from "@/components/ui/SyncedHorizontalScrollbar";
 import { ColumnFilterPopover } from "./ColumnFilterPopover";
 import { getValue, toSearchString } from "./dataTableUtils";
 import { useDataTable } from "./useDataTable";
@@ -68,6 +69,7 @@ export function DataTable<T>({
   toolbarActions,
   className,
 }: DataTableProps<T>) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const table = useDataTable<T>({
     tableId,
     rows,
@@ -119,7 +121,8 @@ export function DataTable<T>({
       </div>
 
       <div className="rounded-md border">
-        <Table>
+        <SyncedHorizontalScrollbar targetRef={scrollContainerRef} />
+        <Table scrollContainerRef={scrollContainerRef}>
           <TableHeader>
             <TableRow>
               {columns.map((col) => {

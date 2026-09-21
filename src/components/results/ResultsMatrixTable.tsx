@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import RichText from "@/components/forms/RichText";
+import { SyncedHorizontalScrollbar } from "@/components/ui/SyncedHorizontalScrollbar";
 import { toUnicode } from "@/lib/richText";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
@@ -42,6 +43,7 @@ export default function ResultsMatrixTable({
   records: ResultRecord[];
   columns: ResultParamColumn[];
 }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const identWidth = useMemo(
     () => IDENT_COLUMNS.reduce((s, c) => s + c.width, 0),
     []
@@ -60,8 +62,10 @@ export default function ResultsMatrixTable({
   }
 
   return (
-    <div className="relative w-full overflow-auto max-h-[70vh] border rounded-md">
-      <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 130 }}>
+    <div className="relative w-full border rounded-md">
+      <SyncedHorizontalScrollbar targetRef={scrollContainerRef} />
+      <div ref={scrollContainerRef} className="w-full overflow-auto max-h-[70vh]">
+        <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 130 }}>
         <thead>
           <tr>
             {IDENT_COLUMNS.map((c, i) => (
@@ -149,7 +153,8 @@ export default function ResultsMatrixTable({
             );
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   );
 }

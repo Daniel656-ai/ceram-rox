@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { downsample, curveOf, type MeasurementDataset } from "@/lib/curves/dataset";
+import { DraggableMarkerLabel } from "./DraggableMarkerLabel";
 
 export interface CurveSelection {
   xKey: string;
@@ -277,7 +278,7 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
             {markers.flatMap((m, mi) =>
               m.values
                 .filter((v) => v.value != null && (yKeys.includes(v.yKey) || v.yKey === y2Key))
-                .map((v) => (
+                .map((v, valueIndex) => (
                   <ReferenceDot
                     key={`dot-${mi}-${v.yKey}`}
                     yAxisId={v.yKey === y2Key ? "right" : "left"}
@@ -288,7 +289,15 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
                     stroke="hsl(var(--background))"
                   >
                     {showMarkerValues && (
-                      <RLabel value={fmt(v.value as number)} position="right" fontSize={10} />
+                      <RLabel
+                        content={(props) => (
+                          <DraggableMarkerLabel
+                            viewBox={props.viewBox as { cx?: number; cy?: number; x?: number; y?: number }}
+                            value={fmt(v.value as number)}
+                            index={mi + valueIndex}
+                          />
+                        )}
+                      />
                     )}
                   </ReferenceDot>
                 ))
