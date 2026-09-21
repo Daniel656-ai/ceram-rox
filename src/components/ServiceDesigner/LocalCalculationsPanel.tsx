@@ -696,6 +696,7 @@ export default function LocalCalculationsPanel({
                             value={t.ref || "__none__"}
                             onValueChange={(v) => {
                               if (v === "__const__") { setToken(i, { source: "const", ref: null, ref_id: null, value: 0 } as any); return; }
+                              if (v === "__link__") { openLinkPicker(i); return; }
                               if (v === "__none__") { setToken(i, { source: "field", ref: "", ref_id: null } as any); return; }
                               const agg = aggregateRefs.find((a) => v === `SUM(${a.key})` || v === `COUNT(${a.key})`);
                               if (agg) { setToken(i, { source: "field", ref: v, ref_id: null } as any); return; }
