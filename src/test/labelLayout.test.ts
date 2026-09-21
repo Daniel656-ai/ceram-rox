@@ -5,7 +5,22 @@ const bounds = { left: 10, top: 10, right: 310, bottom: 210 };
 
 describe("curve marker label layout", () => {
   it("prefers a position above the selected point when space is available", () => {
-    expect(automaticLabelPosition({ x: 120, y: 100 }, 0, bounds)).toEqual({ x: 132, y: 68 });
+    expect(automaticLabelPosition({ x: 120, y: 100 }, 0, bounds)).toEqual({ x: 84, y: 66 });
+  });
+
+  it("avoids curve points occupying the preferred area", () => {
+    const clear = automaticLabelPosition({ x: 120, y: 100 }, 0, bounds);
+    const occupied = automaticLabelPosition({ x: 120, y: 100 }, 0, bounds, {
+      points: [{ x: 120, y: 72 }],
+    });
+    expect(occupied).not.toEqual(clear);
+  });
+
+  it("avoids an already placed marker label", () => {
+    const placed = automaticLabelPosition({ x: 120, y: 100 }, 0, bounds, {
+      labels: [{ x: 84, y: 66, width: LABEL_WIDTH, height: LABEL_HEIGHT }],
+    });
+    expect(placed).not.toEqual({ x: 84, y: 66 });
   });
 
   it("uses another side near the upper chart boundary", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import {
   LABEL_HEIGHT,
   LABEL_WIDTH,
@@ -7,6 +7,7 @@ import {
   leaderLineEnd,
   type LabelBounds,
   type LabelPoint,
+  type LabelRect,
 } from "@/lib/curves/labelLayout";
 
 interface DraggableMarkerLabelProps {
@@ -24,6 +25,7 @@ export function DraggableMarkerLabel({ viewBox, value, index }: DraggableMarkerL
   const dragRef = useRef<{ pointerX: number; pointerY: number; origin: LabelPoint } | null>(null);
   const [bounds, setBounds] = useState<LabelBounds>({ left: 4, top: 4, right: 1000, bottom: 1000 });
   const [manualPosition, setManualPosition] = useState<LabelPoint | null>(null);
+  const [obstacles, setObstacles] = useState<{ points: LabelPoint[]; labels: LabelRect[] }>({ points: [], labels: [] });
 
   useEffect(() => {
     const svg = groupRef.current?.ownerSVGElement;
@@ -33,7 +35,41 @@ export function DraggableMarkerLabel({ viewBox, value, index }: DraggableMarkerL
     setManualPosition((current) => current ? clampLabel(current, next) : null);
   }, [anchor.x, anchor.y]);
 
-  const automatic = automaticLabelPosition(anchor, index, bounds);
+  useLayoutEffect(() => {
+    const group = groupRef.current;
+    const svg = group?.ownerSVGElement;
+    if (!group || !svg) return;
+
+    const collect = () => {
+      const points: LabelPoint[] = [];
+      svg.querySelectorAll<SVGGeometryElement>(".recharts-line-curve").forEach((path) => {
+        const length = path.getTotalLength?.() ?? 0;
+        for (let offset = 0; offset <= length; offset += 10) {
+          const point = path.getPointAtLength(offset);
+          points.push({ x: point.x, y: point.y });
+        }
+      });
+      svg.querySelectorAll<SVGCircleElement>(".recharts-reference-dot circle").forEach((circle) => {
+        points.push({ x: circle.cx.baseVal.value, y: circle.cy.baseVal.value });
+      });
+      const labels = Array.from(svg.querySelectorAll<SVGGElement>("[data-marker-label]"))
+        .filter((candidate) => candidate !== group)
+        .map((candidate) => candidate.querySelector("rect"))
+        .filter((rect): rect is SVGRectElement => rect !== null)
+        .map((rect) => ({
+          x: rect.x.baseVal.value,
+          y: rect.y.baseVal.value,
+          width: rect.width.baseVal.value,
+          height: rect.height.baseVal.value,
+        }));
+      setObstacles({ points, labels });
+    };
+
+    const frame = requestAnimationFrame(collect);
+    return () => cancelAnimationFrame(frame);
+  }, [anchor.x, anchor.y, index, value]);
+
+  const automatic = automaticLabelPosition(anchor, index, bounds, obstacles);
   const position = manualPosition ?? automatic;
   const lineEnd = leaderLineEnd(anchor, position);
 
@@ -62,6 +98,7 @@ export function DraggableMarkerLabel({ viewBox, value, index }: DraggableMarkerL
   return (
     <g
       ref={groupRef}
+      data-marker-label={index}
       role="button"
       aria-label={`${value} verschieben`}
       tabIndex={0}
