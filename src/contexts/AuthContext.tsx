@@ -19,9 +19,15 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  /** Primäre Basisrolle (größter Funktionsumfang) – Verhalten wie bisher. */
   role: AppRole | null;
+  /** Alle zugewiesenen Basisrollen. */
+  roles: AppRole[];
+  hasRole: (role: AppRole) => boolean;
   customRoleId: string | null;
   customRoleName: string | null;
+  customRoleIds: string[];
+  customRoleNames: string[];
   permissions: string[];
   mustChangePassword: boolean;
   loading: boolean;

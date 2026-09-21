@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { session, role, loading, mustChangePassword } = useAuth();
+  const { session, role, roles, loading, mustChangePassword } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -29,7 +29,9 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/change-password" replace />;
   }
 
-  if (allowedRoles && role && !allowedRoles.includes(role)) {
+  // Mehrfachrollen: Zugriff, sobald EINE der Rollen erlaubt ist.
+  const effectiveRoles = roles.length > 0 ? roles : role ? [role] : [];
+  if (allowedRoles && effectiveRoles.length > 0 && !effectiveRoles.some((r) => allowedRoles.includes(r))) {
     return <Navigate to="/dashboard" replace />;
   }
 
