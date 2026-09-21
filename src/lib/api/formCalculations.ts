@@ -55,6 +55,12 @@ export interface FormCalculation {
   is_result: boolean;
   /** Optionaler Anzeigename in der Ergebnisdatenbank. */
   result_label: string | null;
+  /**
+   * Zusatzangaben der Berechnung – gleiche Struktur wie `form_fields.metadata`.
+   * Enthält u. a. `result_conditions` (Ergebnisbedingungen). Bestehende
+   * Berechnungen ohne Eintrag verhalten sich unverändert.
+   */
+  metadata?: Record<string, unknown> | null;
   sort_order: number;
   created_at: string;
   updated_at: string;

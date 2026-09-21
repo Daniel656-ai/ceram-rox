@@ -24,6 +24,7 @@ import { loadSavedAnalyses, persistSavedAnalyses, type SavedAnalysis } from "@/l
 import { useAllServiceParameterDefs } from "@/hooks/useServiceParameters";
 import { buildServiceSchemas, flattenSchemas, exportCell, columnHeader } from "@/lib/resultSchema";
 import ResultsMatrixTable from "@/components/results/ResultsMatrixTable";
+import { collectConditionDimensions, matchesCondition, conditionSummary } from "@/lib/resultConditions";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -68,6 +69,10 @@ export default function ResultsDatabasePage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchText, setSearchText] = useState("");
+  // Ergebnismerkmale (z. B. Vorgabetemperatur) – Merkmale und Werte entstehen
+  // ausschließlich aus den tatsächlich gespeicherten Ergebnissen.
+  const [conditionKey, setConditionKey] = useState<string>("all");
+  const [conditionValue, setConditionValue] = useState<string>("all");
 
   // Chart state
   const [chartType, setChartType] = useState<"scatter" | "bar" | "line">("scatter");
@@ -106,6 +111,11 @@ export default function ResultsDatabasePage() {
   const uniqueProjects = useMemo(() => [...new Set(records.map(r => r.projectName).filter(Boolean))].sort(), [records]);
   const uniqueCreators = useMemo(() => [...new Set(records.map(r => r.createdByName).filter(Boolean))].sort(), [records]);
   const uniqueTechnicians = useMemo(() => [...new Set(records.map(r => r.assignedToName).filter(Boolean))].sort(), [records]);
+  const conditionDimensions = useMemo(() => collectConditionDimensions(records), [records]);
+  const conditionValues = useMemo(
+    () => conditionDimensions.find((d) => d.key === conditionKey)?.values ?? [],
+    [conditionDimensions, conditionKey]
+  );
 
   // Apply filters
   const filteredRecords = useMemo(() => {
@@ -114,6 +124,7 @@ export default function ResultsDatabasePage() {
       if (projectFilter !== "all" && r.projectName !== projectFilter) return false;
       if (creatorFilter !== "all" && r.createdByName !== creatorFilter) return false;
       if (technicianFilter !== "all" && r.assignedToName !== technicianFilter) return false;
+      if (conditionKey !== "all" && !matchesCondition(r, conditionKey, conditionValue)) return false;
       if (sampleFilter && !r.sampleNumber.toLowerCase().includes(sampleFilter.toLowerCase()) && !r.sampleName.toLowerCase().includes(sampleFilter.toLowerCase())) return false;
       if (dateFrom && r.completedAt && isBefore(parseISO(r.completedAt), parseISO(dateFrom))) return false;
       if (dateTo && r.completedAt && isAfter(parseISO(r.completedAt), parseISO(dateTo + "T23:59:59"))) return false;
@@ -125,7 +136,7 @@ export default function ResultsDatabasePage() {
       }
       return true;
     });
-  }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, sampleFilter, dateFrom, dateTo, searchText]);
+  }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, conditionKey, conditionValue, sampleFilter, dateFrom, dateTo, searchText]);
 
   const clearFilters = () => {
     setServiceFilter("all");
@@ -136,9 +147,11 @@ export default function ResultsDatabasePage() {
     setDateFrom("");
     setDateTo("");
     setSearchText("");
+    setConditionKey("all");
+    setConditionValue("all");
   };
 
-  const hasActiveFilters = serviceFilter !== "all" || projectFilter !== "all" || creatorFilter !== "all" || technicianFilter !== "all" || sampleFilter || dateFrom || dateTo || searchText;
+  const hasActiveFilters = serviceFilter !== "all" || projectFilter !== "all" || creatorFilter !== "all" || technicianFilter !== "all" || conditionKey !== "all" || sampleFilter || dateFrom || dateTo || searchText;
 
   // ==========================================================
   // Export – die Spaltenstruktur ist immer identisch (stabile
@@ -156,7 +169,8 @@ export default function ResultsDatabasePage() {
         "Dienstleistung": r.serviceName,
         "Analyse": r.measurementNumber,
         "Messung": r.instanceLabel ?? "",
-        "Messkontext": r.instanceContext ? Object.values(r.instanceContext).filter(Boolean).join(" · ") : "",
+        // Messkontext und Ergebnismerkmale (z. B. „Temperatur: 300 °C“).
+        "Messkontext": conditionSummary(r),
         "Datum": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
         "Projekt": r.projectName || r.projectNumber,
         "Auftraggeber": r.createdByName,
@@ -570,6 +584,31 @@ export default function ResultsDatabasePage() {
               </SelectContent>
             </Select>
             <Input placeholder="Proben-ID..." value={sampleFilter} onChange={e => setSampleFilter(e.target.value)} />
+            {conditionDimensions.length > 0 && (
+              <>
+                <Select
+                  value={conditionKey}
+                  onValueChange={(v) => { setConditionKey(v); setConditionValue("all"); }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Ergebnismerkmal" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Ergebnismerkmale</SelectItem>
+                    {conditionDimensions.map(d => <SelectItem key={d.key} value={d.key}>{d.key}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={conditionValue}
+                  onValueChange={setConditionValue}
+                  disabled={conditionKey === "all"}
+                >
+                  <SelectTrigger><SelectValue placeholder="Wert" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Werte</SelectItem>
+                    {conditionValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
             <Input type="date" placeholder="Von" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
             <Input type="date" placeholder="Bis" value={dateTo} onChange={e => setDateTo(e.target.value)} />
           </div>

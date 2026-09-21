@@ -253,15 +253,26 @@ export function buildLinkedFormResultCandidates(
         };
       }),
     ...instanceCandidates,
-    ...calculations.map((calculation) => ({
-      key: `${prefix}${calculation.calc_key}`,
-      label: calculation.result_label || calculation.display_name || calculation.calc_key,
-      unit: calculation.unit ?? null,
-      value: calculated[calculation.calc_key]?.value ?? null,
-      official: calculation.is_result === true,
-      kind: "calculation" as const,
-      error: calculated[calculation.calc_key]?.error ?? null,
-    })),
+    ...calculations.map((calculation) => {
+      // Ergebnisbedingungen von Berechnungen nutzen dieselbe Mechanik wie
+      // Felder (`metadata.result_conditions`): Bedingungen erscheinen in der
+      // Bezeichnung UND bleiben strukturiert am Ergebnis erhalten. Sie sind
+      // niemals Bestandteil der Formel.
+      const base = calculation.result_label || calculation.display_name || calculation.calc_key;
+      const conditions = collectResultConditions(
+        readResultConditions(calculation as any), fields, localValues,
+      );
+      return {
+        key: `${prefix}${calculation.calc_key}`,
+        label: buildConditionLabel(base, conditions),
+        unit: calculation.unit ?? null,
+        value: calculated[calculation.calc_key]?.value ?? null,
+        official: calculation.is_result === true,
+        kind: "calculation" as const,
+        error: calculated[calculation.calc_key]?.error ?? null,
+        instanceContext: conditions.length ? conditionsToContext(conditions) : null,
+      };
+    }),
   ];
 
   // Sicherheitsnetz: ein Ergebnisschlüssel erscheint genau einmal. Ein Wert

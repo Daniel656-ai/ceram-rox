@@ -26,7 +26,11 @@ import {
   evaluateLocalCalculations, formatCalcResult,
 } from "@/lib/localCalculations";
 import { extractReferences, FORMULA_FUNCTIONS, formulaFunctionLabel } from "@/lib/formulaEngine";
-import { readValueSource, isLinkedField, linkOriginLabel } from "@/lib/fieldLinks";
+import {
+  readValueSource, isLinkedField, linkOriginLabel,
+  readResultConditions, writeResultConditions,
+} from "@/lib/fieldLinks";
+import { Checkbox } from "@/components/ui/checkbox";
 import { repeaterAggregateRefs } from "@/lib/repeaterAggregation";
 import { GEOMETRY_CALCULATIONS, type GeometryCalcDefinition } from "@/lib/geometry/calculations";
 import { globalConstantScope, isGlobalConstant } from "@/lib/globalConstants";
@@ -157,6 +161,10 @@ interface Draft {
   formula: string;
   is_result: boolean;
   result_label: string;
+  /** Feldschlüssel der Ergebnisbedingungen (z. B. Vorgabetemperatur T1). */
+  conditionKeys: string[];
+  /** Unveränderte weitere Zusatzangaben der Berechnung. */
+  metadata: Record<string, unknown>;
 }
 
 const emptyDraft = (): Draft => ({
@@ -167,6 +175,8 @@ const emptyDraft = (): Draft => ({
   formula: "",
   is_result: false,
   result_label: "",
+  conditionKeys: [],
+  metadata: {},
 });
 
 export default function LocalCalculationsPanel({
@@ -211,6 +221,17 @@ export default function LocalCalculationsPanel({
     [numericFields],
   );
   const linkedFields = useMemo(() => numericFields.filter((f) => isLinkedField(f as any)), [numericFields]);
+  /**
+   * Mögliche Ergebnisbedingungen: alle einfachen Felder des Formulars –
+   * einschließlich verknüpfter Vorgabefelder (T1–T6). Keine eigene Auswahl-
+   * oder Verknüpfungslogik; es wird dieselbe Feldliste verwendet.
+   */
+  const conditionCandidates = useMemo(
+    () => (fields as FormField[]).filter(
+      (f) => !["repeater", "measurement_block", "measurement_import"].includes(f.field_type)
+    ),
+    [fields],
+  );
   const originOf = (f: FormField) => linkOriginLabel(readValueSource(f as any));
   const fieldLabel = (key: string) =>
     fields.find((f) => f.field_key === key)?.display_name
@@ -361,6 +382,8 @@ export default function LocalCalculationsPanel({
       formula: tokens.length ? buildFormulaFromTokens(tokens) : (c.formula ?? ""),
       is_result: !!(c as any).is_result,
       result_label: (c as any).result_label ?? "",
+      conditionKeys: readResultConditions(c as any),
+      metadata: ((c as any).metadata ?? {}) as Record<string, unknown>,
     });
     setTestValues({});
     setOpen(true);
@@ -392,6 +415,11 @@ export default function LocalCalculationsPanel({
         rounding: draft.rounding,
         is_result: draft.is_result,
         result_label: draft.is_result ? (draft.result_label.trim() || null) : null,
+        // Ergebnisbedingungen liegen – wie bei Feldern – in `metadata`.
+        // Ohne Bedingungen bleibt der Eintrag leer (Altverhalten unverändert).
+        metadata: writeResultConditions(
+          draft.metadata, draft.is_result ? draft.conditionKeys : [],
+        ),
       };
       if (draft.id) {
         const { form_id: _f, ...rest } = payload;
@@ -960,6 +988,32 @@ export default function LocalCalculationsPanel({
                 <SymbolInput className="h-8" placeholder={draft.display_name || "Ergebnis-Bezeichnung"}
                   value={draft.result_label}
                   onChange={(v) => setDraft((d) => ({ ...d, result_label: v }))} />
+              )}
+              {draft.is_result && conditionCandidates.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Messbedingungen in der Bezeichnung</Label>
+                  <div className="flex flex-wrap gap-3 max-h-40 overflow-auto">
+                    {conditionCandidates.map((f) => (
+                      <label key={f.id} className="flex items-center gap-1.5 text-xs">
+                        <Checkbox
+                          checked={draft.conditionKeys.includes(f.field_key)}
+                          onCheckedChange={(v) => setDraft((d) => ({
+                            ...d,
+                            conditionKeys: v
+                              ? [...d.conditionKeys, f.field_key]
+                              : d.conditionKeys.filter((k) => k !== f.field_key),
+                          }))}
+                        />
+                        {f.display_name || f.field_key}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Kennzeichnet das Ergebnis – z. B. η-NO_{"{x}"}_{"{(300 °C)}"} aus der Vorgabe T1.
+                    Die Bedingung fließt nie in die Formel ein und bleibt zusätzlich als
+                    strukturiertes Merkmal (Wert + Einheit) im Ergebnis erhalten.
+                  </p>
+                </div>
               )}
             </div>
 
