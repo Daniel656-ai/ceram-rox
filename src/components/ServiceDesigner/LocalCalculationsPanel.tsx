@@ -157,6 +157,10 @@ interface Draft {
   formula: string;
   is_result: boolean;
   result_label: string;
+  /** Feldschlüssel der Ergebnisbedingungen (z. B. Vorgabetemperatur T1). */
+  conditionKeys: string[];
+  /** Unveränderte weitere Zusatzangaben der Berechnung. */
+  metadata: Record<string, unknown>;
 }
 
 const emptyDraft = (): Draft => ({
@@ -167,6 +171,8 @@ const emptyDraft = (): Draft => ({
   formula: "",
   is_result: false,
   result_label: "",
+  conditionKeys: [],
+  metadata: {},
 });
 
 export default function LocalCalculationsPanel({
