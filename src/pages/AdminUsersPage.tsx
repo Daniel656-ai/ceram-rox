@@ -140,19 +140,42 @@ export default function AdminUsersPage() {
       key: "role",
       type: "status",
       header: t("admin:role"),
-      accessor: (u) => u.custom_role_name || "",
-      cell: (u) => (
-        <Select value={u.custom_role_id || ""} onValueChange={(v) => handleRoleChange(u.user_id, v)}>
-          <SelectTrigger className="w-[200px]"><SelectValue placeholder={u.custom_role_name || "–"} /></SelectTrigger>
-          <SelectContent>
-            {customRoles.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                <div className="flex items-center gap-2">{r.name}{r.is_system && <Badge variant="outline" className="text-xs ml-1">{t("admin:role_type_system")}</Badge>}</div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ),
+      accessor: (u) => (u.custom_role_names?.length ? u.custom_role_names.join(", ") : u.custom_role_name || ""),
+      cell: (u) => {
+        const assigned: string[] = u.custom_role_ids?.length
+          ? u.custom_role_ids
+          : u.custom_role_id ? [u.custom_role_id] : [];
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="w-[220px] justify-start font-normal">
+                <span className="truncate">
+                  {assigned.length
+                    ? customRoles.filter((r) => assigned.includes(r.id)).map((r) => r.name).join(", ")
+                    : "–"}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2 space-y-1" align="start">
+              {customRoles.map((r) => (
+                <label key={r.id} className="flex items-center gap-2 rounded px-1 py-1 hover:bg-muted cursor-pointer">
+                  <Checkbox
+                    checked={assigned.includes(r.id)}
+                    onCheckedChange={(v) => handleRolesChange(u, r.id, v === true)}
+                  />
+                  <span className="text-sm">{r.name}</span>
+                  {r.is_system && <Badge variant="outline" className="text-xs">{t("admin:role_type_system")}</Badge>}
+                </label>
+              ))}
+              <p className="text-[11px] text-muted-foreground pt-1">
+                Mehrere Rollen sind gleichzeitig möglich; der Mitarbeiter erhält die Summe der
+                Berechtigungen. Pro Rollenart (Auftraggeber / Messdienstleister / Administrator)
+                ist eine Rolle wählbar.
+              </p>
+            </PopoverContent>
+          </Popover>
+        );
+      },
     },
     {
       key: "is_active",
