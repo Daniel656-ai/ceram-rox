@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { evaluateValidations, validationIdsFromMetadata } from "@/lib/globalValidation";
@@ -1190,7 +1191,7 @@ function RepeaterTable({
   }));
 
   return (
-    <div className="overflow-auto max-h-[65vh] rounded border">
+    <HorizontalScrollArea className="rounded border" viewportClassName="max-h-[65vh]">
       <table className="w-full text-xs border-separate border-spacing-0">
         <thead className="sticky top-0 z-20 bg-muted">
           <tr>
@@ -1227,7 +1228,7 @@ function RepeaterTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </HorizontalScrollArea>
   );
 }
 

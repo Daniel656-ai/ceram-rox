@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import {
   computePlateGeometry,
   emptyPlateThicknessRow,
@@ -100,7 +101,7 @@ export default function PlateGeometrySection({ data, reactor, readOnly, onChange
             Bitte zuerst die Plattenanzahl erfassen – die Zeilen richten sich danach.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <HorizontalScrollArea>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-muted-foreground">
@@ -135,14 +136,14 @@ export default function PlateGeometrySection({ data, reactor, readOnly, onChange
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
         )}
       </div>
 
       <div className="space-y-2">
         <h4 className="text-sm font-medium">Gewicht / Dimension</h4>
         {rows === 0 ? null : (
-          <div className="overflow-x-auto">
+          <HorizontalScrollArea>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-muted-foreground">
@@ -187,7 +188,7 @@ export default function PlateGeometrySection({ data, reactor, readOnly, onChange
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
         )}
       </div>
 
