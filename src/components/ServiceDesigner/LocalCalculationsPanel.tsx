@@ -788,7 +788,9 @@ export default function LocalCalculationsPanel({
                   </div>
                   <p className="text-[11px] text-muted-foreground">
                     Angeboten werden rechenbare Felder dieses Formulars sowie 🔗 verknüpfte Felder
-                    (Werte aus vorangegangenen Dienstleistungen). Technische Schlüssel sind nicht nötig.
+                    (Werte aus vorangegangenen Dienstleistungen). Über „🔗 Wert verknüpfen …“ lässt
+                    sich ein Parameter direkt mit einem Feld eines anderen Formulars verbinden,
+                    z. B. mit einer Auftraggeber-Vorgabe (T1 … T6). Technische Schlüssel sind nicht nötig.
                   </p>
                 </div>
               ) : (
