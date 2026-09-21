@@ -978,6 +978,32 @@ export default function LocalCalculationsPanel({
                   value={draft.result_label}
                   onChange={(v) => setDraft((d) => ({ ...d, result_label: v }))} />
               )}
+              {draft.is_result && conditionCandidates.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Messbedingungen in der Bezeichnung</Label>
+                  <div className="flex flex-wrap gap-3 max-h-40 overflow-auto">
+                    {conditionCandidates.map((f) => (
+                      <label key={f.id} className="flex items-center gap-1.5 text-xs">
+                        <Checkbox
+                          checked={draft.conditionKeys.includes(f.field_key)}
+                          onCheckedChange={(v) => setDraft((d) => ({
+                            ...d,
+                            conditionKeys: v
+                              ? [...d.conditionKeys, f.field_key]
+                              : d.conditionKeys.filter((k) => k !== f.field_key),
+                          }))}
+                        />
+                        {f.display_name || f.field_key}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Kennzeichnet das Ergebnis – z. B. η-NO_{"{x}"}_{"{(300 °C)}"} aus der Vorgabe T1.
+                    Die Bedingung fließt nie in die Formel ein und bleibt zusätzlich als
+                    strukturiertes Merkmal (Wert + Einheit) im Ergebnis erhalten.
+                  </p>
+                </div>
+              )}
             </div>
 
 
