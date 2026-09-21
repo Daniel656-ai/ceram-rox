@@ -60,19 +60,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [customRoleId, setCustomRoleId] = useState<string | null>(null);
   const [customRoleName, setCustomRoleName] = useState<string | null>(null);
+  const [customRoleIds, setCustomRoleIds] = useState<string[]>([]);
+  const [customRoleNames, setCustomRoleNames] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
-    const { profile, role, customRoleId, customRoleName, permissions } =
-      await api.users.loadAuthContext(userId);
-    if (profile) setProfile(profile as Profile);
-    if (role) setRole(role as AppRole);
-    setCustomRoleId(customRoleId);
-    setCustomRoleName(customRoleName);
-    setPermissions(permissions);
+    const ctx = await api.users.loadAuthContext(userId);
+    if (ctx.profile) setProfile(ctx.profile as Profile);
+    if (ctx.role) setRole(ctx.role as AppRole);
+    setRoles((ctx.roles ?? []) as AppRole[]);
+    setCustomRoleId(ctx.customRoleId);
+    setCustomRoleName(ctx.customRoleName);
+    setCustomRoleIds(ctx.customRoleIds ?? []);
+    setCustomRoleNames(ctx.customRoleNames ?? []);
+    setPermissions(ctx.permissions);
   };
 
   const refreshProfile = async () => {
