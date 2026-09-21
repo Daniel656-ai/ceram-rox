@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { cn } from "@/lib/utils";
 
 interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
@@ -8,9 +9,9 @@ interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
 
 const Table = React.forwardRef<HTMLTableElement, TableProps>(
   ({ className, scrollContainerRef, ...props }, ref) => (
-    <div ref={scrollContainerRef} className="relative w-full overflow-auto">
+    <HorizontalScrollArea scrollContainerRef={scrollContainerRef}>
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
-    </div>
+    </HorizontalScrollArea>
   ),
 );
 Table.displayName = "Table";

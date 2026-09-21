@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 import RichText from "@/components/forms/RichText";
-import { SyncedHorizontalScrollbar } from "@/components/ui/SyncedHorizontalScrollbar";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { toUnicode } from "@/lib/richText";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
@@ -63,8 +63,7 @@ export default function ResultsMatrixTable({
 
   return (
     <div className="relative w-full border rounded-md">
-      <SyncedHorizontalScrollbar targetRef={scrollContainerRef} />
-      <div ref={scrollContainerRef} className="w-full overflow-auto max-h-[70vh]">
+      <HorizontalScrollArea scrollContainerRef={scrollContainerRef} viewportClassName="max-h-[70vh]">
         <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 130 }}>
         <thead>
           <tr>
@@ -154,7 +153,7 @@ export default function ResultsMatrixTable({
           })}
         </tbody>
         </table>
-      </div>
+      </HorizontalScrollArea>
     </div>
   );
 }

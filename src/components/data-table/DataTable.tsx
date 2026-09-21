@@ -26,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { SyncedHorizontalScrollbar } from "@/components/ui/SyncedHorizontalScrollbar";
 import { ColumnFilterPopover } from "./ColumnFilterPopover";
 import { getValue, toSearchString } from "./dataTableUtils";
 import { useDataTable } from "./useDataTable";
@@ -121,7 +120,6 @@ export function DataTable<T>({
       </div>
 
       <div className="rounded-md border">
-        <SyncedHorizontalScrollbar targetRef={scrollContainerRef} />
         <Table scrollContainerRef={scrollContainerRef}>
           <TableHeader>
             <TableRow>
