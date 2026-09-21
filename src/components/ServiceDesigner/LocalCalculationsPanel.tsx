@@ -491,24 +491,47 @@ export default function LocalCalculationsPanel({
   const createLink = useMutation({
     mutationFn: async () => {
       const src = linkSourceOptions.find((o) => o.key === linkFieldKey);
-      const form = (allForms as Array<{ id: string; name: string }>).find((f) => f.id === linkFormId);
+      const srcForm = (allForms as Array<{ id: string; name: string }>).find((f) => f.id === linkFormId);
       if (!linkFormId || !src) throw new Error("Bitte Formular und Feld wählen");
-      // Bereits vorhandene Verknüpfung auf dieselbe Quelle wiederverwenden.
+      // Bereits vorhandene Verknüpfung auf dieselbe Quelle wiederverwenden –
+      // es entsteht kein zweites Feld für denselben Wert.
       const existing = fields.find((f) => {
         const vs = readValueSource(f as any);
         return vs?.source.kind === "linked_form"
           && vs.source.form_id === linkFormId
           && vs.source.field_key === linkFieldKey;
       });
-      if (existing) return existing;
+      if (existing) return existing as FormField;
       return api.formFields.create({
-        form_id: form?.id ? (form.id === linkFormId ? (fields[0]?.form_id ?? "") : "") : "",
-        field_key: "",
-        display_name: "",
+        form_id: form.id,
+        field_key: uniqueFieldKey(src.label),
+        display_name: src.label,
         field_type: "number",
+        unit: src.unit ?? null,
+        readonly: true,
+        sort_order: (fields.length + 1) * 10,
+        data_source: {
+          mode: "copy",
+          source: {
+            kind: "linked_form",
+            form_id: linkFormId,
+            field_key: linkFieldKey,
+            label: `${srcForm?.name ?? "Formular"} → ${src.label}`,
+          },
+        },
       } as any);
     },
-    onSuccess: () => {},
+    onSuccess: (created: FormField) => {
+      qc.invalidateQueries({ queryKey: ["form-fields", form.id] });
+      if (linkTarget === "formula") {
+        setDraft((d) => ({ ...d, formula: appendRef(d.formula, created.field_key) }));
+      } else {
+        setToken(linkTarget, { source: "field", ref: created.field_key, ref_id: created.id } as any);
+      }
+      setLinkOpen(false);
+      toast.success(`Wert verknüpft: ${created.display_name}`);
+    },
+    onError: (e: any) => toast.error(e.message || "Verknüpfung nicht möglich"),
   });
 
 
