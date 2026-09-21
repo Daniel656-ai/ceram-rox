@@ -992,6 +992,55 @@ export default function LocalCalculationsPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Wert verknüpfen – gleiche Wertquellen-Mechanik wie im Feldeditor. */}
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Wert verknüpfen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Der Parameter greift auf ein Feld eines anderen Formulars zu (z. B. eine
+              Auftraggeber-Vorgabe wie T1). Der Wert wird nicht kopiert – Änderungen der Quelle
+              wirken sofort.
+            </p>
+            <div className="space-y-1">
+              <Label className="text-xs">Formular</Label>
+              <Select value={linkFormId} onValueChange={(v) => { setLinkFormId(v); setLinkFieldKey(""); }}>
+                <SelectTrigger><SelectValue placeholder="Formular wählen" /></SelectTrigger>
+                <SelectContent>
+                  {(allForms as Array<{ id: string; name: string }>)
+                    .filter((f) => f.id !== form.id)
+                    .map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Feld</Label>
+              <Select value={linkFieldKey} onValueChange={setLinkFieldKey} disabled={!linkFormId}>
+                <SelectTrigger><SelectValue placeholder="Feld wählen" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {linkSourceOptions.map((o) => (
+                    <SelectItem key={o.key} value={o.key}>
+                      {o.label}{o.unit ? ` [${o.unit}]` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkOpen(false)}>Abbrechen</Button>
+            <Button
+              disabled={!linkFormId || !linkFieldKey || createLink.isPending}
+              onClick={() => createLink.mutate()}
+            >
+              Übernehmen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
