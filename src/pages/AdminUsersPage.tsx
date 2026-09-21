@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile, useResetUserPassword, useUserEmails } from "@/hooks/useUsers";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { useCustomRoles } from "@/hooks/useCustomRoles";
 import { Card, CardContent } from "@/components/ui/card";
@@ -114,6 +115,25 @@ export default function AdminUsersPage() {
     if (!selectedRole) return;
     try { await updateRole.mutateAsync({ userId, role: selectedRole.base_role, customRoleId }); toast.success(t("admin:role_changed")); }
     catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
+  };
+
+  /** Mehrfachauswahl: Rolle hinzufügen oder entfernen, übrige Rollen bleiben bestehen. */
+  const handleRolesChange = async (u: any, customRoleId: string, checked: boolean) => {
+    const current: string[] = u.custom_role_ids?.length
+      ? [...u.custom_role_ids]
+      : u.custom_role_id ? [u.custom_role_id] : [];
+    const next = checked
+      ? Array.from(new Set([...current, customRoleId]))
+      : current.filter((id) => id !== customRoleId);
+    if (next.length === 0) { toast.error("Mindestens eine Rolle ist erforderlich."); return; }
+    const selection = next
+      .map((id) => customRoles.find((r) => r.id === id))
+      .filter(Boolean)
+      .map((r: any) => ({ customRoleId: r.id, baseRole: r.base_role }));
+    try {
+      await setUserRoles.mutateAsync({ userId: u.user_id, selection });
+      toast.success(t("admin:role_changed"));
+    } catch (err: any) { toast.error(t("common:error"), { description: err.message }); }
   };
 
   const handleStatusChange = async (userId: string, isActive: boolean) => {
