@@ -47,14 +47,13 @@ export function SyncedHorizontalScrollbar({ targetRef }: SyncedHorizontalScrollb
     };
   }, [targetRef]);
 
-  if (!visible) return null;
-
   return (
     <div
       ref={topRef}
-      className="sticky top-0 z-50 h-4 w-full overflow-x-auto overflow-y-hidden bg-background"
+      className={`sticky top-0 z-50 h-4 w-full overflow-x-auto overflow-y-hidden bg-background ${visible ? "block" : "hidden"}`}
       aria-label="Tabelle horizontal scrollen"
       role="region"
+      aria-hidden={!visible}
     >
       <div aria-hidden="true" style={{ width: contentWidth, height: 1 }} />
     </div>
