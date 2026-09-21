@@ -1,76 +1,54 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import { moduleFromPath, runtimeVariant } from "@/lib/usageModule";
-import type { UsageEventInput } from "@/lib/api/usageEvents";
+import { moduleFromPath } from "@/lib/usageModule";
+import { setUsageUser, trackUsage, flushUsage } from "@/lib/usageTracking";
 
 const FLUSH_INTERVAL_MS = 15000;
-const MAX_BUFFER = 20;
 
 /**
- * Zentrales, rein technisches Nutzungs-Tracking ("module_opened").
+ * Bindet die zentrale Nutzungserfassung an die gemeinsame Hülle für
+ * angemeldete Seiten:
+ * - meldet den angemeldeten Benutzer an die zentrale Tracking-Funktion
+ * - erfasst automatisch jedes geöffnete Modul ("module_opened")
  *
- * - keine fachlichen Inhalte
- * - blockiert niemals Navigation, Seitenaufbau oder fachliche Prozesse
- * - Fehler (fehlende Struktur, offline) werden still ignoriert
+ * Alle weiteren Module und Funktionen rufen direkt trackUsage(...) auf;
+ * dafür ist an dieser Stelle keine Änderung nötig.
  */
 export function useUsageTracking() {
   const location = useLocation();
   const { user } = useAuth();
-  const buffer = useRef<UsageEventInput[]>([]);
   const lastModule = useRef<string | null>(null);
   const userId = user?.id ?? null;
 
-  const flush = useRef(async () => {
-    const pending = buffer.current;
-    if (pending.length === 0) return;
-    buffer.current = [];
-    try {
-      const ok = await api.usageEvents.insertBatch(pending);
-      if (!ok) return; // still verwerfen – kein Retry, kein Fehlerdialog
-    } catch {
-      /* ignore */
-    }
-  });
+  useEffect(() => {
+    setUsageUser(userId);
+    if (!userId) lastModule.current = null;
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
     const mod = moduleFromPath(location.pathname);
     if (mod === lastModule.current) return;
     lastModule.current = mod;
-
-    buffer.current.push({
-      occurred_at: new Date().toISOString(),
-      module: mod,
-      action: "module_opened",
-      user_id: userId,
-      variant: runtimeVariant(),
-    });
-
-    if (buffer.current.length >= MAX_BUFFER) {
-      void flush.current();
-      return;
-    }
-    // kurz sammeln, dann gebündelt übertragen (nicht blockierend)
-    const t = window.setTimeout(() => void flush.current(), 3000);
-    return () => window.clearTimeout(t);
+    // genau ein Ereignis je Modulwechsel – unabhängig von der Anzahl der Rollen
+    trackUsage({ module: mod, action: "module_opened" });
   }, [location.pathname, userId]);
 
   useEffect(() => {
     if (!userId) return;
-    const timer = window.setInterval(() => void flush.current(), FLUSH_INTERVAL_MS);
+    const timer = window.setInterval(() => void flushUsage(), FLUSH_INTERVAL_MS);
     const onHide = () => {
-      if (document.visibilityState === "hidden") void flush.current();
+      if (document.visibilityState === "hidden") void flushUsage();
     };
-    const onPageHide = () => void flush.current();
+    const onPageHide = () => void flushUsage();
     document.addEventListener("visibilitychange", onHide);
     window.addEventListener("pagehide", onPageHide);
     return () => {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("pagehide", onPageHide);
-      void flush.current();
+      void flushUsage();
     };
   }, [userId]);
 }
