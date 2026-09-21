@@ -404,6 +404,11 @@ export default function LocalCalculationsPanel({
         rounding: draft.rounding,
         is_result: draft.is_result,
         result_label: draft.is_result ? (draft.result_label.trim() || null) : null,
+        // Ergebnisbedingungen liegen – wie bei Feldern – in `metadata`.
+        // Ohne Bedingungen bleibt der Eintrag leer (Altverhalten unverändert).
+        metadata: writeResultConditions(
+          draft.metadata, draft.is_result ? draft.conditionKeys : [],
+        ),
       };
       if (draft.id) {
         const { form_id: _f, ...rest } = payload;
