@@ -221,6 +221,17 @@ export default function LocalCalculationsPanel({
     [numericFields],
   );
   const linkedFields = useMemo(() => numericFields.filter((f) => isLinkedField(f as any)), [numericFields]);
+  /**
+   * Mögliche Ergebnisbedingungen: alle einfachen Felder des Formulars –
+   * einschließlich verknüpfter Vorgabefelder (T1–T6). Keine eigene Auswahl-
+   * oder Verknüpfungslogik; es wird dieselbe Feldliste verwendet.
+   */
+  const conditionCandidates = useMemo(
+    () => (fields as FormField[]).filter(
+      (f) => !["repeater", "measurement_block", "measurement_import"].includes(f.field_type)
+    ),
+    [fields],
+  );
   const originOf = (f: FormField) => linkOriginLabel(readValueSource(f as any));
   const fieldLabel = (key: string) =>
     fields.find((f) => f.field_key === key)?.display_name
