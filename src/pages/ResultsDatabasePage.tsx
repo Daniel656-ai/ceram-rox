@@ -169,7 +169,8 @@ export default function ResultsDatabasePage() {
         "Dienstleistung": r.serviceName,
         "Analyse": r.measurementNumber,
         "Messung": r.instanceLabel ?? "",
-        "Messkontext": r.instanceContext ? Object.values(r.instanceContext).filter(Boolean).join(" · ") : "",
+        // Messkontext und Ergebnismerkmale (z. B. „Temperatur: 300 °C“).
+        "Messkontext": conditionSummary(r),
         "Datum": r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yyyy", { locale: de }) : "",
         "Projekt": r.projectName || r.projectNumber,
         "Auftraggeber": r.createdByName,
@@ -583,6 +584,31 @@ export default function ResultsDatabasePage() {
               </SelectContent>
             </Select>
             <Input placeholder="Proben-ID..." value={sampleFilter} onChange={e => setSampleFilter(e.target.value)} />
+            {conditionDimensions.length > 0 && (
+              <>
+                <Select
+                  value={conditionKey}
+                  onValueChange={(v) => { setConditionKey(v); setConditionValue("all"); }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Ergebnismerkmal" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Ergebnismerkmale</SelectItem>
+                    {conditionDimensions.map(d => <SelectItem key={d.key} value={d.key}>{d.key}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={conditionValue}
+                  onValueChange={setConditionValue}
+                  disabled={conditionKey === "all"}
+                >
+                  <SelectTrigger><SelectValue placeholder="Wert" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Werte</SelectItem>
+                    {conditionValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
             <Input type="date" placeholder="Von" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
             <Input type="date" placeholder="Bis" value={dateTo} onChange={e => setDateTo(e.target.value)} />
           </div>
