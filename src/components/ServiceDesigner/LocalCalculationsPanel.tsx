@@ -433,6 +433,85 @@ export default function LocalCalculationsPanel({
       return { ...d, tokens: t.length ? t : [{ type: "operand", source: "field", ref: "" }] };
     });
 
+  /* ----------------------------------------------------------------
+   * „Wert verknüpfen“ – identische Mechanik wie im Feldeditor:
+   * die Verknüpfung wird als Wertquelle (`data_source`) eines Feldes
+   * dieses Formulars gespeichert. Es entsteht keine zweite Logik.
+   * ---------------------------------------------------------------- */
+  const [linkOpen, setLinkOpen] = useState(false);
+  /** Zielort der neuen Verknüpfung: Operandenposition oder Formeltext. */
+  const [linkTarget, setLinkTarget] = useState<number | "formula">("formula");
+  const [linkFormId, setLinkFormId] = useState("");
+  const [linkFieldKey, setLinkFieldKey] = useState("");
+
+  const { data: allForms = [] } = useQuery({
+    queryKey: ["form-definitions"],
+    queryFn: () => api.formDefinitions.list(),
+    enabled: linkOpen,
+  });
+  const { data: srcFields = [] } = useQuery({
+    queryKey: ["form-fields", linkFormId],
+    queryFn: () => api.formFields.listForForm(linkFormId),
+    enabled: !!linkFormId,
+  });
+  const { data: srcCalcs = [] } = useQuery({
+    queryKey: ["form-calculations", linkFormId],
+    queryFn: () => api.formCalculations.listForForm(linkFormId),
+    enabled: !!linkFormId,
+  });
+  /** Quellgrößen des anderen Formulars: Felder UND dort berechnete Werte. */
+  const linkSourceOptions = useMemo(() => [
+    ...(srcFields as FormField[])
+      .filter((f) => !["repeater", "measurement_block", "measurement_import"].includes(f.field_type))
+      .map((f) => ({ key: f.field_key, label: f.display_name || f.field_key, unit: f.unit })),
+    ...(srcCalcs as FormCalculation[]).map((c) => ({
+      key: c.calc_key,
+      label: `${c.display_name || c.calc_key} (Berechnung)`,
+      unit: c.unit,
+    })),
+  ].filter((o, i, arr) => !!o.key && arr.findIndex((x) => x.key === o.key) === i),
+  [srcFields, srcCalcs]);
+
+  const openLinkPicker = (target: number | "formula") => {
+    setLinkTarget(target);
+    setLinkFormId("");
+    setLinkFieldKey("");
+    setLinkOpen(true);
+  };
+
+  /** Eindeutiger technischer Schlüssel für das verknüpfte Feld dieses Formulars. */
+  const uniqueFieldKey = (base: string) => {
+    const taken = new Set([...fields.map((f) => f.field_key), ...(calcs as FormCalculation[]).map((c) => c.calc_key)]);
+    let key = slug(base);
+    let n = 2;
+    while (taken.has(key)) key = `${slug(base)}_${n++}`;
+    return key;
+  };
+
+  const createLink = useMutation({
+    mutationFn: async () => {
+      const src = linkSourceOptions.find((o) => o.key === linkFieldKey);
+      const form = (allForms as Array<{ id: string; name: string }>).find((f) => f.id === linkFormId);
+      if (!linkFormId || !src) throw new Error("Bitte Formular und Feld wählen");
+      // Bereits vorhandene Verknüpfung auf dieselbe Quelle wiederverwenden.
+      const existing = fields.find((f) => {
+        const vs = readValueSource(f as any);
+        return vs?.source.kind === "linked_form"
+          && vs.source.form_id === linkFormId
+          && vs.source.field_key === linkFieldKey;
+      });
+      if (existing) return existing;
+      return api.formFields.create({
+        form_id: form?.id ? (form.id === linkFormId ? (fields[0]?.form_id ?? "") : "") : "",
+        field_key: "",
+        display_name: "",
+        field_type: "number",
+      } as any);
+    },
+    onSuccess: () => {},
+  });
+
+
   return (
     <div className="space-y-3">
       <Card>
