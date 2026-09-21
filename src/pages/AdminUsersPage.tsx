@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useUsers, useUpdateUserRole, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile, useResetUserPassword, useUserEmails } from "@/hooks/useUsers";
+import { useUsers, useUpdateUserRole, useSetUserRoles, useUpdateUserStatus, useCreateUser, useDeleteUser, useUpdateProfile, useResetUserPassword, useUserEmails } from "@/hooks/useUsers";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -32,6 +32,7 @@ export default function AdminUsersPage() {
   const { data: customRoles = [] } = useCustomRoles();
   const { user: currentUser } = useAuth();
   const updateRole = useUpdateUserRole();
+  const setUserRoles = useSetUserRoles();
   const updateStatus = useUpdateUserStatus();
   const createUser = useCreateUser();
   const deleteUser = useDeleteUser();
