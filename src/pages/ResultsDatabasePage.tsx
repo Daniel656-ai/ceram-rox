@@ -68,6 +68,10 @@ export default function ResultsDatabasePage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [searchText, setSearchText] = useState("");
+  // Ergebnismerkmale (z. B. Vorgabetemperatur) – Merkmale und Werte entstehen
+  // ausschließlich aus den tatsächlich gespeicherten Ergebnissen.
+  const [conditionKey, setConditionKey] = useState<string>("all");
+  const [conditionValue, setConditionValue] = useState<string>("all");
 
   // Chart state
   const [chartType, setChartType] = useState<"scatter" | "bar" | "line">("scatter");
@@ -106,6 +110,11 @@ export default function ResultsDatabasePage() {
   const uniqueProjects = useMemo(() => [...new Set(records.map(r => r.projectName).filter(Boolean))].sort(), [records]);
   const uniqueCreators = useMemo(() => [...new Set(records.map(r => r.createdByName).filter(Boolean))].sort(), [records]);
   const uniqueTechnicians = useMemo(() => [...new Set(records.map(r => r.assignedToName).filter(Boolean))].sort(), [records]);
+  const conditionDimensions = useMemo(() => collectConditionDimensions(records), [records]);
+  const conditionValues = useMemo(
+    () => conditionDimensions.find((d) => d.key === conditionKey)?.values ?? [],
+    [conditionDimensions, conditionKey]
+  );
 
   // Apply filters
   const filteredRecords = useMemo(() => {
@@ -114,6 +123,7 @@ export default function ResultsDatabasePage() {
       if (projectFilter !== "all" && r.projectName !== projectFilter) return false;
       if (creatorFilter !== "all" && r.createdByName !== creatorFilter) return false;
       if (technicianFilter !== "all" && r.assignedToName !== technicianFilter) return false;
+      if (conditionKey !== "all" && !matchesCondition(r, conditionKey, conditionValue)) return false;
       if (sampleFilter && !r.sampleNumber.toLowerCase().includes(sampleFilter.toLowerCase()) && !r.sampleName.toLowerCase().includes(sampleFilter.toLowerCase())) return false;
       if (dateFrom && r.completedAt && isBefore(parseISO(r.completedAt), parseISO(dateFrom))) return false;
       if (dateTo && r.completedAt && isAfter(parseISO(r.completedAt), parseISO(dateTo + "T23:59:59"))) return false;
@@ -125,7 +135,7 @@ export default function ResultsDatabasePage() {
       }
       return true;
     });
-  }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, sampleFilter, dateFrom, dateTo, searchText]);
+  }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, conditionKey, conditionValue, sampleFilter, dateFrom, dateTo, searchText]);
 
   const clearFilters = () => {
     setServiceFilter("all");
@@ -136,9 +146,11 @@ export default function ResultsDatabasePage() {
     setDateFrom("");
     setDateTo("");
     setSearchText("");
+    setConditionKey("all");
+    setConditionValue("all");
   };
 
-  const hasActiveFilters = serviceFilter !== "all" || projectFilter !== "all" || creatorFilter !== "all" || technicianFilter !== "all" || sampleFilter || dateFrom || dateTo || searchText;
+  const hasActiveFilters = serviceFilter !== "all" || projectFilter !== "all" || creatorFilter !== "all" || technicianFilter !== "all" || conditionKey !== "all" || sampleFilter || dateFrom || dateTo || searchText;
 
   // ==========================================================
   // Export – die Spaltenstruktur ist immer identisch (stabile
