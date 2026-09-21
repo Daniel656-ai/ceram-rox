@@ -701,7 +701,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
       {importedRows.length > 0 && (
         <div className="rounded border bg-muted/20 p-2">
           <p className="text-[11px] font-medium mb-1">Zugeordnete Ergebnisse</p>
-          <table className="w-full text-[11px]">
+          <HorizontalScrollArea>
+            <table className="w-full text-[11px]">
             <tbody>
               {importedRows.map((r, i) => (
                 <tr key={i}>
@@ -710,7 +711,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </HorizontalScrollArea>
         </div>
       )}
       {last?.imported_at && missingCaseElements.length > 0 && (
@@ -751,7 +753,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
       {metadata.length > 0 && (
         <div className="rounded border bg-muted/10 p-2">
           <p className="text-[11px] font-medium mb-1">Importinformationen</p>
-          <table className="w-full text-[11px]">
+          <HorizontalScrollArea>
+            <table className="w-full text-[11px]">
             <tbody>
               {metadata.map((m, i) => (
                 <tr key={i}>
@@ -760,7 +763,8 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </HorizontalScrollArea>
         </div>
       )}
 

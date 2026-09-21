@@ -9,6 +9,7 @@ import CurveViewer from "./CurveViewer";
 import BjhChartsPanel from "./BjhChartsPanel";
 
 import CurvePointEvaluations from "./CurvePointEvaluations";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 
 interface Props {
   measurementId: string;
@@ -126,7 +127,7 @@ export default function MeasurementCurvesCard({ measurementId }: Props) {
         )}
 
         {evaluations.some((e) => e.kind !== "point") && (
-          <div className="rounded border">
+          <HorizontalScrollArea className="rounded border">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
                 <tr>
@@ -152,7 +153,7 @@ export default function MeasurementCurvesCard({ measurementId }: Props) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
         )}
       </CardContent>
     </Card>

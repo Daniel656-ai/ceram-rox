@@ -15,6 +15,7 @@ import type { ImportMetadataEntry, UnassignedMeasurementValue } from "@/lib/meas
 import { toast } from "sonner";
 import CurveViewer, { type CurveSelection } from "@/components/curves/CurveViewer";
 import BjhChartsPanel from "@/components/curves/BjhChartsPanel";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 
 import CurveEvaluationPanel, { type CurveEvaluationProvenance } from "@/components/curves/CurveEvaluationPanel";
 import { api } from "@/lib/api";
@@ -439,7 +440,7 @@ export default function MeasurementFileImportPanel({
 
 
 
-          <div className="border rounded overflow-hidden">
+          <HorizontalScrollArea className="border rounded">
             <table className="w-full text-xs">
               <thead className="bg-muted/50">
                 <tr>
@@ -507,7 +508,7 @@ export default function MeasurementFileImportPanel({
                 })}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
 
           {measurement.dataset && measurement.dataset.rows.length > 0 && (
             <div className="rounded border p-3 space-y-4">

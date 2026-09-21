@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { curveOf, findChannel, interpolateAt, type MeasurementDataset } from "@/lib/curves/dataset";
 import type { CurveEvaluationRecord } from "@/lib/api/measurementRawData";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 
 interface Props {
   datasetId: string;
@@ -227,7 +228,8 @@ export default function CurvePointEvaluations({
                   </Button>
                 )}
               </div>
-              <table className="w-full text-xs">
+              <HorizontalScrollArea>
+                <table className="w-full text-xs">
                 <thead className="text-muted-foreground">
                   <tr>
                     <th className="text-left px-3 py-1.5">Kurve</th>
@@ -246,7 +248,8 @@ export default function CurvePointEvaluations({
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </HorizontalScrollArea>
             </div>
           ))}
         </div>

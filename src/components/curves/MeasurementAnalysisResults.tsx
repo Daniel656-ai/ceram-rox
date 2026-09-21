@@ -9,6 +9,7 @@ import {
   ANALYSIS_LABELS, detectAnalysisKind, sortByAnalysisOrder, type AnalysisKind,
 } from "@/lib/curves/analysisTypes";
 import type { MeasurementRawDataset } from "@/lib/api/measurementRawData";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 
 /**
  * Fertige Ergebnisdarstellung importierter Messdaten.
@@ -58,7 +59,7 @@ function AnalysisSection({ head, kind }: { head: MeasurementRawDataset; kind: An
       </div>
 
       {evaluations.length > 0 && (
-        <div className="rounded border">
+        <HorizontalScrollArea className="rounded border">
           <table className="w-full text-xs">
             <thead className="bg-muted/50">
               <tr>
@@ -79,7 +80,7 @@ function AnalysisSection({ head, kind }: { head: MeasurementRawDataset; kind: An
               ))}
             </tbody>
           </table>
-        </div>
+        </HorizontalScrollArea>
       )}
 
       {kind === "BJH"

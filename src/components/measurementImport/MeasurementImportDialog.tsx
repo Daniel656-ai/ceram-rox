@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { AlertTriangle, ClipboardPaste, Settings2, Plus, FileUp } from "lucide-react";
 import ImportProfileEditorDialog from "./ImportProfileEditorDialog";
 import MeasurementFileImportPanel, { type CurvePersistContext } from "./MeasurementFileImportPanel";
@@ -401,7 +402,7 @@ export default function MeasurementImportDialog({
                   </div>
                 )}
 
-                <div className="border rounded overflow-hidden">
+                <HorizontalScrollArea className="border rounded">
                   <table className="w-full text-xs">
                     <thead className="bg-muted/50">
                       <tr>
@@ -470,7 +471,7 @@ export default function MeasurementImportDialog({
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </HorizontalScrollArea>
 
                 {unassigned.length > 0 && (
                   <button
