@@ -1,5 +1,6 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { normalizeRoles, primaryRole, mergePermissions } from "@/lib/roles";
 
 export interface UserWithRole {
   id: string;
@@ -12,8 +13,12 @@ export interface UserWithRole {
   created_at: string;
   updated_at: string;
   user_roles: { role: string }[];
+  /** Primäre Rolle (größter Funktionsumfang) – Abwärtskompatibilität. */
   custom_role_id: string | null;
   custom_role_name: string | null;
+  /** Alle zugewiesenen Rollen. */
+  custom_role_ids: string[];
+  custom_role_names: string[];
 }
 
 
@@ -28,16 +33,30 @@ export const users = {
     if (rolesRes.error) throw rolesRes.error;
     if (customRolesRes.error) throw customRolesRes.error;
 
-    const roleMap = new Map((rolesRes.data || []).map((r: any) => [r.user_id, r]));
+    const rowsByUser = new Map<string, any[]>();
+    for (const r of (rolesRes.data || []) as any[]) {
+      const list = rowsByUser.get(r.user_id) ?? [];
+      list.push(r);
+      rowsByUser.set(r.user_id, list);
+    }
     const customRoleMap = new Map((customRolesRes.data || []).map((cr: any) => [cr.id, cr.name]));
 
     return (profilesRes.data || []).map((p: any) => {
-      const ur = roleMap.get(p.user_id);
+      const rows = rowsByUser.get(p.user_id) ?? [];
+      const roles = normalizeRoles(rows.map((r) => r.role));
+      const effective = roles.length > 0 ? roles : (["auftraggeber"] as const);
+      const ids = rows.map((r) => r.custom_role_id).filter(Boolean) as string[];
+      const primary = primaryRole(effective as string[]);
+      const primaryRow = rows.find((r) => r.role === primary) ?? rows[0];
       return {
         ...p,
-        user_roles: [{ role: ur?.role || "auftraggeber" }],
-        custom_role_id: ur?.custom_role_id || null,
-        custom_role_name: ur?.custom_role_id ? customRoleMap.get(ur.custom_role_id) || null : null,
+        user_roles: effective.map((role) => ({ role })),
+        custom_role_id: primaryRow?.custom_role_id || null,
+        custom_role_name: primaryRow?.custom_role_id
+          ? customRoleMap.get(primaryRow.custom_role_id) || null
+          : null,
+        custom_role_ids: ids,
+        custom_role_names: ids.map((id) => customRoleMap.get(id) || "").filter(Boolean),
       } as UserWithRole;
     });
   },
@@ -46,6 +65,47 @@ export const users = {
     const update: any = { role };
     if (customRoleId !== undefined) update.custom_role_id = customRoleId;
     await run(dbClient.from("user_roles").update(update).eq("user_id", userId));
+  },
+
+  /**
+   * Mehrere Rollen gleichzeitig zuweisen. Je Basisrolle existiert genau eine
+   * Zeile (bestehende Datenstruktur), die Rollen bleiben eigenständig.
+   */
+  async setRoles(
+    userId: string,
+    selection: { customRoleId: string; baseRole: string }[],
+  ): Promise<void> {
+    const byBase = new Map<string, string>();
+    for (const s of selection) {
+      if (byBase.has(s.baseRole)) {
+        throw new Error(
+          "Pro Rollenart ist gleichzeitig nur eine Rolle möglich (z. B. nicht Auftraggeber und PO zusammen).",
+        );
+      }
+      byBase.set(s.baseRole, s.customRoleId);
+    }
+    const existing = ((await unwrap(
+      dbClient.from("user_roles").select("id, role, custom_role_id").eq("user_id", userId),
+    )) ?? []) as any[];
+
+    const obsolete = existing.filter((r) => !byBase.has(r.role)).map((r) => r.id);
+    if (obsolete.length > 0) {
+      await run(dbClient.from("user_roles").delete().in("id", obsolete));
+    }
+    for (const [baseRole, customRoleId] of byBase) {
+      const row = existing.find((r) => r.role === baseRole);
+      if (row) {
+        if (row.custom_role_id !== customRoleId) {
+          await run(
+            dbClient.from("user_roles").update({ custom_role_id: customRoleId }).eq("id", row.id),
+          );
+        }
+      } else {
+        await run(
+          dbClient.from("user_roles").insert({ user_id: userId, role: baseRole as any, custom_role_id: customRoleId }),
+        );
+      }
+    }
   },
 
   async updateStatus(userId: string, isActive: boolean): Promise<void> {
@@ -62,31 +122,42 @@ export const users = {
   },
   /**
    * Load everything needed by the AuthContext for the given user in one call:
-   * profile, base role, custom role id+name and permission keys.
+   * profile, all base roles, custom role ids+names and the union of all
+   * permission keys of the assigned roles.
    */
   async loadAuthContext(userId: string) {
     const [profileRes, roleRes] = await Promise.all([
       dbClient.from("profiles").select("*").eq("user_id", userId).single(),
-      dbClient.from("user_roles").select("role, custom_role_id").eq("user_id", userId).single(),
+      dbClient.from("user_roles").select("role, custom_role_id").eq("user_id", userId),
     ]);
 
     const profile = profileRes.data ?? null;
-    const role = (roleRes.data?.role as string | undefined) ?? null;
-    const customRoleId = roleRes.data?.custom_role_id ?? null;
+    const rows = (roleRes.data ?? []) as any[];
+    const roles = normalizeRoles(rows.map((r) => r.role));
+    const role = primaryRole(roles);
+    const customRoleIds = rows.map((r) => r.custom_role_id).filter(Boolean) as string[];
+    const primaryRowId =
+      (rows.find((r) => r.role === role)?.custom_role_id as string | undefined) ?? null;
 
-    let customRoleName: string | null = null;
+    let customRoleNames: string[] = [];
     let permissions: string[] = [];
 
-    if (customRoleId) {
+    if (customRoleIds.length > 0) {
       const [crRes, permRes] = await Promise.all([
-        dbClient.from("custom_roles").select("name").eq("id", customRoleId).single(),
-        dbClient.from("role_permissions").select("permission_key").eq("role_id", customRoleId),
+        dbClient.from("custom_roles").select("id, name").in("id", customRoleIds),
+        dbClient.from("role_permissions").select("permission_key").in("role_id", customRoleIds),
       ]);
-      customRoleName = crRes.data?.name ?? null;
-      permissions = (permRes.data ?? []).map((p: any) => p.permission_key);
+      const nameById = new Map(((crRes.data ?? []) as any[]).map((r) => [r.id, r.name]));
+      customRoleNames = customRoleIds.map((id) => nameById.get(id) || "").filter(Boolean);
+      // Summe der Berechtigungen: keine Rolle überschreibt eine andere.
+      permissions = mergePermissions([((permRes.data ?? []) as any[]).map((p) => p.permission_key)]);
     }
 
-    return { profile, role, customRoleId, customRoleName, permissions };
+    const customRoleId = primaryRowId ?? customRoleIds[0] ?? null;
+    const nameIndex = customRoleIds.indexOf(customRoleId ?? "");
+    const customRoleName = nameIndex >= 0 ? customRoleNames[nameIndex] ?? null : null;
+
+    return { profile, role, roles, customRoleId, customRoleName, customRoleIds, customRoleNames, permissions };
   },
 
   async clearMustChangePassword(userId: string): Promise<void> {

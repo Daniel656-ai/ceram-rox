@@ -14,6 +14,16 @@ export function useUpdateUserRole() {
   });
 }
 
+/** Mehrere Rollen gleichzeitig zuweisen (bestehende Rollen, keine Kombi-Rolle). */
+export function useSetUserRoles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, selection }: { userId: string; selection: { customRoleId: string; baseRole: string }[] }) =>
+      api.users.setRoles(userId, selection),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
 export function useUpdateUserStatus() {
   const qc = useQueryClient();
   return useMutation({

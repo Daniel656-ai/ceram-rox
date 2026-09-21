@@ -19,9 +19,15 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  /** Primäre Basisrolle (größter Funktionsumfang) – Verhalten wie bisher. */
   role: AppRole | null;
+  /** Alle zugewiesenen Basisrollen. */
+  roles: AppRole[];
+  hasRole: (role: AppRole) => boolean;
   customRoleId: string | null;
   customRoleName: string | null;
+  customRoleIds: string[];
+  customRoleNames: string[];
   permissions: string[];
   mustChangePassword: boolean;
   loading: boolean;
@@ -34,8 +40,12 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   role: null,
+  roles: [],
+  hasRole: () => false,
   customRoleId: null,
   customRoleName: null,
+  customRoleIds: [],
+  customRoleNames: [],
   permissions: [],
   mustChangePassword: false,
   loading: true,
@@ -50,19 +60,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [customRoleId, setCustomRoleId] = useState<string | null>(null);
   const [customRoleName, setCustomRoleName] = useState<string | null>(null);
+  const [customRoleIds, setCustomRoleIds] = useState<string[]>([]);
+  const [customRoleNames, setCustomRoleNames] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
-    const { profile, role, customRoleId, customRoleName, permissions } =
-      await api.users.loadAuthContext(userId);
-    if (profile) setProfile(profile as Profile);
-    if (role) setRole(role as AppRole);
-    setCustomRoleId(customRoleId);
-    setCustomRoleName(customRoleName);
-    setPermissions(permissions);
+    const ctx = await api.users.loadAuthContext(userId);
+    if (ctx.profile) setProfile(ctx.profile as Profile);
+    if (ctx.role) setRole(ctx.role as AppRole);
+    setRoles((ctx.roles ?? []) as AppRole[]);
+    setCustomRoleId(ctx.customRoleId);
+    setCustomRoleName(ctx.customRoleName);
+    setCustomRoleIds(ctx.customRoleIds ?? []);
+    setCustomRoleNames(ctx.customRoleNames ?? []);
+    setPermissions(ctx.permissions);
   };
 
   const refreshProfile = async () => {
@@ -80,8 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setRole(null);
+          setRoles([]);
           setCustomRoleId(null);
           setCustomRoleName(null);
+          setCustomRoleIds([]);
+          setCustomRoleNames([]);
           setPermissions([]);
         }
         setLoading(false);
@@ -104,15 +122,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await api.auth.signOut();
     setProfile(null);
     setRole(null);
+    setRoles([]);
     setCustomRoleId(null);
     setCustomRoleName(null);
+    setCustomRoleIds([]);
+    setCustomRoleNames([]);
     setPermissions([]);
   };
 
   const mustChangePassword = !!profile?.must_change_password;
+  const effectiveRoles = roles.length > 0 ? roles : role ? [role] : [];
+  const hasRole = (r: AppRole) => effectiveRoles.includes(r);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, role, customRoleId, customRoleName, permissions, mustChangePassword, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, role, roles: effectiveRoles, hasRole, customRoleId, customRoleName, customRoleIds, customRoleNames, permissions, mustChangePassword, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
