@@ -2133,7 +2133,7 @@ export default function FormLayoutRenderer({
       }
     }
     return out;
-  }, [localCalcs, globalCalcs, values, hasGlobalNodes, fields, constants]);
+  }, [localCalcs, globalCalcs, values, hasGlobalNodes, fields, constants, stepData, formData]);
 
   /** Ergebnisse in die Formularwerte zurückschreiben – für Speicherung & Folgeberechnungen. */
   useEffect(() => {
