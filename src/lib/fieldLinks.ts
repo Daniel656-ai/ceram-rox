@@ -236,3 +236,25 @@ export function resolveLinkedValue(
         : ctx.stepData?.[vs.source.step_key ?? ""]?.[vs.source.field_key];
   return raw === undefined || raw === "" ? null : raw;
 }
+
+/**
+ * Werte ALLER verknüpften Felder eines Formulars – unabhängig davon, ob das
+ * Feld im Layout sichtbar gerendert wird. Dieselbe Mechanik wie in der Anzeige
+ * (`resolveLinkedValue`), nur zusätzlich für Berechnungen nutzbar.
+ *
+ * Es wird kein Ersatzwert erzeugt: fehlt der Quellwert, enthält der Scope den
+ * Schlüssel nicht und die Berechnung bleibt „nicht berechenbar“.
+ */
+export function linkedFieldScope(
+  fields: Array<{ id?: string; field_key: string; data_source?: unknown }>,
+  ctx: { formValues?: Record<string, unknown>; stepData?: StepData; formData?: LinkedFormData },
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const f of fields ?? []) {
+    const vs = readValueSource(f as any);
+    if (!vs || !f.field_key) continue;
+    const value = resolveLinkedValue(vs, ctx);
+    if (value != null && value !== "") out[f.field_key] = value;
+  }
+  return out;
+}
