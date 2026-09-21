@@ -24,6 +24,7 @@ import { loadSavedAnalyses, persistSavedAnalyses, type SavedAnalysis } from "@/l
 import { useAllServiceParameterDefs } from "@/hooks/useServiceParameters";
 import { buildServiceSchemas, flattenSchemas, exportCell, columnHeader } from "@/lib/resultSchema";
 import ResultsMatrixTable from "@/components/results/ResultsMatrixTable";
+import { collectConditionDimensions, matchesCondition, conditionSummary } from "@/lib/resultConditions";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
