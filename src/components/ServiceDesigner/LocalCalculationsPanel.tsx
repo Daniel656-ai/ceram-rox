@@ -818,6 +818,9 @@ export default function LocalCalculationsPanel({
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => openLinkPicker("formula")}>
+                      🔗 Wert verknüpfen
+                    </Button>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button size="sm" variant="outline"><Plus className="h-3 w-3 mr-1" />Feld einfügen</Button>
