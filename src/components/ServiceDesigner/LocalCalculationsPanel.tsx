@@ -769,6 +769,7 @@ export default function LocalCalculationsPanel({
 
                               <SelectGroup>
                                 <SelectLabel>Sonstiges</SelectLabel>
+                                <SelectItem value="__link__">🔗 Wert verknüpfen …</SelectItem>
                                 <SelectItem value="__const__">Fester Wert …</SelectItem>
                               </SelectGroup>
                             </SelectContent>
