@@ -615,6 +615,7 @@ export type Database = {
           id: string
           inputs: Json
           is_result: boolean
+          metadata: Json
           result_label: string | null
           result_type: string
           rounding: string
@@ -635,6 +636,7 @@ export type Database = {
           id?: string
           inputs?: Json
           is_result?: boolean
+          metadata?: Json
           result_label?: string | null
           result_type?: string
           rounding?: string
@@ -655,6 +657,7 @@ export type Database = {
           id?: string
           inputs?: Json
           is_result?: boolean
+          metadata?: Json
           result_label?: string | null
           result_type?: string
           rounding?: string
