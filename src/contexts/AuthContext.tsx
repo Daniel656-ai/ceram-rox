@@ -95,8 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setRole(null);
+          setRoles([]);
           setCustomRoleId(null);
           setCustomRoleName(null);
+          setCustomRoleIds([]);
+          setCustomRoleNames([]);
           setPermissions([]);
         }
         setLoading(false);
@@ -119,15 +122,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await api.auth.signOut();
     setProfile(null);
     setRole(null);
+    setRoles([]);
     setCustomRoleId(null);
     setCustomRoleName(null);
+    setCustomRoleIds([]);
+    setCustomRoleNames([]);
     setPermissions([]);
   };
 
   const mustChangePassword = !!profile?.must_change_password;
+  const effectiveRoles = roles.length > 0 ? roles : role ? [role] : [];
+  const hasRole = (r: AppRole) => effectiveRoles.includes(r);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, role, customRoleId, customRoleName, permissions, mustChangePassword, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, role, roles: effectiveRoles, hasRole, customRoleId, customRoleName, customRoleIds, customRoleNames, permissions, mustChangePassword, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
