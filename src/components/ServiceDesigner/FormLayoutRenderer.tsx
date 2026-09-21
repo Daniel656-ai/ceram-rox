@@ -2087,7 +2087,18 @@ export default function FormLayoutRenderer({
     const out: Record<string, CalcDisplayResult> = {};
     // Werte des Formulars + Listen aus Wiederholbereichen (rein zur Auswertung).
     const aggregates = repeaterAggregateScope(fields, values ?? {});
-    const vals = { ...(values ?? {}), ...constants, ...aggregates };
+    // Verknüpfte Felder (Wertquelle) stehen Berechnungen auch dann zur
+    // Verfügung, wenn das Feld nicht sichtbar im Layout platziert ist.
+    const linked = linkedFieldScope(fields as any, {
+      formValues: values ?? {},
+      stepData,
+      formData,
+    });
+    const vals = { ...linked, ...(values ?? {}), ...constants, ...aggregates };
+    // Ein leerer gespeicherter Wert darf den aktuellen Quellwert nicht verdecken.
+    for (const [k, v] of Object.entries(linked)) {
+      if (vals[k] == null || vals[k] === "") vals[k] = v;
+    }
     const local = evaluateLocalCalculations(localCalcs, vals, [
       ...fields.map((f) => f.field_key),
       ...Object.keys(aggregates),
