@@ -743,6 +743,42 @@ export default function CreateOrderPage() {
                       : String(raw),
                   unit: def?.unit || null,
                 });
+
+                // Zusätzlich als normaler Formularwert derselben Messung
+                // ablegen (`form:<Formular>:<Feldschlüssel>`), damit die
+                // Messdienstleisteransicht und der bestehende Formel-Scope
+                // exakt dasselbe Feld lesen. Kein neues Feld, keine zweite
+                // Feldinstanz – nur derselbe Wert unter dem vorhandenen
+                // Feldschlüssel. Die Auftragsparameter oben bleiben unberührt.
+                const payload: any = {
+                  order_measurement_id: createdMeasurement.id,
+                  result_name: `form:${fid}:${item.fieldKey}`,
+                  display_label: def?.display_name || item.fieldKey,
+                  unit: def?.unit || undefined,
+                  is_official: false,
+                  measured_by: user!.id,
+                  value: null,
+                  remarks: null,
+                };
+                if (typeof raw === "number") {
+                  payload.value = raw;
+                } else if (typeof raw === "string") {
+                  const text = raw.trim();
+                  const numeric = /^[+-]?(\d+([.,]\d+)?|[.,]\d+)([eE][+-]?\d+)?$/.test(text);
+                  const num = numeric ? parseFloat(text.replace(",", ".")) : NaN;
+                  if (numeric && !isNaN(num)) payload.value = num;
+                  else payload.remarks = raw;
+                } else if (typeof raw === "boolean") {
+                  payload.remarks = raw ? "true" : "false";
+                } else {
+                  payload.remarks = JSON.stringify(raw);
+                }
+                try {
+                  await api.measurementResults.create(payload);
+                } catch (err: any) {
+                  // Der Auftrag bleibt gültig; nur die Vorbelegung fehlt dann.
+                  console.warn("Formularwert konnte nicht übernommen werden", err);
+                }
               }
             }
           }
