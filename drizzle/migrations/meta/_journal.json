@@ -71,6 +71,13 @@
       "when": 1789989421922,
       "tag": "0009_add_form_calculations_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790057591352,
+      "tag": "0010_orders_readable_for_qualified_technicians",
+      "breakpoints": true
     }
   ]
 }
