@@ -10383,6 +10383,10 @@ export type Database = {
         Returns: boolean
       }
       can_manage_designer: { Args: { _uid: string }; Returns: boolean }
+      can_read_order_via_measurement: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_view_others_vacation: { Args: { _user_id: string }; Returns: boolean }
       can_view_portfolio: {
         Args: { _portfolio_id: string; _user_id: string }
