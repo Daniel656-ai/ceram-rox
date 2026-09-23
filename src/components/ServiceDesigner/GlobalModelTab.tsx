@@ -652,6 +652,7 @@ export default function GlobalModelTab() {
               <div className="sm:col-span-2">
                 <GlobalRepeaterSettings
                   draft={fieldDraft}
+                  lists={lists}
                   onChange={(patch) => setFieldDraft({ ...fieldDraft, ...patch })}
                 />
               </div>
