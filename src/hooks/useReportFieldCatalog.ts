@@ -201,6 +201,8 @@ function formFieldToItem(f: FormField, prefix: string, sourceLabel: string): Rep
       dataType: "repeater",
       sourceLabel,
       subfields: [
+        { key: "section", label: "Teilprozessschritt" },
+        { key: "offset_minutes", label: "Zugabezeit", unit: "min" },
         { key: "material", label: "Rohstoff" },
         { key: "quantity", label: "Menge" },
         { key: "unit", label: "Einheit" },
