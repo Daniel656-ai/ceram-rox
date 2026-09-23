@@ -191,6 +191,7 @@
   "category_stationaerer_katalysator": "Stationary catalyst",
   "category_plattenkatalysator": "Plate catalyst",
   "category_marinekatalysator": "Marine catalyst",
+  "category_oxidationskatalysator": "Oxidation catalyst",
   "category_heat_media": "Heat Media",
   "v2o5_content": "V₂O₅ content [%]",
   "v2o5_auto_zero": "auto 0.00 %",
