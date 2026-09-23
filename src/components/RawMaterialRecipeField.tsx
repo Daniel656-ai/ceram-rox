@@ -11,19 +11,26 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle2, ChevronsUpDown, GripVertical, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronsUpDown, GripVertical, Plus, SeparatorHorizontal, Trash2 } from "lucide-react";
 import { formatQuantity } from "@/lib/formatQuantity";
+import {
+  appendRowToSection,
+  appendSection,
+  groupRecipeSections,
+  isSectionEntry,
+  removeSectionMarker,
+  sectionTitle,
+  updateSectionMarker,
+  type RecipeEntry,
+  type RecipeMaterialRow,
+} from "@/lib/recipeSections";
 
-export interface RecipeRow {
-  raw_material_id: string;
-  quantity: number | string;
-  unit: string;
-  note?: string;
-}
+/** Rohstoffzeile einer Rezeptur (unverändertes Format). */
+export type RecipeRow = RecipeMaterialRow;
 
 interface Props {
-  value: RecipeRow[] | undefined;
-  onChange: (rows: RecipeRow[]) => void;
+  value: RecipeEntry[] | undefined;
+  onChange: (rows: RecipeEntry[]) => void;
   readonly?: boolean;
 }
 
@@ -38,6 +45,8 @@ interface MaterialOption {
   /** Vorberechneter Suchtext über alle Identifikationsfelder. */
   haystack: string;
 }
+
+const GRID = "grid grid-cols-[auto_minmax(180px,2fr)_100px_80px_1fr_auto] items-center gap-2";
 
 function MaterialPicker({
   options, valueId, disabled, onSelect,
@@ -98,7 +107,7 @@ function SortableRow({ id, disabled, children }: { id: string; disabled?: boolea
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }}
-      className="grid grid-cols-[auto_minmax(180px,2fr)_100px_80px_1fr_auto] items-center gap-2"
+      className={GRID}
     >
       <button
         type="button"
@@ -116,14 +125,16 @@ function SortableRow({ id, disabled, children }: { id: string; disabled?: boolea
 }
 
 /**
- * Rezeptur / Rohstoffliste (Auftraggeber).
+ * Rezeptur / Rohstoffliste (Auftraggeber) mit Zugabefolge.
  * Es werden ausschließlich bestehende Rohstoffe der Rohstoffverwaltung
  * ausgewählt (Referenz auf `raw_materials.id`); Stammdaten werden hier nie
  * verändert oder neu angelegt. Die Reihenfolge der Positionen ist Teil des
- * gespeicherten Werts (Array-Reihenfolge).
+ * gespeicherten Werts (Array-Reihenfolge). Abschnittswechsel markieren
+ * Teilprozessschritte mit eigener Zugabezeit.
  */
 export default function RawMaterialRecipeField({ value, onChange, readonly }: Props) {
-  const rows: RecipeRow[] = Array.isArray(value) ? value : [];
+  const entries: RecipeEntry[] = Array.isArray(value) ? value : [];
+  const sections = useMemo(() => groupRecipeSections(entries), [entries]);
 
   const { data: materials = [] } = useQuery({
     queryKey: ["raw-materials"],
@@ -167,27 +178,31 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
   }, [containers]);
 
   const update = (idx: number, patch: Partial<RecipeRow>) =>
-    onChange(rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
-  const remove = (idx: number) => onChange(rows.filter((_, i) => i !== idx));
-  const add = () => onChange([...rows, { raw_material_id: "", quantity: "", unit: "", note: "" }]);
+    onChange(entries.map((r, i) => (i === idx ? { ...(r as RecipeRow), ...patch } : r)));
+  const remove = (idx: number) => onChange(entries.filter((_, i) => i !== idx));
+  const addRow = (sectionIdx: number) => onChange(appendRowToSection(entries, sectionIdx));
+  const addSection = () => onChange(appendSection(entries, ""));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
-  const rowIds = rows.map((_, i) => `recipe-row-${i}`);
+  const rowId = (index: number) => `recipe-row-${index}`;
+  const sortableIds = entries.map((e, i) => (isSectionEntry(e) ? `recipe-section-${i}` : rowId(i)));
   const onDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const from = rowIds.indexOf(String(active.id));
-    const to = rowIds.indexOf(String(over.id));
+    const from = sortableIds.indexOf(String(active.id));
+    const to = sortableIds.indexOf(String(over.id));
     if (from < 0 || to < 0) return;
-    onChange(arrayMove(rows, from, to));
+    onChange(arrayMove(entries, from, to));
   };
 
   const shortages = useMemo(() => {
     const list: Array<{ name: string; required: number; available: number; unit: string }> = [];
-    for (const r of rows) {
+    for (const e of entries) {
+      if (isSectionEntry(e)) continue;
+      const r = e as RecipeRow;
       if (!r.raw_material_id) continue;
       const req = Number(r.quantity);
       if (!isFinite(req) || req <= 0) continue;
@@ -203,90 +218,145 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
       }
     }
     return list;
-  }, [rows, availableByMaterial, materialById]);
+  }, [entries, availableByMaterial, materialById]);
+
+  const renderRow = (index: number, row: RecipeRow) => {
+    const mat = materialById.get(row.raw_material_id);
+    const req = Number(row.quantity);
+    const avail = availableByMaterial.get(row.raw_material_id) ?? 0;
+    const short = row.raw_material_id && isFinite(req) && req > 0 && avail < req;
+    return (
+      <SortableRow key={rowId(index)} id={rowId(index)} disabled={readonly}>
+        <MaterialPicker
+          options={options}
+          valueId={row.raw_material_id}
+          disabled={readonly}
+          onSelect={(v) => {
+            const chosen = options.find((o) => o.id === v);
+            update(index, { raw_material_id: v, unit: row.unit || chosen?.unit || "" });
+          }}
+        />
+        <Input
+          type="number"
+          step="any"
+          value={row.quantity ?? ""}
+          onChange={(e) => update(index, { quantity: e.target.value })}
+          disabled={readonly}
+          className="h-8"
+        />
+        <Input
+          value={row.unit ?? ""}
+          onChange={(e) => update(index, { unit: e.target.value })}
+          disabled={readonly}
+          className="h-8"
+          placeholder={mat?.unit ?? "kg"}
+        />
+        <Input
+          value={row.note ?? ""}
+          onChange={(e) => update(index, { note: e.target.value })}
+          disabled={readonly}
+          className="h-8"
+          placeholder="optional"
+        />
+        <div className="flex items-center gap-1">
+          {row.raw_material_id && isFinite(req) && req > 0 && (
+            <Badge variant={short ? "destructive" : "secondary"} className="text-[10px]">
+              {short ? <AlertTriangle className="mr-0.5 h-3 w-3" /> : <CheckCircle2 className="mr-0.5 h-3 w-3" />}
+              {formatQuantity(avail)} {row.unit || mat?.unit || ""}
+            </Badge>
+          )}
+          {!readonly && (
+            <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove(index)}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      </SortableRow>
+    );
+  };
+
+  const isEmpty = entries.length === 0;
 
   return (
-    <div className="space-y-2 rounded-md border p-2">
+    <div className="space-y-3 rounded-md border p-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">Rezeptur / Rohstoffliste</span>
+        <span className="text-xs font-medium text-muted-foreground">Rezeptur / Zugabefolge</span>
         {!readonly && (
-          <Button type="button" size="sm" variant="outline" onClick={add} className="h-7">
-            <Plus className="mr-1 h-3 w-3" /> Rohstoff hinzufügen
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => addRow(Math.max(sections.length - 1, 0))} className="h-7">
+              <Plus className="mr-1 h-3 w-3" /> Rohstoff hinzufügen
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={addSection} className="h-7">
+              <SeparatorHorizontal className="mr-1 h-3 w-3" /> Abschnittswechsel
+            </Button>
+          </div>
         )}
       </div>
 
-      {rows.length === 0 ? (
+      {isEmpty ? (
         <p className="py-2 text-xs text-muted-foreground">Noch keine Rohstoffe hinzugefügt.</p>
       ) : (
-        <div className="space-y-1">
-          <div className="grid grid-cols-[auto_minmax(180px,2fr)_100px_80px_1fr_auto] gap-2 px-1 text-[10px] uppercase text-muted-foreground">
-            <div className="w-4">#</div>
-            <div>Rohstoff</div>
-            <div>Sollmenge</div>
-            <div>Einheit</div>
-            <div>Bemerkung</div>
-            <div />
-          </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
-              {rows.map((row, idx) => {
-                const mat = materialById.get(row.raw_material_id);
-                const req = Number(row.quantity);
-                const avail = availableByMaterial.get(row.raw_material_id) ?? 0;
-                const short = row.raw_material_id && isFinite(req) && req > 0 && avail < req;
-                return (
-                  <SortableRow key={rowIds[idx]} id={rowIds[idx]} disabled={readonly}>
-                    <MaterialPicker
-                      options={options}
-                      valueId={row.raw_material_id}
-                      disabled={readonly}
-                      onSelect={(v) => {
-                        const chosen = options.find((o) => o.id === v);
-                        update(idx, { raw_material_id: v, unit: row.unit || chosen?.unit || "" });
-                      }}
-                    />
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-4">
+              {sections.map((section, sIdx) => (
+                <section key={section.markerIndex >= 0 ? `sec-${section.markerIndex}` : "sec-implicit"} className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2 border-l-2 border-primary/60 pl-2">
+                    <span className="text-xs font-semibold">{sectionTitle(section, sIdx)}</span>
+                    <span className="text-[11px] text-muted-foreground">Zugabezeit</span>
                     <Input
                       type="number"
                       step="any"
-                      value={row.quantity ?? ""}
-                      onChange={(e) => update(idx, { quantity: e.target.value })}
-                      disabled={readonly}
-                      className="h-8"
+                      className="h-7 w-20"
+                      placeholder="0"
+                      value={section.offset_minutes ?? ""}
+                      disabled={readonly || section.markerIndex < 0}
+                      onChange={(e) =>
+                        onChange(updateSectionMarker(entries, section.markerIndex, { offset_minutes: e.target.value }))
+                      }
                     />
-                    <Input
-                      value={row.unit ?? ""}
-                      onChange={(e) => update(idx, { unit: e.target.value })}
-                      disabled={readonly}
-                      className="h-8"
-                      placeholder={mat?.unit ?? "kg"}
-                    />
-                    <Input
-                      value={row.note ?? ""}
-                      onChange={(e) => update(idx, { note: e.target.value })}
-                      disabled={readonly}
-                      className="h-8"
-                      placeholder="optional"
-                    />
-                    <div className="flex items-center gap-1">
-                      {row.raw_material_id && isFinite(req) && req > 0 && (
-                        <Badge variant={short ? "destructive" : "secondary"} className="text-[10px]">
-                          {short ? <AlertTriangle className="mr-0.5 h-3 w-3" /> : <CheckCircle2 className="mr-0.5 h-3 w-3" />}
-                          {formatQuantity(avail)} {row.unit || mat?.unit || ""}
-                        </Badge>
-                      )}
-                      {!readonly && (
-                        <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove(idx)}>
-                          <Trash2 className="h-3 w-3" />
+                    <span className="text-[11px] text-muted-foreground">min</span>
+                    {!readonly && (
+                      <>
+                        <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => addRow(sIdx)}>
+                          <Plus className="mr-1 h-3 w-3" /> Rohstoff
                         </Button>
-                      )}
+                        {section.markerIndex >= 0 && (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            aria-label="Abschnittswechsel entfernen"
+                            onClick={() => onChange(removeSectionMarker(entries, section.markerIndex))}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {section.rows.length === 0 ? (
+                    <p className="pl-2 text-xs text-muted-foreground">Noch keine Rohstoffe in diesem Abschnitt.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className={`${GRID} px-1 text-[10px] uppercase text-muted-foreground`}>
+                        <div className="w-4">#</div>
+                        <div>Rohstoff</div>
+                        <div>Sollmenge</div>
+                        <div>Einheit</div>
+                        <div>Bemerkung</div>
+                        <div />
+                      </div>
+                      {section.rows.map(({ index, row }) => renderRow(index, row))}
                     </div>
-                  </SortableRow>
-                );
-              })}
-            </SortableContext>
-          </DndContext>
-        </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {shortages.length > 0 && (
