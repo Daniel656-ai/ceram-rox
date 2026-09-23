@@ -384,10 +384,29 @@ function MultiSelectControl({
   );
 }
 
-function FieldControl({ field, readonly }: { field: FormField; readonly: boolean }) {
-  const { value, setValue, interactive } = useBinding(field.field_key);
+function FieldControl({ field: rawField, readonly }: { field: FormField; readonly: boolean }) {
+  const { value, setValue, interactive } = useBinding(rawField.field_key);
   const disabled = readonly || !interactive;
   const renderTokens = useSystemTextRenderer();
+
+  /* Auswahlwerte aus einer verknüpften Stammdatenliste (gilt gleichermaßen für
+   * globale Felder und für Unterfelder eines Repeaters). Ohne Verknüpfung
+   * bleiben die im Formular gespeicherten Auswahlwerte unverändert. */
+  const listId = (rawField.metadata as any)?.global_list_id as string | null | undefined;
+  const { data: listItems } = useQuery({
+    queryKey: ["global-list-items", listId],
+    queryFn: () => api.globalListItems.list(listId as string),
+    enabled: !!listId,
+    staleTime: 5 * 60 * 1000,
+  });
+  const field = useMemo(() => {
+    if (!listId || !listItems?.length) return rawField;
+    return {
+      ...rawField,
+      select_options: listItems.map((i) => ({ label: i.label, value: i.item_value })),
+    } as FormField;
+  }, [rawField, listId, listItems]);
+
 
   if ((field.metadata as any)?.global_field_source === "constant") {
     const constant = parseGlobalConstantValue({
