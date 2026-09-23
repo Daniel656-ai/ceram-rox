@@ -678,9 +678,12 @@ export default function GlobalModelTab() {
  * ------------------------------------------------------------------ */
 function GlobalRepeaterSettings({
   draft,
+  lists,
   onChange,
 }: {
   draft: FieldDraft;
+  /** Globale Stammdatenlisten – Datenquelle einzelner Unterfelder. */
+  lists: Array<{ id: string; display_name: string }>;
   onChange: (patch: Partial<FieldDraft>) => void;
 }) {
   const meta = draft.repeater ?? {};
