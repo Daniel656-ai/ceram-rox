@@ -28,6 +28,7 @@ import TemplateManager from "@/components/TemplateManager";
 import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
 import ServiceLinkedForms, { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
+import { buildFormValueResultPayload } from "@/lib/orderFormValueHandover";
 import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
 import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
 import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
@@ -750,31 +751,17 @@ export default function CreateOrderPage() {
                 // exakt dasselbe Feld lesen. Kein neues Feld, keine zweite
                 // Feldinstanz – nur derselbe Wert unter dem vorhandenen
                 // Feldschlüssel. Die Auftragsparameter oben bleiben unberührt.
-                const payload: any = {
-                  order_measurement_id: createdMeasurement.id,
-                  result_name: `form:${fid}:${item.fieldKey}`,
-                  display_label: def?.display_name || item.fieldKey,
-                  unit: def?.unit || undefined,
-                  is_official: false,
-                  measured_by: user!.id,
-                  value: null,
-                  remarks: null,
-                };
-                if (typeof raw === "number") {
-                  payload.value = raw;
-                } else if (typeof raw === "string") {
-                  const text = raw.trim();
-                  const numeric = /^[+-]?(\d+([.,]\d+)?|[.,]\d+)([eE][+-]?\d+)?$/.test(text);
-                  const num = numeric ? parseFloat(text.replace(",", ".")) : NaN;
-                  if (numeric && !isNaN(num)) payload.value = num;
-                  else payload.remarks = raw;
-                } else if (typeof raw === "boolean") {
-                  payload.remarks = raw ? "true" : "false";
-                } else {
-                  payload.remarks = JSON.stringify(raw);
-                }
+                const payload = buildFormValueResultPayload({
+                  measurementId: createdMeasurement.id,
+                  formId: fid,
+                  fieldKey: item.fieldKey,
+                  raw,
+                  def,
+                  measuredBy: user!.id,
+                });
+                if (!payload) continue;
                 try {
-                  await api.measurementResults.create(payload);
+                  await api.measurementResults.create(payload as any);
                 } catch (err: any) {
                   // Der Auftrag bleibt gültig; nur die Vorbelegung fehlt dann.
                   console.warn("Formularwert konnte nicht übernommen werden", err);
