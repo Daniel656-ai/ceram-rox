@@ -112,3 +112,24 @@ export function updateSectionMarker(
 export function sectionTitle(section: RecipeSection, position: number): string {
   return section.label?.trim() || `Teilprozessschritt ${position + 1}`;
 }
+
+/**
+ * Erkennt einen gespeicherten Rezepturwert (Array oder JSON-String) und gibt
+ * dessen Einträge zurück – sonst `null`. Rein lesend, kein zweiter Speicherort.
+ */
+export function parseRecipeValue(value: unknown): RecipeEntry[] | null {
+  let v: any = value;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s.startsWith("[")) return null;
+    try { v = JSON.parse(s); } catch { return null; }
+  }
+  if (!Array.isArray(v) || v.length === 0) return null;
+  const looksLikeRecipe = v.every(
+    (e) => !!e && typeof e === "object" && (isSectionEntry(e) || "raw_material_id" in e)
+  );
+  if (!looksLikeRecipe) return null;
+  // Nur Werte mit tatsächlichem Inhalt (mindestens eine belegte Rohstoffzeile).
+  const hasContent = v.some((e) => !isSectionEntry(e) && String((e as any).raw_material_id ?? "").length > 0);
+  return hasContent ? (v as RecipeEntry[]) : null;
+}

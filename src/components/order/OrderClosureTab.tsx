@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import OrderResultsDetail from "@/components/order/OrderResultsDetail";
 import PhotoDocumentationCard from "@/components/order/PhotoDocumentationCard";
+import RecipeDocumentationCard from "@/components/order/RecipeDocumentationCard";
 
 import CompletedResultForm from "@/components/CompletedResultForm";
 import OrderReportTab from "@/components/OrderReportTab";
@@ -83,6 +84,9 @@ export default function OrderClosureTab({ order }: { order: any }) {
           <OrderResultsDetail orderId={order.id} orderNumber={order.order_number} />
         </CardContent>
       </Card>
+
+      {/* Ergebnis der Knetung: erfasste Rezeptur/Zugabefolge – getrennt von der Fotodokumentation. */}
+      <RecipeDocumentationCard orderId={order.id} />
 
       <PhotoDocumentationCard orderId={order.id} />
 
