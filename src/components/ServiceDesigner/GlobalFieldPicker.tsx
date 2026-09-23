@@ -16,6 +16,9 @@ import {
   readGlobalRepeaterMeta,
   readGlobalRepeaterSubfields,
   globalTypeToFormFieldType,
+  subfieldListId,
+  subfieldFormFieldType,
+  subfieldInsertMetadata,
   type GlobalField,
   type GlobalObject,
 } from "@/lib/api/globalModel";
@@ -198,14 +201,23 @@ export default function GlobalFieldPicker({ open, onOpenChange, formId, existing
               subKey = `${s.field_key}_${n}`;
             }
             usedKeys.add(subKey);
+            // Unterfeld mit Stammdatenreferenz: Auswahlwerte stammen aus der
+            // verknüpften Stammdatenliste (dieselbe Mechanik wie bei globalen Feldern).
+            const subListId = subfieldListId(s);
+            let subOptions = (s.select_options ?? []) as any;
+            if (subListId && lists.some((l) => l.id === subListId)) {
+              const items = await api.globalListItems.list(subListId);
+              subOptions = items.map((i) => ({ label: i.label, value: i.item_value }));
+            }
             await api.formFields.create({
               form_id: formId,
               field_key: subKey,
               display_name: s.display_name,
-              field_type: globalTypeToFormFieldType(s.data_type) as any,
+              field_type: subfieldFormFieldType(s) as any,
               unit: s.unit ?? null,
               is_required: !!s.is_required,
-              select_options: (s.select_options ?? []) as any,
+              select_options: subOptions,
+              metadata: subfieldInsertMetadata(s) as any,
               parent_field_id: created.id,
               sort_order: subSort++,
             } as any);

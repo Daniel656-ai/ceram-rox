@@ -652,6 +652,7 @@ export default function GlobalModelTab() {
               <div className="sm:col-span-2">
                 <GlobalRepeaterSettings
                   draft={fieldDraft}
+                  lists={lists}
                   onChange={(patch) => setFieldDraft({ ...fieldDraft, ...patch })}
                 />
               </div>
@@ -677,9 +678,12 @@ export default function GlobalModelTab() {
  * ------------------------------------------------------------------ */
 function GlobalRepeaterSettings({
   draft,
+  lists,
   onChange,
 }: {
   draft: FieldDraft;
+  /** Globale Stammdatenlisten – Datenquelle einzelner Unterfelder. */
+  lists: Array<{ id: string; display_name: string }>;
   onChange: (patch: Partial<FieldDraft>) => void;
 }) {
   const meta = draft.repeater ?? {};
@@ -799,7 +803,30 @@ function GlobalRepeaterSettings({
                   Pflichtfeld
                 </label>
               </div>
-              {(s.data_type === "select" || s.data_type === "multiselect") && (
+              <div>
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Datenquelle: Stammdaten (Referenz)
+                </Label>
+                <Select
+                  value={s.list_id ?? NONE}
+                  onValueChange={(v) => patchSubfield(i, { list_id: v === NONE ? null : v })}
+                >
+                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Keine" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Keine (freie Eingabe)</SelectItem>
+                    {lists.map((l) => (
+                      <SelectItem key={l.id} value={l.id}><RichText value={l.display_name} /></SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {s.list_id && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Im Formular erscheint eine Auswahl der Einträge dieser Stammdatenliste;
+                    gespeichert wird der Eintrag als Referenz.
+                  </p>
+                )}
+              </div>
+              {!s.list_id && (s.data_type === "select" || s.data_type === "multiselect") && (
                 <Input
                   className="h-7 text-xs"
                   placeholder="Optionen, mit Komma getrennt"
