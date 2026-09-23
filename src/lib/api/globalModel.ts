@@ -238,3 +238,17 @@ export const globalTypeToFormFieldType = (t: string): string => {
 
 /** Kanonischer Bindungspfad, z.B. "order.versuchsnummer". */
 export const bindingPathFor = (objectKey: string, fieldKey: string) => `${objectKey}.${fieldKey}`;
+
+/**
+ * Formularfeld-Typ eines Repeater-Unterfeldes. Unterfelder mit Stammdaten-
+ * referenz werden generisch zu einer Auswahl aus dieser Liste; alle übrigen
+ * Unterfelder behalten ihr bisheriges Verhalten unverändert.
+ */
+export const subfieldFormFieldType = (s: GlobalRepeaterSubfield): string =>
+  subfieldListId(s) ? "select" : globalTypeToFormFieldType(s.data_type);
+
+/** Metadaten eines eingefügten Unterfeldes (leer ohne Stammdatenreferenz). */
+export const subfieldInsertMetadata = (s: GlobalRepeaterSubfield): Record<string, unknown> => {
+  const listId = subfieldListId(s);
+  return listId ? { global_list_id: listId } : {};
+};
