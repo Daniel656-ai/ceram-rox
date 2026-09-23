@@ -8,6 +8,7 @@ export const SAMPLE_CATEGORIES = [
   "stationaerer_katalysator",
   "plattenkatalysator",
   "marinekatalysator",
+  "oxidationskatalysator",
   "heat_media",
 ] as const;
 
