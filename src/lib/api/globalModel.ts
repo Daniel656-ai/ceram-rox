@@ -92,7 +92,18 @@ export interface GlobalRepeaterSubfield {
   unit?: string | null;
   is_required?: boolean;
   select_options?: Array<string | { label: string; value: string }>;
+  /**
+   * Optionale Datenquelle „Referenz (Stammdaten)“: Das Unterfeld bietet im
+   * Formular ausschließlich die Einträge dieser globalen Stammdatenliste zur
+   * Auswahl an; gespeichert wird der technische Eintragsschlüssel.
+   * Ohne Angabe verhält sich das Unterfeld unverändert wie bisher.
+   */
+  list_id?: string | null;
 }
+
+/** Stammdatenliste eines Unterfeldes (null = klassisches Unterfeld). */
+export const subfieldListId = (s: Pick<GlobalRepeaterSubfield, "list_id">): string | null =>
+  typeof s.list_id === "string" && s.list_id ? s.list_id : null;
 
 /** Konfiguration eines globalen Repeater-Feldes (in metadata.repeater). */
 export interface GlobalRepeaterMeta {
