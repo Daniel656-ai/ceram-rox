@@ -316,24 +316,17 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
                       }
                     />
                     <span className="text-[11px] text-muted-foreground">min</span>
-                    {!readonly && (
-                      <>
-                        <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => addRow(sIdx)}>
-                          <Plus className="mr-1 h-3 w-3" /> Rohstoff
-                        </Button>
-                        {section.markerIndex >= 0 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7"
-                            aria-label="Abschnittswechsel entfernen"
-                            onClick={() => onChange(removeSectionMarker(entries, section.markerIndex))}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </>
+                    {!readonly && section.markerIndex >= 0 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        aria-label="Abschnittswechsel entfernen"
+                        onClick={() => onChange(removeSectionMarker(entries, section.markerIndex))}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     )}
                   </div>
 
