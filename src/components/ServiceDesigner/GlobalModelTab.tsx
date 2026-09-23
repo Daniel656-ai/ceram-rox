@@ -803,7 +803,30 @@ function GlobalRepeaterSettings({
                   Pflichtfeld
                 </label>
               </div>
-              {(s.data_type === "select" || s.data_type === "multiselect") && (
+              <div>
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Datenquelle: Stammdaten (Referenz)
+                </Label>
+                <Select
+                  value={s.list_id ?? NONE}
+                  onValueChange={(v) => patchSubfield(i, { list_id: v === NONE ? null : v })}
+                >
+                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Keine" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>Keine (freie Eingabe)</SelectItem>
+                    {lists.map((l) => (
+                      <SelectItem key={l.id} value={l.id}><RichText value={l.display_name} /></SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {s.list_id && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Im Formular erscheint eine Auswahl der Einträge dieser Stammdatenliste;
+                    gespeichert wird der Eintrag als Referenz.
+                  </p>
+                )}
+              </div>
+              {!s.list_id && (s.data_type === "select" || s.data_type === "multiselect") && (
                 <Input
                   className="h-7 text-xs"
                   placeholder="Optionen, mit Komma getrennt"
