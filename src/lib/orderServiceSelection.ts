@@ -38,14 +38,25 @@ export interface SelectionEntry {
   token: string;
   /** Weitere Schreibweisen (z.B. Anzeigebezeichnung der Stammdatenliste). */
   aliases: string[];
+  /**
+   * Stabile Zuordnung „Auszulösende Dienstleistung“ aus dem Stammdateneintrag
+   * (`metadata.service_id`). Hat Vorrang vor jedem Namensvergleich; ist sie
+   * gesetzt, aber ungültig, gibt es KEINEN Rückfall auf den Namen.
+   */
+  service_id?: string | null;
 }
 
 export interface SelectionField {
   field_key: string;
   display_name?: string | null;
   field_type?: string | null;
-  select_options?: Array<string | { label?: string | null; value?: string | null }> | null;
+  select_options?: Array<
+    string | { label?: string | null; value?: string | null; service_id?: string | null }
+  > | null;
 }
+
+/** Hinweistext für Einträge mit ungültiger/archivierter Zuordnung. */
+export const INVALID_SERVICE_REF_SUFFIX = " (zugeordnete Dienstleistung nicht verfügbar)";
 
 const SERVICE_FIELD_NAMES = new Set([
   "dienstleistungen",

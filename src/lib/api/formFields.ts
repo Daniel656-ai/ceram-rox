@@ -135,14 +135,20 @@ export const formFields = {
           const items = (await unwrap(
             dbClient
               .from("global_list_items" as any)
-              .select("list_id,label,item_value,sort_order")
+              .select("list_id,label,item_value,sort_order,metadata")
               .in("list_id", listIds)
               .order("sort_order")
-          )) as unknown as Array<{ list_id: string; label: string; item_value: string }>;
-          const byList = new Map<string, Array<{ label: string; value: string }>>();
+          )) as unknown as Array<{ list_id: string; label: string; item_value: string; metadata?: Record<string, unknown> | null }>;
+          const byList = new Map<string, Array<{ label: string; value: string; service_id?: string }>>();
           for (const it of items) {
             const arr = byList.get(it.list_id) ?? [];
-            arr.push({ label: it.label, value: it.item_value });
+            // Optionale Zuordnung „Auszulösende Dienstleistung“ (stabile ID).
+            const sid = (it.metadata ?? {}).service_id;
+            arr.push({
+              label: it.label,
+              value: it.item_value,
+              ...(typeof sid === "string" && sid ? { service_id: sid } : {}),
+            });
             byList.set(it.list_id, arr);
           }
           for (const g of globals) {
