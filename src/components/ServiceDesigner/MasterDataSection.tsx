@@ -57,6 +57,38 @@ const emptyAttr: AttrDraft = {
   is_required: false, show_in_table: true, description: "", sort_order: 0,
 };
 
+/**
+ * Optionale Zuordnung „Auszulösende Dienstleistung“ eines Stammdateneintrags.
+ * Gespeichert als stabile ID in `metadata.service_id`; angeboten werden nur
+ * bestehende aktive Dienstleistungen – hier wird nichts neu angelegt.
+ */
+function ServiceRefSelect({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
+  const { data: services = [] } = useQuery({
+    queryKey: ["measurement-services-active"],
+    queryFn: () => api.measurementServices.listActive(),
+  });
+  const list = services as Array<{ id: string; service_name: string }>;
+  const invalid = !!value && list.length > 0 && !list.some((s) => s.id === value);
+  return (
+    <div>
+      <Label>Auszulösende Dienstleistung</Label>
+      <Select value={value || "__none__"} onValueChange={(v) => onChange(v === "__none__" ? null : v)}>
+        <SelectTrigger><SelectValue placeholder="Keine Dienstleistung zugeordnet" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">Keine Dienstleistung zugeordnet</SelectItem>
+          {invalid && <SelectItem value={value!}>Nicht verfügbare Dienstleistung</SelectItem>}
+          {list.map((s) => <SelectItem key={s.id} value={s.id}>{s.service_name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      {invalid ? (
+        <p className="mt-1 text-xs text-destructive">Die zugeordnete Dienstleistung existiert nicht mehr oder ist archiviert – der Eintrag wird bei der Auftragserstellung nicht ausgelöst.</p>
+      ) : !value ? (
+        <p className="mt-1 text-xs text-muted-foreground">Keine Dienstleistung zugeordnet – Zuordnung erfolgt wie bisher über den Namen.</p>
+      ) : null}
+    </div>
+  );
+}
+
 function AttributeValueInput({
   attr, value, onChange,
 }: { attr: GlobalListAttribute; value: unknown; onChange: (v: unknown) => void }) {
@@ -586,6 +618,17 @@ export default function MasterDataSection({
                 {a.description && <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>}
               </div>
             ))}
+             <ServiceRefSelect
+               value={typeof itemDraft.metadata.service_id === "string" ? itemDraft.metadata.service_id : null}
+               onChange={(sid) =>
+                 setItemDraft((d) => {
+                   const metadata = { ...d.metadata };
+                   if (sid) metadata.service_id = sid;
+                   else delete metadata.service_id;
+                   return { ...d, metadata };
+                 })
+               }
+             />
              <div><Label>Bemerkung</Label>{isDesktop ? <SymbolTextarea rows={2} value={itemDraft.description} onChange={(value) => setItemDraft((d) => ({ ...d, description: value }))} /> : <Textarea rows={2} value={itemDraft.description} onChange={(e) => setItemDraft((d) => ({ ...d, description: e.target.value }))} />}</div>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2 text-sm">

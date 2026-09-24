@@ -38,14 +38,25 @@ export interface SelectionEntry {
   token: string;
   /** Weitere Schreibweisen (z.B. Anzeigebezeichnung der Stammdatenliste). */
   aliases: string[];
+  /**
+   * Stabile Zuordnung „Auszulösende Dienstleistung“ aus dem Stammdateneintrag
+   * (`metadata.service_id`). Hat Vorrang vor jedem Namensvergleich; ist sie
+   * gesetzt, aber ungültig, gibt es KEINEN Rückfall auf den Namen.
+   */
+  service_id?: string | null;
 }
 
 export interface SelectionField {
   field_key: string;
   display_name?: string | null;
   field_type?: string | null;
-  select_options?: Array<string | { label?: string | null; value?: string | null }> | null;
+  select_options?: Array<
+    string | { label?: string | null; value?: string | null; service_id?: string | null }
+  > | null;
 }
+
+/** Hinweistext für Einträge mit ungültiger/archivierter Zuordnung. */
+export const INVALID_SERVICE_REF_SUFFIX = " (zugeordnete Dienstleistung nicht verfügbar)";
 
 const SERVICE_FIELD_NAMES = new Set([
   "dienstleistungen",
@@ -60,6 +71,8 @@ const isServiceField = (f: SelectionField, services?: SelectableService[]): bool
   const byName = normalizeToken(f.display_name);
   const byKey = normalizeToken(f.field_key);
   if (SERVICE_FIELD_NAMES.has(byName) || SERVICE_FIELD_NAMES.has(byKey)) return true;
+  // Listen mit hinterlegter „Auszulösender Dienstleistung“ sind stets Auswahlfelder für Dienstleistungen.
+  if ((f.select_options ?? []).some((o) => !!o && typeof o === "object" && !!o.service_id)) return true;
   // Felder mit frei gewähltem Namen (z.B. "Analyse PPP") werden über ihren
   // Inhalt erkannt: Mindestens ein Eintrag (Wert oder Bezeichnung) muss exakt
   // einer bestehenden Dienstleistung entsprechen. So steuert dieselbe
@@ -94,11 +107,13 @@ export function readServiceSelectionEntries(
 
   for (const f of fields.filter((f) => isServiceField(f, services))) {
     const labelByValue = new Map<string, string>();
+    const serviceIdByValue = new Map<string, string>();
     for (const o of f.select_options ?? []) {
       if (!o || typeof o === "string") continue;
       const v = normalizeToken(o.value);
       const l = String(o.label ?? "").trim();
       if (v && l) labelByValue.set(v, l);
+      if (v && o.service_id) serviceIdByValue.set(v, String(o.service_id));
     }
 
     const raw = values[f.field_key];
@@ -116,9 +131,11 @@ export function readServiceSelectionEntries(
       if (isObj && (entry as any).label) aliases.add(String((entry as any).label).trim());
       const fromList = labelByValue.get(key);
       if (fromList) aliases.add(fromList);
+      const serviceId = serviceIdByValue.get(key);
       out.push({
         token,
         aliases: [...aliases].filter((a) => a && normalizeToken(a) !== key),
+        ...(serviceId ? { service_id: serviceId } : {}),
       });
     }
   }
@@ -160,7 +177,9 @@ export function planServiceSync(params: {
 }): SyncPlan {
   const { services, measurements, isEdited } = params;
   const selection: SelectionEntry[] = params.selection.map((s) =>
-    typeof s === "string" ? { token: s, aliases: [] } : { token: s.token, aliases: s.aliases ?? [] }
+    typeof s === "string"
+      ? { token: s, aliases: [] }
+      : { token: s.token, aliases: s.aliases ?? [], service_id: s.service_id ?? null }
   );
 
   const byName = new Map<string, SelectableService>();
@@ -179,11 +198,18 @@ export function planServiceSync(params: {
   selection.forEach((entry) => {
     const token = normalizeToken(entry.token);
     if (!token || presentTokens.has(token)) return;
-    let service = byName.get(token);
-    if (!service) {
-      for (const alias of entry.aliases) {
-        service = byName.get(normalizeToken(alias));
-        if (service) break;
+    let service: SelectableService | undefined;
+    if (entry.service_id) {
+      // Stabile Zuordnung hat Vorrang. Ungültig/archiviert → kein Namens-Fallback.
+      service = services.find((s) => s.id === entry.service_id);
+      if (!service) { unresolved.push(entry.token.trim() + INVALID_SERVICE_REF_SUFFIX); return; }
+    } else {
+      service = byName.get(token);
+      if (!service) {
+        for (const alias of entry.aliases) {
+          service = byName.get(normalizeToken(alias));
+          if (service) break;
+        }
       }
     }
     if (!service) { unresolved.push(entry.token.trim()); return; }
