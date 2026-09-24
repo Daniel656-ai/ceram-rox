@@ -407,6 +407,18 @@ function TaskExecutionPageInner() {
         await api.measurementResults.delete(r.id);
       }
     }
+    // Regel-Aktion „Dienstleistung auslösen“: nachträgliche Wertänderungen
+    // wirken auf den gespeicherten Auftrag (idempotent, ohne Duplikate).
+    const orderIdForRules = (measurement as any)?.order_id;
+    if (orderIdForRules) {
+      try {
+        const r = await api.ruleTriggers.syncOrder(orderIdForRules);
+        if (r.added > 0) toast.info(`${r.added} Dienstleistung(en) durch Regel im Auftrag ergänzt`);
+        if (r.kept > 0) toast.warning("Ausgelöste Dienstleistung bleibt erhalten, da bereits bearbeitet");
+      } catch (err) {
+        console.warn("Regel-Auslöser konnten nicht abgeglichen werden", err);
+      }
+    }
   };
 
   /**

@@ -25,6 +25,14 @@ export const ruleTriggers = {
     return out;
   },
 
+  /** Gibt es im Auftrag bereits eine Position dieser Dienstleistung für diese Probe? */
+  exists: async (orderId: string, serviceId: string, sampleId: string | null) => {
+    let q = dbClient.from("order_measurements").select("id").eq("order_id", orderId).eq("service_id", serviceId);
+    q = sampleId ? q.eq("sample_id", sampleId) : q.is("sample_id", null);
+    const rows = (await unwrap(q.limit(1))) as any[];
+    return (rows ?? []).length > 0;
+  },
+
   /**
    * Gleicht die ausgelösten Positionen eines Auftrags mit den aktuell
    * gespeicherten Werten ab (idempotent). Ergänzt fehlende Positionen einmalig,
