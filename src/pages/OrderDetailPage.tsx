@@ -46,7 +46,7 @@ function OrderDetailPageInner() {
   const [searchParams] = useSearchParams();
   const measurementFilter = searchParams.get("measurement");
   const navigate = useNavigate();
-  const { user, role } = useAuth();
+  const { user, role, hasRole } = useAuth();
   const { hasPermission } = usePermissions();
   const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
   const canViewHourlyRates = role === "master" || hasPermission("costs.view_hourly_rates");
@@ -103,11 +103,16 @@ function OrderDetailPageInner() {
 
   // Rollenbasierte Ansicht: Auftraggeber sehen nur die Auftraggeber-Sicht,
   // Messdienstleister nur die MDL-Sicht, Master/Admin können umschalten.
-  const defaultView: "requester" | "provider" = role === "auftraggeber" ? "requester" : "provider";
+  // Mehrfachrollen additiv: Auftraggeber + Messdienstleister dürfen – wie
+  // Master – zwischen beiden Arbeitsansichten wechseln (nur Ansicht,
+  // keine Änderung der Berechtigungen).
+  const isRequester = hasRole("auftraggeber");
+  const isProvider = hasRole("durchfuehrer");
+  const defaultView: "requester" | "provider" = isRequester ? "requester" : "provider";
   const [viewMode, setViewMode] = useState<"requester" | "provider">(defaultView);
-  const canSwitchViews = role === "master";
-  const showRequesterView = canSwitchViews ? viewMode === "requester" : role === "auftraggeber";
-  const showProviderView = canSwitchViews ? viewMode === "provider" : role !== "auftraggeber";
+  const canSwitchViews = role === "master" || (isRequester && isProvider);
+  const showRequesterView = canSwitchViews ? viewMode === "requester" : isRequester;
+  const showProviderView = canSwitchViews ? viewMode === "provider" : !isRequester;
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   if (!order) return (
@@ -118,12 +123,12 @@ function OrderDetailPageInner() {
     </div>
   );
 
-  const canEditDelete = role === "master" || (role === "auftraggeber" && (order as any).created_by === user?.id && order.status === "open");
+  const canEditDelete = role === "master" || (isRequester && (order as any).created_by === user?.id && order.status === "open");
   const canEditPriority = role === "master" || (order as any).created_by === user?.id;
   const myMembership = (projectMembers as any[]).find((m) => m.user_id === user?.id);
   const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
   const canAssign = role === "master" || isProjectLead;
-  const canManageMeasurement = canAssign && role !== "durchfuehrer";
+  const canManageMeasurement = canAssign && !(isProvider && !isRequester && role !== "master");
 
   const allMeasurements = (order as any).order_measurements || [];
   const measurements = measurementFilter
@@ -327,7 +332,7 @@ function OrderDetailPageInner() {
         canBookReplacement={
           !showRequesterView &&
           (role === "master" ||
-            role === "durchfuehrer" ||
+            isProvider ||
             ((order as any).order_measurements || []).some((m: any) => m.assigned_to === user?.id))
         }
         processSlot={

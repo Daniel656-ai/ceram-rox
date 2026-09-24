@@ -166,6 +166,7 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
+      {isDualRole && <DualRoleSwitch value={ordersView} onChange={setOrdersView} />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
