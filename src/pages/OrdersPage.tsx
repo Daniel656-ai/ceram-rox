@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Search, Trash2, Copy, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox } from "lucide-react";
 import { useState, useMemo } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +36,7 @@ export default function OrdersPage() {
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [ordersView, setOrdersView] = useState<"requester" | "provider">("requester");
   type SortKey = "order_number" | "project_number" | "project_name" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
   type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
   const [sort, setSort] = useState<SortState>(() => {
@@ -318,6 +320,17 @@ export default function OrdersPage() {
 /*  Messdienstleister-Ansicht: „Meine Aufgaben" mit zwei Bereichen            */
 /*  1) zugewiesene Aufgaben  2) verfügbare (freie) Aufträge laut Kompetenz    */
 /* -------------------------------------------------------------------------- */
+function DualRoleSwitch({ value, onChange }: { value: "requester" | "provider"; onChange: (v: "requester" | "provider") => void }) {
+  return (
+    <Tabs value={value} onValueChange={(v) => onChange(v as "requester" | "provider")}>
+      <TabsList>
+        <TabsTrigger value="requester">Auftraggeber</TabsTrigger>
+        <TabsTrigger value="provider">Messdienstleister</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+}
+
 function DurchfuehrerTasksView({
   search, setSearch, statusFilter, setStatusFilter,
 }: {
