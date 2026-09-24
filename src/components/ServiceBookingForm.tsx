@@ -18,6 +18,7 @@ import { readImageMeta } from "@/lib/imageGallery";
 import RawMaterialRecipeField from "@/components/RawMaterialRecipeField";
 import RawMaterialSelectField from "@/components/RawMaterialSelectField";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import { isRuleSatisfied } from "@/lib/ruleEvaluation";
 import { useSystemVariables } from "@/context/ProcessContextProvider";
 import type { FormRoleView, FormSection, RepeatableConfig } from "@/lib/api/serviceFormLayouts";
 
@@ -74,22 +75,7 @@ export default function ServiceBookingForm({ serviceId, roleView, values, onChan
     if (!definition?.rules) return { hidden, required };
     for (const rule of definition.rules) {
       if (!rule.enabled) continue;
-      const checks = rule.conditions.map((c) => {
-        const v = values[c.field_key];
-        switch (c.operator) {
-          case "equals": return String(v ?? "") === String(c.value ?? "");
-          case "not_equals": return String(v ?? "") !== String(c.value ?? "");
-          case "is_empty": return v == null || v === "";
-          case "is_not_empty": return !(v == null || v === "");
-          case "contains": return String(v ?? "").includes(String(c.value ?? ""));
-          case "gte": return Number(v) >= Number(c.value);
-          case "lte": return Number(v) <= Number(c.value);
-          case "greater_than": return Number(v) > Number(c.value);
-          case "less_than": return Number(v) < Number(c.value);
-          default: return false;
-        }
-      });
-      const ok = rule.logic === "or" ? checks.some(Boolean) : checks.every(Boolean);
+      const ok = isRuleSatisfied(rule, (k) => values[k]);
       if (!ok) continue;
       for (const a of rule.actions) {
         if (a.type === "hide_field" && a.target_field_key) hidden.add(a.target_field_key);
