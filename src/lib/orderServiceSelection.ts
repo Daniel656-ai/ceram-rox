@@ -86,7 +86,8 @@ const isServiceField = (f: SelectionField, services?: SelectableService[]): bool
       );
     });
   }
-  return false;
+  // Listen mit hinterlegter „Auszulösender Dienstleistung“ sind stets Auswahlfelder für Dienstleistungen.
+  return (f.select_options ?? []).some((o) => !!o && typeof o === "object" && !!o.service_id);
 };
 
 /**
@@ -105,11 +106,13 @@ export function readServiceSelectionEntries(
 
   for (const f of fields.filter((f) => isServiceField(f, services))) {
     const labelByValue = new Map<string, string>();
+    const serviceIdByValue = new Map<string, string>();
     for (const o of f.select_options ?? []) {
       if (!o || typeof o === "string") continue;
       const v = normalizeToken(o.value);
       const l = String(o.label ?? "").trim();
       if (v && l) labelByValue.set(v, l);
+      if (v && o.service_id) serviceIdByValue.set(v, String(o.service_id));
     }
 
     const raw = values[f.field_key];
@@ -127,9 +130,11 @@ export function readServiceSelectionEntries(
       if (isObj && (entry as any).label) aliases.add(String((entry as any).label).trim());
       const fromList = labelByValue.get(key);
       if (fromList) aliases.add(fromList);
+      const serviceId = serviceIdByValue.get(key);
       out.push({
         token,
         aliases: [...aliases].filter((a) => a && normalizeToken(a) !== key),
+        ...(serviceId ? { service_id: serviceId } : {}),
       });
     }
   }
@@ -190,11 +195,18 @@ export function planServiceSync(params: {
   selection.forEach((entry) => {
     const token = normalizeToken(entry.token);
     if (!token || presentTokens.has(token)) return;
-    let service = byName.get(token);
-    if (!service) {
-      for (const alias of entry.aliases) {
-        service = byName.get(normalizeToken(alias));
-        if (service) break;
+    let service: SelectableService | undefined;
+    if (entry.service_id) {
+      // Stabile Zuordnung hat Vorrang. Ungültig/archiviert → kein Namens-Fallback.
+      service = services.find((s) => s.id === entry.service_id);
+      if (!service) { unresolved.push(entry.token.trim() + INVALID_SERVICE_REF_SUFFIX); return; }
+    } else {
+      service = byName.get(token);
+      if (!service) {
+        for (const alias of entry.aliases) {
+          service = byName.get(normalizeToken(alias));
+          if (service) break;
+        }
       }
     }
     if (!service) { unresolved.push(entry.token.trim()); return; }
