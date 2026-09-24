@@ -71,6 +71,8 @@ const isServiceField = (f: SelectionField, services?: SelectableService[]): bool
   const byName = normalizeToken(f.display_name);
   const byKey = normalizeToken(f.field_key);
   if (SERVICE_FIELD_NAMES.has(byName) || SERVICE_FIELD_NAMES.has(byKey)) return true;
+  // Listen mit hinterlegter „Auszulösender Dienstleistung“ sind stets Auswahlfelder für Dienstleistungen.
+  if ((f.select_options ?? []).some((o) => !!o && typeof o === "object" && !!o.service_id)) return true;
   // Felder mit frei gewähltem Namen (z.B. "Analyse PPP") werden über ihren
   // Inhalt erkannt: Mindestens ein Eintrag (Wert oder Bezeichnung) muss exakt
   // einer bestehenden Dienstleistung entsprechen. So steuert dieselbe
@@ -86,8 +88,7 @@ const isServiceField = (f: SelectionField, services?: SelectableService[]): bool
       );
     });
   }
-  // Listen mit hinterlegter „Auszulösender Dienstleistung“ sind stets Auswahlfelder für Dienstleistungen.
-  return (f.select_options ?? []).some((o) => !!o && typeof o === "object" && !!o.service_id);
+  return false;
 };
 
 /**
