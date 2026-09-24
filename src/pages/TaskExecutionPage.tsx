@@ -9,6 +9,7 @@ import MeasurementCurvesCard from "@/components/curves/MeasurementCurvesCard";
 import ServiceBookingForm from "@/components/ServiceBookingForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,7 @@ function TaskExecutionPageInner() {
   const { measurementId } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { user, profile, role } = useAuth();
+  const { user, profile, role, hasRole } = useAuth();
 
   const { data: measurement, isLoading } = useQuery({
     queryKey: ["measurement-task", measurementId],
@@ -81,7 +82,12 @@ function TaskExecutionPageInner() {
    * Messdienstleisterformular der Dienstleistung. Kein Fallback auf das
    * Auftraggeberformular und kein pauschales „Ergebnisformular".
    */
-  const roleView: FormRoleView = "employee";
+  // Doppelrolle Auftraggeber + Messdienstleister: reine Arbeitsansicht
+  // umschaltbar. Berechtigungen (canEdit etc.) bleiben davon unberührt;
+  // beide Ansichten arbeiten auf derselben Wertetasche.
+  const canSwitchFormView = hasRole("auftraggeber") && hasRole("durchfuehrer");
+  const [formView, setFormView] = useState<"customer" | "employee">("employee");
+  const roleView: FormRoleView = canSwitchFormView ? formView : "employee";
   const { data: employeeLayout } = useQuery({
     queryKey: ["service-form-layout", serviceId, "employee"],
     queryFn: () => api.serviceFormLayouts.get(serviceId!, "employee"),
@@ -660,7 +666,15 @@ function TaskExecutionPageInner() {
             </p>
           ) : (
             <>
-              {hasLayoutForm && (
+              {canSwitchFormView && (
+                <Tabs value={formView} onValueChange={(v) => setFormView(v as "customer" | "employee")} className="mb-3">
+                  <TabsList>
+                    <TabsTrigger value="customer">Auftraggeber</TabsTrigger>
+                    <TabsTrigger value="employee">Messdienstleister</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
+              {(hasLayoutForm || roleView === "customer") && (
                 <ServiceBookingForm
                   serviceId={serviceId}
                   roleView={roleView}
@@ -670,7 +684,7 @@ function TaskExecutionPageInner() {
               )}
               <ServiceLinkedForms
                 serviceId={serviceId}
-                context="employee"
+                context={roleView === "customer" ? "customer" : "employee"}
                 stepData={stepData as any}
                 formData={linkedFormData as any}
                 values={values}

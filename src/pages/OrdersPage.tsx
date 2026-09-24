@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Search, Trash2, Copy, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox } from "lucide-react";
 import { useState, useMemo } from "react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,7 +25,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 export default function OrdersPage() {
-  const { user, role } = useAuth();
+  const { user, role, hasRole } = useAuth();
   const { t, i18n } = useTranslation(["orders", "common", "measurements"]);
   const { data: orders = [], isLoading } = useOrders();
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
@@ -35,6 +36,7 @@ export default function OrdersPage() {
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [ordersView, setOrdersView] = useState<"requester" | "provider">("requester");
   type SortKey = "order_number" | "project_number" | "project_name" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
   type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
   const [sort, setSort] = useState<SortState>(() => {
@@ -106,12 +108,26 @@ export default function OrdersPage() {
     });
   }, [visibleOrders, search, statusFilter, sort, i18n.language]);
 
-  if (role === "durchfuehrer") {
+  // Mehrfachrollen additiv: Auftraggeber-Rechte gehen durch eine zusätzliche
+  // Messdienstleister-Rolle nicht verloren.
+  const isRequester = hasRole("auftraggeber");
+  const isProvider = hasRole("durchfuehrer");
+  const isDualRole = isRequester && isProvider && role !== "master";
+  if (isProvider && !isRequester && role !== "master") {
     return <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />;
   }
 
-  const canCreateOrder = role === "master" || role === "auftraggeber" || isAnyProjectLead;
-  const canShowActions = role === "master" || role === "auftraggeber" || isAnyProjectLead;
+  if (isDualRole && ordersView === "provider") {
+    return (
+      <div className="space-y-4">
+        <DualRoleSwitch value={ordersView} onChange={setOrdersView} />
+        <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+      </div>
+    );
+  }
+
+  const canCreateOrder = role === "master" || isRequester || isAnyProjectLead;
+  const canShowActions = role === "master" || isRequester || isAnyProjectLead;
 
   const handleCopy = async (id: string) => {
     try {
@@ -150,6 +166,7 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
+      {isDualRole && <DualRoleSwitch value={ordersView} onChange={setOrdersView} />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -304,6 +321,17 @@ export default function OrdersPage() {
 /*  Messdienstleister-Ansicht: „Meine Aufgaben" mit zwei Bereichen            */
 /*  1) zugewiesene Aufgaben  2) verfügbare (freie) Aufträge laut Kompetenz    */
 /* -------------------------------------------------------------------------- */
+function DualRoleSwitch({ value, onChange }: { value: "requester" | "provider"; onChange: (v: "requester" | "provider") => void }) {
+  return (
+    <Tabs value={value} onValueChange={(v) => onChange(v as "requester" | "provider")}>
+      <TabsList>
+        <TabsTrigger value="requester">Auftraggeber</TabsTrigger>
+        <TabsTrigger value="provider">Messdienstleister</TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+}
+
 function DurchfuehrerTasksView({
   search, setSearch, statusFilter, setStatusFilter,
 }: {
