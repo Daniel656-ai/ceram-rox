@@ -177,7 +177,9 @@ export function planServiceSync(params: {
 }): SyncPlan {
   const { services, measurements, isEdited } = params;
   const selection: SelectionEntry[] = params.selection.map((s) =>
-    typeof s === "string" ? { token: s, aliases: [] } : { token: s.token, aliases: s.aliases ?? [] }
+    typeof s === "string"
+      ? { token: s, aliases: [] }
+      : { token: s.token, aliases: s.aliases ?? [], service_id: s.service_id ?? null }
   );
 
   const byName = new Map<string, SelectableService>();
