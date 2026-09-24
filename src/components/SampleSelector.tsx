@@ -210,7 +210,7 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
                       setForm((f) => ({ ...f, project_id: projectId || "" }));
                       setDialogOpen(true);
                     }}
-                    className="text-primary data-[selected=true]:bg-primary/10"
+                    className="data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     <span className="font-medium">+ {t("new_sample")}</span>
