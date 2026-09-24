@@ -21,7 +21,8 @@ export type RuleActionType =
   | "show_field" | "hide_field"
   | "require_field" | "optional_field"
   | "set_value" | "calculate_value"
-  | "create_task" | "send_notification";
+  | "create_task" | "send_notification"
+  | "trigger_service";
 
 export interface RuleAction {
   id: string;
@@ -33,6 +34,8 @@ export interface RuleAction {
   task_role?: string;
   notify_role?: string;
   notify_message?: string;
+  /** Ziel der Aktion „Dienstleistung auslösen“ (bestehende Dienstleistung). */
+  target_service_id?: string;
 }
 
 export interface ServiceRule {

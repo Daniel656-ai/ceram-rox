@@ -35,13 +35,17 @@ import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
 import type { FormField } from "@/lib/api/formFields";
 import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
+import { planRuleTriggers, ruleStepKey } from "@/lib/ruleEvaluation";
 
 interface SelectedMeasurement {
   uid: string;
   service_id: string;
   service_name: string;
   /** "template" = aus der Auswahl im Auftraggeberformular, "manual" = zusätzlich gebucht. */
-  origin?: "template" | "manual";
+  origin?: "template" | "manual" | "rule";
+  /** Nur bei origin "rule": auslösende Position und Regel. */
+  rule_source_uid?: string | null;
+  rule_id?: string | null;
   /** Auswahlwert, aus dem die Position entstanden ist. */
   selection_token?: string | null;
   source_package_id?: string | null;
@@ -130,6 +134,8 @@ function MeasurementRow({
               <Badge variant="secondary" className="font-normal">
                 <Layers className="h-3 w-3 mr-1" /> {m.source_package_name}
               </Badge>
+            ) : m.origin === "rule" ? (
+              <Badge variant="secondary" className="font-normal">durch Regel ausgelöst</Badge>
             ) : m.origin === "template" ? (
               <Badge variant="secondary" className="font-normal">aus Auswahl</Badge>
             ) : (
@@ -391,6 +397,55 @@ export default function CreateOrderPage() {
   }, [dynamicValues, templateFields, services]);
 
 
+  // ---------------------------------------------------------------------
+  // Regel-Aktion „Dienstleistung auslösen“ (generisch, je Dienstleistung)
+  // ---------------------------------------------------------------------
+  const ruleServiceIds = useMemo(
+    () => [...new Set(measurements.map((m) => m.service_id))].sort(),
+    [measurements]
+  );
+  const { data: rulesByService = {} } = useQuery({
+    queryKey: ["service-rules-by-service", ruleServiceIds],
+    queryFn: () => api.ruleTriggers.rulesByService(ruleServiceIds),
+    enabled: ruleServiceIds.length > 0,
+  });
+  const buildRulePlan = (current: SelectedMeasurement[], formVals: Record<string, Record<string, any>>) =>
+    planRuleTriggers({
+      sources: current.map((m) => ({ key: m.uid, service_id: m.service_id, sample_id: null, values: formVals[m.uid] ?? {} })),
+      rulesByService,
+      existing: current.map((m) => ({
+        key: m.uid,
+        service_id: m.service_id,
+        sample_id: null,
+        from_rule: m.origin === "rule",
+        edited: Object.values(formVals[m.uid] ?? {}).some(
+          (v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)
+        ),
+      })),
+    });
+  const ruleAdditions = (plan: ReturnType<typeof buildRulePlan>): SelectedMeasurement[] =>
+    plan.add.flatMap((a) => {
+      const svc = services.find((s) => s.id === a.target_service_id);
+      if (!svc) return [];
+      return [{
+        uid: newUid(),
+        service_id: svc.id,
+        service_name: svc.service_name,
+        origin: "rule" as const,
+        rule_source_uid: a.source_key,
+        rule_id: a.rule_id,
+      }];
+    });
+
+  useEffect(() => {
+    if (services.length === 0) return;
+    const plan = buildRulePlan(measurementsRef.current, formValuesRef.current);
+    const additions = ruleAdditions(plan);
+    if (additions.length === 0 && plan.remove.length === 0) return;
+    setMeasurements((prev) => [...prev.filter((m) => !plan.remove.includes(m.uid)), ...additions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [measurementFormValues, measurements.length, rulesByService, services]);
+
   const applyServicePackage = (packageId: string) => {
     const pkg = servicePackages.find((p: any) => p.id === packageId);
     if (!pkg) return;
@@ -585,6 +640,7 @@ export default function CreateOrderPage() {
           selection_token: a.token,
         })),
       ];
+      effectiveMeasurements.push(...ruleAdditions(buildRulePlan(effectiveMeasurements, measurementFormValues)));
       if (submitPlan.unresolved.length > 0) {
         toast.warning("Nicht zugeordnete Auswahl", {
           description: `Ohne passende Dienstleistung: ${submitPlan.unresolved.join(", ")}`,
@@ -596,16 +652,28 @@ export default function CreateOrderPage() {
       const sampleTargets: Array<string | null> =
         selectedSampleIds.length > 0 ? selectedSampleIds : [null];
 
+      const createdByUidSample = new Map<string, string>();
       for (let idx = 0; idx < effectiveMeasurements.length * sampleTargets.length; idx++) {
         const m = effectiveMeasurements[Math.floor(idx / sampleTargets.length)];
         const sampleTarget = sampleTargets[idx % sampleTargets.length];
+        const isRule = m.origin === "rule";
+        // Duplikatschutz: bereits (z.B. über feste Abhängigkeit) vorhanden → nicht erneut anlegen.
+        if (isRule && (await api.ruleTriggers.exists(order.id, m.service_id, sampleTarget))) continue;
         const createdMeasurement = await addMeasurement.mutateAsync({
           order_id: order.id, service_id: m.service_id,
           sample_id: sampleTarget,
           due_date: dueDate || undefined,
           source_package_id: m.source_package_id ?? null,
           source_package_name_snapshot: m.source_package_name ?? null,
+          ...(isRule
+            ? {
+                origin: "workflow" as const,
+                source_measurement_id: createdByUidSample.get(`${m.rule_source_uid}|${sampleTarget}`) ?? null,
+                source_step_key: m.rule_id ? ruleStepKey(m.rule_id) : null,
+              }
+            : {}),
         });
+        createdByUidSample.set(`${m.uid}|${sampleTarget}`, createdMeasurement.id);
         const params = measurementParams[m.uid];
         if (params && Object.keys(params).length > 0) {
           const defs = await api.serviceParameters.listByIdsForService(m.service_id, Object.keys(params));
@@ -775,6 +843,11 @@ export default function CreateOrderPage() {
           }
         }
       }
+      // Sicherheitsnetz: ausgelöste Dienstleistungen gegen den gespeicherten
+      // Stand abgleichen (idempotent, erzeugt keine Duplikate).
+      try { await api.ruleTriggers.syncOrder(order.id); }
+      catch (err) { console.warn("Regel-Auslöser konnten nicht abgeglichen werden", err); }
+
       // Auftrag wurde eingereicht → Entwurf wird entfernt (kein Datenverlust,
       // die Daten leben ab jetzt im produktiven Auftrag).
       await autosave.discard();

@@ -19,7 +19,7 @@ export interface SelectionMeasurement {
   service_id: string;
   service_name: string;
   /** "template" = aus der Formularauswahl erzeugt, "manual" = zusätzlich gebucht. */
-  origin?: "template" | "manual";
+  origin?: "template" | "manual" | "rule";
   /** Ursprünglicher Auswahlwert, damit das Entfernen eindeutig bleibt. */
   selection_token?: string | null;
   source_package_id?: string | null;

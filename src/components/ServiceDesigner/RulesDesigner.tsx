@@ -59,13 +59,14 @@ const ACTION_LABELS: Record<RuleActionType, string> = {
   calculate_value: "Wert berechnen (Formel)",
   create_task: "Aufgabe erzeugen",
   send_notification: "Benachrichtigung senden",
+  trigger_service: "Dienstleistung auslösen",
 };
 
 const ACTION_GROUPS: { label: string; types: RuleActionType[] }[] = [
   { label: "Sichtbarkeit", types: ["show_field", "hide_field"] },
   { label: "Pflicht", types: ["require_field", "optional_field"] },
   { label: "Werte", types: ["set_value", "calculate_value"] },
-  { label: "Automatisierung", types: ["create_task", "send_notification"] },
+  { label: "Automatisierung", types: ["create_task", "send_notification", "trigger_service"] },
 ];
 
 const ROLE_OPTIONS = [
@@ -535,6 +536,12 @@ function ActionRow({
   const needsFormula = action.type === "calculate_value";
   const isTask = action.type === "create_task";
   const isNotify = action.type === "send_notification";
+  const isTrigger = action.type === "trigger_service";
+  const { data: allServices = [] } = useQuery({
+    queryKey: ["services"],
+    queryFn: () => api.measurementServices.listActive(),
+    enabled: isTrigger,
+  });
 
   return (
     <div className="border rounded p-2 bg-muted/30 space-y-2">
@@ -589,6 +596,26 @@ function ActionRow({
               </Select>
             </div>
           </>
+        )}
+        {isTrigger && (
+          <div className="col-span-12 space-y-1">
+            <Label className="text-[10px]">Auszulösende Dienstleistung</Label>
+            <Select
+              value={action.target_service_id || "__none__"}
+              onValueChange={(v) => onChange({ target_service_id: v === "__none__" ? undefined : v })}
+            >
+              <SelectTrigger><SelectValue placeholder="Dienstleistung wählen" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">– keine –</SelectItem>
+                {(allServices as any[]).map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.service_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              Wird im selben Auftrag einmalig als Dienstleistungsposition ergänzt, solange die Bedingung erfüllt ist.
+            </p>
+          </div>
         )}
         {isNotify && (
           <>

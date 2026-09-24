@@ -78,6 +78,10 @@ export const measurements = {
     due_date?: string;
     source_package_id?: string | null;
     source_package_name_snapshot?: string | null;
+    /** Nur für automatisch ausgelöste Positionen (Standard im Backend: "booked"). */
+    origin?: "booked" | "workflow";
+    source_measurement_id?: string | null;
+    source_step_key?: string | null;
   }) =>
     unwrap(
       dbClient
