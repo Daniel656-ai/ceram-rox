@@ -172,6 +172,7 @@ import { formFieldPermissions } from "./formFieldPermissions";
 import { serviceFormLinks } from "./serviceFormLinks";
 import { processServiceLinks } from "./processServiceLinks";
 import { serviceDependencies } from "./serviceDependencies";
+import { ruleTriggers } from "./ruleTriggers";
 import { workflowProcessLinks } from "./workflowProcessLinks";
 import { orderWorkflow } from "./orderWorkflow";
 import { orderInstances } from "./orderInstances";
@@ -355,6 +356,7 @@ export const api = {
   serviceFormLinks,
   processServiceLinks,
   serviceDependencies,
+  ruleTriggers,
   workflowProcessLinks,
   orderWorkflow,
 
