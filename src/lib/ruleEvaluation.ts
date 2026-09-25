@@ -10,6 +10,12 @@ export type ValueGetter = (fieldKey: string) => unknown;
 
 /** Prüft eine einzelne Bedingung – Verhalten identisch zur bisherigen Anzeige-Logik. */
 export function evaluateCondition(c: RuleCondition, v: unknown): boolean {
+  if (v instanceof RepeaterColumn) {
+    // Repeater-Unterfeld: „ist leer“ nur, wenn ALLE Einträge leer sind; sonst
+    // genügt ein Eintrag, der die Bedingung erfüllt. Werte werden nicht berechnet.
+    if (c.operator === "is_empty") return v.items.every((x) => evaluateCondition(c, x));
+    return v.items.some((x) => evaluateCondition(c, x));
+  }
   switch (c.operator) {
     case "equals": return String(v ?? "") === String(c.value ?? "");
     case "not_equals": return String(v ?? "") !== String(c.value ?? "");
@@ -36,8 +42,16 @@ export function isRuleSatisfied(rule: ServiceRule, get: ValueGetter): boolean {
  * `form:<Formular>:<Feldschlüssel>` derselben Position. Leere Zahlen-Strings
  * mit Komma werden als Zahl gelesen.
  */
+/** Werte eines Repeater-Unterfelds über alle Einträge (Schlüssel `bereich.unterfeld`). */
+export class RepeaterColumn {
+  constructor(public readonly items: unknown[]) {}
+}
+
+const normalizeNumber = (v: unknown) =>
+  typeof v === "string" && /^\s*[+-]?\d+,\d+\s*$/.test(v) ? v.replace(",", ".").trim() : v;
+
 export function makeValueGetter(values: Record<string, unknown>): ValueGetter {
-  return (key) => {
+  const lookup = (key: string): unknown => {
     let v: unknown = values[key];
     if (v === undefined) {
       const suffix = `:${key}`;
@@ -45,8 +59,21 @@ export function makeValueGetter(values: Record<string, unknown>): ValueGetter {
         if (k.startsWith("form:") && k.endsWith(suffix)) { v = val; break; }
       }
     }
-    if (typeof v === "string" && /^\s*[+-]?\d+,\d+\s*$/.test(v)) return v.replace(",", ".").trim();
     return v;
+  };
+  return (key) => {
+    let v = lookup(key);
+    if (v === undefined && key.includes(".")) {
+      const dot = key.indexOf(".");
+      const rows = lookup(key.slice(0, dot));
+      if (Array.isArray(rows)) {
+        const child = key.slice(dot + 1);
+        return new RepeaterColumn(
+          rows.map((r) => normalizeNumber(r && typeof r === "object" ? (r as Record<string, unknown>)[child] : undefined))
+        );
+      }
+    }
+    return normalizeNumber(v);
   };
 }
 
