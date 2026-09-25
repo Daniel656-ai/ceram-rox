@@ -108,7 +108,21 @@ export default function RulesDesigner({ serviceId, formId, canManage }: Props) {
     const extra = (formFields as any[])
       .filter((f) => !f.parent_field_id && !keys.has(f.field_key))
       .map((f) => ({ ...f, service_id: serviceId, archived: false })) as unknown as typeof serviceFields;
-    return [...serviceFields, ...extra];
+    // Repeater-Unterfelder als `bereich.unterfeld` (Auswertung: mind. ein Eintrag).
+    const all = formFields as any[];
+    const subs = all
+      .filter((f) => f.parent_field_id)
+      .map((c) => {
+        const rep = all.find((r) => r.id === c.parent_field_id && r.field_type === "repeater");
+        if (!rep) return null;
+        return {
+          ...c, service_id: serviceId, archived: false, parent_field_id: null,
+          field_key: `${rep.field_key}.${c.field_key}`,
+          display_name: `${rep.display_name} › ${c.display_name}`,
+        };
+      })
+      .filter(Boolean) as unknown as typeof serviceFields;
+    return [...serviceFields, ...extra, ...subs];
   }, [serviceFields, formFields, serviceId]);
 
   const { data: row, isLoading } = useQuery({
