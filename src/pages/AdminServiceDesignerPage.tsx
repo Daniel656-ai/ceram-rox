@@ -29,6 +29,7 @@ import { FIELD_TYPE_GROUPS, ALL_FIELD_TYPES as ALL_TYPES, slugify } from "@/lib/
 import LocalCalculationsPanel from "@/components/ServiceDesigner/LocalCalculationsPanel";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import RoleViewsDesigner from "@/components/ServiceDesigner/RoleViewsDesigner";
+import RulesDesigner from "@/components/ServiceDesigner/RulesDesigner";
 import { normalizeLayout, type FormLayoutTree } from "@/lib/api/formDefinitionLayout";
 import { autoLayout } from "@/components/OrderKindDynamicForm";
 import OrderKindMappingTab from "@/components/ServiceDesigner/OrderKindMappingTab";
@@ -936,6 +937,7 @@ function GlobalFormLibrary() {
                 <TabsList>
                   <TabsTrigger value="designer">Formular-Designer</TabsTrigger>
                   <TabsTrigger value="preview">Vorschau</TabsTrigger>
+                  <TabsTrigger value="rules">Regeln & Automatisierungen</TabsTrigger>
                 </TabsList>
                 <TabsContent value="designer" className="mt-3">
                   <RoleViewsDesigner
@@ -948,6 +950,9 @@ function GlobalFormLibrary() {
                 <TabsContent value="preview" className="mt-3">
                   <FormPreviewTab form={selectedForm} />
                 </TabsContent>
+                <TabsContent value="rules" className="mt-3">
+                  <FormRulesTab form={selectedForm} />
+                </TabsContent>
               </Tabs>
 
             </CardContent>
@@ -956,6 +961,53 @@ function GlobalFormLibrary() {
           <Card><CardContent className="pt-6 text-sm text-muted-foreground text-center">Bitte ein Formular links auswählen oder anlegen.</CardContent></Card>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------------- Regeln & Automatisierungen je Formular ----------------
+/**
+ * Öffnet den bestehenden RulesDesigner für die Dienstleistung(en), die dieses
+ * Globale Formular verknüpfen (`service_form_links`). Regeln bleiben in
+ * `service_rules` der jeweiligen Dienstleistung.
+ */
+function FormRulesTab({ form }: { form: FormDefinition }) {
+  const { data: links = [] } = useQuery({
+    queryKey: ["service-form-links", "form", form.id],
+    queryFn: () => api.serviceFormLinks.listForForm(form.id),
+  });
+  const { data: services = [] } = useQuery({
+    queryKey: ["measurement-services", "all"],
+    queryFn: () => api.measurementServices.listAll(),
+  });
+  const linked = useMemo(() => {
+    const ids = new Set(links.map((l) => l.service_id));
+    return (services as any[]).filter((s) => ids.has(s.id));
+  }, [links, services]);
+  const [picked, setPicked] = useState<string | null>(null);
+  const serviceId = picked && linked.some((s) => s.id === picked) ? picked : linked[0]?.id ?? null;
+
+  if (linked.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Dieses Formular ist noch mit keiner Dienstleistung verknüpft. Regeln werden je Dienstleistung gespeichert.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {linked.length > 1 && (
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Dienstleistung</Label>
+          <Select value={serviceId ?? undefined} onValueChange={setPicked}>
+            <SelectTrigger className="w-72 h-8"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {linked.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {serviceId && <RulesDesigner key={serviceId} serviceId={serviceId} formId={form.id} canManage={true} />}
     </div>
   );
 }

@@ -83,17 +83,33 @@ function uid() {
 
 interface Props {
   serviceId: string;
+  /** Optional: Felder dieses Globalen Formulars zusätzlich als Bedingungsfelder anbieten. */
+  formId?: string;
   canManage: boolean;
 }
 
-export default function RulesDesigner({ serviceId, canManage }: Props) {
+export default function RulesDesigner({ serviceId, formId, canManage }: Props) {
   const qc = useQueryClient();
   const { user } = useAuth();
 
-  const { data: fields = [] } = useQuery({
+  const { data: serviceFields = [] } = useQuery({
     queryKey: ["service-data-fields", serviceId],
     queryFn: () => api.serviceDataFields.listForService(serviceId),
   });
+  const { data: formFields = [] } = useQuery({
+    queryKey: ["form-fields", formId],
+    queryFn: () => api.formFields.listForForm(formId!),
+    enabled: !!formId,
+  });
+  // Formularfelder werden über ihren Feldschlüssel referenziert; die Auswertung
+  // (makeValueGetter) findet sie als `form:<Formular>:<Feldschlüssel>`.
+  const fields = useMemo(() => {
+    const keys = new Set(serviceFields.map((f) => f.field_key));
+    const extra = (formFields as any[])
+      .filter((f) => !f.parent_field_id && !keys.has(f.field_key))
+      .map((f) => ({ ...f, service_id: serviceId, archived: false })) as unknown as typeof serviceFields;
+    return [...serviceFields, ...extra];
+  }, [serviceFields, formFields, serviceId]);
 
   const { data: row, isLoading } = useQuery({
     queryKey: ["service-rules", serviceId],
