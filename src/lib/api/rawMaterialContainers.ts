@@ -49,7 +49,7 @@ export const rawMaterialContainers = {
     const base = () => {
       let q = db
         .from("raw_material_containers")
-        .select("*, storage_locations(*), raw_material_batches(batch_number)")
+        .select("*, storage_locations(*), raw_material_batches(batch_number, mrs_number)")
         .order("created_at", { ascending: false });
       if (rawMaterialId) q = q.eq("raw_material_id", rawMaterialId);
       return q;
@@ -67,7 +67,7 @@ export const rawMaterialContainers = {
     unwrap<any>(
       db
         .from("raw_material_containers")
-        .select("*, storage_locations(*), raw_material_batches(batch_number)")
+        .select("*, storage_locations(*), raw_material_batches(batch_number, mrs_number)")
         .eq("id", id)
         .single()
     ),
@@ -76,7 +76,7 @@ export const rawMaterialContainers = {
     unwrap<any>(
       db
         .from("raw_material_containers")
-        .select("*, storage_locations(*), raw_material_batches(batch_number, raw_material_id), raw_materials(material_name, unit)")
+        .select("*, storage_locations(*), raw_material_batches(batch_number, mrs_number, raw_material_id), raw_materials(material_name, unit)")
         .or(`barcode.eq.${barcode},container_code.eq.${barcode}`)
         .maybeSingle()
     ),
