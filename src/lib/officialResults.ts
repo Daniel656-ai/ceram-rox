@@ -259,15 +259,19 @@ export function buildLinkedFormResultCandidates(
       // Bezeichnung UND bleiben strukturiert am Ergebnis erhalten. Sie sind
       // niemals Bestandteil der Formel.
       const base = calculation.result_label || calculation.display_name || calculation.calc_key;
-      const conditions = collectResultConditions(
-        readResultConditions(calculation as any), fields, localValues,
-      );
+      const conditionKeys = readResultConditions(calculation as any);
+      const conditions = collectResultConditions(conditionKeys, fields, localValues);
+      // Additiv: Mit Ergebnisbedingungen ist die Berechnung nur aktiv, wenn
+      // ALLE verknüpften Bedingungsfelder einen tatsächlichen Wert haben
+      // (leer = nicht erfüllt, `0` ist ein gültiger Wert). Ohne Bedingungen
+      // bleibt das Verhalten exakt `is_result === true`.
+      const conditionsMet = conditions.length === conditionKeys.length;
       return {
         key: `${prefix}${calculation.calc_key}`,
         label: buildConditionLabel(base, conditions),
         unit: calculation.unit ?? null,
         value: calculated[calculation.calc_key]?.value ?? null,
-        official: calculation.is_result === true,
+        official: calculation.is_result === true && conditionsMet,
         kind: "calculation" as const,
         error: calculated[calculation.calc_key]?.error ?? null,
         instanceContext: conditions.length ? conditionsToContext(conditions) : null,
