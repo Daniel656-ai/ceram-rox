@@ -56,7 +56,7 @@ export default function RawMaterialsPage() {
 
   const [search, setSearch] = useState("");
   const [filterSupplier, setFilterSupplier] = useState("");
-  const [filterLocation, setFilterLocation] = useState("");
+  const [filterLocation, setFilterLocation] = useState<string>(initialPrefs.filterLocation ?? "");
   const [filterHazard, setFilterHazard] = useState<"all" | "hazardous" | "safe">(initialPrefs.filterHazard ?? "all");
   const [sortKey, setSortKey] = useState<"number" | "name" | "hazard">(initialPrefs.sortKey ?? "number");
   const [sortDir, setSortDir] = useState<"asc" | "desc">(initialPrefs.sortDir ?? "asc");
@@ -139,9 +139,29 @@ export default function RawMaterialsPage() {
     return sortDir === "asc" ? cmp : -cmp;
   }) : filtered;
 
+  // Wechselt der Schlüssel (z. B. Benutzer erst nach dem ersten Rendern geladen),
+  // werden die Einstellungen dieses Mitarbeiters geladen, bevor gespeichert wird.
+  const [loadedPrefsKey, setLoadedPrefsKey] = useState(prefsKey);
   useEffect(() => {
-    try { localStorage.setItem(prefsKey, JSON.stringify({ sortKey, sortDir, filterHazard })); } catch {}
-  }, [prefsKey, sortKey, sortDir, filterHazard]);
+    if (loadedPrefsKey === prefsKey) return;
+    const p = loadPrefs();
+    setSortKey(p.sortKey ?? "number");
+    setSortDir(p.sortDir ?? "asc");
+    setFilterHazard(p.filterHazard ?? "all");
+    setFilterLocation(p.filterLocation ?? "");
+    setLoadedPrefsKey(prefsKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefsKey]);
+
+  useEffect(() => {
+    if (loadedPrefsKey !== prefsKey) return;
+    try { localStorage.setItem(prefsKey, JSON.stringify({ sortKey, sortDir, filterHazard, filterLocation })); } catch {}
+  }, [prefsKey, loadedPrefsKey, sortKey, sortDir, filterHazard, filterLocation]);
+
+  // Gespeicherter Lagerort existiert nicht mehr → Filter auf „Alle“ zurücksetzen (nur Ansicht).
+  useEffect(() => {
+    if (filterLocation && locations && !locations.some((l) => l.id === filterLocation)) setFilterLocation("");
+  }, [locations, filterLocation]);
 
   const toggleSort = (key: "number" | "name" | "hazard") => {
     if (sortKey === key) setSortDir(sortDir === "asc" ? "desc" : "asc");
