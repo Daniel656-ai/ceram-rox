@@ -211,13 +211,25 @@ export const rawMaterialAnalyses = {
 };
 
 export const inventoryMovements = {
-  list: (materialId?: string) => {
-    let q = dbClient
-      .from("inventory_movements")
-      .select("*, raw_material_batches(batch_number)")
-      .order("movement_date", { ascending: false });
-    if (materialId) q = q.eq("raw_material_id", materialId);
-    return unwrap(q);
+  /**
+   * Lädt Lagerbewegungen vollständig seitenweise (Server-Limit je Abfrage),
+   * damit die Bestandsberechnung auch bei großen Datenbeständen alle Bewegungen erhält.
+   */
+  list: async (materialId?: string): Promise<any[]> => {
+    const PAGE = 1000;
+    const all: any[] = [];
+    for (let from = 0; ; from += PAGE) {
+      let q = dbClient
+        .from("inventory_movements")
+        .select("*, raw_material_batches(batch_number)")
+        .order("movement_date", { ascending: false })
+        .order("id", { ascending: true });
+      if (materialId) q = q.eq("raw_material_id", materialId);
+      const page = await unwrap<any[]>(q.range(from, from + PAGE - 1));
+      all.push(...(page ?? []));
+      if (!page || page.length < PAGE) break;
+    }
+    return all;
   },
 
   add: (
