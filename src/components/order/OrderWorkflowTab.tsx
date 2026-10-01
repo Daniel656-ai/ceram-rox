@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WorkflowRuntimePanel } from "@/components/workflow/WorkflowRuntimePanel";
 import { ProjectTimeEntries } from "@/components/ProjectTimeEntries";
+import OrderRequesterSpecs from "@/components/order/OrderRequesterSpecs";
 
 import { ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { ListChecks, History, ArrowRight } from "lucide-react";
@@ -116,6 +117,8 @@ export default function OrderWorkflowTab({
 
   return (
     <div className="space-y-4 pt-4">
+      <OrderRequesterSpecs order={order} />
+
       <Card>
         <CardHeader className="py-3 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base flex items-center gap-2">
