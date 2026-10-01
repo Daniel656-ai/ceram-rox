@@ -407,6 +407,21 @@ export default function RawMaterialDetailPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  /** LOT-Nummer nachträglich ändern: aktualisiert nur batch_number des bestehenden Datensatzes (ID bleibt). */
+  const handleBatchNumberEdit = async (batch: any) => {
+    const raw = window.prompt("Neue LOT-Nummer", batch.batch_number ?? "");
+    if (raw == null) return;
+    const val = raw.trim();
+    if (!val) { toast.error("LOT-Nummer ist Pflicht"); return; }
+    if (val === batch.batch_number) return;
+    const dup = (mat.raw_material_batches || []).some((o: any) => o.id !== batch.id && String(o.batch_number).trim().toLowerCase() === val.toLowerCase());
+    if (dup) { toast.error("Diese LOT-Nummer existiert bei diesem Rohstoff bereits"); return; }
+    try {
+      await updateBatch.mutateAsync({ id: batch.id, raw_material_id: id!, batch_number: val });
+      toast.success("LOT-Nummer gespeichert");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   /** MRS-Nummer gehört zum LOT: leer = nicht beprobt, sonst genau eine Nummer je LOT. */
   const handleBatchMrsEdit = async (batch: any, raw: string) => {
     const val = raw.trim() || null;
@@ -777,7 +792,16 @@ export default function RawMaterialDetailPage() {
                     const batchContainers = (containers || []).filter((c: any) => c.batch_id === b.id);
                     return (
                       <TableRow key={b.id}>
-                         <TableCell className="font-mono text-sm">{b.batch_number}</TableCell>
+                         <TableCell className="font-mono text-sm">
+                           <span className="inline-flex items-center gap-1">
+                             {b.batch_number}
+                             {canManageBatches && (
+                               <Button size="sm" variant="ghost" className="h-6 w-6 p-0" title="LOT-Nummer bearbeiten" aria-label="LOT-Nummer bearbeiten" onClick={() => handleBatchNumberEdit(b)}>
+                                 <Pencil className="h-3 w-3" />
+                               </Button>
+                             )}
+                           </span>
+                         </TableCell>
                          <TableCell className="font-mono text-xs">
                            {canManageBatches ? (
                              <Input
