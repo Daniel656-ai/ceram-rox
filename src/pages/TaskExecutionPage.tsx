@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SpecChangeHistory, groupSpecChanges } from "@/components/order/SpecAmendment";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMeasurementAutosave, type AutosaveState } from "@/hooks/useMeasurementAutosave";
 import { ProcessContextProvider } from "@/context/ProcessContextProvider";
@@ -909,6 +910,13 @@ function formatScalar(v: any): string {
 
 function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
   const params: any[] = measurement.measurement_parameters ?? [];
+  // Nur lesend: nachträgliche Änderungen der Auftraggeber-Vorgaben (activity_log).
+  const { data: specEvents = [] } = useQuery({
+    queryKey: ["spec-changes", measurement.id],
+    queryFn: () => api.activityLog.listSpecChangesForMeasurement(measurement.id) as Promise<any[]>,
+    enabled: !!measurement.id,
+  });
+  const specChanges = groupSpecChanges(specEvents as any[]);
   const orderNotes: string | null = measurement.measurement_orders?.notes ?? null;
 
   // Split scalar vs. repeatable parameters (repeatable are stored with parameter_name starting "repeat:")
@@ -935,6 +943,11 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {specChanges.size > 0 && (
+          <div className="rounded border border-warning bg-warning/10 px-3 py-2 text-sm font-medium">
+            Auftraggeber-Vorgabe nachträglich geändert – es gilt der unten angezeigte aktuelle Stand.
+          </div>
+        )}
         {orderNotes?.trim() ? (
           <div>
             <p className="text-xs text-muted-foreground mb-1">Anmerkung zum Auftrag</p>
@@ -951,6 +964,9 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
                   <RichText value={formatScalar(p.parameter_value)} />
                   {p.unit ? <> <RichText value={p.unit} /></> : ""}
                 </span>
+                {specChanges.get(p.id) && (
+                  <div className="mt-1"><SpecChangeHistory changes={specChanges.get(p.id)!} title="Nachträglich geändert" /></div>
+                )}
               </div>
             ))}
           </div>
@@ -963,6 +979,9 @@ function CustomerOrderBriefingCard({ measurement }: { measurement: any }) {
           return (
             <div key={p.id}>
               <p className="text-xs text-muted-foreground mb-1"><RichText value={label} /></p>
+              {specChanges.get(p.id) && (
+                <div className="mb-2"><SpecChangeHistory changes={specChanges.get(p.id)!} /></div>
+              )}
               <div className="space-y-2">
                 {rows.map((row, i) => (
                   <div
