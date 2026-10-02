@@ -10346,6 +10346,15 @@ export type Database = {
         }
         Returns: string
       }
+      amend_order_spec: {
+        Args: {
+          p_label?: string
+          p_new_value: string
+          p_parameter_id: string
+          p_reason: string
+        }
+        Returns: string
+      }
       assign_analysis_request_to_sample: {
         Args: { _request_id: string; _sample_id: string }
         Returns: string

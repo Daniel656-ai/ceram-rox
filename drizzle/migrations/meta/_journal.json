@@ -78,6 +78,13 @@
       "when": 1790057591352,
       "tag": "0010_orders_readable_for_qualified_technicians",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790948659473,
+      "tag": "0011_amend_order_spec",
+      "breakpoints": true
     }
   ]
 }
