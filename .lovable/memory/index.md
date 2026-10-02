@@ -8,3 +8,4 @@
 - [Plattengeometrie](mem://features/plate-geometry) — Gemeinsame Platten-Geometrievermessung für BENCH NOx/SOx, getrennt vom Wabenkörper
 - [Stammdatenreferenz](mem://features/master-data-reference) — Globale Variable bezieht Wert direkt aus Stammdaten (Desktop-only, Vorrang vor Standardwert)
 - [Technische Stammdaten-Bezeichnungen](mem://features/master-data-technical-labels) — Desktop-only Hoch-/Tiefstellung für Anzeigen; Schlüssel und Web bleiben unverändert
+- [Messdurchlauf](mem://features/measurement-run) — Temporärer Durchlauf nach Arbeitsplatz, Autosave nur im Durchlauf, keine DB-Struktur
