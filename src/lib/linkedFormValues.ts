@@ -78,9 +78,16 @@ export function buildLinkedFormValues(
   /** form_id -> Feldschlüssel, die exakt (einfach) gespeichert sind */
   const exact = new Map<string, Set<string>>();
 
+  // Messungen ohne eigene Probe sind nur dann eindeutig der aktuellen Probe
+  // zuzuordnen, wenn der Auftrag keine Messungen anderer Proben enthält.
+  // Sonst würden Werte einer fremden Probe übernommen (Mehrprobenaufträge).
+  const hasOtherSamples = !!sampleId &&
+    (rows ?? []).some((m) => m.sample_id && m.sample_id !== sampleId);
+
   for (const m of rows ?? []) {
     if (excludeMeasurementId && m.id === excludeMeasurementId) continue;
     if (sampleId && m.sample_id && m.sample_id !== sampleId) continue;
+    if (sampleId && !m.sample_id && hasOtherSamples) continue;
     for (const r of m.measurement_results ?? []) {
       const name = String(r.result_name ?? "");
       if (!name.startsWith("form:")) continue;

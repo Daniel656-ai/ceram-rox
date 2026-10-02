@@ -66,3 +66,21 @@ describe("Wertverknüpfung: Messdatenblock-Ergebnisse", () => {
     expect(out.geo?.D).toBeUndefined();
   });
 });
+
+describe("buildLinkedFormValues – Probentrennung", () => {
+  it("übernimmt keine Werte probenloser Messungen in Mehrprobenaufträgen", () => {
+    const rows = [
+      { id: "a", sample_id: null, measurement_results: [{ result_name: "form:F:rohr", value: "12345" }] },
+      { id: "b", sample_id: "S2", measurement_results: [] },
+      { id: "c", sample_id: "S1", measurement_results: [] },
+    ];
+    expect(buildLinkedFormValues(rows as any, { sampleId: "S2", excludeMeasurementId: "b" }).F?.rohr).toBeUndefined();
+  });
+  it("Einprobenauftrag ohne Probenbezug bleibt unverändert", () => {
+    const rows = [
+      { id: "a", sample_id: null, measurement_results: [{ result_name: "form:F:rohr", value: "1" }] },
+      { id: "b", sample_id: "S1", measurement_results: [] },
+    ];
+    expect(buildLinkedFormValues(rows as any, { sampleId: "S1", excludeMeasurementId: "b" }).F?.rohr).toBe("1");
+  });
+});
