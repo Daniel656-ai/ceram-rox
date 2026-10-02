@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,26 +21,43 @@ function runGroupOf(m: any): { key: string; label: string; isWorkstation: boolea
   return { key: `svc:${m.service_id ?? name}`, label: name, isWorkstation: false };
 }
 
+type Item = any & { __free: boolean };
+
 /**
- * Temporäre Zusammenstellung eines Messdurchlaufs aus den EIGENEN zugewiesenen
- * Aufgaben. Die Auswahl lebt nur im Seitenzustand; sie wird nicht gespeichert.
- * Beliebig viele Proben aus beliebig vielen Aufträgen.
+ * Temporäre Zusammenstellung eines Messdurchlaufs aus eigenen zugewiesenen
+ * UND freien, laut Kompetenzmatrix qualifizierten Aufgaben. Die Auswahl lebt
+ * nur im Seitenzustand. Beim Start werden freie Aufgaben über die bestehende
+ * Übernahme (claim_measurement) übernommen; nicht übernehmbare werden
+ * gemeldet und nicht in den Durchlauf aufgenommen.
  */
-export default function MeasurementRunPicker({ tasks }: { tasks: any[] }) {
+export default function MeasurementRunPicker({
+  tasks,
+  freeTasks = [],
+  claim,
+}: {
+  tasks: any[];
+  freeTasks?: any[];
+  claim?: (id: string) => Promise<unknown>;
+}) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [starting, setStarting] = useState(false);
 
   const groups = useMemo(() => {
-    const map = new Map<string, { label: string; isWorkstation: boolean; items: any[] }>();
-    for (const m of tasks) {
-      if (m.status === "completed") continue;
+    const map = new Map<string, { label: string; isWorkstation: boolean; items: Item[] }>();
+    const seen = new Set<string>();
+    const add = (m: any, free: boolean) => {
+      if (m.status === "completed" || seen.has(m.id)) return;
+      seen.add(m.id);
       const g = runGroupOf(m);
       if (!map.has(g.key)) map.set(g.key, { label: g.label, isWorkstation: g.isWorkstation, items: [] });
-      map.get(g.key)!.items.push(m);
-    }
+      map.get(g.key)!.items.push({ ...m, __free: free });
+    };
+    for (const m of tasks) add(m, false);
+    if (claim) for (const m of freeTasks) add(m, true);
     return [...map.entries()].sort((a, b) => a[1].label.localeCompare(b[1].label, "de"));
-  }, [tasks]);
+  }, [tasks, freeTasks, claim]);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -49,7 +67,7 @@ export default function MeasurementRunPicker({ tasks }: { tasks: any[] }) {
       return next;
     });
 
-  const toggleGroup = (items: any[]) =>
+  const toggleGroup = (items: Item[]) =>
     setSelected((prev) => {
       const next = new Set(prev);
       const all = items.every((m) => next.has(m.id));
@@ -60,11 +78,47 @@ export default function MeasurementRunPicker({ tasks }: { tasks: any[] }) {
       return next;
     });
 
-  const start = () => {
+  const start = async () => {
     // Reihenfolge wie angezeigt.
-    const ids = groups.flatMap(([, g]) => g.items.map((m) => m.id)).filter((id) => selected.has(id));
-    if (ids.length === 0) return;
-    navigate(`/aufgaben/${ids[0]}?run=${ids.join(",")}`);
+    const chosen = groups.flatMap(([, g]) => g.items).filter((m) => selected.has(m.id));
+    if (chosen.length === 0) return;
+    setStarting(true);
+    const ok: string[] = [];
+    const failed: string[] = [];
+    try {
+      for (const m of chosen) {
+        if (!m.__free) {
+          ok.push(m.id);
+          continue;
+        }
+        try {
+          await claim!(m.id);
+          ok.push(m.id);
+        } catch (err: any) {
+          const msg = String(err?.message || "");
+          const label = `${m.samples?.sample_number || m.measurement_number} (${m.measurement_orders?.order_number || "–"})`;
+          const reason = msg.includes("already assigned")
+            ? "inzwischen von einem anderen Mitarbeiter übernommen"
+            : msg.includes("already completed")
+              ? "bereits abgeschlossen"
+              : msg.includes("not qualified")
+                ? "keine Qualifikation"
+                : msg || "Übernahme fehlgeschlagen";
+          failed.push(`${label}: ${reason}`);
+        }
+      }
+    } finally {
+      setStarting(false);
+    }
+    if (failed.length > 0) {
+      toast.warning(
+        `${failed.length} ${failed.length === 1 ? "Probe ist" : "Proben sind"} nicht mehr verfügbar und ${failed.length === 1 ? "wurde" : "wurden"} nicht in den Messdurchlauf aufgenommen`,
+        { description: failed.join("\n"), duration: 10000 },
+      );
+    }
+    if (ok.length === 0) return;
+    setSelected(new Set());
+    navigate(`/aufgaben/${ok[0]}?run=${ok.join(",")}`);
   };
 
   if (groups.length === 0) return null;
@@ -73,20 +127,23 @@ export default function MeasurementRunPicker({ tasks }: { tasks: any[] }) {
     <Card>
       <CardHeader className="py-3 flex flex-row items-center justify-between gap-3 flex-wrap">
         <CardTitle className="text-base">Messdurchlauf nach Arbeitsplatz</CardTitle>
-        <Button size="sm" onClick={start} disabled={selected.size === 0}>
+        <Button size="sm" onClick={start} disabled={selected.size === 0 || starting}>
           <PlayCircle className="h-4 w-4 mr-2" />
-          Messdurchlauf starten ({selected.size} {selected.size === 1 ? "Probe" : "Proben"} ausgewählt)
+          {starting
+            ? "Übernehme Aufgaben…"
+            : `Messdurchlauf starten (${selected.size} ${selected.size === 1 ? "Probe" : "Proben"} ausgewählt)`}
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
         <p className="text-xs text-muted-foreground">
-          Wähle beliebig viele deiner offenen Aufgaben – auch aus verschiedenen Aufträgen. Die Auswahl ist nur eine
-          vorübergehende Arbeitszusammenstellung. Freie Aufträge bitte zuerst unten übernehmen.
+          Wähle beliebig viele Proben – auch aus verschiedenen Aufträgen. „Verfügbar" markierte Aufgaben werden beim
+          Start automatisch übernommen. Die Auswahl selbst ist nur eine vorübergehende Arbeitszusammenstellung.
         </p>
         {groups.map(([key, g]) => {
           const isOpen = open[key] ?? false;
           const allSel = g.items.every((m) => selected.has(m.id));
           const someSel = g.items.some((m) => selected.has(m.id));
+          const freeCount = g.items.filter((m) => m.__free).length;
           return (
             <div key={key} className="border rounded-md">
               <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
@@ -106,6 +163,7 @@ export default function MeasurementRunPicker({ tasks }: { tasks: any[] }) {
                     <span className="text-xs font-normal text-muted-foreground">(kein Arbeitsplatz hinterlegt)</span>
                   )}
                 </button>
+                {freeCount > 0 && <Badge variant="secondary">{freeCount} verfügbar</Badge>}
                 <Badge variant="outline">{g.items.length}</Badge>
               </div>
               {isOpen && (
@@ -118,6 +176,9 @@ export default function MeasurementRunPicker({ tasks }: { tasks: any[] }) {
                         {m.samples?.sample_name || ""}
                         <span className="text-muted-foreground"> · {m.measurement_services?.service_name || "–"}</span>
                       </span>
+                      <Badge variant={m.__free ? "secondary" : "outline"} className="w-28 justify-center">
+                        {m.__free ? "Verfügbar" : "Mir zugewiesen"}
+                      </Badge>
                       <span className="font-mono text-muted-foreground">{m.measurement_orders?.order_number || "–"}</span>
                       <span className="text-muted-foreground w-24 truncate">{m.measurement_orders?.projects?.project_number || ""}</span>
                       <PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} />

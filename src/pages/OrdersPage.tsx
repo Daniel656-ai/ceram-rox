@@ -540,8 +540,8 @@ function DurchfuehrerTasksView({
         </Select>
       </div>
 
-      {/* Temporärer Messdurchlauf: nur eigene zugewiesene Aufgaben, keine automatische Übernahme */}
-      <MeasurementRunPicker tasks={assigned} />
+      {/* Temporärer Messdurchlauf: eigene + freie qualifizierte Aufgaben; freie werden beim Start über die bestehende Übernahme übernommen */}
+      <MeasurementRunPicker tasks={assigned} freeTasks={free} claim={(id) => claim.mutateAsync(id)} />
 
       {/* 1) Meine zugewiesenen Aufgaben */}
       <Card>
