@@ -85,6 +85,13 @@
       "when": 1790948659473,
       "tag": "0011_amend_order_spec",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790949373630,
+      "tag": "0012_release_measurement",
+      "breakpoints": true
     }
   ]
 }

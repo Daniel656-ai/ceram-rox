@@ -58,6 +58,22 @@ export const measurements = {
   claim: (id: string) =>
     unwrap(dbClient.rpc("claim_measurement", { _measurement_id: id }) as any),
 
+  /**
+   * Gibt eine eigene, nicht abgeschlossene Aufgabe frei (assigned_to → NULL).
+   * Serverseitig geprüft (SECURITY DEFINER, FOR UPDATE). Liefert true nur bei
+   * tatsächlicher Freigabe. Ergebnisse/Zwischenstände bleiben unberührt.
+   */
+  release: (id: string) =>
+    unwrap(dbClient.rpc("release_measurement" as any, { _measurement_id: id }) as any) as Promise<boolean>,
+
+  /** Frischer Status/Zuweisungsstand für Messdurchlauf-Aufgaben (ohne Cache). */
+  listRunStateByIds: (ids: string[]) =>
+    ids.length === 0
+      ? Promise.resolve([] as { id: string; status: string; assigned_to: string | null }[])
+      : (unwrap(
+          dbClient.from("order_measurements").select("id, status, assigned_to").in("id", ids)
+        ) as Promise<{ id: string; status: string; assigned_to: string | null }[]>),
+
   /** Lookup profiles by user_id for "creator" display. */
   fetchProfiles: (userIds: string[]) =>
     userIds.length === 0
