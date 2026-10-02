@@ -14,6 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { releaseRun } from "@/lib/measurementRun/leaveRun";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -601,6 +606,51 @@ function TaskExecutionPageInner() {
     navigate(`/aufgaben/${id}?run=${runParam}`);
   };
 
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+
+  /** Schritt 1: Zwischenstand sichern; nur bei Erfolg Bestätigung anzeigen. */
+  const requestLeaveRun = async () => {
+    try {
+      await autosave.flush();
+    } catch (err: any) {
+      toast.error("Zwischenstand konnte nicht gespeichert werden – Durchlauf wird nicht verlassen", {
+        description: err?.message,
+      });
+      return;
+    }
+    setLeaveOpen(true);
+  };
+
+  /** Schritte 3–4: frischen Stand laden, eigene offene Aufgaben freigeben. */
+  const confirmLeaveRun = async () => {
+    if (!user?.id) return;
+    setLeaving(true);
+    try {
+      await autosave.flush();
+      const r = await releaseRun({
+        runIds,
+        userId: user.id,
+        loadState: api.measurements.listRunStateByIds,
+        release: api.measurements.release,
+      });
+      if (r.failed.length > 0) {
+        toast.warning(`${r.failed.length} Aufgabe(n) konnten nicht freigegeben werden`, {
+          description: "Sie bleiben Ihnen zugewiesen. Gespeicherte Zwischenstände sind erhalten.",
+        });
+      } else if (r.released.length > 0) {
+        toast.success(`${r.released.length} Aufgabe(n) wieder freigegeben`);
+      }
+      qc.invalidateQueries();
+      setLeaveOpen(false);
+      navigate("/auftraege");
+    } catch (err: any) {
+      toast.error("Durchlauf konnte nicht verlassen werden", { description: err?.message });
+    } finally {
+      setLeaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -654,8 +704,30 @@ function TaskExecutionPageInner() {
           autosaveState={autosave.state}
           autosaveActive={canEdit && !isCompleted && hasForm}
           onSelect={goToRunMeasurement}
+          onLeave={requestLeaveRun}
         />
       )}
+
+      <AlertDialog open={leaveOpen} onOpenChange={(o) => !leaving && setLeaveOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Messdurchlauf verlassen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nicht abgeschlossene Aufgaben werden wieder für andere qualifizierte Mitarbeiter freigegeben.
+              Bereits gespeicherte Zwischenstände bleiben erhalten. Abgeschlossene Messungen bleiben abgeschlossen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={leaving}>Zurück</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={leaving}
+              onClick={(e) => { e.preventDefault(); confirmLeaveRun(); }}
+            >
+              Durchlauf verlassen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader className="py-3">
@@ -1054,7 +1126,7 @@ export default function TaskExecutionPage() {
 
 /** Kompakte Navigation innerhalb des temporären Messdurchlaufs. */
 function RunNavigation({
-  ids, items, activeId, autosaveState, autosaveActive, onSelect,
+  ids, items, activeId, autosaveState, autosaveActive, onSelect, onLeave,
 }: {
   ids: string[];
   items: any[];
@@ -1062,6 +1134,7 @@ function RunNavigation({
   autosaveState: AutosaveState;
   autosaveActive: boolean;
   onSelect: (id: string) => void;
+  onLeave: () => void;
 }) {
   const byId = new Map(items.map((i) => [i.id, i]));
   const statusText: Record<AutosaveState, string> = {
@@ -1081,7 +1154,7 @@ function RunNavigation({
               {statusText[autosaveState]}
             </span>
           )}
-          <Link to="/auftraege" className="text-xs text-primary hover:underline">Durchlauf verlassen</Link>
+          <button type="button" onClick={onLeave} className="text-xs text-primary hover:underline">Durchlauf verlassen</button>
         </div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
