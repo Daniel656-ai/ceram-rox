@@ -13,7 +13,7 @@ import { ChevronDown, ChevronRight, PlayCircle } from "lucide-react";
  * 1. Arbeitsplatz der Messung, 2. Standard-Arbeitsplatz der Dienstleistung,
  * 3. Fallback: Dienstleistung. Keine fest codierte Verfahrensliste.
  */
-export function runGroupOf(m: any): { key: string; label: string; isWorkstation: boolean } {
+function runGroupOf(m: any): { key: string; label: string; isWorkstation: boolean } {
   const ws = m.workstations ?? m.measurement_services?.workstations;
   if (ws?.id) return { key: `ws:${ws.id}`, label: ws.name || "Arbeitsplatz", isWorkstation: true };
   const name = m.measurement_services?.service_name || "Ohne Dienstleistung";
@@ -44,7 +44,8 @@ export default function MeasurementRunPicker({ tasks }: { tasks: any[] }) {
   const toggle = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
 
@@ -52,7 +53,10 @@ export default function MeasurementRunPicker({ tasks }: { tasks: any[] }) {
     setSelected((prev) => {
       const next = new Set(prev);
       const all = items.every((m) => next.has(m.id));
-      for (const m of items) all ? next.delete(m.id) : next.add(m.id);
+      for (const m of items) {
+        if (all) next.delete(m.id);
+        else next.add(m.id);
+      }
       return next;
     });
 
