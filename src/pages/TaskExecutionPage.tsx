@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useMeasurementAutosave, type AutosaveState } from "@/hooks/useMeasurementAutosave";
 import { ProcessContextProvider } from "@/context/ProcessContextProvider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -241,7 +242,7 @@ function TaskExecutionPageInner() {
     if (!measurementId) return;
     setSubmitting(true);
     try {
-      await persistResults(true);
+      await persist(true);
       // Nur Status setzen – bewusst kein actual_duration_hours schreiben.
       await api.measurements.updateStatus(measurementId, "completed");
       toast.success("Messung abgeschlossen und Ergebnisse gespeichert");
@@ -249,7 +250,7 @@ function TaskExecutionPageInner() {
       qc.invalidateQueries({ queryKey: ["measurement-results"] });
       qc.invalidateQueries({ queryKey: ["measurements"] });
       qc.invalidateQueries({ queryKey: ["order"] });
-      navigate("/auftraege");
+      afterComplete();
     } catch (err: any) {
       toast.error("Fehler", { description: err.message });
     } finally {
@@ -257,7 +258,10 @@ function TaskExecutionPageInner() {
     }
   };
 
-  const persistResults = async (requireOfficialCalculations = false) => {
+  const persistResults = async (
+    requireOfficialCalculations = false,
+    opts: { draftOnly?: boolean } = {},
+  ) => {
     if (!measurementId) return;
     // Immer den aktuellen Stand der gespeicherten Ergebnisse lesen: nach einem
     // Import direkt gefolgt vom Speichern wäre eine Momentaufnahme veraltet und
@@ -358,7 +362,11 @@ function TaskExecutionPageInner() {
         display_label: candidate.label,
         // Einheit stammt aus der Felddefinition und bleibt ein eigenes Attribut.
         unit: (candidate.unit ?? "").trim() || prevUnit(existingByName, resultName),
-        is_official: candidate.official,
+        // Autosave (Messdurchlauf) erzeugt nie neue offizielle Ergebnisse:
+        // bestehende Kennzeichnung bleibt, neue Zeilen sind nicht offiziell.
+        is_official: opts.draftOnly
+          ? existingByName.get(resultName)?.is_official === true
+          : candidate.official,
         measured_by: user?.id ?? null,
         measured_at: measuredAt,
         value: null,
@@ -410,7 +418,8 @@ function TaskExecutionPageInner() {
     // Regel-Aktion „Dienstleistung auslösen“: nachträgliche Wertänderungen
     // wirken auf den gespeicherten Auftrag (idempotent, ohne Duplikate).
     const orderIdForRules = (measurement as any)?.order_id;
-    if (orderIdForRules) {
+    // Autosave löst keine Workflow-/Regelaktionen aus.
+    if (orderIdForRules && !opts.draftOnly) {
       try {
         const r = await api.ruleTriggers.syncOrder(orderIdForRules);
         if (r.added > 0) toast.info(`${r.added} Dienstleistung(en) durch Regel im Auftrag ergänzt`);
@@ -419,6 +428,39 @@ function TaskExecutionPageInner() {
         console.warn("Regel-Auslöser konnten nicht abgeglichen werden", err);
       }
     }
+  };
+
+  // Im Messdurchlauf laufen alle Speichervorgänge strikt nacheinander und
+  // jeweils mit dem neuesten Stand. Einzelaufruf: unverändert direkt.
+  const persistRef = useRef(persistResults);
+  persistRef.current = persistResults;
+  const persistLock = useRef<Promise<unknown>>(Promise.resolve());
+  const persist = (req = false, opts: { draftOnly?: boolean } = {}): Promise<void> => {
+    if (!runModeRef.current) return persistResults(req, opts);
+    const p = persistLock.current.then(
+      () => persistRef.current(req, opts),
+      () => persistRef.current(req, opts),
+    );
+    persistLock.current = p.catch(() => {});
+    return p;
+  };
+  const runModeRef = useRef(false);
+  runModeRef.current = new URLSearchParams(window.location.search).get("run")?.split(",").includes(measurementId ?? "") ?? false;
+
+  /** Nach Abschluss: im Durchlauf zur nächsten offenen Probe, sonst wie bisher. */
+  const afterComplete = () => {
+    if (runModeRef.current) {
+      const run = new URLSearchParams(window.location.search).get("run") || "";
+      const ids = run.split(",").filter(Boolean);
+      const idx = ids.indexOf(measurementId ?? "");
+      const next = ids.slice(idx + 1).concat(ids.slice(0, idx))[0];
+      qc.invalidateQueries({ queryKey: ["measurement-run-items"] });
+      if (next) {
+        navigate(`/aufgaben/${next}?run=${run}`);
+        return;
+      }
+    }
+    navigate("/auftraege");
   };
 
   /**
@@ -460,7 +502,7 @@ function TaskExecutionPageInner() {
     setSubmitting(true);
 
     try {
-      await persistResults(true);
+      await persist(true);
       await api.measurements.complete(measurementId, dur, deviationReason);
       toast.success("Messung abgeschlossen und Ergebnisse gespeichert");
       qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
@@ -468,7 +510,7 @@ function TaskExecutionPageInner() {
       qc.invalidateQueries({ queryKey: ["measurements"] });
       qc.invalidateQueries({ queryKey: ["order"] });
       setCompleteOpen(false);
-      navigate("/auftraege");
+      afterComplete();
     } catch (err: any) {
       toast.error("Fehler", { description: err.message });
     } finally {
@@ -489,7 +531,7 @@ function TaskExecutionPageInner() {
     handledPersist.current = persistRequest;
     void (async () => {
       try {
-        await persistResults();
+        await persist();
         toast.success("Importierte Ergebnisse gespeichert");
         qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
         qc.invalidateQueries({ queryKey: ["measurement-results"] });
@@ -506,7 +548,7 @@ function TaskExecutionPageInner() {
   const handleSaveDraft = async () => {
     setSubmitting(true);
     try {
-      await persistResults();
+      await persist();
       toast.success("Zwischenstand gespeichert");
       qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
     } catch (err: any) {
@@ -514,6 +556,42 @@ function TaskExecutionPageInner() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // ---- Temporärer Messdurchlauf (?run=…) – reine Navigation, nichts wird persistiert ----
+  const [searchParams] = useSearchParams();
+  const runIds = useMemo(
+    () => (searchParams.get("run") || "").split(",").map((s) => s.trim()).filter(Boolean),
+    [searchParams]
+  );
+  const runMode = runIds.length > 0 && !!measurementId && runIds.includes(measurementId);
+  const runParam = searchParams.get("run") || "";
+
+  const autosave = useMeasurementAutosave({
+    enabled: runMode && canEdit && !isCompleted && hasForm,
+    ready: initialized,
+    values,
+    save: () => persist(false, { draftOnly: true }),
+  });
+
+  const { data: runItems = [] } = useQuery({
+    queryKey: ["measurement-run-items", runParam],
+    queryFn: () => api.measurements.listByIds(runIds),
+    enabled: runMode,
+  });
+
+  const goToRunMeasurement = async (id: string) => {
+    if (id === measurementId) return;
+    try {
+      await autosave.flush();
+    } catch (err: any) {
+      toast.error("Zwischenstand konnte nicht gespeichert werden – Probe wird nicht gewechselt", {
+        description: err?.message,
+      });
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["measurement-task", id] });
+    navigate(`/aufgaben/${id}?run=${runParam}`);
   };
 
   if (isLoading) {
@@ -560,6 +638,17 @@ function TaskExecutionPageInner() {
         </div>
         <StatusBadge status={m.status} />
       </div>
+
+      {runMode && (
+        <RunNavigation
+          ids={runIds}
+          items={runItems as any[]}
+          activeId={measurementId!}
+          autosaveState={autosave.state}
+          autosaveActive={canEdit && !isCompleted && hasForm}
+          onSelect={goToRunMeasurement}
+        />
+      )}
 
       <Card>
         <CardHeader className="py-3">
@@ -933,7 +1022,66 @@ export default function TaskExecutionPage() {
       sampleId={order?.samples?.id ?? null}
       projectId={order?.projects?.id ?? null}
     >
-      <TaskExecutionPageInner />
+      <TaskExecutionPageInner key={measurementId} />
     </ProcessContextProvider>
+  );
+}
+
+/** Kompakte Navigation innerhalb des temporären Messdurchlaufs. */
+function RunNavigation({
+  ids, items, activeId, autosaveState, autosaveActive, onSelect,
+}: {
+  ids: string[];
+  items: any[];
+  activeId: string;
+  autosaveState: AutosaveState;
+  autosaveActive: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const statusText: Record<AutosaveState, string> = {
+    idle: "Automatisches Zwischenspeichern aktiv",
+    pending: "Änderungen werden gleich gespeichert …",
+    saving: "Wird gespeichert …",
+    saved: "Zwischenstand gespeichert",
+    error: "Speichern fehlgeschlagen – bitte erneut versuchen",
+  };
+  return (
+    <Card>
+      <CardHeader className="py-3 flex flex-row items-center justify-between gap-3 flex-wrap space-y-0">
+        <CardTitle className="text-sm">Messdurchlauf ({ids.length} Proben)</CardTitle>
+        <div className="flex items-center gap-3">
+          {autosaveActive && (
+            <span className={`text-xs ${autosaveState === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+              {statusText[autosaveState]}
+            </span>
+          )}
+          <Link to="/auftraege" className="text-xs text-primary hover:underline">Durchlauf verlassen</Link>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {ids.map((id) => {
+          const it = byId.get(id);
+          const active = id === activeId;
+          const done = it?.status === "completed";
+          const symbol = done ? "✓" : active ? "●" : "○";
+          return (
+            <Button
+              key={id}
+              size="sm"
+              variant={active ? "default" : "outline"}
+              onClick={() => onSelect(id)}
+              title={it?.measurement_services?.service_name ?? ""}
+            >
+              <span className="mr-1">{symbol}</span>
+              <span className="font-mono">{it?.samples?.sample_number || it?.measurement_number || "…"}</span>
+              {it?.measurement_orders?.order_number && (
+                <span className="ml-1 opacity-70">· {it.measurement_orders.order_number}</span>
+              )}
+            </Button>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }

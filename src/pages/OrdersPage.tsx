@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsAnyProjectLead } from "@/hooks/useProjectMembers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import MeasurementRunPicker from "@/components/measurementRun/MeasurementRunPicker";
 
 export default function OrdersPage() {
   const { user, role, hasRole } = useAuth();
@@ -538,6 +539,9 @@ function DurchfuehrerTasksView({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Temporärer Messdurchlauf: nur eigene zugewiesene Aufgaben, keine automatische Übernahme */}
+      <MeasurementRunPicker tasks={assigned} />
 
       {/* 1) Meine zugewiesenen Aufgaben */}
       <Card>
