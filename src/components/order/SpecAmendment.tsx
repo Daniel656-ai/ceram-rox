@@ -93,7 +93,7 @@ export function SpecChangeHistory({
   return (
     <Collapsible>
       <CollapsibleTrigger className="inline-flex items-center gap-1 text-xs">
-        <Badge variant="outline" className="border-warning text-warning-foreground bg-warning/15 gap-1 font-normal">
+        <Badge variant="outline" className="border-warning text-foreground bg-warning/15 gap-1 font-normal">
           <History className="h-3 w-3" />
           {title ?? specChangeBadgeText(changes)} ({changes.length})
           <ChevronDown className="h-3 w-3" />
