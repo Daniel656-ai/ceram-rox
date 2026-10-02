@@ -1,0 +1,1 @@
+- Nachträgliche Änderungen an Auftraggeber-Vorgaben (measurement_parameters) laufen nur über die Datenbankfunktion amend_order_spec, die Wert und activity_log-Eintrag (order_spec_updated) atomar schreibt — Historie darf nie fehlen; Messdienstleister haben nur Lesezugriff.

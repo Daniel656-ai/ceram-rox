@@ -17,6 +17,7 @@ import OrderRequesterSpecs from "@/components/order/OrderRequesterSpecs";
 
 import { ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { ListChecks, History, ArrowRight } from "lucide-react";
+import { SPEC_EVENT, describeSpecChange, specLabel } from "@/components/order/SpecAmendment";
 
 const EVENT_LABELS: Record<string, string> = {
   order_created: "Auftrag erstellt",
@@ -30,6 +31,7 @@ const EVENT_LABELS: Record<string, string> = {
   sample_added: "Probe hinzugefügt",
   replacement_sample_booked: "Ersatzprobe gebucht",
   result_official: "Ergebnis als offiziell markiert",
+  order_spec_updated: "Auftraggeber-Vorgabe geändert",
 };
 
 const serviceStatus = (tasks: any[]) => {
@@ -95,7 +97,9 @@ export default function OrderWorkflowTab({
       id: `e-${e.id}`,
       at: e.created_at,
       user: e.actor_user_id,
-      text: EVENT_LABELS[e.event_type] || e.event_type,
+      text: e.event_type === SPEC_EVENT
+        ? `${EVENT_LABELS[SPEC_EVENT]} – ${specLabel(e.metadata?.parameter_label || e.metadata?.parameter_name)}: ${describeSpecChange(e.metadata).join("; ")}${e.metadata?.reason ? ` · „${e.metadata.reason}"` : ""}`
+        : EVENT_LABELS[e.event_type] || e.event_type,
     }));
     const fromAudit = (auditLogs as any[]).map((l) => ({
       id: `a-${l.id}`,

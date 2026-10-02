@@ -1,7 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClipboardList, Pencil } from "lucide-react";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  AmendableParam, SpecAmendDialog, SpecChangeHistory, groupSpecChanges,
+} from "@/components/order/SpecAmendment";
 
 /**
  * Read-only „Auftraggeber-Vorgaben“: zeigt die bei der Auftragserstellung
@@ -75,9 +82,25 @@ function ValueView({ raw, unit }: { raw: unknown; unit?: string | null }) {
   return <span>{prim(v)}{unit ? ` ${unit}` : ""}</span>;
 }
 
-type Entry = { name: string; raw: unknown; unit: string | null; samples: string[] };
+type Entry = {
+  name: string; raw: unknown; unit: string | null; samples: string[];
+  params: (AmendableParam & { status?: string })[];
+};
 
 export default function OrderRequesterSpecs({ order }: { order: any }) {
+  const { user, role } = useAuth();
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<AmendableParam[] | null>(null);
+  // Nur Master oder der konkrete Auftragsersteller; serverseitig erneut geprüft.
+  const canAmend = role === "master" || (!!user && order?.created_by === user.id);
+
+  const { data: events = [] } = useQuery({
+    queryKey: ["order-activity", order?.id],
+    queryFn: () => api.activityLog.listForOrder(order.id) as Promise<any[]>,
+    enabled: !!order?.id,
+  });
+  const changesByParam = useMemo(() => groupSpecChanges(events as any[]), [events]);
+
   const groups = useMemo(() => {
     const m = new Map<string, { name: string; entries: Map<string, Entry> }>();
     for (const t of (order?.order_measurements || []) as any[]) {
@@ -89,8 +112,12 @@ export default function OrderRequesterSpecs({ order }: { order: any }) {
       for (const p of params) {
         if (isEmpty(parse(p.parameter_value))) continue;
         const id = `${p.parameter_name}|${p.parameter_value}|${p.unit ?? ""}`;
-        const e = g.entries.get(id) ?? { name: p.parameter_name, raw: p.parameter_value, unit: p.unit, samples: [] };
+        const e = g.entries.get(id) ?? { name: p.parameter_name, raw: p.parameter_value, unit: p.unit, samples: [], params: [] };
         const sn = t.samples?.sample_number;
+        e.params.push({
+          id: p.id, parameter_name: p.parameter_name, parameter_value: p.parameter_value,
+          unit: p.unit, sampleNumber: sn ?? null, status: t.status,
+        });
         if (sn && !e.samples.includes(sn)) e.samples.push(sn);
         g.entries.set(id, e);
       }
@@ -150,13 +177,42 @@ export default function OrderRequesterSpecs({ order }: { order: any }) {
                       <span className="ml-1 font-mono text-xs">({e.samples.join(", ")})</span>
                     )}
                   </dt>
-                  <dd><ValueView raw={e.raw} unit={e.unit} /></dd>
+                  <dd className="space-y-1">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1"><ValueView raw={e.raw} unit={e.unit} /></div>
+                      {canAmend && e.params.some((p) => p.status !== "completed") && (
+                        <Button
+                          type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs"
+                          onClick={() => setEditing(e.params.filter((p) => p.status !== "completed"))}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          {e.name.startsWith("repeat:") ? "Eintrag ergänzen / bearbeiten" : "Vorgabe ändern"}
+                        </Button>
+                      )}
+                    </div>
+                    {(() => {
+                      const ch = e.params.flatMap((p) => changesByParam.get(p.id) ?? [])
+                        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+                      return ch.length > 0 ? <SpecChangeHistory changes={ch} /> : null;
+                    })()}
+                  </dd>
                 </div>
               ))}
             </dl>
           </div>
         ))}
       </CardContent>
+      {editing && (
+        <SpecAmendDialog
+          open={!!editing}
+          onOpenChange={(v) => { if (!v) setEditing(null); }}
+          params={editing}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["order"] });
+            qc.invalidateQueries({ queryKey: ["order-activity", order?.id] });
+          }}
+        />
+      )}
     </Card>
   );
 }
