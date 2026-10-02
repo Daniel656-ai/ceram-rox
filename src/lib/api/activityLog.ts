@@ -20,6 +20,17 @@ export const activityLog = {
         .eq("order_id", orderId)
         .order("created_at", { ascending: false })
     ),
+
+  /** Nachträgliche Änderungen der Auftraggeber-Vorgaben einer Messaufgabe (älteste zuerst). */
+  listSpecChangesForMeasurement: (orderMeasurementId: string) =>
+    unwrap(
+      dbClient
+        .from("activity_log")
+        .select("*")
+        .eq("order_measurement_id", orderMeasurementId)
+        .eq("event_type", "order_spec_updated")
+        .order("created_at", { ascending: true })
+    ),
 };
 
 
