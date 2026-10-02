@@ -118,7 +118,7 @@ function TaskExecutionPageInner() {
 
   // Preload existing results into the form (so partial saves resume nicely).
   useEffect(() => {
-    if (initialized || !measurement) return;
+    if (initialized || !measurement || !hydrationReady) return;
     const initial: Record<string, any> = {};
     for (const r of (measurement as any).measurement_results ?? []) {
       const key = r.result_name;
@@ -136,7 +136,7 @@ function TaskExecutionPageInner() {
     }
     setValues(initial);
     setInitialized(true);
-  }, [measurement, initialized]);
+  }, [measurement, initialized, hydrationReady]);
 
   const canEdit = useMemo(() => {
     if (!measurement) return false;
