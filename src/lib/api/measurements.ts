@@ -1,7 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 
-const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_orders(*, projects(project_number, project_name))`;
+const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours, workstation_id, workstations!measurement_services_workstation_id_fkey(id, name)), workstations!order_measurements_workstation_id_fkey(id, name), samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), measurement_orders(*, projects(project_number, project_name))`;
 
 export const measurements = {
   /** Compact projection for ServiceStatistics widget, filtered by created_at range. */
@@ -92,6 +92,16 @@ export const measurements = {
     ),
 
 
+  /** Kompakte Übersicht für die Navigation im temporären Messdurchlauf. */
+  listByIds: (ids: string[]) =>
+    ids.length === 0
+      ? Promise.resolve([] as any[])
+      : unwrap(
+          dbClient
+            .from("order_measurements")
+            .select("id, status, measurement_number, measurement_services(service_name), samples!order_measurements_sample_id_fkey(sample_number, sample_name), measurement_orders(order_number)")
+            .in("id", ids)
+        ),
   /** Full detail for a single measurement (used by task execution view). */
   get: (id: string) =>
     unwrap(
