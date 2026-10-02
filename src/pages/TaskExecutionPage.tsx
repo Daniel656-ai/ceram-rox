@@ -45,11 +45,17 @@ function TaskExecutionPageInner() {
   const qc = useQueryClient();
   const { user, profile, role, hasRole } = useAuth();
 
-  const { data: measurement, isLoading } = useQuery({
+  // Im Messdurchlauf wird die Probe beim Wechsel immer frisch geladen: der
+  // Zwischenspeicher könnte einen Stand vor dem letzten Autosave enthalten.
+  const inRun = new URLSearchParams(window.location.search)
+    .get("run")?.split(",").includes(measurementId ?? "") ?? false;
+  const { data: measurement, isLoading, isFetchedAfterMount } = useQuery({
     queryKey: ["measurement-task", measurementId],
     queryFn: () => api.measurements.get(measurementId!),
     enabled: !!measurementId,
+    ...(inRun ? { refetchOnMount: "always" as const } : {}),
   });
+  const hydrationReady = !inRun || isFetchedAfterMount;
 
   const serviceId: string | undefined = (measurement as any)?.service_id;
 
