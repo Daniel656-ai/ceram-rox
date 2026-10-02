@@ -1026,3 +1026,62 @@ export default function TaskExecutionPage() {
     </ProcessContextProvider>
   );
 }
+
+/** Kompakte Navigation innerhalb des temporären Messdurchlaufs. */
+function RunNavigation({
+  ids, items, activeId, autosaveState, autosaveActive, onSelect,
+}: {
+  ids: string[];
+  items: any[];
+  activeId: string;
+  autosaveState: AutosaveState;
+  autosaveActive: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const statusText: Record<AutosaveState, string> = {
+    idle: "Automatisches Zwischenspeichern aktiv",
+    pending: "Änderungen werden gleich gespeichert …",
+    saving: "Wird gespeichert …",
+    saved: "Zwischenstand gespeichert",
+    error: "Speichern fehlgeschlagen – bitte erneut versuchen",
+  };
+  return (
+    <Card>
+      <CardHeader className="py-3 flex flex-row items-center justify-between gap-3 flex-wrap space-y-0">
+        <CardTitle className="text-sm">Messdurchlauf ({ids.length} Proben)</CardTitle>
+        <div className="flex items-center gap-3">
+          {autosaveActive && (
+            <span className={`text-xs ${autosaveState === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+              {statusText[autosaveState]}
+            </span>
+          )}
+          <Link to="/auftraege" className="text-xs text-primary hover:underline">Durchlauf verlassen</Link>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {ids.map((id) => {
+          const it = byId.get(id);
+          const active = id === activeId;
+          const done = it?.status === "completed";
+          const symbol = done ? "✓" : active ? "●" : "○";
+          return (
+            <Button
+              key={id}
+              size="sm"
+              variant={active ? "default" : "outline"}
+              onClick={() => onSelect(id)}
+              title={it?.measurement_services?.service_name ?? ""}
+            >
+              <span className="mr-1">{symbol}</span>
+              <span className="font-mono">{it?.samples?.sample_number || it?.measurement_number || "…"}</span>
+              {it?.measurement_orders?.order_number && (
+                <span className="ml-1 opacity-70">· {it.measurement_orders.order_number}</span>
+              )}
+            </Button>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
