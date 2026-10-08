@@ -10512,6 +10512,10 @@ export type Database = {
         Args: { _measurement_id: string }
         Returns: number
       }
+      external_owns_sample: {
+        Args: { _sample_id: string; _user_id: string }
+        Returns: boolean
+      }
       finalize_mixture_batch: {
         Args: { _batch_id: string; _produced_quantity: number }
         Returns: undefined
@@ -10834,6 +10838,7 @@ export type Database = {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
       }
+      is_external_customer: { Args: { _user_id: string }; Returns: boolean }
       is_order_creator: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
