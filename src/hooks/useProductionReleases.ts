@@ -3,7 +3,7 @@ import { api } from "@/lib/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ProductionReleaseTestParameter, ProductionReleaseChange } from "@/lib/api/productionReleases";
-import { RELEASE_FIELD_BY_KEY, coerceFieldValue } from "@/lib/productionRelease/fields";
+import { RELEASE_FIELD_BY_KEY, coerceFieldValue, originalTextWorthKeeping } from "@/lib/productionRelease/fields";
 
 /**
  * Berechtigungen für Fertigungsfreigaben – ausschließlich über die bestehende
@@ -185,7 +185,8 @@ export function useResolveChange() {
         const coerced = coerceFieldValue(args.change.field_key, applied);
         const release = await api.productionReleases.get(args.releaseId);
         const sources = { ...((release.field_sources as Record<string, unknown>) ?? {}) };
-        sources[args.change.field_key] = { source: "edited", at: now, by: user?.id ?? null };
+        const raw = originalTextWorthKeeping(args.change.field_key, applied);
+        sources[args.change.field_key] = { source: "edited", at: now, by: user?.id ?? null, ...(raw ? { raw } : {}) };
         await api.productionReleases.update(args.releaseId, {
           [args.change.field_key]: coerced === "" ? null : coerced,
           field_sources: sources,
