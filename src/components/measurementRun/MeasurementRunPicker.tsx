@@ -146,15 +146,17 @@ export default function MeasurementRunPicker({
         </p>
         {groups.map(([key, g]) => {
           const isOpen = open[key] ?? false;
-          const allSel = g.items.every((m) => selected.has(m.id));
-          const someSel = g.items.some((m) => selected.has(m.id));
+          const selectable = g.items.filter((m) => !m.__blocked);
+          const allSel = selectable.length > 0 && selectable.every((m) => selected.has(m.id));
+          const someSel = selectable.some((m) => selected.has(m.id));
           const freeCount = g.items.filter((m) => m.__free).length;
           return (
             <div key={key} className="border rounded-md">
               <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
                 <Checkbox
                   checked={allSel ? true : someSel ? "indeterminate" : false}
-                  onCheckedChange={() => toggleGroup(g.items)}
+                  disabled={selectable.length === 0}
+                  onCheckedChange={() => toggleGroup(selectable)}
                   aria-label={`Alle in ${g.label} auswählen`}
                 />
                 <button
@@ -174,15 +176,15 @@ export default function MeasurementRunPicker({
               {isOpen && (
                 <div className="divide-y">
                   {g.items.map((m) => (
-                    <label key={m.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/30">
-                      <Checkbox checked={selected.has(m.id)} onCheckedChange={() => toggle(m.id)} />
+                    <label key={m.id} className={`flex items-center gap-3 px-3 py-2 text-sm ${m.__blocked ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30"}`}>
+                      <Checkbox checked={selected.has(m.id)} disabled={!!m.__blocked} onCheckedChange={() => !m.__blocked && toggle(m.id)} />
                       <span className="font-mono w-28">{m.samples?.sample_number || "–"}</span>
                       <span className="flex-1 truncate">
                         {m.samples?.sample_name || ""}
                         <span className="text-muted-foreground"> · {m.measurement_services?.service_name || "–"}</span>
                       </span>
-                      <Badge variant={m.__free ? "secondary" : "outline"} className="w-28 justify-center">
-                        {m.__free ? "Verfügbar" : "Mir zugewiesen"}
+                      <Badge variant={m.__free ? "secondary" : "outline"} className="min-w-28 justify-center truncate max-w-48" title={m.__blocked || undefined}>
+                        {m.__blocked ? m.__blocked : m.__free ? "Verfügbar" : "Mir zugewiesen"}
                       </Badge>
                       <span className="font-mono text-muted-foreground">{m.measurement_orders?.order_number || "–"}</span>
                       <span className="text-muted-foreground w-24 truncate">{m.measurement_orders?.projects?.project_number || ""}</span>
