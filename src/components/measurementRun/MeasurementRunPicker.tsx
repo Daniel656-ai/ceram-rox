@@ -21,22 +21,25 @@ function runGroupOf(m: any): { key: string; label: string; isWorkstation: boolea
   return { key: `svc:${m.service_id ?? name}`, label: name, isWorkstation: false };
 }
 
-type Item = any & { __free: boolean };
+type Item = any & { __free: boolean; __blocked?: string | null };
 
 /**
  * Temporäre Zusammenstellung eines Messdurchlaufs aus eigenen zugewiesenen
  * UND freien, laut Kompetenzmatrix qualifizierten Aufgaben. Die Auswahl lebt
- * nur im Seitenzustand. Beim Start werden freie Aufgaben über die bestehende
- * Übernahme (claim_measurement) übernommen; nicht übernehmbare werden
- * gemeldet und nicht in den Durchlauf aufgenommen.
+ * nur im Seitenzustand – Auswählen ändert keine Zuweisung. Beim Start werden
+ * freie Aufgaben über die bestehende Übernahme (claim_measurement) übernommen;
+ * nicht übernehmbare werden gemeldet und nicht in den Durchlauf aufgenommen.
+ * `otherTasks` (fremd zugewiesen / ohne Qualifikation) sind nur sichtbar.
  */
 export default function MeasurementRunPicker({
   tasks,
   freeTasks = [],
+  otherTasks = [],
   claim,
 }: {
   tasks: any[];
   freeTasks?: any[];
+  otherTasks?: any[];
   claim?: (id: string) => Promise<unknown>;
 }) {
   const navigate = useNavigate();
@@ -47,17 +50,19 @@ export default function MeasurementRunPicker({
   const groups = useMemo(() => {
     const map = new Map<string, { label: string; isWorkstation: boolean; items: Item[] }>();
     const seen = new Set<string>();
-    const add = (m: any, free: boolean) => {
+    const add = (m: any, free: boolean, blocked: string | null = null) => {
       if (m.status === "completed" || seen.has(m.id)) return;
       seen.add(m.id);
       const g = runGroupOf(m);
       if (!map.has(g.key)) map.set(g.key, { label: g.label, isWorkstation: g.isWorkstation, items: [] });
-      map.get(g.key)!.items.push({ ...m, __free: free });
+      map.get(g.key)!.items.push({ ...m, __free: free, __blocked: blocked });
     };
     for (const m of tasks) add(m, false);
     if (claim) for (const m of freeTasks) add(m, true);
+    for (const m of otherTasks)
+      add(m, false, m.assigned_to ? `Zugewiesen: ${m.__assigneeName || "anderer Mitarbeiter"}` : "Keine Qualifikation");
     return [...map.entries()].sort((a, b) => a[1].label.localeCompare(b[1].label, "de"));
-  }, [tasks, freeTasks, claim]);
+  }, [tasks, freeTasks, otherTasks, claim]);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
