@@ -15,7 +15,7 @@
 import { api } from "@/lib/api";
 import { extractVisualDocument, type VisualDocument, type VisualPair } from "./pdfVisual";
 import {
-  RELEASE_FIELDS, RELEASE_FIELD_BY_KEY, coerceFieldValue,
+  RELEASE_FIELDS, RELEASE_FIELD_BY_KEY, coerceFieldValue, needsNumericReview, originalTextWorthKeeping,
 } from "./fields";
 import {
   buildBlocks, mergeBlockResults, asText, sameValue, MAX_BLOCKS_LIMIT,
@@ -47,6 +47,30 @@ export interface DetectedChange {
   auto: boolean;
 }
 
+/**
+ * Zahlenfelder, deren Text nicht eindeutig einer Zahl entspricht (z. B.
+ * „152 × 203 mm“), werden nie still umgewandelt, sondern zur Prüfung vorgelegt.
+ */
+export function numericReviewChanges(originalTexts: Record<string, string>, existing: DetectedChange[] = []): DetectedChange[] {
+  const out: DetectedChange[] = [];
+  for (const [k, raw] of Object.entries(originalTexts)) {
+    if (!needsNumericReview(k, raw)) continue;
+    if (existing.some((c) => c.field_key === k && !c.auto)) continue;
+    const def = RELEASE_FIELD_BY_KEY[k];
+    out.push({
+      field_key: k,
+      field_label: def?.labelDe ?? k,
+      old_value: "",
+      new_value: raw,
+      detection: "text",
+      confidence: "low",
+      note: `„${raw}“ enthält mehrere Maße oder ist nicht eindeutig – kein Einzelwert übernommen. Originaltext bleibt erhalten, bitte prüfen.`,
+      auto: false,
+    });
+  }
+  return out;
+}
+
 export interface ReleaseCoverage {
   fileName: string;
   fileBytes: number;
@@ -69,6 +93,8 @@ export interface ReleaseAnalysis {
   values: Record<string, unknown>;
   /** Rohwerte als Text – Grundlage der Korrekturmaske */
   rawValues: Record<string, string>;
+  /** Originaltexte von Zahlenfeldern mit Mehrfachmaß/Toleranz (bleiben unverändert erhalten). */
+  originalTexts?: Record<string, string>;
   testParameters: ProductionReleaseTestParameter[];
   document: {
     release_number?: string;
@@ -265,12 +291,15 @@ export async function analyzeReleaseDocument(args: {
   const decision = decideMatch(identity, existing);
 
   const rawValues: Record<string, string> = {};
+  const originalTexts: Record<string, string> = {};
   const values: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(merged.fields)) {
     if (!RELEASE_FIELD_BY_KEY[k]) continue;
     const s = asText(v);
     if (!s) continue;
     rawValues[k] = s;
+    const keep = originalTextWorthKeeping(k, s);
+    if (keep) originalTexts[k] = keep;
     const coerced = coerceFieldValue(k, s);
     if (coerced !== null && coerced !== undefined && coerced !== "") values[k] = coerced;
   }
@@ -290,6 +319,7 @@ export async function analyzeReleaseDocument(args: {
   // Widersprüchliche Werte aus verschiedenen Blöcken: nie stillschweigend
   // entscheiden, sondern zur Prüfung vorlegen.
   for (const c of merged.conflicts) changes.push(c);
+  changes.push(...numericReviewChanges(originalTexts, changes));
 
   // Unsichere Werte dürfen nicht automatisch gesetzt werden
   for (const c of changes) {
@@ -317,6 +347,7 @@ export async function analyzeReleaseDocument(args: {
     source,
     values,
     rawValues,
+    originalTexts,
     testParameters: merged.testParameters,
     document: {
       ...doc,
@@ -369,6 +400,7 @@ export function assignAnalysisToRelease(
     rawValues: analysis.rawValues,
     isRevision,
   });
+  changes.push(...numericReviewChanges(analysis.originalTexts ?? {}, changes));
   const values = { ...analysis.values };
   const rawValues = { ...analysis.rawValues };
   for (const c of changes) {
@@ -681,6 +713,13 @@ async function saveReleaseImport(args: {
     if (!RELEASE_FIELD_BY_KEY[k]) continue;
     base[k] = v;
     sources[k] = { source: "pdf", at: now, by: userId, document: analysis.fileName };
+  }
+  // Originaltext von Mehrfachmaßen/Toleranzen unverändert sichern (z. B. „152 × 203 mm“),
+  // auch wenn kein eindeutiger Einzelwert gespeichert werden konnte.
+  for (const [k, raw] of Object.entries(analysis.originalTexts ?? {})) {
+    if (!RELEASE_FIELD_BY_KEY[k]) continue;
+    const prevSrc = (sources[k] as Record<string, unknown> | undefined) ?? { source: "pdf", at: now, by: userId, document: analysis.fileName };
+    sources[k] = { ...prevSrc, raw };
   }
   for (const c of autoChanges) {
     const coerced = coerceFieldValue(c.field_key, c.new_value);
