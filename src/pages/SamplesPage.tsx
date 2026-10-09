@@ -548,7 +548,7 @@ export default function SamplesPage() {
 
     return cols;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, activeTab, etaMap, sampleMeasurementTypes, role, user?.id, canCreate, deleteSample]);
+  }, [t, activeTab, etaMap, sampleMeasurementTypes, role, user?.id, canCreate, deleteSample, orderLinks]);
 
   return (
     <div className="space-y-6">
