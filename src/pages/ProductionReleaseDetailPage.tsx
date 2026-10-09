@@ -23,7 +23,7 @@ import { ArrowLeft, Save, Trash2, FileDown, Plus, AlertTriangle, History, Shield
 import {
   RELEASE_FIELDS, RELEASE_FIELD_GROUPS, RELEASE_STATUS_LABEL, RELEASE_STATUS_COLOR,
   RELEASE_STATUS_FLOW, TEST_SECTIONS, TEST_PARAMETERS, TEST_SECTION_LABEL,
-  TEST_PARAMETER_LABEL, coerceFieldValue, isReviewRequired,
+  TEST_PARAMETER_LABEL, coerceFieldValue, originalTextWorthKeeping, isReviewRequired,
 } from "@/lib/productionRelease/fields";
 import {
   useProductionRelease, useReleaseTestParameters, useProductionReleasePermissions,
@@ -120,10 +120,12 @@ export default function ProductionReleaseDetailPage() {
       const changed = String(before ?? "") !== String(coerced ?? "");
       if (changed) {
         const prev = sourceMap[f.key]?.source;
+        const raw = originalTextWorthKeeping(f.key, values[f.key]);
         sources[f.key] = {
           source: prev === "pdf" || prev === "edited" ? "edited" : "manual",
           at: now,
           by: user?.id ?? null,
+          ...(raw ? { raw } : {}),
         };
       }
     }
