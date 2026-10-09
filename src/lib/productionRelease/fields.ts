@@ -169,13 +169,10 @@ export function coerceFieldValue(key: string, raw: unknown): unknown {
   if (raw === null || raw === undefined || raw === "") return null;
   const s = String(raw).trim();
   if (def.type === "number" || def.type === "integer") {
-    // deutsche und englische Zahlformate, Einheiten und Vorzeichen tolerieren
-    const cleaned = s
-      .replace(/[^\d,.\-+]/g, "")
-      .replace(/\.(?=\d{3}\b)/g, "")
-      .replace(",", ".");
-    const n = Number.parseFloat(cleaned);
-    if (!Number.isFinite(n)) return null;
+    // Ziffern werden nie durch Entfernen von Trennzeichen zusammengefügt
+    // (z. B. „152 x 152 mm“). Mehrdeutiges → null, die Freigabe wird geprüft.
+    const n = numericValueForField(key, s);
+    if (n === null) return null;
     return def.type === "integer" ? Math.round(n) : n;
   }
   if (def.type === "date") {
