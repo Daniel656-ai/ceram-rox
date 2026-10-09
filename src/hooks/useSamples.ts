@@ -56,6 +56,16 @@ export function useSampleMeasurements(sampleId?: string) {
   });
 }
 
+/** sample_id → zugeordnete Aufträge (nur über echte IDs). Ohne sampleId: alle. */
+export function useSampleOrderLinks(sampleId?: string) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["sample_order_links", sampleId ?? "all"],
+    queryFn: async () => buildSampleOrderMap(await api.samples.listOrderLinks(sampleId)),
+    enabled: !!user,
+  });
+}
+
 export function useCreateSample() {
   const qc = useQueryClient();
   return useMutation({

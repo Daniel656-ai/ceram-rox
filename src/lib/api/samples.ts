@@ -1,5 +1,9 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import type { SampleOrderEdge } from "@/lib/samples/orderLinks";
+
+const ORDER_REF_SELECT =
+  "id, order_number, order_kind, order_type, customer_name, pp_experiment_number, project_id, projects(project_number, project_name)";
 
 const SAMPLE_SELECT =
   "*, projects(project_number, project_name), storage_locations:location_id(id, hall, room, shelf, position)";
@@ -70,6 +74,39 @@ export const samples = {
       } as any)
     );
     return data;
+  },
+
+  /**
+   * Auftragsbezüge von Proben – nur über echte Fremdschlüssel:
+   * samples.order_id / pilot_plant_order_id, measurement_orders.sample_id,
+   * order_samples. Optional auf eine Probe beschränkt.
+   */
+  async listOrderLinks(sampleId?: string): Promise<SampleOrderEdge[]> {
+    let direct = dbClient
+      .from("measurement_orders")
+      .select(`sample_id, ${ORDER_REF_SELECT}`)
+      .not("sample_id", "is", null);
+    if (sampleId) direct = direct.eq("sample_id", sampleId);
+    let viaJoin = dbClient
+      .from("order_samples")
+      .select(`sample_id, measurement_orders(${ORDER_REF_SELECT})`);
+    if (sampleId) viaJoin = viaJoin.eq("sample_id", sampleId);
+    let fromSample = dbClient
+      .from("samples")
+      .select(
+        `id, o1:measurement_orders!samples_order_id_fkey(${ORDER_REF_SELECT}), o2:measurement_orders!samples_pilot_plant_order_id_fkey(${ORDER_REF_SELECT})`
+      )
+      .or("order_id.not.is.null,pilot_plant_order_id.not.is.null");
+    if (sampleId) fromSample = fromSample.eq("id", sampleId);
+    const [a, b, c] = await Promise.all([unwrap(direct), unwrap(viaJoin), unwrap(fromSample)]);
+    const edges: SampleOrderEdge[] = [];
+    for (const r of (a || []) as any[]) edges.push({ sample_id: r.sample_id, order: r });
+    for (const r of (b || []) as any[]) edges.push({ sample_id: r.sample_id, order: r.measurement_orders });
+    for (const r of (c || []) as any[]) {
+      edges.push({ sample_id: r.id, order: r.o1 });
+      edges.push({ sample_id: r.id, order: r.o2 });
+    }
+    return edges;
   },
 
   /** List all samples belonging to a given order (via samples.order_id). */
