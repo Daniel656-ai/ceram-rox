@@ -29,7 +29,7 @@ describe("m3OrderLabel", () => {
     expect(m3OrderSortText(a).includes("SW-")).toBe(false);
   });
   it("interne Auftragsnummer in deriveM3Values bleibt unverändert", () => {
-    const d = deriveM3Values({ release: { order_number: "X" } as any, orderNumber: "SW-260003" } as any);
+    const d = deriveM3Values({ release: { order_number: "X" } as any, orderNumber: "SW-260003", stored: {}, constants: {} } as any);
     expect(d.values.order_number).toBe("SW-260003");
   });
 });
