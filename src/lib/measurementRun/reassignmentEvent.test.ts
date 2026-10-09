@@ -20,3 +20,13 @@ describe("describeReassignment", () => {
       .toContain("nicht zugewiesen → Bert B");
   });
 });
+
+describe("describeReassignment – Entfernung", () => {
+  it("shows removed assignment with previous person, actor mode and reason", () => {
+    const t = describeReassignment(
+      { from_user_id: "a", to_user_id: null, action: "unassigned", mode: "master", reason: "Krank", measurement_number: "M260002" },
+      name,
+    );
+    expect(t).toBe('Zuweisung entfernt M260002: Anna A · durch Admin · Grund: „Krank"');
+  });
+});
