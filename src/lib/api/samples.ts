@@ -1,5 +1,6 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { sanitizeSamplePatch } from "@/lib/samples/sampleEdit";
 import type { SampleOrderEdge } from "@/lib/samples/orderLinks";
 
 const ORDER_REF_SELECT =
@@ -120,6 +121,38 @@ export const samples = {
     ),
 
   delete: (id: string) => run(dbClient.from("samples").delete().eq("id", id)),
+
+  /**
+   * Nachträgliche Bearbeitung: speichert nur erlaubte, geänderte Felder und
+   * protokolliert sie im bestehenden Probenverlauf. Wird keine Zeile
+   * aktualisiert (z. B. fehlende Berechtigung), wird ein Fehler geworfen.
+   */
+  async updateFields(args: {
+    id: string;
+    patch: Record<string, unknown>;
+    userId: string;
+    changes: Array<{ field: string; old: unknown; new: unknown }>;
+    hazardCleared?: boolean;
+    comment?: string;
+  }) {
+    const patch = sanitizeSamplePatch(args.patch);
+    if (Object.keys(patch).length === 0) return;
+    const rows = await unwrap(
+      dbClient.from("samples").update(patch as any).eq("id", args.id).select("id")
+    );
+    if (!rows || (rows as any[]).length === 0) {
+      throw new Error("Probe konnte nicht gespeichert werden (keine Berechtigung oder nicht gefunden).");
+    }
+    await run(
+      dbClient.from("sample_history").insert({
+        sample_id: args.id,
+        action: "fields_updated",
+        user_id: args.userId,
+        comment: args.comment ?? null,
+        metadata: { changes: args.changes, hazard_cleared: !!args.hazardCleared },
+      } as any)
+    );
+  },
 
   async updateStatus(args: {
     id: string;

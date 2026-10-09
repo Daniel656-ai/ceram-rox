@@ -34,6 +34,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PersonSelect } from "@/components/PersonSelect";
 import { SampleTraceability } from "@/components/SampleTraceability";
 import { Search } from "lucide-react";
+import { SampleEditDialog } from "@/components/samples/SampleEditDialog";
+import { canEditSample } from "@/lib/samples/sampleEdit";
 
 const STATUSES = ["neu", "eingelagert", "in_bearbeitung", "teilweise_verbraucht", "vollstaendig_verbraucht", "entsorgt", "zurueckgesendet"] as const;
 
@@ -225,6 +227,9 @@ export default function SampleDetailPage() {
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2">
         <SampleLabelPrintDialog sample={s} />
+        {canEditSample(s, user?.id, role) && (
+          <SampleEditDialog sample={s} projects={projects as any} linkedOrderCount={orderLinks?.get(s.id)?.length ?? 0} userId={user!.id} />
+        )}
         {canManage && (
           <>
             <Dialog open={statusDialog} onOpenChange={setStatusDialog}>
@@ -548,6 +553,10 @@ export default function SampleDetailPage() {
                           <div className="text-xs text-muted-foreground mt-1">
                             {h.metadata.new_status && <span>{t(`status_${h.metadata.new_status}`)}</span>}
                             {h.metadata.to_user && <span>{t("handover_to")}: {getUserName(h.metadata.to_user)}</span>}
+                            {Array.isArray(h.metadata.changes) && h.metadata.changes.map((c: any) => (
+                              <span key={c.field} className="block">{t(`edit_field_${c.field}`, { defaultValue: c.field })}: {Array.isArray(c.old) ? c.old.join(", ") : String(c.old ?? "–")} → {Array.isArray(c.new) ? c.new.join(", ") : String(c.new ?? "–")}</span>
+                            ))}
+                            {h.metadata.hazard_cleared && <span className="block">{t("edit_hazard_cleared_log")}</span>}
                           </div>
                         )}
                       </div>

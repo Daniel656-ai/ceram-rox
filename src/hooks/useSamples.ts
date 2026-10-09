@@ -103,6 +103,18 @@ export function useCreateSample() {
   });
 }
 
+export function useUpdateSampleFields() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: Parameters<typeof api.samples.updateFields>[0]) => api.samples.updateFields(args),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["samples"] });
+      qc.invalidateQueries({ queryKey: ["sample"] });
+      qc.invalidateQueries({ queryKey: ["sample_history"] });
+    },
+  });
+}
+
 export function useDeleteSample() {
   const qc = useQueryClient();
   return useMutation({
