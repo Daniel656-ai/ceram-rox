@@ -7,6 +7,7 @@ describe("reassignErrorText", () => {
     expect(reassignErrorText("measurement already completed")).toMatch(/Abgeschlossene/);
     expect(reassignErrorText("target not qualified")).toMatch(/nicht qualifiziert/);
     expect(reassignErrorText("not permitted")).toMatch(/Keine Berechtigung/);
+    expect(reassignErrorText("not assigned")).toMatch(/niemandem zugewiesen/);
     expect(reassignErrorText("")).toMatch(/nicht geändert/);
   });
 });
