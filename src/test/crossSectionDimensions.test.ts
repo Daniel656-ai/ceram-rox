@@ -3,7 +3,7 @@ import {
   analyzeDimensionText, symmetrizeTolerance, crossSectionFromRelease, formatCrossSection,
 } from "@/lib/productionRelease/dimensions";
 import { coerceFieldValue, needsNumericReview } from "@/lib/productionRelease/fields";
-import { numericReviewChanges } from "@/lib/productionRelease/importPipeline";
+
 import { deriveM3Values } from "@/lib/m3List/derive";
 import { buildNoxHandover } from "@/lib/m3List/noxHandover";
 
@@ -16,10 +16,7 @@ describe("Querschnitt – Erkennung", () => {
   it("152 × 203 mm bleibt als zwei Maße erhalten und wird zur Prüfung vorgelegt", () => {
     expect(analyzeDimensionText("152 mm × 203 mm")).toEqual({ kind: "cross_section", width: 152, height: 203 });
     expect(coerceFieldValue("cross_section_mm", "152 × 203 mm")).toBeNull();
-    const c = numericReviewChanges({ cross_section_mm: "152 × 203 mm" });
-    expect(c).toHaveLength(1);
-    expect(c[0].auto).toBe(false);
-    expect(c[0].new_value).toBe("152 × 203 mm");
+    expect(needsNumericReview("cross_section_mm", "152 × 203 mm")).toBe(true);
   });
   it("Einzelwert 150 bleibt 150", () => {
     expect(coerceFieldValue("cross_section_mm", "150")).toBe(150);

@@ -188,3 +188,37 @@ export function coerceFieldValue(key: string, raw: unknown): unknown {
   }
   return s;
 }
+
+/**
+ * Einzelzahl für ein Zahlenfeld der Freigabe – oder null, wenn der Text
+ * nicht eindeutig einer Zahl entspricht.
+ * - Einzelwert (auch mit Einheit): Wert
+ * - Toleranzangabe („150 mm +1/−3 mm“): Nennmaß der Originalvorgabe (keine Symmetrisierung)
+ * - Querschnitt „a × b“: nur beim Querschnittsfeld und nur bei a = b
+ */
+export function numericValueForField(key: string, raw: unknown): number | null {
+  const a = analyzeDimensionText(raw);
+  if (a.kind === "single") return a.value;
+  if (a.kind === "tolerance") return a.nominal;
+  if (a.kind === "cross_section" && key === "cross_section_mm" && a.width === a.height) return a.width;
+  return null;
+}
+
+/** Text eines Zahlenfeldes, der nicht verlustfrei als Zahl gespeichert werden kann. */
+export function needsNumericReview(key: string, raw: unknown): boolean {
+  const def = RELEASE_FIELD_BY_KEY[key];
+  if (!def || (def.type !== "number" && def.type !== "integer")) return false;
+  if (raw === null || raw === undefined || String(raw).trim() === "") return false;
+  return numericValueForField(key, raw) === null;
+}
+
+/** Originaltext eines Zahlenfeldes, der zusätzlich gesichert werden soll (Mehrfachmaß/Toleranz). */
+export function originalTextWorthKeeping(key: string, raw: unknown): string | null {
+  const def = RELEASE_FIELD_BY_KEY[key];
+  if (!def || (def.type !== "number" && def.type !== "integer")) return null;
+  if (raw === null || raw === undefined) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const a = analyzeDimensionText(s);
+  return a.kind === "single" ? null : s;
+}
