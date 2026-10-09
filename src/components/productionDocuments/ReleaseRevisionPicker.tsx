@@ -32,6 +32,7 @@ export function useReleaseRevisionList(): ReleaseRevisionOption[] {
       root_release_id: r.root_release_id ?? null,
       release_number: r.release_number ?? null,
       revision_number: r.revision_number ?? null,
+      project_id: r.project_id ?? null,
       project_name: r.project_name ?? null,
       customer_name: r.customer_name ?? null,
       article_number: r.article_number ?? null,
