@@ -18,6 +18,7 @@ import OrderRequesterSpecs from "@/components/order/OrderRequesterSpecs";
 import { ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { ListChecks, History, ArrowRight } from "lucide-react";
 import { SPEC_EVENT, describeSpecChange, specLabel } from "@/components/order/SpecAmendment";
+import { REASSIGN_EVENT, describeReassignment } from "@/lib/measurementRun/reassignmentEvent";
 
 const EVENT_LABELS: Record<string, string> = {
   order_created: "Auftrag erstellt",
@@ -99,7 +100,9 @@ export default function OrderWorkflowTab({
       user: e.actor_user_id,
       text: e.event_type === SPEC_EVENT
         ? `${EVENT_LABELS[SPEC_EVENT]} – ${specLabel(e.metadata?.parameter_label || e.metadata?.parameter_name)}: ${describeSpecChange(e.metadata).join("; ")}${e.metadata?.reason ? ` · „${e.metadata.reason}"` : ""}`
-        : EVENT_LABELS[e.event_type] || e.event_type,
+        : e.event_type === REASSIGN_EVENT
+          ? describeReassignment(e.metadata, userName)
+          : EVENT_LABELS[e.event_type] || e.event_type,
     }));
     const fromAudit = (auditLogs as any[]).map((l) => ({
       id: `a-${l.id}`,
