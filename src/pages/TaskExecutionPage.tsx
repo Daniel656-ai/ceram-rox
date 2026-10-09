@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SpecChangeHistory, groupSpecChanges } from "@/components/order/SpecAmendment";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMeasurementAutosave, type AutosaveState } from "@/hooks/useMeasurementAutosave";
+import { useRefreshGuard } from "@/lib/refreshGuard";
 import { ProcessContextProvider } from "@/context/ProcessContextProvider";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -545,6 +546,11 @@ function TaskExecutionPageInner() {
       qc.invalidateQueries({ queryKey: ["measurement-results"] });
       qc.invalidateQueries({ queryKey: ["measurements"] });
       qc.invalidateQueries({ queryKey: ["order"] });
+      // Abschluss ändert Status in Auftrags-, Aufgaben- und Probenlisten.
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["my-measurements"] });
+      qc.invalidateQueries({ queryKey: ["samples"] });
+      qc.invalidateQueries({ queryKey: ["sample_measurements"] });
       setCompleteOpen(false);
       afterComplete();
     } catch (err: any) {
@@ -608,6 +614,13 @@ function TaskExecutionPageInner() {
     ready: initialized,
     values,
     save: () => persist(false, { draftOnly: true }),
+  });
+  // „Ansicht aktualisieren": offenen Zwischenstand zuerst sichern; scheitert
+  // das, wird nicht aktualisiert. Ohne Autosave bleiben die Eingaben im
+  // Formular erhalten (Werte werden nur einmalig aus dem Server übernommen).
+  useRefreshGuard(async () => {
+    await autosave.flush();
+    if (autosave.hasUnsaved()) throw new Error("unsaved");
   });
 
   const { data: runItems = [] } = useQuery({
