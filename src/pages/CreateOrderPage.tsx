@@ -32,6 +32,7 @@ import { buildFormValueResultPayload } from "@/lib/orderFormValueHandover";
 import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
 import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
 import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
+import { useRefreshGuard } from "@/lib/refreshGuard";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
 import type { FormField } from "@/lib/api/formFields";
 import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
@@ -236,14 +237,21 @@ export default function CreateOrderPage() {
     !!selectedProjectId || measurements.length > 0 || selectedSampleIds.length > 0 ||
     !!notes || Object.keys(dynamicValues).length > 0;
 
+  const autosaveEnabled = draftsEnabled && mode === "single" && !draftLoading;
   const autosave = useOrderDraftAutosave({
-    enabled: draftsEnabled && mode === "single" && !draftLoading,
+    enabled: autosaveEnabled,
     userId: user?.id,
     draftId,
     onDraftCreated: (id) => setDraftId(id),
     payload: draftPayload,
     title: draftTitle,
     hasContent: hasDraftContent,
+  });
+  // „Ansicht aktualisieren": Entwurf vorher sichern; ohne Bestätigung abbrechen.
+  useRefreshGuard(async () => {
+    if (!autosaveEnabled || !hasDraftContent) return;
+    const id = await autosave.saveNow();
+    if (!id) throw new Error("draft not saved");
   });
 
   // Entwurf laden (?draft=<id>) – exakt an seinem bisherigen Stand.
