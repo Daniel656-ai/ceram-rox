@@ -200,6 +200,8 @@ export interface ReleaseRevisionOption {
   root_release_id: string | null;
   release_number: string | null;
   revision_number: number | null;
+  /** Verknüpftes Projekt (production_releases.project_id) – Grundlage der m³-Auftragsanzeige. */
+  project_id?: string | null;
   project_name: string | null;
   customer_name: string | null;
   article_number: string | null;
