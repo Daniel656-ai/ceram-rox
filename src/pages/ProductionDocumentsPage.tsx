@@ -24,6 +24,8 @@ import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProductionDocumentRequests, useRequestProductionDocument, useRemoveProductionDocument } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
+import { useProjects } from "@/hooks/useProjects";
+import { m3OrderLabel, m3OrderSortText } from "@/lib/m3List/orderLabel";
 import { useProductionReleasePermissions } from "@/hooks/useProductionReleases";
 import { latestRevisionInGroup, releaseRevisionLabel, type ReleaseRevisionOption } from "@/lib/productionReleaseRef";
 import {
@@ -135,6 +137,15 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
   const { data: orders = [] } = useOrders();
   const releases = useReleaseRevisionList();
   const isM3 = kind === "m3_list";
+  const { data: projects = [] } = useProjects();
+  const projectNameById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const p of projects as any[]) map.set(p.id, p.project_name ?? null);
+    return map;
+  }, [projects]);
+  /** m³: Anzeige „release_number Projektname“ – nur Darstellung. */
+  const m3Label = (r: any) =>
+    m3OrderLabel(r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null, projectNameById);
   const removeRequest = useRemoveProductionDocument();
   const [deleteRow, setDeleteRow] = useState<any>(null);
 
@@ -180,7 +191,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
       if (!q) return true;
       const o = orderById.get(r.order_id);
       const rel = r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null;
-      const hay = [o?.order_number, rel ? releaseRevisionLabel(rel) : null, rel?.customer_name]
+      const hay = [isM3 ? m3OrderSortText(m3Label(r)) : o?.order_number, rel ? releaseRevisionLabel(rel) : null, rel?.customer_name]
         .filter(Boolean).join(" ").toLowerCase();
       return hay.includes(q);
     });
@@ -188,6 +199,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
     return sort.sortRows(
       filtered,
       (r: any, key) => {
+        if (key === "order" && isM3) return m3OrderSortText(m3Label(r));
         if (key === "order") return orderById.get(r.order_id)?.order_number ?? "";
         if (key === "source") {
           const rel = r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null;
@@ -198,7 +210,8 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
       },
       (key) => (key === "requested" ? "date" : "text")
     );
-  }, [requests, search, orderById, releaseById, sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requests, search, orderById, releaseById, projectNameById, isM3, sort]);
 
   return (
     <Card>
@@ -272,7 +285,19 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
               return (
                 <TableRow key={r.id}>
                   <TableCell className="font-mono text-xs">
-                    {r.order_id
+                    {isM3 ? (() => {
+                      const l = m3Label(r);
+                      return (
+                        <span>
+                          {l.label ?? "–"}
+                          {!l.complete && (
+                            <Badge variant="outline" className="ml-2 font-sans border-destructive text-destructive" title={l.problem ?? ""}>
+                              unvollständig: {l.problem}
+                            </Badge>
+                          )}
+                        </span>
+                      );
+                    })() : r.order_id
                       ? (o?.order_number ?? r.order_id.slice(0, 8))
                       : <span className="text-muted-foreground">nicht zugeordnet</span>}
                   </TableCell>
