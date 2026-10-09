@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useSampleOrderLinks } from "@/hooks/useSamples";
+import { SampleProjectLink, SampleOrderLinks } from "@/components/samples/SampleRefLinks";
 import { useTranslation } from "react-i18next";
 import {
   useSampleDetail, useSampleHistory, useSampleDocuments, useSubSamples,
@@ -49,6 +51,7 @@ export default function SampleDetailPage() {
   const { data: documents = [] } = useSampleDocuments(id);
   const { data: subSamples = [] } = useSubSamples(id);
   const { data: sampleMeasurements = [] } = useSampleMeasurements(id);
+  const { data: orderLinks } = useSampleOrderLinks(id);
   const { data: locations = [] } = useStorageLocations();
   const { data: users = [] } = useUsers();
   const { data: projects = [] } = useProjects();
@@ -204,7 +207,7 @@ export default function SampleDetailPage() {
         <Button variant="ghost" size="icon" asChild><Link to="/proben"><ArrowLeft className="h-4 w-4" /></Link></Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{s.sample_number} – {s.sample_name}</h1>
-          <p className="text-muted-foreground">{project?.project_number}{project?.project_name ? ` – ${project.project_name}` : ""}</p>
+          <p className="text-muted-foreground">{s.project_id && project ? <SampleProjectLink projectId={s.project_id} project={project} full /> : null}</p>
         </div>
         <Badge variant="outline" className={`ml-auto ${statusColors[s.status] || ""}`}>
           {t(`status_${s.status}`)}
@@ -317,7 +320,8 @@ export default function SampleDetailPage() {
               <CardContent className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("sample_number")}</span><span className="font-medium">{s.sample_number}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("name")}</span><span className="font-medium">{s.sample_name}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">{t("project")}</span><span className="font-medium">{project?.project_number || "–"}</span></div>
+                <div className="flex justify-between gap-4"><span className="text-muted-foreground">{t("project")}</span><span className="font-medium text-right"><SampleProjectLink projectId={s.project_id} project={project} full /></span></div>
+                <div className="flex justify-between gap-4"><span className="text-muted-foreground">{t("orders_col", { defaultValue: "Auftrag" })}</span><span className="font-medium text-right"><SampleOrderLinks orders={orderLinks?.get(s.id)} vertical /></span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("description")}</span><span className="font-medium text-right max-w-[60%]">{s.description}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">{t("created_at")}</span><span className="font-medium">{new Date(s.created_at).toLocaleDateString("de-DE")}</span></div>
                 {s.category && (

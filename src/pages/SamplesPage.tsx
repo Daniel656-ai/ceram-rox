@@ -1,4 +1,5 @@
-import { useSamples, useCreateSample, useDeleteSample } from "@/hooks/useSamples";
+import { useSamples, useCreateSample, useDeleteSample, useSampleOrderLinks } from "@/hooks/useSamples";
+import { SampleProjectLink, SampleOrderLinks } from "@/components/samples/SampleRefLinks";
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useProjects } from "@/hooks/useProjects";
 import { useStorageLocations } from "@/hooks/useRawMaterials";
@@ -71,6 +72,7 @@ export default function SamplesPage() {
   const createSample = useCreateSample();
   const deleteSample = useDeleteSample();
   const etaMap = useEstimatedCompletion();
+  const { data: orderLinks } = useSampleOrderLinks();
 
 
   // Fetch measurement orders with services for linking samples to measurement types
@@ -346,6 +348,13 @@ export default function SamplesPage() {
         key: "project",
         header: t("project"),
         accessor: (s) => s.projects?.project_number || "",
+        cell: (s) => <SampleProjectLink projectId={s.project_id} project={s.projects} />,
+      },
+      {
+        key: "orders",
+        header: t("orders_col", { defaultValue: "Auftrag" }),
+        accessor: (s) => (orderLinks?.get(s.id) || []).map((o) => o.order_number || "").join(", "),
+        cell: (s) => <SampleOrderLinks orders={orderLinks?.get(s.id)} />,
       },
       {
         key: "category",
@@ -539,7 +548,7 @@ export default function SamplesPage() {
 
     return cols;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t, activeTab, etaMap, sampleMeasurementTypes, role, user?.id, canCreate, deleteSample]);
+  }, [t, activeTab, etaMap, sampleMeasurementTypes, role, user?.id, canCreate, deleteSample, orderLinks]);
 
   return (
     <div className="space-y-6">

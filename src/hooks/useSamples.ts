@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { buildSampleOrderMap } from "@/lib/samples/orderLinks";
 
 export function useSamples() {
   const { user } = useAuth();
@@ -53,6 +54,16 @@ export function useSampleMeasurements(sampleId?: string) {
     queryKey: ["sample_measurements", sampleId],
     queryFn: () => api.samples.listMeasurements(sampleId!),
     enabled: !!user && !!sampleId,
+  });
+}
+
+/** sample_id → zugeordnete Aufträge (nur über echte IDs). Ohne sampleId: alle. */
+export function useSampleOrderLinks(sampleId?: string) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["sample_order_links", sampleId ?? "all"],
+    queryFn: async () => buildSampleOrderMap(await api.samples.listOrderLinks(sampleId)),
+    enabled: !!user,
   });
 }
 
