@@ -202,6 +202,7 @@ export const measurements = {
         .eq("id", id)
     ),
 
+  /** @deprecated Direkte Zuweisungsänderung wird von der Datenbank abgelehnt – reassign/claim/release verwenden. */
   assign: (id: string, assignedTo: string | null) =>
     run(
       dbClient
