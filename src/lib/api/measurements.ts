@@ -103,7 +103,8 @@ export const measurements = {
    * Zuweisung ändern / Vertretung (SECURITY DEFINER). Prüft serverseitig
    * Berechtigung, Status, Qualifikation, Pflichtgrund und protokolliert.
    */
-  reassign: (id: string, newUserId: string, reason: string) =>
+  /** newUserId = null entfernt die Zuweisung (gleiche geprüfte DB-Funktion). */
+  reassign: (id: string, newUserId: string | null, reason: string) =>
     unwrap(
       dbClient.rpc("reassign_measurement" as any, {
         _measurement_id: id,

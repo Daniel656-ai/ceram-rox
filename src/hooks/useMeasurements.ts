@@ -257,7 +257,7 @@ export function useOpenMeasurementsOverview() {
 export function useReassignMeasurement() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, newUserId, reason }: { id: string; newUserId: string; reason: string }) =>
+    mutationFn: ({ id, newUserId, reason }: { id: string; newUserId: string | null; reason: string }) =>
       api.measurements.reassign(id, newUserId, reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["open-measurements-overview"] });
