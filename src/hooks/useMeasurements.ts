@@ -215,8 +215,56 @@ export function useClaimMeasurement() {
     mutationFn: (id: string) => api.measurements.claim(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["unassigned-qualified"] });
+      qc.invalidateQueries({ queryKey: ["open-measurements-overview"] });
       qc.invalidateQueries({ queryKey: ["my-measurements"] });
       qc.invalidateQueries({ queryKey: ["order"] });
+    },
+  });
+}
+
+/**
+ * Sichtbare, aber (derzeit) nicht übernehmbare offene Aufgaben: fremd
+ * zugewiesen oder ohne eigene Qualifikation. Rein lesend.
+ */
+export function useOpenMeasurementsOverview() {
+  const { user, role } = useAuth();
+  return useQuery({
+    queryKey: ["open-measurements-overview", user?.id, role],
+    queryFn: async () => {
+      if (!user) return [];
+      const [rows, qualified] = await Promise.all([
+        api.measurements.listOpenVisible(),
+        api.measurements.listQualifiedServiceIds(user.id),
+      ]);
+      const q = new Set(qualified);
+      const isMaster = role === "master";
+      const others = ((rows || []) as any[]).filter(
+        (m) => m.assigned_to !== user.id && (m.assigned_to !== null || (!isMaster && !q.has(m.service_id)))
+      );
+      const ids = Array.from(new Set(others.map((m) => m.assigned_to).filter(Boolean))) as string[];
+      const profiles = await api.measurements.fetchProfiles(ids);
+      const names = new Map((profiles || []).map((p: any) => [p.user_id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim()]));
+      return others.map((m) => ({
+        ...m,
+        __qualified: isMaster || q.has(m.service_id),
+        __assigneeName: m.assigned_to ? names.get(m.assigned_to) || "anderer Mitarbeiter" : null,
+      }));
+    },
+    enabled: !!user,
+  });
+}
+
+export function useReassignMeasurement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, newUserId, reason }: { id: string; newUserId: string; reason: string }) =>
+      api.measurements.reassign(id, newUserId, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["open-measurements-overview"] });
+      qc.invalidateQueries({ queryKey: ["unassigned-qualified"] });
+      qc.invalidateQueries({ queryKey: ["my-measurements"] });
+      qc.invalidateQueries({ queryKey: ["order"] });
+      qc.invalidateQueries({ queryKey: ["measurement"] });
     },
   });
 }
