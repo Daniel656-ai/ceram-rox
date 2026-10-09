@@ -1,5 +1,6 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { sanitizeSamplePatch } from "@/lib/samples/sampleEdit";
 import type { SampleOrderEdge } from "@/lib/samples/orderLinks";
 
 const ORDER_REF_SELECT =
@@ -134,7 +135,6 @@ export const samples = {
     hazardCleared?: boolean;
     comment?: string;
   }) {
-    const { sanitizeSamplePatch } = await import("@/lib/samples/sampleEdit");
     const patch = sanitizeSamplePatch(args.patch);
     if (Object.keys(patch).length === 0) return;
     const rows = await unwrap(
