@@ -1,5 +1,6 @@
 import { analyzeDimensionText } from "./dimensions";
 /**
+ * Fertigungsfreigabe – zentraler Feldkatalog.
  *
  * EINZIGE Quelle der Wahrheit für die strukturierten Felder einer
  * Fertigungsfreigabe. Wird gleichermaßen verwendet von
