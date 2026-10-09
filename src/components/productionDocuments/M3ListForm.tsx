@@ -29,6 +29,7 @@ import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
 import { SAMPLING_CODE_MAP, normalizeSamplingKey } from "@/lib/samplingCodeMap";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { m3OrderLabel, withM3OrderDisplay } from "@/lib/m3List/orderDisplay";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
   const qc = useQueryClient();
@@ -43,6 +44,19 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   });
 
   const { data: release } = useProductionReleaseRevision(request?.based_on_release_id ?? null);
+
+  // Resolve the project only by the release's explicit link, never by its imported name.
+  const projectId = release?.project_id;
+  const { data: linkedProject } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => {
+      if (!projectId) return null;
+      return api.projects.get(projectId);
+    },
+    enabled: !!projectId,
+  });
+  const releaseNumber = typeof release?.release_number === "string" ? release.release_number : null;
+  const orderDisplayLabel = m3OrderLabel(releaseNumber, linkedProject?.project_name);
 
   /** Die Vorlagenstruktur muss auch ohne verfügbare Konstanten sichtbar sein. */
   const { data: formId, error: templateError, isLoading: templateLoading } = useQuery({
@@ -104,6 +118,11 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         constants: constantsState.constants,
       }),
     [release, request, stored, constantsState.constants]
+  );
+
+  const displayValues = useMemo(
+    () => withM3OrderDisplay(derived.values, releaseNumber, linkedProject?.project_name),
+    [derived.values, releaseNumber, linkedProject?.project_name],
   );
 
   /** Aktuelle Auswahl: gespeicherte Auswahl, sonst der automatische Vorschlag. */
@@ -255,7 +274,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           <div className="font-medium">Beprobungsauftrag</div>
           <div className="text-xs text-muted-foreground">
             {request.order_id
-              ? `Vorhanden: ${String(derived.values.order_number ?? request.order_id.slice(0, 8))} – Grundlage der Kundendokumentation.`
+              ? `Vorhanden${orderDisplayLabel ? `: ${orderDisplayLabel}` : ""} – Grundlage der Kundendokumentation.`
               : "Noch keiner. Der Laborauftrag zur Beprobung wird aus dieser m³-Liste erzeugt und der Fertigungsfreigabe zugeordnet."}
           </div>
         </div>
@@ -328,7 +347,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           layout={layout}
           fields={typedFields}
           permissions={permissions}
-          values={derived.values as Record<string, never>}
+          values={displayValues as Record<string, never>}
           onChange={(key, v) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }))}
         />
       )}

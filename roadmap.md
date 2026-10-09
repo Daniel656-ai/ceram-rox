@@ -1,8 +1,8 @@
 # Roadmap
 
-- [x] Inspect m³ sources: linked release has project_id but no authoritative serial-number field; stop before display changes
-- [ ] Apply display-only change and missing/long-serial tests — blocked until the authoritative serial-number source is identified
-- [ ] Verify Web/Desktop — blocked until the serial-number source is identified and display change is approved by that clarification
+- [x] Inspect m³ sources and confirm release_number with user; project_id identifies the linked project
+- [x] Apply display-only change; 38 targeted tests passed (12 new), with no production data writes
+- [x] Verify authenticated Web m³ form: real release without project_id displays only its identifier; shared Desktop code reviewed, manual Desktop check and linked-project Web example remain open (no suitable live data changed/created)
 
 - [x] Analyze shared scrolling in Projects and Results Database tables
 - [x] Add synchronized, reachable top horizontal scrollbars without changing table behavior
