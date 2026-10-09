@@ -12,6 +12,7 @@ import {
   lengthTolerance, diameterTolerance, innerWallTolerance, labScope, type M3Constants,
 } from "./calculations";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
+import { crossSectionFromRelease } from "@/lib/productionRelease/dimensions";
 
 /** Gespeicherte, manuell änderbare Beprobungsauswahl (Kürzel-Liste). */
 export const M3_LAB_SELECTION_KEY = "lab_tests_selected";
@@ -45,6 +46,17 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
     if (!spec.release_field) continue;
     const raw = release ? (release as Record<string, unknown>)[spec.release_field] : undefined;
     values[spec.field_key] = raw ?? null;
+  }
+  // Querschnitt: Breite und Höhe getrennt, Anzeige „152 mm × 152 mm“.
+  // Kein stilles Korrigieren unplausibler Altwerte – nur Hinweis.
+  const cs = crossSectionFromRelease(release);
+  values.cross_section_mm = cs.display;
+  values.cross_section_width_mm = cs.width;
+  values.cross_section_height_mm = cs.height;
+  if (cs.width != null && cs.height == null && cs.width > 1000) {
+    notices.push(
+      `Der Querschnitt in der Fertigungsfreigabe ist unplausibel (${cs.display}). Vermutlich wurden zwei Maße zusammengefügt – bitte die Freigabe prüfen und korrigieren oder neu importieren.`
+    );
   }
   values.order_number = orderNumber ?? (release?.order_number as string | undefined) ?? null;
   values.release_label = release
@@ -130,7 +142,7 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
 export function stripDerivedValues(values: Record<string, unknown>): Record<string, unknown> {
   const derivedKeys = new Set([
     ...M3_HEADER_FIELDS.map((f) => f.field_key),
-    "release_label", "cell_count", "elements_per_m3", "marking_elements", "marking_rows",
+    "release_label", "cell_count", "cross_section_width_mm", "cross_section_height_mm", "elements_per_m3", "marking_elements", "marking_rows",
     "laborkat_length_mm", "required_length_mm", "labor_kat_count", "micro_nox", "micro_sox",
     "length_tolerance", "diameter_tolerance", "inner_wall_tolerance", "lab_tests", "lab_tests_auto",
   ]);

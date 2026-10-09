@@ -75,7 +75,17 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     queryFn: () => api.globalFields.list(),
   });
 
-  const typedFields = fields as FormField[];
+  // Der Querschnitt wird als Text „Breite × Höhe“ angezeigt – auch in bereits
+  // bestehenden m³-Vorlagen (nur Darstellung, keine Änderung der Vorlage).
+  const typedFields = useMemo(
+    () =>
+      (fields as FormField[]).map((f) =>
+        f.field_key === "cross_section_mm"
+          ? ({ ...f, field_type: "text", unit: null, display_name: f.display_name === "Durchmesser D" ? "Querschnitt" : f.display_name } as FormField)
+          : f
+      ),
+    [fields]
+  );
 
   useEffect(() => {
     if (request && stored === null) {

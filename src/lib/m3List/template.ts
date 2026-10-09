@@ -38,7 +38,7 @@ export const M3_HEADER_FIELDS: FieldSpec[] = [
   { field_key: "length_mm", display_name: "Länge", field_type: "number", unit: "mm", role: "grey", category: "Kopfdaten", release_field: "length_mm" },
   { field_key: "piece_count", display_name: "Stückzahl", field_type: "number", unit: "Stk", role: "grey", category: "Kopfdaten", release_field: "piece_count" },
   { field_key: "inner_wall_thickness_mm", display_name: "Innenwand ti", field_type: "decimal", unit: "mm", role: "grey", category: "Kopfdaten", release_field: "inner_wall_thickness_mm" },
-  { field_key: "cross_section_mm", display_name: "Durchmesser D", field_type: "decimal", unit: "mm", role: "grey", category: "Kopfdaten", release_field: "cross_section_mm" },
+  { field_key: "cross_section_mm", display_name: "Querschnitt", field_type: "text", role: "grey", category: "Kopfdaten", release_field: "cross_section_mm" },
   { field_key: "cell_configuration", display_name: "Zellkonfiguration", field_type: "text", role: "grey", category: "Kopfdaten", release_field: "cell_configuration" },
   { field_key: "completion_date", display_name: "Fertigstellung", field_type: "date", role: "grey", category: "Kopfdaten", release_field: "completion_date" },
   { field_key: "delivery_date", display_name: "Lieferdatum", field_type: "date", role: "grey", category: "Kopfdaten", release_field: "delivery_date" },
