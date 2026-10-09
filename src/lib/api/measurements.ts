@@ -59,6 +59,60 @@ export const measurements = {
     unwrap(dbClient.rpc("claim_measurement", { _measurement_id: id }) as any),
 
   /**
+   * Alle offenen (nicht abgeschlossenen) Aufgaben im Rahmen der RLS – für
+   * interne Messdienstleister unabhängig von Qualifikation und Zuweisung.
+   * Rein lesend; ändert keine Zuweisung.
+   */
+  listOpenVisible: () =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select(MY_MEASUREMENT_SELECT)
+        .neq("status", "completed")
+    ),
+
+  /** Dienstleistungen, für die ein Benutzer laut Kompetenzmatrix qualifiziert ist. */
+  async listQualifiedServiceIds(userId: string): Promise<string[]> {
+    const rows = await unwrap(
+      dbClient.from("mdl_service_permissions").select("service_id").eq("user_id", userId)
+    );
+    return (rows || []).map((r: any) => r.service_id);
+  },
+
+  /** Qualifizierte Kolleg:innen für eine Dienstleistung (Kandidaten für Vertretung). */
+  async listQualifiedUsers(serviceId: string) {
+    const perms = await unwrap(
+      dbClient.from("mdl_service_permissions").select("user_id").eq("service_id", serviceId)
+    );
+    const ids = Array.from(new Set((perms || []).map((p: any) => p.user_id)));
+    if (ids.length === 0) return [] as { user_id: string; first_name: string | null; last_name: string | null }[];
+    return unwrap(
+      dbClient.from("profiles").select("user_id, first_name, last_name").in("user_id", ids)
+    ) as Promise<{ user_id: string; first_name: string | null; last_name: string | null }[]>;
+  },
+
+  /** Eigene Projektrolle (owner/leader/member) – nur für die Anzeige des Knopfes. */
+  async myProjectRole(projectId: string, userId: string): Promise<string | null> {
+    const rows = await unwrap(
+      dbClient.from("project_members").select("role").eq("project_id", projectId).eq("user_id", userId)
+    );
+    return ((rows || [])[0] as any)?.role ?? null;
+  },
+
+  /**
+   * Zuweisung ändern / Vertretung (SECURITY DEFINER). Prüft serverseitig
+   * Berechtigung, Status, Qualifikation, Pflichtgrund und protokolliert.
+   */
+  reassign: (id: string, newUserId: string, reason: string) =>
+    unwrap(
+      dbClient.rpc("reassign_measurement" as any, {
+        _measurement_id: id,
+        _new_user_id: newUserId,
+        _reason: reason,
+      }) as any
+    ),
+
+  /**
    * Gibt eine eigene, nicht abgeschlossene Aufgabe frei (assigned_to → NULL).
    * Serverseitig geprüft (SECURITY DEFINER, FOR UPDATE). Liefert true nur bei
    * tatsächlicher Freigabe. Ergebnisse/Zwischenstände bleiben unberührt.

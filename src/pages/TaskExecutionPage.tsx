@@ -19,6 +19,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { releaseRun } from "@/lib/measurementRun/leaveRun";
+import ReassignMeasurementDialog from "@/components/measurementRun/ReassignMeasurementDialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -152,6 +153,20 @@ function TaskExecutionPageInner() {
 
   const isCompleted = (measurement as any)?.status === "completed";
 
+  // „Zuweisung ändern": nur Anzeige-Steuerung; die Datenbank prüft erneut.
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const projectIdForRole = (measurement as any)?.measurement_orders?.project_id as string | undefined;
+  const { data: myProjectRole = null } = useQuery({
+    queryKey: ["my-project-role", projectIdForRole, user?.id],
+    queryFn: () => api.measurements.myProjectRole(projectIdForRole!, user!.id),
+    enabled: !!projectIdForRole && !!user && role !== "master",
+  });
+  const canReassign =
+    !!measurement && !isCompleted &&
+    (role === "master" ||
+      (measurement as any).assigned_to === user?.id ||
+      myProjectRole === "owner" || myProjectRole === "leader");
+
   /**
    * Ergebnis-Definition: NUR Felder/Berechnungen, die im Designer als
    * „offizielles Ergebnis" markiert sind, gelangen als Ergebnisspalte in die
@@ -275,6 +290,15 @@ function TaskExecutionPageInner() {
     opts: { draftOnly?: boolean } = {},
   ) => {
     if (!measurementId) return;
+    // Nach einer Neuzuweisung lehnt die Datenbank (RLS) Schreibzugriffe des
+    // bisherigen Bearbeiters ohnehin ab; hier wird das zusätzlich erkannt und
+    // als Fehler gemeldet, statt stillschweigend „gespeichert" anzuzeigen.
+    if (role !== "master") {
+      const [fresh] = await api.measurements.listRunStateByIds([measurementId]);
+      if (!fresh || fresh.assigned_to !== user?.id) {
+        throw new Error("Diese Aufgabe ist dir nicht mehr zugewiesen – Speichern nicht möglich.");
+      }
+    }
     // Immer den aktuellen Stand der gespeicherten Ergebnisse lesen: nach einem
     // Import direkt gefolgt vom Speichern wäre eine Momentaufnahme veraltet und
     // würde Ergebnisse doppelt anlegen.
@@ -693,8 +717,26 @@ function TaskExecutionPageInner() {
             {project?.project_number ? ` · Projekt ${project.project_number}` : ""}
           </p>
         </div>
-        <StatusBadge status={m.status} />
+        <div className="flex items-center gap-2">
+          {canReassign && (
+            <Button size="sm" variant="outline" onClick={() => setReassignOpen(true)}>
+              Zuweisung ändern
+            </Button>
+          )}
+          <StatusBadge status={m.status} />
+        </div>
       </div>
+
+      {canReassign && (
+        <ReassignMeasurementDialog
+          open={reassignOpen}
+          onOpenChange={setReassignOpen}
+          measurementId={measurementId!}
+          serviceId={(m as any).service_id}
+          currentAssignee={(m as any).assigned_to ?? null}
+          onDone={() => qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] })}
+        />
+      )}
 
       {runMode && (
         <RunNavigation

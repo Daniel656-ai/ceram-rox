@@ -3,6 +3,7 @@ import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
   useClaimMeasurement,
+  useOpenMeasurementsOverview,
 } from "@/hooks/useMeasurements";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
@@ -344,6 +345,7 @@ function DurchfuehrerTasksView({
   const { t, i18n } = useTranslation(["orders", "common", "measurements"]);
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
   const { data: freeTasks = [], isLoading: isLoadingFree } = useUnassignedQualifiedMeasurements();
+  const { data: otherOpen = [] } = useOpenMeasurementsOverview();
   const claim = useClaimMeasurement();
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
@@ -462,6 +464,13 @@ function DurchfuehrerTasksView({
     [freeTasks, search, statusFilter, sortFree, i18n.language]
   );
 
+  // Nur sichtbar: fremd zugewiesene bzw. nicht qualifizierte offene Aufgaben.
+  const others = useMemo(
+    () => (otherOpen as any[]).filter(matches),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [otherOpen, search, statusFilter]
+  );
+
   const handleClaim = async (id: string, label: string) => {
     setClaimingId(id);
     try {
@@ -541,7 +550,7 @@ function DurchfuehrerTasksView({
       </div>
 
       {/* Temporärer Messdurchlauf: eigene + freie qualifizierte Aufgaben; freie werden beim Start über die bestehende Übernahme übernommen */}
-      <MeasurementRunPicker tasks={assigned} freeTasks={free} claim={(id) => claim.mutateAsync(id)} />
+      <MeasurementRunPicker tasks={assigned} freeTasks={free} otherTasks={others} claim={(id) => claim.mutateAsync(id)} />
 
       {/* 1) Meine zugewiesenen Aufgaben */}
       <Card>

@@ -21,22 +21,25 @@ function runGroupOf(m: any): { key: string; label: string; isWorkstation: boolea
   return { key: `svc:${m.service_id ?? name}`, label: name, isWorkstation: false };
 }
 
-type Item = any & { __free: boolean };
+type Item = any & { __free: boolean; __blocked?: string | null };
 
 /**
  * Temporäre Zusammenstellung eines Messdurchlaufs aus eigenen zugewiesenen
  * UND freien, laut Kompetenzmatrix qualifizierten Aufgaben. Die Auswahl lebt
- * nur im Seitenzustand. Beim Start werden freie Aufgaben über die bestehende
- * Übernahme (claim_measurement) übernommen; nicht übernehmbare werden
- * gemeldet und nicht in den Durchlauf aufgenommen.
+ * nur im Seitenzustand – Auswählen ändert keine Zuweisung. Beim Start werden
+ * freie Aufgaben über die bestehende Übernahme (claim_measurement) übernommen;
+ * nicht übernehmbare werden gemeldet und nicht in den Durchlauf aufgenommen.
+ * `otherTasks` (fremd zugewiesen / ohne Qualifikation) sind nur sichtbar.
  */
 export default function MeasurementRunPicker({
   tasks,
   freeTasks = [],
+  otherTasks = [],
   claim,
 }: {
   tasks: any[];
   freeTasks?: any[];
+  otherTasks?: any[];
   claim?: (id: string) => Promise<unknown>;
 }) {
   const navigate = useNavigate();
@@ -47,17 +50,19 @@ export default function MeasurementRunPicker({
   const groups = useMemo(() => {
     const map = new Map<string, { label: string; isWorkstation: boolean; items: Item[] }>();
     const seen = new Set<string>();
-    const add = (m: any, free: boolean) => {
+    const add = (m: any, free: boolean, blocked: string | null = null) => {
       if (m.status === "completed" || seen.has(m.id)) return;
       seen.add(m.id);
       const g = runGroupOf(m);
       if (!map.has(g.key)) map.set(g.key, { label: g.label, isWorkstation: g.isWorkstation, items: [] });
-      map.get(g.key)!.items.push({ ...m, __free: free });
+      map.get(g.key)!.items.push({ ...m, __free: free, __blocked: blocked });
     };
     for (const m of tasks) add(m, false);
     if (claim) for (const m of freeTasks) add(m, true);
+    for (const m of otherTasks)
+      add(m, false, m.assigned_to ? `Zugewiesen: ${m.__assigneeName || "anderer Mitarbeiter"}` : "Keine Qualifikation");
     return [...map.entries()].sort((a, b) => a[1].label.localeCompare(b[1].label, "de"));
-  }, [tasks, freeTasks, claim]);
+  }, [tasks, freeTasks, otherTasks, claim]);
 
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -80,7 +85,7 @@ export default function MeasurementRunPicker({
 
   const start = async () => {
     // Reihenfolge wie angezeigt.
-    const chosen = groups.flatMap(([, g]) => g.items).filter((m) => selected.has(m.id));
+    const chosen = groups.flatMap(([, g]) => g.items).filter((m) => selected.has(m.id) && !m.__blocked);
     if (chosen.length === 0) return;
     setStarting(true);
     const ok: string[] = [];
@@ -141,15 +146,17 @@ export default function MeasurementRunPicker({
         </p>
         {groups.map(([key, g]) => {
           const isOpen = open[key] ?? false;
-          const allSel = g.items.every((m) => selected.has(m.id));
-          const someSel = g.items.some((m) => selected.has(m.id));
+          const selectable = g.items.filter((m) => !m.__blocked);
+          const allSel = selectable.length > 0 && selectable.every((m) => selected.has(m.id));
+          const someSel = selectable.some((m) => selected.has(m.id));
           const freeCount = g.items.filter((m) => m.__free).length;
           return (
             <div key={key} className="border rounded-md">
               <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
                 <Checkbox
                   checked={allSel ? true : someSel ? "indeterminate" : false}
-                  onCheckedChange={() => toggleGroup(g.items)}
+                  disabled={selectable.length === 0}
+                  onCheckedChange={() => toggleGroup(selectable)}
                   aria-label={`Alle in ${g.label} auswählen`}
                 />
                 <button
@@ -169,15 +176,15 @@ export default function MeasurementRunPicker({
               {isOpen && (
                 <div className="divide-y">
                   {g.items.map((m) => (
-                    <label key={m.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/30">
-                      <Checkbox checked={selected.has(m.id)} onCheckedChange={() => toggle(m.id)} />
+                    <label key={m.id} className={`flex items-center gap-3 px-3 py-2 text-sm ${m.__blocked ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30"}`}>
+                      <Checkbox checked={selected.has(m.id)} disabled={!!m.__blocked} onCheckedChange={() => !m.__blocked && toggle(m.id)} />
                       <span className="font-mono w-28">{m.samples?.sample_number || "–"}</span>
                       <span className="flex-1 truncate">
                         {m.samples?.sample_name || ""}
                         <span className="text-muted-foreground"> · {m.measurement_services?.service_name || "–"}</span>
                       </span>
-                      <Badge variant={m.__free ? "secondary" : "outline"} className="w-28 justify-center">
-                        {m.__free ? "Verfügbar" : "Mir zugewiesen"}
+                      <Badge variant={m.__free ? "secondary" : "outline"} className="min-w-28 justify-center truncate max-w-48" title={m.__blocked || undefined}>
+                        {m.__blocked ? m.__blocked : m.__free ? "Verfügbar" : "Mir zugewiesen"}
                       </Badge>
                       <span className="font-mono text-muted-foreground">{m.measurement_orders?.order_number || "–"}</span>
                       <span className="text-muted-foreground w-24 truncate">{m.measurement_orders?.projects?.project_number || ""}</span>

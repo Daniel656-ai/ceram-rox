@@ -10839,6 +10839,7 @@ export type Database = {
         Returns: boolean
       }
       is_external_customer: { Args: { _user_id: string }; Returns: boolean }
+      is_internal_technician: { Args: { _user_id: string }; Returns: boolean }
       is_order_creator: {
         Args: { _order_id: string; _user_id: string }
         Returns: boolean
@@ -10881,6 +10882,10 @@ export type Database = {
         Returns: string
       }
       order_has_official_result: {
+        Args: { _order_id: string }
+        Returns: boolean
+      }
+      order_has_open_measurement: {
         Args: { _order_id: string }
         Returns: boolean
       }
@@ -10942,6 +10947,10 @@ export type Database = {
       project_has_official_result: {
         Args: { _project_id: string }
         Returns: boolean
+      }
+      reassign_measurement: {
+        Args: { _measurement_id: string; _new_user_id: string; _reason: string }
+        Returns: string
       }
       reassign_measurement_sample: {
         Args: {
