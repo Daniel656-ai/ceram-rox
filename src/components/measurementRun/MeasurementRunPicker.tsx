@@ -85,7 +85,7 @@ export default function MeasurementRunPicker({
 
   const start = async () => {
     // Reihenfolge wie angezeigt.
-    const chosen = groups.flatMap(([, g]) => g.items).filter((m) => selected.has(m.id));
+    const chosen = groups.flatMap(([, g]) => g.items).filter((m) => selected.has(m.id) && !m.__blocked);
     if (chosen.length === 0) return;
     setStarting(true);
     const ok: string[] = [];
