@@ -1,6 +1,6 @@
 /**
  * Anzeige der Spalte „Auftrag“ in der m³-Übersicht (nur Darstellung).
- * Soll: production_releases.release_number + " " + projects.project_name,
+ * Soll: erste 9 Zeichen von production_releases.article_number + " " + projects.project_name,
  * Projekt ausschließlich über production_releases.project_id.
  * Kein Ersatz durch interne ROX-Auftragsnummer oder Freitext.
  */
@@ -10,27 +10,33 @@ export interface M3OrderLabel {
   problem: string | null;
 }
 
+/** Erste 9 Zeichen der Artikelnummer, exakt übernommen (z. B. "0040-6129-125-0998" → "0040-6129"). */
+export function articlePrefix(articleNumber: string | null | undefined): string | null {
+  const a = articleNumber?.trim();
+  return a ? a.slice(0, 9) : null;
+}
+
 export function m3OrderLabel(
-  release: { release_number?: string | null; project_id?: string | null } | null | undefined,
+  release: { article_number?: string | null; project_id?: string | null } | null | undefined,
   projectNameById: Map<string, string | null | undefined>
 ): M3OrderLabel {
   if (!release) return { label: null, complete: false, problem: "Keine Fertigungsfreigabe hinterlegt" };
-  const rn = release.release_number?.trim() || null;
+  const an = articlePrefix(release.article_number);
   if (!release.project_id) {
-    return { label: rn, complete: false, problem: "Projektzuordnung fehlt in der Fertigungsfreigabe" };
+    return { label: an, complete: false, problem: "Projektzuordnung fehlt in der Fertigungsfreigabe" };
   }
   if (!projectNameById.has(release.project_id)) {
-    return { label: rn, complete: false, problem: "Verknüpftes Projekt nicht gefunden" };
+    return { label: an, complete: false, problem: "Verknüpftes Projekt nicht gefunden" };
   }
   const pn = projectNameById.get(release.project_id)?.trim() || null;
-  if (!rn || !pn) {
+  if (!an || !pn) {
     return {
-      label: [rn, pn].filter(Boolean).join(" ") || null,
+      label: [an, pn].filter(Boolean).join(" ") || null,
       complete: false,
-      problem: !rn ? "Freigabenummer fehlt" : "Projektname fehlt",
+      problem: !an ? "Artikelnummer fehlt in der Fertigungsfreigabe" : "Projektname fehlt",
     };
   }
-  return { label: `${rn} ${pn}`, complete: true, problem: null };
+  return { label: `${an} ${pn}`, complete: true, problem: null };
 }
 
 /** Text für Suche und Sortierung – identisch zur sichtbaren Bezeichnung. */
