@@ -10916,6 +10916,10 @@ export type Database = {
       }
       pp_seed_blocks: { Args: { _order_id: string }; Returns: undefined }
       pp_start_block: { Args: { _block_id: string }; Returns: undefined }
+      preview_renumber_user_orders: {
+        Args: { _start_value: number; _user_id: string; _year: number }
+        Returns: Json
+      }
       priority_enum_to_int: {
         Args: { p: Database["public"]["Enums"]["order_priority"] }
         Returns: number
@@ -11002,6 +11006,16 @@ export type Database = {
       rename_form_definition: {
         Args: { _form_id: string; _new_name: string }
         Returns: undefined
+      }
+      renumber_user_orders: {
+        Args: {
+          _expected_order_ids: string[]
+          _reason: string
+          _start_value: number
+          _user_id: string
+          _year: number
+        }
+        Returns: number
       }
       resolve_workflow_template: {
         Args: { p_order_id: string }
