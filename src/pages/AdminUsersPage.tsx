@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, CalendarClock, KeyRound, Copy, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, CalendarClock, KeyRound, Copy, RefreshCw, ListOrdered } from "lucide-react";
+import { RenumberOrdersDialog } from "@/components/admin/RenumberOrdersDialog";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -30,7 +31,9 @@ export default function AdminUsersPage() {
   const { data: userEmails = {} } = useUserEmails();
 
   const { data: customRoles = [] } = useCustomRoles();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasRole } = useAuth();
+  const isMaster = hasRole("master");
+  const [renumberUser, setRenumberUser] = useState<any>(null);
   const updateRole = useUpdateUserRole();
   const setUserRoles = useSetUserRoles();
   const updateStatus = useUpdateUserStatus();
@@ -232,12 +235,13 @@ export default function AdminUsersPage() {
             <Button variant="ghost" size="icon" title={t("admin:schedule_button")} onClick={() => setScheduleUser(u)}><CalendarClock className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" onClick={() => openEdit(u)}><Pencil className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" title={t("auth:admin_reset_button")} onClick={() => openReset(u)}><KeyRound className="h-4 w-4" /></Button>
+            {isMaster && (<Button variant="ghost" size="icon" title={t("admin:renumber_button")} onClick={() => setRenumberUser(u)}><ListOrdered className="h-4 w-4" /></Button>)}
             {!isSelf && (<Button variant="ghost" size="icon" onClick={() => setDeleteTarget(u)}><Trash2 className="h-4 w-4 text-destructive" /></Button>)}
           </div>
         );
       },
     },
-  ], [t, customRoles, dateFmt, currentUser?.id]);
+  ], [t, customRoles, dateFmt, currentUser?.id, isMaster]);
 
   return (
     <div className="space-y-6">
@@ -394,6 +398,7 @@ export default function AdminUsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {isMaster && <RenumberOrdersDialog user={renumberUser} onClose={() => setRenumberUser(null)} />}
     </div>
 
   );
