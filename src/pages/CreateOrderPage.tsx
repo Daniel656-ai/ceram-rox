@@ -36,6 +36,7 @@ import { useRefreshGuard } from "@/lib/refreshGuard";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
 import type { FormField } from "@/lib/api/formFields";
 import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
+import { isProjectRequired } from "@/lib/orders/projectRequirement";
 import { planRuleTriggers, ruleStepKey } from "@/lib/ruleEvaluation";
 
 interface SelectedMeasurement {
@@ -538,8 +539,7 @@ export default function CreateOrderPage() {
 
   // Projektbezogene Aufträge (F&E) benötigen ein Projekt; Kunden- und
   // Produktionsaufträge nicht. Keine Sonderlogik an anderer Stelle.
-  const PROJECT_OPTIONAL_ORDER_TYPES = ["customer", "production"];
-  const projectRequired = !!orderType && !PROJECT_OPTIONAL_ORDER_TYPES.includes(orderType);
+  const projectRequired = isProjectRequired(orderType);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -957,6 +957,22 @@ export default function CreateOrderPage() {
       {mode === "single" ? (
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
+          <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>{t("orders:order_type")} *</Label>
+              <Select value={orderType} onValueChange={setOrderType}>
+                <SelectTrigger><SelectValue placeholder={t("orders:choose_type")} /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+            <div><Label>{t("orders:notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders:notes_placeholder")} rows={3} /></div>
+          </CardContent>
+        </Card>
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">
               {t("common:project")} {projectRequired ? "*" : <span className="text-muted-foreground font-normal">({t("orders:project_optional")})</span>}
@@ -1011,7 +1027,7 @@ export default function CreateOrderPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">{t("orders:sample")} *</CardTitle></CardHeader>
             <CardContent>
-              <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} />
+              <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} />
             </CardContent>
           </Card>
         )}
@@ -1063,22 +1079,6 @@ export default function CreateOrderPage() {
 
 
 
-        <Card>
-          <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>{t("orders:order_type")}</Label>
-              <Select value={orderType} onValueChange={setOrderType}>
-                <SelectTrigger><SelectValue placeholder={t("orders:choose_type")} /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
-            <div><Label>{t("orders:notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders:notes_placeholder")} rows={3} /></div>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader>

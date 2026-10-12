@@ -17,6 +17,7 @@ import { ChevronsUpDown, Check, Plus, X, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { isSampleFormComplete } from "@/lib/orders/projectRequirement";
 import { SampleParametersFields } from "@/components/SampleParametersFields";
 import { EMPTY_SAMPLE_PARAMETERS, sampleParametersToPayload, type SampleParameters } from "@/lib/sampleParameters";
 
@@ -40,9 +41,11 @@ interface SampleSelectorProps {
   values?: string[];
   onValuesChange?: (sampleIds: string[]) => void;
   projectId?: string;
+  /** Projekt bei Neuanlage verpflichtend (Standard: ja). Projektfreie Aufträge übergeben false. */
+  projectRequired?: boolean;
 }
 
-export default function SampleSelector({ value, onSelect, values, onValuesChange, projectId }: SampleSelectorProps) {
+export default function SampleSelector({ value, onSelect, values, onValuesChange, projectId, projectRequired = true }: SampleSelectorProps) {
   const multiple = Array.isArray(values);
   const selectedIds = multiple ? values! : value ? [value] : [];
 
@@ -134,14 +137,14 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
   };
 
   const handleCreate = async () => {
-    if (!form.sample_name.trim() || !form.project_id || !form.description.trim() || !form.post_measurement_action) {
+    if (!isSampleFormComplete(form, projectRequired)) {
       toast.error(t("all_required"));
       return;
     }
     try {
       const newSample = await createSample.mutateAsync({
         sample_name: form.sample_name.trim(),
-        project_id: form.project_id,
+        project_id: form.project_id || null,
         description: form.description.trim(),
         created_by: user!.id,
         post_measurement_action: form.post_measurement_action || undefined,
@@ -292,10 +295,11 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
                 <Input value={form.sample_name} onChange={e => setForm(f => ({ ...f, sample_name: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>{t("project_number")}</Label>
-                <Select value={form.project_id} onValueChange={v => setForm(f => ({ ...f, project_id: v }))}>
+                <Label>{t("project_number")}{projectRequired ? " *" : ""}</Label>
+                <Select value={form.project_id || (projectRequired ? "" : "__none__")} onValueChange={v => setForm(f => ({ ...f, project_id: v === "__none__" ? "" : v }))}>
                   <SelectTrigger><SelectValue placeholder={t("select_project")} /></SelectTrigger>
                   <SelectContent>
+                    {!projectRequired && <SelectItem value="__none__">{t("no_project_assigned")}</SelectItem>}
                     {projects.map(p => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.project_number}{p.project_name ? ` – ${p.project_name}` : ""}

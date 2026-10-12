@@ -347,7 +347,7 @@ export default function SamplesPage() {
       {
         key: "project",
         header: t("project"),
-        accessor: (s) => s.projects?.project_number || "",
+        accessor: (s) => s.projects?.project_number || t("no_project_assigned"),
         cell: (s) => <SampleProjectLink projectId={s.project_id} project={s.projects} />,
       },
       {
