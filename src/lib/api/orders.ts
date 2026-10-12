@@ -8,6 +8,27 @@ const ORDER_LIST_SELECT =
 const ORDER_DETAIL_SELECT = `*, projects(project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name, description, is_hazardous, location_id, storage_locations(hall, room, shelf, position)), order_samples(id, sample_id, created_at, samples(id, sample_number, sample_name, description, is_hazardous)), order_measurements(*, samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name), measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_parameters(*), measurement_results(*), work_logs(*), documents(*))`;
 
 export const orders = {
+  /** Master only (server-checked): preview renumbering of a user's orders in one year. */
+  previewRenumberUserOrders: async (userId: string, year: number, startValue: number) => {
+    const { data, error } = await dbClient.rpc("preview_renumber_user_orders" as any, {
+      _user_id: userId, _year: year, _start_value: startValue,
+    } as any);
+    if (error) throw error;
+    return data as unknown as import("@/lib/orders/renumber").RenumberPreview;
+  },
+
+  /** Master only (server-checked): atomic renumbering; aborts if order list changed since preview. */
+  renumberUserOrders: async (params: {
+    userId: string; year: number; startValue: number; reason: string; expectedOrderIds: string[];
+  }) => {
+    const { data, error } = await dbClient.rpc("renumber_user_orders" as any, {
+      _user_id: params.userId, _year: params.year, _start_value: params.startValue,
+      _reason: params.reason, _expected_order_ids: params.expectedOrderIds,
+    } as any);
+    if (error) throw error;
+    return data as unknown as number;
+  },
+
   list: () =>
     unwrap(
       dbClient
