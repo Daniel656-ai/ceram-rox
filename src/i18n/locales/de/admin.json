@@ -229,5 +229,22 @@
   "schedule_saved": "Arbeitszeit gespeichert",
   "schedule_select_day": "Bitte mindestens einen Arbeitstag auswählen",
   "email_invalid": "Ungültiges E-Mail-Format",
-  "email_duplicate": "Diese E-Mail-Adresse ist bereits vergeben"
+  "email_duplicate": "Diese E-Mail-Adresse ist bereits vergeben",
+  "renumber_button": "Auftragsnummern neu vergeben",
+  "renumber_title": "Startwert der Auftragsnummern anpassen",
+  "renumber_year": "Kalenderjahr",
+  "renumber_start": "Startzähler (1–9999)",
+  "renumber_preview": "Vorschau laden",
+  "renumber_invalid_input": "Ungültiges Jahr oder ungültiger Startwert",
+  "renumber_empty": "Keine Aufträge für diesen Benutzer und dieses Jahr – keine Änderung möglich.",
+  "renumber_overflow": "Zählerüberlauf: letzte benötigte Nummer wäre {{last}} (max. 9999).",
+  "renumber_collision": "{{count}} Kollision(en) mit bestehenden Auftragsnummern – Ausführung blockiert.",
+  "renumber_col_current": "Bisherige Nummer",
+  "renumber_col_new": "Neue Nummer",
+  "renumber_col_created": "Erstellt",
+  "renumber_col_status": "Status",
+  "renumber_reason": "Begründung (mind. {{min}} Zeichen)",
+  "renumber_confirm": "Ich bestätige die Neu-Nummerierung von {{count}} Auftrag/Aufträgen.",
+  "renumber_execute": "Neu nummerieren",
+  "renumber_success": "{{count}} Auftrag/Aufträge neu nummeriert"
 }

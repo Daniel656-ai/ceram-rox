@@ -229,5 +229,22 @@
   "schedule_saved": "Working time saved",
   "schedule_select_day": "Please select at least one working day",
   "email_invalid": "Invalid email format",
-  "email_duplicate": "This email address is already in use"
+  "email_duplicate": "This email address is already in use",
+  "renumber_button": "Renumber orders",
+  "renumber_title": "Adjust order number start value",
+  "renumber_year": "Calendar year",
+  "renumber_start": "Start counter (1–9999)",
+  "renumber_preview": "Load preview",
+  "renumber_invalid_input": "Invalid year or start value",
+  "renumber_empty": "No orders for this user and year – nothing to change.",
+  "renumber_overflow": "Counter overflow: last required number would be {{last}} (max 9999).",
+  "renumber_collision": "{{count}} collision(s) with existing order numbers – execution blocked.",
+  "renumber_col_current": "Current number",
+  "renumber_col_new": "New number",
+  "renumber_col_created": "Created",
+  "renumber_col_status": "Status",
+  "renumber_reason": "Reason (min. {{min}} characters)",
+  "renumber_confirm": "I confirm renumbering {{count}} order(s).",
+  "renumber_execute": "Renumber",
+  "renumber_success": "{{count}} order(s) renumbered"
 }
