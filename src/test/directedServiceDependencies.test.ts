@@ -19,8 +19,9 @@ const services: Record<string, Svc> = {
   GEO: { id: "GEO", template: "AKT_TPL" },
   ZUS: { id: "ZUS", template: "AKT_TPL" },
   AKT: { id: "AKT" },
-  BET: { id: "BET", template: "AKT_TPL" }, // worst case: BET falsch zugeordnet
-  BJH: { id: "BJH", template: "BET_TPL" },
+  BET: { id: "BET", template: "BET_TPL" }, // wie im Web-Datenbestand: BET ist nur Teil seiner eigenen Vorlage
+  BJH: { id: "BJH" },
+  X_OWNER: { id: "X_OWNER", template: "AKT_TPL" },
   BENCH_NOX: { id: "BENCH_NOX" },
   BENCH_SOX: { id: "BENCH_SOX" },
 };
@@ -75,5 +76,8 @@ describe("gerichtete Abhängigkeiten (Programm-Nachbildung)", () => {
   it("Wiederholte Auswahl erzeugt keine Duplikate", () => {
     const r = expand(["BJH", "BJH", "NOX", "NOX"]);
     expect(new Set(r).size).toBe(r.length);
+  });
+  it("Grenze: Leistung mit Vorlage, die selbst NICHT in deren Verknüpfungen steht, gilt als übergeordnet", () => {
+    expect(expand(["X_OWNER"])).toEqual(expect.arrayContaining(["GEO", "ZUS", "AKT"]));
   });
 });
