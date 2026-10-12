@@ -8576,7 +8576,7 @@ export type Database = {
             | null
           post_measurement_action_text: string | null
           prepared_for_measurement_id: string | null
-          project_id: string
+          project_id: string | null
           raw_material_code: string | null
           raw_material_id: string | null
           sample_group: string | null
@@ -8619,7 +8619,7 @@ export type Database = {
             | null
           post_measurement_action_text?: string | null
           prepared_for_measurement_id?: string | null
-          project_id: string
+          project_id?: string | null
           raw_material_code?: string | null
           raw_material_id?: string | null
           sample_group?: string | null
@@ -8662,7 +8662,7 @@ export type Database = {
             | null
           post_measurement_action_text?: string | null
           prepared_for_measurement_id?: string | null
-          project_id?: string
+          project_id?: string | null
           raw_material_code?: string | null
           raw_material_id?: string | null
           sample_group?: string | null
