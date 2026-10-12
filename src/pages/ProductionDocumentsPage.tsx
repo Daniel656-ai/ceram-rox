@@ -143,7 +143,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
     for (const p of projects as any[]) map.set(p.id, p.project_name ?? null);
     return map;
   }, [projects]);
-  /** m³: Anzeige „release_number Projektname“ – nur Darstellung. */
+  /** m³: Anzeige „erste 9 Zeichen article_number + Projektname“ – nur Darstellung. */
   const m3Label = (r: any) =>
     m3OrderLabel(r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null, projectNameById);
   const removeRequest = useRemoveProductionDocument();
