@@ -72,7 +72,7 @@ export function useCreateSample() {
   return useMutation({
     mutationFn: (sample: {
       sample_name: string;
-      project_id: string;
+      project_id: string | null;
       description: string;
       created_by: string;
       post_measurement_action?: string;
