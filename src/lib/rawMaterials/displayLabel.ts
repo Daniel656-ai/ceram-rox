@@ -52,3 +52,36 @@ export function resolveRawMaterialDisplay(
   const label = formatCodeName(input.code, name);
   return label ? { label, unresolved: false } : null;
 }
+
+/** Spaltenschlüssel, die in Tabellenwerten eine Rohstoff-Referenz enthalten. */
+export const RAW_MATERIAL_ID_KEYS = new Set(["raw_material_id"]);
+
+/**
+ * Anzeige eines gespeicherten Tabellen-/Repeater-Werts, der eine Rohstoff-Referenz ist:
+ * - reine Rohstoff-ID (unter einem Rohstoff-Schlüssel),
+ * - Objekt aus der Rohstoffauswahl ({ raw_material_id, material_name, material_number }).
+ * Gibt `null` zurück, wenn der Wert keine Rohstoff-Referenz ist. Reine Anzeige.
+ */
+export function rawMaterialValueLabel(
+  key: string | null,
+  value: unknown,
+  byId: Map<string, RawMaterialLookup>,
+): RawMaterialDisplay | null {
+  if (key && RAW_MATERIAL_ID_KEYS.has(key) && typeof value === "string" && value.trim()) {
+    return resolveRawMaterialDisplay({ id: value.trim() }, byId);
+  }
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const o = value as Record<string, unknown>;
+    if ("raw_material_id" in o || ("material_name" in o && "mode" in o)) {
+      return resolveRawMaterialDisplay(
+        {
+          id: typeof o.raw_material_id === "string" ? o.raw_material_id : null,
+          name: typeof o.material_name === "string" ? o.material_name : null,
+          code: typeof o.material_number === "string" ? o.material_number : null,
+        },
+        byId,
+      );
+    }
+  }
+  return null;
+}

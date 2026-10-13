@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   AmendableParam, SpecAmendDialog, SpecChangeHistory, groupSpecChanges,
 } from "@/components/order/SpecAmendment";
+import { rawMaterialValueLabel, RAW_MATERIAL_ID_KEYS, type RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
 
 /**
  * Read-only „Auftraggeber-Vorgaben“: zeigt die bei der Auftragserstellung
@@ -44,7 +45,16 @@ const prim = (v: unknown): string => {
 
 const labelOf = (name: string) => name.replace(/^repeat:/, "");
 
-function ValueView({ raw, unit }: { raw: unknown; unit?: string | null }) {
+function RawCell({ col, value, materials }: { col: string | null; value: unknown; materials: Map<string, RawMaterialLookup> }) {
+  // Reine Anzeige: Rohstoff-ID → „RK-Code – Rohstoffname“; gespeicherter Wert bleibt unverändert.
+  const d = rawMaterialValueLabel(col, value, materials);
+  if (d) return <span className={d.unresolved ? "italic text-muted-foreground" : undefined}>{d.label}</span>;
+  return <>{prim(value)}</>;
+}
+
+const colLabel = (c: string) => (RAW_MATERIAL_ID_KEYS.has(c) ? "Rohstoff" : c);
+
+function ValueView({ raw, unit, materials }: { raw: unknown; unit?: string | null; materials: Map<string, RawMaterialLookup> }) {
   const v = parse(raw);
   if (Array.isArray(v) && v.some((x) => x && typeof x === "object" && !Array.isArray(x))) {
     const rows = v.filter((x) => x && typeof x === "object") as Record<string, unknown>[];
@@ -55,14 +65,14 @@ function ValueView({ raw, unit }: { raw: unknown; unit?: string | null }) {
           <thead className="bg-muted/50">
             <tr>
               <th className="px-2 py-1 text-left font-medium">#</th>
-              {cols.map((c) => <th key={c} className="px-2 py-1 text-left font-medium">{c}</th>)}
+              {cols.map((c) => <th key={c} className="px-2 py-1 text-left font-medium">{colLabel(c)}</th>)}
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => (
               <tr key={i} className="border-t">
                 <td className="px-2 py-1 text-muted-foreground">{i + 1}</td>
-                {cols.map((c) => <td key={c} className="px-2 py-1">{isEmpty(r[c]) ? "–" : prim(r[c])}</td>)}
+                {cols.map((c) => <td key={c} className="px-2 py-1">{isEmpty(r[c]) ? "–" : <RawCell col={c} value={r[c]} materials={materials} />}</td>)}
               </tr>
             ))}
           </tbody>
@@ -74,12 +84,12 @@ function ValueView({ raw, unit }: { raw: unknown; unit?: string | null }) {
     return (
       <div className="flex flex-wrap gap-1">
         {v.filter((x) => !isEmpty(x)).map((x, i) => (
-          <Badge key={i} variant="secondary" className="font-normal">{prim(x)}</Badge>
+          <Badge key={i} variant="secondary" className="font-normal"><RawCell col={null} value={x} materials={materials} /></Badge>
         ))}
       </div>
     );
   }
-  return <span>{prim(v)}{unit ? ` ${unit}` : ""}</span>;
+  return <span><RawCell col={null} value={v} materials={materials} />{unit ? ` ${unit}` : ""}</span>;
 }
 
 type Entry = {
@@ -99,6 +109,15 @@ export default function OrderRequesterSpecs({ order }: { order: any }) {
     queryFn: () => api.activityLog.listForOrder(order.id) as Promise<any[]>,
     enabled: !!order?.id,
   });
+  const { data: rawMaterials = [] } = useQuery({
+    queryKey: ["raw-materials"],
+    queryFn: () => api.rawMaterials.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const materialById = useMemo(
+    () => new Map((rawMaterials as any[]).map((m) => [m.id as string, m as RawMaterialLookup])),
+    [rawMaterials],
+  );
   const changesByParam = useMemo(() => groupSpecChanges(events as any[]), [events]);
 
   const groups = useMemo(() => {
@@ -159,7 +178,7 @@ export default function OrderRequesterSpecs({ order }: { order: any }) {
               {templateValues.map(([k, v]) => (
                 <div key={k} className="contents">
                   <dt className="text-muted-foreground">{k}</dt>
-                  <dd><ValueView raw={v} /></dd>
+                  <dd><ValueView raw={v} materials={materialById} /></dd>
                 </div>
               ))}
             </dl>
@@ -179,7 +198,7 @@ export default function OrderRequesterSpecs({ order }: { order: any }) {
                   </dt>
                   <dd className="space-y-1">
                     <div className="flex items-start gap-2">
-                      <div className="flex-1"><ValueView raw={e.raw} unit={e.unit} /></div>
+                      <div className="flex-1"><ValueView raw={e.raw} unit={e.unit} materials={materialById} /></div>
                       {canAmend && e.params.some((p) => p.status !== "completed") && (
                         <Button
                           type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs"
