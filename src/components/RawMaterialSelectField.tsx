@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { resolveRawMaterialDisplay, looksLikeId } from "@/lib/rawMaterials/displayLabel";
 
 /**
  * Wert eines Rohstoff-Feldes.
@@ -51,7 +52,10 @@ interface Props {
 export default function RawMaterialSelectField({ value, onChange, disabled, className }: Props) {
   const current = normalizeRawMaterialRef(value);
   const [open, setOpen] = useState(false);
-  const [externalMode, setExternalMode] = useState(current?.mode === "external");
+  // Ein reiner ID-String ist kein externer Freitext, sondern eine Stammdaten-Referenz.
+  const [externalMode, setExternalMode] = useState(
+    current?.mode === "external" && !looksLikeId(current.material_name),
+  );
 
   const { data: materials = [] } = useQuery({
     queryKey: ["raw-materials"],
@@ -70,6 +74,20 @@ export default function RawMaterialSelectField({ value, onChange, disabled, clas
       })),
     [materials]
   );
+
+  // Reine Anzeige: ID → „Rohstoffcode – Rohstoffname“; gespeicherter Wert bleibt unverändert.
+  const materialById = useMemo(
+    () => new Map((materials as any[]).map((m) => [m.id as string, m])),
+    [materials]
+  );
+  const display = current
+    ? resolveRawMaterialDisplay(
+        { id: current.raw_material_id, name: current.material_name, code: current.material_number },
+        materialById,
+      )
+    : null;
+  const currentId =
+    current?.raw_material_id ?? (looksLikeId(current?.material_name) ? current!.material_name.trim() : null);
 
   if (externalMode) {
     return (
@@ -109,10 +127,8 @@ export default function RawMaterialSelectField({ value, onChange, disabled, clas
             disabled={disabled}
             className="h-9 flex-1 justify-between font-normal"
           >
-            <span className="truncate">
-              {current?.material_name
-                ? `${current.material_name}${current.material_number ? ` (${current.material_number})` : ""}`
-                : "Rohstoff auswählen…"}
+            <span className={cn("truncate", display?.unresolved && "text-muted-foreground italic")}>
+              {display?.label ?? "Rohstoff auswählen…"}
             </span>
             <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
           </Button>
@@ -142,13 +158,13 @@ export default function RawMaterialSelectField({ value, onChange, disabled, clas
                     <Check
                       className={cn(
                         "mr-2 h-3.5 w-3.5",
-                        current?.raw_material_id === o.id ? "opacity-100" : "opacity-0"
+                        currentId === o.id ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <span className="truncate">{o.name}</span>
                     {o.number && (
-                      <span className="ml-2 font-mono text-[10px] text-muted-foreground">{o.number}</span>
+                      <span className="mr-2 font-mono text-[10px] text-muted-foreground">{o.number} –</span>
                     )}
+                    <span className="truncate">{o.name}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
