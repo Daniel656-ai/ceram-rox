@@ -32,6 +32,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { MS_AUSWAHL_KEY, MUNDSTUECK_MS_KEY, AUTO_LOCKED_KEYS, isAutoEntry, removePairedRow } from "@/lib/rules/mundstueck293";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -1100,8 +1102,21 @@ function RepeaterField({
     const next = [...entries, {} as Record<string, any>];
     updateEntries(next);
   };
+  // MS-Auswahl und „Mundstück MS“ sind nur über die Reihenfolge verknüpft:
+  // Entfernen/Verschieben wirkt immer auf beide Listen gleichzeitig.
+  const isMsAuswahl = storageKey === MS_AUSWAHL_KEY;
   const removeAt = (i: number) => {
     if (meta.min_entries && entries.length <= meta.min_entries) return;
+    if (isMsAuswahl) {
+      const r = removePairedRow(entries, root?.get(MUNDSTUECK_MS_KEY), i);
+      if (!r.ok) {
+        toast.error("Zu diesem Mundstück sind in „Mundstück MS“ bereits Werte erfasst – Eintrag bleibt erhalten.");
+        return;
+      }
+      updateEntries(r.auswahl);
+      if (r.mundstueck) root?.set(MUNDSTUECK_MS_KEY, r.mundstueck);
+      return;
+    }
     const next = entries.filter((_, idx) => idx !== i);
     updateEntries(next);
   };
@@ -1111,6 +1126,12 @@ function RepeaterField({
     const next = entries.slice();
     [next[i], next[j]] = [next[j], next[i]];
     updateEntries(next);
+    const pair = isMsAuswahl ? root?.get(MUNDSTUECK_MS_KEY) : null;
+    if (Array.isArray(pair) && Math.max(i, j) < pair.length) {
+      const p = pair.slice();
+      [p[i], p[j]] = [p[j], p[i]];
+      root?.set(MUNDSTUECK_MS_KEY, p);
+    }
   };
   const duplicateAt = (i: number) => {
     if (meta.max_entries != null && entries.length >= meta.max_entries) return;
@@ -1180,6 +1201,14 @@ function RepeaterField({
             canRemove={canRemove && (!meta.min_entries || entries.length > meta.min_entries)}
             canReorder={interactive && !readonly}
             itemLabel={meta.item_label ?? "Eintrag"}
+            header={isMsAuswahl && isAutoEntry(entry) ? (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <Badge variant={entry.verwaist ? "destructive" : "secondary"}>
+                  {entry.verwaist ? "verwaist – bitte prüfen" : "automatisch – wegen gebuchter Leistung"}
+                </Badge>
+                {entry.zweck && <span className="text-muted-foreground">{String(entry.zweck)} · Anzahl und Länge gesperrt</span>}
+              </div>
+            ) : undefined}
             onChange={(next) => {
               const arr = entries.slice();
               arr[i] = next;
@@ -1281,8 +1310,16 @@ function RepeaterEntry({
 
   const scope = useMemo(() => ({
     get: (k: string) => entry?.[k],
-    set: (k: string, v: any) => onChange({ ...(entry ?? {}), [k]: v }),
-    setMany: (patch: Record<string, any>) => onChange({ ...(entry ?? {}), ...patch }),
+    // Auto-Einträge (Mundstück 293/1): Anzahl und Länge sind gesperrt.
+    set: (k: string, v: any) => {
+      if (isAutoEntry(entry) && (AUTO_LOCKED_KEYS as readonly string[]).includes(k)) return;
+      onChange({ ...(entry ?? {}), [k]: v });
+    },
+    setMany: (patch: Record<string, any>) => {
+      const p = { ...patch };
+      if (isAutoEntry(entry)) for (const k of AUTO_LOCKED_KEYS) delete p[k];
+      onChange({ ...(entry ?? {}), ...p });
+    },
   }), [entry, onChange]);
 
   const keys = useMemo(() => children.map((c) => c.field_key), [children]);
