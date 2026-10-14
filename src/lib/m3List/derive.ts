@@ -9,7 +9,7 @@
 import {
   elementsPerCubicMeter, elementCountForRow, markingElements, markingRows, laborKat,
   cellCountFromConfiguration, cellCountFromOrderNumber, noxMicro, soxMicro,
-  lengthTolerance, diameterTolerance, innerWallTolerance, labScope, type M3Constants,
+  lengthTolerance, diameterTolerance, innerWallTolerance, labScope, freeTolerance, type M3Constants,
 } from "./calculations";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 import { crossSectionFromRelease } from "@/lib/productionRelease/dimensions";
@@ -78,8 +78,11 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
   }
 
   const variant = num(stored.tolerance_variant) ?? 1;
-  values.length_tolerance = lengthTolerance(variant);
-  values.diameter_tolerance = diameterTolerance(variant);
+  // Freie Toleranzen ergänzen die Varianten 1/2 (nur wenn beide Werte gültig sind).
+  const freeL = stored.tolerance_free === true ? freeTolerance(stored.tol_length_plus, stored.tol_length_minus) : null;
+  const freeD = stored.tolerance_free === true ? freeTolerance(stored.tol_diameter_plus, stored.tol_diameter_minus) : null;
+  values.length_tolerance = freeL ?? lengthTolerance(variant);
+  values.diameter_tolerance = freeD ?? diameterTolerance(variant);
   values.inner_wall_tolerance = innerWallTolerance(cellCount);
 
   const nox = lengthMm != null ? noxMicro(cellCount, lengthMm, num(stored.av_nox)) : null;

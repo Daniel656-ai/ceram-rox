@@ -108,6 +108,7 @@ export function matchSamplingCodes<T extends { id: string; service_name: string 
   for (const raw of codes) {
     const code = (raw ?? "").trim();
     if (!code) continue;
+    if (normalizeSamplingKey(code) === normalizeSamplingKey(NO_MEASUREMENT_CODE)) continue;
     const hits = serviceNamesForCode(code)
       .map((n) => byName.get(normalizeSamplingKey(n)))
       .filter(Boolean) as T[];
