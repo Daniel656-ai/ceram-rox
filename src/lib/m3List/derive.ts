@@ -13,6 +13,7 @@ import {
 } from "./calculations";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 import { crossSectionFromRelease } from "@/lib/productionRelease/dimensions";
+import { benchExtraTestPieces } from "@/lib/samplingCodeMap";
 
 /** Gespeicherte, manuell änderbare Beprobungsauswahl (Kürzel-Liste). */
 export const M3_LAB_SELECTION_KEY = "lab_tests_selected";
@@ -158,6 +159,7 @@ export function stripDerivedValues(values: Record<string, unknown>): Record<stri
     "release_label", "cell_count", "cross_section_width_mm", "cross_section_height_mm", "elements_per_m3", "marking_elements", "marking_rows",
     "laborkat_length_mm", "required_length_mm", "labor_kat_count", "micro_nox", "micro_sox",
     "length_tolerance", "diameter_tolerance", "inner_wall_tolerance", "lab_tests", "lab_tests_auto",
+    "bench_extra_pieces", "regular_element_total", "total_element_count",
   ]);
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(values)) {
