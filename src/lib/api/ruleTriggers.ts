@@ -1,6 +1,5 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
-import { syncMundstueck293 } from "./mundstueck293";
 import type { ServiceRule } from "./serviceRules";
 import {
   planRuleTriggers, ruleStepKey, isRuleStepKey,
@@ -40,8 +39,6 @@ export const ruleTriggers = {
    * entfernt nur unbearbeitete ausgelöste Positionen.
    */
   syncOrder: async (orderId: string) => {
-    // Automatisches Mundstück 293/1 (unabhängig von Service-Regeln, idempotent).
-    try { await syncMundstueck293(orderId); } catch (e) { console.warn("293/1-Abgleich fehlgeschlagen", e); }
     const ms = (await unwrap(
       dbClient
         .from("order_measurements")

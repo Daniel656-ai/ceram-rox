@@ -1,4 +1,3 @@
-import { syncMundstueck293 } from "./mundstueck293";
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 
@@ -131,12 +130,7 @@ export const measurements = {
    * Serverseitig: master, Begründung ≥ 5 Zeichen, Auftragssperre, Status „open", keine schützenswerten Daten.
    */
   deleteWithReason: (id: string, reason: string) =>
-    (async () => {
-      const om = (await unwrap(dbClient.from("order_measurements").select("order_id").eq("id", id).maybeSingle())) as any;
-      const res = await unwrap(dbClient.rpc("delete_order_measurement" as any, { _measurement_id: id, _reason: reason }) as any);
-      if (om?.order_id) { try { await syncMundstueck293(om.order_id); } catch (e) { console.warn("293/1-Abgleich fehlgeschlagen", e); } }
-      return res;
-    })(),
+    unwrap(dbClient.rpc("delete_order_measurement" as any, { _measurement_id: id, _reason: reason }) as any),
 
   /** Frischer Status/Zuweisungsstand für Messdurchlauf-Aufgaben (ohne Cache). */
   listRunStateByIds: (ids: string[]) =>
@@ -177,10 +171,7 @@ export const measurements = {
         .insert({ ...m, measurement_number: "WILL_BE_OVERWRITTEN" } as any)
         .select()
         .single()
-    ).then(async (row) => {
-      try { await syncMundstueck293(m.order_id); } catch (e) { console.warn("293/1-Abgleich fehlgeschlagen", e); }
-      return row;
-    }),
+    ),
 
 
   /** Kompakte Übersicht für die Navigation im temporären Messdurchlauf. */

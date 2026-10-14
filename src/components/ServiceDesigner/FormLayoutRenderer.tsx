@@ -52,7 +52,6 @@ import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculations, formatCalcResult } from "@/lib/localCalculations";
 import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
-import { isAutoRow, hasValues, AUTO_LOCKED_KEYS, AUTO_HINT, ORPHAN_HINT, MS_AUSWAHL_KEY, MUNDSTUECK_KEY } from "@/lib/rules/mundstueck293";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
 import { walkNodes } from "@/lib/api/formDefinitionLayout";
@@ -1103,17 +1102,6 @@ function RepeaterField({
   };
   const removeAt = (i: number) => {
     if (meta.min_entries && entries.length <= meta.min_entries) return;
-    if (storageKey === MS_AUSWAHL_KEY) {
-      // Zuordnung zu „Mundstück MS“ nur über die Position → synchron entfernen.
-      const mund = root?.get(MUNDSTUECK_KEY);
-      if (Array.isArray(mund) && i < mund.length) {
-        if (hasValues(mund[i])) {
-          window.alert("Zu diesem Mundstück sind in „Mundstück MS“ bereits Werte erfasst. Bitte zuerst dort prüfen – Eintrag wird nicht entfernt.");
-          return;
-        }
-        root?.set(MUNDSTUECK_KEY, mund.filter((_: any, idx: number) => idx !== i));
-      }
-    }
     const next = entries.filter((_, idx) => idx !== i);
     updateEntries(next);
   };
@@ -1293,15 +1281,8 @@ function RepeaterEntry({
 
   const scope = useMemo(() => ({
     get: (k: string) => entry?.[k],
-    set: (k: string, v: any) => {
-      if (isAutoRow(entry) && AUTO_LOCKED_KEYS.includes(k)) return; // Anzahl/Länge gesperrt
-      onChange({ ...(entry ?? {}), [k]: v });
-    },
-    setMany: (patch: Record<string, any>) => {
-      const p = { ...patch };
-      if (isAutoRow(entry)) AUTO_LOCKED_KEYS.forEach((k) => delete p[k]);
-      onChange({ ...(entry ?? {}), ...p });
-    },
+    set: (k: string, v: any) => onChange({ ...(entry ?? {}), [k]: v }),
+    setMany: (patch: Record<string, any>) => onChange({ ...(entry ?? {}), ...patch }),
   }), [entry, onChange]);
 
   const keys = useMemo(() => children.map((c) => c.field_key), [children]);
@@ -1431,17 +1412,7 @@ function RepeaterEntry({
     <EntryScopeCtx.Provider value={scope}>
       <div className="border rounded p-3 bg-background">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-            {itemLabel} {index + 1}
-            {isAutoRow(entry) && (
-              <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary" title="Anzahl und Länge werden automatisch festgelegt">
-                {AUTO_HINT}: {entry.zweck}
-              </span>
-            )}
-            {isAutoRow(entry) && entry.verwaist && (
-              <span className="rounded border border-destructive/40 bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive">{ORPHAN_HINT}</span>
-            )}
-          </span>
+          <span className="text-xs font-medium text-muted-foreground">{itemLabel} {index + 1}</span>
           <div className="flex items-center gap-1">
             {canReorder && (
               <>
