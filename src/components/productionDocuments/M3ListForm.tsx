@@ -24,11 +24,11 @@ import { useProductionReleaseRevision } from "@/hooks/useProductionDocuments";
 import { ensureM3Template } from "@/lib/m3List/template";
 import { ensureM3Constants, readM3Constants } from "@/lib/m3List/constants";
 import { deriveM3Values, stripDerivedValues } from "@/lib/m3List/derive";
-import { BENCH_TEMPLATES, formatElementNumber } from "@/lib/m3List/calculations";
+import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
 import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
 import { M3_ROWS_KEY } from "@/lib/m3List/template";
 import { normalizeSamplingKey, selectableSamplingCodes, toggleSamplingCode, benchExtraTestPieces } from "@/lib/samplingCodeMap";
-import { canUseTestMarking, readTestMarkingIndex, TEST_MARKING_KEY } from "@/lib/m3List/testMarking";
+import { canUseTestMarking, resolveTestMarking, applyTestMarking } from "@/lib/m3List/testMarking";
 import { Input } from "@/components/ui/input";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -124,8 +124,11 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   };
   const setStoredKey = (key: string, v: unknown) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }));
   const mayMarkTest = canUseTestMarking(customRoleNames ?? []);
-  const testIndex = readTestMarkingIndex(stored ?? {});
   const derivedRows = (Array.isArray(derived.values[M3_ROWS_KEY]) ? derived.values[M3_ROWS_KEY] : []) as Record<string, unknown>[];
+  const testMarking = resolveTestMarking(stored ?? {}, derivedRows);
+  const testIndex = testMarking.rowIndex;
+  const setTestRow = (i: number | null) =>
+    setStored((prev) => applyTestMarking(prev ?? {}, M3_ROWS_KEY, i, () => crypto.randomUUID()));
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);
@@ -320,7 +323,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </div>
         {benchExtraTestPieces(selectedCodes) > 0 && (
           <div className="text-xs text-muted-foreground">
-            Bench gewählt: insgesamt 1 zusätzliches Teststück.
+            Bench gewählt: insgesamt 1 zusätzliches Teststück (in der Gesamtmenge enthalten).
           </div>
         )}
       </div>
@@ -360,7 +363,11 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       </div>
 
       <div className="rounded-md border p-3 space-y-2">
-        <div className="text-sm font-medium">Elementnummern</div>
+        <div className="text-sm font-medium">m³-Zeilen und Stückzahlen</div>
+        <div className="text-xs text-muted-foreground">
+          Angezeigt wird die berechnete Stückzahl je Zeile – keine Elementnummer. Eine echte
+          Elementnummer ist im Datenbestand derzeit nicht vorhanden.
+        </div>
         {derivedRows.length === 0 ? (
           <div className="text-xs text-muted-foreground">Noch keine m³-Zeilen.</div>
         ) : (
@@ -377,13 +384,13 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
                         : "tabular-nums"
                     }
                   >
-                    {formatElementNumber(r.element_count)}
+                    {r.element_count == null ? "—" : `${String(r.element_count)} Stk`}
                   </span>
                   {mayMarkTest && (
                     <label className="flex items-center gap-1 text-xs">
                       <Checkbox
                         checked={marked}
-                        onCheckedChange={(v) => setStoredKey(TEST_MARKING_KEY, v === true ? i : null)}
+                        onCheckedChange={(v) => setTestRow(v === true ? i : null)}
                       />
                       Gesamte Charge mit TEST stempeln
                     </label>
@@ -393,10 +400,26 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
             })}
           </div>
         )}
+        {derivedRows.length > 0 && (
+          <div className="text-sm tabular-nums">
+            Reguläre Elementanzahl: {String(derived.values.regular_element_total ?? "—")} Stk · Bench-Zusatz:{" "}
+            {String(derived.values.bench_extra_pieces ?? 0)} Stk ·{" "}
+            <span className="font-semibold">Gesamt: {String(derived.values.total_element_count ?? "—")} Stk</span>
+          </div>
+        )}
+        {(testMarking.status === "legacy_index" || testMarking.status === "missing" || testMarking.status === "ambiguous") && (
+          <div className="text-xs text-destructive">
+            {testMarking.status === "legacy_index"
+              ? "Eine ältere TEST-Kennzeichnung war nur über die Zeilenposition gespeichert und wird nicht automatisch zugeordnet. Bitte die Zeile erneut kennzeichnen."
+              : testMarking.status === "ambiguous"
+                ? "Die TEST-Kennzeichnung ist nicht eindeutig (Zeile wurde dupliziert). Bitte die Zeile erneut kennzeichnen."
+                : "Die gekennzeichnete m³-Zeile ist nicht mehr vorhanden. Bitte prüfen."}
+          </div>
+        )}
         {testIndex != null && testIndex < derivedRows.length && (
           <div className="rounded-md border-2 border-destructive p-2 text-sm font-medium text-destructive">
             Bitte die komplette Charge, in welcher die gekennzeichnete{" "}
-            <span className="rounded px-1 bg-[hsl(var(--test-mark))] text-[hsl(var(--test-mark-foreground))]">Elementnummer</span>{" "}
+            <span className="rounded px-1 bg-[hsl(var(--test-mark))] text-[hsl(var(--test-mark-foreground))]">m³-Zeile {testIndex + 1}</span>{" "}
             enthalten ist, mit einem zusätzlichen Stempel ‚TEST …‘ versehen!
           </div>
         )}

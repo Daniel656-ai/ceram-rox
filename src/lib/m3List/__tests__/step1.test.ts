@@ -3,7 +3,7 @@ import {
   laborKat, laborKatSpecialCount, formatElementNumber, parseToleranceInput, freeTolerance,
   excelRoundUp, type M3Constants,
 } from "../calculations";
-import { deriveM3Values } from "../derive";
+import { deriveM3Values, stripDerivedValues } from "../derive";
 import { canUseTestMarking, readTestMarkingIndex } from "../testMarking";
 import {
   serviceNamesForCode, toggleSamplingCode, benchExtraTestPieces, matchSamplingCodes,
@@ -124,5 +124,70 @@ describe("Freie Toleranzen", () => {
     expect(r.values.diameter_tolerance).toBe("(+/-2) [mm]");
     const off = deriveM3Values({ ...base, stored: { tolerance_free: false, tol_length_plus: "1", tol_length_minus: "3" } });
     expect(off.values.length_tolerance).toBe("(+3/-3) [mm]");
+  });
+});
+
+import { resolveTestMarking, applyTestMarking, M3_ROW_ID_FIELD } from "../testMarking";
+
+describe("Elementnummer – keine Scheinlösung", () => {
+  it("Stückzahl wird nicht als Elementnummer abgeleitet (keine Element-ID im Datenbestand)", () => {
+    const r = deriveM3Values({ release: { length_mm: 520 }, orderNumber: null, constants: C, stored: { m3_rows: [{ volume_m3: 4 }] } });
+    const row = (r.values.m3_rows as any[])[0];
+    expect(row.element_number).toBeUndefined();
+    expect(row.element_count).toBe(340);
+  });
+  it("Formatierung: führende Nullen, über fünf Stellen ohne Abschneiden", () => {
+    expect(formatElementNumber(99999)).toBe("99999");
+    expect(formatElementNumber(123456)).toBe("123456");
+  });
+});
+
+describe("TEST-Kennzeichnung – stabile Zeilen-ID", () => {
+  let n = 0; const id = () => `id-${++n}`;
+  it("bleibt bei Verschieben/Löschen anderer Zeilen an derselben Zeile", () => {
+    let s: Record<string, unknown> = { m3_rows: [{ volume_m3: 1 }, { volume_m3: 2 }, { volume_m3: 3 }] };
+    s = applyTestMarking(s, "m3_rows", 1, id);
+    const rows = s.m3_rows as any[];
+    const moved = { ...s, m3_rows: [rows[1], rows[2]] }; // Zeile 0 gelöscht
+    const res = resolveTestMarking(moved, moved.m3_rows as any[]);
+    expect(res).toEqual({ rowIndex: 0, status: "ok" });
+    expect((moved.m3_rows as any[])[0].volume_m3).toBe(2);
+  });
+  it("alte Positions-Kennzeichnung wird nicht geraten", () => {
+    expect(resolveTestMarking({ test_charge_row_index: 1 }, [{}, {}])).toEqual({ rowIndex: null, status: "legacy_index" });
+  });
+  it("duplizierte ID ist mehrdeutig und erhält beim Neumarkieren eine neue ID", () => {
+    const rows = [{ [M3_ROW_ID_FIELD]: "x" }, { [M3_ROW_ID_FIELD]: "x" }];
+    expect(resolveTestMarking({ test_charge_row_id: "x" }, rows).status).toBe("ambiguous");
+    const s = applyTestMarking({ m3_rows: rows }, "m3_rows", 1, () => "neu");
+    expect(resolveTestMarking(s, s.m3_rows as any[])).toEqual({ rowIndex: 1, status: "ok" });
+  });
+  it("Entfernen löscht Altwert und ID-Verweis", () => {
+    const s = applyTestMarking({ test_charge_row_index: 0, m3_rows: [{}] }, "m3_rows", null, id);
+    expect(s.test_charge_row_index).toBeUndefined();
+    expect(s.test_charge_row_id).toBeNull();
+  });
+});
+
+describe("Bench-Zusatz in der Gesamtmenge", () => {
+  const base = { release: { length_mm: 520 }, orderNumber: null, constants: C };
+  const rows = [{ volume_m3: 4 }, { volume_m3: 1 }];
+  const run = (sel: string[]) => deriveM3Values({ ...base, stored: { m3_rows: rows, lab_tests_selected: sel } }).values;
+  it.each([
+    [["Geo"], 0], [["Bench NOx"], 1], [["Bench SOx"], 1], [["Bench NOx", "Bench SOx"], 1], [["Bench"], 1],
+  ])("%j → Zusatz %i, Gesamt = regulär + Zusatz", (sel, extra) => {
+    const v = run(sel as string[]);
+    expect(v.bench_extra_pieces).toBe(extra);
+    expect(v.regular_element_total).toBe(340 + 90);
+    expect(v.total_element_count).toBe(430 + (extra as number));
+  });
+  it("Speichern und erneutes Öffnen addiert nicht doppelt", () => {
+    const v1 = run(["Bench NOx", "Bench SOx"]);
+    const stored = stripDerivedValues(v1);
+    expect(stored.total_element_count).toBeUndefined();
+    expect(stored.bench_extra_pieces).toBeUndefined();
+    const v2 = deriveM3Values({ ...base, stored }).values;
+    expect(v2.total_element_count).toBe(431);
+    expect(stored.lab_tests_selected).toEqual(["Bench NOx", "Bench SOx"]);
   });
 });
