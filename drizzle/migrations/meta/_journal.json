@@ -141,6 +141,13 @@
       "when": 1791805561247,
       "tag": "0019_directed_process_template_dependencies",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791958136767,
+      "tag": "0020_delete_order_measurement",
+      "breakpoints": true
     }
   ]
 }

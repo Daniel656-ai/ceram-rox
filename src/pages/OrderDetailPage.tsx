@@ -37,6 +37,7 @@ import CompletedResultForm from "@/components/CompletedResultForm";
 import OrderResultsOverview from "@/components/OrderResultsOverview";
 import OrderHeaderSummary from "@/components/order/OrderHeaderSummary";
 import OrderProductionDocuments from "@/components/order/OrderProductionDocuments";
+import AdminDeleteMeasurementsCard from "@/components/order/AdminDeleteMeasurementsCard";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -320,6 +321,10 @@ function OrderDetailPageInner() {
           <CardHeader><CardTitle className="text-base">Bemerkungen</CardTitle></CardHeader>
           <CardContent><p className="text-sm whitespace-pre-wrap">{order.notes}</p></CardContent>
         </Card>
+      )}
+
+      {role === "master" && (
+        <AdminDeleteMeasurementsCard orderId={id!} measurements={allMeasurements} />
       )}
 
       <OrderWorkflowTabs

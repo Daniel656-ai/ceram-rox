@@ -121,6 +121,17 @@ export const measurements = {
   release: (id: string) =>
     unwrap(dbClient.rpc("release_measurement" as any, { _measurement_id: id }) as any) as Promise<boolean>,
 
+  /** Lesende Vorschau (nur ROX-Admin = Basisrolle master): Abhängigkeiten, Blockaden, Entkopplungen. */
+  previewDelete: (id: string) =>
+    unwrap(dbClient.rpc("preview_delete_order_measurement" as any, { _measurement_id: id }) as any) as Promise<any>,
+
+  /**
+   * Löscht eine einzelne Dienstleistung atomar inkl. Audit-Eintrag (SECURITY DEFINER).
+   * Serverseitig: master, Begründung ≥ 5 Zeichen, Auftragssperre, Status „open", keine schützenswerten Daten.
+   */
+  deleteWithReason: (id: string, reason: string) =>
+    unwrap(dbClient.rpc("delete_order_measurement" as any, { _measurement_id: id, _reason: reason }) as any),
+
   /** Frischer Status/Zuweisungsstand für Messdurchlauf-Aufgaben (ohne Cache). */
   listRunStateByIds: (ids: string[]) =>
     ids.length === 0
