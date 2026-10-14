@@ -9,3 +9,4 @@
 - [x] Analyze DIL/STA selected-value labels
 - [x] Add automatic label placement and drag fallback without changing chart data
 - [x] Verify both tables, both chart types, and desktop-equivalent shared code
+- [x] Automatisches Mundstück 293/1 (Raumgewicht/Wasseraufnahme/Schwindung), reihenfolgesynchron, auch bei Nachbuchung
