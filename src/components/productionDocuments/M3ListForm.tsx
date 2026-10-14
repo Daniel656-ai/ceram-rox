@@ -308,16 +308,103 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           hier frei geändert werden – maßgeblich für den Beprobungsauftrag ist diese Auswahl.
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
-          {SAMPLING_CODE_MAP.map((m) => (
-            <label key={m.code} className="flex items-center gap-2 text-sm">
+          {selectableSamplingCodes(selectedCodes).map((code) => (
+            <label key={code} className="flex items-center gap-2 text-sm">
               <Checkbox
-                checked={selectedCodes.includes(m.code)}
-                onCheckedChange={(v) => toggleCode(m.code, v === true)}
+                checked={selectedCodes.some((c) => normalizeSamplingKey(c) === normalizeSamplingKey(code))}
+                onCheckedChange={(v) => toggleCode(code, v === true)}
               />
-              <span>{m.code}</span>
+              <span>{code === "Bench" ? "Bench (alt: NOx + SOx)" : code}</span>
             </label>
           ))}
         </div>
+        {benchExtraTestPieces(selectedCodes) > 0 && (
+          <div className="text-xs text-muted-foreground">
+            Bench gewählt: insgesamt 1 zusätzliches Teststück.
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-md border p-3 space-y-2">
+        <div className="text-sm font-medium">Freie Toleranzen</div>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={stored?.tolerance_free === true}
+            onCheckedChange={(v) => setStoredKey("tolerance_free", v === true)}
+          />
+          <span>Freie Toleranzen statt Variante 1/2 verwenden</span>
+        </label>
+        {stored?.tolerance_free === true && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            {([
+              ["tol_length_plus", "Länge + [mm]"],
+              ["tol_length_minus", "Länge − [mm]"],
+              ["tol_diameter_plus", "Durchmesser + [mm]"],
+              ["tol_diameter_minus", "Durchmesser − [mm]"],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="space-y-1">
+                <span className="text-muted-foreground">{label}</span>
+                <Input
+                  inputMode="decimal"
+                  placeholder="z. B. 1,5"
+                  value={String(stored?.[key] ?? "")}
+                  onChange={(e) => setStoredKey(key, e.target.value)}
+                />
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="text-xs text-muted-foreground">
+          Aktuell: L {String(derived.values.length_tolerance ?? "–")} · D {String(derived.values.diameter_tolerance ?? "–")}
+        </div>
+      </div>
+
+      <div className="rounded-md border p-3 space-y-2">
+        <div className="text-sm font-medium">Elementnummern</div>
+        {derivedRows.length === 0 ? (
+          <div className="text-xs text-muted-foreground">Noch keine m³-Zeilen.</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {derivedRows.map((r, i) => {
+              const marked = testIndex === i;
+              return (
+                <div key={i} className="flex items-center gap-2 rounded border px-2 py-1 text-sm">
+                  <span className="text-xs text-muted-foreground">Zeile {i + 1}</span>
+                  <span
+                    className={
+                      marked
+                        ? "tabular-nums font-semibold rounded px-1 bg-[hsl(var(--test-mark))] text-[hsl(var(--test-mark-foreground))]"
+                        : "tabular-nums"
+                    }
+                  >
+                    {formatElementNumber(r.element_count)}
+                  </span>
+                  {mayMarkTest && (
+                    <label className="flex items-center gap-1 text-xs">
+                      <Checkbox
+                        checked={marked}
+                        onCheckedChange={(v) => setStoredKey(TEST_MARKING_KEY, v === true ? i : null)}
+                      />
+                      Gesamte Charge mit TEST stempeln
+                    </label>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {testIndex != null && testIndex < derivedRows.length && (
+          <div className="rounded-md border-2 border-destructive p-2 text-sm font-medium text-destructive">
+            Bitte die komplette Charge, in welcher die gekennzeichnete{" "}
+            <span className="rounded px-1 bg-[hsl(var(--test-mark))] text-[hsl(var(--test-mark-foreground))]">Elementnummer</span>{" "}
+            enthalten ist, mit einem zusätzlichen Stempel ‚TEST …‘ versehen!
+          </div>
+        )}
+        {!mayMarkTest && (
+          <div className="text-xs text-muted-foreground">
+            TEST-Kennzeichnung nur für Administrator, Messdienstleister, Teamleiter und PMO.
+          </div>
+        )}
       </div>
 
       {!!typedFields.length && (
