@@ -65,7 +65,9 @@ export function useAddOrderMeasurement() {
   return useMutation({
     mutationFn: (m: { order_id: string; service_id: string; sample_id?: string | null; planned_hours?: number; due_date?: string; source_package_id?: string | null; source_package_name_snapshot?: string | null; origin?: "booked" | "workflow"; source_measurement_id?: string | null; source_step_key?: string | null }) =>
       api.measurements.add(m),
-    onSuccess: () => {
+    onSuccess: async (_d, m) => {
+      // Nachträglich gebuchte Leistung: Regel „Mundstück 293/1“ anwenden.
+      try { await api.mundstueck293.syncOrder(m.order_id); } catch (err) { console.warn("Mundstück 293/1", err); }
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order"] });
     },

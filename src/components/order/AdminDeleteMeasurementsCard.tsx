@@ -33,6 +33,8 @@ export default function AdminDeleteMeasurementsCard({ orderId, measurements }: {
     setBusy(true);
     try {
       await api.measurements.deleteWithReason(target.id, reason.trim());
+      // Leistung entfernt: Regel „Mundstück 293/1“ anwenden.
+      try { await api.mundstueck293.syncOrder(orderId); } catch (err) { console.warn("Mundstück 293/1", err); }
       toast.success(`Dienstleistung ${target.measurement_number ?? ""} gelöscht`);
       close();
       await Promise.all([

@@ -855,6 +855,9 @@ export default function CreateOrderPage() {
       // Stand abgleichen (idempotent, erzeugt keine Duplikate).
       try { await api.ruleTriggers.syncOrder(order.id); }
       catch (err) { console.warn("Regel-Auslöser konnten nicht abgeglichen werden", err); }
+      // Regel „Mundstück 293/1“ (Raumgewicht / Wasseraufnahme / Schwindung).
+      try { await api.mundstueck293.syncOrder(order.id); }
+      catch (err) { console.warn("Mundstück 293/1 konnte nicht abgeglichen werden", err); }
 
       // Auftrag wurde eingereicht → Entwurf wird entfernt (kein Datenverlust,
       // die Daten leben ab jetzt im produktiven Auftrag).
