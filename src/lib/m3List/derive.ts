@@ -103,6 +103,7 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
   values.lab_tests_auto = scope.text;
   values[M3_LAB_SELECTION_KEY] = manual;
   values.lab_tests = (manual ?? scope.tests).join(", ");
+  values.bench_extra_pieces = benchExtraTestPieces(manual ?? scope.tests);
   if (scope.soxDroppedByVolume) {
     notices.push("SOx ist gefordert, entfällt aber laut Fachlogik, weil die Liefermenge über 20 m³ liegt. Bitte bestätigen.");
   }
@@ -116,6 +117,8 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
     values.laborkat_length_mm = null;
     values.required_length_mm = null;
     values.labor_kat_count = null;
+    values.regular_element_total = null;
+    values.total_element_count = null;
     values[M3_ROWS_KEY] = rows.map((r) => ({ ...r, element_count: null, row_labor_kat: null }));
     if (lengthMm == null) notices.push("In der hinterlegten Revision ist keine Länge vorhanden – die Berechnungen sind nicht möglich.");
     return { values, notices, cellCount };
@@ -132,11 +135,18 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
   values.required_length_mm = kat?.requiredLengthMm ?? null;
   values.labor_kat_count = kat?.count ?? null;
 
-  values[M3_ROWS_KEY] = rows.map((r) => ({
+  const derivedRows = rows.map((r) => ({
     ...r,
     element_count: elementCountForRow(num(r.volume_m3) ?? 0, lengthMm, constants),
     row_labor_kat: kat?.count ?? null,
   }));
+  values[M3_ROWS_KEY] = derivedRows;
+
+  // Gesamtmenge = reguläre Elementanzahl (Summe der Zeilen, unverändert berechnet)
+  // + Bench-Zusatz (0/1). Stets neu abgeleitet und nie gespeichert → keine Doppeladdition.
+  const regular = derivedRows.reduce((s, r) => s + (typeof r.element_count === "number" ? r.element_count : 0), 0);
+  values.regular_element_total = derivedRows.length ? regular : null;
+  values.total_element_count = derivedRows.length ? regular + (values.bench_extra_pieces as number) : null;
 
   return { values, notices, cellCount };
 }
