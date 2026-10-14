@@ -36,6 +36,10 @@
     --warning: 38 85% 50%;
     --warning-foreground: 0 0% 100%;
 
+    /* TEST-Kennzeichnung m³-Liste: gelber Hintergrund, rote Schrift (in beiden Themes gleich) */
+    --test-mark: 54 97% 70%;
+    --test-mark-foreground: 0 74% 42%;
+
     --border: 200 10% 86%;
     --input: 200 10% 86%;
     --ring: 200 60% 32%;
