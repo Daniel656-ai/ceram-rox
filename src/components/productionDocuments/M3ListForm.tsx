@@ -24,15 +24,18 @@ import { useProductionReleaseRevision } from "@/hooks/useProductionDocuments";
 import { ensureM3Template } from "@/lib/m3List/template";
 import { ensureM3Constants, readM3Constants } from "@/lib/m3List/constants";
 import { deriveM3Values, stripDerivedValues } from "@/lib/m3List/derive";
-import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
+import { BENCH_TEMPLATES, formatElementNumber } from "@/lib/m3List/calculations";
 import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
-import { SAMPLING_CODE_MAP, normalizeSamplingKey } from "@/lib/samplingCodeMap";
+import { M3_ROWS_KEY } from "@/lib/m3List/template";
+import { normalizeSamplingKey, selectableSamplingCodes, toggleSamplingCode, benchExtraTestPieces } from "@/lib/samplingCodeMap";
+import { canUseTestMarking, readTestMarkingIndex, TEST_MARKING_KEY } from "@/lib/m3List/testMarking";
+import { Input } from "@/components/ui/input";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
   const qc = useQueryClient();
-  const { role, user } = useAuth();
+  const { role, user, customRoleNames } = useAuth();
   const [stored, setStored] = useState<Record<string, unknown> | null>(null);
   const [saving, setSaving] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
@@ -117,18 +120,12 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   );
 
   const toggleCode = (code: string, checked: boolean) => {
-    const next = checked
-      ? [...selectedCodes, code]
-      : selectedCodes.filter((c) => c.toLowerCase() !== code.toLowerCase());
-    // Reihenfolge der zentralen Zuordnung beibehalten.
-    const ordered = SAMPLING_CODE_MAP.map((m) => m.code).filter((c) =>
-      next.some((n) => n.toLowerCase() === c.toLowerCase())
-    );
-    const unknown = next.filter(
-      (n) => !SAMPLING_CODE_MAP.some((m) => m.code.toLowerCase() === n.toLowerCase())
-    );
-    setStored((prev) => ({ ...(prev ?? {}), [M3_LAB_SELECTION_KEY]: [...ordered, ...unknown] }));
+    setStored((prev) => ({ ...(prev ?? {}), [M3_LAB_SELECTION_KEY]: toggleSamplingCode(selectedCodes, code, checked) }));
   };
+  const setStoredKey = (key: string, v: unknown) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }));
+  const mayMarkTest = canUseTestMarking(customRoleNames ?? []);
+  const testIndex = readTestMarkingIndex(stored ?? {});
+  const derivedRows = (Array.isArray(derived.values[M3_ROWS_KEY]) ? derived.values[M3_ROWS_KEY] : []) as Record<string, unknown>[];
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);
