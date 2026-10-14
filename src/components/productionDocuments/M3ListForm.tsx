@@ -10,7 +10,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertCircle, AlertTriangle, Save } from "lucide-react";
+import { AlertCircle, AlertTriangle, FileDown, Save } from "lucide-react";
+import { buildM3PdfModel, renderM3Pdf } from "@/lib/m3List/pdfExport";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -446,7 +447,16 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         <div>{BENCH_TEMPLATES.withSox}</div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => {
+            const doc = renderM3Pdf(buildM3PdfModel(derived.values, { notices: derived.notices, testRowIndex: testIndex }));
+            doc.save(`m3-Liste_${String(derived.values.release_label ?? "export").replace(/[^\w.-]+/g, "_")}.pdf`);
+          }}
+        >
+          <FileDown className="h-4 w-4 mr-2" /> PDF (A4)
+        </Button>
         <Button onClick={save} disabled={saving}>
           <Save className="h-4 w-4 mr-2" /> m³-Liste speichern
         </Button>
