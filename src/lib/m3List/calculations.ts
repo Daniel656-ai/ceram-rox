@@ -82,19 +82,42 @@ export interface LaborKatResult {
   count: number;
 }
 
-/** Excel N8–N15: Labor-KAT-Berechnung. */
+/**
+ * Fachlich freigegebene Sonderregeln auf Basis der Labor-KAT-Länge (L + Zuschlag).
+ * Exakte Ergebnisse (keine Mindestwerte). Ab 600 mm: null → bisherige Formel.
+ */
+export function laborKatSpecialCount(laborKatLengthMm: number): number | null {
+  if (!Number.isFinite(laborKatLengthMm)) return null;
+  if (laborKatLengthMm < 100) return 4;
+  if (laborKatLengthMm < 300) return 3;
+  if (laborKatLengthMm < 600) return 2;
+  return null;
+}
+
+/** Excel N8–N15: Labor-KAT-Berechnung (mit Sonderregeln unter 600 mm Labor-KAT-Länge). */
 export function laborKat(lengthMm: number, c: M3Constants): LaborKatResult | null {
   if (!Number.isFinite(lengthMm) || lengthMm <= 0) return null;
   const rsmMin = lengthMm <= c.rsmMaxMm ? lengthMm : c.rsmMaxMm;
   const required = rsmMin + c.pressureTestMm + c.pressureTestMm;
+  const laborKatLengthMm = lengthMm + c.laborKatAddMm;
   return {
-    laborKatLengthMm: lengthMm + c.laborKatAddMm,
+    laborKatLengthMm,
     rsmMinMm: rsmMin,
     rsmMaxMm: c.rsmMaxMm,
     pressureTestMm: c.pressureTestMm,
     requiredLengthMm: required,
-    count: excelRoundUp(required / lengthMm),
+    count: laborKatSpecialCount(laborKatLengthMm) ?? excelRoundUp(required / lengthMm),
   };
+}
+
+/** Reine Anzeige: Elementnummer fünfstellig mit führenden Nullen (350 → „00350“). */
+export function formatElementNumber(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  const n = typeof value === "number" ? value : Number(String(value).replace(",", "."));
+  if (!Number.isFinite(n)) return String(value);
+  const neg = n < 0;
+  const s = String(Math.abs(Math.trunc(n))).padStart(5, "0");
+  return neg ? `-${s}` : s;
 }
 
 /* -------------------------------------------------------------
@@ -192,6 +215,26 @@ export const diameterTolerance = (variant: number) =>
 
 export const innerWallTolerance = (cells: number | null) =>
   cells != null && cells > 29 ? "(+0/-0,05) [mm]" : "(+0/-0,1) [mm]";
+
+/** Toleranzeingabe parsen (Dezimalkomma erlaubt, Vorzeichen optional). */
+export function parseToleranceInput(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const s = String(v).trim().replace(/\s+/g, "").replace("−", "-").replace(/mm$/i, "").replace(",", ".");
+  if (!s || !/^[+-]?\d*\.?\d+$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+const fmtTol = (n: number) => String(Math.abs(n)).replace(".", ",");
+
+/** Freie, auch asymmetrische Toleranz, z. B. (+1/-3) [mm]. */
+export function freeTolerance(plus: unknown, minus: unknown): string | null {
+  const p = parseToleranceInput(plus);
+  const m = parseToleranceInput(minus);
+  if (p == null || m == null) return null;
+  return `(+${fmtTol(p)}/-${fmtTol(m)}) [mm]`;
+}
 
 /* -------------------------------------------------------------
  * Laborprüfungen (Excel A10 / O21 / O22 / O23)
