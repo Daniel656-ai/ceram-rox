@@ -173,6 +173,7 @@ import { serviceFormLinks } from "./serviceFormLinks";
 import { processServiceLinks } from "./processServiceLinks";
 import { serviceDependencies } from "./serviceDependencies";
 import { ruleTriggers } from "./ruleTriggers";
+import { mundstueck293 } from "./mundstueck293";
 import { workflowProcessLinks } from "./workflowProcessLinks";
 import { orderWorkflow } from "./orderWorkflow";
 import { orderInstances } from "./orderInstances";
@@ -357,6 +358,7 @@ export const api = {
   processServiceLinks,
   serviceDependencies,
   ruleTriggers,
+  mundstueck293,
   workflowProcessLinks,
   orderWorkflow,
 

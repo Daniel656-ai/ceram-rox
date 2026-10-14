@@ -464,6 +464,16 @@ function TaskExecutionPageInner() {
       } catch (err) {
         console.warn("Regel-Auslöser konnten nicht abgeglichen werden", err);
       }
+      // Regel „Mundstück 293/1“: geänderte Werte dieser Messung sofort übernehmen,
+      // damit ein späteres Speichern sie nicht überschreibt.
+      try {
+        const mres = await api.mundstueck293.syncOrder(orderIdForRules);
+        const own = mres.changes.filter((c) => c.measurementId === (measurement as any)?.id);
+        if (own.length) setValues((prev) => ({ ...prev, ...Object.fromEntries(own.map((c) => [c.key, c.value])) }));
+        if (mres.orphaned > 0) toast.warning("Mundstück 293/1: automatischer Eintrag verwaist – bitte prüfen");
+      } catch (err) {
+        console.warn("Mundstück 293/1 konnte nicht abgeglichen werden", err);
+      }
     }
   };
 
