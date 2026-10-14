@@ -10319,6 +10319,10 @@ export type Database = {
         Returns: string
       }
       _order_lock_bypass: { Args: never; Returns: boolean }
+      _order_measurement_delete_facts: {
+        Args: { _measurement_id: string }
+        Returns: Json
+      }
       activate_mixture_recipe_version: {
         Args: { _version_id: string }
         Returns: undefined
@@ -10500,6 +10504,10 @@ export type Database = {
           _name?: string
           _parent_sample_id: string
         }
+        Returns: string
+      }
+      delete_order_measurement: {
+        Args: { _measurement_id: string; _reason: string }
         Returns: string
       }
       delete_service_safe: { Args: { _service_id: string }; Returns: undefined }
@@ -10916,6 +10924,10 @@ export type Database = {
       }
       pp_seed_blocks: { Args: { _order_id: string }; Returns: undefined }
       pp_start_block: { Args: { _block_id: string }; Returns: undefined }
+      preview_delete_order_measurement: {
+        Args: { _measurement_id: string }
+        Returns: Json
+      }
       preview_renumber_user_orders: {
         Args: { _start_value: number; _user_id: string; _year: number }
         Returns: Json
