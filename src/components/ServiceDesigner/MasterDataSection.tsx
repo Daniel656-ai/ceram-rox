@@ -170,8 +170,9 @@ export default function MasterDataSection({
   });
 
   const { data: items = [] } = useQuery({
-    queryKey: ["global-list-items", selectedId],
-    queryFn: () => api.globalListItems.list(selectedId!),
+    // Eigener Schlüssel: Verwaltung lädt auch inaktive Einträge (Reaktivierung).
+    queryKey: ["global-list-items", selectedId, "all"],
+    queryFn: () => api.globalListItems.list(selectedId!, { includeInactive: true }),
     enabled: !!selectedId,
   });
 

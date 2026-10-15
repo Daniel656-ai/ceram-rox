@@ -140,13 +140,15 @@ export const globalLists = {
 };
 
 export const globalListItems = {
-  list: (listId: string, opts?: { includeArchived?: boolean }) => {
+  /** Standard: nur aktive Einträge (Auswahllisten). Verwaltung: `includeInactive: true`. */
+  list: (listId: string, opts?: { includeArchived?: boolean; includeInactive?: boolean }) => {
     let q = table("global_list_items")
       .select("*")
       .eq("list_id", listId)
       .order("sort_order", { ascending: true })
       .order("label", { ascending: true });
     if (!opts?.includeArchived) q = q.is("archived_at", null);
+    if (!opts?.includeInactive) q = q.eq("is_active", true);
     return unwrap(q) as unknown as Promise<GlobalListItem[]>;
   },
   create: (input: Partial<GlobalListItem> & { list_id: string; item_value: string; label: string }) =>
