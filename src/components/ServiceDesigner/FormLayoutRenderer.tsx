@@ -402,12 +402,16 @@ function FieldControl({ field: rawField, readonly }: { field: FormField; readonl
     staleTime: 5 * 60 * 1000,
   });
   const field = useMemo(() => {
-    if (!listId || !listItems?.length) return rawField;
-    return {
-      ...rawField,
-      select_options: listItems.map((i) => ({ label: i.label, value: i.item_value })),
-    } as FormField;
-  }, [rawField, listId, listItems]);
+    if (!listId || !listItems) return rawField;
+    // Einzelauswahl: gespeicherter Wert eines inzwischen inaktiven Eintrags
+    // bleibt als nicht auswählbare Option „(inaktiv)“ sichtbar.
+    const options =
+      rawField.field_type === "select"
+        ? withHistoricalOption(listItems, value)
+        : listItems.map((i) => ({ label: i.label, value: i.item_value }));
+    if (!options.length) return rawField;
+    return { ...rawField, select_options: options } as FormField;
+  }, [rawField, listId, listItems, value]);
 
 
   if ((field.metadata as any)?.global_field_source === "constant") {
@@ -463,7 +467,8 @@ function FieldControl({ field: rawField, readonly }: { field: FormField; readonl
             {(field.select_options ?? []).map((o, i) => {
               const v = typeof o === "string" ? o : o.value;
               const l = typeof o === "string" ? o : o.label;
-              return <SelectItem key={i} value={v || String(i)}>{l}</SelectItem>;
+              const inactive = typeof o !== "string" && (o as any).inactive === true;
+              return <SelectItem key={i} value={v || String(i)} disabled={inactive}>{l}</SelectItem>;
             })}
           </SelectContent>
         </Select>
