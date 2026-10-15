@@ -38,7 +38,9 @@ Deno.serve(async (req) => {
     const issues: Array<{ table: string; issue: string; severity: 'warning' | 'error'; count: number }> = [];
 
     // 1. Orders referencing non-existent projects
-    const { data: orphanedOrders } = await supabase.rpc('check_orphaned_orders').catch(() => ({ data: null }));
+    const { data: orphanedOrders } = await supabase
+      .rpc('check_orphaned_orders')
+      .then((res) => res, () => ({ data: null }));
     // Fallback: manual check
     const { data: orders } = await supabase.from('measurement_orders').select('id, project_id');
     const { data: projects } = await supabase.from('projects').select('id');
@@ -129,7 +131,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
