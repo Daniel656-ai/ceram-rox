@@ -15,6 +15,7 @@
 import { resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { elementKey } from "@/lib/elementKeys";
+import { reorderNoxItems, noxDisplayLabels } from "@/lib/noxColumnOrder";
 
 /**
  * Kanonischer Zuordnungsschlüssel eines Ergebnisparameters.
@@ -49,6 +50,8 @@ export interface ResultParamColumn {
   unit: string | null;
   /** Optionale fachliche Gruppierung (z. B. „Hauptoxide"). */
   group: string | null;
+  /** Nur sichtbare Überschrift (z. B. ohne redundante Indexnummer); Zuordnung bleibt `key`. */
+  displayLabel?: string;
 }
 
 export interface ServiceResultSchema {
@@ -137,8 +140,18 @@ export function buildServiceSchemas(
 
   }
 
-  // Auch Dienstleistungen ohne Datensätze behalten ihre definierte Struktur,
-  // sobald mindestens ein Datensatz existiert – hier nicht nötig, aber die
+  // NOx-Kenngrößen je Dienstleistung temperaturabhängig ordnen (K-Wert vor
+  // η-NOx je Temperatur); andere Spalten behalten ihre Position. Indexnummern
+  // entfallen nur sichtbar und nur bei eindeutiger Temperatur.
+  for (const s of schemas.values()) {
+    s.columns = reorderNoxItems(s.columns, (c) => c.label);
+    const display = noxDisplayLabels(s.columns.map((c) => c.label));
+    for (const c of s.columns) {
+      const d = display.get(c.label);
+      if (d) c.displayLabel = d;
+    }
+  }
+
   // Reihenfolge der Dienstleistungen bleibt stabil (alphabetisch).
   return [...schemas.values()].sort((a, b) => a.serviceName.localeCompare(b.serviceName, "de"));
 }
@@ -185,6 +198,6 @@ export function exportCell(record: ResultRecord, key: string): number | string {
  * stehen – niemals leere Klammern.
  */
 export function columnHeader(col: ResultParamColumn): string {
-  return formatResultLabel(col.label, col.unit);
+  return formatResultLabel(col.displayLabel ?? col.label, col.unit);
 }
 
