@@ -1,3 +1,4 @@
+import { withHistoricalOption } from "@/lib/masterData/inactiveOptions";
 import { fieldElementKey, explicitFieldElementKey, writeFieldElementKey, elementKey, formatElementKey } from "@/lib/elementKeys";
 import { useMemo, useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
 import RichText from "@/components/forms/RichText";
