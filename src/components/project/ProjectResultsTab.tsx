@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2 } from "lucide-react";
 import { formatResultLabel } from "@/lib/resultLabels";
+import { reorderNoxItems } from "@/lib/noxColumnOrder";
 
 
 export interface ProjectResultRow {
@@ -74,7 +75,7 @@ export function ProjectResultsTab({ rows }: Props) {
     samples: Array.from(new Set(rows.map((r) => r.sampleNumber))).sort(),
     orders: Array.from(new Set(rows.map((r) => r.orderNumber))).sort(),
     services: Array.from(new Set(rows.map((r) => r.serviceName))).sort(),
-    params: Array.from(new Set(rows.map((r) => r.parameter))).sort(),
+    params: reorderNoxItems(Array.from(new Set(rows.map((r) => r.parameter))).sort(), (p) => p),
   }), [rows]);
 
   const filtered = rows.filter((r) => {
