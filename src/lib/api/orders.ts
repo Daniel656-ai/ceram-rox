@@ -3,7 +3,7 @@ import { unwrap, run } from "./_helpers";
 import type { OrderType, OrderPriority } from "@/lib/types";
 
 const ORDER_LIST_SELECT =
-  "*, projects(project_number, project_name), order_measurements(assigned_to, measurement_services(category))";
+  "*, projects(project_number, project_name), current_sample:samples!measurement_orders_sample_id_fkey(id, sample_name, sample_number), order_samples(sample_id, samples(id, sample_name, sample_number)), order_measurements(assigned_to, sample_id, current_sample:samples!order_measurements_sample_id_fkey(id, sample_name, sample_number), measurement_services(category)), linked_samples:samples!samples_order_id_fkey(id, sample_name, sample_number, order_id), produced_samples:samples!samples_pilot_plant_order_id_fkey(id, sample_name, sample_number, pilot_plant_order_id)";
 
 const ORDER_DETAIL_SELECT = `*, projects(project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name, description, is_hazardous, location_id, storage_locations(hall, room, shelf, position)), order_samples(id, sample_id, created_at, samples(id, sample_number, sample_name, description, is_hazardous)), order_measurements(*, samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name), measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_parameters(*), measurement_results(*), work_logs(*), documents(*))`;
 
