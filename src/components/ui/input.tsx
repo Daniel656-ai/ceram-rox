@@ -2,8 +2,17 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Scrollschutz für Zahlenfelder: Ist das Feld fokussiert, würde der Browser
+ * den Wert per Mausrad verändern. Wir lösen stattdessen den Fokus – das
+ * Wheel-Ereignis wird NICHT abgebrochen, die Seite/der Container scrollt normal.
+ */
+export function protectNumberWheel(el: HTMLInputElement | null | undefined) {
+  if (el && el.type === "number" && el.ownerDocument?.activeElement === el) el.blur();
+}
+
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onWheel, ...props }, ref) => {
     return (
       <input
         type={type}
@@ -12,6 +21,10 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className,
         )}
         ref={ref}
+        onWheel={(e) => {
+          if (type === "number") protectNumberWheel(e.currentTarget);
+          onWheel?.(e);
+        }}
         {...props}
       />
     );
