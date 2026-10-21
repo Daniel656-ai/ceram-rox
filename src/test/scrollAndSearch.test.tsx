@@ -3,7 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { filterOptions, matchesPrefix, shouldShowSearch } from "@/lib/ui/optionFilter";
-import css from "@/index.css?raw";
+import { readFileSync } from "node:fs";
+const css = readFileSync("src/index.css", "utf8");
+(globalThis as any).ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
+Element.prototype.scrollIntoView ??= function () {};
 
 const labels = ["11.4", "11.5", "12.0", "007", "008", "070", "3001", "3002", "4300", "Abc", "abd"];
 const opts = labels.map((l) => ({ value: `id-${l}`, label: l }));
