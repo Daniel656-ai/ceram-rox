@@ -1,6 +1,7 @@
 import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
 import { resolveOrderKind, matchesOrderKindFilter, type OrderKindFilter } from "@/lib/orders/orderKind";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
+import { orderSampleLinks } from "@/lib/orders/orderSamples";
 import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
@@ -30,7 +31,7 @@ import MeasurementRunPicker from "@/components/measurementRun/MeasurementRunPick
 
 export default function OrdersPage() {
   const { user, role, hasRole } = useAuth();
-  const { t, i18n } = useTranslation(["orders", "common", "measurements"]);
+  const { t, i18n } = useTranslation(["orders", "common", "measurements", "samples"]);
   const { data: orders = [], isLoading } = useOrders();
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
   const { data: isAnyProjectLead = false } = useIsAnyProjectLead();
@@ -238,6 +239,7 @@ export default function OrdersPage() {
             <TableHeader>
               <TableRow>
                 <SortableHead sortKey="order_number">{t("orders:order_number")}</SortableHead>
+                <TableHead>{t("samples:sample_name")}</TableHead>
                 <SortableHead sortKey="project_number">{t("orders:project_number")}</SortableHead>
                 <SortableHead sortKey="project_name">{t("orders:project_name")}</SortableHead>
                 <SortableHead sortKey="order_kind">{t("orders:kind_label")}</SortableHead>
@@ -252,9 +254,9 @@ export default function OrdersPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={canShowActions ? 11 : 10} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={canShowActions ? 11 : 10} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
               ) : (
                 filtered.map((o: any) => (
                   <TableRow key={o.id}>
@@ -268,6 +270,17 @@ export default function OrdersPage() {
                       {orderIdentity(o).missingExperimentNumber && (
                         <div className="text-xs text-muted-foreground">{t("orders:without_experiment_number")}</div>
                       )}
+                    </TableCell>
+                    <TableCell className="min-w-[140px] max-w-[260px] whitespace-normal">
+                      {orderSampleLinks(o).length ? (
+                        <div className="flex flex-col gap-1">
+                          {orderSampleLinks(o).map(sample => (
+                            <Link key={sample.id} to={sample.href} className="text-primary hover:underline break-words">
+                              {sample.label}
+                            </Link>
+                          ))}
+                        </div>
+                      ) : "–"}
                     </TableCell>
                     <TableCell>
                       {o.projects?.project_number ? (
