@@ -96,7 +96,9 @@ export const measurements = {
     const rows = await unwrap(
       dbClient.from("project_members").select("role").eq("project_id", projectId).eq("user_id", userId)
     );
-    return ((rows || [])[0] as any)?.role ?? null;
+    // Doppelrolle möglich: höchstwertige Rolle (owner > leader > member)
+    const roles = ((rows || []) as any[]).map((r) => r.role);
+    return ["owner", "leader", "member"].find((r) => roles.includes(r)) ?? null;
   },
 
   /**
