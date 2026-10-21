@@ -1,8 +1,19 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 import { buildLinkedFormValues } from "@/lib/linkedFormValues";
+import type { PrecisionDefinitions } from "@/lib/resultDisplayPrecision";
 
 export const measurementResults = {
+  /** Read-only display metadata. Missing access/schema retains the old formatting. */
+  listDisplayPrecisionDefinitions: async (serviceIds: string[], formIds: string[]): Promise<PrecisionDefinitions> => {
+    const [fields, calculations, serviceFields] = await Promise.all([
+      formIds.length ? unwrap(dbClient.from("form_fields").select("id,form_id,field_key,decimal_places,parent_field_id,field_type,metadata").in("form_id", formIds)).catch(() => []) : [],
+      formIds.length ? unwrap(dbClient.from("form_calculations").select("form_id,calc_key,decimals").in("form_id", formIds)).catch(() => []) : [],
+      serviceIds.length ? unwrap(dbClient.from("service_data_fields").select("service_id,field_key,decimal_places").in("service_id", serviceIds)).catch(() => []) : [],
+    ]);
+    return { fields, calculations, serviceFields } as PrecisionDefinitions;
+  },
+
   list: (measurementId: string) =>
     unwrap(
       dbClient

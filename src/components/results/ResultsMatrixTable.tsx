@@ -5,7 +5,9 @@ import { toUnicode } from "@/lib/richText";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
-import { columnHeader, resultCell, type ResultParamColumn } from "@/lib/resultSchema";
+import { columnHeader, resultCell, resultForColumn, type ResultParamColumn } from "@/lib/resultSchema";
+import { useResultDisplayPrecision } from "@/hooks/useResultDisplayPrecision";
+import { formatResultDisplayValue, resolveResultPrecision } from "@/lib/resultDisplayPrecision";
 
 /**
  * Kompakter, fixierter Identifikationsbereich. Breiten orientieren sich am
@@ -24,12 +26,6 @@ const OFFSETS = IDENT_COLUMNS.reduce<number[]>((acc, c, i) => {
   return acc;
 }, []);
 
-function fmtValue(v: number | null, text: string | null, present: boolean) {
-  if (!present) return "";
-  if (v !== null) return new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 }).format(v);
-  return text ?? "";
-}
-
 /**
  * Ergebnismatrix: eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte.
  * Die Spaltenstruktur stammt aus der stabilen Ergebnisdefinition und bleibt
@@ -44,6 +40,7 @@ export default function ResultsMatrixTable({
   columns: ResultParamColumn[];
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const precisionDefinitions = useResultDisplayPrecision(records);
   const identWidth = useMemo(
     () => IDENT_COLUMNS.reduce((s, c) => s + c.width, 0),
     []
@@ -142,9 +139,11 @@ export default function ResultsMatrixTable({
                 </td>
                 {columns.map((col) => {
                   const cell = resultCell(r, col.key);
+                  const result = resultForColumn(r, col.key);
+                  const precision = result ? resolveResultPrecision(result, r.serviceId, precisionDefinitions) : undefined;
                   return (
                     <td key={col.key} className="px-3 py-1.5 border-b text-right tabular-nums font-mono">
-                      {fmtValue(cell.value, cell.text, cell.present)}
+                      {formatResultDisplayValue(cell.value, cell.text, cell.present, precision)}
                     </td>
                   );
                 })}
