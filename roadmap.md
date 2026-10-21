@@ -1,5 +1,10 @@
 # Roadmap
 
+- [x] Ergebnisdatenbank: sicher zugeordnete Nachkommastellen ausschließlich in der Matrix anzeigen
+- [x] Präzisionstests und bestehende Regressionstests ausführen; Web mit vorhandenen Porenvolumen-Ergebnissen prüfen
+- [ ] Web-Abnahme BET (1 Stelle) und weitere Präzisionen — keine entsprechenden offiziellen Ergebnisse im vorhandenen Datenbestand; keine Testdaten angelegt
+- [ ] Desktop-Präzisionsanzeige prüfen — wartet auf Zugriff/Abnahme in der Firmenumgebung
+
 - [x] Inspect m³ sources: linked release has project_id but no authoritative serial-number field; stop before display changes
 - [ ] Apply display-only change and missing/long-serial tests — blocked until the authoritative serial-number source is identified
 - [ ] Verify Web/Desktop — blocked until the serial-number source is identified and display change is approved by that clarification

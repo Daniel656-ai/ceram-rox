@@ -171,10 +171,7 @@ export interface ResultCellValue {
 
 /** Wert eines Ergebnisparameters – leer bleibt leer, 0 bleibt 0. */
 export function resultCell(record: ResultRecord, key: string): ResultCellValue {
-  const wanted = paramKey(key);
-  const hit =
-    record.outputResults.find((o) => resultLabel(o) === key) ??
-    record.outputResults.find((o) => paramKey(resultLabel(o)) === wanted);
+  const hit = resultForColumn(record, key);
 
   if (!hit) return { present: false, value: null, text: null };
   if (hit.value === null || hit.value === undefined) {
@@ -182,6 +179,15 @@ export function resultCell(record: ResultRecord, key: string): ResultCellValue {
     return { present: text !== "", value: null, text: text || null };
   }
   return { present: true, value: hit.value, text: null };
+}
+
+/** Same exact result lookup for cell content and display-only metadata. */
+export function resultForColumn(record: ResultRecord, key: string) {
+  const wanted = paramKey(key);
+  return (
+    record.outputResults.find((o) => resultLabel(o) === key) ??
+    record.outputResults.find((o) => paramKey(resultLabel(o)) === wanted)
+  );
 }
 
 /** Exportwert: leer, wenn kein Ergebnis vorliegt; 0, wenn 0 gemessen wurde. */
