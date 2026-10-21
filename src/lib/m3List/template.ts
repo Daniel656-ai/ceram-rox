@@ -33,7 +33,7 @@ export const M3_HEADER_FIELDS: FieldSpec[] = [
   { field_key: "customer_name", display_name: "Kunde", field_type: "text", role: "grey", category: "Kopfdaten", release_field: "customer_name" },
   { field_key: "end_customer", display_name: "Endkunde", field_type: "text", role: "grey", category: "Kopfdaten", release_field: "end_customer" },
   { field_key: "article_number", display_name: "Artikelnummer", field_type: "text", role: "grey", category: "Kopfdaten", release_field: "article_number" },
-  { field_key: "release_label", display_name: "Fertigungsfreigabe / Revision", field_type: "text", role: "grey", category: "Kopfdaten" },
+  { field_key: "release_label", display_name: "Produktionsfreigabe / Revision", field_type: "text", role: "grey", category: "Kopfdaten" },
   { field_key: "v2o5_percent", display_name: "V2O5", field_type: "decimal", unit: "%", role: "grey", category: "Kopfdaten", release_field: "v2o5_percent" },
   { field_key: "length_mm", display_name: "Länge", field_type: "number", unit: "mm", role: "grey", category: "Kopfdaten", release_field: "length_mm" },
   { field_key: "piece_count", display_name: "Stückzahl", field_type: "number", unit: "Stk", role: "grey", category: "Kopfdaten", release_field: "piece_count" },

@@ -118,7 +118,7 @@ export function decideMatch(
         revisionNumber: tagged,
         warnings,
         blocker:
-          `Revision erkannt (Rev. ${tagged}), aber die zugehörige ursprüngliche Fertigungsfreigabe ` +
+          `Revision erkannt (Rev. ${tagged}), aber die zugehörige ursprüngliche Produktionsfreigabe ` +
           `${identity.releaseNumber ?? ""} wurde nicht gefunden. Bitte Zuordnung prüfen. Fehlercode: REVISION_UNMATCHED.`,
       };
     }
@@ -150,7 +150,7 @@ export function decideMatch(
   // Gleiche Kennung, aber keine Revisionskennung im Dateinamen:
   // gleicher Auftrag → Revision des bestehenden Stands, mit Hinweis.
   warnings.push(
-    `Für ${existing.release_number ?? identity.releaseNumber ?? "diese Kennung"} existiert bereits eine Fertigungsfreigabe (Rev. ${currentRev}), ` +
+    `Für ${existing.release_number ?? identity.releaseNumber ?? "diese Kennung"} existiert bereits eine Produktionsfreigabe (Rev. ${currentRev}), ` +
       `der Dateiname trägt jedoch keine Revisionskennung (_RevX). Die Datei wird als Rev. ${(currentRev ?? 0) + 1} zugeordnet – bitte prüfen.`,
   );
   return {

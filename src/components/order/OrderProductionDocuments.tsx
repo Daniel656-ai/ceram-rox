@@ -136,7 +136,7 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell className="font-medium">Fertigungsfreigabe</TableCell>
+              <TableCell className="font-medium">Produktionsfreigabe</TableCell>
               <TableCell>
                 {currentRelease ? (
                   <Badge variant="outline">
@@ -183,7 +183,7 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
                         title={
                           currentRelease
                             ? undefined
-                            : "Nur möglich, wenn dieser Auftrag der Beprobungsauftrag einer Fertigungsfreigabe ist."
+                            : "Nur möglich, wenn dieser Auftrag der Beprobungsauftrag einer Produktionsfreigabe ist."
                         }
                         onClick={() => onRequest(kind)}
                       >
@@ -206,8 +206,8 @@ export default function OrderProductionDocuments({ order }: { order: any }) {
 
         {!currentRelease && (
           <p className="text-xs text-muted-foreground">
-            Diesem Auftrag ist keine Fertigungsfreigabe zugeordnet. Die Zuordnung entsteht
-            ausschließlich über die m³-Liste der Fertigungsfreigabe („Beprobungsauftrag erstellen“);
+            Diesem Auftrag ist keine Produktionsfreigabe zugeordnet. Die Zuordnung entsteht
+            ausschließlich über die m³-Liste der Produktionsfreigabe („Beprobungsauftrag erstellen“);
             eine freie Auswahl ist fachlich nicht zulässig.
           </p>
         )}

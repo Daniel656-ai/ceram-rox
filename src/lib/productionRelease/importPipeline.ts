@@ -189,7 +189,7 @@ export async function analyzeReleaseDocument(args: {
     // Nichts stillschweigend abschneiden: das Dokument ist zu groß.
     const cutoff = blocks.slice(MAX_BLOCKS_LIMIT).flatMap((b) => b.pageNumbers);
     throw new Error(
-      `Fertigungsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze. ` +
+      `Produktionsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze. ` +
         `Datei: ${args.fileName}; Größe: ${(fileBytes / 1024 / 1024).toFixed(2)} MB; Seiten: ${totalPages}; ` +
         `verarbeitbar bis Seite ${blocks[MAX_BLOCKS_LIMIT - 1].pageNumbers.at(-1)}; nicht verarbeitbar: Seiten ${cutoff[0]}–${cutoff.at(-1)}; Fehlercode: DOC_TOO_LARGE.`
     );
@@ -251,7 +251,7 @@ export async function analyzeReleaseDocument(args: {
   if (!results.length) {
     const first = errors[0];
     throw new Error(
-      `Fertigungsfreigabe konnte nicht verarbeitet werden. ${first?.message ?? "Die Auswertung lieferte kein Ergebnis."} ` +
+      `Produktionsfreigabe konnte nicht verarbeitet werden. ${first?.message ?? "Die Auswertung lieferte kein Ergebnis."} ` +
         `Datei: ${args.fileName}; Größe: ${(fileBytes / 1024 / 1024).toFixed(2)} MB; Seiten: ${totalPages}; ` +
         `verarbeitet bis Seite 0; nicht verarbeitet: Seiten 1–${totalPages}; Fehlercode: ${first?.code ?? "NO_RESULT"}.`
     );
@@ -423,7 +423,7 @@ export function assignAnalysisToRelease(
     targetRevisionNumber: target ? decision.revisionNumber : (analysis.identity.revisionNumber ?? 0),
     matchWarnings: target
       ? decision.warnings
-      : [`Die Datei ${analysis.fileName} wurde auf Wunsch des Benutzers als NEUE Fertigungsfreigabe eingeordnet.`],
+      : [`Die Datei ${analysis.fileName} wurde auf Wunsch des Benutzers als NEUE Produktionsfreigabe eingeordnet.`],
     matchBlocker: target ? decision.blocker : null,
     document: { ...analysis.document, release_number: releaseNumber || undefined, is_revision: isRevision },
     changes,
@@ -687,7 +687,7 @@ async function saveReleaseImport(args: {
       api.productionReleases.pendingRevision(rootId));
     if (openRev) {
       throw new Error(
-        `Für diese Fertigungsfreigabe wartet bereits Revision ${Number(openRev.revision_number) || 0} auf Prüfung und Freigabe. ` +
+        `Für diese Produktionsfreigabe wartet bereits Revision ${Number(openRev.revision_number) || 0} auf Prüfung und Freigabe. ` +
           `Bitte diese zuerst freigeben oder löschen, bevor eine weitere Revision importiert wird. Fehlercode: REVISION_PENDING.`
       );
     }
@@ -744,7 +744,7 @@ async function saveReleaseImport(args: {
   // erwartet ISO. Unlesbare Datumsangaben bleiben leer statt den Import zu stoppen.
   const revisionDate = coerceFieldValue("delivery_date", analysis.document.revision_date ?? null) as string | null;
 
-  const row = await step("Fertigungsfreigabe anlegen", () => api.productionReleases.create({
+  const row = await step("Produktionsfreigabe anlegen", () => api.productionReleases.create({
     ...base,
     release_type: releaseType,
     release_number: releaseNumber,

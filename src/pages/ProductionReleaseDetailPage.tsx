@@ -139,7 +139,7 @@ export default function ProductionReleaseDetailPage() {
         values: out,
         testParameters: tests.filter((t) => (t.value_text ?? "").trim() !== ""),
       });
-      toast.success("Fertigungsfreigabe gespeichert.");
+      toast.success("Produktionsfreigabe gespeichert.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Speichern fehlgeschlagen");
     }
@@ -154,7 +154,7 @@ export default function ProductionReleaseDetailPage() {
         toast.success(
           res.promoted
             ? `Revision ${Number(res.revision_number) || 0} abgeschlossen – sie ist jetzt der aktuelle Stand.`
-            : "Fertigungsfreigabe abgeschlossen – Prüfung erledigt."
+            : "Produktionsfreigabe abgeschlossen – Prüfung erledigt."
         );
       } catch (e) {
         toast.error(`Abschluss nicht möglich. ${describeSaveError(e)}`, { duration: 12000 });
@@ -175,7 +175,7 @@ export default function ProductionReleaseDetailPage() {
     setTests((p) => [...p, { section: "nox_bench", parameter_key: "flowrate", value_text: "", unit: "" }]);
 
   if (!perms.canView) {
-    return <div className="p-6 text-muted-foreground">Keine Berechtigung für Fertigungsfreigaben.</div>;
+    return <div className="p-6 text-muted-foreground">Keine Berechtigung für Produktionsfreigaben.</div>;
   }
   if (isLoading || !release) {
     return <div className="p-6 text-muted-foreground">Wird geladen …</div>;
@@ -224,7 +224,7 @@ export default function ProductionReleaseDetailPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {values.project_name || "Fertigungsfreigabe"}
+              {values.project_name || "Produktionsfreigabe"}
             </h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Badge variant="outline" className={RELEASE_STATUS_COLOR[release.status]}>
@@ -587,7 +587,7 @@ export default function ProductionReleaseDetailPage() {
                   {!changes.length && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
-                        Keine erkannten Änderungen – diese Fertigungsfreigabe wurde nicht als
+                        Keine erkannten Änderungen – diese Produktionsfreigabe wurde nicht als
                         Revision importiert.
                       </TableCell>
                     </TableRow>
@@ -651,7 +651,7 @@ export default function ProductionReleaseDetailPage() {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Der Auftrag wird nicht hier ausgewählt: Er entsteht aus der m³-Liste dieser
-                  Fertigungsfreigabe (Beprobung). Die Zuordnung gilt dann für alle Revisionen und
+                  Produktionsfreigabe (Beprobung). Die Zuordnung gilt dann für alle Revisionen und
                   ist Grundlage der Kundendokumentation.
                 </p>
               </div>
@@ -677,7 +677,7 @@ export default function ProductionReleaseDetailPage() {
             <CardContent className="text-sm text-muted-foreground space-y-2">
               {release.form_definition_id ? (
                 <p>
-                  Dieser Fertigungsfreigabe ist ein Formular aus dem Formulardesigner zugeordnet.
+                  Dieser Produktionsfreigabe ist ein Formular aus dem Formulardesigner zugeordnet.
                   Anpassungen erfolgen dort:{" "}
                   <Link className="underline" to="/admin/messdienstleistungen">Formulardesigner öffnen</Link>.
                 </p>

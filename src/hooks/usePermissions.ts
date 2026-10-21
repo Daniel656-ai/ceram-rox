@@ -223,11 +223,11 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
   "portfolios.documents.manage": { de: "Portfolio-Dokumente verwalten", en: "Manage portfolio documents" },
   "portfolios.dashboard.view": { de: "Portfolio-Dashboard ansehen", en: "View portfolio dashboard" },
   "production_releases.view": { de: "Fertigungsunterlagen ansehen", en: "View production documents" },
-  "production_releases.create": { de: "Fertigungsfreigabe anlegen", en: "Create production releases" },
-  "production_releases.edit": { de: "Fertigungsfreigabe bearbeiten", en: "Edit production releases" },
-  "production_releases.import": { de: "Fertigungsfreigabe per PDF importieren", en: "Import production release from PDF" },
-  "production_releases.approve": { de: "Fertigungsfreigabe freigeben / abschließen", en: "Approve / close production releases" },
-  "production_releases.delete": { de: "Fertigungsfreigabe löschen", en: "Delete production releases" },
+  "production_releases.create": { de: "Produktionsfreigabe anlegen", en: "Create production releases" },
+  "production_releases.edit": { de: "Produktionsfreigabe bearbeiten", en: "Edit production releases" },
+  "production_releases.import": { de: "Produktionsfreigabe per PDF importieren", en: "Import production release from PDF" },
+  "production_releases.approve": { de: "Produktionsfreigabe freigeben / abschließen", en: "Approve / close production releases" },
+  "production_releases.delete": { de: "Produktionsfreigabe löschen", en: "Delete production releases" },
   "customers.manage": { de: "Kundenstamm verwalten", en: "Manage customers" },
 };
 

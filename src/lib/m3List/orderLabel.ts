@@ -20,10 +20,10 @@ export function m3OrderLabel(
   release: { article_number?: string | null; project_id?: string | null } | null | undefined,
   projectNameById: Map<string, string | null | undefined>
 ): M3OrderLabel {
-  if (!release) return { label: null, complete: false, problem: "Keine Fertigungsfreigabe hinterlegt" };
+  if (!release) return { label: null, complete: false, problem: "Keine Produktionsfreigabe hinterlegt" };
   const an = articlePrefix(release.article_number);
   if (!release.project_id) {
-    return { label: an, complete: false, problem: "Projektzuordnung fehlt in der Fertigungsfreigabe" };
+    return { label: an, complete: false, problem: "Projektzuordnung fehlt in der Produktionsfreigabe" };
   }
   if (!projectNameById.has(release.project_id)) {
     return { label: an, complete: false, problem: "Verknüpftes Projekt nicht gefunden" };
@@ -33,7 +33,7 @@ export function m3OrderLabel(
     return {
       label: [an, pn].filter(Boolean).join(" ") || null,
       complete: false,
-      problem: !an ? "Artikelnummer fehlt in der Fertigungsfreigabe" : "Projektname fehlt",
+      problem: !an ? "Artikelnummer fehlt in der Produktionsfreigabe" : "Projektname fehlt",
     };
   }
   return { label: `${an} ${pn}`, complete: true, problem: null };

@@ -98,7 +98,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
       setChanges(res.changes);
       if (!res.coverage.complete) {
         const msg =
-          `Fertigungsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze. ` +
+          `Produktionsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze. ` +
           `Datei: ${res.coverage.fileName}; Größe: ${(res.coverage.fileBytes / 1024 / 1024).toFixed(2)} MB; ` +
           `Seiten: ${res.coverage.totalPages}; verarbeitet bis Seite ${res.coverage.processedUntilPage}; ` +
           `nicht verarbeitet: Seite(n) ${res.coverage.failedPages.join(", ")}; ` +
@@ -114,13 +114,13 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
         toast.success(
           res.isRevision
             ? `Revision ${res.targetRevisionNumber} von ${res.existing?.release_number ?? ""} erkannt – ${auto} Änderung(en) eindeutig, ${open} zur Prüfung.`
-            : `Neue Fertigungsfreigabe ${res.identity.releaseNumber ?? ""}: ${Object.keys(res.rawValues).length} Felder und ${res.testParameters.length} Prüfwerte erkannt.`
+            : `Neue Produktionsfreigabe ${res.identity.releaseNumber ?? ""}: ${Object.keys(res.rawValues).length} Felder und ${res.testParameters.length} Prüfwerte erkannt.`
         );
       }
     } catch (e) {
       const detail = e instanceof Error ? e.message : "Unbekannte Ursache.";
-      setFileError(`Fertigungsfreigabe konnte nicht verarbeitet werden. ${detail}`);
-      toast.error(`Fertigungsfreigabe konnte nicht verarbeitet werden. ${detail}`, { duration: 12000 });
+      setFileError(`Produktionsfreigabe konnte nicht verarbeitet werden. ${detail}`);
+      toast.error(`Produktionsfreigabe konnte nicht verarbeitet werden. ${detail}`, { duration: 12000 });
     } finally {
       setBusy(false);
     }
@@ -190,7 +190,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
       toast.success(
         target
           ? `Zugeordnet: Rev. ${next.targetRevisionNumber} von ${target.release_number ?? "–"}.`
-          : "Wird als neue Fertigungsfreigabe angelegt."
+          : "Wird als neue Produktionsfreigabe angelegt."
       );
     } catch (e) {
       toast.error(`Zuordnung nicht möglich. ${e instanceof Error ? e.message : ""}`);
@@ -236,7 +236,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
       onOpenChange(false);
     } catch (e) {
       toast.error(
-        `Fertigungsfreigabe konnte nicht verarbeitet werden. ${
+        `Produktionsfreigabe konnte nicht verarbeitet werden. ${
           e instanceof Error ? e.message : "Fehler beim Speichern der erkannten Daten."
         }`,
         { duration: 12000 }
@@ -254,10 +254,10 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Fertigungsfreigabe aus PDF importieren</DialogTitle>
+          <DialogTitle>Produktionsfreigabe aus PDF importieren</DialogTitle>
           <DialogDescription>
             Das Dokument wird ausgelesen (Text, Position, Farbe, Durchstreichungen, bei Bedarf OCR).
-            ROX erkennt, ob es sich um eine neue Fertigungsfreigabe oder um eine Revision handelt.
+            ROX erkennt, ob es sich um eine neue Produktionsfreigabe oder um eine Revision handelt.
             Vor dem Speichern können alle Werte korrigiert werden.
           </DialogDescription>
         </DialogHeader>
@@ -359,10 +359,10 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
                 {analysis.matchBlocker
                   ? "Zuordnung prüfen"
                   : analysis.isRevision
-                    ? `Revision ${analysis.targetRevisionNumber} der bestehenden Fertigungsfreigabe${
+                    ? `Revision ${analysis.targetRevisionNumber} der bestehenden Produktionsfreigabe${
                         analysis.existing?.release_number ? ` ${analysis.existing.release_number}` : ""
                       }`
-                    : `Neue Fertigungsfreigabe${analysis.identity.releaseNumber ? ` ${analysis.identity.releaseNumber}` : ""}`}
+                    : `Neue Produktionsfreigabe${analysis.identity.releaseNumber ? ` ${analysis.identity.releaseNumber}` : ""}`}
               </AlertTitle>
               <AlertDescription className="text-sm space-y-2">
                 <div>
@@ -384,7 +384,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
                     der Prüfung gültig und danach als Historie erhalten.
                   </div>
                 ) : (
-                  <div>Für diese Kennung ist noch keine Fertigungsfreigabe vorhanden – sie wird als Entwurf neu angelegt.</div>
+                  <div>Für diese Kennung ist noch keine Produktionsfreigabe vorhanden – sie wird als Entwurf neu angelegt.</div>
                 )}
                 {analysis.matchWarnings.map((w, i) => (
                   <div key={i} className="flex gap-2"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /><span>{w}</span></div>
@@ -394,10 +394,10 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <Select value={manualTarget} onValueChange={setManualTarget}>
                       <SelectTrigger className="h-8 w-[280px] bg-background text-foreground">
-                        <SelectValue placeholder="Bestehende Fertigungsfreigabe wählen" />
+                        <SelectValue placeholder="Bestehende Produktionsfreigabe wählen" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">Bestehende Fertigungsfreigabe wählen…</SelectItem>
+                        <SelectItem value="__none__">Bestehende Produktionsfreigabe wählen…</SelectItem>
                         {currentReleases.map((r) => (
                           <SelectItem key={r.id} value={r.id}>
                             {(r.release_number as string) || "ohne Nr."} · Rev. {Number(r.revision_number) || 0}
@@ -412,7 +412,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
                     </Button>
                     {analysis.matchState !== "revision_conflict" && (
                       <Button size="sm" variant="outline" onClick={() => void reassign(null)}>
-                        Trotzdem als neue Fertigungsfreigabe anlegen
+                        Trotzdem als neue Produktionsfreigabe anlegen
                       </Button>
                     )}
                   </div>
@@ -425,7 +425,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
               <AlertTitle>
                 {analysis.coverage.complete
                   ? `Vollständig verarbeitet: alle ${analysis.coverage.totalPages} Seite(n)`
-                  : "Fertigungsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze."}
+                  : "Produktionsfreigabe konnte nicht vollständig verarbeitet werden. Das Dokument überschreitet die technische Verarbeitungsgrenze."}
               </AlertTitle>
               <AlertDescription className="text-sm">
                 Datei: <span className="font-medium">{analysis.coverage.fileName}</span> ·{" "}
@@ -439,7 +439,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
                       {analysis.coverage.errors.map((e) => e.code).join(", ") || "UNBEKANNT"}
                     </span>
                     . Der Import wird als „Prüfung erforderlich“ gespeichert – nicht als vollständige
-                    Fertigungsfreigabe.
+                    Produktionsfreigabe.
                   </>
                 )}
               </AlertDescription>
@@ -494,7 +494,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
                 <AlertTitle>{pendingChanges.length} Angabe(n) benötigen eine Prüfung</AlertTitle>
                 <AlertDescription className="text-sm">
                   Der Import wird trotzdem abgeschlossen. Die unsicheren Punkte erscheinen beim
-                  Öffnen der Fertigungsfreigabe zur Prüfung – nichts davon wird automatisch gesetzt.
+                  Öffnen der Produktionsfreigabe zur Prüfung – nichts davon wird automatisch gesetzt.
                 </AlertDescription>
               </Alert>
             )}
@@ -587,7 +587,7 @@ export function ImportPdfDialog({ open, onOpenChange, onImported }: Props) {
 
             {!filled.length && !tests.length && !changes.length && (
               <p className="text-sm text-muted-foreground">
-                Es konnten keine Felder zugeordnet werden. Die Fertigungsfreigabe kann trotzdem
+                Es konnten keine Felder zugeordnet werden. Die Produktionsfreigabe kann trotzdem
                 angelegt und manuell ausgefüllt werden.
               </p>
             )}

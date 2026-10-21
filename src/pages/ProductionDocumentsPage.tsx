@@ -94,7 +94,7 @@ function NewM3Dialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
         <DialogHeader>
           <DialogTitle>Neue m³-Liste</DialogTitle>
           <DialogDescription>
-            Die m³-Liste wird dauerhaft mit genau dieser Fertigungsfreigabe-Revision verbunden. Eine später
+            Die m³-Liste wird dauerhaft mit genau dieser Produktionsfreigabe-Revision verbunden. Eine später
             importierte Revision verändert diese m³-Liste nicht.
           </DialogDescription>
         </DialogHeader>
@@ -220,7 +220,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
           <CardTitle className="text-base">{DOC_KIND_LABEL[kind]}</CardTitle>
           <p className="text-sm text-muted-foreground">
             {isM3
-              ? "Jede m³-Liste verweist dauerhaft auf genau eine Fertigungsfreigabe-Revision."
+              ? "Jede m³-Liste verweist dauerhaft auf genau eine Produktionsfreigabe-Revision."
               : "Auftragsbezogener Folgeprozess – die Anforderung erfolgt direkt im Auftrag unter „Fertigungsunterlagen“."}
           </p>
         </div>
@@ -253,7 +253,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
               </SortableHead>
               {isM3 && (
                 <SortableHead columnKey="source" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
-                  Quelle (Fertigungsfreigabe / Revision)
+                  Quelle (Produktionsfreigabe / Revision)
                 </SortableHead>
               )}
               <SortableHead columnKey="status" sortKey={sort.sortKey} sortDir={sort.sortDir} onToggle={sort.toggleSort}>
@@ -367,7 +367,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
             <AlertDialogTitle>Doppelte m³-Liste entfernen?</AlertDialogTitle>
             <AlertDialogDescription>
               Es wird ausschließlich dieser doppelte, leere Eintrag entfernt. Die gültige m³-Liste
-              derselben Fertigungsfreigabe/Revision bleibt unverändert erhalten.
+              derselben Produktionsfreigabe/Revision bleibt unverändert erhalten.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -397,7 +397,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
             <DialogTitle>Quellwerte der m³-Liste</DialogTitle>
             <DialogDescription>
               Alle Werte stammen ausschließlich aus der hinterlegten Revision. Es wird nichts in die
-              Fertigungsfreigabe zurückgeschrieben.
+              Produktionsfreigabe zurückgeschrieben.
             </DialogDescription>
           </DialogHeader>
           <ReleaseSourceValues releaseId={sourceId} />
@@ -409,7 +409,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
           <DialogHeader>
             <DialogTitle>m³-Liste</DialogTitle>
             <DialogDescription>
-              Graue Werte stammen aus der hinterlegten Fertigungsfreigabe-Revision, gelbe Felder werden
+              Graue Werte stammen aus der hinterlegten Produktionsfreigabe-Revision, gelbe Felder werden
               geprüft, berechnete Werte ermittelt ROX.
             </DialogDescription>
           </DialogHeader>
@@ -448,7 +448,7 @@ export default function ProductionDocumentsPage() {
 
       <Tabs value={tab} onValueChange={(v) => setParams({ tab: v })}>
         <TabsList>
-          <TabsTrigger value="freigaben">Fertigungsfreigaben</TabsTrigger>
+          <TabsTrigger value="freigaben">Produktionsfreigaben</TabsTrigger>
           <TabsTrigger value="m3">m³-Liste</TabsTrigger>
           <TabsTrigger value="dokumentation">Kundendoku</TabsTrigger>
         </TabsList>

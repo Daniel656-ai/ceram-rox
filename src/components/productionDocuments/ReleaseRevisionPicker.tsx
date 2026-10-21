@@ -73,7 +73,7 @@ export default function ReleaseRevisionPicker({ value, onChange, disabled, place
           className="w-full justify-between font-normal"
         >
           <span className="truncate">
-            {selected ? releaseRevisionLabel(selected) : (placeholder ?? "Fertigungsfreigabe suchen …")}
+            {selected ? releaseRevisionLabel(selected) : (placeholder ?? "Produktionsfreigabe suchen …")}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -86,7 +86,7 @@ export default function ReleaseRevisionPicker({ value, onChange, disabled, place
             onValueChange={setQuery}
           />
           <CommandList>
-            <CommandEmpty>Keine passende Fertigungsfreigabe gefunden.</CommandEmpty>
+            <CommandEmpty>Keine passende Produktionsfreigabe gefunden.</CommandEmpty>
             <CommandGroup>
               {filtered.map((o) => (
                 <CommandItem

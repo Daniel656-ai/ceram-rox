@@ -42,7 +42,7 @@
     "reference": "Referenz"
   },
   "doc_kinds": {
-    "production_release": "Fertigungsfreigabe",
+    "production_release": "Produktionsfreigabe",
     "measurement_document": "Messdokument"
   },
   "ui": {
