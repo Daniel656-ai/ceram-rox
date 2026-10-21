@@ -106,11 +106,11 @@ export interface ProductionReleaseChange {
 const IMPORT_ERROR_TEXTS: Record<string, string> = {
   INVALID_PAYLOAD: "Die Datei konnte nicht an die Auswertung übergeben werden.",
   PDF_EMPTY: "Aus dieser Datei konnten weder Text noch Seitenbilder gelesen werden.",
-  PDF_PARSE_ERROR: "Die Fertigungsfreigabe konnte nicht gelesen werden.",
-  NO_DATA_RECOGNIZED: "In diesem Dokument wurden keine Fertigungsfreigabedaten erkannt.",
+  PDF_PARSE_ERROR: "Die Produktionsfreigabe konnte nicht gelesen werden.",
+  NO_DATA_RECOGNIZED: "In diesem Dokument wurden keine Produktionsfreigabedaten erkannt.",
   RATE_LIMITED: "Zu viele Importe in kurzer Zeit. Bitte in einer Minute erneut versuchen.",
   PAYMENT_REQUIRED: "Das Kontingent für die Dokumenterkennung ist aufgebraucht.",
-  AI_ERROR: "Die Fertigungsfreigabe konnte nicht ausgewertet werden.",
+  AI_ERROR: "Die Produktionsfreigabe konnte nicht ausgewertet werden.",
   AI_UNAVAILABLE: "Die Dokumenterkennung ist derzeit nicht erreichbar.",
   AI_TIMEOUT:
     "Die Dokumenterkennung hat zu lange gedauert. Bitte erneut versuchen oder das PDF auf die relevanten Seiten kürzen.",

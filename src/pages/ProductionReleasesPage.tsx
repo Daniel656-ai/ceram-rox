@@ -133,7 +133,7 @@ export default function ProductionReleasesPage() {
       <div className="p-6">
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            Für Fertigungsfreigaben fehlt die Berechtigung.
+            Für Produktionsfreigaben fehlt die Berechtigung.
           </CardContent>
         </Card>
       </div>
@@ -144,9 +144,9 @@ export default function ProductionReleasesPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Fertigungsfreigaben</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Produktionsfreigaben</h1>
           <p className="text-sm text-muted-foreground">
-            Zentrale Erfassung, Prüfung und Freigabe von Fertigungsfreigaben.
+            Zentrale Erfassung, Prüfung und Freigabe von Produktionsfreigaben.
           </p>
         </div>
         <div className="flex gap-2">
@@ -165,7 +165,7 @@ export default function ProductionReleasesPage() {
           )}
           {perms.canCreate && (
             <Button onClick={onCreateClick}>
-              <Plus className="h-4 w-4 mr-2" /> Fertigungsfreigabe anlegen
+              <Plus className="h-4 w-4 mr-2" /> Produktionsfreigabe anlegen
             </Button>
           )}
         </div>
@@ -240,7 +240,7 @@ export default function ProductionReleasesPage() {
               {!isLoading && !filtered.length && (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                    Noch keine Fertigungsfreigaben vorhanden.
+                    Noch keine Produktionsfreigaben vorhanden.
                   </TableCell>
                 </TableRow>
               )}
@@ -308,7 +308,7 @@ export default function ProductionReleasesPage() {
           toast.success(
             isRevision
               ? `Revision ${revisionNumber} angelegt – der bisherige Stand bleibt gültig, bis Sie die Revision freigeben.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen zuvor eine Prüfung.` : ""}`
-              : `Fertigungsfreigabe aus PDF erstellt.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen eine Prüfung.` : ""}`,
+              : `Produktionsfreigabe aus PDF erstellt.${pendingCount ? ` ${pendingCount} Angabe(n) benötigen eine Prüfung.` : ""}`,
             { duration: 8000 }
           );
           navigate(`/fertigungsfreigaben/${releaseId}`);
@@ -319,7 +319,7 @@ export default function ProductionReleasesPage() {
       <Dialog open={configOpen} onOpenChange={setConfigOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Formular für Fertigungsfreigaben</DialogTitle>
+            <DialogTitle>Formular für Produktionsfreigaben</DialogTitle>
             <DialogDescription>
               Das Erfassungsformular stammt aus dem bestehenden Formulardesigner und kann dort
               jederzeit angepasst werden.
@@ -358,7 +358,7 @@ export default function ProductionReleasesPage() {
           <DialogHeader>
             <DialogTitle>Noch kein Formular hinterlegt</DialogTitle>
             <DialogDescription>
-              Für Fertigungsfreigaben ist bisher kein Formular aus dem Formulardesigner zugeordnet.
+              Für Produktionsfreigaben ist bisher kein Formular aus dem Formulardesigner zugeordnet.
               Sie können jetzt eines zuordnen oder die Freigabe zunächst mit den Standardfeldern anlegen.
             </DialogDescription>
           </DialogHeader>

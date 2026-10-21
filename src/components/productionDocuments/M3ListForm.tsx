@@ -147,7 +147,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   if (!request.based_on_release_id) {
     return (
       <p className="text-sm text-destructive flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4" /> Dieser m³-Liste ist keine Fertigungsfreigabe-Revision zugeordnet.
+        <AlertTriangle className="h-4 w-4" /> Dieser m³-Liste ist keine Produktionsfreigabe-Revision zugeordnet.
       </p>
     );
   }
@@ -257,7 +257,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           <div className="text-xs text-muted-foreground">
             {request.order_id
               ? `Vorhanden: ${String(derived.values.order_number ?? request.order_id.slice(0, 8))} – Grundlage der Kundendokumentation.`
-              : "Noch keiner. Der Laborauftrag zur Beprobung wird aus dieser m³-Liste erzeugt und der Fertigungsfreigabe zugeordnet."}
+              : "Noch keiner. Der Laborauftrag zur Beprobung wird aus dieser m³-Liste erzeugt und der Produktionsfreigabe zugeordnet."}
           </div>
         </div>
         {!request.order_id && (

@@ -58,7 +58,7 @@ export interface ReleaseFieldDefinition {
  * Spalten von `production_releases`.
  */
 export const RELEASE_FIELD_CATALOG: ReleaseFieldDefinition[] = [
-  { key: "release_number", label: "Fertigungsfreigabe (Kennung)", unit: null, role: "grey" },
+  { key: "release_number", label: "Produktionsfreigabe (Kennung)", unit: null, role: "grey" },
   { key: "revision_number", label: "Revision", unit: null, role: "grey" },
   { key: "revision_date", label: "Revisionsdatum", unit: null, role: "grey" },
   { key: "project_name", label: "Projekt", unit: null, role: "grey" },
@@ -167,7 +167,7 @@ export function resolveProductionReleaseField(
   if (!release) {
     return {
       status: "missing",
-      reason: "Die referenzierte Fertigungsfreigabe-Revision wurde nicht gefunden.",
+      reason: "Die referenzierte Produktionsfreigabe-Revision wurde nicht gefunden.",
     };
   }
   if (release.id && String(release.id) !== ref.release_id) {

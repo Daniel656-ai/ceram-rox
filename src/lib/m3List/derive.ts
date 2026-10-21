@@ -56,7 +56,7 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
   values.cross_section_height_mm = cs.height;
   if (cs.width != null && cs.height == null && cs.width > 1000) {
     notices.push(
-      `Der Querschnitt in der Fertigungsfreigabe ist unplausibel (${cs.display}). Vermutlich wurden zwei Maße zusammengefügt – bitte die Freigabe prüfen und korrigieren oder neu importieren.`
+      `Der Querschnitt in der Produktionsfreigabe ist unplausibel (${cs.display}). Vermutlich wurden zwei Maße zusammengefügt – bitte die Freigabe prüfen und korrigieren oder neu importieren.`
     );
   }
   values.order_number = orderNumber ?? (release?.order_number as string | undefined) ?? null;
@@ -71,11 +71,11 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
   values.cell_count = cellCount;
   if (cellsFromRelease != null && cellsFromOrder != null && cellsFromRelease !== cellsFromOrder) {
     notices.push(
-      `Plausibilitätsprüfung: Zellkonfiguration der Fertigungsfreigabe (${cellsFromRelease}) weicht von der Auftragsnummer (${cellsFromOrder}) ab.`
+      `Plausibilitätsprüfung: Zellkonfiguration der Produktionsfreigabe (${cellsFromRelease}) weicht von der Auftragsnummer (${cellsFromOrder}) ab.`
     );
   }
   if (cellsFromRelease == null && cellsFromOrder != null) {
-    notices.push("Die Zellenzahl stammt aus der Auftragsnummer – in der Fertigungsfreigabe ist keine Zellkonfiguration hinterlegt.");
+    notices.push("Die Zellenzahl stammt aus der Auftragsnummer – in der Produktionsfreigabe ist keine Zellkonfiguration hinterlegt.");
   }
 
   const variant = num(stored.tolerance_variant) ?? 1;

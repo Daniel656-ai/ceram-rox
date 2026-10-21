@@ -15,13 +15,13 @@ export default function ReleaseSourceValues({ releaseId }: { releaseId: string |
   const { data: release, isLoading, isError } = useProductionReleaseRevision(releaseId);
 
   if (!releaseId) {
-    return <p className="text-sm text-muted-foreground">Dieser m³-Liste ist noch keine Fertigungsfreigabe-Revision zugeordnet.</p>;
+    return <p className="text-sm text-muted-foreground">Dieser m³-Liste ist noch keine Produktionsfreigabe-Revision zugeordnet.</p>;
   }
   if (isLoading) return <p className="text-sm text-muted-foreground">Quellwerte werden geladen …</p>;
   if (isError || !release) {
     return (
       <p className="text-sm text-destructive flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4" /> Die hinterlegte Fertigungsfreigabe-Revision konnte nicht geladen werden.
+        <AlertTriangle className="h-4 w-4" /> Die hinterlegte Produktionsfreigabe-Revision konnte nicht geladen werden.
       </p>
     );
   }

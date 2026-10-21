@@ -52,7 +52,7 @@ export function buildNoxHandover(values: Record<string, unknown>): NoxHandoverVa
     { key: "cross_section_mm", label: "Querschnitt", aliases: ["Durchmesser D", "Durchmesser"], unit: null, source: "cross_section_mm" },
     { key: "v2o5_percent", label: "V2O5", aliases: [], unit: "%", source: "v2o5_percent" },
     { key: "article_number", label: "Artikelnummer", aliases: ["Artikel"], unit: null, source: "article_number" },
-    { key: "release_label", label: "Fertigungsfreigabe / Revision", aliases: ["Fertigungsfreigabe"], unit: null, source: "release_label" },
+    { key: "release_label", label: "Produktionsfreigabe / Revision", aliases: ["Fertigungsfreigabe / Revision", "Fertigungsfreigabe", "Produktionsfreigabe"], unit: null, source: "release_label" },
   ];
 
   const out: NoxHandoverValue[] = [];

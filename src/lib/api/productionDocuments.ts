@@ -84,7 +84,7 @@ export const productionDocuments = {
       // aktualisiert nur den bestehenden Eintrag (kein Duplikat).
       const sameRecord = !!args.orderId && existing?.order_id === args.orderId;
       if (existing && !sameRecord) {
-        throw new Error("Für diese Fertigungsfreigabe / Revision existiert bereits eine m³-Liste.");
+        throw new Error("Für diese Produktionsfreigabe / Revision existiert bereits eine m³-Liste.");
       }
     }
 
@@ -192,7 +192,7 @@ export const productionDocuments = {
     )) as { id: string; root_release_id: string | null; order_id: string | null } | null;
     if (orderId && row?.order_id && row.order_id !== orderId) {
       throw new Error(
-        "Dieser Fertigungsfreigabe ist bereits ein Beprobungsauftrag zugeordnet. Eine andere Zuordnung ist fachlich nicht zulässig."
+        "Dieser Produktionsfreigabe ist bereits ein Beprobungsauftrag zugeordnet. Eine andere Zuordnung ist fachlich nicht zulässig."
       );
     }
     const rootId = row?.root_release_id ?? releaseId;
