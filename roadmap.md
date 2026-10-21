@@ -3,6 +3,7 @@
 - [x] Pilot-Plant-Versuchsnummer: Gebäude-/Massetypfeld und Web-Abbildung geprüft; Stop-Regel ausgelöst
 - [x] Pilot-Plant-Versuchsnummer: vorhandene Kennung in Übersicht, Ergebnisdatenbank und Details anzeigen; Suche/Sortierung konsistent halten
 - [x] Nutzerklärung: Dieselkathalle→_CC bestätigt; lokales massetyp als Übergang freigegeben, bestehendes Feld in Erstellung einblenden
+- [x] Übergangsfeld: 14 gezielte Tests bestanden; angemeldete Web-Erstellung zeigt DK/GK/KK/MK/PK/Heat Media ohne Laufzeitfehler. Kein Auftrag gespeichert; dauerhafte Speicherung noch nicht end-to-end geprüft
 - [ ] Pilot-Plant-Versuchsnummer: neue Nummern erfassen/ableiten — globale `versuchsnummer` im Web gefunden, aber nicht an Pilot-Plant-Auftragsformular gebunden; Nummernteilformat noch nicht belegt. Vor Definitions-/Datenstrukturänderung anhalten
 - [x] Pilot-Plant-Versuchsnummer: 688 Tests erfolgreich; Web-Übersicht, Suche, Sortierung und Detailziel mit vorhandener Nummer geprüft; Ergebnisabfrage HTTP 200
 - [ ] Pilot-Plant-Versuchsnummer: reale PP-Ergebnisanzeige im Web prüfen — keine offiziellen PP-Ergebnisse vorhanden
