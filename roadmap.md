@@ -7,7 +7,8 @@
 - [x] Pilot-Plant-Versuchsnummer: vorhandene Kennung in Übersicht, Ergebnisdatenbank und Details anzeigen; Suche/Sortierung konsistent halten
 - [x] Nutzerklärung: Dieselkathalle→_CC bestätigt; lokales massetyp als Übergang freigegeben, bestehendes Feld in Erstellung einblenden
 - [x] Übergangsfeld: 14 gezielte Tests bestanden; angemeldete Web-Erstellung zeigt DK/GK/KK/MK/PK/Heat Media ohne Laufzeitfehler. Kein Auftrag gespeichert; dauerhafte Speicherung noch nicht end-to-end geprüft
-- [ ] Pilot-Plant-Versuchsnummer: neue Nummern erfassen/ableiten — globale `versuchsnummer` im Web gefunden, aber nicht an Pilot-Plant-Auftragsformular gebunden; Nummernteilformat noch nicht belegt. Vor Definitions-/Datenstrukturänderung anhalten
+- [x] Nutzerkorrektur zur Desktop-Versuchsnummer berücksichtigen: vorhandenes globales Feld im Desktop-PP-Auftragsformular ist bestätigt; verfügbare Web-Definition und tatsächlicher gemeinsamer Lade-/Speichercode erneut lesend geprüft
+- [ ] Pilot-Plant-Versuchsnummer: neue Nummern erfassen/ableiten — globale `versuchsnummer` im Web vorhanden, aber im Web-PP-Auftragsformular weiterhin keine Feldreferenz; konkrete Desktop-Formularreferenz, gespeicherter Wertepfad und Nummernteilformat fehlen. Keine andere Formularreferenz als Ersatz und keine Definitions-/Datenstrukturänderung
 - [x] Pilot-Plant-Versuchsnummer: 688 Tests erfolgreich; Web-Übersicht, Suche, Sortierung und Detailziel mit vorhandener Nummer geprüft; Ergebnisabfrage HTTP 200
 - [ ] Pilot-Plant-Versuchsnummer: reale PP-Ergebnisanzeige im Web prüfen — keine offiziellen PP-Ergebnisse vorhanden
 - [ ] Pilot-Plant-Versuchsnummer: Desktop-Abnahme — Firmenumgebung nicht zugänglich; gesonderte Nutzerprüfung erforderlich
