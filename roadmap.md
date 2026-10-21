@@ -1,8 +1,9 @@
 # Roadmap
 
 - [x] Pilot-Plant-Versuchsnummer: Gebäude-/Massetypfeld und Web-Abbildung geprüft; Stop-Regel ausgelöst
-- [ ] Pilot-Plant-Versuchsnummer: Übersicht, Ergebnisansichten und Erfassung ergänzen — blockiert bis Desktop-Gebäudefeld und vollständige Massetyp-Auswahl samt Web-Abbildung belegt sind
-- [ ] Pilot-Plant-Versuchsnummer: Tests und Web-/Desktop-Abnahme — blockiert durch fehlende Feldquelle; Firmenzugriff separat erforderlich
+- [ ] Pilot-Plant-Versuchsnummer: vorhandene Kennung in Übersicht, Ergebnisdatenbank und Details anzeigen; Suche/Sortierung konsistent halten
+- [ ] Pilot-Plant-Versuchsnummer: neue Nummern erfassen/ableiten — blockiert: `massetyp` fehlt im Auftragslayout, Nummernteil nicht festgelegt, Dieselkathalle→Dieselkat-Fall nicht bestätigt; keine Definitions-/DB-Änderung ohne Klärung
+- [ ] Pilot-Plant-Versuchsnummer: Anzeige automatisiert und im Web prüfen; Desktop-Abnahme separat durch Nutzer erforderlich
 
 - [x] Ergebnisdatenbank: sicher zugeordnete Nachkommastellen ausschließlich in der Matrix anzeigen
 - [x] Präzisionstests und bestehende Regressionstests ausführen; Web mit vorhandenen Porenvolumen-Ergebnissen prüfen
