@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import OrdersPage from "@/pages/OrdersPage";
@@ -34,7 +34,10 @@ function open() {
     <Route path="/auftraege/:id" element={<div data-testid="order-target" />} />
   </Routes></MemoryRouter>);
 }
-afterEach(() => { cleanup(); state.role = "master"; sessionStorage.clear(); });
+beforeEach(() => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+});
+afterEach(() => { cleanup(); state.role = "master"; sessionStorage.clear(); vi.unstubAllGlobals(); });
 
 describe("order overview regression with readable sample links", () => {
   it("keeps existing search fields and does not silently add sample-name search", () => {
