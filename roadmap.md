@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Freigegebene Probenname-Spalte mit ID-Zuordnung, Suche, Sortierung und Links ergänzen
+- [x] Zehn relevante Tests und Web-Prüfung bestanden; native Desktop-Firmenabnahme nicht verfügbar
+
 - [x] Inspect m³ sources: linked release has project_id but no authoritative serial-number field; stop before display changes
 - [ ] Apply display-only change and missing/long-serial tests — blocked until the authoritative serial-number source is identified
 - [ ] Verify Web/Desktop — blocked until the serial-number source is identified and display change is approved by that clarification
