@@ -40,9 +40,11 @@ import OrderProductionDocuments from "@/components/order/OrderProductionDocument
 import AdminDeleteMeasurementsCard from "@/components/order/AdminDeleteMeasurementsCard";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { orderIdentity } from "@/lib/orders/orderIdentity";
 
 
 function OrderDetailPageInner() {
+  const { t } = useTranslation("orders");
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const measurementFilter = searchParams.get("measurement");
@@ -246,8 +248,14 @@ function OrderDetailPageInner() {
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">
-            Auftrag: {(order as any).order_number || (order as any).projects?.project_number}
+            {t("detail_title", { number: orderIdentity(order as any).number || (order as any).projects?.project_number })}
           </h1>
+          {orderIdentity(order as any).hasExperimentNumber && (
+            <p className="text-sm text-muted-foreground">{t("technical_number", { number: (order as any).order_number })}</p>
+          )}
+          {orderIdentity(order as any).missingExperimentNumber && (
+            <p className="text-sm text-muted-foreground">{t("without_experiment_number")}</p>
+          )}
           <p className="text-muted-foreground">
             {(order as any).projects?.project_number ? `Projekt: ${(order as any).projects.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]}
             {creatorName ? ` · Auftraggeber: ${creatorName}` : ""}

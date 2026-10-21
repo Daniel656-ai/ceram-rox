@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/StatusBadge";
 import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
+import { orderIdentity } from "@/lib/orders/orderIdentity";
+import { useTranslation } from "react-i18next";
 
 /**
  * Kompakter Auftragskopf – immer sichtbar oberhalb der Tabs.
@@ -16,6 +18,8 @@ export default function OrderHeaderSummary({
   order: any;
   creatorName?: string;
 }) {
+  const { t } = useTranslation("orders");
+  const identity = orderIdentity(order);
   const measurements: any[] = order.order_measurements || [];
   const done = measurements.filter((m) => m.status === "completed").length;
   const progress = measurements.length ? Math.round((done / measurements.length) * 100) : 0;
@@ -36,10 +40,12 @@ export default function OrderHeaderSummary({
   return (
     <Card>
       <CardContent className="pt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <Item label="Auftragsnummer">
-          <span className="font-mono">
-            {order.order_number || order.projects?.project_number || "–"}
+        <Item label={identity.hasExperimentNumber ? t("pp.experiment_number") : t("order_number")}>
+          <span className="font-mono break-words">
+            {identity.number || order.projects?.project_number || "–"}
           </span>
+          {identity.hasExperimentNumber && <div className="text-xs text-muted-foreground break-words">{t("technical_number", { number: identity.technicalNumber })}</div>}
+          {identity.missingExperimentNumber && <div className="text-xs text-muted-foreground">{t("without_experiment_number")}</div>}
         </Item>
         <Item label="Bezeichnung">
           {order.projects?.project_name || "–"}

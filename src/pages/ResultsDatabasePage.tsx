@@ -130,7 +130,7 @@ export default function ResultsDatabasePage() {
       if (dateTo && r.completedAt && isAfter(parseISO(r.completedAt), parseISO(dateTo + "T23:59:59"))) return false;
       if (searchText) {
         const s = searchText.toLowerCase();
-        const matches = [r.measurementNumber, r.orderNumber, r.projectNumber, r.projectName, r.sampleNumber, r.sampleName, r.serviceName, r.assignedToName, r.createdByName, r.remarks]
+        const matches = [r.measurementNumber, r.orderIdentity?.number, r.orderNumber, r.projectNumber, r.projectName, r.sampleNumber, r.sampleName, r.serviceName, r.assignedToName, r.createdByName, r.remarks]
           .some(v => v?.toLowerCase().includes(s));
         if (!matches) return false;
       }

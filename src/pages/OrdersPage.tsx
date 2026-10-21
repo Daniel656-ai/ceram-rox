@@ -1,5 +1,6 @@
 import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
 import { resolveOrderKind, matchesOrderKindFilter, type OrderKindFilter } from "@/lib/orders/orderKind";
+import { orderIdentity } from "@/lib/orders/orderIdentity";
 import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
@@ -62,7 +63,7 @@ export default function OrdersPage() {
   };
   const getSortValue = (o: any, key: SortKey): any => {
     switch (key) {
-      case "order_number": return o.order_number ?? "";
+      case "order_number": return orderIdentity(o).number;
       case "order_kind": return kindLabel(o);
       case "project_number": return o.projects?.project_number ?? "";
       case "project_name": return o.projects?.project_name ?? "";
@@ -97,6 +98,7 @@ export default function OrdersPage() {
     const q = search.toLowerCase();
     const result = visibleOrders.filter((o: any) => {
       const matchesSearch = !q ||
+        orderIdentity(o).number.toLowerCase().includes(q) ||
         o.order_number?.toLowerCase().includes(q) ||
         o.projects?.project_number?.toLowerCase().includes(q) ||
         o.projects?.project_name?.toLowerCase().includes(q) ||
@@ -258,8 +260,14 @@ export default function OrdersPage() {
                   <TableRow key={o.id}>
                     <TableCell>
                       <Link to={`/auftraege/${o.id}`} className="font-mono font-medium text-primary hover:underline">
-                        {o.order_number || "–"}
+                        {orderIdentity(o).number || "–"}
                       </Link>
+                      {orderIdentity(o).hasExperimentNumber && (
+                        <div className="text-xs text-muted-foreground break-words">{t("orders:technical_number", { number: o.order_number })}</div>
+                      )}
+                      {orderIdentity(o).missingExperimentNumber && (
+                        <div className="text-xs text-muted-foreground">{t("orders:without_experiment_number")}</div>
+                      )}
                     </TableCell>
                     <TableCell>
                       {o.projects?.project_number ? (
