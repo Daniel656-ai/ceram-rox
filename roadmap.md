@@ -1,8 +1,8 @@
 # Roadmap
 
-- [ ] Pilot-Plant-Versuchsnummer: tatsächliches Gebäude-/Massetypfeld und Web-Abbildung prüfen; bei fehlender Abbildung vor Umsetzung stoppen
-- [ ] Pilot-Plant-Versuchsnummer: Übersicht, Ergebnisansichten und Erfassung minimal ergänzen — abhängig von bestätigter Gebäude-/Massetypquelle
-- [ ] Pilot-Plant-Versuchsnummer: automatisierte Tests und Web-/Desktop-Abnahme — abhängig von geklärter Feldquelle
+- [x] Pilot-Plant-Versuchsnummer: Gebäude-/Massetypfeld und Web-Abbildung geprüft; Stop-Regel ausgelöst
+- [ ] Pilot-Plant-Versuchsnummer: Übersicht, Ergebnisansichten und Erfassung ergänzen — blockiert bis Desktop-Gebäudefeld und vollständige Massetyp-Auswahl samt Web-Abbildung belegt sind
+- [ ] Pilot-Plant-Versuchsnummer: Tests und Web-/Desktop-Abnahme — blockiert durch fehlende Feldquelle; Firmenzugriff separat erforderlich
 
 - [x] Ergebnisdatenbank: sicher zugeordnete Nachkommastellen ausschließlich in der Matrix anzeigen
 - [x] Präzisionstests und bestehende Regressionstests ausführen; Web mit vorhandenen Porenvolumen-Ergebnissen prüfen
