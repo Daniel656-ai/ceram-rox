@@ -1,5 +1,6 @@
 {
   "kind_label": "Order kind",
+  "all_kinds": "All order kinds",
   "kind": {
     "pilot_plant": "Pilot Plant",
     "labor": "Lab",
