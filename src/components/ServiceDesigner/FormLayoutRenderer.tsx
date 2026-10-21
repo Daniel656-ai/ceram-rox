@@ -1708,23 +1708,19 @@ function MeasurementBlockField({
             <div className="min-w-56">
               <Label className="text-xs">Messfall</Label>
               <div className="flex items-center gap-1">
-                <Select
+                <SearchableSelect
                   value={activeCaseId ?? "__none__"}
                   disabled={!interactive || readonly}
                   onValueChange={(v) => applyCase(cases.find((c) => c.id === v) ?? null)}
-                >
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Messfall wählen…" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">– Messfall wählen –</SelectItem>
-                    {cases.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                    {/* Historisch verwendeter (inaktiver) Messfall bleibt sichtbar */}
-                    {historicCase && (
-                      <SelectItem value={historicCase.id}>{historicCase.name} (inaktiv)</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                  placeholder="Messfall wählen…"
+                  triggerClassName="h-9"
+                  options={[
+                    { value: "__none__", label: "– Messfall wählen –" },
+                    ...cases.map((c) => ({ value: c.id, label: c.name })),
+                    // Historisch verwendeter (inaktiver) Messfall bleibt sichtbar
+                    ...(historicCase ? [{ value: historicCase.id, label: `${historicCase.name} (inaktiv)` }] : []),
+                  ]}
+                />
                 {canManageCases && activeCaseRecord && (
                   <Button size="icon" variant="outline" type="button" className="h-9 w-9"
                     title="Messfall bearbeiten"
