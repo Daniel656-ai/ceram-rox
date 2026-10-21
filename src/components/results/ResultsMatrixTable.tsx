@@ -8,6 +8,7 @@ import { expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResul
 import { columnHeader, resultCell, resultForColumn, type ResultParamColumn } from "@/lib/resultSchema";
 import { useResultDisplayPrecision } from "@/hooks/useResultDisplayPrecision";
 import { formatResultDisplayValue, resolveResultPrecision } from "@/lib/resultDisplayPrecision";
+import { useTranslation } from "react-i18next";
 
 /**
  * Kompakter, fixierter Identifikationsbereich. Breiten orientieren sich am
@@ -39,6 +40,7 @@ export default function ResultsMatrixTable({
   records: ResultRecord[];
   columns: ResultParamColumn[];
 }) {
+  const { t } = useTranslation("orders");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const precisionDefinitions = useResultDisplayPrecision(records);
   const identWidth = useMemo(
@@ -112,7 +114,13 @@ export default function ResultsMatrixTable({
                   className={`${stickyCell} font-mono text-xs`}
                   style={{ left: OFFSETS[1], width: IDENT_COLUMNS[1].width, maxWidth: IDENT_COLUMNS[1].width }}
                 >
-                  {r.orderNumber}
+                  <span className="break-words">{r.orderIdentity?.number || r.orderNumber}</span>
+                  {r.orderIdentity?.hasExperimentNumber && (
+                    <div className="font-sans text-[11px] text-muted-foreground break-words">{t("technical_number", { number: r.orderNumber })}</div>
+                  )}
+                  {r.orderIdentity?.missingExperimentNumber && (
+                    <div className="font-sans text-[11px] text-muted-foreground break-words">{t("without_experiment_number")}</div>
+                  )}
                 </td>
                 <td
                   className={stickyCell}

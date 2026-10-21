@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { orderElementResults } from "@/lib/rfaFixedElements";
+import { orderIdentity } from "@/lib/orders/orderIdentity";
 
 
 export interface ResultRecord {
@@ -10,6 +11,8 @@ export interface ResultRecord {
   measurementNumber: string;
   orderId: string;
   orderNumber: string;
+  /** Display metadata only; orderNumber remains technical for exports/charts. */
+  orderIdentity?: ReturnType<typeof orderIdentity>;
   orderType: string;
   projectNumber: string;
   projectName: string;
@@ -102,32 +105,9 @@ export function useResultsDatabase() {
       // bleiben in ihren Auftrags-/Arbeitsansichten sichtbar, erzeugen hier
       // aber keinen Eintrag. Normale Messwerte (measurement_parameters) sind
       // bewusst nicht Teil dieser Sicht.
-      const { data: measurements, error } = await api
-        .from("order_measurements")
-        .select(`
-          id, measurement_number, status, assigned_to, actual_duration_hours, service_id,
-          created_at, updated_at, sample_id, original_sample_id,
-          samples!order_measurements_sample_id_fkey(id, sample_number, sample_name),
-          original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
-          measurement_services(service_name, category, standard_duration_hours),
-          measurement_orders(
-            id, order_number, order_type, created_by, notes,
-            projects(project_number, project_name),
-            samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
-          ),
-          measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
-        `)
-        .eq("measurement_results.is_official", true)
-        .order("updated_at", { ascending: false });
-
-      if (error) throw error;
-
-
-
-      // Fetch all profiles for name resolution
-      const { data: profiles } = await api
-        .from("profiles")
-        .select("user_id, first_name, last_name");
+      const measurements = await api.measurementResults.listOfficialDatabase();
+      // Preserve the existing optional name-resolution behavior.
+      const profiles = await api.measurementResults.listDatabaseProfiles().catch(() => []);
       
       const profileMap = new Map(
         (profiles || []).map(p => [p.user_id, `${p.first_name} ${p.last_name}`])
@@ -146,6 +126,7 @@ export function useResultsDatabase() {
           measurementNumber: m.measurement_number,
           orderId: order?.id || "",
           orderNumber: order?.order_number || "",
+          orderIdentity: orderIdentity(order ?? {}),
           orderType: order?.order_type || "",
           projectNumber: order?.projects?.project_number || "",
           projectName: order?.projects?.project_name || "",
