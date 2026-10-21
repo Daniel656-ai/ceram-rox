@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -462,17 +463,18 @@ function FieldControl({ field: rawField, readonly }: { field: FormField; readonl
 
     case "select":
       return (
-        <Select value={value ?? ""} onValueChange={(v) => setValue(v)} disabled={disabled}>
-          <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-          <SelectContent>
-            {(field.select_options ?? []).map((o, i) => {
-              const v = typeof o === "string" ? o : o.value;
-              const l = typeof o === "string" ? o : o.label;
-              const inactive = typeof o !== "string" && (o as any).inactive === true;
-              return <SelectItem key={i} value={v || String(i)} disabled={inactive}>{l}</SelectItem>;
-            })}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={value ?? ""}
+          onValueChange={(v) => setValue(v)}
+          disabled={disabled}
+          placeholder="—"
+          options={(field.select_options ?? []).map((o, i) => {
+            const v = typeof o === "string" ? o : o.value;
+            const l = typeof o === "string" ? o : o.label;
+            const inactive = typeof o !== "string" && (o as any).inactive === true;
+            return { value: v || String(i), label: String(l ?? ""), disabled: inactive };
+          })}
+        />
       );
     case "multiselect":
       return <MultiSelectControl field={field} value={value} setValue={setValue} disabled={disabled} interactive={interactive} />
