@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] Mundstück-Zahlenfeld „Max.“: konkretes Feld, dynamische Obergrenze, Speicherung und Berechnungen prüfen; Umsetzung nur bei belegten Voraussetzungen
+- [x] Mundstück-Zahlenfeld „Max.“: verfügbare Web-Definitionen und Speichercode lesend geprüft; keine geeignete Obergrenzenquelle belegt
+- [ ] Mundstück-Zahlenfeld „Max.“ umsetzen — blockiert: Zieldefinition `ms_auswahl_1.anzahl` im Web nicht vorhanden, Desktop-Felddefinition/Obergrenzenquelle und Max.-Speichervertrag fehlen; keine Strukturänderung vorgenommen
 
 - [x] Pilot-Plant-Versuchsnummer: Gebäude-/Massetypfeld und Web-Abbildung geprüft; Stop-Regel ausgelöst
 - [x] Pilot-Plant-Versuchsnummer: vorhandene Kennung in Übersicht, Ergebnisdatenbank und Details anzeigen; Suche/Sortierung konsistent halten
