@@ -3,7 +3,7 @@ import { unwrap, run } from "./_helpers";
 import type { OrderType, OrderPriority } from "@/lib/types";
 
 const ORDER_LIST_SELECT =
-  "*, projects(project_number, project_name), order_measurements(assigned_to)";
+  "*, projects(project_number, project_name), order_measurements(assigned_to), order_samples!order_samples_order_id_fkey(id, created_at, samples!order_samples_sample_id_fkey(id, sample_name, sample_number)), samples!measurement_orders_sample_id_fkey(id, sample_name, sample_number)";
 
 const ORDER_DETAIL_SELECT = `*, projects(project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name, description, is_hazardous, location_id, storage_locations(hall, room, shelf, position)), order_samples(id, sample_id, created_at, samples(id, sample_number, sample_name, description, is_hazardous)), order_measurements(*, samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name), measurement_services(service_name, category, hourly_rate, standard_duration_hours), measurement_parameters(*), measurement_results(*), work_logs(*), documents(*))`;
 
