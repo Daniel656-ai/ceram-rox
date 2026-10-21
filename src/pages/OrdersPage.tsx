@@ -38,8 +38,10 @@ export default function OrdersPage() {
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [kindFilter, setKindFilter] = useState<OrderKindFilter>("all");
+  const kindLabel = (o: any) => t(`orders:kind.${resolveOrderKind(o)}`);
   const [ordersView, setOrdersView] = useState<"requester" | "provider">("requester");
-  type SortKey = "order_number" | "project_number" | "project_name" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
+  type SortKey = "order_number" | "project_number" | "project_name" | "order_kind" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
   type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
   const [sort, setSort] = useState<SortState>(() => {
     try {
@@ -60,6 +62,7 @@ export default function OrdersPage() {
   const getSortValue = (o: any, key: SortKey): any => {
     switch (key) {
       case "order_number": return o.order_number ?? "";
+      case "order_kind": return kindLabel(o);
       case "project_number": return o.projects?.project_number ?? "";
       case "project_name": return o.projects?.project_name ?? "";
       case "order_type": return o.order_type ?? "";
@@ -90,13 +93,15 @@ export default function OrdersPage() {
   const visibleOrders = orders;
 
   const filtered = useMemo(() => {
+    const q = search.toLowerCase();
     const result = visibleOrders.filter((o: any) => {
-      const matchesSearch = !search ||
-        o.order_number?.toLowerCase().includes(search.toLowerCase()) ||
-        o.projects?.project_number?.toLowerCase().includes(search.toLowerCase()) ||
-        o.projects?.project_name?.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = !q ||
+        o.order_number?.toLowerCase().includes(q) ||
+        o.projects?.project_number?.toLowerCase().includes(q) ||
+        o.projects?.project_name?.toLowerCase().includes(q) ||
+        kindLabel(o).toLowerCase().includes(q);
       const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesOrderKindFilter(o, kindFilter);
     });
     if (!sort) return result;
     const { key, dir } = sort;
@@ -108,7 +113,8 @@ export default function OrdersPage() {
       if (typeof av === "number" && typeof bv === "number") return (av - bv) * mult;
       return String(av).localeCompare(String(bv), i18n.language, { numeric: true, sensitivity: "base" }) * mult;
     });
-  }, [visibleOrders, search, statusFilter, sort, i18n.language]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleOrders, search, statusFilter, kindFilter, sort, i18n.language]);
 
   // Mehrfachrollen additiv: Auftraggeber-Rechte gehen durch eine zusätzliche
   // Messdienstleister-Rolle nicht verloren.
@@ -211,6 +217,16 @@ export default function OrdersPage() {
             <SelectItem value="completed">{t("common:status_completed")}</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as OrderKindFilter)}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder={t("orders:kind_label")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("orders:all_kinds")}</SelectItem>
+            <SelectItem value="labor">{t("orders:kind.labor")}</SelectItem>
+            <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
@@ -221,6 +237,7 @@ export default function OrdersPage() {
                 <SortableHead sortKey="order_number">{t("orders:order_number")}</SortableHead>
                 <SortableHead sortKey="project_number">{t("orders:project_number")}</SortableHead>
                 <SortableHead sortKey="project_name">{t("orders:project_name")}</SortableHead>
+                <SortableHead sortKey="order_kind">{t("orders:kind_label")}</SortableHead>
                 <SortableHead sortKey="order_type">{t("orders:order_type")}</SortableHead>
                 <SortableHead sortKey="ranking">{t("orders:priority")}</SortableHead>
                 <SortableHead sortKey="status">{t("common:status")}</SortableHead>
@@ -232,9 +249,9 @@ export default function OrdersPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
               ) : (
                 filtered.map((o: any) => (
                   <TableRow key={o.id}>
@@ -254,6 +271,7 @@ export default function OrdersPage() {
                       ) : "–"}
                     </TableCell>
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
+                    <TableCell>{kindLabel(o)}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}</TableCell>
                     <TableCell>
                       {role === "master" ? (

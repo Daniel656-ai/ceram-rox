@@ -1,5 +1,6 @@
 {
   "kind_label": "Auftragsart",
+  "all_kinds": "Alle Auftragsarten",
   "kind": {
     "pilot_plant": "Pilot Plant",
     "labor": "Labor",
