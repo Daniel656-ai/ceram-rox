@@ -719,8 +719,9 @@ function TaskExecutionPageInner() {
         release: api.measurements.release,
       });
       if (!out.ok) {
-        if (out.stage === "save") {
-          toast.error("Zwischenstand konnte nicht gespeichert werden – Durchlauf wird nicht verlassen", { description: out.message });
+        const fail = out as Extract<typeof out, { ok: false }>;
+        if (fail.stage === "save") {
+          toast.error("Zwischenstand konnte nicht gespeichert werden – Durchlauf wird nicht verlassen", { description: fail.message });
         } else if (out.result) {
           if (out.result.released.length > 0) toast.success(`${out.result.released.length} Aufgabe(n) wieder freigegeben`);
           toast.warning(`${out.result.failed.length} Aufgabe(n) konnten nicht freigegeben werden`, {
@@ -728,7 +729,7 @@ function TaskExecutionPageInner() {
           });
           qc.invalidateQueries();
         } else {
-          toast.error("Freigabe fehlgeschlagen – Sie bleiben auf dieser Seite", { description: out.message });
+          toast.error("Freigabe fehlgeschlagen – Sie bleiben auf dieser Seite", { description: fail.message });
         }
         return;
       }
