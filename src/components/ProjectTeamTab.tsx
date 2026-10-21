@@ -12,6 +12,7 @@ import { UserPlus, Trash2, Crown, ShieldCheck, User } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PersonSelect } from "@/components/PersonSelect";
+import { excludedForRole } from "@/lib/projectRoles";
 
 const ROLE_ICONS: Record<string, any> = {
   owner: Crown,
@@ -42,7 +43,10 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedRole, setSelectedRole] = useState("member");
 
-  const memberUserIds = (members as any[]).map((m: any) => m.user_id);
+  // Nur Personen ausschließen, die die gewählte Rolle bereits besitzen (Doppelrolle owner+leader erlaubt).
+  const memberUserIds = excludedForRole(members as any[], selectedRole);
+  const hasRole = (userId: string, role: string, exceptId?: string) =>
+    (members as any[]).some((x: any) => x.user_id === userId && x.role === role && x.id !== exceptId);
 
   const getUserName = (userId: string) => {
     const u = (users as any[]).find((u: any) => u.user_id === userId);
@@ -146,9 +150,9 @@ export function ProjectTeamTab({ projectId, canManage }: Props) {
                             </div>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="owner">{t("role_owner")}</SelectItem>
-                            <SelectItem value="leader">{t("role_leader")}</SelectItem>
-                            <SelectItem value="member">{t("role_member")}</SelectItem>
+                            <SelectItem value="owner" disabled={hasRole(m.user_id, "owner", m.id)}>{t("role_owner")}</SelectItem>
+                            <SelectItem value="leader" disabled={hasRole(m.user_id, "leader", m.id)}>{t("role_leader")}</SelectItem>
+                            <SelectItem value="member" disabled={hasRole(m.user_id, "member", m.id)}>{t("role_member")}</SelectItem>
                           </SelectContent>
                         </Select>
                       ) : (

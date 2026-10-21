@@ -1,3 +1,4 @@
+import { rolesOfUser, primaryRole, isLeaderOrOwner as isLeaderOrOwnerRoles } from "@/lib/projectRoles";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useProjectDetail, useProjectSamples, useProjectOrders, useProjectSampleHistory, useProjectOrderSampleLinks, useProjectOfficialResults } from "@/hooks/useProjectDetail";
@@ -81,15 +82,12 @@ export default function ProjectDetailPage() {
   const etaMap = useEstimatedCompletion();
   const reportRef = useRef<HTMLDivElement>(null);
 
-  // Determine current user's project role
-  const myProjectRole = useMemo(() => {
-    if (!user) return null;
-    const m = (members as any[]).find((m: any) => m.user_id === user.id);
-    return m?.role || null;
-  }, [members, user]);
+  // Alle Projektrollen des Benutzers (Doppelrolle owner+leader möglich)
+  const myProjectRoles = useMemo(() => rolesOfUser(members as any[], user?.id), [members, user]);
+  const myProjectRole = primaryRole(myProjectRoles);
 
   const isMaster = role === "master";
-  const isLeaderOrOwner = myProjectRole === "leader" || myProjectRole === "owner";
+  const isLeaderOrOwner = isLeaderOrOwnerRoles(myProjectRoles);
   const canEditByPermission = hasPermission("projects.edit");
   const canManageTeam = isMaster || isLeaderOrOwner || canEditByPermission;
   const canManagePlanning = isMaster || isLeaderOrOwner || canEditByPermission;
@@ -423,7 +421,7 @@ export default function ProjectDetailPage() {
           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
             <p>{project.description || t("description")}</p>
             {myProjectRole && (
-              <Badge variant="secondary" className="text-xs">{t("your_role")}: {t(`role_${myProjectRole}`)}</Badge>
+              <Badge variant="secondary" className="text-xs">{t("your_role")}: {myProjectRoles.map((r) => t(`role_${r}`)).join(", ")}</Badge>
             )}
           </div>
         </div>
