@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Mundstück-Zahlenfeld „Max.“: konkretes Feld, dynamische Obergrenze, Speicherung und Berechnungen prüfen; Umsetzung nur bei belegten Voraussetzungen
+
 - [x] Pilot-Plant-Versuchsnummer: Gebäude-/Massetypfeld und Web-Abbildung geprüft; Stop-Regel ausgelöst
 - [x] Pilot-Plant-Versuchsnummer: vorhandene Kennung in Übersicht, Ergebnisdatenbank und Details anzeigen; Suche/Sortierung konsistent halten
 - [x] Nutzerklärung: Dieselkathalle→_CC bestätigt; lokales massetyp als Übergang freigegeben, bestehendes Feld in Erstellung einblenden
