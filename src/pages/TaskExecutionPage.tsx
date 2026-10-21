@@ -772,7 +772,7 @@ function TaskExecutionPageInner() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Zurück">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
@@ -822,19 +822,31 @@ function TaskExecutionPageInner() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Messdurchlauf verlassen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Nicht abgeschlossene Aufgaben werden wieder für andere qualifizierte Mitarbeiter freigegeben.
-              Bereits gespeicherte Zwischenstände bleiben erhalten. Abgeschlossene Messungen bleiben abgeschlossen.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Möchten Sie den Messdurchlauf verlassen? Wie soll mit Ihren noch offenen Aufgaben verfahren werden?</p>
+                {leaveScope.count === 1 ? (
+                  <p>Betroffen: <span className="font-medium text-foreground">{leaveScope.singleLabel ?? "1 Aufgabe"}</span></p>
+                ) : (
+                  <p>
+                    Die Entscheidung gilt für <span className="font-medium text-foreground">alle {leaveScope.count} freigabefähigen,
+                    noch nicht abgeschlossenen Aufgaben</span> dieses Messdurchlaufs.
+                  </p>
+                )}
+                <p className="text-xs">
+                  Gespeicherte Zwischenstände und abgeschlossene Messungen bleiben in jedem Fall erhalten.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={leaving}>Zurück</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={leaving}
-              onClick={(e) => { e.preventDefault(); confirmLeaveRun(); }}
-            >
-              Durchlauf verlassen
-            </AlertDialogAction>
+            <AlertDialogCancel disabled={leaving}>Abbrechen</AlertDialogCancel>
+            <Button variant="outline" disabled={leaving} onClick={() => confirmLeave("keep")}>
+              Behalten
+            </Button>
+            <Button disabled={leaving} onClick={() => confirmLeave("release")}>
+              Freigeben
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
