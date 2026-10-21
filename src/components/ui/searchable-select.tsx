@@ -50,7 +50,8 @@ export function SearchableSelect({
   const visible = filterOptions(options, query);
 
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(""); }}>
+    // modal: eigene Scroll-Ebene, sonst blockiert ein umgebender Dialog das Mausrad in der Liste.
+    <Popover modal open={open} onOpenChange={(o) => { setOpen(o); if (!o) setQuery(""); }}>
       <PopoverTrigger asChild>
         <button
           type="button"
