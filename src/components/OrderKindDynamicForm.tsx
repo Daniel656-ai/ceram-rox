@@ -64,9 +64,9 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);
-    if (normalized.nodes.length) return normalized;
-    return autoLayout(typedFields);
-  }, [form?.layout, typedFields]);
+    const base = normalized.nodes.length ? normalized : autoLayout(typedFields);
+    return includePilotPlantMassType(base, typedFields, orderKind);
+  }, [form?.layout, typedFields, orderKind]);
 
   const { data: permissions } = useQuery({
     queryKey: ["form-field-permissions", formId, role, typedFields.length],
@@ -105,6 +105,19 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
       </CardContent>
     </Card>
   );
+}
+
+/** Approved interim source: expose the existing local field, never create one. */
+export function includePilotPlantMassType(layout: FormLayoutTree, fields: FormField[], kind: OrderKind): FormLayoutTree {
+  if (kind !== "pilot_plant") return layout;
+  const field = fields.find(f => f.field_key === "massetyp" && f.field_type === "select" && !f.parent_field_id && !f.global_field_id);
+  if (!field) return layout;
+  const contains = (nodes: LayoutNode[]): boolean => nodes.some(node =>
+    (node.type === "field" && node.field_id === field.id) ||
+    ("children" in node && contains(node.children))
+  );
+  if (contains(layout.nodes)) return layout;
+  return { ...layout, nodes: [...layout.nodes, { id: `pp-existing-mass-${field.id}`, type: "field", field_id: field.id, width: 12 }] };
 }
 
 /**

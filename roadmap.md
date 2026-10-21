@@ -2,7 +2,8 @@
 
 - [x] Pilot-Plant-Versuchsnummer: Gebäude-/Massetypfeld und Web-Abbildung geprüft; Stop-Regel ausgelöst
 - [x] Pilot-Plant-Versuchsnummer: vorhandene Kennung in Übersicht, Ergebnisdatenbank und Details anzeigen; Suche/Sortierung konsistent halten
-- [ ] Pilot-Plant-Versuchsnummer: neue Nummern erfassen/ableiten — blockiert: `massetyp` fehlt im Auftragslayout, Nummernteil nicht festgelegt, Dieselkathalle→Dieselkat-Fall nicht bestätigt; keine Definitions-/DB-Änderung ohne Klärung
+- [x] Nutzerklärung: Dieselkathalle→_CC bestätigt; lokales massetyp als Übergang freigegeben, bestehendes Feld in Erstellung einblenden
+- [ ] Pilot-Plant-Versuchsnummer: neue Nummern erfassen/ableiten — globale `versuchsnummer` im Web gefunden, aber nicht an Pilot-Plant-Auftragsformular gebunden; Nummernteilformat noch nicht belegt. Vor Definitions-/Datenstrukturänderung anhalten
 - [x] Pilot-Plant-Versuchsnummer: 688 Tests erfolgreich; Web-Übersicht, Suche, Sortierung und Detailziel mit vorhandener Nummer geprüft; Ergebnisabfrage HTTP 200
 - [ ] Pilot-Plant-Versuchsnummer: reale PP-Ergebnisanzeige im Web prüfen — keine offiziellen PP-Ergebnisse vorhanden
 - [ ] Pilot-Plant-Versuchsnummer: Desktop-Abnahme — Firmenumgebung nicht zugänglich; gesonderte Nutzerprüfung erforderlich
