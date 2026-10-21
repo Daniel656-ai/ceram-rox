@@ -19,7 +19,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { releaseRun } from "@/lib/measurementRun/leaveRun";
+import {
+  leaveDestination, leaveDialogScope, performLeave, selectReleasable, type LeaveChoice,
+} from "@/lib/measurementRun/leaveRun";
 import ReassignMeasurementDialog from "@/components/measurementRun/ReassignMeasurementDialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -655,8 +657,18 @@ function TaskExecutionPageInner() {
 
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [leaveScope, setLeaveScope] = useState<{ count: number; singleLabel: string | null }>({ count: 0, singleLabel: null });
 
-  /** Schritt 1: Zwischenstand sichern; nur bei Erfolg Bestätigung anzeigen. */
+  const goAfterLeave = () => {
+    const dest = leaveDestination((window.history.state as { idx?: unknown } | null)?.idx);
+    if (dest === -1) navigate(-1);
+    else navigate(dest);
+  };
+
+  /**
+   * Einheitlicher Einstieg (Zurück-Button + „Durchlauf verlassen"): Zwischenstand
+   * sichern, frischen Stand laden; nur bei eigenen offenen Aufgaben Dialog zeigen.
+   */
   const requestLeaveRun = async () => {
     try {
       await autosave.flush();
@@ -666,33 +678,67 @@ function TaskExecutionPageInner() {
       });
       return;
     }
+    let releasable: string[] = [];
+    try {
+      if (user?.id) releasable = selectReleasable(await api.measurements.listRunStateByIds(runIds), user.id);
+    } catch (err: any) {
+      toast.error("Aktueller Stand konnte nicht geladen werden – Durchlauf wird nicht verlassen", {
+        description: err?.message,
+      });
+      return;
+    }
+    if (releasable.length === 0) {
+      goAfterLeave();
+      return;
+    }
+    const labelOf = (id: string) => {
+      const it: any = runItems.find((r: any) => r.id === id);
+      const parts = [it?.measurement_orders?.order_number, it?.measurement_number].filter(Boolean);
+      return parts.length ? parts.join(" · ") : null;
+    };
+    setLeaveScope(leaveDialogScope(releasable, labelOf));
     setLeaveOpen(true);
   };
 
-  /** Schritte 3–4: frischen Stand laden, eigene offene Aufgaben freigeben. */
-  const confirmLeaveRun = async () => {
+  const handleBack = () => {
+    if (runMode && user?.id) void requestLeaveRun();
+    else navigate(-1);
+  };
+
+  /** Entscheidung „Behalten" / „Freigeben" – Freigabe nur über releaseRun. */
+  const confirmLeave = async (choice: LeaveChoice) => {
     if (!user?.id) return;
     setLeaving(true);
     try {
-      await autosave.flush();
-      const r = await releaseRun({
+      const out = await performLeave({
+        choice,
+        flush: () => autosave.flush(),
         runIds,
         userId: user.id,
         loadState: api.measurements.listRunStateByIds,
         release: api.measurements.release,
       });
-      if (r.failed.length > 0) {
-        toast.warning(`${r.failed.length} Aufgabe(n) konnten nicht freigegeben werden`, {
-          description: "Sie bleiben Ihnen zugewiesen. Gespeicherte Zwischenstände sind erhalten.",
-        });
-      } else if (r.released.length > 0) {
-        toast.success(`${r.released.length} Aufgabe(n) wieder freigegeben`);
+      if (!out.ok) {
+        const fail = out as Extract<typeof out, { ok: false }>;
+        if (fail.stage === "save") {
+          toast.error("Zwischenstand konnte nicht gespeichert werden – Durchlauf wird nicht verlassen", { description: fail.message });
+        } else if (out.result) {
+          if (out.result.released.length > 0) toast.success(`${out.result.released.length} Aufgabe(n) wieder freigegeben`);
+          toast.warning(`${out.result.failed.length} Aufgabe(n) konnten nicht freigegeben werden`, {
+            description: "Sie bleiben Ihnen zugewiesen. Gespeicherte Zwischenstände sind erhalten. Bitte erneut versuchen.",
+          });
+          qc.invalidateQueries();
+        } else {
+          toast.error("Freigabe fehlgeschlagen – Sie bleiben auf dieser Seite", { description: fail.message });
+        }
+        return;
+      }
+      if (out.result && out.result.released.length > 0) {
+        toast.success(`${out.result.released.length} Aufgabe(n) wieder freigegeben`);
       }
       qc.invalidateQueries();
       setLeaveOpen(false);
-      navigate("/auftraege");
-    } catch (err: any) {
-      toast.error("Durchlauf konnte nicht verlassen werden", { description: err?.message });
+      goAfterLeave();
     } finally {
       setLeaving(false);
     }
@@ -727,7 +773,7 @@ function TaskExecutionPageInner() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Zurück">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
@@ -777,19 +823,31 @@ function TaskExecutionPageInner() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Messdurchlauf verlassen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Nicht abgeschlossene Aufgaben werden wieder für andere qualifizierte Mitarbeiter freigegeben.
-              Bereits gespeicherte Zwischenstände bleiben erhalten. Abgeschlossene Messungen bleiben abgeschlossen.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Möchten Sie den Messdurchlauf verlassen? Wie soll mit Ihren noch offenen Aufgaben verfahren werden?</p>
+                {leaveScope.count === 1 ? (
+                  <p>Betroffen: <span className="font-medium text-foreground">{leaveScope.singleLabel ?? "1 Aufgabe"}</span></p>
+                ) : (
+                  <p>
+                    Die Entscheidung gilt für <span className="font-medium text-foreground">alle {leaveScope.count} freigabefähigen,
+                    noch nicht abgeschlossenen Aufgaben</span> dieses Messdurchlaufs.
+                  </p>
+                )}
+                <p className="text-xs">
+                  Gespeicherte Zwischenstände und abgeschlossene Messungen bleiben in jedem Fall erhalten.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={leaving}>Zurück</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={leaving}
-              onClick={(e) => { e.preventDefault(); confirmLeaveRun(); }}
-            >
-              Durchlauf verlassen
-            </AlertDialogAction>
+            <AlertDialogCancel disabled={leaving}>Abbrechen</AlertDialogCancel>
+            <Button variant="outline" disabled={leaving} onClick={() => confirmLeave("keep")}>
+              Behalten
+            </Button>
+            <Button disabled={leaving} onClick={() => confirmLeave("release")}>
+              Freigeben
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
