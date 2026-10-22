@@ -51,10 +51,12 @@ export default function OrderWorkflowTab({
   order,
   isRequesterView,
   processSlot,
+  beforeHistorySlot,
 }: {
   order: any;
   isRequesterView: boolean;
   processSlot?: React.ReactNode;
+  beforeHistorySlot?: React.ReactNode;
 }) {
 
   const navigate = useNavigate();
@@ -248,6 +250,8 @@ export default function OrderWorkflowTab({
         </Card>
       )}
 
+
+      {beforeHistorySlot}
 
       <Card>
         <CardHeader className="py-3">

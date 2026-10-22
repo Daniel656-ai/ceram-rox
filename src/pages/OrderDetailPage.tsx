@@ -322,7 +322,7 @@ function OrderDetailPageInner() {
 
       <OrderHeaderSummary order={order} creatorName={creatorName} />
 
-      <OrderProductionDocuments order={order} />
+      {order.order_type !== "rnd" && <OrderProductionDocuments order={order} />}
 
       {order.notes && (
         <Card>
@@ -337,6 +337,7 @@ function OrderDetailPageInner() {
 
       <OrderWorkflowTabs
         order={order}
+        beforeHistorySlot={order.order_type === "rnd" ? <OrderProductionDocuments order={order} /> : undefined}
         isRequesterView={showRequesterView}
         canEditSamples={
           role === "master" ||

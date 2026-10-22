@@ -24,12 +24,14 @@ export function OrderWorkflowTabs({
   canEditSamples = false,
   canBookReplacement = false,
   processSlot,
+  beforeHistorySlot,
 }: {
   order: any;
   isRequesterView?: boolean;
   canEditSamples?: boolean;
   canBookReplacement?: boolean;
   processSlot?: ReactNode;
+  beforeHistorySlot?: ReactNode;
 }) {
   const { t } = useTranslation(["orders", "common"]);
   const kind: string = order?.order_kind || "labor";
@@ -62,6 +64,7 @@ export function OrderWorkflowTabs({
               order={order}
               isRequesterView={isRequesterView}
               processSlot={processSlot}
+              beforeHistorySlot={beforeHistorySlot}
             />
           </TabsContent>
 
