@@ -4,6 +4,7 @@ import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, u
 import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
+import { OrderRunSheetButton } from "@/components/OrderRunSheet";
 import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -270,6 +271,7 @@ function OrderDetailPageInner() {
         {(order as any).workflow_status && <WorkflowStatusBadge status={(order as any).workflow_status} />}
         <StatusBadge status={order.status} />
         {/* Kopierfunktion temporär deaktiviert – Handler/Hook bleiben erhalten */}
+        <OrderRunSheetButton order={order} />
         {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={openEditDialog}>
