@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { dmcSvg } from "@/components/SampleRunSheet";
 import { buildOrderRunSheet, orderDmcPayload } from "@/lib/runSheet/buildOrderRunSheet";
 import { escHtml as esc, specValueHtml, RUN_SHEET_CSS } from "@/lib/runSheet/specHtml";
+import { printHtml } from "@/lib/runSheet/printHtml";
 import { specLabelOf } from "@/lib/specValues";
 import { ORDER_PRIORITY_LABELS, type OrderPriority } from "@/lib/types";
 import type { RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
@@ -20,8 +21,6 @@ export function OrderRunSheetButton({ order }: { order: any }) {
 
   const handlePrint = async () => {
     if (busy || !order?.id) return;
-    const win = window.open("", "_blank", "width=900,height=1000");
-    if (!win) { toast.error(t("runsheet_popup_blocked")); return; }
     setBusy(true);
     try {
       const formId = order?.shared_form_data?.template?.form_definition_id as string | undefined;
@@ -55,7 +54,7 @@ export function OrderRunSheetButton({ order }: { order: any }) {
           </section>`).join("");
 
       const prio = sheet.priority ? (ORDER_PRIORITY_LABELS[sheet.priority as OrderPriority] ?? sheet.priority) : null;
-      win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+      await printHtml(`<!DOCTYPE html><html><head><meta charset="utf-8">
         <title>${esc(t("runsheet_order_title"))} – ${esc(sheet.number)}</title>
         <style>${RUN_SHEET_CSS}</style></head><body><div class="page">
         <header>
@@ -82,11 +81,8 @@ export function OrderRunSheetButton({ order }: { order: any }) {
         <h2>${esc(t("runsheet_services_section"))}</h2>
         ${svcHtml}
         </div>
-        <script>window.onload=function(){setTimeout(function(){window.print();},200);}</script>
         </body></html>`);
-      win.document.close();
     } catch (err: any) {
-      win.close();
       toast.error(t("runsheet_error"), { description: err?.message });
     } finally {
       setBusy(false);

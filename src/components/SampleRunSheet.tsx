@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { buildRunSheet, dmcPayload, type RunSheetOrder } from "@/lib/runSheet/buildRunSheet";
 import { specValueHtml, RUN_SHEET_CSS } from "@/lib/runSheet/specHtml";
+import { printHtml } from "@/lib/runSheet/printHtml";
 import { specLabelOf } from "@/lib/specValues";
 import type { RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
 
@@ -62,9 +63,6 @@ export function SampleRunSheetButton({ sample }: { sample: { id: string; sample_
 
   const handlePrint = async () => {
     if (busy) return;
-    // Fenster synchron öffnen (Popup-Blocker), Inhalt danach schreiben.
-    const win = window.open("", "_blank", "width=900,height=1000");
-    if (!win) { toast.error(t("runsheet_popup_blocked")); return; }
     setBusy(true);
     try {
       const rows = (await api.measurements.listForRunSheet(sample.id)) as any[];
@@ -73,20 +71,16 @@ export function SampleRunSheetButton({ sample }: { sample: { id: string; sample_
       const mats = (await api.rawMaterials.list()) as any[];
       const materials = new Map(mats.map((m) => [m.id as string, m as RawMaterialLookup]));
       if (orders.length === 0) {
-        win.close();
         toast.info(t("runsheet_empty"));
         return;
       }
       const printedAt = fmt(new Date().toISOString());
-      win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+      await printHtml(`<!DOCTYPE html><html><head><meta charset="utf-8">
         <title>${esc(t("runsheet_title"))} – ${esc(sample.sample_number)}</title>
         <style>${RUN_SHEET_CSS}</style></head><body>
         ${orders.map((o) => renderOrder(o, printedAt, materials)).join("")}
-        <script>window.onload=function(){setTimeout(function(){window.print();},200);}</script>
         </body></html>`);
-      win.document.close();
     } catch (err: any) {
-      win.close();
       toast.error(t("runsheet_error"), { description: err?.message });
     } finally {
       setBusy(false);
