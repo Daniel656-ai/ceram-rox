@@ -20,6 +20,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { releaseRun } from "@/lib/measurementRun/leaveRun";
+import { leaveTask, needsBackDialog, backTarget, type BackChoice } from "@/lib/measurementRun/taskBack";
 import ReassignMeasurementDialog from "@/components/measurementRun/ReassignMeasurementDialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -698,6 +699,69 @@ function TaskExecutionPageInner() {
     }
   };
 
+  // ---- Zurückpfeil: Dienstleistung behalten oder freigeben (nur diese Seite) ----
+  const [backOpen, setBackOpen] = useState(false);
+  const [backBusy, setBackBusy] = useState(false);
+  const backBusyRef = useRef(false);
+  const goBack = () => {
+    const t = backTarget(runMode, (window.history.state as any)?.idx);
+    if (t === -1) navigate(-1); else navigate(t);
+  };
+  const onBackClick = () => {
+    const show = needsBackDialog({
+      canEdit, status: (measurement as any)?.status,
+      assignedTo: (measurement as any)?.assigned_to, userId: user?.id,
+    });
+    if (show) setBackOpen(true); else goBack();
+  };
+  const saveBeforeBack = async () => {
+    if (!hasForm) return;
+    if (runMode) {
+      await autosave.flush();
+      if (autosave.hasUnsaved()) throw new Error("Zwischenstand nicht gespeichert");
+    } else {
+      await persist(false, { draftOnly: true });
+    }
+  };
+  const handleBack = async (choice: BackChoice) => {
+    if (backBusyRef.current || !user?.id || !measurementId) return;
+    backBusyRef.current = true;
+    setBackBusy(true);
+    try {
+      let r;
+      try {
+        r = await leaveTask({
+          choice, measurementId, runIds: runMode ? runIds : [], userId: user.id,
+          save: saveBeforeBack,
+          loadState: api.measurements.listRunStateByIds,
+          release: api.measurements.release,
+        });
+      } catch (err: any) {
+        toast.error("Eingaben konnten nicht gespeichert werden – Bearbeitung wird nicht verlassen", {
+          description: err?.message,
+        });
+        return;
+      }
+      if (choice === "release") {
+        if (r.failed.length > 0) {
+          toast.warning(`${r.failed.length} Dienstleistung(en) konnten nicht freigegeben werden`, {
+            description: "Sie bleiben Ihnen zugewiesen. Eingaben sind gespeichert.",
+          });
+        }
+        if (r.released.length > 0) toast.success(`${r.released.length} Dienstleistung(en) freigegeben`);
+        if (r.skipped.length > 0) toast.info(`${r.skipped.length} Dienstleistung(en) waren bereits abgeschlossen oder umgewiesen`);
+      } else {
+        toast.success("Eingaben gespeichert – Dienstleistung bleibt Ihnen zugewiesen");
+      }
+      qc.invalidateQueries();
+      setBackOpen(false);
+      goBack();
+    } finally {
+      backBusyRef.current = false;
+      setBackBusy(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -727,7 +791,7 @@ function TaskExecutionPageInner() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+        <Button variant="ghost" size="icon" onClick={onBackClick}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
@@ -790,6 +854,28 @@ function TaskExecutionPageInner() {
             >
               Durchlauf verlassen
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={backOpen} onOpenChange={(o) => !backBusy && setBackOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bearbeitung verlassen</AlertDialogTitle>
+            <AlertDialogDescription>
+              {runMode
+                ? "Eingaben werden gespeichert. Beim Freigeben werden alle nicht abgeschlossenen, Ihnen zugewiesenen Dienstleistungen dieses Messdurchlaufs wieder freigegeben."
+                : "Eingaben werden gespeichert. Möchten Sie diese Dienstleistung behalten oder für andere qualifizierte Mitarbeiter freigeben?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={backBusy}>Abbrechen</AlertDialogCancel>
+            <Button variant="outline" disabled={backBusy} onClick={() => handleBack("release")}>
+              Dienstleistung freigeben
+            </Button>
+            <Button disabled={backBusy} onClick={() => handleBack("keep")}>
+              Dienstleistung behalten
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
