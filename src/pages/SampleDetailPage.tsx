@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { ArrowLeft, AlertTriangle, Upload, Clock, MapPin, Users, FlaskConical, FileText, GitBranch, CalendarClock, Eye, Download } from "lucide-react";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 import { SampleBarcode, SampleQRCode, SampleLabelPrintDialog } from "@/components/SampleLabel";
+import { SampleRunSheetButton } from "@/components/SampleRunSheet";
 import { GhsPictogramList } from "@/components/GhsPictogram";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PersonSelect } from "@/components/PersonSelect";
@@ -227,6 +228,7 @@ export default function SampleDetailPage() {
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2">
         <SampleLabelPrintDialog sample={s} />
+        <SampleRunSheetButton sample={s} />
         {canEditSample(s, user?.id, role) && (
           <SampleEditDialog sample={s} projects={projects as any} linkedOrderCount={orderLinks?.get(s.id)?.length ?? 0} userId={user!.id} />
         )}
