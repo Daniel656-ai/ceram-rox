@@ -14,7 +14,11 @@
 export interface FormValueFieldDef {
   display_name?: string | null;
   unit?: string | null;
+  field_type?: string | null;
 }
+
+/** Feldtypen, deren Zeichenfolgen immer Text bleiben (Kennungen wie „014“). */
+const TEXT_FIELD_TYPES = new Set(["text", "longtext", "select", "multiselect"]);
 
 export interface FormValueResultPayload {
   order_measurement_id: string;
@@ -32,6 +36,8 @@ const NUMERIC = /^[+-]?(\d+([.,]\d+)?|[.,]\d+)([eE][+-]?\d+)?$/;
 /**
  * Baut die Ergebniszeile für einen Auftraggeber-Formularwert.
  * Leere Werte werden nicht übernommen (`null`) – sie dürfen nie zu 0 werden.
+ * Text-/Auswahlfelder behalten Zeichenfolgen unverändert; Zahl-, Dezimal-,
+ * Prozent- und unbekannte Feldtypen verhalten sich wie bisher.
  */
 export function buildFormValueResultPayload(params: {
   measurementId: string;
@@ -60,8 +66,9 @@ export function buildFormValueResultPayload(params: {
     if (!Number.isFinite(raw)) return null;
     payload.value = raw;
   } else if (typeof raw === "string") {
+    const isText = !!def?.field_type && TEXT_FIELD_TYPES.has(def.field_type);
     const text = raw.trim();
-    const num = NUMERIC.test(text) ? parseFloat(text.replace(",", ".")) : NaN;
+    const num = !isText && NUMERIC.test(text) ? parseFloat(text.replace(",", ".")) : NaN;
     if (Number.isFinite(num)) payload.value = num;
     else payload.remarks = raw;
   } else if (typeof raw === "boolean") {
