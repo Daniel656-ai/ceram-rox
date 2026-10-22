@@ -11,7 +11,7 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export function dmcSvg(payload: string): string {
-  return toSVG({ bcid: "datamatrix", text: payload, scale: 3, padding: 2 } as any);
+  return toSVG({ bcid: "datamatrix", text: payload, scale: 3, padding: 2, backgroundcolor: "FFFFFF" } as any);
 }
 
 /** Proben-Laufzettel (A4) – nur lesend, Druck über eigenes Fenster wie beim Etikett. */
