@@ -9,7 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   AmendableParam, SpecAmendDialog, SpecChangeHistory, groupSpecChanges,
 } from "@/components/order/SpecAmendment";
-import { rawMaterialValueLabel, RAW_MATERIAL_ID_KEYS, type RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
+import { rawMaterialValueLabel, type RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
+import { parseSpecValue, isEmptySpecValue, primSpecValue, specLabelOf, specColLabel, specValueShape } from "@/lib/specValues";
 
 /**
  * Read-only „Auftraggeber-Vorgaben“: zeigt die bei der Auftragserstellung
@@ -19,31 +20,10 @@ import { rawMaterialValueLabel, RAW_MATERIAL_ID_KEYS, type RawMaterialLookup } f
  * `shared_form_data.template.values` (Auftragsformular). Keine Defaults.
  */
 
-const parse = (raw: unknown): unknown => {
-  if (typeof raw !== "string") return raw;
-  const s = raw.trim();
-  if ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith("{") && s.endsWith("}"))) {
-    try { return JSON.parse(s); } catch { return raw; }
-  }
-  return raw;
-};
-
-const isEmpty = (v: unknown) =>
-  v == null || (typeof v === "string" && v.trim() === "") || (Array.isArray(v) && v.length === 0);
-
-const prim = (v: unknown): string => {
-  if (v === true || v === "true") return "Ja";
-  if (v === false || v === "false") return "Nein";
-  if (v && typeof v === "object") {
-    const o = v as Record<string, unknown>;
-    const label = o.label ?? o.name ?? o.display_name ?? o.value;
-    if (label != null && typeof label !== "object") return String(label);
-    return Object.entries(o).filter(([, x]) => !isEmpty(x)).map(([k, x]) => `${k}: ${prim(x)}`).join(", ");
-  }
-  return String(v);
-};
-
-const labelOf = (name: string) => name.replace(/^repeat:/, "");
+const parse = parseSpecValue;
+const isEmpty = isEmptySpecValue;
+const prim = primSpecValue;
+const labelOf = specLabelOf;
 
 function RawCell({ col, value, materials }: { col: string | null; value: unknown; materials: Map<string, RawMaterialLookup> }) {
   // Reine Anzeige: Rohstoff-ID → „RK-Code – Rohstoffname“; gespeicherter Wert bleibt unverändert.
@@ -52,13 +32,12 @@ function RawCell({ col, value, materials }: { col: string | null; value: unknown
   return <>{prim(value)}</>;
 }
 
-const colLabel = (c: string) => (RAW_MATERIAL_ID_KEYS.has(c) ? "Rohstoff" : c);
+const colLabel = specColLabel;
 
 function ValueView({ raw, unit, materials }: { raw: unknown; unit?: string | null; materials: Map<string, RawMaterialLookup> }) {
-  const v = parse(raw);
-  if (Array.isArray(v) && v.some((x) => x && typeof x === "object" && !Array.isArray(x))) {
-    const rows = v.filter((x) => x && typeof x === "object") as Record<string, unknown>[];
-    const cols = Array.from(new Set(rows.flatMap((r) => Object.keys(r).filter((k) => !k.startsWith("__")))));
+  const shape = specValueShape(raw);
+  if (shape.kind === "table") {
+    const { rows, cols } = shape;
     return (
       <div className="overflow-x-auto">
         <table className="text-xs border rounded">
@@ -80,16 +59,16 @@ function ValueView({ raw, unit, materials }: { raw: unknown; unit?: string | nul
       </div>
     );
   }
-  if (Array.isArray(v)) {
+  if (shape.kind === "list") {
     return (
       <div className="flex flex-wrap gap-1">
-        {v.filter((x) => !isEmpty(x)).map((x, i) => (
+        {shape.items.map((x, i) => (
           <Badge key={i} variant="secondary" className="font-normal"><RawCell col={null} value={x} materials={materials} /></Badge>
         ))}
       </div>
     );
   }
-  return <span><RawCell col={null} value={v} materials={materials} />{unit ? ` ${unit}` : ""}</span>;
+  return <span><RawCell col={null} value={shape.value} materials={materials} />{unit ? ` ${unit}` : ""}</span>;
 }
 
 type Entry = {
