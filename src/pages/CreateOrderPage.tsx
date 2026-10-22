@@ -38,6 +38,7 @@ import type { FormField } from "@/lib/api/formFields";
 import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
 import { isProjectRequired } from "@/lib/orders/projectRequirement";
 import { planRuleTriggers, ruleStepKey } from "@/lib/ruleEvaluation";
+import { experimentNumberPatch } from "@/lib/orders/experimentNumber";
 
 interface SelectedMeasurement {
   uid: string;
@@ -566,6 +567,7 @@ export default function CreateOrderPage() {
         sample_id: selectedSampleIds[0] || undefined,
         order_kind: orderKind,
         pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
+        ...experimentNumberPatch(dynamicFormId ? templateFields : [], dynamicValues),
       });
 
       // Pilot Plant: seed process blocks. Alle fachlichen Angaben kommen aus
