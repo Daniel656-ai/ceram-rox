@@ -31,6 +31,18 @@ export const activityLog = {
         .eq("event_type", "order_spec_updated")
         .order("created_at", { ascending: true })
     ),
+
+  /** Vorgabenänderungen mehrerer Messaufgaben (nur lesend, für den Laufzettel). */
+  listSpecChangesForMeasurements: (ids: string[]) =>
+    ids.length === 0
+      ? Promise.resolve([] as { order_measurement_id: string | null; created_at: string }[])
+      : (unwrap(
+          dbClient
+            .from("activity_log")
+            .select("order_measurement_id, created_at")
+            .in("order_measurement_id", ids)
+            .eq("event_type", "order_spec_updated")
+        ) as Promise<{ order_measurement_id: string | null; created_at: string }[]>),
 };
 
 
