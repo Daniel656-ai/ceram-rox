@@ -261,5 +261,20 @@
   "runsheet_no_dmc": "No code – identifier missing",
   "runsheet_empty": "No services are uniquely assigned to this sample.",
   "runsheet_error": "Run sheet could not be created",
-  "runsheet_popup_blocked": "Print window was blocked"
+  "runsheet_popup_blocked": "Print window was blocked",
+  "runsheet_order_print": "Print order run sheet",
+  "runsheet_order_title": "Order run sheet",
+  "runsheet_technical": "technical",
+  "runsheet_project": "Project",
+  "runsheet_due": "Due",
+  "runsheet_priority": "Priority",
+  "runsheet_notes": "Notes",
+  "runsheet_form_section": "Order form",
+  "runsheet_services_section": "Services and specifications",
+  "runsheet_field": "Field",
+  "runsheet_missing_def": "Field description missing",
+  "runsheet_without_sample": "without sample",
+  "runsheet_no_services": "No services",
+  "runsheet_state_services": "Change state of service specifications",
+  "runsheet_state_form": "Change state of order form"
 }

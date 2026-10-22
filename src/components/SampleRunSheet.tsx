@@ -6,6 +6,9 @@ import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { buildRunSheet, dmcPayload, type RunSheetOrder } from "@/lib/runSheet/buildRunSheet";
+import { specValueHtml, RUN_SHEET_CSS } from "@/lib/runSheet/specHtml";
+import { specLabelOf } from "@/lib/specValues";
+import type { RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -24,7 +27,7 @@ export function SampleRunSheetButton({ sample }: { sample: { id: string; sample_
       dateStyle: "medium", timeStyle: "short",
     });
 
-  const renderOrder = (o: RunSheetOrder, printedAt: string) => {
+  const renderOrder = (o: RunSheetOrder, printedAt: string, materials: Map<string, RawMaterialLookup>) => {
     const payload = dmcPayload(o.orderNumber, sample.sample_number);
     const services = o.services.map((s) => `
       <section class="svc">
@@ -32,7 +35,7 @@ export function SampleRunSheetButton({ sample }: { sample: { id: string; sample_
         ${s.params.length === 0
           ? `<p class="muted">${esc(t("runsheet_no_specs"))}</p>`
           : `<table><thead><tr><th>${esc(t("runsheet_param"))}</th><th>${esc(t("runsheet_value"))}</th><th>${esc(t("runsheet_unit"))}</th></tr></thead><tbody>
-            ${s.params.map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(p.value)}</td><td>${esc(p.unit ?? "–")}</td></tr>`).join("")}
+            ${s.params.map((p) => `<tr><td>${esc(specLabelOf(p.name))}</td><td>${specValueHtml(p.value, null, materials)}</td><td>${esc(p.unit ?? "–")}</td></tr>`).join("")}
             </tbody></table>`}
       </section>`).join("");
     return `
@@ -67,6 +70,8 @@ export function SampleRunSheetButton({ sample }: { sample: { id: string; sample_
       const rows = (await api.measurements.listForRunSheet(sample.id)) as any[];
       const changes = await api.activityLog.listSpecChangesForMeasurements(rows.map((r) => r.id));
       const orders = buildRunSheet(sample.id, rows, changes);
+      const mats = (await api.rawMaterials.list()) as any[];
+      const materials = new Map(mats.map((m) => [m.id as string, m as RawMaterialLookup]));
       if (orders.length === 0) {
         win.close();
         toast.info(t("runsheet_empty"));
@@ -75,26 +80,8 @@ export function SampleRunSheetButton({ sample }: { sample: { id: string; sample_
       const printedAt = fmt(new Date().toISOString());
       win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
         <title>${esc(t("runsheet_title"))} – ${esc(sample.sample_number)}</title>
-        <style>
-          @page { size: A4; margin: 14mm; }
-          body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; margin: 0; }
-          .page { page-break-after: always; break-after: page; }
-          .page:last-child { page-break-after: auto; break-after: auto; }
-          header { display: flex; justify-content: space-between; gap: 8mm; border-bottom: 1px solid #999; padding-bottom: 4mm; }
-          h1 { font-size: 16pt; margin: 0 0 3mm; }
-          h2 { font-size: 12pt; margin: 5mm 0 2mm; }
-          h3 { font-size: 11pt; margin: 4mm 0 1.5mm; }
-          dl { display: grid; grid-template-columns: auto 1fr; gap: 1mm 4mm; margin: 0; font-size: 11pt; }
-          dt { color: #444; } dd { margin: 0; font-weight: bold; }
-          .dmc svg { width: 32mm; height: 32mm; }
-          .stand { display: flex; justify-content: space-between; gap: 6mm; font-size: 9pt; margin-top: 3mm; }
-          .muted { color: #666; font-weight: normal; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #bbb; padding: 1.2mm 2mm; text-align: left; vertical-align: top; }
-          th { background: #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .svc { break-inside: avoid; }
-        </style></head><body>
-        ${orders.map((o) => renderOrder(o, printedAt)).join("")}
+        <style>${RUN_SHEET_CSS}</style></head><body>
+        ${orders.map((o) => renderOrder(o, printedAt, materials)).join("")}
         <script>window.onload=function(){setTimeout(function(){window.print();},200);}</script>
         </body></html>`);
       win.document.close();

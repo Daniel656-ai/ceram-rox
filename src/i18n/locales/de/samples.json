@@ -261,5 +261,20 @@
   "runsheet_no_dmc": "Kein Code – Kennung fehlt",
   "runsheet_empty": "Dieser Probe sind keine Dienstleistungen eindeutig zugeordnet.",
   "runsheet_error": "Laufzettel konnte nicht erstellt werden",
-  "runsheet_popup_blocked": "Druckfenster wurde blockiert"
+  "runsheet_popup_blocked": "Druckfenster wurde blockiert",
+  "runsheet_order_print": "Auftrags-Laufzettel drucken",
+  "runsheet_order_title": "Auftrags-Laufzettel",
+  "runsheet_technical": "technisch",
+  "runsheet_project": "Projekt",
+  "runsheet_due": "Fällig",
+  "runsheet_priority": "Priorität",
+  "runsheet_notes": "Hinweise",
+  "runsheet_form_section": "Auftragsformular",
+  "runsheet_services_section": "Dienstleistungen und Vorgaben",
+  "runsheet_field": "Feld",
+  "runsheet_missing_def": "Feldbeschreibung fehlt",
+  "runsheet_without_sample": "ohne Probe",
+  "runsheet_no_services": "Keine Dienstleistungen",
+  "runsheet_state_services": "Änderungsstand Dienstleistungsvorgaben",
+  "runsheet_state_form": "Änderungsstand Auftragsformular"
 }

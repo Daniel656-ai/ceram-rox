@@ -37,3 +37,4 @@
 - [ ] Prüfung in der Firmenumgebung mit Testauftrag — wartet auf den Nutzer (Formular nur dort vorhanden)
 - [ ] m³-Liste: vollständige Analyse und Umsetzungskonzept (nur lesen) — als Nächstes
 - [x] Proben-Laufzettel mit DMC (Web geprüft); offen: Desktop-Druckprüfung, Scan mit Handscanner auf Papier
+- [x] Auftrags-Laufzettel + Tabellenwerte im Proben-Laufzettel (Web geprüft); offen: Desktop-Druck, Papier-Scan
