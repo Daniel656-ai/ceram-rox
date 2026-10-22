@@ -134,6 +134,16 @@ export const measurements = {
   deleteWithReason: (id: string, reason: string) =>
     unwrap(dbClient.rpc("delete_order_measurement" as any, { _measurement_id: id, _reason: reason }) as any),
 
+  /** Laufzettel: Dienstleistungen genau einer Probe mit gespeicherten Vorgaben (nur lesend, RLS). */
+  listForRunSheet: (sampleId: string) =>
+    unwrap(
+      dbClient
+        .from("order_measurements")
+        .select("id, sample_id, measurement_number, measurement_services(service_name), measurement_parameters(id, parameter_name, parameter_value, unit), measurement_orders(id, order_number, order_kind, pp_experiment_number, customer_name, order_measurements(measurement_services(category)))")
+        .eq("sample_id", sampleId)
+        .order("created_at", { ascending: true })
+    ),
+
   /** Frischer Status/Zuweisungsstand für Messdurchlauf-Aufgaben (ohne Cache). */
   listRunStateByIds: (ids: string[]) =>
     ids.length === 0

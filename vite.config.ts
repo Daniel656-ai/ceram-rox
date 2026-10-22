@@ -22,5 +22,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Eine einzige React-Instanz – verhindert "null (reading 'useRef')" nach Paket-Installationen.
+    dedupe: ["react", "react-dom", "react/jsx-runtime"],
   },
 }));
