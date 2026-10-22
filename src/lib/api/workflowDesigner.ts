@@ -7,6 +7,8 @@
  */
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { formFields } from "./formFields";
+import { experimentNumberPatch } from "@/lib/orders/experimentNumber";
 
 // =====================================================================
 // service_forms
@@ -326,10 +328,24 @@ export const orderSharedFormData = {
   },
   merge: async (orderId: string, patch: Record<string, unknown>) => {
     const current = await orderSharedFormData.get(orderId);
+    let numberPatch: { pp_experiment_number?: string } = {};
+    const template = patch.template;
+    // Only submitted template values trigger synchronization, never a read,
+    // unrelated patch or old values from the loaded order.
+    if (template && typeof template === "object" && !Array.isArray(template)) {
+      const submitted = template as Record<string, unknown>;
+      const previous = current.template as Record<string, unknown> | undefined;
+      const formId = submitted.form_definition_id ?? previous?.form_definition_id;
+      const values = submitted.values;
+      if (typeof formId === "string" && values && typeof values === "object" && !Array.isArray(values)) {
+        const fields = await formFields.listForForm(formId);
+        numberPatch = experimentNumberPatch(fields, values as Record<string, unknown>);
+      }
+    }
     await run(
       dbClient
         .from("measurement_orders" as any)
-        .update({ shared_form_data: { ...current, ...patch } } as any)
+        .update({ shared_form_data: { ...current, ...patch }, ...numberPatch } as any)
         .eq("id", orderId)
     );
   },
