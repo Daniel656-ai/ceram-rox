@@ -1,6 +1,7 @@
 # Roadmap
 
-- [ ] F&E-Bereichsreihenfolge: Fertigungsunterlagen lokal vor Änderungsverlauf verschieben; Web mit bestehendem Auftrag und Regressionen prüfen, Desktop separat abnehmen
+- [x] F&E-Bereichsreihenfolge: Fertigungsunterlagen im Workflow nach Arbeitszeiten direkt vor Änderungsverlauf; bestehender F&E-/Kundenauftrag im Web geprüft, 727 Tests erfolgreich
+- [ ] F&E-Bereichsreihenfolge: installierte Desktopansicht separat abnehmen — Firmenumgebung nicht zugänglich
 
 - [x] Versuchsnummer: ausgefülltes bestehendes Formularfeld bei explizitem Anlegen/Speichern zusätzlich getrimmt in pp_experiment_number übernehmen; leere Werte erhalten bestehende Nummern, keine Nachbefüllung
 - [x] Versuchsnummer: 720 Tests bestanden, Speicherung/Anzeige isoliert getestet; Web-Übersicht und bestehende Details lesend ohne Laufzeitfehler geprüft
