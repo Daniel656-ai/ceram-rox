@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { buildRunSheet, dmcPayload, type RunSheetOrder } from "@/lib/runSheet/buildRunSheet";
 import { specValueHtml, RUN_SHEET_CSS } from "@/lib/runSheet/specHtml";
+import { printHtml } from "@/lib/runSheet/printHtml";
 import { specLabelOf } from "@/lib/specValues";
 import type { RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
 
