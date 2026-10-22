@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Versuchsnummer: ausgefülltes bestehendes Formularfeld bei explizitem Anlegen/Speichern zusätzlich getrimmt in pp_experiment_number übernehmen; leere Werte erhalten bestehende Nummern, keine Nachbefüllung
+- [ ] Versuchsnummer: gezielte Speicher-/Anzeigetests und getrennte Web-/Desktop-Prüfung
+
 - [x] Probenname-Spalte: bestehende lesbare Probenbeziehungen laden, UUID-dedupliziert direkt nach Auftragsnummer verlinken; Suche/Filter unverändert
 - [x] Probenname-Spalte: isolierte Tests und Web-Navigation, Nummernsortierung, Auftragsartfilter sowie DE/EN geprüft
 - [ ] Probenname-Spalte: Desktop-Build und Firmenabnahme — blockiert: WebKit-Systembibliothek fehlt, installierte Firmenumgebung nicht zugänglich; keine Infrastrukturänderung freigegeben
