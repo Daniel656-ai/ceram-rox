@@ -70,8 +70,8 @@ describe("nested renderer, no backend writes", () => {
     const added = values().runs[0].points[2].__instance_id;
     expect(added).toBeTruthy();
     expect(values().runs[1]).toEqual(initial.runs[1]);
-    fireEvent.click(screen.getAllByTitle("Nach oben")[2]);
-    expect(values().runs[0].points.map((p: { __instance_id: string }) => p.__instance_id)).toEqual(["A", "A1"].includes(added) ? [] : ["A1", added, "A2"]);
+    fireEvent.click(screen.getAllByTitle("Nach oben")[3]);
+    expect(values().runs[0].points.map((p: { __instance_id: string }) => p.__instance_id)).toEqual(["A1", added, "A2"]);
     fireEvent.click(screen.getAllByTitle("Duplizieren")[1]);
     expect(values().runs[0].points[1].__instance_id).not.toBe("A1");
     fireEvent.click(screen.getAllByTitle("Entfernen")[1]);
