@@ -95,15 +95,21 @@ export function updateScopedContainer(
     if (previous.includes(entry)) return entry;
     let next = calculatedEntry(owner, fields, calcs, root, entry, parent);
     if (owner.field_type !== "measurement_block") return next;
-    const runScope = { ...entryDefinitionScope(owner, fields, calcs, next), ...next };
+    const runScope = { ...next, ...entryDefinitionScope(owner, fields, calcs, next) };
+    const oldEntry = previous.find((p) => p[INSTANCE_ID_KEY] === entry[INSTANCE_ID_KEY]);
+    const oldScope = oldEntry ? { ...oldEntry, ...entryDefinitionScope(owner, fields, calcs, oldEntry) } : {};
+    const parentChanged = Object.keys(runScope).some((key) => !Array.isArray(runScope[key]) &&
+      !key.startsWith("__") && JSON.stringify(runScope[key]) !== JSON.stringify(oldScope[key]));
     for (const nested of containerFields(owner, fields, calcs).filter((f) => f.field_type === "repeater")) {
       const placement = containerLayout(owner, fields, calcs).items.flatMap((i) => i.type === "group" ? i.children : [i])
         .find((i) => i.type === "field" && (i.field_id === nested.id || i.key === nested.field_key));
       const key = placement?.type === "field" ? placement.value_key ?? nested.field_key : nested.field_key;
       const raw = next[key];
+      const oldPoints = oldEntry?.[key];
       if (!Array.isArray(raw)) continue; // Never redistribute old root arrays.
       next = { ...next, [key]: raw.map((point) => {
         if (!point || typeof point !== "object" || Array.isArray(point)) return point;
+        if (!parentChanged && Array.isArray(oldPoints) && oldPoints.includes(point)) return point;
         return calculatedEntry(nested, fields, calcs, root, point, runScope);
       }) };
     }

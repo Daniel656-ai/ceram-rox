@@ -55,7 +55,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculations, formatCalcResult } from "@/lib/localCalculations";
-import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry } from "@/lib/scopedMeasurementValues";
+import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry, evaluateScopedEntry } from "@/lib/scopedMeasurementValues";
 import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
@@ -105,6 +105,7 @@ interface ValuesCtxShape {
   values: Record<string, any>;
 }
 const ValuesCtx = createContext<ValuesCtxShape | null>(null);
+const CalculationInputsCtx = createContext<Record<string, unknown>>({});
 
 /** Nested overlay context used inside repeater entries so field values bind to
  *  the entry object instead of the top-level form state. */
@@ -1091,7 +1092,8 @@ function RepeaterField({
   const managed = nested || hasScopedReferences(field);
   const children = useMemo(() => managed ? containerFields(field, allFields, calcs) : repeaterChildren(allFields, field.id), [managed, field, allFields, calcs]);
 
-  const storageKey = meta.storage_key || field.field_key;
+  const storageKey = nested ? field.field_key : meta.storage_key || field.field_key;
+  const calculationInputs = useContext(CalculationInputsCtx);
   const root = useContext(ValuesCtx);
   const rawList = nested ? parent?.get(storageKey) : root?.get(storageKey);
   const entries: Array<Record<string, any>> = Array.isArray(rawList) ? rawList : [];
@@ -1116,7 +1118,7 @@ function RepeaterField({
   latest.current = entries;
   const updateEntries = (next: Array<Record<string, any>>) => {
     if (readonly || !interactive) return;
-    const updated = managed ? updateScopedContainer(field, allFields, calcs, root?.values ?? {}, next, latest.current, parent?.values) : next;
+    const updated = managed ? updateScopedContainer(field, allFields, calcs, calculationInputs, next, latest.current, parent?.values) : next;
     latest.current = updated;
     if (nested) parent?.set(storageKey, updated);
     else root?.set(storageKey, updated);
@@ -1340,6 +1342,7 @@ function RepeaterEntry({
 
   const allCalcs = useContext(LocalCalcsCtx);
   const ancestor = useContext(EntryScopeCtx);
+  const calculationInputs = useContext(CalculationInputsCtx);
   const latestEntry = useRef(entry);
   latestEntry.current = entry;
   const keys = useMemo(() => children.map((c) => c.field_key), [children]);
@@ -1376,10 +1379,14 @@ function RepeaterEntry({
   const entryCalcs = useMemo(() => seriesCalculations(allCalcs, keys), [allCalcs, keys]);
 
   const entryResults = useMemo(() => {
+    const live = managed && owner ? evaluateScopedEntry(owner, allFields, allCalcs, calculationInputs, entry, ancestor?.values) : {};
     const raw = managed ? Object.fromEntries(allCalcs.map((c) => {
       const placement = tree.items.flatMap((i) => i.type === "group" ? i.children : [i]).find((i) => i.type === "calculation" && i.calc_key === c.calc_key);
       const k = placement?.type === "calculation" ? placement.value_key ?? c.calc_key : c.calc_key;
-      return [c.calc_key, { value: typeof entry[k] === "number" ? entry[k] : null, error: null }];
+      const stored = typeof entry[k] === "number" ? entry[k] : null;
+      const current = live[c.calc_key];
+      const error = current?.error ?? (stored !== current?.value ? "Gespeicherter Wert stimmt nicht mit den aktuellen Eingaben überein" : null);
+      return [c.calc_key, { value: error ? null : stored, error }];
     })) : evaluateEntryCalculations(allCalcs, root?.values, entry, keys);
     const out: Record<string, CalcDisplayResult> = {};
     for (const c of allCalcs) {
@@ -1394,7 +1401,7 @@ function RepeaterEntry({
       };
     }
     return out;
-  }, [allCalcs, root?.values, entry, keys, managed, tree]);
+  }, [allCalcs, root?.values, entry, keys, managed, tree, owner, allFields, calculationInputs, ancestor?.values]);
 
   /** Ergebnisse je Messpunkt im Eintrag speichern (Reihenfolge bleibt erhalten). */
   const interactiveRoot = !!root?.interactive;
@@ -1585,6 +1592,7 @@ function MeasurementBlockField({
 
 
   const storageKey = meta.storage_key || field.field_key;
+  const calculationInputs = useContext(CalculationInputsCtx);
   const root = useContext(ValuesCtx);
   const rawList = root?.get(storageKey);
   const entries: Array<Record<string, any>> = Array.isArray(rawList) ? rawList : [];
@@ -1604,7 +1612,7 @@ function MeasurementBlockField({
   latest.current = entries;
   const updateEntries = (next: Array<Record<string, any>>) => {
     if (readonly || !interactive) return;
-    const updated = managed ? updateScopedContainer(field, allFields, calcs, root?.values ?? {}, next, latest.current) : next;
+    const updated = managed ? updateScopedContainer(field, allFields, calcs, calculationInputs, next, latest.current) : next;
     latest.current = updated;
     root?.set(storageKey, updated);
   };
@@ -2203,6 +2211,12 @@ export default function FormLayoutRenderer({
     [globalFields],
   );
 
+  const calculationInputs = { ...linkedFieldScope(fields as any, { formValues: values ?? {}, stepData, formData }), ...(values ?? {}), ...constants };
+  const scopedCalcKeys = new Set(fields.filter((f) => hasScopedReferences(f)).flatMap((f) =>
+    containerLayout(f, fields, localCalcs).items.flatMap((i) => i.type === "group" ? i.children : [i])
+      .flatMap((i) => i.type === "calculation" ? [i.calc_key] : [])));
+  const topCalcKeys = new Set(calcNodes.filter((n) => n.scope === "local").map((n) => n.calc_key));
+
   const calcResults = useMemo(() => {
     const out: Record<string, CalcDisplayResult> = {};
     // Werte des Formulars + Listen aus Wiederholbereichen (rein zur Auswertung).
@@ -2261,6 +2275,7 @@ export default function FormLayoutRenderer({
     for (const [k, r] of Object.entries(calcResults)) {
       const key = k.split(":")[1];
       if (!key) continue;
+      if (k.startsWith("local:") && scopedCalcKeys.has(key) && !topCalcKeys.has(key)) continue;
       if ((values as any)?.[key] !== r.value) onChange?.(key, r.value);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2276,9 +2291,11 @@ export default function FormLayoutRenderer({
       <CalcResultsCtx.Provider value={calcResults}>
       <LocalCalcsCtx.Provider value={localCalcs}>
       <ValuesCtx.Provider value={bind}>
+      <CalculationInputsCtx.Provider value={calculationInputs}>
         <div className="grid grid-cols-12 gap-3">
           {layout.nodes.map(n => <RenderNode key={n.id} node={n} fields={fields} />)}
         </div>
+      </CalculationInputsCtx.Provider>
       </ValuesCtx.Provider>
       </LocalCalcsCtx.Provider>
       </CalcResultsCtx.Provider>
