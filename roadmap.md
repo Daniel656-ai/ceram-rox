@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Freigegebene lokale Definitionreferenzen und Messblock → Temperatur-Repeater additiv implementieren; offizielle Ergebnisableitung unverändert
+- [ ] Referenzen, unabhängige Kontexte, JSON-Speicherung und Bestandsregressionen isoliert testen; keine produktiven Testdaten
+- [ ] Installierte Desktop-Abnahme der Verschachtelung — Firmenumgebung nicht zugänglich
+
 - [x] F&E-Bereichsreihenfolge: Fertigungsunterlagen im Workflow nach Arbeitszeiten direkt vor Änderungsverlauf; bestehender F&E-/Kundenauftrag im Web geprüft, 727 Tests erfolgreich
 - [ ] F&E-Bereichsreihenfolge: installierte Desktopansicht separat abnehmen — Firmenumgebung nicht zugänglich
 
