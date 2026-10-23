@@ -1207,7 +1207,7 @@ function RepeaterField({
         </div>
       )}
       <div className="p-3 space-y-3">
-        {meta.table_view && entries.length > 0 && (
+        {meta.table_view && !managed && entries.length > 0 && (
           <RepeaterTable managed={managed} entries={entries} children={children} storageKeyLabel={meta.item_label ?? "Eintrag"} />
         )}
         {entries.length === 0 && (
@@ -2212,7 +2212,8 @@ export default function FormLayoutRenderer({
   );
 
   const calculationInputs = { ...linkedFieldScope(fields as any, { formValues: values ?? {}, stepData, formData }), ...(values ?? {}), ...constants };
-  const scopedCalcKeys = new Set(fields.filter((f) => hasScopedReferences(f)).flatMap((f) =>
+  const scopedCalcKeys = new Set(fields.filter((f) => hasScopedReferences(f) ||
+    (f.field_type === "repeater" && fields.some((p) => p.id === f.parent_field_id && p.field_type === "measurement_block"))).flatMap((f) =>
     containerLayout(f, fields, localCalcs).items.flatMap((i) => i.type === "group" ? i.children : [i])
       .flatMap((i) => i.type === "calculation" ? [i.calc_key] : [])));
   const topCalcKeys = new Set(calcNodes.filter((n) => n.scope === "local").map((n) => n.calc_key));
