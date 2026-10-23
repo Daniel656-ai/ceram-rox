@@ -2,7 +2,7 @@ import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 import {
   planMundstueck293, bookedCases, countBrenntemperaturen,
-  MS_AUSWAHL_KEY, MUNDSTUECK_MS_KEY, BRENNEN_KEY,
+  MS_AUSWAHL_KEY, MUNDSTUECK_MS_KEY, BRENNEN_KEY, EXTRUSION_SERVICE_NAME,
 } from "@/lib/rules/mundstueck293";
 
 /**
@@ -43,6 +43,8 @@ export const mundstueck293 = {
     }
 
     for (const m of ms) {
+      // Regel nur auf Extrusions-Aufgaben anwenden; andere Leistungen bleiben unberührt.
+      if (m.measurement_services?.service_name !== EXTRUSION_SERVICE_NAME) continue;
       const results: any[] = m.measurement_results ?? [];
       for (const auswahlRow of results.filter((r) => suffix(MS_AUSWAHL_KEY)(r.result_name))) {
         const fid = auswahlRow.result_name.split(":")[1];
