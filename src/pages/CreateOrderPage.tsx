@@ -973,21 +973,39 @@ export default function CreateOrderPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
-            <div><Label>{t("orders:notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders:notes_placeholder")} rows={3} /></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {t("common:project")} {projectRequired ? "*" : <span className="text-muted-foreground font-normal">({t("orders:project_optional")})</span>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
             <div>
-              <Label>{t("orders:select_project")}</Label>
+              <Label>{t("orders:kind_label")} *</Label>
+              <Select
+                value={orderKind}
+                onValueChange={(v) => {
+                  const next = v as "labor" | "pilot_plant";
+                  setOrderKind(next);
+                  if (next === "labor") {
+                    // Laborauftrag: nur Labor-Dienstleistungen zulässig
+                    const laborIds = new Set(laborServices.map((s) => s.id));
+                    setMeasurements((prev) => prev.filter((m) => laborIds.has(m.service_id)));
+                  }
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="labor">{t("orders:kind.labor")}</SelectItem>
+                  <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {orderKind !== "pilot_plant" && (
+              <div>
+                <Label>{t("orders:sample")} *</Label>
+                <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} />
+              </div>
+            )}
+            <div>
+              <Label>
+                {t("common:project")} {projectRequired ? "*" : <span className="text-muted-foreground font-normal">({t("orders:project_optional")})</span>}
+              </Label>
               <Select value={selectedProjectId || "__none__"} onValueChange={(v) => setSelectedProjectId(v === "__none__" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder={t("orders:choose_project")} /></SelectTrigger>
+                <SelectTrigger aria-label={t("orders:select_project")}><SelectValue placeholder={t("orders:choose_project")} /></SelectTrigger>
                 <SelectContent>
                   {!projectRequired && <SelectItem value="__none__">{t("orders:no_project")}</SelectItem>}
                   {projects.map((p) => (
@@ -999,43 +1017,10 @@ export default function CreateOrderPage() {
                 <p className="text-xs text-muted-foreground mt-1">{t("orders:project_optional_hint")}</p>
               )}
             </div>
+            <div><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+            <div><Label>{t("orders:notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders:notes_placeholder")} rows={3} /></div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader><CardTitle className="text-base">{t("orders:kind_label")} *</CardTitle></CardHeader>
-          <CardContent>
-            <Select
-              value={orderKind}
-              onValueChange={(v) => {
-                const next = v as "labor" | "pilot_plant";
-                setOrderKind(next);
-                if (next === "labor") {
-                  // Laborauftrag: nur Labor-Dienstleistungen zulässig
-                  const laborIds = new Set(laborServices.map((s) => s.id));
-                  setMeasurements((prev) => prev.filter((m) => laborIds.has(m.service_id)));
-                }
-              }}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="labor">{t("orders:kind.labor")}</SelectItem>
-                <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-
-
-        {orderKind !== "pilot_plant" && (
-          <Card>
-            <CardHeader><CardTitle className="text-base">{t("orders:sample")} *</CardTitle></CardHeader>
-            <CardContent>
-              <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} />
-            </CardContent>
-          </Card>
-        )}
 
         {/* Dynamic, template-driven form for the selected Auftragsart.
             Fields, sections, labels and validations come exclusively from the
