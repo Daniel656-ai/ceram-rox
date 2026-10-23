@@ -166,6 +166,7 @@ function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly, s
       <FormLayoutRenderer
         layout={layout}
         fields={typedFields}
+        readOnly={readOnly}
         permissions={effectivePermissions}
         values={localValues}
         onChange={(key, v) => onChange(linkedFormValueKey(formId, key), v)}

@@ -1015,6 +1015,7 @@ function TaskExecutionPageInner() {
               )}
               <ServiceLinkedForms
                 serviceId={serviceId}
+                readOnly={!canEdit || isCompleted}
                 context={roleView === "customer" ? "customer" : "employee"}
                 stepData={stepData as any}
                 formData={linkedFormData as any}
