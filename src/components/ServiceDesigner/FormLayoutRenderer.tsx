@@ -1,6 +1,6 @@
 import { withHistoricalOption } from "@/lib/masterData/inactiveOptions";
 import { fieldElementKey, explicitFieldElementKey, writeFieldElementKey, elementKey, formatElementKey } from "@/lib/elementKeys";
-import { useMemo, useState, useEffect, createContext, useContext, useCallback, type ReactNode } from "react";
+import { useMemo, useState, useEffect, createContext, useContext, useCallback, useRef, type ReactNode } from "react";
 import RichText from "@/components/forms/RichText";
 import { columnsGridStyle } from "@/lib/api/formDefinitionLayout";
 import type { LayoutNode, FieldNode, TabsNode, ColumnsNode, LayoutWidth, FormLayoutTree, CalculationNode } from "@/lib/api/formDefinitionLayout";
@@ -55,6 +55,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculations, formatCalcResult } from "@/lib/localCalculations";
+import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry } from "@/lib/scopedMeasurementValues";
 import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
@@ -123,6 +124,9 @@ const CalcResultsCtx = createContext<Record<string, CalcDisplayResult>>({});
 const LocalCalcsCtx = createContext<FormCalculation[]>([]);
 
 const EntryScopeCtx = createContext<{
+  owner?: FormField;
+  values?: Record<string, unknown>;
+  managed?: boolean;
   get: (key: string) => any;
   set: (key: string, v: any) => void;
   /**
@@ -1081,11 +1085,15 @@ function RepeaterField({
 }: { field: FormField; node: FieldNode; allFields: FormField[] }) {
   const perm = usePerm(field.id);
   const meta = readRepeaterMeta(field);
-  const children = useMemo(() => repeaterChildren(allFields, field.id), [allFields, field.id]);
+  const calcs = useContext(LocalCalcsCtx);
+  const parent = useContext(EntryScopeCtx);
+  const nested = parent?.owner?.field_type === "measurement_block";
+  const managed = nested || hasScopedReferences(field);
+  const children = useMemo(() => managed ? containerFields(field, allFields, calcs) : repeaterChildren(allFields, field.id), [managed, field, allFields, calcs]);
 
   const storageKey = meta.storage_key || field.field_key;
   const root = useContext(ValuesCtx);
-  const rawList = root?.get(storageKey);
+  const rawList = nested ? parent?.get(storageKey) : root?.get(storageKey);
   const entries: Array<Record<string, any>> = Array.isArray(rawList) ? rawList : [];
 
   const interactive = !!root?.interactive;
@@ -1104,15 +1112,23 @@ function RepeaterField({
     return n != null && n > 0 ? Math.round(n) : null;
   })();
 
-  const updateEntries = (next: Array<Record<string, any>>) => root?.set(storageKey, next);
+  const latest = useRef(entries);
+  latest.current = entries;
+  const updateEntries = (next: Array<Record<string, any>>) => {
+    if (readonly || !interactive) return;
+    const updated = managed ? updateScopedContainer(field, allFields, calcs, root?.values ?? {}, next, latest.current, parent?.values) : next;
+    latest.current = updated;
+    if (nested) parent?.set(storageKey, updated);
+    else root?.set(storageKey, updated);
+  };
 
   const add = () => {
-    const next = [...entries, {} as Record<string, any>];
+    const next = [...latest.current, managed ? newTemperatureEntry() : {}];
     updateEntries(next);
   };
   // MS-Auswahl und „Mundstück MS“ sind nur über die Reihenfolge verknüpft:
   // Entfernen/Verschieben wirkt immer auf beide Listen gleichzeitig.
-  const isMsAuswahl = storageKey === MS_AUSWAHL_KEY;
+  const isMsAuswahl = !nested && storageKey === MS_AUSWAHL_KEY;
   const removeAt = (i: number) => {
     if (meta.min_entries && entries.length <= meta.min_entries) return;
     if (isMsAuswahl) {
@@ -1144,14 +1160,14 @@ function RepeaterField({
   const duplicateAt = (i: number) => {
     if (meta.max_entries != null && entries.length >= meta.max_entries) return;
     const next = entries.slice();
-    next.splice(i + 1, 0, JSON.parse(JSON.stringify(entries[i] ?? {})));
+    next.splice(i + 1, 0, managed ? duplicateScopedEntry(entries[i] ?? {}) : JSON.parse(JSON.stringify(entries[i] ?? {})));
     updateEntries(next);
   };
 
   // Auto-seed min_entries in interactive mode
   if (interactive && !readonly && meta.min_entries && entries.length < meta.min_entries) {
     const seeded = entries.slice();
-    while (seeded.length < meta.min_entries) seeded.push({});
+    while (seeded.length < meta.min_entries) seeded.push(managed ? newTemperatureEntry() : {});
     // Defer to avoid setState during render
     queueMicrotask(() => updateEntries(seeded));
   }
@@ -1179,7 +1195,7 @@ function RepeaterField({
               size="sm" variant="ghost" type="button" className="h-6 text-[11px]"
               onClick={() => {
                 const next = entries.slice();
-                while (next.length < planned) next.push({});
+                while (next.length < planned) next.push(managed ? newTemperatureEntry() : {});
                 updateEntries(next);
               }}
             >
@@ -1190,7 +1206,7 @@ function RepeaterField({
       )}
       <div className="p-3 space-y-3">
         {meta.table_view && entries.length > 0 && (
-          <RepeaterTable entries={entries} children={children} storageKeyLabel={meta.item_label ?? "Eintrag"} />
+          <RepeaterTable managed={managed} entries={entries} children={children} storageKeyLabel={meta.item_label ?? "Eintrag"} />
         )}
         {entries.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-4">
@@ -1199,7 +1215,9 @@ function RepeaterField({
         )}
         {entries.map((entry, i) => (
           <RepeaterEntry
-            key={i}
+            key={managed && typeof entry[INSTANCE_ID_KEY] === "string" ? entry[INSTANCE_ID_KEY] : i}
+            owner={field}
+            managed={managed}
             index={i}
             entry={entry}
             children={children}
@@ -1218,8 +1236,10 @@ function RepeaterField({
               </div>
             ) : undefined}
             onChange={(next) => {
-              const arr = entries.slice();
-              arr[i] = next;
+              const arr = latest.current.slice();
+              const index = entry[INSTANCE_ID_KEY] ? arr.findIndex((e) => e[INSTANCE_ID_KEY] === entry[INSTANCE_ID_KEY]) : i;
+              if (index < 0) return;
+              arr[index] = next;
               updateEntries(arr);
             }}
             onRemove={() => removeAt(i)}
@@ -1238,8 +1258,8 @@ function RepeaterField({
  * Spalten aus Unterfeldern und den zugehörigen Berechnungen (inkl. Einheiten).
  */
 function RepeaterTable({
-  entries, children, storageKeyLabel,
-}: { entries: Array<Record<string, any>>; children: FormField[]; storageKeyLabel: string }) {
+  entries, children, storageKeyLabel, managed = false,
+}: { managed?: boolean; entries: Array<Record<string, any>>; children: FormField[]; storageKeyLabel: string }) {
   const root = useContext(ValuesCtx);
   const allCalcs = useContext(LocalCalcsCtx);
   const keys = useMemo(() => children.map((c) => c.field_key), [children]);
@@ -1247,7 +1267,7 @@ function RepeaterTable({
 
   const rows = entries.map((e) => ({
     entry: e,
-    results: evaluateEntryCalculations(allCalcs, root?.values, e, keys),
+    results: managed ? Object.fromEntries(allCalcs.map((c) => [c.calc_key, { value: typeof e[c.calc_key] === "number" ? e[c.calc_key] : null, error: null }])) : evaluateEntryCalculations(allCalcs, root?.values, e, keys),
   }));
 
   return (
@@ -1294,10 +1314,12 @@ function RepeaterTable({
 
 
 function RepeaterEntry({
-  index, entry, children, allFields, readonly, layout,
+  index, entry, children, allFields, readonly, layout, owner, managed = false,
   canRemove, canReorder, itemLabel, header,
   onChange, onRemove, onMoveUp, onMoveDown, onDuplicate,
 }: {
+  owner?: FormField;
+  managed?: boolean;
   index: number;
   entry: Record<string, any>;
   children: FormField[];
@@ -1316,32 +1338,49 @@ function RepeaterEntry({
   onDuplicate: () => void;
 }) {
 
-  const scope = useMemo(() => ({
-    get: (k: string) => entry?.[k],
-    // Auto-Einträge (Mundstück 293/1): Anzahl und Länge sind gesperrt.
+  const allCalcs = useContext(LocalCalcsCtx);
+  const ancestor = useContext(EntryScopeCtx);
+  const latestEntry = useRef(entry);
+  latestEntry.current = entry;
+  const keys = useMemo(() => children.map((c) => c.field_key), [children]);
+  const tree = useMemo(() => managed && owner ? containerLayout(owner, allFields, allCalcs) : normalizeRepeaterLayout(layout, keys), [managed, owner, allFields, allCalcs, layout, keys]);
+  const valueKeys = new Map(tree.items.flatMap((i) => i.type === "group" ? i.children : [i]).filter((i) => i.type === "field").map((i) => [i.key, i.value_key ?? i.key]));
+  const scope = {
+    owner,
+    managed,
+    values: { ...(ancestor?.values ?? {}), ...(owner ? entryDefinitionScope(owner, allFields, allCalcs, entry) : entry) },
+    get: (k: string) => latestEntry.current?.[valueKeys.get(k) ?? k],
     set: (k: string, v: any) => {
-      if (isAutoEntry(entry) && (AUTO_LOCKED_KEYS as readonly string[]).includes(k)) return;
-      onChange({ ...(entry ?? {}), [k]: v });
+      if (readonly || (isAutoEntry(entry) && (AUTO_LOCKED_KEYS as readonly string[]).includes(k))) return;
+      const next = { ...latestEntry.current, [valueKeys.get(k) ?? k]: v };
+      latestEntry.current = next;
+      onChange(next);
     },
     setMany: (patch: Record<string, any>) => {
-      const p = { ...patch };
-      if (isAutoEntry(entry)) for (const k of AUTO_LOCKED_KEYS) delete p[k];
-      onChange({ ...(entry ?? {}), ...p });
+      if (readonly) return;
+      const p: Record<string, any> = {};
+      for (const [k, v] of Object.entries(patch)) {
+        if (isAutoEntry(entry) && (AUTO_LOCKED_KEYS as readonly string[]).includes(k)) continue;
+        p[valueKeys.get(k) ?? k] = v;
+      }
+      const next = { ...latestEntry.current, ...p };
+      latestEntry.current = next;
+      onChange(next);
     },
-  }), [entry, onChange]);
-
-  const keys = useMemo(() => children.map((c) => c.field_key), [children]);
-  const tree = useMemo(() => normalizeRepeaterLayout(layout, keys), [layout, keys]);
+  };
 
   /* ---- Berechnungen im Scope dieses Eintrags (Messpunkt) -----------
    * Dieselbe Formel wird für jeden Messpunkt mit dessen eigenen Werten
    * ausgewertet. Fehlende Eingangsgrößen ⇒ kein Ergebnis (nie 0). */
   const root = useContext(ValuesCtx);
-  const allCalcs = useContext(LocalCalcsCtx);
   const entryCalcs = useMemo(() => seriesCalculations(allCalcs, keys), [allCalcs, keys]);
 
   const entryResults = useMemo(() => {
-    const raw = evaluateEntryCalculations(allCalcs, root?.values, entry, keys);
+    const raw = managed ? Object.fromEntries(allCalcs.map((c) => {
+      const placement = tree.items.flatMap((i) => i.type === "group" ? i.children : [i]).find((i) => i.type === "calculation" && i.calc_key === c.calc_key);
+      const k = placement?.type === "calculation" ? placement.value_key ?? c.calc_key : c.calc_key;
+      return [c.calc_key, { value: typeof entry[k] === "number" ? entry[k] : null, error: null }];
+    })) : evaluateEntryCalculations(allCalcs, root?.values, entry, keys);
     const out: Record<string, CalcDisplayResult> = {};
     for (const c of allCalcs) {
       const r = raw[c.calc_key];
@@ -1355,12 +1394,12 @@ function RepeaterEntry({
       };
     }
     return out;
-  }, [allCalcs, root?.values, entry, keys]);
+  }, [allCalcs, root?.values, entry, keys, managed, tree]);
 
   /** Ergebnisse je Messpunkt im Eintrag speichern (Reihenfolge bleibt erhalten). */
   const interactiveRoot = !!root?.interactive;
   useEffect(() => {
-    if (!interactiveRoot || !entryCalcs.length) return;
+    if (managed || readonly || !interactiveRoot || !entryCalcs.length) return;
     const patch: Record<string, any> = {};
     for (const c of entryCalcs) {
       const v = entryResults[`local:${c.calc_key}`]?.value ?? null;
@@ -1436,8 +1475,9 @@ function RepeaterEntry({
         </div>
       );
     }
-    const cf = byKey[item.key];
+    const cf = item.field_id ? allFields.find((f) => f.id === item.field_id) : byKey[item.key];
     if (!cf) return null;
+    if (cf.field_type === "measurement_block" || (cf.field_type === "repeater" && owner?.field_type !== "measurement_block")) return null;
     // Freitext-/Bemerkungsfelder brauchen spürbar mehr Platz als Messwerte.
     const wide = ["textarea", "long_text", "rich_text"].includes(String(cf.field_type));
     const p = cellProps(item, wide ? 220 : undefined);
@@ -1445,7 +1485,7 @@ function RepeaterEntry({
       <div key={item.id} className={cn(p.className, sticky, "min-w-0")} style={p.style}>
         <FieldWithLabel
           field={cf}
-          node={{ id: `inline-${cf.id}`, type: "field", field_id: cf.id, width: 12 }}
+          node={{ id: `inline-${item.id}`, type: "field", field_id: cf.id, width: 12, readonly }}
           allFields={allFields}
         />
       </div>
@@ -1503,7 +1543,9 @@ function MeasurementBlockField({
 }: { field: FormField; node: FieldNode; allFields: FormField[] }) {
   const perm = usePerm(field.id);
   const meta = readMeasurementBlockMeta(field);
-  const children = useMemo(() => repeaterChildren(allFields, field.id), [allFields, field.id]);
+  const calcs = useContext(LocalCalcsCtx);
+  const managed = hasScopedReferences(field) || repeaterChildren(allFields, field.id).some((f) => f.field_type === "repeater");
+  const children = useMemo(() => managed ? containerFields(field, allFields, calcs) : repeaterChildren(allFields, field.id), [managed, field, allFields, calcs]);
   const childDefs = useMemo(() => toBlockChildDefs(children), [children]);
   const hasLabelChild = childDefs.some((c) => c.role === "label");
 
@@ -1558,7 +1600,14 @@ function MeasurementBlockField({
   const label = node.label_override || field.display_name;
   const desc = node.description_override ?? field.description;
 
-  const updateEntries = (next: Array<Record<string, any>>) => root?.set(storageKey, next);
+  const latest = useRef(entries);
+  latest.current = entries;
+  const updateEntries = (next: Array<Record<string, any>>) => {
+    if (readonly || !interactive) return;
+    const updated = managed ? updateScopedContainer(field, allFields, calcs, root?.values ?? {}, next, latest.current) : next;
+    latest.current = updated;
+    root?.set(storageKey, updated);
+  };
 
   const makeEntry = (): Record<string, any> => ({
     [INSTANCE_ID_KEY]: newInstanceId(),
@@ -1582,7 +1631,7 @@ function MeasurementBlockField({
   // niemals zwei Messungen teilen.
   const duplicateAt = (i: number) => {
     if (meta.max_entries != null && entries.length >= meta.max_entries) return;
-    const copy = JSON.parse(JSON.stringify(entries[i] ?? {}));
+    const copy = managed ? duplicateScopedEntry(entries[i] ?? {}) : JSON.parse(JSON.stringify(entries[i] ?? {}));
     copy[INSTANCE_ID_KEY] = newInstanceId();
     const next = entries.slice();
     next.splice(i + 1, 0, copy);
@@ -1792,8 +1841,10 @@ function MeasurementBlockField({
             "";
           const title = instanceLabel(explicit, context, meta, i);
           const patch = (next: Record<string, any>) => {
-            const arr = entries.slice();
-            arr[i] = next;
+            const arr = latest.current.slice();
+            const index = entry[INSTANCE_ID_KEY] ? arr.findIndex((e) => e[INSTANCE_ID_KEY] === entry[INSTANCE_ID_KEY]) : i;
+            if (index < 0) return;
+            arr[index] = next;
             updateEntries(arr);
           };
           // Aus einem Messfall erzeugte Messungen: Kontext ist vorgegeben und
@@ -1870,6 +1921,8 @@ function MeasurementBlockField({
 
           return (
             <RepeaterEntry
+                owner={field}
+                managed={managed}
               key={entry?.[INSTANCE_ID_KEY] ?? i}
               index={i}
               entry={entry}
@@ -2090,12 +2143,14 @@ export default function FormLayoutRenderer({
   onChange,
   formId,
   localCalculations,
+  readOnly = false,
   stepData,
   formData,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
   permissions?: Map<string, EffectivePermission>;
+  readOnly?: boolean;
   /** When provided, the renderer is interactive and binds inputs to these values. */
   values?: Record<string, any>;
   onChange?: (key: string, v: any) => void;
@@ -2108,7 +2163,7 @@ export default function FormLayoutRenderer({
   /** Werte anderer verknüpfter Formulare desselben Vorgangs (form_id -> Werte). */
   formData?: LinkedFormData;
 }) {
-  const interactive = !!(values && onChange);
+  const interactive = !readOnly && !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
     get: (k) => values?.[k],
     set: (k, v) => onChange?.(k, v),
