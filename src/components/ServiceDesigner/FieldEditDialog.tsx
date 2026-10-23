@@ -28,6 +28,7 @@ import MeasurementCaseEditorDialog from "@/components/measurementImport/Measurem
 import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
 import { readValueSource, readResultConditions, writeResultConditions } from "@/lib/fieldLinks";
+import { eligibleLocalReferences } from "@/lib/scopedMeasurementValues";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link2 } from "lucide-react";
 import { parseMultiSelectDefault, serializeMultiSelectDefault } from "@/lib/multiSelectDefaults";
@@ -161,7 +162,9 @@ export default function FieldEditDialog({
   const isImage = fieldType === "image";
 
   const typeChanged = fieldType !== field.field_type;
-  const typeGroups = field.parent_field_id ? SUBFIELD_TYPE_GROUPS : FIELD_TYPE_GROUPS;
+  const typeGroups = field.parent_field_id
+    ? (isBlockChild ? FIELD_TYPE_GROUPS.map((g) => ({ ...g, types: g.types.filter((t) => t.value !== "measurement_block") })) : SUBFIELD_TYPE_GROUPS)
+    : FIELD_TYPE_GROUPS;
 
   const changeType = (next: FormFieldType) => {
     if (next === fieldType) return;
@@ -692,11 +695,12 @@ export function RepeaterConfigPanel({
         Zusätzliche Tabellenansicht der Einträge (Messreihe)
       </label>
 
-      {children.length > 0 && (
+      {(children.length > 0 || fields.length > 1 || formCalcs.length > 0) && (
         <div className="pt-2 border-t">
           <RepeaterLayoutDesigner
-            subfields={children.map((c) => ({ key: c.field_key, label: c.display_name, type: c.field_type, unit: c.unit }))}
-            calculations={formCalcs.map((c) => ({ calc_key: c.calc_key, label: c.display_name, unit: c.unit }))}
+            subfields={children.map((c) => ({ id: c.id, key: c.field_key, label: c.display_name, type: c.field_type, unit: c.unit }))}
+            referenceFields={eligibleLocalReferences(field, fields).map((c) => ({ id: c.id, key: c.field_key, label: c.display_name, type: c.field_type, unit: c.unit }))}
+            calculations={formCalcs.map((c) => ({ id: c.id, calc_key: c.calc_key, label: c.display_name, unit: c.unit }))}
             value={meta.layout}
             disabled={disabled}
             onChange={(layout) => saveMeta({ layout })}
@@ -851,7 +855,7 @@ function SubfieldManager({
               <Select value={newType} onValueChange={(v: FormFieldType) => setNewType(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-96">
-                  {SUBFIELD_TYPE_GROUPS.map(g => (
+                  {(isBlock ? FIELD_TYPE_GROUPS.map((g) => ({ ...g, types: g.types.filter((t) => t.value !== "measurement_block") })) : SUBFIELD_TYPE_GROUPS).map(g => (
                     <div key={g.label}>
                       <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">{g.label}</div>
                       {g.types.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}

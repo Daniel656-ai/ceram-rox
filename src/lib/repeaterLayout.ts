@@ -14,6 +14,10 @@ export interface RepeaterFieldItem {
   type: "field";
   /** field_key des Unterfeldes */
   key: string;
+  /** Stable definition reference; legacy key-only placements remain supported. */
+  field_id?: string;
+  /** Original value key, retained when a referenced definition is renamed. */
+  value_key?: string;
   width: number; // 1..12
 }
 export interface RepeaterHeadingItem {
@@ -36,6 +40,8 @@ export interface RepeaterCalcItem {
   id: string;
   type: "calculation";
   calc_key: string;
+  calc_id?: string;
+  value_key?: string;
   width: number;
   label_override?: string | null;
 }
@@ -133,6 +139,10 @@ export function normalizeRepeaterLayout(
   availableKeys: string[],
   /** Bekannte Berechnungsschlüssel; ohne Angabe bleiben alle erhalten. */
   availableCalcKeys?: string[],
+  references?: {
+    fields: Array<{ id: string; field_key: string }>;
+    calculations: Array<{ id: string; calc_key: string }>;
+  },
 ): RepeaterLayout {
   const base = emptyRepeaterLayout();
   const src = (raw && typeof raw === "object" ? (raw as any) : {}) as Partial<RepeaterLayout>;
@@ -148,18 +158,25 @@ export function normalizeRepeaterLayout(
     if (it.type === "heading") return { id, type: "heading", text: String(it.text ?? "Überschrift"), width };
     if (it.type === "spacer") return { id, type: "spacer", width };
     if (it.type === "calculation") {
-      const ck = String(it.calc_key ?? "");
+      const target = it.calc_id && references ? references.calculations.find((c) => c.id === it.calc_id) : undefined;
+      if (it.calc_id && references && !target) return null;
+      const ck = target?.calc_key ?? String(it.calc_key ?? "");
       if (!ck) return null;
       if (availableCalcKeys && !availableCalcKeys.includes(ck)) return null;
       return {
         id, type: "calculation", calc_key: ck, width,
+        ...(typeof it.calc_id === "string" ? { calc_id: it.calc_id, value_key: it.value_key ?? it.calc_key } : {}),
         label_override: typeof it.label_override === "string" ? it.label_override : null,
       };
     }
-    const key = String(it.key ?? "");
-    if (!known.has(key) || seen.has(key)) return null;
+    const target = it.field_id && references ? references.fields.find((f) => f.id === it.field_id) : undefined;
+    if (it.field_id && references && !target) return null;
+    const key = target?.field_key ?? String(it.key ?? "");
+    if ((!target && !known.has(key)) || (!it.field_id && seen.has(key))) return null;
     seen.add(key);
-    return { id, type: "field", key, width: typeof it.width === "number" ? Math.max(1, Math.min(12, it.width)) : 6 };
+    return { id, type: "field", key,
+      ...(typeof it.field_id === "string" ? { field_id: it.field_id, value_key: it.value_key ?? it.key } : {}),
+      width: typeof it.width === "number" ? Math.max(1, Math.min(12, it.width)) : 6 };
   };
 
   const items: RepeaterLayoutItem[] = [];

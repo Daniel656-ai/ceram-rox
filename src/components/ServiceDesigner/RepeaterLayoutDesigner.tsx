@@ -8,6 +8,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Input } from "@/components/ui/input";
 import { SymbolInput } from "@/components/forms/SymbolInput";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/repeaterLayout";
 
 export interface RepeaterSubfieldInfo {
+  id?: string;
   key: string;
   label: string;
   type?: string;
@@ -28,6 +30,7 @@ export interface RepeaterSubfieldInfo {
 }
 
 export interface RepeaterCalcInfo {
+  id?: string;
   calc_key: string;
   label: string;
   unit?: string | null;
@@ -35,6 +38,7 @@ export interface RepeaterCalcInfo {
 
 interface Props {
   subfields: RepeaterSubfieldInfo[];
+  referenceFields?: RepeaterSubfieldInfo[];
   /**
    * Lokale Berechnungen des Formulars. Sie können als Element im Eintrag
    * platziert werden und werden je Messpunkt mit dessen Werten ausgewertet.
@@ -53,10 +57,14 @@ const ROOT = "__root__";
  * Ergebnis wird pro Repeater gespeichert und in jedem Formular verwendet,
  * das diesen Repeater referenziert.
  */
-export default function RepeaterLayoutDesigner({ subfields, calculations = [], value, onChange, disabled }: Props) {
+export default function RepeaterLayoutDesigner({ subfields, referenceFields = [], calculations = [], value, onChange, disabled }: Props) {
   const keys = useMemo(() => subfields.map((s) => s.key), [subfields]);
-  const layout = useMemo(() => normalizeRepeaterLayout(value, keys), [value, keys]);
-  const labelFor = (k: string) => subfields.find((s) => s.key === k)?.label ?? k;
+  const catalog = [...subfields, ...referenceFields];
+  const layout = normalizeRepeaterLayout(value, keys, undefined, {
+    fields: catalog.filter((f): f is RepeaterSubfieldInfo & { id: string } => !!f.id).map((f) => ({ id: f.id, field_key: f.key })),
+    calculations: calculations.filter((c): c is RepeaterCalcInfo & { id: string } => !!c.id),
+  });
+  const labelFor = (k: string) => catalog.find((s) => s.key === k)?.label ?? k;
   const calcLabelFor = (k: string) => calculations.find((c) => c.calc_key === k)?.label ?? k;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
@@ -249,7 +257,7 @@ export default function RepeaterLayoutDesigner({ subfields, calculations = [], v
           </Select>
         )}
 
-        {item.type !== "field" && (
+        {(item.type !== "field" || item.field_id) && (
           <Button size="icon" variant="ghost" className="h-6 w-6" disabled={disabled}
             onClick={() => removeItem(item.id)} type="button">
             <Trash2 className="h-3 w-3" />
@@ -309,23 +317,23 @@ export default function RepeaterLayoutDesigner({ subfields, calculations = [], v
             onClick={() => addItem({ id: newItemId(), type: "spacer", width: 6 })}>
             <Minus className="h-3 w-3 mr-1" />Abstand
           </Button>
+          {referenceFields.length > 0 && (
+            <SearchableSelect value="__none__" placeholder="Lokales Feld referenzieren" triggerClassName="h-7 w-[220px] text-[11px]"
+              options={[{ value: "__none__", label: "Lokales Feld referenzieren" }, ...referenceFields.filter((f) => f.id).map((f) => ({ value: f.id ?? f.key, label: f.label }))]}
+              onValueChange={(id) => {
+                const f = referenceFields.find((f) => f.id === id);
+                if (!f?.id) return;
+                addItem({ id: newItemId(), type: "field", field_id: f.id, key: f.key, value_key: f.key, width: f.type === "repeater" ? 12 : 6 });
+              }} />
+          )}
           {calculations.length > 0 && (
-            <Select
-              value=""
-              onValueChange={(v) => addItem({ id: newItemId(), type: "calculation", calc_key: v, width: 4 })}
-            >
-              <SelectTrigger className="h-7 w-[190px] text-[11px]">
-                <Calculator className="h-3 w-3 mr-1" />
-                <SelectValue placeholder="Berechnung einfügen" />
-              </SelectTrigger>
-              <SelectContent>
-                {calculations.map((c) => (
-                  <SelectItem key={c.calc_key} value={c.calc_key}>
-                    {c.label}{c.unit ? ` [${c.unit}]` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect value="__none__" placeholder="Berechnung einfügen" triggerClassName="h-7 w-[220px] text-[11px]"
+              options={[{ value: "__none__", label: "Berechnung einfügen" }, ...calculations.map((c) => ({ value: c.id ?? c.calc_key, label: c.label }))]}
+              onValueChange={(id) => {
+                const c = calculations.find((c) => (c.id ?? c.calc_key) === id);
+                if (!c) return;
+                addItem({ id: newItemId(), type: "calculation", calc_id: c.id, calc_key: c.calc_key, value_key: c.calc_key, width: 4 });
+              }} />
           )}
           <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]"
             onClick={() => commit(keys.map((k) => ({ id: newItemId(), type: "field", key: k, width: 6 } as RepeaterLayoutItem)))}>
@@ -334,7 +342,7 @@ export default function RepeaterLayoutDesigner({ subfields, calculations = [], v
         </div>
       )}
 
-      {subfields.length === 0 ? (
+      {layout.items.length === 0 ? (
         <p className="text-xs text-muted-foreground">Zuerst Unterfelder anlegen.</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
