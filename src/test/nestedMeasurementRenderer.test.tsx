@@ -48,6 +48,8 @@ describe("nested renderer, no backend writes", () => {
     render(<Harness restored={old} />);
     await waitFor(() => expect(screen.getAllByRole("spinbutton")).toHaveLength(2));
     expect(values().runs[0].points[0].answer).toBe(123);
+    expect(values()).not.toHaveProperty("answer");
+    expect(screen.getByText("Gespeicherter Wert stimmt nicht mit den aktuellen Eingaben überein")).toBeTruthy();
   });
   it("edits own O2 and point, saves JSON and restores the exact independent values", async () => {
     render(<Harness />);
@@ -82,5 +84,16 @@ describe("nested renderer, no backend writes", () => {
     expect(screen.queryByRole("button", { name: "Punkt hinzufügen" })).toBeNull();
     expect(screen.getAllByRole("spinbutton").every((i) => (i as HTMLInputElement).disabled)).toBe(true);
     expect(values()).toEqual(initial);
+  });
+  it("a root-oriented custom storage key cannot redirect a nested list", () => {
+    const saved = fields[1].metadata;
+    fields[1].metadata = { repeater: { ...(saved as { repeater: Record<string, unknown> }).repeater, storage_key: "o2" } };
+    try {
+      render(<Harness />);
+      fireEvent.click(screen.getAllByRole("button", { name: "Punkt hinzufügen" })[0]);
+      expect(values().runs[0].o2).toBe(2);
+      expect(values().runs[0].points).toHaveLength(3);
+      expect(values().runs[1]).toEqual(initial.runs[1]);
+    } finally { fields[1].metadata = saved; }
   });
 });

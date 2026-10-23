@@ -95,6 +95,19 @@ describe("run and temperature isolation", () => {
 });
 
 describe("scoped dependency failures", () => {
+  it("parent rename aliases override conflicting historical properties", () => {
+    const renamed = fields.map((f) => f.id === "o" ? { ...f, field_key: "oxygen" } : f);
+    const defs = [calc("c", "answer", "temperature * oxygen")];
+    const out = updateScopedContainer(block, renamed, defs, {}, [{ __instance_id: "A", o2: 2, oxygen: 99, points: [{ temperature: 200 }] }]);
+    expect((out[0].points as Array<Record<string, unknown>>)[0].answer).toBe(400);
+  });
+  it("editing one point preserves untouched historical point results", () => {
+    const old = { __instance_id: "A", o2: 2, points: [{ __instance_id: "A1", temperature: 200, answer: 400 }, { __instance_id: "A2", temperature: 280, answer: 123 }] };
+    const changed = { ...old, points: [{ ...old.points[0], temperature: 250 }, old.points[1]] };
+    const out = updateScopedContainer(block, fields, calcs, {}, [changed], [old]);
+    expect((out[0].points as Array<Record<string, unknown>>)[0].answer).toBe(500);
+    expect((out[0].points as Array<Record<string, unknown>>)[1].answer).toBe(123);
+  });
   it("missing current input masks an unrelated root value; zero remains valid", () => {
     expect(evaluateScopedEntry(points, fields, calcs, { temperature: 999 }, {}, { o2: 2 }).answer.value).toBeNull();
     expect(evaluateScopedEntry(points, fields, calcs, {}, { temperature: 0 }, { o2: 2 }).answer.value).toBe(0);
