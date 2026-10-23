@@ -17,6 +17,8 @@
 export const MS_AUSWAHL_KEY = "ms_auswahl_1";
 export const MUNDSTUECK_MS_KEY = "mundstueck_ms_1";
 export const BRENNEN_KEY = "brennen_1";
+/** Die Regel wird nur auf Aufgaben dieser Leistung angewendet (exakter Leistungsname). */
+export const EXTRUSION_SERVICE_NAME = "Extrusion";
 export const MS_293 = "293_1";
 export const ZWECK_RW = "Raumgewicht / Wasseraufnahme";
 export const ZWECK_SCHW = "Schwindung";
