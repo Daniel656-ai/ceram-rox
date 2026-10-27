@@ -8,7 +8,7 @@ beforeEach(() => {
   mocks.get.mockResolvedValue(source());
   mocks.fields.mockResolvedValue([f("text")]);
   mocks.links.mockResolvedValue([{ form_definition_id: "f" }]);
-  mocks.formFields.mockResolvedValue([f("temperature", "decimal"), f("enabled", "boolean"), f("result", "decimal", { is_result: true }), f("versuchsnummer"), f("points", "repeater"), f("temperature", "decimal", { id: "pt", parent_field_id: "points" }), f("enabled", "boolean", { id: "pe", parent_field_id: "points" })]);
+  mocks.formFields.mockResolvedValue([f("temperature", "decimal"), f("enabled", "boolean"), f("result", "decimal", { is_result: true }), f("versuchsnummer"), f("points", "repeater", { metadata: { repeater: { layout: { version: 1, gap: "md", items: ["temperature", "enabled", "result"].map(key => ({ id: `p-${key}`, type: "field", field_id: key, key, width: 12 })) } } } })]);
   mocks.definitions.mockResolvedValue([]); mocks.layout.mockResolvedValue(null);
 });
 describe("safe independent templates", () => {
@@ -38,7 +38,7 @@ describe("safe independent templates", () => {
     expect(a.payload.measurements?.[0].uid).not.toBe(b.payload.measurements?.[0].uid);
   });
   it("refuses ambiguous labels instead of guessing or losing a requirement", async () => {
-    mocks.fields.mockResolvedValue([f("temperature")]);
+    mocks.fields.mockResolvedValue([f("text"), f("temperature")]);
     await expect(buildPayloadFromOrder("source", DEFAULT_COPY_OPTIONS)).rejects.toThrow("nicht eindeutig");
   });
   it("copies draft duplicates and false/zero, clears old date, number and sample by default", () => {
