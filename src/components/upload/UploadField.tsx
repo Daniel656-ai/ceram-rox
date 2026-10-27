@@ -24,6 +24,8 @@ export interface UploadValueEntry {
   __id: string;
   /** Pending file to be uploaded on submit. */
   pendingFile?: File;
+  /** JSON marker left when a local file cannot be restored. */
+  __draft_file_missing?: boolean;
   /** Optional local object URL for preview (revoked on unmount). */
   previewUrl?: string;
   /** Stored path once uploaded (post-submit). */
@@ -268,7 +270,8 @@ export default function UploadField({
                 <p className="text-[10px] text-muted-foreground">
                   {entry.size ? bytesLabel(entry.size) : ""}
                   {entry.templateId && <> · <Badge variant="outline" className="text-[9px]">Vorlage</Badge></>}
-                  {entry.pendingFile && <> · <span className="text-amber-600">wird beim Speichern hochgeladen</span></>}
+                  {entry.pendingFile instanceof File && <> · <span className="text-muted-foreground">lokal – nach erneutem Öffnen wieder auswählen</span></>}
+                  {entry.pendingFile && !(entry.pendingFile instanceof File) && <> · <span className="text-destructive">Datei erneut auswählen</span></>}
                 </p>
               </div>
               {!disabled && (

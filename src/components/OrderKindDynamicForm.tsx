@@ -18,6 +18,7 @@ interface Props {
   onTemplateResolved?: (formId: string | null) => void;
   /** Called with the loaded template fields (e.g. to read a service selection). */
   onFieldsResolved?: (fields: FormField[]) => void;
+  onReady?: (kind: OrderKind, ready: boolean) => void;
 }
 
 /**
@@ -30,19 +31,15 @@ interface Props {
  *
  * If no template is mapped for this order kind, the component renders nothing.
  */
-export default function OrderKindDynamicForm({ orderKind, values, onChange, onTemplateResolved, onFieldsResolved }: Props) {
+export default function OrderKindDynamicForm({ orderKind, values, onChange, onTemplateResolved, onFieldsResolved, onReady }: Props) {
   const { role } = useAuth();
 
-  const { data: mapping, isLoading: mapLoading } = useQuery({
+  const { data: mapping, isLoading: mapLoading, isSuccess: mapSuccess } = useQuery({
     queryKey: ["order-kind-form-template", orderKind],
     queryFn: () => api.orderKindFormTemplates.get(orderKind),
   });
 
   const formId = mapping?.form_definition_id ?? null;
-
-  useEffect(() => {
-    onTemplateResolved?.(formId);
-  }, [formId, onTemplateResolved]);
 
   const { data: form } = useQuery({
     queryKey: ["form-definition", formId],
@@ -50,7 +47,7 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
     enabled: !!formId,
   });
 
-  const { data: fields = [], isLoading: fieldsLoading } = useQuery({
+  const { data: fields = [], isLoading: fieldsLoading, isSuccess: fieldsSuccess } = useQuery({
     queryKey: ["form-fields", formId],
     queryFn: () => (formId ? api.formFields.listForForm(formId) : Promise.resolve([])),
     enabled: !!formId,
@@ -59,8 +56,12 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
   const typedFields = fields as FormField[];
 
   useEffect(() => {
+    const ready = mapSuccess && (!formId || fieldsSuccess);
+    onReady?.(orderKind, ready);
+    if (!ready) return;
+    onTemplateResolved?.(formId);
     onFieldsResolved?.(typedFields);
-  }, [typedFields, onFieldsResolved]);
+  }, [orderKind, mapSuccess, formId, fieldsSuccess, typedFields, onReady, onTemplateResolved, onFieldsResolved]);
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);

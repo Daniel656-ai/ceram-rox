@@ -20,6 +20,10 @@ export interface OrderDraftPayload {
     uid: string;
     service_id: string;
     service_name: string;
+    origin?: "template" | "manual" | "rule";
+    selection_token?: string | null;
+    rule_source_uid?: string | null;
+    rule_id?: string | null;
     source_package_id?: string | null;
     source_package_name?: string | null;
   }>;
@@ -58,21 +62,27 @@ const SELECT = "*, projects(project_number, project_name)";
  * Upload-Feldern). Anhänge werden bewusst nicht im Entwurf gespeichert.
  */
 export function sanitizeDraftPayload<T>(value: T): T {
-  const seen = new WeakSet<object>();
+  const ancestors = new WeakSet<object>();
   const walk = (v: any): any => {
     if (v == null) return v;
-    if (typeof File !== "undefined" && v instanceof File) return undefined;
-    if (typeof Blob !== "undefined" && v instanceof Blob) return undefined;
+    if (typeof File !== "undefined" && v instanceof File) return { __draft_file_missing: true, name: v.name, type: v.type, size: v.size };
+    if (typeof Blob !== "undefined" && v instanceof Blob) return { __draft_file_missing: true, type: v.type, size: v.size };
     if (typeof v === "function") return undefined;
-    if (Array.isArray(v)) return v.map(walk).filter((x) => x !== undefined);
     if (typeof v === "object") {
-      if (seen.has(v)) return undefined;
-      seen.add(v);
+      if (ancestors.has(v)) throw new Error("Circular draft value");
+      ancestors.add(v);
+      if (Array.isArray(v)) {
+        const result = v.map((x) => walk(x) ?? null);
+        ancestors.delete(v);
+        return result;
+      }
       const out: Record<string, any> = {};
       for (const [k, val] of Object.entries(v)) {
+        if (k === "previewUrl" && typeof val === "string" && val.startsWith("blob:")) continue;
         const w = walk(val);
         if (w !== undefined) out[k] = w;
       }
+      ancestors.delete(v);
       return out;
     }
     return v;
@@ -133,6 +143,8 @@ export const orderDrafts = {
         .from("order_drafts" as any)
         .update(sanitizeDraftPayload(updates) as any)
         .eq("id", id)
+        .select("id")
+        .single()
     ),
 
   remove: (id: string) =>

@@ -16,10 +16,13 @@ import {
 import { AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import {
-  buildPayloadFromDraft, buildPayloadFromOrder, COPY_OPTION_LABELS,
+  buildValidatedPayloadFromDraft, buildPayloadFromOrder, COPY_OPTION_LABELS,
   DEFAULT_COPY_OPTIONS, type CopyOptions,
 } from "@/lib/orderTemplateCopy";
 import type { OrderDraft } from "@/lib/api/orderDrafts";
+import { Input } from "@/components/ui/input";
+import { useTranslation } from "react-i18next";
+import { orderIdentity } from "@/lib/orders/orderIdentity";
 
 interface Props {
   open: boolean;
@@ -34,6 +37,8 @@ export default function UseAsTemplateDialog({
   open, onOpenChange, sourceDraft = null, sourceOrderId = null,
 }: Props) {
   const navigate = useNavigate();
+  const { t } = useTranslation("orders");
+  const [search, setSearch] = useState("");
   const qc = useQueryClient();
   const { user } = useAuth();
   const [opts, setOpts] = useState<CopyOptions>(DEFAULT_COPY_OPTIONS);
@@ -41,11 +46,12 @@ export default function UseAsTemplateDialog({
   const [busy, setBusy] = useState(false);
 
   const needsOrderPicker = !sourceDraft && !sourceOrderId;
-  const { data: orders = [] } = useQuery({
+  const { data: orders = [], isLoading, isError } = useQuery({
     queryKey: ["orders", "template-picker"],
     queryFn: () => api.orders.list(),
     enabled: open && needsOrderPicker,
   });
+  const filteredOrders = orders.filter(o => [orderIdentity(o).number, o.order_number, o.projects?.project_number, o.projects?.project_name, o.notes].join(" ").toLocaleLowerCase().includes(search.toLocaleLowerCase().trim()));
 
   const toggle = (k: keyof CopyOptions) =>
     setOpts((p) => ({ ...p, [k]: !p[k] }));
@@ -59,7 +65,7 @@ export default function UseAsTemplateDialog({
       const orderId = sourceOrderId || pickedOrderId || null;
 
       if (sourceDraft) {
-        payload = buildPayloadFromDraft(sourceDraft.payload, opts);
+        payload = await buildValidatedPayloadFromDraft(sourceDraft.payload, opts);
         label = sourceDraft.title || "Entwurf";
       } else if (orderId) {
         const res = await buildPayloadFromOrder(orderId, opts);
@@ -112,16 +118,14 @@ export default function UseAsTemplateDialog({
         {needsOrderPicker && (
           <div className="space-y-2">
             <Label>Vorlage (bestehender Auftrag)</Label>
-            <Select value={pickedOrderId} onValueChange={setPickedOrderId}>
-              <SelectTrigger><SelectValue placeholder="Auftrag wählen" /></SelectTrigger>
-              <SelectContent>
-                {(orders as any[]).map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.order_number ?? "–"} · {o.projects?.project_number ?? ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input value={search} onChange={event => setSearch(event.target.value)} aria-label={t("draftSafety.search")} placeholder={t("draftSafety.search")} />
+            <div className="max-h-56 overflow-y-auto border rounded-md" role="listbox" aria-label={t("draftSafety.template")}>
+              {isLoading ? <p className="p-3 text-sm">{t("draftSafety.loading")}</p> : isError ? <p className="p-3 text-sm text-destructive">{t("draftSafety.error")}</p> : filteredOrders.length === 0 ? <p className="p-3 text-sm">{t("draftSafety.empty")}</p> : filteredOrders.map(o => (
+                <Button key={o.id} type="button" variant={pickedOrderId === o.id ? "secondary" : "ghost"} className="w-full justify-start h-auto whitespace-normal text-left" role="option" aria-selected={pickedOrderId === o.id} onClick={() => setPickedOrderId(o.id)}>
+                  {orderIdentity(o).number || "–"} · {o.projects?.project_number ?? ""} {o.projects?.project_name ?? ""}
+                </Button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -163,7 +167,7 @@ export default function UseAsTemplateDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-          <Button onClick={handleCreate} disabled={busy}>
+          <Button onClick={handleCreate} disabled={busy || (needsOrderPicker && (!pickedOrderId || isLoading || isError))}>
             <Copy className="h-4 w-4 mr-2" />
             {busy ? "Erstelle…" : "Entwurf erstellen"}
           </Button>
