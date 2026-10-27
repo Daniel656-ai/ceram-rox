@@ -16,7 +16,7 @@ import {
 import { AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import {
-  buildPayloadFromDraft, buildPayloadFromOrder, COPY_OPTION_LABELS,
+  buildValidatedPayloadFromDraft, buildPayloadFromOrder, COPY_OPTION_LABELS,
   DEFAULT_COPY_OPTIONS, type CopyOptions,
 } from "@/lib/orderTemplateCopy";
 import type { OrderDraft } from "@/lib/api/orderDrafts";
@@ -65,7 +65,7 @@ export default function UseAsTemplateDialog({
       const orderId = sourceOrderId || pickedOrderId || null;
 
       if (sourceDraft) {
-        payload = buildPayloadFromDraft(sourceDraft.payload, opts);
+        payload = await buildValidatedPayloadFromDraft(sourceDraft.payload, opts);
         label = sourceDraft.title || "Entwurf";
       } else if (orderId) {
         const res = await buildPayloadFromOrder(orderId, opts);

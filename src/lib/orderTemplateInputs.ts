@@ -32,7 +32,7 @@ export function copyTemplateInputs(values: Record<string, unknown>, fields: Inpu
   const output: Record<string, unknown> = {};
   for (const field of fields) {
     if (!templateInputAllowed(field)) continue;
-    const meta = field.metadata as Record<string, any> | undefined;
+    const meta = field.metadata as { repeater?: { storage_key?: string }; measurement_block?: { storage_key?: string } } | undefined;
     const key = meta?.repeater?.storage_key ?? meta?.measurement_block?.storage_key ?? field.field_key;
     if (!(key in values)) continue;
     const raw = parseTemplateInput(values[key], field);

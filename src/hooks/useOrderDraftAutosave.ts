@@ -44,7 +44,7 @@ export function useOrderDraftAutosave(args: Args) {
     }
   }, [args.draftId, args.restoredPayload]);
 
-  const dirty = args.hasContent && serialized !== lastSerialized.current;
+  const dirty = (args.hasContent || !!args.draftId) && serialized !== lastSerialized.current;
   const saveNow = (): Promise<string | null> => {
     if (writer.current) return writer.current;
     if (!latest.current.enabled || !latest.current.userId || stopped.current) return Promise.resolve(null);

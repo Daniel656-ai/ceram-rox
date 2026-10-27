@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import type { OrderDraftPayload } from "@/lib/api/orderDrafts";
+import { sanitizeDraftPayload, type OrderDraftPayload } from "@/lib/api/orderDrafts";
 import { cleanDraftTemplateValue, copyTemplateInputs, parseTemplateInput, templateInputAllowed } from "@/lib/orderTemplateInputs";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
 
@@ -55,7 +55,7 @@ export async function buildPayloadFromOrder(
   orderId: string,
   opts: CopyOptions
 ): Promise<{ payload: OrderDraftPayload; label: string }> {
-  const order: any = await api.orders.get(orderId);
+  const order = await api.orders.get(orderId);
   if (!order) throw new Error("Auftrag nicht gefunden");
 
   const payload: OrderDraftPayload = {
@@ -75,7 +75,7 @@ export async function buildPayloadFromOrder(
 
   // Template values are filtered by their actual definition, never by result records.
   if (opts.orderForm) {
-    const tpl = order.shared_form_data?.template;
+    const tpl = (order.shared_form_data as { template?: { values?: Record<string, unknown>; form_definition_id?: string } } | null)?.template;
     if (tpl?.values && tpl.form_definition_id) {
       const fields = await api.formFields.listForForm(tpl.form_definition_id);
       payload.dynamicValues = copyTemplateInputs(tpl.values, fields);
@@ -84,7 +84,7 @@ export async function buildPayloadFromOrder(
   }
 
   if (opts.services) {
-    for (const m of (order.order_measurements ?? []) as any[]) {
+    for (const m of order.order_measurements ?? []) {
       const uid = newUid();
       payload.measurements?.push({
         uid, service_id: m.service_id,
@@ -106,7 +106,7 @@ export async function buildPayloadFromOrder(
       })));
       const values: Record<string, unknown> = {};
       const params: Record<string, string> = {};
-      for (const p of (m.measurement_parameters ?? []) as any[]) {
+      for (const p of m.measurement_parameters ?? []) {
         const name = String(p.parameter_name ?? "");
         if (!name) continue;
         const candidates = [
@@ -146,7 +146,7 @@ export async function buildPayloadFromOrder(
   // Proben werden bewusst NICHT mit ihren alten Identifikationen übernommen.
   // Nur wenn explizit gewünscht, werden die Probenreferenzen mitkopiert.
   if (opts.samples) {
-    const ids = ((order.order_samples ?? []) as any[]).map((s) => s.sample_id).filter(Boolean);
+    const ids = (order.order_samples ?? []).map((s) => s.sample_id).filter(Boolean);
     payload.selectedSampleIds = [...new Set(ids)];
   }
 
@@ -159,7 +159,7 @@ export function buildPayloadFromDraft(
   source: OrderDraftPayload,
   opts: CopyOptions
 ): OrderDraftPayload {
-  const src = cleanDraftTemplateValue(deepCopy(source)) as OrderDraftPayload;
+  const src = cleanDraftTemplateValue(sanitizeDraftPayload(source)) as OrderDraftPayload;
   const out: OrderDraftPayload = {
     selectedProjectId: src.selectedProjectId ?? "",
     orderType: src.orderType ?? "",
@@ -193,6 +193,36 @@ export function buildPayloadFromDraft(
         if (out.measurementParams) out.measurementParams[uid] = deepCopy(src.measurementParams[m.uid]);
       }
     }
+  }
+  return out;
+}
+
+/** Designer metadata also filters draft copies; direct restoration never uses this copier. */
+export async function buildValidatedPayloadFromDraft(source: OrderDraftPayload, opts: CopyOptions): Promise<OrderDraftPayload> {
+  const out = buildPayloadFromDraft(source, opts);
+  if (opts.orderForm && out.dynamicFormId && out.dynamicValues) {
+    out.dynamicValues = copyTemplateInputs(out.dynamicValues, await api.formFields.listForForm(out.dynamicFormId));
+  }
+  for (const m of out.measurements ?? []) {
+    const values = out.measurementFormValues?.[m.uid];
+    if (!values) continue;
+    const [fields, links, layout] = await Promise.all([
+      api.serviceDataFields.listForService(m.service_id), api.serviceFormLinks.listForService(m.service_id), api.serviceFormLayouts.get(m.service_id, "customer"),
+    ]);
+    const clean = copyTemplateInputs(values, fields);
+    for (const section of layout?.layout?.sections ?? []) {
+      if (!section.repeatable?.enabled) continue;
+      const key = section.repeatable.storage_key || `repeat:${section.id}`;
+      const rows = values[key];
+      if (Array.isArray(rows)) clean[key] = rows.map(row => ({ ...copyTemplateInputs(row, fields.filter(f => section.fields.some(ref => ref.field_id === f.id))), __id: newUid() }));
+    }
+    for (const link of links) {
+      const prefix = `form:${link.form_definition_id}:`;
+      const formValues = Object.fromEntries(Object.entries(values).filter(([key]) => key.startsWith(prefix)).map(([key, value]) => [key.slice(prefix.length), value]));
+      const copied = copyTemplateInputs(formValues, await api.formFields.listForForm(link.form_definition_id));
+      for (const [key, value] of Object.entries(copied)) clean[`${prefix}${key}`] = value;
+    }
+    if (out.measurementFormValues) out.measurementFormValues[m.uid] = clean;
   }
   return out;
 }
