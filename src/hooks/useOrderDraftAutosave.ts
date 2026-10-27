@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { sanitizeDraftPayload, type OrderDraftPayload } from "@/lib/api/orderDrafts";
 
@@ -28,7 +28,7 @@ export function useOrderDraftAutosave(args: Args) {
   const serializedRef = useRef(serialized);
   serializedRef.current = serialized;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!args.draftId && baselineId.current) {
       draftIdRef.current = null;
       baselineId.current = null;
@@ -36,7 +36,7 @@ export function useOrderDraftAutosave(args: Args) {
       stopped.current = false;
       setState("idle");
     }
-    if (args.restoredPayload && args.draftId !== baselineId.current) {
+    if (args.draftId && args.restoredPayload && args.draftId !== baselineId.current) {
       draftIdRef.current = args.draftId;
       baselineId.current = args.draftId;
       lastSerialized.current = JSON.stringify(sanitizeDraftPayload(args.restoredPayload));
@@ -49,10 +49,12 @@ export function useOrderDraftAutosave(args: Args) {
     if (writer.current) return writer.current;
     if (!latest.current.enabled || !latest.current.userId || stopped.current) return Promise.resolve(null);
     const job = async () => {
+      const targetId = draftIdRef.current;
       setState("saving");
       try {
         do {
           const current = latest.current;
+          if (draftIdRef.current !== targetId && targetId !== null) return null;
           const userId = current.userId;
           if (!userId || !current.enabled || stopped.current) return null;
           const snapshot = serializedRef.current;
@@ -68,6 +70,7 @@ export function useOrderDraftAutosave(args: Args) {
             current.onDraftCreated(created.id);
           }
           lastSerialized.current = snapshot;
+          if (targetId !== null && draftIdRef.current !== targetId) return null;
         } while (serializedRef.current !== lastSerialized.current);
         setState("saved");
         return draftIdRef.current;

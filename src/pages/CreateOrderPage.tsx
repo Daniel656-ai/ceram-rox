@@ -248,7 +248,9 @@ export default function CreateOrderPage() {
     !!selectedProjectId || measurements.length > 0 || selectedSampleIds.length > 0 ||
     !!notes || !!orderType || !!dueDate || hasDraftValue(dynamicValues);
 
-  const autosaveEnabled = draftsEnabled && mode === "single" && !draftLoading && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
+  const urlDraftId = searchParams.get("draft");
+  const draftHydrated = !urlDraftId || urlDraftId === localCreatedId.current || loadedDraft?.id === urlDraftId;
+  const autosaveEnabled = draftsEnabled && mode === "single" && !draftLoading && draftHydrated && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
   const autosave = useOrderDraftAutosave({
     enabled: autosaveEnabled,
     userId: user?.id,
@@ -275,7 +277,11 @@ export default function CreateOrderPage() {
   // Entwurf laden (?draft=<id>) – exakt an seinem bisherigen Stand.
   useEffect(() => {
     const id = searchParams.get("draft");
-    if (!id) { setDraftLoading(false); return; }
+    if (!id) {
+      setDraftLoading(false);
+      setDraftId(null); setLoadedDraft(null);
+      return;
+    }
     if (id === localCreatedId.current) return;
     let cancelled = false;
     setDraftLoading(true);
