@@ -575,7 +575,6 @@ export default function CreateOrderPage() {
   };
 
   const updateFormValue = (uid: string, key: string, value: any) => {
-    reconcileAllowed.current = true;
     setMeasurementFormValues((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [key]: value } }));
   };
 
@@ -1010,7 +1009,7 @@ export default function CreateOrderPage() {
       </div>
 
       {mode === "single" ? (
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6" onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -1078,7 +1077,7 @@ export default function CreateOrderPage() {
         <OrderKindDynamicForm
           orderKind={orderKind}
           values={dynamicValues}
-          onChange={(patch) => { reconcileAllowed.current = true; setDynamicValues((prev) => ({ ...prev, ...patch })); }}
+          onChange={(patch) => setDynamicValues((prev) => ({ ...prev, ...patch }))}
           onTemplateResolved={setDynamicFormId}
           onFieldsResolved={setTemplateFields}
           onReady={onTemplateReady}

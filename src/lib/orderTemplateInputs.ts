@@ -28,7 +28,7 @@ export function parseTemplateInput(raw: unknown, field: InputDefinition): unknow
 }
 
 /** Allowlist inputs per owning definition; calculations and previous run identities never travel. */
-export function copyTemplateInputs(values: Record<string, unknown>, fields: InputDefinition[]): Record<string, unknown> {
+export function copyTemplateInputs(values: Record<string, unknown>, fields: InputDefinition[], definitionScope: InputDefinition[] = fields): Record<string, unknown> {
   const output: Record<string, unknown> = {};
   for (const field of fields) {
     if (!templateInputAllowed(field)) continue;
@@ -37,16 +37,16 @@ export function copyTemplateInputs(values: Record<string, unknown>, fields: Inpu
     if (!(key in values)) continue;
     const raw = parseTemplateInput(values[key], field);
     if (["repeater", "measurement_block"].includes(field.field_type) && Array.isArray(raw)) {
-      const layout = containerLayout(field as FormField, fields as FormField[]);
+      const layout = containerLayout(field as FormField, definitionScope as FormField[]);
       const leaves = layout.items.flatMap(item => item.type === "group" ? item.children : [item]);
       const children = leaves.flatMap(item => {
         if (item.type !== "field") return [];
-        const def = fields.find(f => item.field_id ? f.id === item.field_id : f.field_key === item.key);
+        const def = definitionScope.find(f => item.field_id ? f.id === item.field_id : f.field_key === item.key);
         return def ? [{ ...def, field_key: item.value_key ?? item.key }] : [];
       });
       output[key] = raw.map(entry => {
         if (!entry || typeof entry !== "object") throw new Error(`Nicht lesbarer Wiederholungsbereich: ${key}`);
-        return { ...copyTemplateInputs(entry as Record<string, unknown>, children), __instance_id: crypto.randomUUID() };
+        return { ...copyTemplateInputs(entry as Record<string, unknown>, children, definitionScope), __instance_id: crypto.randomUUID() };
       });
     } else output[key] = structuredClone(raw);
   }
