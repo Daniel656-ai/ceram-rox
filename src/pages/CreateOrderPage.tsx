@@ -39,6 +39,7 @@ import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderService
 import { isProjectRequired } from "@/lib/orders/projectRequirement";
 import { planRuleTriggers, ruleStepKey } from "@/lib/ruleEvaluation";
 import { experimentNumberPatch } from "@/lib/orders/experimentNumber";
+import { draftPositionEdited, hasDraftValue, missingDraftFiles } from "@/lib/orderDraftSafety";
 
 interface SelectedMeasurement {
   uid: string;
@@ -173,7 +174,7 @@ export default function CreateOrderPage() {
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
   const { data: projects = [] } = useProjects();
-  const { data: services = [] } = useServices();
+  const { data: services = [], isSuccess: servicesReady } = useServices();
   const { data: servicePackages = [] } = useQuery({
     queryKey: ["service-packages", "active-only"],
     queryFn: () => api.servicePackages.listWithItems({ includeInactive: false }),
@@ -211,15 +212,23 @@ export default function CreateOrderPage() {
   // Felder der Formularvorlage – daraus wird die Mehrfachauswahl
   // "Dienstleistungen" gelesen (keine feste Feldliste im Code).
   const [templateFields, setTemplateFields] = useState<FormField[]>([]);
+  const [templateReadyKind, setTemplateReadyKind] = useState<string | null>(null);
+  const reconcileAllowed = useRef(true);
+  const templateReady = templateReadyKind === orderKind;
+  const onTemplateReady = useMemo(() => (kind: string, ready: boolean) => setTemplateReadyKind(ready ? kind : null), []);
 
   // ---------------------------------------------------------------------
   // Entwürfe & Vorlagen (additiv, über Berechtigungen deaktivierbar)
   // ---------------------------------------------------------------------
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const draftsEnabled = hasPermission("orders.drafts.manage");
   const [draftId, setDraftId] = useState<string | null>(searchParams.get("draft"));
   const [loadedDraft, setLoadedDraft] = useState<OrderDraft | null>(null);
   const [draftLoading, setDraftLoading] = useState(!!searchParams.get("draft"));
+  const [draftLoadFailed, setDraftLoadFailed] = useState(false);
+  const [closingDraft, setClosingDraft] = useState(false);
+  const localCreatedId = useRef<string | null>(null);
+  const [rulesReady, setRulesReady] = useState(false);
 
   const draftPayload: OrderDraftPayload = useMemo(() => ({
     selectedProjectId, orderType, orderKind, dueDate, notes,
@@ -237,21 +246,28 @@ export default function CreateOrderPage() {
 
   const hasDraftContent =
     !!selectedProjectId || measurements.length > 0 || selectedSampleIds.length > 0 ||
-    !!notes || Object.keys(dynamicValues).length > 0;
+    !!notes || !!orderType || !!dueDate || hasDraftValue(dynamicValues);
 
-  const autosaveEnabled = draftsEnabled && mode === "single" && !draftLoading;
+  const autosaveEnabled = draftsEnabled && mode === "single" && !draftLoading && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
   const autosave = useOrderDraftAutosave({
     enabled: autosaveEnabled,
     userId: user?.id,
     draftId,
-    onDraftCreated: (id) => setDraftId(id),
+    onDraftCreated: (id) => {
+      localCreatedId.current = id;
+      setDraftId(id);
+      setSearchParams((previous) => { const next = new URLSearchParams(previous); next.set("draft", id); return next; }, { replace: true });
+      queryClient.invalidateQueries({ queryKey: ["order-drafts"] });
+    },
     payload: draftPayload,
     title: draftTitle,
     hasContent: hasDraftContent,
+    restoredPayload: loadedDraft?.payload,
   });
   // „Ansicht aktualisieren": Entwurf vorher sichern; ohne Bestätigung abbrechen.
   useRefreshGuard(async () => {
-    if (!autosaveEnabled || !hasDraftContent) return;
+    if (!hasDraftContent) return;
+    if (!autosaveEnabled) throw new Error("draft not ready");
     const id = await autosave.saveNow();
     if (!id) throw new Error("draft not saved");
   });
@@ -260,11 +276,15 @@ export default function CreateOrderPage() {
   useEffect(() => {
     const id = searchParams.get("draft");
     if (!id) { setDraftLoading(false); return; }
+    if (id === localCreatedId.current) return;
     let cancelled = false;
     setDraftLoading(true);
+    setDraftLoadFailed(false);
+    reconcileAllowed.current = false;
     api.orderDrafts.get(id)
       .then((d) => {
-        if (cancelled || !d) return;
+        if (cancelled) return;
+        if (!d) throw new Error("Entwurf nicht gefunden");
         const p = d.payload || {};
         setSelectedProjectId(p.selectedProjectId ?? "");
         setOrderType(p.orderType ?? "");
@@ -281,16 +301,20 @@ export default function CreateOrderPage() {
         setDraftId(d.id);
         setLoadedDraft(d);
       })
-      .catch((e: any) => toast.error("Entwurf konnte nicht geladen werden", { description: e.message }))
+      .catch((e: any) => { if (!cancelled) { setDraftLoadFailed(true); toast.error("Entwurf konnte nicht geladen werden", { description: e.message }); } })
       .finally(() => { if (!cancelled) setDraftLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get("draft")]);
 
   const handleSaveAndClose = async () => {
-    const id = await autosave.saveNow();
-    if (id) { toast.success("Entwurf gespeichert"); navigate("/auftraege"); }
-    else toast.error("Entwurf konnte nicht gespeichert werden");
+    if (closingDraft) return;
+    setClosingDraft(true);
+    try {
+      const id = await autosave.saveNow();
+      if (id) { toast.success("Entwurf gespeichert"); navigate("/auftraege"); }
+      else toast.error("Entwurf konnte nicht gespeichert werden");
+    } finally { setClosingDraft(false); }
   };
 
 
@@ -369,12 +393,13 @@ export default function CreateOrderPage() {
       selection: readServiceSelectionEntries(dynamicValues, templateFields as any, services as any),
       services: services as any,
       measurements: current,
+      isEdited: (uid) => draftPositionEdited(draftPayload, uid),
       // Vor dem Speichern existiert noch keine Dienstleistung: Abwählen
       // entfernt die Position samt erfassten Eingaben aus dem Entwurf.
     });
 
   useEffect(() => {
-    if (templateFields.length === 0 || services.length === 0) return;
+    if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || !reconcileAllowed.current) return;
     const plan = buildServicePlan(measurementsRef.current);
     setUnresolvedSelection(plan.unresolved);
     if (plan.add.length === 0 && plan.remove.length === 0) return;
@@ -404,7 +429,7 @@ export default function CreateOrderPage() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dynamicValues, templateFields, services]);
+  }, [dynamicValues, templateFields, services, draftLoading, templateReady, servicesReady]);
 
 
   // ---------------------------------------------------------------------
@@ -414,11 +439,12 @@ export default function CreateOrderPage() {
     () => [...new Set(measurements.map((m) => m.service_id))].sort(),
     [measurements]
   );
-  const { data: rulesByService = {} } = useQuery({
+  const { data: rulesByService = {}, isSuccess: ruleQueryReady } = useQuery({
     queryKey: ["service-rules-by-service", ruleServiceIds],
     queryFn: () => api.ruleTriggers.rulesByService(ruleServiceIds),
     enabled: ruleServiceIds.length > 0,
   });
+  useEffect(() => { setRulesReady(ruleServiceIds.length === 0 || ruleQueryReady); }, [ruleQueryReady, ruleServiceIds.length]);
   const buildRulePlan = (current: SelectedMeasurement[], formVals: Record<string, Record<string, any>>) =>
     planRuleTriggers({
       sources: current.map((m) => ({ key: m.uid, service_id: m.service_id, sample_id: null, values: formVals[m.uid] ?? {} })),
@@ -428,9 +454,7 @@ export default function CreateOrderPage() {
         service_id: m.service_id,
         sample_id: null,
         from_rule: m.origin === "rule",
-        edited: Object.values(formVals[m.uid] ?? {}).some(
-          (v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)
-        ),
+        edited: draftPositionEdited({ measurementFormValues: formVals, measurementParams }, m.uid),
       })),
     });
   const ruleAdditions = (plan: ReturnType<typeof buildRulePlan>): SelectedMeasurement[] =>
@@ -448,13 +472,13 @@ export default function CreateOrderPage() {
     });
 
   useEffect(() => {
-    if (services.length === 0) return;
+    if (draftLoading || !templateReady || !servicesReady || !ruleQueryReady || !reconcileAllowed.current) return;
     const plan = buildRulePlan(measurementsRef.current, formValuesRef.current);
     const additions = ruleAdditions(plan);
     if (additions.length === 0 && plan.remove.length === 0) return;
     setMeasurements((prev) => [...prev.filter((m) => !plan.remove.includes(m.uid)), ...additions]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [measurementFormValues, measurements.length, rulesByService, services]);
+  }, [measurementFormValues, measurements.length, rulesByService, services, draftLoading, templateReady, servicesReady, ruleQueryReady]);
 
   const applyServicePackage = (packageId: string) => {
     const pkg = servicePackages.find((p: any) => p.id === packageId);
@@ -535,6 +559,7 @@ export default function CreateOrderPage() {
   };
 
   const updateFormValue = (uid: string, key: string, value: any) => {
+    reconcileAllowed.current = true;
     setMeasurementFormValues((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [key]: value } }));
   };
 
@@ -544,6 +569,12 @@ export default function CreateOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || (measurements.length > 0 && !ruleQueryReady)) {
+      toast.error("Formular wird noch geladen oder konnte nicht vollständig geladen werden"); return;
+    }
+    if (missingDraftFiles(draftPayload).length > 0 && JSON.stringify(draftPayload).includes("__draft_file_missing")) {
+      toast.error("Bitte fehlende Dateianhänge erneut auswählen"); return;
+    }
     const isPurePP = orderKind === "pilot_plant";
     // Labor requires sample + measurements. Pilot Plant / Combined may start without a sample; measurements optional for pure PP.
     if (!user || !orderType) {
@@ -911,7 +942,7 @@ export default function CreateOrderPage() {
       <span className="flex items-center gap-1.5 text-xs text-destructive">
         <CloudOff className="h-3.5 w-3.5" /> Änderungen konnten nicht gespeichert werden
       </span>
-    ) : null;
+    ) : autosave.state === "dirty" ? <span className="text-xs text-muted-foreground">{t("orders:draftSafety.unsaved")}</span> : null;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -925,6 +956,9 @@ export default function CreateOrderPage() {
       </div>
 
       {mode === "single" && <OrderDraftsPanel activeDraftId={draftId} />}
+      {mode === "single" && missingDraftFiles(draftPayload).length > 0 && (
+        <p role="status" className="text-sm text-destructive">{t("orders:draftSafety.files", { names: missingDraftFiles(draftPayload).join(", ") })}</p>
+      )}
 
       {mode === "single" && loadedDraft?.source_label && (
         <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
@@ -1028,9 +1062,10 @@ export default function CreateOrderPage() {
         <OrderKindDynamicForm
           orderKind={orderKind}
           values={dynamicValues}
-          onChange={(patch) => setDynamicValues((prev) => ({ ...prev, ...patch }))}
+          onChange={(patch) => { reconcileAllowed.current = true; setDynamicValues((prev) => ({ ...prev, ...patch })); }}
           onTemplateResolved={setDynamicFormId}
           onFieldsResolved={setTemplateFields}
+          onReady={onTemplateReady}
         />
 
         {/* Die im Auftraggeberformular ausgewählten Dienstleistungen erscheinen
@@ -1238,7 +1273,7 @@ export default function CreateOrderPage() {
         <div className="flex gap-3 flex-wrap items-center">
           <Button type="submit" disabled={submitting}>{submitting ? t("orders:submitting") : t("orders:submit_order")}</Button>
           {draftsEnabled && (
-            <Button type="button" variant="secondary" onClick={handleSaveAndClose}>
+            <Button type="button" variant="secondary" onClick={handleSaveAndClose} disabled={!autosaveEnabled || closingDraft || submitting}>
               <Save className="h-4 w-4 mr-2" /> Entwurf speichern &amp; schließen
             </Button>
           )}
