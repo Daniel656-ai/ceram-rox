@@ -1,5 +1,10 @@
 # Roadmap
 
+- [ ] Schritt 1: Entwurfsspeicherung, Wiederherstellung, URL, Dateihinweise und bestätigtes Speichern absichern; kritische Tests vor Schritt 2 ausführen
+- [ ] Schritt 2: Drei Einstiege im bestehenden Entwurfsfenster; vollständige, unabhängige Vorlagenübernahme ohne alte Identitäten/Ergebnisse
+- [ ] Entwürfe/Vorlagen: manuelle Web-Speicherabnahme — keine produktiven Testdaten; isolierte Tests möglich
+- [ ] Entwürfe/Vorlagen: kompilierte Desktop-Abnahme — Firmenumgebung nicht zugänglich; Windows-X wartet ohne native Änderung nicht garantiert
+
 - [x] Freigegebene lokale Definitionreferenzen und Messblock → Temperatur-Repeater additiv implementieren; offizielle Ergebnisableitung unverändert
 - [x] Referenzen, unabhängige Kontexte, JSON-Speicherung und Bestandsregressionen isoliert getestet; 781 Tests erfolgreich, Web-Renderer mit isolierten Browserwerten geprüft, keine produktiven Testdaten
 - [ ] Echte Web-Speicherabnahme und Formular-Klonprüfung — nur ohne produktive Testschreibzugriffe möglich; isolierter JSON-Roundtrip geprüft
