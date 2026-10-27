@@ -279,6 +279,12 @@ export default function CreateOrderPage() {
     const id = searchParams.get("draft");
     if (!id) {
       setDraftLoading(false);
+      if (loadedDraft) {
+        setSelectedProjectId(""); setOrderType(""); setOrderKind("labor"); setDueDate(""); setNotes("");
+        setMeasurements([]); setSelectedSampleIds([]); setProcessTemplateId("__none__");
+        setMeasurementParams({}); setMeasurementFormValues({}); setDynamicValues({});
+        reconcileAllowed.current = true;
+      }
       setDraftId(null); setLoadedDraft(null);
       return;
     }

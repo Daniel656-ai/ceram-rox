@@ -106,9 +106,12 @@ export async function buildPayloadFromOrder(
       })));
       const values: Record<string, unknown> = {};
       const params: Record<string, string> = {};
+      const seenParameterNames = new Set<string>();
       for (const p of m.measurement_parameters ?? []) {
         const name = String(p.parameter_name ?? "");
         if (!name) continue;
+        if (seenParameterNames.has(name)) throw new Error(`Vorgabe „${name}“ ist mehrfach gespeichert und nicht eindeutig; Vorlage nicht erstellt.`);
+        seenParameterNames.add(name);
         const candidates = [
           ...fields.filter(f => f.field_key === name || f.display_name === name).map(f => ({ key: f.field_key, def: f })),
           ...linkedDefinitions.flatMap(link => link.fields.filter(f => f.field_key === name || f.display_name === name)
