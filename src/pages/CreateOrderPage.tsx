@@ -575,6 +575,7 @@ export default function CreateOrderPage() {
   };
 
   const updateFormValue = (uid: string, key: string, value: any) => {
+    if (loadedDraft && !reconcileAllowed.current) return;
     setMeasurementFormValues((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [key]: value } }));
   };
 
@@ -1077,7 +1078,7 @@ export default function CreateOrderPage() {
         <OrderKindDynamicForm
           orderKind={orderKind}
           values={dynamicValues}
-          onChange={(patch) => setDynamicValues((prev) => ({ ...prev, ...patch }))}
+          onChange={(patch) => { if (loadedDraft && !reconcileAllowed.current) return; setDynamicValues((prev) => ({ ...prev, ...patch })); }}
           onTemplateResolved={setDynamicFormId}
           onFieldsResolved={setTemplateFields}
           onReady={onTemplateReady}
