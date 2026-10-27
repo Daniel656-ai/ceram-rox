@@ -316,6 +316,22 @@ export default function CreateOrderPage() {
       else toast.error("Entwurf konnte nicht gespeichert werden");
     } finally { setClosingDraft(false); }
   };
+  const beforeDraftSwitch = async () => {
+    if (!hasDraftContent || !autosave.dirty) return true;
+    const saved = await autosave.saveNow();
+    if (!saved) toast.error(t("orders:draftSafety.switchError"));
+    return !!saved;
+  };
+  const startNewDraft = async () => {
+    if (!await beforeDraftSwitch()) return;
+    localCreatedId.current = null;
+    setDraftId(null); setLoadedDraft(null); setDraftLoadFailed(false);
+    setSelectedProjectId(""); setOrderType(""); setOrderKind("labor"); setDueDate(""); setNotes("");
+    setMeasurements([]); setSelectedSampleIds([]); setProcessTemplateId("__none__");
+    setMeasurementParams({}); setMeasurementFormValues({}); setDynamicValues({});
+    reconcileAllowed.current = true;
+    setSearchParams({}, { replace: true });
+  };
 
 
   // Batch state
@@ -955,7 +971,7 @@ export default function CreateOrderPage() {
         {mode === "single" && draftsEnabled && saveIndicator}
       </div>
 
-      {mode === "single" && <OrderDraftsPanel activeDraftId={draftId} />}
+      {mode === "single" && <OrderDraftsPanel activeDraftId={draftId} beforeSwitch={beforeDraftSwitch} onNew={startNewDraft} />}
       {mode === "single" && missingDraftFiles(draftPayload).length > 0 && (
         <p role="status" className="text-sm text-destructive">{t("orders:draftSafety.files", { names: missingDraftFiles(draftPayload).join(", ") })}</p>
       )}

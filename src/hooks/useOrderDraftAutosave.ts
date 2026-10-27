@@ -29,6 +29,13 @@ export function useOrderDraftAutosave(args: Args) {
   serializedRef.current = serialized;
 
   useEffect(() => {
+    if (!args.draftId && baselineId.current) {
+      draftIdRef.current = null;
+      baselineId.current = null;
+      lastSerialized.current = "";
+      stopped.current = false;
+      setState("idle");
+    }
     if (args.restoredPayload && args.draftId !== baselineId.current) {
       draftIdRef.current = args.draftId;
       baselineId.current = args.draftId;

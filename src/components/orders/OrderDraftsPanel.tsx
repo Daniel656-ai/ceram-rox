@@ -9,9 +9,11 @@ import { useMyOrderDrafts, useDeleteOrderDraft } from "@/hooks/useOrderDrafts";
 import { usePermissions } from "@/hooks/usePermissions";
 import UseAsTemplateDialog from "./UseAsTemplateDialog";
 import type { OrderDraft } from "@/lib/api/orderDrafts";
+import { useTranslation } from "react-i18next";
 
 /** „Meine Entwürfe" — optionaler Bereich, nur bei entsprechender Berechtigung. */
-export default function OrderDraftsPanel({ activeDraftId }: { activeDraftId?: string | null }) {
+export default function OrderDraftsPanel({ activeDraftId, beforeSwitch, onNew }: { activeDraftId?: string | null; beforeSwitch?: () => Promise<boolean>; onNew?: () => Promise<void> }) {
+  const { t } = useTranslation("orders");
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const { data: drafts = [] } = useMyOrderDrafts();
@@ -35,14 +37,18 @@ export default function OrderDraftsPanel({ activeDraftId }: { activeDraftId?: st
               <FileText className="h-4 w-4" /> Meine Entwürfe
             </CardTitle>
             {canTemplate && (
-              <Button type="button" variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+              <Button type="button" variant="outline" size="sm" onClick={async () => { if (!beforeSwitch || await beforeSwitch()) setPickerOpen(true); }}>
                 <Copy className="h-3.5 w-3.5 mr-1.5" />
-                Auftrag als Vorlage
+                {t("draftSafety.template")}
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
+          <div className="flex gap-2 flex-wrap mb-3">
+            <Button type="button" variant="outline" onClick={() => void onNew?.()}>{t("draftSafety.start")}</Button>
+            {canDrafts && <span className="text-sm font-medium self-center">{t("draftSafety.continue")}</span>}
+          </div>
           {!canDrafts ? (
             <p className="text-sm text-muted-foreground">
               Keine Berechtigung zum Verwalten von Auftragsentwürfen.
@@ -77,7 +83,7 @@ export default function OrderDraftsPanel({ activeDraftId }: { activeDraftId?: st
                   </div>
                   <Button
                     type="button" variant="outline" size="sm"
-                    onClick={() => navigate(`/auftraege/neu?draft=${d.id}`)}
+                    onClick={async () => { if (!beforeSwitch || await beforeSwitch()) navigate(`/auftraege/neu?draft=${d.id}`); }}
                   >
                     <FolderOpen className="h-3.5 w-3.5 mr-1.5" /> Weiterbearbeiten
                   </Button>
@@ -85,7 +91,7 @@ export default function OrderDraftsPanel({ activeDraftId }: { activeDraftId?: st
                     <Button
                       type="button" variant="ghost" size="icon" className="h-8 w-8"
                       title="Als Vorlage verwenden"
-                      onClick={() => setTemplateSource(d)}
+                      onClick={async () => { if (!beforeSwitch || await beforeSwitch()) setTemplateSource(d); }}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
