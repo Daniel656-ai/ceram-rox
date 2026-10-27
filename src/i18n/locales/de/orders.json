@@ -1,4 +1,16 @@
 {
+  "draftSafety": {
+    "unsaved": "Noch nicht gespeicherte Änderungen",
+    "files": "Lokale Dateien werden nicht im Entwurf gespeichert. Nach erneutem Öffnen bitte wieder auswählen: {{names}}",
+    "start": "Neuen Auftrag beginnen",
+    "continue": "Gespeicherten Entwurf fortsetzen",
+    "template": "Früheren Auftrag als Vorlage laden",
+    "search": "Auftragsnummer, Projekt oder Anmerkung suchen",
+    "empty": "Keine passenden Aufträge",
+    "loading": "Aufträge werden geladen…",
+    "error": "Aufträge konnten nicht geladen werden",
+    "switchError": "Aktueller Entwurf konnte nicht gespeichert werden"
+  },
   "kind_label": "Auftragsart",
   "all_kinds": "Alle Auftragsarten",
   "kind": {

@@ -1,4 +1,16 @@
 {
+  "draftSafety": {
+    "unsaved": "Unsaved changes",
+    "files": "Local files are not saved in drafts. Select them again after reopening: {{names}}",
+    "start": "Start a new order",
+    "continue": "Continue a saved draft",
+    "template": "Load a previous order as a template",
+    "search": "Search order number, project or notes",
+    "empty": "No matching orders",
+    "loading": "Loading orders…",
+    "error": "Orders could not be loaded",
+    "switchError": "The current draft could not be saved"
+  },
   "kind_label": "Order kind",
   "all_kinds": "All order kinds",
   "kind": {
