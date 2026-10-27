@@ -1,7 +1,7 @@
 import type { FormField } from "@/lib/api/formFields";
 import { containerLayout } from "@/lib/scopedMeasurementValues";
 
-type InputDefinition = Partial<FormField> & { field_key: string; field_type: string };
+type InputDefinition = Partial<Omit<FormField, "field_type">> & { field_key: string; field_type: string };
 const excludedKeys = new Set(["versuchsnummer", "pp_experiment_number", "order_number", "sample_number", "measurement_number"]);
 export function templateInputAllowed(field: InputDefinition) {
   return !field.is_result && !["computed", "file", "image", "measurement_import"].includes(field.field_type)
