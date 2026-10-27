@@ -45,4 +45,22 @@ describe("single draft writer", () => {
     window.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
   });
+  it("clearing all values in an existing draft persists the empty payload", async () => {
+    const old = { ...args, draftId: "d", restoredPayload: args.payload };
+    const h = renderHook(p => useOrderDraftAutosave(p), { initialProps: old });
+    h.rerender({ ...old, hasContent: false, payload: { notes: "" } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1300); });
+    expect(mocks.update).toHaveBeenCalledWith("d", expect.objectContaining({ payload: { notes: "" } }));
+  });
+  it("switching identity after a confirmed save never writes old data to the new draft", async () => {
+    const old = { ...args, draftId: "d", restoredPayload: args.payload };
+    const h = renderHook(p => useOrderDraftAutosave(p), { initialProps: old });
+    h.rerender({ ...old, enabled: false });
+    h.rerender({ ...old, draftId: "new", payload: { notes: "new draft" }, restoredPayload: { notes: "new draft" } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2500); });
+    expect(mocks.update).not.toHaveBeenCalled();
+    h.rerender({ ...old, draftId: "new", payload: { notes: "edit new" }, restoredPayload: { notes: "new draft" } });
+    await act(async () => { expect(await h.result.current.saveNow()).toBe("new"); });
+    expect(mocks.update).toHaveBeenCalledExactlyOnceWith("new", expect.objectContaining({ payload: { notes: "edit new" } }));
+  });
 });

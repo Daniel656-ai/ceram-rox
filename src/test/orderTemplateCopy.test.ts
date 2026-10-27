@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildPayloadFromDraft, buildPayloadFromOrder, DEFAULT_COPY_OPTIONS } from "@/lib/orderTemplateCopy";
+import { copyTemplateInputs } from "@/lib/orderTemplateInputs";
 const mocks = vi.hoisted(() => ({ get: vi.fn(), fields: vi.fn(), links: vi.fn(), formFields: vi.fn(), definitions: vi.fn(), layout: vi.fn() }));
 vi.mock("@/lib/api", () => ({ api: { orders: { get: mocks.get }, serviceDataFields: { listForService: mocks.fields }, serviceFormLinks: { listForService: mocks.links }, formFields: { listForForm: mocks.formFields }, serviceParameters: { listForService: mocks.definitions }, serviceFormLayouts: { get: mocks.layout } } }));
 const f = (key: string, type = "text", extras = {}) => ({ id: key, form_id: "f", field_key: key, display_name: key, field_type: type, is_result: false, parent_field_id: null, metadata: {}, ...extras });
@@ -12,6 +13,18 @@ beforeEach(() => {
   mocks.definitions.mockResolvedValue([]); mocks.layout.mockResolvedValue(null);
 });
 describe("safe independent templates", () => {
+  it("copies block to repeater nesting using each placement storage key and original definition scope", () => {
+    const placement = (id: string, key: string, value_key = key) => ({ id: `p-${id}`, type: "field", field_id: id, key, value_key, width: 12 });
+    const layout = (items: unknown[]) => ({ version: 1, gap: "md", items });
+    const fields = [
+      f("runs", "measurement_block", { metadata: { measurement_block: { layout: layout([placement("points", "points", "temperatures")]) } } }),
+      f("points", "repeater", { metadata: { repeater: { layout: layout([placement("temperature", "temperature", "t")]) } } }), f("temperature", "decimal"),
+    ];
+    const copied = copyTemplateInputs({ runs: [{ temperatures: [{ t: 0, result: 7 }] }] }, fields);
+    const rows = copied.runs as { temperatures: { t: number; result?: number }[] }[];
+    expect(rows[0].temperatures[0].t).toBe(0);
+    expect(rows[0].temperatures[0]).not.toHaveProperty("result");
+  });
   it("keeps duplicate service/package positions with distinct new identities and linked input values, not results", async () => {
     const { payload } = await buildPayloadFromOrder("source", DEFAULT_COPY_OPTIONS);
     expect(payload.measurements).toHaveLength(2);

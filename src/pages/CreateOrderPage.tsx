@@ -39,7 +39,7 @@ import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderService
 import { isProjectRequired } from "@/lib/orders/projectRequirement";
 import { planRuleTriggers, ruleStepKey } from "@/lib/ruleEvaluation";
 import { experimentNumberPatch } from "@/lib/orders/experimentNumber";
-import { draftPositionEdited, hasDraftValue, missingDraftFiles } from "@/lib/orderDraftSafety";
+import { draftPositionEdited, hasDraftValue, missingDraftFiles, normalizeRestoredDraft } from "@/lib/orderDraftSafety";
 
 interface SelectedMeasurement {
   uid: string;
@@ -297,7 +297,7 @@ export default function CreateOrderPage() {
       .then((d) => {
         if (cancelled) return;
         if (!d) throw new Error("Entwurf nicht gefunden");
-        const p = d.payload || {};
+        const p = normalizeRestoredDraft(d.payload || {});
         setSelectedProjectId(p.selectedProjectId ?? "");
         setOrderType(p.orderType ?? "");
         setOrderKind(p.orderKind === "pilot_plant" ? "pilot_plant" : "labor");
@@ -311,7 +311,7 @@ export default function CreateOrderPage() {
         setDynamicValues((p.dynamicValues ?? {}) as any);
         setDynamicFormId(p.dynamicFormId ?? null);
         setDraftId(d.id);
-        setLoadedDraft(d);
+        setLoadedDraft({ ...d, payload: p });
       })
       .catch((e: any) => { if (!cancelled) { setDraftLoadFailed(true); toast.error("Entwurf konnte nicht geladen werden", { description: e.message }); } })
       .finally(() => { if (!cancelled) setDraftLoading(false); });

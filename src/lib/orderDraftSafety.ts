@@ -1,5 +1,14 @@
 import type { OrderDraftPayload } from "@/lib/api/orderDrafts";
 
+export function normalizeRestoredDraft(p: OrderDraftPayload): OrderDraftPayload {
+  return {
+    selectedProjectId: p.selectedProjectId ?? "", orderType: p.orderType ?? "", orderKind: p.orderKind === "pilot_plant" ? "pilot_plant" : "labor",
+    dueDate: p.dueDate ?? "", notes: p.notes ?? "", measurements: p.measurements ?? [], selectedSampleIds: p.selectedSampleIds ?? [],
+    processTemplateId: p.processTemplateId ?? "__none__", measurementParams: p.measurementParams ?? {}, measurementFormValues: p.measurementFormValues ?? {},
+    dynamicValues: p.dynamicValues ?? {}, dynamicFormId: p.dynamicFormId ?? null,
+  };
+}
+
 /** Empty containers are not edits; 0 and false explicitly are. */
 export function hasDraftValue(value: unknown): boolean {
   if (value == null || value === "") return false;
