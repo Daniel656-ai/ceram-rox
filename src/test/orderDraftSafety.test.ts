@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { sanitizeDraftPayload } from "@/lib/api/orderDrafts";
-import { draftPositionEdited, missingDraftFiles } from "@/lib/orderDraftSafety";
+import { draftPositionEdited, missingDraftFiles, normalizeRestoredDraft } from "@/lib/orderDraftSafety";
 import { planServiceSync } from "@/lib/orderServiceSelection";
 
 describe("draft value roundtrip", () => {
+  it("normalizes a sparse stored draft into the exact form baseline without losing provenance", () => {
+    const position = { uid: "original", service_id: "s", service_name: "S", origin: "rule" as const, rule_id: "rule", rule_source_uid: "parent", selection_token: "token" };
+    const restored = normalizeRestoredDraft({ measurements: [position], notes: "014" });
+    expect(restored.measurements?.[0]).toEqual(position);
+    expect(restored.measurementParams).toEqual({});
+    expect(restored.processTemplateId).toBe("__none__");
+    expect(restored.dynamicFormId).toBeNull();
+  });
   it("preserves 0, false, repeated references, nested repeaters and position identities", () => {
     const entry = { temperature: 0, enabled: false, text: "014" };
     const payload = { measurements: [{ uid: "original", service_id: "s", service_name: "S", origin: "template", selection_token: "S" }], measurementFormValues: { original: { runs: [{ points: [entry, entry] }] } } };
