@@ -106,7 +106,7 @@ describe("nested measurement block → temperature repeater", () => {
       { __instance_id: "B", o2: 5, points: [{ __instance_id: "B1", temperature: 200 }] },
     ] };
     render(<Harness fields={fields} initial={initial} />);
-    expect(screen.getAllByTestId("repeater-row-label").map((e) => e.textContent)).toEqual(["200 °C", "360 °C", "200 °C"]);
+    expect(screen.getAllByTestId("repeater-row-label").map((e) => e.textContent)).toEqual(["Messung 1 1", "200 °C", "360 °C", "Messung 2 2", "200 °C"]);
     expect(screen.getAllByText("Sauerstoff").length).toBe(2);
     const stored = JSON.parse(screen.getByTestId("values").textContent!);
     expect(stored.runs[0].points[1]).toMatchObject({ __instance_id: "A2", temperature: 360 });
