@@ -36,6 +36,7 @@ import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardP
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { MS_AUSWAHL_KEY, MUNDSTUECK_MS_KEY, AUTO_LOCKED_KEYS, isAutoEntry, removePairedRow } from "@/lib/rules/mundstueck293";
+import { formatRepeaterRowLabel, isRowLabelCandidate } from "@/lib/repeaterRowLabel";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -1229,6 +1230,7 @@ function RepeaterField({
             canRemove={canRemove && (!meta.min_entries || entries.length > meta.min_entries)}
             canReorder={interactive && !readonly}
             itemLabel={meta.item_label ?? "Eintrag"}
+            labelFieldKey={meta.label_field_key}
             header={isMsAuswahl && isAutoEntry(entry) ? (
               <div className="flex flex-wrap items-center gap-2 text-xs">
                 <Badge variant={entry.verwaist ? "destructive" : "secondary"}>
@@ -1317,7 +1319,7 @@ function RepeaterTable({
 
 function RepeaterEntry({
   index, entry, children, allFields, readonly, layout, owner, managed = false,
-  canRemove, canReorder, itemLabel, header,
+  canRemove, canReorder, itemLabel, header, labelFieldKey,
   onChange, onRemove, onMoveUp, onMoveDown, onDuplicate,
 }: {
   owner?: FormField;
@@ -1331,6 +1333,8 @@ function RepeaterEntry({
   canRemove: boolean;
   canReorder: boolean;
   itemLabel: string;
+  /** Optionales Unterfeld, dessen Wert die Zeile beschriftet. */
+  labelFieldKey?: string;
   /** Zusätzlicher Kopfbereich (z. B. Messkontext eines Messdatenblocks). */
   header?: ReactNode;
   onChange: (next: Record<string, any>) => void;
@@ -1419,6 +1423,11 @@ function RepeaterEntry({
     () => Object.fromEntries(children.map((c) => [c.field_key, c])) as Record<string, FormField>,
     [children]
   );
+  // Sichtbarer Zeilentitel – reine Anzeige, Zuordnung bleibt Position/__instance_id.
+  const rowLabel = formatRepeaterRowLabel({
+    entry, labelFieldKey, field: labelFieldKey ? byKey[labelFieldKey] : null,
+    valueKey: labelFieldKey ? valueKeys.get(labelFieldKey) : undefined, itemLabel, index,
+  });
 
   /* Kompakte Messreihen: schmale Spalten werden nicht weiter gequetscht,
    * sondern erhalten eine Mindestbreite; der Block scrollt horizontal. */
@@ -1492,7 +1501,7 @@ function RepeaterEntry({
       <div key={item.id} className={cn(p.className, sticky, "min-w-0")} style={p.style}>
         <FieldWithLabel
           field={cf}
-          node={{ id: `inline-${item.id}`, type: "field", field_id: cf.id, width: 12, readonly }}
+          node={{ id: `inline-${item.id}`, type: "field", field_id: cf.id, width: 12, readonly, label_override: item.label_override ?? undefined }}
           allFields={allFields}
         />
       </div>
@@ -1504,7 +1513,7 @@ function RepeaterEntry({
     <EntryScopeCtx.Provider value={scope}>
       <div className="border rounded p-3 bg-background">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted-foreground">{itemLabel} {index + 1}</span>
+          <span className="text-xs font-medium text-muted-foreground" data-testid="repeater-row-label">{rowLabel}</span>
           <div className="flex items-center gap-1">
             {canReorder && (
               <>
