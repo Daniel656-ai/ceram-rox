@@ -36,7 +36,7 @@ import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardP
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { MS_AUSWAHL_KEY, MUNDSTUECK_MS_KEY, AUTO_LOCKED_KEYS, isAutoEntry, removePairedRow } from "@/lib/rules/mundstueck293";
-import { formatRepeaterRowLabel, isRowLabelCandidate } from "@/lib/repeaterRowLabel";
+import { formatRepeaterRowLabel } from "@/lib/repeaterRowLabel";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
