@@ -19,6 +19,8 @@ export interface RepeaterFieldItem {
   /** Original value key, retained when a referenced definition is renamed. */
   value_key?: string;
   width: number; // 1..12
+  /** Anzeigename nur für diese Platzierung; leer = field.display_name. */
+  label_override?: string | null;
 }
 export interface RepeaterHeadingItem {
   id: string;
@@ -174,9 +176,11 @@ export function normalizeRepeaterLayout(
     const key = target?.field_key ?? String(it.key ?? "");
     if ((!target && !known.has(key)) || (!it.field_id && seen.has(key))) return null;
     seen.add(key);
+    const labelOverride = typeof it.label_override === "string" && it.label_override.trim() ? it.label_override : null;
     return { id, type: "field", key,
       ...(typeof it.field_id === "string" ? { field_id: it.field_id, value_key: it.value_key ?? it.key } : {}),
-      width: typeof it.width === "number" ? Math.max(1, Math.min(12, it.width)) : 6 };
+      width: typeof it.width === "number" ? Math.max(1, Math.min(12, it.width)) : 6,
+      ...(labelOverride ? { label_override: labelOverride } : {}) };
   };
 
   const items: RepeaterLayoutItem[] = [];
