@@ -1059,7 +1059,7 @@ export default function CreateOrderPage() {
             {orderKind !== "pilot_plant" && (
               <div>
                 <Label>{t("orders:sample")} *</Label>
-                <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} />
+                <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} showDetails />
               </div>
             )}
             <div>
