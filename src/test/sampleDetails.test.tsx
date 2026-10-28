@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { buildSampleDetailSections } from "@/lib/samples/sampleDetailRows";
 
-const t = (k: string, o?: Record<string, unknown>) => (o?.defaultValue as string) ?? k;
+const t = (k: string) => `T:${k}`;
 const rows = (s: any) => Object.fromEntries(buildSampleDetailSections(s, t).flatMap((x) => x.rows).map((r) => [r.key, r.value]));
 
 describe("buildSampleDetailSections", () => {
@@ -21,11 +21,11 @@ describe("buildSampleDetailSections", () => {
       projects: { project_number: "PR-1", project_name: "Kat" }, storage_locations: { hall: "H1", room: "R2" }, hazard_categories: ["toxisch"] });
     expect(r.operating_hours).toBe("0");
     expect(r.v2o5_content).toBe("1,50 %");
-    expect(r.category).toBe("category_heat_media");
-    expect(r.is_used_catalyst).toBe("hazard_no");
+    expect(r.category).toBe("T:category_heat_media");
+    expect(r.is_used_catalyst).toBe("T:hazard_no");
     expect(r.project).toBe("PR-1 – Kat");
     expect(r.location).toBe("H1 › R2");
-    expect(r.hazard_categories).toBe("hazard_toxisch");
+    expect(r.hazard_categories).toBe("T:hazard_toxisch");
   });
 });
 
