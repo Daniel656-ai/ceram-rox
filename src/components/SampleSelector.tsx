@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ChevronsUpDown, Check, Plus, X, Tag } from "lucide-react";
+import { ChevronsUpDown, Check, Plus, X, Tag, Info } from "lucide-react";
+import SampleDetailsDialog from "@/components/samples/SampleDetailsDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -43,9 +44,11 @@ interface SampleSelectorProps {
   projectId?: string;
   /** Projekt bei Neuanlage verpflichtend (Standard: ja). Projektfreie Aufträge übergeben false. */
   projectRequired?: boolean;
+  /** Ausgewählte Proben anklickbar machen und Details read-only im Dialog zeigen. */
+  showDetails?: boolean;
 }
 
-export default function SampleSelector({ value, onSelect, values, onValuesChange, projectId, projectRequired = true }: SampleSelectorProps) {
+export default function SampleSelector({ value, onSelect, values, onValuesChange, projectId, projectRequired = true, showDetails = false }: SampleSelectorProps) {
   const multiple = Array.isArray(values);
   const selectedIds = multiple ? values! : value ? [value] : [];
 
@@ -57,6 +60,7 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
   const createSample = useCreateSample();
 
   const [open, setOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formTagInput, setFormTagInput] = useState("");
   const [params, setParams] = useState<SampleParameters>(EMPTY_SAMPLE_PARAMETERS);
@@ -264,8 +268,24 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
           <div className="flex flex-wrap gap-1.5 overflow-y-auto max-h-28 p-2">
             {selectedSamples.map((s) => (
               <Badge key={s.id} variant="secondary" className="gap-1 py-1 pl-2 pr-1 max-w-full">
-                <span className="font-mono text-xs shrink-0">{s.sample_number}</span>
-                <span className="text-xs truncate max-w-40">– {s.sample_name}</span>
+                {showDetails ? (
+                  <button
+                    type="button"
+                    onClick={() => setDetailId(s.id)}
+                    aria-label={`Details zu ${s.sample_number} anzeigen`}
+                    title="Probendetails anzeigen"
+                    className="flex items-center gap-1 min-w-0 rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <Info className="h-3 w-3 shrink-0 text-primary" />
+                    <span className="font-mono text-xs shrink-0">{s.sample_number}</span>
+                    <span className="text-xs truncate max-w-40">– {s.sample_name}</span>
+                  </button>
+                ) : (
+                  <>
+                    <span className="font-mono text-xs shrink-0">{s.sample_number}</span>
+                    <span className="text-xs truncate max-w-40">– {s.sample_name}</span>
+                  </>
+                )}
                 <button
                   type="button"
                   aria-label={`${s.sample_number} entfernen`}
@@ -280,8 +300,7 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
         </div>
       )}
       </div>
-
-
+      {showDetails && <SampleDetailsDialog sampleId={detailId} onClose={() => setDetailId(null)} />}
 
       <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
