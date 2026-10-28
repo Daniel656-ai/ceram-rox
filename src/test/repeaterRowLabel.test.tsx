@@ -91,3 +91,24 @@ describe("repeater renderer", () => {
     expect(Object.keys(stored[0])).toEqual(["t"]);
   });
 });
+
+describe("nested measurement block → temperature repeater", () => {
+  const ref = (id: string, key: string, extra = {}) => ({ id: `p-${id}`, type: "field", field_id: id, key, value_key: key, width: 12, ...extra });
+  const lay = (items: unknown[]) => ({ version: 1, gap: "md", items });
+  const fields = [
+    f("r", "runs", "Durchläufe", "measurement_block", { measurement_block: { layout: lay([ref("o", "o2", { label_override: "Sauerstoff" }), ref("p", "points")]) } }),
+    f("p", "points", "Temperaturpunkte", "repeater", { repeater: { item_label: "Temperatur", label_field_key: "temperature", layout: lay([ref("t", "temperature")]) } }),
+    f("o", "o2", "O₂"), f("t", "temperature", "Temperatur", "decimal", {}, { unit: "°C" }),
+  ];
+  it("inner rows use their own reference; outer keeps its label; values unchanged", () => {
+    const initial = { runs: [
+      { __instance_id: "A", o2: 2, points: [{ __instance_id: "A1", temperature: 200 }, { __instance_id: "A2", temperature: 360 }] },
+      { __instance_id: "B", o2: 5, points: [{ __instance_id: "B1", temperature: 200 }] },
+    ] };
+    render(<Harness fields={fields} initial={initial} />);
+    expect(screen.getAllByTestId("repeater-row-label").map((e) => e.textContent)).toEqual(["200 °C", "360 °C", "200 °C"]);
+    expect(screen.getAllByText("Sauerstoff").length).toBe(2);
+    const stored = JSON.parse(screen.getByTestId("values").textContent!);
+    expect(stored.runs[0].points[1]).toMatchObject({ __instance_id: "A2", temperature: 360 });
+  });
+});
