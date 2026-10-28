@@ -29,6 +29,8 @@ import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
 import { readValueSource, readResultConditions, writeResultConditions } from "@/lib/fieldLinks";
 import { eligibleLocalReferences } from "@/lib/scopedMeasurementValues";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { isRowLabelCandidate } from "@/lib/repeaterRowLabel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link2 } from "lucide-react";
 import { parseMultiSelectDefault, serializeMultiSelectDefault } from "@/lib/multiSelectDefaults";
