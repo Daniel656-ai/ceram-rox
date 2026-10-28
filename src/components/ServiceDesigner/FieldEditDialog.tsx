@@ -29,6 +29,8 @@ import RepeaterLayoutDesigner from "./RepeaterLayoutDesigner";
 import { SymbolInput, SymbolTextarea } from "@/components/forms/SymbolInput";
 import { readValueSource, readResultConditions, writeResultConditions } from "@/lib/fieldLinks";
 import { eligibleLocalReferences } from "@/lib/scopedMeasurementValues";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { isRowLabelCandidate } from "@/lib/repeaterRowLabel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link2 } from "lucide-react";
 import { parseMultiSelectDefault, serializeMultiSelectDefault } from "@/lib/multiSelectDefaults";
@@ -652,6 +654,28 @@ export function RepeaterConfigPanel({
         <Label className="text-xs">Eintrag-Label</Label>
         <Input className="h-8 text-xs" value={meta.item_label ?? ""} onChange={(e) => saveMeta({ item_label: e.target.value })} disabled={disabled} />
       </div>
+      {!isBlock && (() => {
+        const seen = new Set<string>();
+        const candidates = [...children, ...eligibleLocalReferences(field, fields)]
+          .filter((c) => isRowLabelCandidate(String(c.field_type)) && !seen.has(c.field_key) && (seen.add(c.field_key), true));
+        return (
+          <div>
+            <Label className="text-xs">Zeilenbezeichnung aus Feld (optional)</Label>
+            <SearchableSelect
+              value={meta.label_field_key ?? "__none__"}
+              onValueChange={(v) => saveMeta({ label_field_key: v === "__none__" ? undefined : v })}
+              disabled={disabled}
+              options={[
+                { value: "__none__", label: `Laufende Nummer (${meta.item_label || "Eintrag"} 1, 2, …)` },
+                ...candidates.map((c) => ({ value: c.field_key, label: `${c.display_name} (${c.field_key})` })),
+              ]}
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Zeigt den Wert dieses Feldes als Zeilentitel. Leere Werte zeigen weiter die laufende Nummer.
+            </p>
+          </div>
+        );
+      })()}
       <div>
         <Label className="text-xs">Button-Text „Hinzufügen“</Label>
         <Input className="h-8 text-xs" value={meta.add_label ?? ""} onChange={(e) => saveMeta({ add_label: e.target.value })} disabled={disabled} />

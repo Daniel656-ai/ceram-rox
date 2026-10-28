@@ -202,10 +202,17 @@ export default function RepeaterLayoutDesigner({ subfields, referenceFields = []
       <div className="flex items-center gap-2 min-w-0">
         <span className="flex-1 min-w-0 truncate text-xs">
           {item.type === "field" && (
-            <>
-              {labelFor(item.key)}
-              <span className="ml-2 font-mono text-[10px] text-muted-foreground">{item.key}</span>
-            </>
+            <span className="flex items-center gap-1.5 min-w-0">
+              <Input
+                aria-label={`Anzeigename für ${item.key}`}
+                className="h-7 text-xs min-w-[120px] flex-1"
+                value={item.label_override ?? ""}
+                placeholder={labelFor(item.key)}
+                disabled={disabled}
+                onChange={(e) => patchItem(item.id, { label_override: e.target.value.trim() ? e.target.value : null } as any)}
+              />
+              <span className="font-mono text-[10px] text-muted-foreground shrink-0">{item.key}</span>
+            </span>
           )}
           {item.type === "heading" && (
             <Input
@@ -396,7 +403,7 @@ function PreviewItem({
   }
   return (
     <div className={repeaterWidthClass(item.width)}>
-      <p className="text-[10px] text-muted-foreground truncate">{labelFor(item.key)}</p>
+      <p className="text-[10px] text-muted-foreground truncate">{item.label_override || labelFor(item.key)}</p>
       <div className="h-7 rounded border bg-background" />
     </div>
   );

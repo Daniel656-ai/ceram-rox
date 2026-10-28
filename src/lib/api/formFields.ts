@@ -72,6 +72,8 @@ export interface RepeaterMeta {
   plan_field_key?: string;
   /** Kompakte Tabellendarstellung der Einträge zusätzlich anbieten. */
   table_view?: boolean;
+  /** field_key des Unterfelds, dessen Wert die Zeile beschriftet (reine Anzeige). */
+  label_field_key?: string;
 }
 
 export const readRepeaterMeta = (field: FormField): RepeaterMeta => {
@@ -86,6 +88,7 @@ export const readRepeaterMeta = (field: FormField): RepeaterMeta => {
     layout: r.layout ?? null,
     plan_field_key: typeof r.plan_field_key === "string" && r.plan_field_key.trim() ? r.plan_field_key.trim() : undefined,
     table_view: r.table_view === true,
+    label_field_key: typeof r.label_field_key === "string" && r.label_field_key.trim() ? r.label_field_key.trim() : undefined,
   };
 };
 
