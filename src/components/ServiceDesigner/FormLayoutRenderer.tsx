@@ -124,7 +124,9 @@ export interface CalcDisplayResult {
 const CalcResultsCtx = createContext<Record<string, CalcDisplayResult>>({});
 
 /** Lokale Berechnungen des Formulars – für Auswertungen je Messpunkt. */
-const LocalCalcsCtx = createContext<FormCalculation[]>([]);
+/** Stabiler leerer Fallback – verhindert neue Array-Referenzen je Render. */
+const EMPTY_CALCS: FormCalculation[] = [];
+const LocalCalcsCtx = createContext<FormCalculation[]>(EMPTY_CALCS);
 
 const EntryScopeCtx = createContext<{
   owner?: FormField;
@@ -2198,7 +2200,7 @@ export default function FormLayoutRenderer({
   }, [layout]);
   const hasGlobalNodes = calcNodes.some((n) => n.scope === "global");
 
-  const { data: fetchedLocal = [] } = useQuery({
+  const { data: fetchedLocal = EMPTY_CALCS } = useQuery({
     queryKey: ["form-calculations", formId],
     queryFn: () => api.formCalculations.listForForm(formId!),
     enabled: !!formId && !localCalculations,
