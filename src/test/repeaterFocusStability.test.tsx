@@ -59,15 +59,16 @@ function Harness({ fields, rootKey, initial }: { fields: FormField[]; rootKey: s
   </QueryClientProvider>;
 }
 
-function typeKeepsFocus(label: string, text: string) {
-  const input = screen.getByLabelText(label, { exact: false, selector: "input" }) as HTMLInputElement;
+const textInputs = () => Array.from(document.querySelectorAll<HTMLInputElement>('input[type="text"]'));
+
+function typeKeepsFocus(index: number, text: string) {
+  const input = textInputs()[index];
   input.focus();
   let current = "";
   for (const ch of text) {
     current += ch;
     fireEvent.change(document.activeElement as HTMLInputElement, { target: { value: current } });
-    const now = screen.getByLabelText(label, { exact: false, selector: "input" });
-    expect(now).toBe(input);
+    expect(textInputs()[index]).toBe(input);
     expect(document.activeElement).toBe(input);
   }
   expect(input.value).toBe(text);
@@ -83,17 +84,17 @@ describe("Repeater-Unterfelder behalten beim Tippen den Fokus", () => {
 
   it("Lotnummer 644000123 und Rohstoff mit mehreren Zeichen", () => {
     render(<Harness fields={rohstoffFields} rootKey="zusatzstoff" initial={initial} />);
-    const lots = screen.getAllByLabelText("Lotnummer", { exact: false, selector: "input" });
-    const lot = lots[0] as HTMLInputElement;
+    // Reihenfolge je Zeile: Rohstoff, Lotnummer
+    const lot = textInputs()[1];
     lot.focus();
     let v = "";
     for (const ch of "644000123") {
       v += ch;
       fireEvent.change(lot, { target: { value: v } });
       expect(document.activeElement).toBe(lot);
-      expect(screen.getAllByLabelText("Lotnummer", { exact: false, selector: "input" })[0]).toBe(lot);
+      expect(textInputs()[1]).toBe(lot);
     }
-    const roh = screen.getAllByLabelText("Rohstoff", { exact: false, selector: "input" })[0] as HTMLInputElement;
+    const roh = textInputs()[0];
     roh.focus();
     v = "";
     for (const ch of "Kaolin") {
@@ -109,7 +110,7 @@ describe("Repeater-Unterfelder behalten beim Tippen den Fokus", () => {
   it("m³ Verantwortlich/Bearbeitet nimmt einen mehrteiligen Namen auf", () => {
     const fields = [f("m", "m3_rows", "Zeilen", "repeater"), f("rr", "row_responsible", "verantwortlich / bearbeitet", "text", "m")];
     render(<Harness fields={fields} rootKey="m3_rows" initial={{ m3_rows: [{ __instance_id: "M1", row_responsible: "" }] }} />);
-    typeKeepsFocus("verantwortlich / bearbeitet", "Maria Muster-Huber");
+    typeKeepsFocus(0, "Maria Muster-Huber");
     expect(JSON.parse(screen.getByTestId("values").textContent!)[0].row_responsible).toBe("Maria Muster-Huber");
   });
 });
