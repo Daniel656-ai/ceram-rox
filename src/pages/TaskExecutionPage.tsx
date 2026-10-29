@@ -31,6 +31,11 @@ import OrderUploadedFiles from "@/components/OrderUploadedFiles";
 import RichText from "@/components/forms/RichText";
 import ServiceLinkedForms, { linkedFormValueKey } from "@/components/ServiceLinkedForms";
 import SampleGeometryCard from "@/components/geometry/SampleGeometryCard";
+import {
+  clearActiveTaskContext,
+  resolveTaskSample,
+  setActiveTaskContext,
+} from "@/lib/samples/activeSampleContext";
 import { toast } from "sonner";
 import type { FormRoleView } from "@/lib/api/serviceFormLayouts";
 import { ORDER_PRIORITY_LABELS, type OrderPriority } from "@/lib/types";
@@ -87,6 +92,20 @@ function TaskExecutionPageInner() {
    * zweiter Speicherort und keine zusätzliche Zuordnungslogik.
    */
   const sampleId: string | undefined = (measurement as any)?.sample_id ?? undefined;
+
+  /**
+   * Maßgebliche Probe = Probe dieser Dienstleistung (stabile ID). Sie wird als
+   * aktiver Kontext registriert, damit laufende Importe bei einem Wechsel der
+   * Dienstleistung abbrechen statt unter der falschen Probe zu speichern.
+   */
+  const taskSample = useMemo(() => resolveTaskSample(measurement), [measurement]);
+  const activeMeasurementId: string | undefined = (measurement as any)?.id;
+  const activeSampleId = taskSample.status === "resolved" ? taskSample.id : null;
+  useEffect(() => {
+    if (!activeMeasurementId) return;
+    setActiveTaskContext({ orderMeasurementId: activeMeasurementId, sampleId: activeSampleId });
+    return () => clearActiveTaskContext(activeMeasurementId);
+  }, [activeMeasurementId, activeSampleId]);
   const { data: linkedFormData = {} } = useQuery({
     queryKey: ["order-linked-form-values", orderId, sampleId, measurementId],
     queryFn: () => api.measurementResults.listFormValuesForOrder(orderId!, sampleId, measurementId),
@@ -774,7 +793,9 @@ function TaskExecutionPageInner() {
   const m: any = measurement;
   const order = m.measurement_orders;
   const project = order?.projects;
-  const sample = order?.samples;
+  const sample = taskSample.status === "resolved"
+    ? { id: taskSample.id, sample_number: taskSample.sampleNumber, sample_name: taskSample.sampleName }
+    : null;
 
   /** Priorität: gespeicherter Rang der Messung, sonst des Auftrags, sonst Auftragspriorität. */
   const rank: number | null = m.ranking ?? order?.ranking ?? null;
@@ -924,7 +945,11 @@ function TaskExecutionPageInner() {
           <div>
             <p className="text-muted-foreground text-xs">Probe / Objekt</p>
             <p className="font-medium">
-              {sample?.sample_number ? `${sample.sample_number} – ${sample.sample_name ?? ""}` : "–"}
+              {sample
+                ? `${sample.sample_number ?? "–"} – ${sample.sample_name ?? ""}`
+                : taskSample.status === "unresolved" && taskSample.reason === "mismatch"
+                  ? "Probe nicht eindeutig zugeordnet"
+                  : "Keine Probe zugeordnet"}
             </p>
           </div>
           <div>
@@ -977,6 +1002,7 @@ function TaskExecutionPageInner() {
                 ? {
                     orderMeasurementId: m.id,
                     sampleId: sample?.id ?? null,
+                    sampleNumber: sample?.sample_number ?? null,
                     serviceId: serviceId ?? null,
                     profileId: profile?.id ?? null,
                     persistResults:
@@ -1265,10 +1291,12 @@ export default function TaskExecutionPage() {
     enabled: !!measurementId,
   });
   const order = (measurement as any)?.measurement_orders;
+  const taskSample = resolveTaskSample(measurement);
   return (
     <ProcessContextProvider
       orderId={order?.id ?? null}
-      sampleId={order?.samples?.id ?? null}
+      sampleId={taskSample.status === "resolved" ? taskSample.id : null}
+      strictSample
       projectId={order?.projects?.id ?? null}
     >
       <TaskExecutionPageInner key={measurementId} />

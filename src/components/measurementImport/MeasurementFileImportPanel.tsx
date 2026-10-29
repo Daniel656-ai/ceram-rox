@@ -13,6 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, FileUp, Info } from "lucide-react";
 import type { ImportMetadataEntry, UnassignedMeasurementValue } from "@/lib/measurementClassification";
 import { toast } from "sonner";
+import {
+  getActiveTaskContext,
+  verifyFileSampleNumber,
+  verifyImportContext,
+} from "@/lib/samples/activeSampleContext";
 import CurveViewer, { type CurveSelection } from "@/components/curves/CurveViewer";
 import BjhChartsPanel from "@/components/curves/BjhChartsPanel";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
@@ -30,6 +35,8 @@ import type { CurveSignalMapping } from "@/lib/api/measurementRawData";
 export interface CurvePersistContext {
   orderMeasurementId: string;
   sampleId?: string | null;
+  /** Probennummer der beim Importstart festgehaltenen Probe. */
+  sampleNumber?: string | null;
   serviceId?: string | null;
   instanceKey?: string | null;
   instanceLabel?: string | null;
@@ -87,6 +94,9 @@ const confBadge = (c: FileMappedRow["confidence"]) =>
   c === "high" ? <Badge variant="secondary">sicher</Badge>
     : c === "medium" ? <Badge variant="outline">wahrscheinlich</Badge>
       : <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3" />unsicher</Badge>;
+
+/** Abbruch wegen nicht eindeutiger Probenzuordnung (nie still übergehen). */
+class SampleGuardError extends Error {}
 
 export default function MeasurementFileImportPanel({
   profile, targets, currentValues, allowedImporters, curveContext, curveDefaults,
@@ -194,9 +204,30 @@ export default function MeasurementFileImportPanel({
     };
   };
 
+  /**
+   * Probenzuordnung vor jedem Speichern prüfen: festgehaltene Dienstleistung/
+   * Probe muss noch aktiv sein, und eine Probennummer in der Datei muss zur
+   * ausgewählten Probe passen. Liefert die Fehlermeldung oder null.
+   */
+  const sampleGuardError = (parsed: ImportedMeasurement | null): string | null => {
+    if (!curveContext?.orderMeasurementId) return null;
+    const ctx = verifyImportContext(
+      { orderMeasurementId: curveContext.orderMeasurementId, sampleId: curveContext.sampleId ?? null },
+      getActiveTaskContext(),
+    );
+    if (!ctx.ok) return ctx.message;
+    const file = verifyFileSampleNumber(
+      [parsed?.headerMap ?? {}, parsed?.sampleInformation ?? {}, parsed?.sourceFileName ?? ""],
+      curveContext.sampleNumber,
+    );
+    return file.ok ? null : file.message;
+  };
+
   /** Speichert die Rohdaten einmalig und liefert die Datensatz-Id. */
   const ensureDataset = async (parsed: ImportedMeasurement): Promise<string | null> => {
     if (!curveContext?.orderMeasurementId || !parsed.dataset) return null;
+    const guard = sampleGuardError(parsed);
+    if (guard) throw new SampleGuardError(guard);
     const mapping = buildSignalMapping(parsed);
     if (datasetId) {
       await api.measurementRawData.updateSignalMapping(datasetId, mapping);
@@ -232,6 +263,8 @@ export default function MeasurementFileImportPanel({
       toast.error("Ohne Messungskontext kann kein offizielles Ergebnis gespeichert werden.");
       return;
     }
+    const guard = sampleGuardError(measurement);
+    if (guard) { toast.error(guard); return; }
     const dsId = await ensureDataset(measurement);
     const result: any = await api.measurementResults.create({
       order_measurement_id: curveContext.orderMeasurementId,
@@ -311,6 +344,8 @@ export default function MeasurementFileImportPanel({
 
     // Fall A/B: Rohdaten müssen erfolgreich gespeichert sein, sonst wird die
     // Übernahme abgebrochen – keine leere oder ungültige Rohdatenreferenz.
+    const guard = sampleGuardError(measurement);
+    if (guard) { toast.error(guard); return; }
     let savedDatasetId: string | null = null;
     let rawDataError: string | null = null;
     if (curveContext?.orderMeasurementId && hasCurves && measurement) {
