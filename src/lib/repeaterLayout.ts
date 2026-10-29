@@ -245,3 +245,31 @@ export function repeaterUnitMinPx(items: RepeaterLayoutItem[]): number | null {
   }
   return unit > 0 ? unit : null;
 }
+
+/**
+ * Anzeigenamen je Platzierung für die Tabellenansicht eines Repeaters.
+ * Liefert je field_key bzw. calc_key den ersten nicht-leeren label_override;
+ * ohne Eintrag gilt der Standardname der Definition. Reine Anzeige.
+ */
+export function layoutLabelOverrides(layout: RepeaterLayout): {
+  fields: Map<string, string>;
+  calcs: Map<string, string>;
+} {
+  const fields = new Map<string, string>();
+  const calcs = new Map<string, string>();
+  const visit = (it: RepeaterLeafItem) => {
+    const label = (it as any).label_override;
+    if (typeof label !== "string" || !label.trim()) return;
+    if (it.type === "field" && !fields.has(it.key)) fields.set(it.key, label);
+    if (it.type === "calculation" && !calcs.has(it.calc_key)) calcs.set(it.calc_key, label);
+  };
+  for (const it of layout.items) {
+    if (it.type === "group") it.children.forEach(visit);
+    else visit(it);
+  }
+  return { fields, calcs };
+}
+
+/** Spaltenüberschrift: Override, sonst Standardname. */
+export const columnLabel = (override: string | undefined, fallback: string): string =>
+  override && override.trim() ? override : fallback;
