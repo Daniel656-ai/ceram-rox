@@ -136,3 +136,16 @@ describe("Import-Absicherung", () => {
     expect(getActiveTaskContext()).toEqual({ orderMeasurementId: "m3", sampleId: "s3" });
   });
 });
+
+describe("Mehrprobenauftrag mit zwei Proben", () => {
+  it("jede Dienstleistung zeigt ihre eigene Probe, Auftragsebene bleibt ungelöst", () => {
+    const two = SAMPLES.slice(0, 2);
+    for (const s of two) {
+      const r = resolveTaskSample({ sample_id: s.id, samples: s } as any);
+      expect(r).toMatchObject({ status: "resolved", id: s.id, sampleNumber: s.sample_number });
+    }
+    expect(
+      resolveOrderLevelSampleId({ sample_id: "s1", sample_ids: ["s1", "s2"], samples: two[0] } as any),
+    ).toBeNull();
+  });
+});
