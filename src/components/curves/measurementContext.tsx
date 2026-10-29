@@ -11,7 +11,10 @@ import { createContext, useContext, type ReactNode } from "react";
  */
 export interface RuntimeMeasurementContext {
   orderMeasurementId: string;
+  /** Stabile Proben-ID der Dienstleistung; null = nicht eindeutig bestimmt. */
   sampleId?: string | null;
+  /** Probennummer derselben Probe (Abgleich mit Dateiinhalten). */
+  sampleNumber?: string | null;
   serviceId?: string | null;
   /** public.profiles.id – nicht die Auth-Benutzer-ID. */
   profileId?: string | null;

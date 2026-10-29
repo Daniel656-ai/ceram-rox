@@ -57,6 +57,7 @@ export function ProcessContextProvider({
     request.orderId ?? null,
     request.orderInstanceId ?? null,
     request.sampleId ?? null,
+    request.strictSample ?? false,
     request.projectId ?? null,
     request.processTemplateId ?? null,
     request.currentStepName ?? null,

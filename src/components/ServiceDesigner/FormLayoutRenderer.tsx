@@ -36,6 +36,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  getActiveTaskContext,
+  verifyFileSampleNumber,
+  verifyImportContext,
+  type ImportSnapshot,
+} from "@/lib/samples/activeSampleContext";
 import { MS_AUSWAHL_KEY, MUNDSTUECK_MS_KEY, AUTO_LOCKED_KEYS, isAutoEntry, removePairedRow } from "@/lib/rules/mundstueck293";
 import { formatRepeaterRowLabel } from "@/lib/repeaterRowLabel";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
@@ -580,6 +586,10 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
   const cfg = readImportMeta(field);
   /** Laufzeitkontext der Messung – nur dort werden Rohdaten dauerhaft gespeichert. */
   const runtime = useRuntimeMeasurementContext();
+  /** Beim Importstart festgehaltene Dienstleistung/Probe (nie nachträglich ersetzt). */
+  const [importSnapshot, setImportSnapshot] = useState<
+    (ImportSnapshot & { sampleNumber: string | null }) | null
+  >(null);
   const instanceKey = read(INSTANCE_ID_KEY) ?? null;
   const instanceLabel = read(INSTANCE_LABEL_KEY) ?? null;
   const caseInstanceId = read(CASE_INSTANCE_KEY) ?? null;
@@ -725,7 +735,18 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
         variant="outline"
         size="sm"
         disabled={readonly || !interactive}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setImportSnapshot(
+            runtime
+              ? {
+                  orderMeasurementId: runtime.orderMeasurementId,
+                  sampleId: runtime.sampleId ?? null,
+                  sampleNumber: runtime.sampleNumber ?? null,
+                }
+              : null,
+          );
+          setOpen(true);
+        }}
       >
         <ClipboardPaste className="h-3.5 w-3.5 mr-1" /> Messdaten übernehmen
       </Button>
@@ -817,10 +838,11 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           caseElementKeys={caseElements}
           elementRange={caseRange}
           curveContext={
-            runtime
+            runtime && importSnapshot
               ? {
-                  orderMeasurementId: runtime.orderMeasurementId,
-                  sampleId: runtime.sampleId ?? null,
+                  orderMeasurementId: importSnapshot.orderMeasurementId,
+                  sampleId: importSnapshot.sampleId,
+                  sampleNumber: importSnapshot.sampleNumber,
                   serviceId: runtime.serviceId ?? null,
                   instanceKey: typeof instanceKey === "string" ? instanceKey : null,
                   instanceLabel: typeof instanceLabel === "string" ? instanceLabel : null,
@@ -836,6 +858,21 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           }
           allowedEvaluations={curveCfg?.allowed_evaluations.length ? curveCfg.allowed_evaluations : null}
           onApply={(values, meta) => {
+            // Probenzuordnung: Dienstleistung/Probe vom Importstart müssen noch
+            // aktiv sein; eine Probennummer im Import muss zur Probe passen.
+            if (runtime) {
+              const ctx = verifyImportContext(importSnapshot, getActiveTaskContext());
+              const file = ctx.ok
+                ? verifyFileSampleNumber(
+                    [meta.sampleLabel, meta.metadata ?? [], meta.source ?? ""],
+                    importSnapshot?.sampleNumber,
+                  )
+                : ctx;
+              if (!file.ok) {
+                toast.error(file.message);
+                return;
+              }
+            }
             // Messwerte UND Importprotokoll in einem Schreibvorgang – sonst
             // überschreibt der letzte Schreibvorgang die vorherigen Messwerte.
             const protocol = JSON.stringify({
