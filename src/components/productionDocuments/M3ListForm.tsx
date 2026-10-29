@@ -39,6 +39,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   const { role, user, customRoleNames } = useAuth();
   const [stored, setStored] = useState<Record<string, unknown> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
 
   const { data: request, isLoading } = useQuery({
