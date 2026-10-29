@@ -1052,8 +1052,8 @@ function CalculationInspector({
       </div>
       <div>
         <Label className="text-xs">Beschriftung (optional)</Label>
-        <Input value={node.label_override ?? ""} className="h-8 text-xs"
-          onChange={(e) => onChange({ label_override: e.target.value } as any)} disabled={disabled} />
+        <SymbolInput value={node.label_override ?? ""} className="h-8 text-xs"
+          onChange={(v) => onChange({ label_override: v } as any)} disabled={disabled} />
       </div>
       <div className="flex items-center justify-between">
         <Label className="text-xs">Einheit anzeigen</Label>
@@ -1093,7 +1093,7 @@ function FieldInspector({
       </div>
       <div>
         <Label className="text-xs">Label-Override</Label>
-        <Input value={node.label_override ?? ""} className="h-8 text-xs" onChange={(e) => onChange({ label_override: e.target.value } as any)} disabled={disabled} />
+        <SymbolInput value={node.label_override ?? ""} className="h-8 text-xs" onChange={(v) => onChange({ label_override: v } as any)} disabled={disabled} />
       </div>
       <div>
         <Label className="text-xs">Hilfetext-Override</Label>

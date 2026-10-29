@@ -165,10 +165,11 @@ export function normalizeRepeaterLayout(
       const ck = target?.calc_key ?? String(it.calc_key ?? "");
       if (!ck) return null;
       if (availableCalcKeys && !availableCalcKeys.includes(ck)) return null;
+      const calcLabel = typeof it.label_override === "string" && it.label_override.trim() ? it.label_override : null;
       return {
         id, type: "calculation", calc_key: ck, width,
         ...(typeof it.calc_id === "string" ? { calc_id: it.calc_id, value_key: it.value_key ?? it.calc_key } : {}),
-        label_override: typeof it.label_override === "string" ? it.label_override : null,
+        ...(calcLabel ? { label_override: calcLabel } : {}),
       };
     }
     const target = it.field_id && references ? references.fields.find((f) => f.id === it.field_id) : undefined;
