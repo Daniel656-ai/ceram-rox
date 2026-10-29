@@ -1287,13 +1287,13 @@ function RepeaterTable({
             </th>
             {children.map((c) => (
               <th key={c.id} className="bg-muted px-2 py-1 text-left font-medium border-b align-bottom leading-tight min-w-[84px]">
-                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={c.display_name} /></div>
+                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={columnLabel(overrides.fields.get(c.field_key), c.display_name)} /></div>
                 {c.unit && <div className="text-[10px] font-normal text-muted-foreground">[<RichText value={c.unit} />]</div>}
               </th>
             ))}
             {calcs.map((c) => (
               <th key={c.id} className="bg-muted px-2 py-1 text-left font-medium border-b align-bottom leading-tight min-w-[84px]">
-                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={c.display_name} /></div>
+                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={columnLabel(overrides.calcs.get(c.calc_key), c.display_name)} /></div>
                 {c.unit && <div className="text-[10px] font-normal text-muted-foreground">[<RichText value={c.unit} />]</div>}
               </th>
             ))}
