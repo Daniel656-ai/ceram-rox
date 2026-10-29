@@ -10,8 +10,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertCircle, AlertTriangle, FileDown, Save } from "lucide-react";
-import { buildM3PdfModel, renderM3Pdf } from "@/lib/m3List/pdfExport";
+import { AlertCircle, AlertTriangle, FileDown, Printer, Save } from "lucide-react";
+import { downloadM3Pdf, printM3List } from "@/lib/m3List/m3PrintActions";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -450,12 +450,31 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       <div className="flex justify-end gap-2">
         <Button
           variant="outline"
-          onClick={() => {
-            const doc = renderM3Pdf(buildM3PdfModel(derived.values, { notices: derived.notices, testRowIndex: testIndex }));
-            doc.save(`m3-Liste_${String(derived.values.release_label ?? "export").replace(/[^\w.-]+/g, "_")}.pdf`);
+          disabled={printing}
+          onClick={async () => {
+            setPrinting(true);
+            try {
+              await printM3List(derived.values, { notices: derived.notices, testRowIndex: testIndex });
+            } catch (e) {
+              toast.error(e instanceof Error ? `Drucken fehlgeschlagen: ${e.message}` : "Drucken fehlgeschlagen.");
+            } finally {
+              setPrinting(false);
+            }
           }}
         >
-          <FileDown className="h-4 w-4 mr-2" /> PDF (A4)
+          <Printer className="h-4 w-4 mr-2" /> PDF drucken
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            try {
+              downloadM3Pdf(derived.values, { notices: derived.notices, testRowIndex: testIndex });
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "PDF-Download fehlgeschlagen.");
+            }
+          }}
+        >
+          <FileDown className="h-4 w-4 mr-2" /> PDF herunterladen
         </Button>
         <Button onClick={save} disabled={saving}>
           <Save className="h-4 w-4 mr-2" /> m³-Liste speichern
