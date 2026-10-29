@@ -30,6 +30,8 @@ import type { CurveSignalMapping } from "@/lib/api/measurementRawData";
 export interface CurvePersistContext {
   orderMeasurementId: string;
   sampleId?: string | null;
+  /** Probennummer der beim Importstart festgehaltenen Probe. */
+  sampleNumber?: string | null;
   serviceId?: string | null;
   instanceKey?: string | null;
   instanceLabel?: string | null;
