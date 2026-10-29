@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const rows: Record<string, Record<string, Record<string, unknown>>> = {};
 vi.mock("@/lib/api/client", () => ({
   dbClient: {
+    auth: { getUser: async () => ({ data: { user: null } }) },
     from: (table: string) => ({
       select: () => ({
         eq: (_col: string, id: string) => ({
