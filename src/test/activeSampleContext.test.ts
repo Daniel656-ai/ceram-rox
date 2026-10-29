@@ -2,18 +2,26 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Minimaler Datenbank-Mock für systemContext.load (nur lesende Einzelabfragen).
 const rows: Record<string, Record<string, Record<string, unknown>>> = {};
-vi.mock("@/lib/api/client", () => ({
-  dbClient: {
-    auth: { getUser: async () => ({ data: { user: null } }) },
-    from: (table: string) => ({
-      select: () => ({
-        eq: (_col: string, id: string) => ({
-          maybeSingle: async () => ({ data: rows[table]?.[id] ?? null }),
-        }),
-      }),
-    }),
-  },
-}));
+vi.mock("@/lib/api/client", () => {
+  const query = (table: string) => {
+    let id: string | null = null;
+    const q: any = {
+      select: () => q,
+      eq: (col: string, v: string) => { if (col === "id") id = v; return q; },
+      in: () => q,
+      order: () => q,
+      limit: () => q,
+      maybeSingle: async () => ({ data: id ? rows[table]?.[id] ?? null : null }),
+    };
+    return q;
+  };
+  return {
+    dbClient: {
+      auth: { getUser: async () => ({ data: { user: null } }) },
+      from: query,
+    },
+  };
+});
 
 import {
   clearActiveTaskContext,
