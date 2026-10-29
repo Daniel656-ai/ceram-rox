@@ -1,5 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProcessContextProvider } from "@/context/ProcessContextProvider";
+import { resolveOrderLevelSampleId } from "@/lib/samples/activeSampleContext";
 import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog, useCopyOrder } from "@/hooks/useOrders";
 import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
@@ -449,7 +450,8 @@ export default function OrderDetailPage() {
   return (
     <ProcessContextProvider
       orderId={id ?? null}
-      sampleId={(order as any)?.samples?.id ?? null}
+      sampleId={resolveOrderLevelSampleId(order)}
+      strictSample
       projectId={(order as any)?.project_id ?? null}
     >
       <OrderDetailPageInner />

@@ -15,6 +15,11 @@ export interface SystemContextRequest {
   /** Auftrags-Instanz (order_instances) – optional, ergänzt den Prozesskontext. */
   orderInstanceId?: string | null;
   sampleId?: string | null;
+  /**
+   * true: `sampleId` ist allein maßgeblich – kein Rückfall auf die Probe des
+   * Auftrags bzw. die erste Probe. Fehlt sie, bleibt die Probe unaufgelöst.
+   */
+  strictSample?: boolean;
   projectId?: string | null;
   /** Prozessvorlage (process_templates) */
   processTemplateId?: string | null;
@@ -66,8 +71,9 @@ export const systemContext = {
     }
 
     // ---- Probe -------------------------------------------------------------
-    const sampleId =
-      req.sampleId ??
+    const sampleId = req.strictSample
+      ? (req.sampleId ?? null)
+      : req.sampleId ??
       (order?.sample_id as string | undefined) ??
       ((order?.sample_ids as string[] | undefined)?.[0] ?? null);
     let sample: Record<string, unknown> | null = null;
