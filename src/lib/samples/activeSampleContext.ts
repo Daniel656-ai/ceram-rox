@@ -87,7 +87,13 @@ export interface ImportSnapshot {
   sampleId: string | null;
 }
 
-export type ContextCheck = { ok: true } | { ok: false; message: string };
+/** ok=false immer mit verständlicher Meldung; ok=true mit leerer Meldung. */
+export interface ContextCheck {
+  ok: boolean;
+  message: string;
+}
+
+const OK: ContextCheck = { ok: true, message: "" };
 
 /**
  * Vor dem Speichern: Die beim Importstart festgehaltene Dienstleistung/Probe
@@ -118,7 +124,7 @@ export function verifyImportContext(
       message: "Import abgebrochen: Die Probe der aktiven Dienstleistung stimmt nicht mit dem Import überein.",
     };
   }
-  return { ok: true };
+  return OK;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,7 +165,7 @@ export function verifyFileSampleNumber(
   expectedSampleNumber: string | null | undefined,
 ): ContextCheck {
   const found = extractSampleNumbers(sources);
-  if (found.length === 0) return { ok: true };
+  if (found.length === 0) return OK;
   if (found.length > 1) {
     return {
       ok: false,
@@ -179,5 +185,5 @@ export function verifyFileSampleNumber(
       message: `Import abgebrochen: Die Datei gehört zu Probe ${found[0]}, ausgewählt ist ${expected}.`,
     };
   }
-  return { ok: true };
+  return OK;
 }
