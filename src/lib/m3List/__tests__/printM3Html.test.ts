@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const printHtmlMock = vi.fn(() => Promise.resolve());
+const printHtmlMock = vi.fn((_html: string) => Promise.resolve());
 vi.mock("@/lib/runSheet/printHtml", () => ({ printHtml: (h: string) => printHtmlMock(h) }));
 const saveMock = vi.fn();
 vi.mock("jspdf", () => ({
