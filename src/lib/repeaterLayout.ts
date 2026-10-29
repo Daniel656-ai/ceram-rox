@@ -151,10 +151,27 @@ export function normalizeRepeaterLayout(
   const gap: RepeaterGap = src.gap === "sm" || src.gap === "lg" ? src.gap : "md";
   const known = new Set(availableKeys);
   const seen = new Set<string>();
+  // Deterministische IDs für Knoten ohne gespeicherte ID: gleiche Struktur →
+  // gleiche ID bei jeder Normalisierung (stabile React-Keys, kein Fokusverlust).
+  const usedIds = new Set<string>();
+  const collect = (it: any) => { if (it && typeof it.id === "string" && it.id) usedIds.add(it.id); };
+  for (const it of Array.isArray(src.items) ? src.items : []) {
+    collect(it);
+    if ((it as any)?.type === "group" && Array.isArray((it as any).children)) (it as any).children.forEach(collect);
+  }
+  const autoId = (base: string) => {
+    let id = `auto-${base}`;
+    for (let n = 2; usedIds.has(id); n++) id = `auto-${base}-${n}`;
+    usedIds.add(id);
+    return id;
+  };
+  const leafBase = (it: any, path: string) =>
+    it.type === "field" ? `f:${it.field_id ?? it.key ?? ""}` :
+    it.type === "calculation" ? `c:${it.calc_id ?? it.calc_key ?? ""}` : `${it.type}:${path}`;
 
-  const cleanLeaf = (it: any): RepeaterLeafItem | null => {
+  const cleanLeaf = (it: any, path: string): RepeaterLeafItem | null => {
     if (!it || typeof it !== "object" || !isLeaf(it.type)) return null;
-    const id = typeof it.id === "string" && it.id ? it.id : newItemId();
+    const id = typeof it.id === "string" && it.id ? it.id : autoId(leafBase(it, path));
     if (it.type === "break") return { id, type: "break" };
     const width = typeof it.width === "number" ? Math.max(1, Math.min(12, it.width)) : 12;
     if (it.type === "heading") return { id, type: "heading", text: String(it.text ?? "Überschrift"), width };
@@ -185,25 +202,25 @@ export function normalizeRepeaterLayout(
   };
 
   const items: RepeaterLayoutItem[] = [];
-  for (const it of Array.isArray(src.items) ? src.items : []) {
+  (Array.isArray(src.items) ? src.items : []).forEach((it, idx) => {
     if ((it as any)?.type === "group") {
       const g = it as RepeaterGroupItem;
       items.push({
-        id: typeof g.id === "string" && g.id ? g.id : newItemId(),
+        id: typeof g.id === "string" && g.id ? g.id : autoId(`g:${idx}`),
         type: "group",
         title: String(g.title ?? "Gruppe"),
         width: typeof g.width === "number" ? Math.max(1, Math.min(12, g.width)) : 12,
-        children: (Array.isArray(g.children) ? g.children : []).map(cleanLeaf).filter(Boolean) as RepeaterLeafItem[],
+        children: (Array.isArray(g.children) ? g.children : []).map((c, ci) => cleanLeaf(c, `${idx}.${ci}`)).filter(Boolean) as RepeaterLeafItem[],
       });
-      continue;
+      return;
     }
-    const leaf = cleanLeaf(it);
+    const leaf = cleanLeaf(it, String(idx));
     if (leaf) items.push(leaf);
-  }
+  });
 
   // Fehlende Unterfelder anhängen (Standardbreite 1/2)
   for (const k of availableKeys) {
-    if (!seen.has(k)) items.push({ id: newItemId(), type: "field", key: k, width: 6 });
+    if (!seen.has(k)) items.push({ id: autoId(`f:${k}`), type: "field", key: k, width: 6 });
   }
 
   return { ...base, gap, items };
