@@ -19,6 +19,7 @@ import { effectiveElementRange } from "@/lib/rfaFixedElements";
 
 import {
   normalizeRepeaterLayout, repeaterWidthClass, repeaterGapClass, repeaterUnitMinPx,
+  layoutLabelOverrides, columnLabel,
   type RepeaterLayoutItem,
 } from "@/lib/repeaterLayout";
 import type { EffectivePermission } from "@/lib/api/formFieldPermissions";
@@ -1209,7 +1210,7 @@ function RepeaterField({
       )}
       <div className="p-3 space-y-3">
         {meta.table_view && !managed && entries.length > 0 && (
-          <RepeaterTable managed={managed} entries={entries} children={children} storageKeyLabel={meta.item_label ?? "Eintrag"} />
+          <RepeaterTable managed={managed} entries={entries} children={children} layout={meta.layout} storageKeyLabel={meta.item_label ?? "Eintrag"} />
         )}
         {entries.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-4">
@@ -1262,12 +1263,14 @@ function RepeaterField({
  * Spalten aus Unterfeldern und den zugehörigen Berechnungen (inkl. Einheiten).
  */
 function RepeaterTable({
-  entries, children, storageKeyLabel, managed = false,
-}: { managed?: boolean; entries: Array<Record<string, any>>; children: FormField[]; storageKeyLabel: string }) {
+  entries, children, storageKeyLabel, managed = false, layout,
+}: { managed?: boolean; entries: Array<Record<string, any>>; children: FormField[]; storageKeyLabel: string; layout?: unknown }) {
   const root = useContext(ValuesCtx);
   const allCalcs = useContext(LocalCalcsCtx);
   const keys = useMemo(() => children.map((c) => c.field_key), [children]);
   const calcs = useMemo(() => seriesCalculations(allCalcs, keys), [allCalcs, keys]);
+  // Nur Anzeige: Überschrift aus label_override der Layout-Platzierung.
+  const overrides = useMemo(() => layoutLabelOverrides(normalizeRepeaterLayout(layout, keys)), [layout, keys]);
 
   const rows = entries.map((e) => ({
     entry: e,
@@ -1284,13 +1287,13 @@ function RepeaterTable({
             </th>
             {children.map((c) => (
               <th key={c.id} className="bg-muted px-2 py-1 text-left font-medium border-b align-bottom leading-tight min-w-[84px]">
-                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={c.display_name} /></div>
+                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={columnLabel(overrides.fields.get(c.field_key), c.display_name)} /></div>
                 {c.unit && <div className="text-[10px] font-normal text-muted-foreground">[<RichText value={c.unit} />]</div>}
               </th>
             ))}
             {calcs.map((c) => (
               <th key={c.id} className="bg-muted px-2 py-1 text-left font-medium border-b align-bottom leading-tight min-w-[84px]">
-                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={c.display_name} /></div>
+                <div className="font-medium [word-break:normal] [overflow-wrap:break-word]"><RichText value={columnLabel(overrides.calcs.get(c.calc_key), c.display_name)} /></div>
                 {c.unit && <div className="text-[10px] font-normal text-muted-foreground">[<RichText value={c.unit} />]</div>}
               </th>
             ))}
