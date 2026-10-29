@@ -203,14 +203,15 @@ export default function RepeaterLayoutDesigner({ subfields, referenceFields = []
         <span className="flex-1 min-w-0 truncate text-xs">
           {item.type === "field" && (
             <span className="flex items-center gap-1.5 min-w-0">
-              <Input
-                aria-label={`Anzeigename für ${item.key}`}
-                className="h-7 text-xs min-w-[120px] flex-1"
-                value={item.label_override ?? ""}
-                placeholder={labelFor(item.key)}
-                disabled={disabled}
-                onChange={(e) => patchItem(item.id, { label_override: e.target.value.trim() ? e.target.value : null } as any)}
-              />
+              <span className="min-w-[120px] flex-1">
+                <SymbolInput
+                  className="h-7 text-xs"
+                  value={item.label_override ?? ""}
+                  placeholder={labelFor(item.key)}
+                  disabled={disabled}
+                  onChange={(v) => patchItem(item.id, { label_override: v.trim() ? v : null } as any)}
+                />
+              </span>
               <span className="font-mono text-[10px] text-muted-foreground shrink-0">{item.key}</span>
             </span>
           )}
@@ -221,11 +222,19 @@ export default function RepeaterLayoutDesigner({ subfields, referenceFields = []
             />
           )}
           {item.type === "calculation" && (
-            <>
-              <Calculator className="inline h-3 w-3 mr-1 text-muted-foreground" />
-              {calcLabelFor(item.calc_key)}
-              <span className="ml-2 font-mono text-[10px] text-muted-foreground">{item.calc_key}</span>
-            </>
+            <span className="flex items-center gap-1.5 min-w-0">
+              <Calculator className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <span className="min-w-[120px] flex-1">
+                <SymbolInput
+                  className="h-7 text-xs"
+                  value={item.label_override ?? ""}
+                  placeholder={calcLabelFor(item.calc_key)}
+                  disabled={disabled}
+                  onChange={(v) => patchItem(item.id, { label_override: v.trim() ? v : null } as any)}
+                />
+              </span>
+              <span className="font-mono text-[10px] text-muted-foreground shrink-0">{item.calc_key}</span>
+            </span>
           )}
           {item.type === "spacer" && <span className="text-muted-foreground">Abstand / Platzhalter</span>}
           {item.type === "break" && <span className="text-muted-foreground">Zeilenumbruch</span>}
