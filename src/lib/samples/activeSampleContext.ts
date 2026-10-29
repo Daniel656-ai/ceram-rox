@@ -46,11 +46,13 @@ export function resolveTaskSample(measurement: unknown): ResolvedTaskSample {
 export function resolveOrderLevelSampleId(order: unknown): string | null {
   const o = (order ?? {}) as {
     sample_id?: string | null;
+    sample_ids?: Array<string | null> | null;
     samples?: { id?: string | null } | null;
     order_samples?: Array<{ sample_id?: string | null }> | null;
     order_measurements?: Array<{ sample_id?: string | null }> | null;
   };
   const ids = new Set<string>();
+  for (const id of o.sample_ids ?? []) if (id) ids.add(id);
   for (const r of o.order_samples ?? []) if (r?.sample_id) ids.add(r.sample_id);
   for (const r of o.order_measurements ?? []) if (r?.sample_id) ids.add(r.sample_id);
   const own = o.samples?.id ?? o.sample_id ?? null;
