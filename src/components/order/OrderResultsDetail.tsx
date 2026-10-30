@@ -461,6 +461,24 @@ function AnalysisBlock({
               size="sm"
               className="h-7 text-xs"
               onClick={() =>
+                onReplace({
+                  measurementId: analysis.measurementId,
+                  measurementNumber: analysis.measurementNumber,
+                  serviceName: analysis.serviceName,
+                  sampleNumber: sample.sampleNumber,
+                  orderNumber,
+                })
+              }
+            >
+              <PencilLine className="h-3.5 w-3.5 mr-1" /> Ergebnisse ändern/ergänzen
+            </Button>
+          )}
+          {canCorrect && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() =>
                 onReassign({
                   measurementId: analysis.measurementId,
                   measurementNumber: analysis.measurementNumber,
