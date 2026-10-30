@@ -235,3 +235,19 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* Only m³-list presentation; no other repeater gets these dimensions/colors. */
+.m3-charge-block { --m3-charge-background: #ffeb3b; --m3-charge-foreground: #d32f2f; }
+.m3-charge-active {
+  background: var(--m3-charge-background);
+  color: var(--m3-charge-foreground);
+  border-color: var(--m3-charge-foreground);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.m3-list-display [data-repeater-key="m3_rows"] table { font-size: 20px; min-width: 680px; }
+.m3-list-display [data-repeater-key="m3_rows"] th,
+.m3-list-display [data-repeater-key="m3_rows"] td { padding: 14px 16px; line-height: 1.35; }
+.m3-list-display [data-repeater-key="m3_rows"] th,
+.m3-list-display [data-repeater-key="m3_rows"] th > div:first-child { font-weight: 700; }
+.m3-list-display [data-repeater-key="m3_rows"] input { font-size: 18px; min-height: 44px; }
