@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import type { ReplaceResultsPayload } from "@/lib/results/replaceResults";
 
 /** Darf der aktuelle Benutzer gespeicherte Messergebnisse korrigieren? */
 export function useCanCorrectResults(): boolean {

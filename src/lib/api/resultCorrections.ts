@@ -85,4 +85,23 @@ export const resultCorrections = {
         p_reason: params.reason,
       })
     ),
+
+  /**
+   * Atomare Ergebnisänderung und -ergänzung einer Dienstleistung.
+   * Serverseitig: Berechtigung, Begründungspflicht, Historie pro
+   * Wertänderung/Ergänzung, Idempotenz über `operationId`, optionale
+   * Rohdatenverknüpfung/-ablösung, vollständiger Rollback bei Fehlern.
+   * `is_official` wird ausschließlich serverseitig bestimmt.
+   */
+  replaceResults: (params: ReplaceResultsPayload) =>
+    unwrap(
+      (dbClient as any).rpc("replace_measurement_results", {
+        p_order_measurement_id: params.orderMeasurementId,
+        p_operation_id: params.operationId,
+        p_results: params.results,
+        p_reason: params.reason,
+        p_new_raw_dataset_id: params.newRawDatasetId ?? null,
+        p_replaces_dataset_id: params.replacesDatasetId ?? null,
+      })
+    ) as Promise<ReplaceResultsSummary>,
 };
