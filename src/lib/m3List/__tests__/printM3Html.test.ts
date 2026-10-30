@@ -7,6 +7,7 @@ vi.mock("jspdf", () => ({
   jsPDF: class {
     save = saveMock;
     setFont() {} setFontSize() {} text() {} line() {} addPage() {} setPage() {}
+    setFillColor() {} setTextColor() {} rect() {}
     splitTextToSize(t: string) { return [t]; }
     getNumberOfPages() { return 1; }
   },
@@ -40,7 +41,7 @@ describe("buildM3PrintHtml", () => {
     for (const [k] of model.header) expect(html).toContain(k);
     expect(html).toContain("Elemente je m³");
     expect(html).toContain("<td>123</td>");
-    expect(html).toContain("184 Stk");
+    expect(html).toContain("00184");
     expect(html).toContain("@page { size: A4");
   });
 
@@ -62,6 +63,16 @@ describe("buildM3PrintHtml", () => {
   it("zeigt Hinweis ohne Zeilen", () => {
     const h = buildM3PrintHtml(buildM3PdfModel({}, { notices: [], testRowIndex: null }));
     expect(h).toContain("Keine m³-Zeilen.");
+  });
+  it("aktivierte Charge hat eigene farbige Druckkennzeichnung, deaktivierte nicht", () => {
+    expect(html).toContain('class="charge charge-active"');
+    expect(html).toContain("--charge-background: #ffeb3b");
+    expect(html).toContain("--charge-foreground: #d32f2f");
+    expect(html).toContain("print-color-adjust: exact");
+    const neutral = buildM3PrintHtml(buildM3PdfModel(values, { notices: [], testRowIndex: null }));
+    expect(neutral).toContain('class="charge"');
+    expect(neutral).not.toContain('class="charge charge-active"');
+    expect(neutral).not.toContain('<tr class="test">');
   });
 });
 

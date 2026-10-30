@@ -129,11 +129,11 @@ describe("Freie Toleranzen", () => {
 
 import { resolveTestMarking, applyTestMarking, M3_ROW_ID_FIELD } from "../testMarking";
 
-describe("Elementnummer – keine Scheinlösung", () => {
-  it("Stückzahl wird nicht als Elementnummer abgeleitet (keine Element-ID im Datenbestand)", () => {
+describe("Elementnummer – freigegebene reine Anzeige", () => {
+  it("Stückzahl bleibt numerisch und erhält eine separat abgeleitete Anzeige", () => {
     const r = deriveM3Values({ release: { length_mm: 520 }, orderNumber: null, constants: C, stored: { m3_rows: [{ volume_m3: 4 }] } });
     const row = (r.values.m3_rows as any[])[0];
-    expect(row.element_number).toBeUndefined();
+    expect(row.element_number).toBe("00340");
     expect(row.element_count).toBe(340);
   });
   it("Formatierung: führende Nullen, über fünf Stellen ohne Abschneiden", () => {

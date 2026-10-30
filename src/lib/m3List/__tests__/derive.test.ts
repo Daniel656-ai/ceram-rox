@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { deriveM3Values, stripDerivedValues } from "../derive";
 import type { M3Constants } from "../calculations";
+import { formatElementNumber } from "../calculations";
 
 const constants: M3Constants = {
   crossSectionM: 0.15,
@@ -71,12 +72,30 @@ describe("m³-Liste – Ableitung der Formularwerte", () => {
       project_name: "Projekt A",
       lab_tests: "Geo",
       delivery_volume_m3: 8.47,
-      m3_rows: [{ volume_m3: 4, element_count: 340, row_labor_kat: 2 }],
+      test_charge_row_id: "stable-1",
+      m3_rows: [{ volume_m3: 4, element_count: 340, element_number: "00340", row_labor_kat: 2, __m3_row_id: "stable-1", row_responsible: "AB" }],
     });
     expect(stripped.project_name).toBeUndefined();
     expect(stripped.lab_tests).toBeUndefined();
     expect(stripped.delivery_volume_m3).toBe(8.47);
-    expect(stripped.m3_rows).toEqual([{ volume_m3: 4 }]);
+    expect(stripped.test_charge_row_id).toBe("stable-1");
+    expect(stripped.m3_rows).toEqual([{ volume_m3: 4, __m3_row_id: "stable-1", row_responsible: "AB" }]);
+  });
+});
+
+describe("freigegebene Elementnummern", () => {
+  it.each([[970, "00970"], [1, "00001"], [12345, "12345"], [0, "00000"], [123456, "123456"]])("%s → %s", (count, expected) => {
+    expect(formatElementNumber(count)).toBe(expected);
+  });
+  it.each([null, undefined, "", "970", "abc", -1, 1.5, NaN, Infinity, true, {}, Number.MAX_SAFE_INTEGER + 1])("ungültig %s bleibt Platzhalter", (count) => {
+    expect(formatElementNumber(count)).toBe("—");
+  });
+  it("leere/ungültige Zeilen oder fehlende Berechnungsgrundlagen bleiben ohne Nummer", () => {
+    const stored = { m3_rows: [{}, { volume_m3: "abc" }, { volume_m3: -1 }] };
+    const result = deriveM3Values({ release, stored, orderNumber: null, constants });
+    expect((result.values.m3_rows as Record<string, unknown>[]).map((r) => r.element_number)).toEqual([null, null, null]);
+    const missing = deriveM3Values({ release, stored: { m3_rows: [{ volume_m3: 15, element_number: "stale" }] }, orderNumber: null, constants: null });
+    expect((missing.values.m3_rows as Record<string, unknown>[])[0].element_number).toBeNull();
   });
 });
 
