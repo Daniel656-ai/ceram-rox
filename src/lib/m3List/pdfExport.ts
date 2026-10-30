@@ -8,6 +8,7 @@
  */
 import { jsPDF } from "jspdf";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
+import { formatElementNumber } from "./calculations";
 
 export interface M3PdfRow {
   index: number;
@@ -60,7 +61,7 @@ export function buildM3PdfModel(
     rows: rows.map((r, i) => ({
       index: i + 1,
       volume: s(r.volume_m3),
-      pieces: r.element_count == null ? "—" : `${r.element_count} Stk`,
+      pieces: Object.prototype.hasOwnProperty.call(r, "element_number") ? s(r.element_number) : formatElementNumber(r.element_count),
       laborKat: s(r.row_labor_kat),
       responsible: s(r.row_responsible),
       test: opts.testRowIndex === i,
@@ -69,12 +70,12 @@ export function buildM3PdfModel(
       values.bench_extra_pieces ?? 0
     )} Stk · Gesamt: ${s(values.total_element_count)} Stk`,
     testNotice:
-      opts.testRowIndex != null && opts.testRowIndex < rows.length
+      opts.testRowIndex != null && opts.testRowIndex >= 0 && opts.testRowIndex < rows.length
         ? `TEST: Bitte die komplette Charge der m³-Zeile ${opts.testRowIndex + 1} mit einem zusätzlichen Stempel ‚TEST …‘ versehen!`
         : null,
     notices: opts.notices,
     originalNote:
-      "Hinweis: Eine unveränderliche Originalversion ist für diese m³-Liste nicht vorhanden. Abweichungen gegenüber dem Original können daher nicht ausgewiesen werden. Die Zeilenstückzahl ist keine Elementnummer.",
+      "Hinweis: Eine unveränderliche Originalversion ist für diese m³-Liste nicht vorhanden. Abweichungen gegenüber dem Original können daher nicht ausgewiesen werden.",
   };
 }
 
@@ -125,16 +126,38 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
 
   // Tabelle mit Kopfzeilen-Wiederholung
   const cols = [
-    { h: "Zeile", w: 16 }, { h: "m³", w: 24 }, { h: "Stückzahl", w: 30 },
-    { h: "Labor-KAT", w: 24 }, { h: "verantwortlich", w: 70 }, { h: "TEST", w: 18 },
+    { h: "Zeile", w: 18 }, { h: "m³", w: 22 }, { h: "Elementnummer", w: 43 },
+    { h: "Labor-Kats", w: 30 }, { h: "Verantwortlich / bearbeitet", w: 47 }, { h: "TEST", w: 22 },
   ];
+  const TABLE_SIZE = 18, TABLE_LINE = 7.5, PAD = 2;
+  const chargeColors = { background: [255, 235, 59], foreground: [211, 47, 47] } as const;
+  const chargeText = model.testNotice ? `Gesamte Charge · ${model.testNotice}` : "Gesamte Charge";
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(TABLE_SIZE);
+  const chargeLines = doc.splitTextToSize(chargeText, PAGE_W - 2 * M - 2 * PAD) as string[];
+  const chargeH = chargeLines.length * TABLE_LINE + 2 * PAD;
+  ensure(chargeH);
+  if (model.testNotice) {
+    doc.setFillColor(...chargeColors.background);
+    doc.rect(M, y, PAGE_W - 2 * M, chargeH, "F");
+    doc.setTextColor(...chargeColors.foreground);
+  }
+  doc.text(chargeLines, M + PAD, y + PAD + 5.8, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
+  doc.setTextColor(0);
+  y += chargeH + 3;
   const head = () => {
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
+    doc.setFontSize(TABLE_SIZE);
+    const lines = cols.map((c) => doc.splitTextToSize(c.h, c.w - 2 * PAD) as string[]);
+    const h = Math.max(...lines.map((l) => l.length)) * TABLE_LINE + 2 * PAD;
+    ensure(h);
     let x = M;
-    for (const c of cols) { doc.text(c.h, x + 1, y + 4); x += c.w; }
-    doc.line(M, y + 5.5, M + cols.reduce((a, c) => a + c.w, 0), y + 5.5);
-    y += 7;
+    cols.forEach((c, i) => {
+      doc.text(lines[i], x + PAD, y + PAD + 5.8, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
+      doc.rect(x, y, c.w, h);
+      x += c.w;
+    });
+    y += h;
   };
   text("m³-Tabelle", M, 11, true);
   ensure(14);
@@ -142,22 +165,29 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
   for (const r of model.rows) {
     const cells = [String(r.index), r.volume, r.pieces, r.laborKat, r.responsible, r.test ? "TEST" : ""];
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const wrapped = cells.map((c, i) => doc.splitTextToSize(c, cols[i].w - 2) as string[]);
-    const h = Math.max(...wrapped.map((w) => w.length)) * LINE + 1;
+    doc.setFontSize(TABLE_SIZE);
+    doc.setFont("helvetica", r.test ? "bold" : "normal");
+    const wrapped = cells.map((c, i) => doc.splitTextToSize(c, cols[i].w - 2 * PAD) as string[]);
+    const h = Math.max(...wrapped.map((w) => w.length)) * TABLE_LINE + 2 * PAD;
     ensure(h, head);
+    if (r.test) {
+      doc.setFillColor(...chargeColors.background);
+      doc.rect(M, y, PAGE_W - 2 * M, h, "F");
+      doc.setTextColor(...chargeColors.foreground);
+    }
     let x = M;
     wrapped.forEach((w, i) => {
       doc.setFont("helvetica", r.test ? "bold" : "normal");
-      doc.text(w, x + 1, y + 4);
+      doc.text(w, x + PAD, y + PAD + 5.8, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
+      doc.rect(x, y, cols[i].w, h);
       x += cols[i].w;
     });
+    doc.setTextColor(0);
     y += h;
   }
   if (!model.rows.length) text("Keine m³-Zeilen.", M);
   y += 2;
   text(model.totals, M, 9, true);
-  if (model.testNotice) { y += 2; text(model.testNotice, M, 10, true); }
   for (const n of model.notices) text(`• ${n}`, M, 8);
   y += 2;
   text(model.originalNote, M, 8);
