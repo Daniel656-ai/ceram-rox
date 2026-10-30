@@ -1,5 +1,9 @@
 import { dbClient } from "./client";
 import { unwrap } from "./_helpers";
+import type {
+  ReplaceResultsPayload,
+  ReplaceResultsSummary,
+} from "@/lib/results/replaceResults";
 
 const FIELDS = `id, change_type, order_id, order_measurement_id, measurement_result_id, service_id,
   parameter_name, parameter_label, unit, old_value, new_value, old_text, new_text,

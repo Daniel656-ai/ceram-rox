@@ -46,6 +46,21 @@ export function useCorrectResultValue() {
   });
 }
 
+/**
+ * Atomare Ergebnisänderung und -ergänzung einer Dienstleistung
+ * (RPC `replace_measurement_results`): Wertänderungen inkl. `0` und
+ * Textwerten, Ergänzung fehlender Zeilen, Historie und Idempotenz
+ * werden serverseitig erzwungen.
+ */
+export function useReplaceMeasurementResults() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (params: ReplaceResultsPayload) =>
+      api.resultCorrections.replaceResults(params),
+    onSuccess: invalidate,
+  });
+}
+
 export function useReassignMeasurementSample() {
   const invalidate = useInvalidate();
   return useMutation({
