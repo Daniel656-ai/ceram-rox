@@ -380,6 +380,11 @@ export default function OrderResultsDetail({
         onOpenChange={(v) => !v && setReassignCtx(null)}
         context={reassignCtx}
       />
+      <ReplaceResultsDialog
+        open={!!replaceCtx}
+        onOpenChange={(v) => !v && setReplaceCtx(null)}
+        context={replaceCtx}
+      />
       <CorrectionHistoryDialog
         open={!!historyCtx}
         onOpenChange={(v) => !v && setHistoryCtx(null)}
@@ -401,6 +406,7 @@ function AnalysisBlock({
   correctedResultIds,
   onCorrect,
   onReassign,
+  onReplace,
   onHistory,
 }: {
   analysis: AnalysisEntry;
@@ -412,6 +418,7 @@ function AnalysisBlock({
   correctedResultIds: Set<string>;
   onCorrect: (ctx: CorrectionContext) => void;
   onReassign: (ctx: ReassignContext) => void;
+  onReplace: (ctx: ReplaceResultsContext) => void;
   onHistory: (ctx: { measurementId: string; measurementNumber?: string; resultId?: string }) => void;
 }) {
   return (
