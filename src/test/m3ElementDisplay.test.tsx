@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
@@ -14,7 +14,8 @@ vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ role: "durchfuehrer
 vi.mock("@/context/ProcessContextProvider", () => ({ useSystemTextRenderer: () => (v: string) => v }));
 vi.mock("@/lib/api", () => ({ api: { globalFields: { list: async () => [] }, formCalculations: { listForForm: async () => [] } } }));
 vi.mock("@/components/measurementImport/MeasurementCaseEditorDialog", () => ({ default: () => null }));
-afterEach(cleanup);
+beforeEach(() => vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} }));
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 const field = (id: string, key: string, name: string, type: string, parent: string | null = null, metadata = {}): FormField => ({
   id, form_id: "local", field_key: key, display_name: name, field_type: type, parent_field_id: parent, metadata,
