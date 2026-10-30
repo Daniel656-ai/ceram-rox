@@ -185,3 +185,55 @@ export function buildReplaceResultsPayload(
     replacesDatasetId: input.replacesDatasetId ?? null,
   };
 }
+
+/** Editor-Zeile des Änderungsdialogs (bestehendes Ergebnis oder Ergänzung). */
+export interface ReplaceEditRow {
+  resultName: string;
+  instanceKey?: string | null;
+  instanceLabel?: string | null;
+  displayLabel?: string | null;
+  unit?: string | null;
+  /** Rohwert des Eingabefelds (Zahl oder Text). */
+  input: string;
+  /** Bisheriger Zustand zur Änderungserkennung (bei Ergänzungen null). */
+  currentValue: number | null;
+  currentText: string | null;
+  isNew: boolean;
+}
+
+/**
+ * Ermittelt die tatsächlich zu übertragenden Einträge:
+ * - unveränderte Zeilen werden nicht gesendet (kein Historieneintrag),
+ * - geleerte bestehende Zeilen bleiben unangetastet,
+ * - neue Zeilen nur mit Namen und Wert,
+ * - Typwechsel (Zahl ↔ Text) werden als Änderung erkannt.
+ */
+export function buildChangedEntries(rows: ReplaceEditRow[]): ReplaceResultEntry[] {
+  const entries: ReplaceResultEntry[] = [];
+  for (const row of rows) {
+    const parsed = parseResultInput(row.input);
+    if (row.isNew) {
+      if (!row.resultName.trim() || !parsed) continue;
+      entries.push({
+        result_name: row.resultName,
+        unit: row.unit ?? null,
+        display_label: row.displayLabel ?? row.resultName,
+        ...parsed,
+      });
+      continue;
+    }
+    if (!parsed) continue; // geleerte Zeile: unverändert lassen
+    const nextValue = "value" in parsed ? parsed.value : null;
+    const nextText = "text_value" in parsed ? parsed.text_value : null;
+    if (nextValue === row.currentValue && nextText === row.currentText) continue;
+    entries.push({
+      result_name: row.resultName,
+      instance_key: row.instanceKey ?? null,
+      instance_label: row.instanceLabel ?? null,
+      display_label: row.displayLabel ?? null,
+      unit: row.unit ?? null,
+      ...parsed,
+    });
+  }
+  return entries;
+}
