@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import ResultCorrectionDialog, { type CorrectionContext } from "@/components/results/ResultCorrectionDialog";
 import SampleReassignDialog, { type ReassignContext } from "@/components/results/SampleReassignDialog";
 import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
+import ReplaceResultsDialog, { type ReplaceResultsContext } from "@/components/results/ReplaceResultsDialog";
 import { useCanCorrectResults, useOrderCorrections } from "@/hooks/useResultCorrections";
 import {
   buildOrderResultStructure,
@@ -235,6 +236,7 @@ export default function OrderResultsDetail({
   const { data: corrections = [] } = useOrderCorrections(orderId);
   const [correctCtx, setCorrectCtx] = useState<CorrectionContext | null>(null);
   const [reassignCtx, setReassignCtx] = useState<ReassignContext | null>(null);
+  const [replaceCtx, setReplaceCtx] = useState<ReplaceResultsContext | null>(null);
   const [historyCtx, setHistoryCtx] = useState<{ measurementId: string; measurementNumber?: string; resultId?: string } | null>(null);
 
   const correctedResultIds = useMemo(
