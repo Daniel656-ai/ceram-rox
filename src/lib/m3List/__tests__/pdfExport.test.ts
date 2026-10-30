@@ -31,10 +31,11 @@ describe("m³-PDF", () => {
     expect(m.rows[0].pieces).toBe("00970");
     const pdf = renderM3Pdf(m).output();
     expect(pdf).toContain("00970");
-    expect(pdf).toContain("Elementnummer");
+    const renderedText = Array.from(pdf.matchAll(/\(([^()]*)\) Tj/g), (match) => match[1]).join("");
+    expect(renderedText).toContain("Elementnummer");
     expect(pdf).toContain("Gesamte Charge");
     expect(pdf).toContain("1. 0.92 0.23 rg");
-    expect(pdf).toContain("0.83 0.18 0.18 rg");
+    expect(pdf).toContain("0.827 0.184 0.184 rg");
   });
   it("neutrales PDF enthält keine aktive Chargenfüllung und keine ungültige Nummer", () => {
     const m = buildM3PdfModel({ m3_rows: [{ element_count: -1 }, { element_count: 970, element_number: null }] }, { notices: [], testRowIndex: null });

@@ -432,7 +432,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           layout={layout}
           fields={typedFields}
           permissions={permissions}
-          values={displayValues as Record<string, never>}
+          values={displayValues}
           onChange={(key, v) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }))}
         />
         </div>
