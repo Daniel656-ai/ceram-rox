@@ -97,36 +97,7 @@ export default function ReplaceResultsDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, context?.measurementId, isLoading]);
 
-  const changedEntries = useMemo(() => {
-    const entries: ReplaceResultEntry[] = [];
-    for (const row of rows) {
-      const parsed = parseResultInput(row.input);
-      if (row.isNew) {
-        if (!row.resultName.trim() || !parsed) continue;
-        entries.push({
-          result_name: row.resultName,
-          unit: row.unit,
-          display_label: row.resultName,
-          ...parsed,
-        });
-        continue;
-      }
-      if (!parsed) continue; // geleerte Zeile: unverändert lassen
-      const nextValue = "value" in parsed ? parsed.value : null;
-      const nextText = "text_value" in parsed ? parsed.text_value : null;
-      const unchanged = nextValue === row.currentValue && nextText === row.currentText;
-      if (unchanged) continue;
-      entries.push({
-        result_name: row.resultName,
-        instance_key: row.instanceKey,
-        instance_label: row.instanceLabel,
-        display_label: row.displayLabel,
-        unit: row.unit,
-        ...parsed,
-      });
-    }
-    return entries;
-  }, [rows]);
+  const changedEntries = useMemo(() => buildChangedEntries(rows), [rows]);
 
   const reasonOk = reason.trim().length > 0;
 
