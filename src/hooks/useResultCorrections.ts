@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import type { ReplaceResultsPayload } from "@/lib/results/replaceResults";
 
 /** Darf der aktuelle Benutzer gespeicherte Messergebnisse korrigieren? */
 export function useCanCorrectResults(): boolean {
@@ -42,6 +43,21 @@ export function useCorrectResultValue() {
   return useMutation({
     mutationFn: (params: { resultId: string; newValue: number; reason: string }) =>
       api.resultCorrections.correctValue(params),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * Atomare Ergebnisänderung und -ergänzung einer Dienstleistung
+ * (RPC `replace_measurement_results`): Wertänderungen inkl. `0` und
+ * Textwerten, Ergänzung fehlender Zeilen, Historie und Idempotenz
+ * werden serverseitig erzwungen.
+ */
+export function useReplaceMeasurementResults() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (params: ReplaceResultsPayload) =>
+      api.resultCorrections.replaceResults(params),
     onSuccess: invalidate,
   });
 }

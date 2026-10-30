@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import ResultCorrectionDialog, { type CorrectionContext } from "@/components/results/ResultCorrectionDialog";
 import SampleReassignDialog, { type ReassignContext } from "@/components/results/SampleReassignDialog";
 import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
+import ReplaceResultsDialog, { type ReplaceResultsContext } from "@/components/results/ReplaceResultsDialog";
 import { useCanCorrectResults, useOrderCorrections } from "@/hooks/useResultCorrections";
 import {
   buildOrderResultStructure,
@@ -235,6 +236,7 @@ export default function OrderResultsDetail({
   const { data: corrections = [] } = useOrderCorrections(orderId);
   const [correctCtx, setCorrectCtx] = useState<CorrectionContext | null>(null);
   const [reassignCtx, setReassignCtx] = useState<ReassignContext | null>(null);
+  const [replaceCtx, setReplaceCtx] = useState<ReplaceResultsContext | null>(null);
   const [historyCtx, setHistoryCtx] = useState<{ measurementId: string; measurementNumber?: string; resultId?: string } | null>(null);
 
   const correctedResultIds = useMemo(
@@ -337,6 +339,7 @@ export default function OrderResultsDetail({
                           correctedResultIds={correctedResultIds}
                           onCorrect={setCorrectCtx}
                           onReassign={setReassignCtx}
+                          onReplace={setReplaceCtx}
                           onHistory={setHistoryCtx}
                         />
                       ))}
@@ -358,6 +361,7 @@ export default function OrderResultsDetail({
                       correctedResultIds={correctedResultIds}
                       onCorrect={setCorrectCtx}
                       onReassign={setReassignCtx}
+                      onReplace={setReplaceCtx}
                       onHistory={setHistoryCtx}
                     />
                   ))
@@ -377,6 +381,11 @@ export default function OrderResultsDetail({
         open={!!reassignCtx}
         onOpenChange={(v) => !v && setReassignCtx(null)}
         context={reassignCtx}
+      />
+      <ReplaceResultsDialog
+        open={!!replaceCtx}
+        onOpenChange={(v) => !v && setReplaceCtx(null)}
+        context={replaceCtx}
       />
       <CorrectionHistoryDialog
         open={!!historyCtx}
@@ -399,6 +408,7 @@ function AnalysisBlock({
   correctedResultIds,
   onCorrect,
   onReassign,
+  onReplace,
   onHistory,
 }: {
   analysis: AnalysisEntry;
@@ -410,6 +420,7 @@ function AnalysisBlock({
   correctedResultIds: Set<string>;
   onCorrect: (ctx: CorrectionContext) => void;
   onReassign: (ctx: ReassignContext) => void;
+  onReplace: (ctx: ReplaceResultsContext) => void;
   onHistory: (ctx: { measurementId: string; measurementNumber?: string; resultId?: string }) => void;
 }) {
   return (
@@ -444,6 +455,24 @@ function AnalysisBlock({
               }
             >
               <History className="h-3.5 w-3.5 mr-1" /> Historie
+            </Button>
+          )}
+          {canCorrect && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() =>
+                onReplace({
+                  measurementId: analysis.measurementId,
+                  measurementNumber: analysis.measurementNumber,
+                  serviceName: analysis.serviceName,
+                  sampleNumber: sample.sampleNumber,
+                  orderNumber,
+                })
+              }
+            >
+              <PencilLine className="h-3.5 w-3.5 mr-1" /> Ergebnisse ändern/ergänzen
             </Button>
           )}
           {canCorrect && (

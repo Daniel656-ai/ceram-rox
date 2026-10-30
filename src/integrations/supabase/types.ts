@@ -2145,6 +2145,86 @@ export type Database = {
           },
         ]
       }
+      measurement_import_operations: {
+        Row: {
+          added_count: number
+          affected_count: number
+          created_at: string
+          created_by: string | null
+          created_by_user_id: string
+          id: string
+          operation_id: string
+          order_measurement_id: string
+          payload_hash: string
+          raw_dataset_id: string | null
+          reason: string
+          replaces_dataset_id: string | null
+          unchanged_count: number
+          updated_count: number
+        }
+        Insert: {
+          added_count?: number
+          affected_count?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_user_id: string
+          id?: string
+          operation_id: string
+          order_measurement_id: string
+          payload_hash: string
+          raw_dataset_id?: string | null
+          reason: string
+          replaces_dataset_id?: string | null
+          unchanged_count?: number
+          updated_count?: number
+        }
+        Update: {
+          added_count?: number
+          affected_count?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_user_id?: string
+          id?: string
+          operation_id?: string
+          order_measurement_id?: string
+          payload_hash?: string
+          raw_dataset_id?: string | null
+          reason?: string
+          replaces_dataset_id?: string | null
+          unchanged_count?: number
+          updated_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_import_operations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_import_operations_order_measurement_id_fkey"
+            columns: ["order_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_import_operations_raw_dataset_id_fkey"
+            columns: ["raw_dataset_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_raw_datasets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_import_operations_replaces_dataset_id_fkey"
+            columns: ["replaces_dataset_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_raw_datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurement_import_profiles: {
         Row: {
           created_at: string
@@ -2355,14 +2435,17 @@ export type Database = {
           instrument: string | null
           measurement_type: string | null
           metadata: Json
+          operation_id: string | null
           order_measurement_id: string
           parser_version: string | null
           point_count: number
+          replaces_dataset_id: string | null
           sample_id: string | null
           service_id: string | null
           signal_mapping: Json
           source_file_id: string | null
           source_file_name: string | null
+          superseded_at: string | null
           updated_at: string
         }
         Insert: {
@@ -2379,14 +2462,17 @@ export type Database = {
           instrument?: string | null
           measurement_type?: string | null
           metadata?: Json
+          operation_id?: string | null
           order_measurement_id: string
           parser_version?: string | null
           point_count?: number
+          replaces_dataset_id?: string | null
           sample_id?: string | null
           service_id?: string | null
           signal_mapping?: Json
           source_file_id?: string | null
           source_file_name?: string | null
+          superseded_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -2403,14 +2489,17 @@ export type Database = {
           instrument?: string | null
           measurement_type?: string | null
           metadata?: Json
+          operation_id?: string | null
           order_measurement_id?: string
           parser_version?: string | null
           point_count?: number
+          replaces_dataset_id?: string | null
           sample_id?: string | null
           service_id?: string | null
           signal_mapping?: Json
           source_file_id?: string | null
           source_file_name?: string | null
+          superseded_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2433,6 +2522,13 @@ export type Database = {
             columns: ["order_measurement_id"]
             isOneToOne: false
             referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_raw_datasets_replaces_dataset_id_fkey"
+            columns: ["replaces_dataset_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_raw_datasets"
             referencedColumns: ["id"]
           },
           {
@@ -2506,10 +2602,12 @@ export type Database = {
           old_sample_number: string | null
           old_text: string | null
           old_value: number | null
+          operation_id: string | null
           order_id: string | null
           order_measurement_id: string
           parameter_label: string | null
           parameter_name: string | null
+          raw_dataset_id: string | null
           reason: string
           service_id: string | null
           unit: string | null
@@ -2529,10 +2627,12 @@ export type Database = {
           old_sample_number?: string | null
           old_text?: string | null
           old_value?: number | null
+          operation_id?: string | null
           order_id?: string | null
           order_measurement_id: string
           parameter_label?: string | null
           parameter_name?: string | null
+          raw_dataset_id?: string | null
           reason: string
           service_id?: string | null
           unit?: string | null
@@ -2552,10 +2652,12 @@ export type Database = {
           old_sample_number?: string | null
           old_text?: string | null
           old_value?: number | null
+          operation_id?: string | null
           order_id?: string | null
           order_measurement_id?: string
           parameter_label?: string | null
           parameter_name?: string | null
+          raw_dataset_id?: string | null
           reason?: string
           service_id?: string | null
           unit?: string | null
@@ -2579,6 +2681,7 @@ export type Database = {
           temperature_range_from: number | null
           temperature_range_to: number | null
           temperature_unit: string | null
+          text_value: string | null
           unit: string | null
           updated_at: string
           value: number | null
@@ -2599,6 +2702,7 @@ export type Database = {
           temperature_range_from?: number | null
           temperature_range_to?: number | null
           temperature_unit?: string | null
+          text_value?: string | null
           unit?: string | null
           updated_at?: string
           value?: number | null
@@ -2619,6 +2723,7 @@ export type Database = {
           temperature_range_from?: number | null
           temperature_range_to?: number | null
           temperature_unit?: string | null
+          text_value?: string | null
           unit?: string | null
           updated_at?: string
           value?: number | null
@@ -11028,6 +11133,17 @@ export type Database = {
           _year: number
         }
         Returns: number
+      }
+      replace_measurement_results: {
+        Args: {
+          p_new_raw_dataset_id?: string
+          p_operation_id: string
+          p_order_measurement_id: string
+          p_reason: string
+          p_replaces_dataset_id?: string
+          p_results: Json
+        }
+        Returns: Json
       }
       resolve_workflow_template: {
         Args: { p_order_id: string }
