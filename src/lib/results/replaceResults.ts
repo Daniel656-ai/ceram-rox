@@ -92,10 +92,12 @@ function normalizeEntry(entry: ReplaceResultEntry): ReplaceResultEntry {
     display_label: clean(entry.display_label),
     unit: clean(entry.unit),
     remarks: clean(entry.remarks),
+    // text_value wird getrimmt, aber nicht zu null normalisiert, damit
+    // leere Texte wie auf dem Server als „darf nicht leer" abgelehnt werden.
     text_value:
       entry.text_value === undefined || entry.text_value === null
         ? entry.text_value
-        : clean(entry.text_value),
+        : entry.text_value.trim(),
   };
 }
 
