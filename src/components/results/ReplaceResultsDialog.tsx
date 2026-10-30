@@ -12,8 +12,7 @@ import { api } from "@/lib/api";
 import { useReplaceMeasurementResults } from "@/hooks/useResultCorrections";
 import {
   buildReplaceResultsPayload,
-  parseResultInput,
-  type ReplaceResultEntry,
+  buildChangedEntries,
 } from "@/lib/results/replaceResults";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
