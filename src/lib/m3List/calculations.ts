@@ -112,12 +112,8 @@ export function laborKat(lengthMm: number, c: M3Constants): LaborKatResult | nul
 
 /** Reine Anzeige: Elementnummer fünfstellig mit führenden Nullen (350 → „00350“). */
 export function formatElementNumber(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "—";
-  const n = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-  if (!Number.isFinite(n)) return String(value);
-  const neg = n < 0;
-  const s = String(Math.abs(Math.trunc(n))).padStart(5, "0");
-  return neg ? `-${s}` : s;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return "—";
+  return String(value).padStart(5, "0");
 }
 
 /* -------------------------------------------------------------

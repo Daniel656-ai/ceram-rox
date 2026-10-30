@@ -10,6 +10,7 @@ import {
   elementsPerCubicMeter, elementCountForRow, markingElements, markingRows, laborKat,
   cellCountFromConfiguration, cellCountFromOrderNumber, noxMicro, soxMicro,
   lengthTolerance, diameterTolerance, innerWallTolerance, labScope, freeTolerance, type M3Constants,
+  formatElementNumber,
 } from "./calculations";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 import { crossSectionFromRelease } from "@/lib/productionRelease/dimensions";
@@ -120,7 +121,7 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
     values.labor_kat_count = null;
     values.regular_element_total = null;
     values.total_element_count = null;
-    values[M3_ROWS_KEY] = rows.map((r) => ({ ...r, element_count: null, row_labor_kat: null }));
+    values[M3_ROWS_KEY] = rows.map((r) => ({ ...r, element_count: null, element_number: null, row_labor_kat: null }));
     if (lengthMm == null) notices.push("In der hinterlegten Revision ist keine Länge vorhanden – die Berechnungen sind nicht möglich.");
     return { values, notices, cellCount };
   }
@@ -136,11 +137,11 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
   values.required_length_mm = kat?.requiredLengthMm ?? null;
   values.labor_kat_count = kat?.count ?? null;
 
-  const derivedRows = rows.map((r) => ({
-    ...r,
-    element_count: elementCountForRow(num(r.volume_m3) ?? 0, lengthMm, constants),
-    row_labor_kat: kat?.count ?? null,
-  }));
+  const derivedRows = rows.map((r) => {
+    const count = elementCountForRow(num(r.volume_m3) ?? 0, lengthMm, constants);
+    const formatted = num(r.volume_m3) == null ? "—" : formatElementNumber(count);
+    return { ...r, element_count: count, element_number: formatted === "—" ? null : formatted, row_labor_kat: kat?.count ?? null };
+  });
   values[M3_ROWS_KEY] = derivedRows;
 
   // Gesamtmenge = reguläre Elementanzahl (Summe der Zeilen, unverändert berechnet)
@@ -166,7 +167,7 @@ export function stripDerivedValues(values: Record<string, unknown>): Record<stri
     if (derivedKeys.has(k)) continue;
     if (k === M3_ROWS_KEY && Array.isArray(v)) {
       out[k] = v.map((row) => {
-        const { element_count: _a, row_labor_kat: _b, ...rest } = (row ?? {}) as Record<string, unknown>;
+        const { element_count: _a, row_labor_kat: _b, element_number: _c, ...rest } = (row ?? {}) as Record<string, unknown>;
         return rest;
       });
       continue;

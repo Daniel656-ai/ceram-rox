@@ -9,6 +9,7 @@
  */
 import { api } from "@/lib/api";
 import type { FormField, FormFieldType } from "@/lib/api/formFields";
+import { normalizeRepeaterLayout } from "@/lib/repeaterLayout";
 
 export const M3_FORM_NAME = "m³-Liste";
 
@@ -84,12 +85,30 @@ export const M3_CONFIRM_FIELDS: FieldSpec[] = [
 
 export const M3_ROW_FIELDS: FieldSpec[] = [
   { field_key: "volume_m3", display_name: "m³", field_type: "decimal", unit: "m³", role: "row", category: "m³-Tabelle" },
-  { field_key: "element_count", display_name: "Elemente", field_type: "number", unit: "Stk", role: "computed", category: "m³-Tabelle" },
+  { field_key: "element_count", display_name: "Elementnummer", field_type: "text", role: "computed", category: "m³-Tabelle" },
   { field_key: "row_labor_kat", display_name: "Labor-Kats", field_type: "number", role: "computed", category: "m³-Tabelle" },
   { field_key: "row_responsible", display_name: "verantwortlich / bearbeitet", field_type: "text", role: "row", category: "m³-Tabelle" },
 ];
 
 export const M3_ROWS_KEY = "m3_rows";
+
+/** Local display metadata only: never writes or renames stored field identities. */
+export function m3DisplayFields(fields: FormField[]): FormField[] {
+  const repeater = fields.find((f) => f.field_key === M3_ROWS_KEY);
+  return fields.map((f) => {
+    if (f.field_key === "cross_section_mm") return { ...f, field_type: "text", unit: null, display_name: f.display_name === "Durchmesser D" ? "Querschnitt" : f.display_name };
+    if (f.parent_field_id === repeater?.id && f.field_key === "element_count") return { ...f, field_type: "text", display_name: "Elementnummer", unit: null, readonly: true };
+    if (f.id !== repeater?.id) return f;
+    const metadata = (f.metadata ?? {}) as Record<string, unknown>;
+    const meta = (metadata.repeater ?? {}) as Record<string, unknown>;
+    const layout = normalizeRepeaterLayout(meta.layout, fields.filter((c) => c.parent_field_id === f.id).map((c) => c.field_key));
+    const items = layout.items.map((item) => {
+      const adapt = (leaf: typeof item) => leaf.type === "field" && leaf.key === "element_count" ? { ...leaf, label_override: "Elementnummer" } : leaf;
+      return item.type === "group" ? { ...item, children: item.children.map((leaf) => leaf.type === "field" && leaf.key === "element_count" ? { ...leaf, label_override: "Elementnummer" } : leaf) } : adapt(item);
+    });
+    return { ...f, metadata: { ...metadata, repeater: { ...meta, layout: { ...layout, items } } } } as FormField;
+  });
+}
 
 const fieldPayload = (formId: string, spec: FieldSpec, sort: number, parentId: string | null = null) => ({
   form_id: formId,
