@@ -339,6 +339,7 @@ export default function OrderResultsDetail({
                           correctedResultIds={correctedResultIds}
                           onCorrect={setCorrectCtx}
                           onReassign={setReassignCtx}
+                          onReplace={setReplaceCtx}
                           onHistory={setHistoryCtx}
                         />
                       ))}
@@ -360,6 +361,7 @@ export default function OrderResultsDetail({
                       correctedResultIds={correctedResultIds}
                       onCorrect={setCorrectCtx}
                       onReassign={setReassignCtx}
+                      onReplace={setReplaceCtx}
                       onHistory={setHistoryCtx}
                     />
                   ))
