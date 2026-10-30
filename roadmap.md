@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] m³-Liste: freigegebene Elementnummern, Chargenblock und gezielte Tabellenvergrößerung in Bildschirm, HTML und PDF implementieren
+- [ ] m³-Liste: Berechnung/Speicherschutz/Markierung sowie beide Ausgaben isoliert prüfen, Web lesend prüfen ohne produktive Testdaten
+- [ ] m³-Liste: tatsächliche Desktop-Druckabnahme — Firmenumgebung hier nicht zugänglich
+
 - [x] Schritt 1: Entwurfsspeicherung, Wiederherstellung, URL, Dateihinweise und bestätigtes Speichern abgesichert; 38 relevante Tests vor Schritt 2 bestanden
 - [x] Schritt 2: Drei Einstiege im bestehenden Entwurfsfenster; unabhängige Vorlagenübernahme mit Doppelpositionen, Eingabe-Allowlist und Stop bei uneindeutigen Vorgaben
 - [x] Entwürfe/Vorlagen: authentifizierter Web-Ablauf mit isolierter Speicherung, Reload, zugänglicher Auftragsauswahl, Vorlage und Speichern/Schließen geprüft; keine produktiven Testdaten
