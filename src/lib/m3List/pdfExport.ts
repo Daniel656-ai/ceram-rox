@@ -145,18 +145,21 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
     doc.rect(M, y, PAGE_W - 2 * M, chargeH, "F");
     doc.setTextColor(...chargeColors.foreground);
   }
-  doc.text(chargeLines, M + PAD, y + PAD + 5.8, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
+  doc.text(chargeLines, M + PAD, y + PAD + BASELINE, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
   doc.setTextColor(0);
   y += chargeH + 3;
   const head = () => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(TABLE_SIZE);
-    const lines = cols.map((c) => doc.splitTextToSize(c.h, c.w - 2 * PAD) as string[]);
+    // Explizite Zeilenumbrüche (\n) in Überschriften bleiben erhalten.
+    const lines = cols.map((c) =>
+      c.h.split("\n").flatMap((part) => doc.splitTextToSize(part, c.w - 2 * PAD) as string[])
+    );
     const h = Math.max(...lines.map((l) => l.length)) * TABLE_LINE + 2 * PAD;
     ensure(h);
     let x = M;
     cols.forEach((c, i) => {
-      doc.text(lines[i], x + PAD, y + PAD + 5.8, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
+      doc.text(lines[i], x + PAD, y + PAD + BASELINE, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
       doc.rect(x, y, c.w, h);
       x += c.w;
     });
@@ -181,7 +184,7 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
     let x = M;
     wrapped.forEach((w, i) => {
       doc.setFont("helvetica", r.test ? "bold" : "normal");
-      doc.text(w, x + PAD, y + PAD + 5.8, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
+      doc.text(w, x + PAD, y + PAD + BASELINE, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
       doc.rect(x, y, cols[i].w, h);
       x += cols[i].w;
     });

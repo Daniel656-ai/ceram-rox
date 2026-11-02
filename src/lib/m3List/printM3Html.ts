@@ -43,12 +43,12 @@ table { border-collapse: collapse; width: 100%; }
 .kv th { text-align: left; width: 55mm; padding: 0.6mm 2mm 0.6mm 0; vertical-align: top; }
 .kv td { padding: 0.6mm 0; white-space: pre-wrap; word-break: break-word; }
 .rows thead { display: table-header-group; }
-.rows { table-layout: fixed; font-size: 18pt; }
-.rows th, .rows td { border: 0.2mm solid #999; padding: 2mm; line-height: 1.2; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.rows { table-layout: fixed; font-size: 9pt; }
+.rows th, .rows td { border: 0.2mm solid #999; padding: 1mm 1.5mm; line-height: 1.25; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .rows th { font-weight: bold; }
 .rows tr { break-inside: avoid; }
 :root { --charge-background: #ffeb3b; --charge-foreground: #d32f2f; }
-.charge { border: 0.4mm solid #999; padding: 3mm; font-size: 18pt; font-weight: bold; margin: 3mm 0; break-inside: avoid; }
+.charge { border: 0.4mm solid #999; padding: 2mm; font-size: 10pt; font-weight: bold; margin: 2mm 0; break-inside: avoid; }
 .charge-active, .rows tr.test td { background: var(--charge-background); color: var(--charge-foreground); font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .totals { font-weight: bold; margin-top: 2mm; }
 .testnotice { font-weight: bold; font-size: 10pt; margin-top: 2mm; }
@@ -63,7 +63,7 @@ ${pairs(model.header)}
 ${pairs(model.calc)}
 <h2>m³-Tabelle</h2>
 <div class="charge${model.testNotice ? " charge-active" : ""}">Gesamte Charge${model.testNotice ? `<p>${escapeHtml(model.testNotice)}</p>` : ""}</div>
-<table class="rows"><thead><tr><th style="width:18mm">Zeile</th><th style="width:22mm">m³</th><th style="width:43mm">Elementnummer</th><th style="width:30mm">Labor-Kats</th><th>Verantwortlich / bearbeitet</th><th style="width:22mm">TEST</th></tr></thead>
+<table class="rows"><thead><tr><th style="width:18mm">Zeile</th><th style="width:22mm">m³</th><th style="width:43mm">Elementnummer</th><th style="width:30mm">Labor-Kats</th><th>Verantwortlich /<br>bearbeitet</th><th style="width:22mm">TEST</th></tr></thead>
 <tbody>${rows}</tbody></table>
 <p class="totals">${escapeHtml(model.totals)}</p>
 ${model.notices.map((n) => `<p class="small">• ${escapeHtml(n)}</p>`).join("")}
