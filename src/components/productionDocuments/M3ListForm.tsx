@@ -380,6 +380,8 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           Aktuell: L {String(derived.values.length_tolerance ?? "–")} · D {String(derived.values.diameter_tolerance ?? "–")}
         </div>
       </div>
+      </div>
+
 
       {!!typedFields.length && layoutSplit?.found && layoutSplit.before.nodes.length > 0 && (
         <div className="m3-list-display">
