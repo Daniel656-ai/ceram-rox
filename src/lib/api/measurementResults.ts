@@ -18,7 +18,7 @@ export const measurementResults = {
         projects(project_number, project_name),
         samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
       ),
-      measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
+      measurement_results!inner(id, result_name, value, text_value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
     `).eq("measurement_results.is_official", true).order("updated_at", { ascending: false })
   ),
   listDatabaseProfiles: () => unwrap(dbClient.from("profiles").select("user_id, first_name, last_name")),
@@ -46,6 +46,8 @@ export const measurementResults = {
     result_name: string;
     unit?: string;
     value?: number;
+    /** Qualifizierter Textwert („< 0,01“, „n.b.“) – eigenständig neben `value`. */
+    text_value?: string | null;
     temperature_range_from?: number;
     temperature_range_to?: number;
     temperature_unit?: string;
@@ -73,6 +75,8 @@ export const measurementResults = {
       result_name?: string;
       unit?: string;
       value?: number;
+      /** Qualifizierter Textwert („< 0,01“, „n.b.“) – eigenständig neben `value`. */
+      text_value?: string | null;
       temperature_range_from?: number;
       temperature_range_to?: number;
       temperature_unit?: string;

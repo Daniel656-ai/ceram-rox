@@ -38,6 +38,8 @@ export interface ResultRecord {
     id: string;
     result_name: string;
     value: number | null;
+    /** Qualifizierter Textwert („< 0,01“, „n.b.“) – eigenständig neben `value`. */
+    text_value?: string | null;
     unit: string | null;
     temperature_range_from: number | null;
     temperature_range_to: number | null;

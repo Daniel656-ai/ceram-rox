@@ -102,6 +102,9 @@ export function effectiveElementRange(
 /**
  * Numerischer Messwert > 0? Die Prüfung erfolgt immer auf dem Zahlenwert,
  * niemals auf dem formatierten Anzeigetext („0,000“ ist nicht > 0).
+ *
+ * @deprecated Nur noch für Altaufrufe – fachlich maßgeblich ist
+ * `isValidResultValue` (0 und Grenzwerttexte sind gültige Messwerte).
  */
 export function isPositiveMeasurement(value: unknown): boolean {
   if (value == null) return false;
@@ -110,6 +113,80 @@ export function isPositiveMeasurement(value: unknown): boolean {
   if (!raw) return false;
   const n = Number.parseFloat(raw.replace(/\s/g, "").replace(",", "."));
   return Number.isFinite(n) && n > 0;
+}
+
+/** Technischer Schlüssel des Messfalls „Vollständige externe Analyse“. */
+export const EXTERNAL_ANALYSIS_CASE_KEY = "external_analysis";
+
+/**
+ * Eindeutige Kennzeichnung des Modus „Externe Analyse“: ausschließlich der
+ * Messfall-Schlüssel entscheidet. `element_range === "ALL"` allein aktiviert
+ * den Modus niemals.
+ */
+export const isExternalAnalysisCaseKey = (key: string | null | undefined): boolean =>
+  typeof key === "string" && key.trim() === EXTERNAL_ANALYSIS_CASE_KEY;
+
+/** Ergebnis der einheitlichen Messwert-Gültigkeitsprüfung. */
+export interface ValidResultValue {
+  isValid: boolean;
+  /** Endlicher Zahlenwert (0 und negative Werte sind gültig), sonst null. */
+  numericValue: number | null;
+  /** Qualifizierter Textwert („< 0,01“, „n.b.“ …) aus der Importquelle, sonst null. */
+  textValue: string | null;
+}
+
+const INVALID_RESULT_VALUE: ValidResultValue = { isValid: false, numericValue: null, textValue: null };
+
+/** Platzhalter ohne Messung – niemals ein Ergebnis. */
+const NON_VALUE_MARKERS = new Set(["-", "--", "n/a", "na", "n. a.", "keine", "leer"]);
+
+/** Anerkannte Messqualifikationen, die als Textwert gespeichert werden. */
+const QUALIFIED_TEXT_PATTERN = /^([<>≤≥≈~]\s*.+|n\.?\s?[bn]\.?|nicht (bestimmbar|nachweisbar))$/i;
+
+/**
+ * Einheitliche Gültigkeitsprüfung eines Messwerts (ersetzt fachlich
+ * `isPositiveMeasurement`):
+ *  - jede endliche Zahl ist gültig – inklusive 0 und negativer Werte;
+ *  - qualifizierte Textwerte („< 0,01“, „> 100“, „n.b.“, „n.n.“) werden als
+ *    Textwert übernommen, sofern sie aus der Importquelle stammen;
+ *  - fehlende Werte (null/""), Platzhalter („-“, „n/a“) und unleserliche
+ *    Zeichenfolgen erzeugen kein Ergebnis – fehlend wird nie als 0 gedeutet.
+ */
+export function isValidResultValue(raw: unknown): ValidResultValue {
+  if (raw == null) return INVALID_RESULT_VALUE;
+  if (typeof raw === "number") {
+    return Number.isFinite(raw)
+      ? { isValid: true, numericValue: raw, textValue: null }
+      : INVALID_RESULT_VALUE;
+  }
+  if (typeof raw !== "string") return INVALID_RESULT_VALUE;
+  const text = raw.trim();
+  if (!text) return INVALID_RESULT_VALUE;
+  const lower = text.toLowerCase();
+  if (NON_VALUE_MARKERS.has(lower)) return INVALID_RESULT_VALUE;
+  // Reine Zahl (DE/EN-Schreibweise) → numerischer Wert.
+  const numeric = /^[+-]?(\d+([.,]\d+)?|[.,]\d+)([eE][+-]?\d+)?$/.test(text.replace(/\s/g, ""));
+  if (numeric) {
+    const n = Number.parseFloat(text.replace(/\s/g, "").replace(",", "."));
+    return Number.isFinite(n)
+      ? { isValid: true, numericValue: n, textValue: null }
+      : INVALID_RESULT_VALUE;
+  }
+  // Grenzwert („< 0,01“): Zahl hinter dem Präfix muss lesbar sein.
+  const bound = text.match(/^[<>≤≥≈~]\s*(.+)$/);
+  if (bound) {
+    const inner = bound[1].replace(/\s/g, "");
+    const n = Number.parseFloat(inner.replace(",", "."));
+    if (/^[+-]?(\d+([.,]\d+)?|[.,]\d+)([eE][+-]?\d+)?$/.test(inner) && Number.isFinite(n)) {
+      return { isValid: true, numericValue: null, textValue: text };
+    }
+    return INVALID_RESULT_VALUE;
+  }
+  // Anerkannte analytische Statusangaben („n.b.“, „n.n.“ …).
+  if (QUALIFIED_TEXT_PATTERN.test(text)) {
+    return { isValid: true, numericValue: null, textValue: text };
+  }
+  return INVALID_RESULT_VALUE;
 }
 
 /**

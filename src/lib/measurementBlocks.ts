@@ -135,6 +135,8 @@ export interface MeasurementInstance {
   elementSpec: CaseElementSpec[];
   /** Vom Messfall vorgegebener Elementbereich (z. B. „B-U“), sonst null. */
   elementRange: string | null;
+  /** Technischer Schlüssel des angewendeten Messfalls, sonst null. */
+  caseKey: string | null;
   index: number;
 }
 
@@ -189,6 +191,10 @@ export function readInstances(
         typeof e[CASE_ELEMENT_RANGE_KEY] === "string" && (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
           ? (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
           : effectiveElementRange(null, [explicit], Object.values(context)),
+      caseKey:
+        typeof e[CASE_KEY_KEY] === "string" && (e[CASE_KEY_KEY] as string).trim()
+          ? (e[CASE_KEY_KEY] as string).trim()
+          : null,
       index,
     };
 
@@ -230,6 +236,12 @@ export const instanceResultKey = (
 export const CASE_ID_KEY = "__case_id";
 export const CASE_INSTANCE_KEY = "__case_instance_id";
 export const IMPORT_PROFILE_KEY = "__import_profile_id";
+/**
+ * Technischer Schlüssel des angewendeten Messfalls (z. B. "external_analysis").
+ * Er reist mit dem Messblock-Eintrag, damit Import und Ergebnisbildung den
+ * Messfall-Modus ohne erneuten Datenbankzugriff erkennen.
+ */
+export const CASE_KEY_KEY = "__case_key";
 
 export interface MeasurementCaseConfig {
   /** Messfall-Steuerung für diesen Messblock aktiv? */
@@ -406,6 +418,8 @@ export function caseElementKeys(context: Record<string, unknown> | null | undefi
 export interface CaseTemplate {
   id: string;
   name: string;
+  /** Technischer Schlüssel des Messfalls (z. B. "external_analysis"). */
+  case_key?: string | null;
   /**
    * Ergebnisliste des Messfalls (Auswahl + Reihenfolge aus der globalen
    * Elementbibliothek). Sie ist unabhängig vom Messkontext.
@@ -472,6 +486,7 @@ export function buildEntriesFromCase(
       [CASE_ID_KEY]: caseDef.id,
       [CASE_INSTANCE_KEY]: inst.id,
       [IMPORT_PROFILE_KEY]: inst.import_profile_id ?? null,
+      [CASE_KEY_KEY]: caseDef.case_key ?? null,
       [CASE_ELEMENT_SPEC_KEY]: spec,
       // Ausschließlich die Ergebnisliste des Messfalls. Der Messkontext bzw.
       // eine Import-Unterkategorie bestimmt die Ergebnisse NIEMALS.

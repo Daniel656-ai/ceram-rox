@@ -260,6 +260,14 @@ export interface MapOptions {
    * festen Liste.
    */
   elementRange?: string | null;
+  /**
+   * Dynamische Elementübernahme ohne Bereichsgrenze (reguläre RFA über die
+   * 17er-Basis hinaus bzw. Messfall „Externe Analyse“): jedes eindeutig
+   * erkannte Element der Messdatei ohne eigenes Ergebnisfeld erhält
+   * dynamisch das Ziel `element:<Key>`. Nur bei RFA-/Elementanalyse-
+   * Dienstleistungen aktiv – andere Dienstleistungen bleiben unverändert.
+   */
+  dynamicElements?: boolean;
 }
 
 /** Element-Schlüssel eines Zielfelds (konfiguriert oder abgeleitet). */
@@ -290,14 +298,22 @@ export function buildCaseTargets(
   spec: Array<{ key: string; label?: string | null; unit?: string | null }>,
   formTargets: TargetCandidate[],
   elementRange?: string | null,
-  rfaDefault?: boolean
+  rfaDefault?: boolean,
+  /**
+   * Messfall „Externe Analyse“ (case_key === "external_analysis"): keine
+   * 17er-Basis und kein Bereich – jedes erkannte Element der Messdatei wird
+   * dynamisch übernommen (mapReadings, `dynamicElements`).
+   */
+  externalAnalysis?: boolean
 ): TargetCandidate[] {
   const parsedRange = parseElementRange(elementRange);
   // Bereichs-Messfall („Standardlos“, „Oberfläche“): die 17 Standardelemente
   // sind immer Ziele – in fester Reihenfolge, unabhängig vom Import.
   // Reguläre RFA ohne Messfall: dieselbe 17er-Struktur als Standard-Zielliste.
+  // Externe Analyse: bewusst KEINE 17er-Basis – die Zielliste bleibt die
+  // Formularliste, alle weiteren Elemente kommen dynamisch hinzu.
   const effective =
-    parsedRange || (rfaDefault && spec.length === 0)
+    !externalAnalysis && (parsedRange || (rfaDefault && spec.length === 0))
       ? withFixedRfaElements(
           spec.map((s) => ({ key: s.key, label: s.label ?? s.key, official: true, unit: s.unit ?? null }))
         )
@@ -419,8 +435,14 @@ export function mapReadings(
       // erkannt. Ob es ein offizielles Ergebnis ist, entscheidet der Messfall.
       const t = byElement.get(detected) ?? canon.get(detected.toLowerCase());
       if (t) { targetFieldKey = t.field_key; origin = "auto"; matchedBy = "element"; }
-      else if (elementInRange(detected, range)) {
-        // Bereichs-Messfall (z. B. Standardlos „B-U“): dynamisches Ziel.
+      else if (
+        elementInRange(detected, range) ||
+        // Dynamische Übernahme nur ohne eingeschränkten Messfall – eine
+        // ausdrückliche Elementauswahl bleibt immer strikt.
+        (options.dynamicElements && !(options.caseElementKeys?.length))
+      ) {
+        // Bereichs-Messfall (z. B. Standardlos „B-U“), reguläre RFA über die
+        // 17er-Basis hinaus oder externe Analyse: dynamisches Ziel.
         targetFieldKey = elementValueKey(detected); origin = "auto"; matchedBy = "element";
       }
       else matchNote = `Element ${detected} erkannt, im Messfall aber nicht als Ergebnis konfiguriert.`;

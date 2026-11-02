@@ -23,7 +23,7 @@ const standardlos: CaseTemplate = {
 };
 
 describe("Standardlos/Oberfläche: Ergebnisse speichern und anzeigen", () => {
-  it("dynamische Elemente > 0 werden zu echten Ergebnissen mit originaler Einheit", () => {
+  it("dynamische Elemente mit gültigem Wert (inkl. 0) werden zu echten Ergebnissen mit originaler Einheit", () => {
     const entry = buildEntriesFromCase(standardlos, [
       { field_key: "import", field_type: "measurement_import", role: "value" } as any,
     ])[0];
@@ -44,12 +44,13 @@ describe("Standardlos/Oberfläche: Ergebnisse speichern und anzeigen", () => {
       "SiO2", "Al2O3", "Fe2O3", "TiO2", "CaO", "MgO", "BaO", "Na2O", "K2O",
       "SO3", "P2O5", "V2O5", "WO3", "MoO3", "As", "Pb", "Nb",
     ]);
-    expect(official.slice(17).map((c) => c.label)).toEqual(["Rb"]);
+    // ZrO₂ = 0 ist ein gültiger Messwert und erscheint ebenfalls.
+    expect(official.slice(17).map((c) => c.label)).toEqual(["Rb", "ZrO₂"]);
     expect(official.find((c) => c.label === "As")!.unit).toBe("ppm");
     expect(official.find((c) => c.label === "Rb")!.unit).toBe("%");
     expect(official.find((c) => c.key.endsWith("element:SiO2"))!.value).toBe(8.2);
     // Werte, die gespeichert werden (nicht leer)
-    expect(official.filter((c) => c.value != null).length).toBe(3);
+    expect(official.filter((c) => c.value != null).length).toBe(4);
   });
 
   it("Ergebnisdatenbank sortiert Elemente: 17 Standard zuerst, danach Ordnungszahl", () => {
@@ -87,7 +88,8 @@ describe("Standardlos/Oberfläche: Ergebnisse speichern und anzeigen", () => {
 /**
  * Messfälle ohne gepflegten Elementbereich: „Standardlos“/„Oberfläche“ – auch
  * als Messung der Messfallsteuerung „Externe Analyse“ – erzeugen immer die 17
- * Standardelemente und danach die zusätzlich gemessenen Elemente (> 0).
+ * Standardelemente und danach die zusätzlich gemessenen Elemente (gültige
+ * Messwerte inkl. 0; leere/Platzhalter-Werte nie).
  */
 describe("Standardlos/Oberfläche ohne gepflegten Elementbereich", () => {
   const childDefs = [{ field_key: "import", field_type: "measurement_import", role: "value" as const }];
@@ -112,13 +114,14 @@ describe("Standardlos/Oberfläche ohne gepflegten Elementbereich", () => {
     "SO3", "P2O5", "V2O5", "WO3", "MoO3", "As", "Pb", "Nb",
   ];
 
-  it("Messfall „RFA – Standardlos“ ohne Bereich: 17 fest + zusätzliche > 0", () => {
+  it("Messfall „RFA – Standardlos“ ohne Bereich: 17 fest + zusätzliche gültige Werte (inkl. 0)", () => {
     const official = run(
       { id: "c1", name: "RFA – Standardlos", element_range: null, elements: [], instances: [{ id: "i1", label: "Messung", context: {} }] },
       measured,
     );
     expect(official.slice(0, 17).map((c) => c.key.split("element:")[1])).toEqual(first17);
-    expect(official.slice(17).map((c) => c.label)).toEqual(["Rb", "SrO", "ZrO₂", "Tl"]);
+    // Cr₂O₃ = 0 ist ein gültiger Messwert und erscheint ebenfalls.
+    expect(official.slice(17).map((c) => c.label)).toEqual(["Cr₂O₃", "Rb", "SrO", "ZrO₂", "Tl"]);
   });
 
   it("Messfall „RFA – Oberfläche“ ohne Bereich verhält sich gleich", () => {
@@ -126,7 +129,7 @@ describe("Standardlos/Oberfläche ohne gepflegten Elementbereich", () => {
       { id: "c2", name: "RFA – Oberfläche", element_range: null, elements: [], instances: [{ id: "i1", label: "Messung", context: {} }] },
       measured,
     );
-    expect(official).toHaveLength(21);
+    expect(official).toHaveLength(22);
   });
 
   it("„Externe Analyse“: nur die Messung „Standardlos“ ist dynamisch, „Kalibriert“ nicht", () => {
@@ -147,7 +150,8 @@ describe("Standardlos/Oberfläche ohne gepflegten Elementbereich", () => {
     const std = official.filter((c) => c.instanceLabel === "Standardlos");
     const kal = official.filter((c) => c.instanceLabel === "Kalibriert");
     expect(std.slice(0, 17).map((c) => c.key.split("element:")[1])).toEqual(first17);
-    expect(std.slice(17).map((c) => c.label)).toEqual(["Rb", "SrO", "ZrO₂", "Tl"]);
+    // Cr₂O₃ = 0 ist ein gültiger Messwert und erscheint ebenfalls.
+    expect(std.slice(17).map((c) => c.label)).toEqual(["Cr₂O₃", "Rb", "SrO", "ZrO₂", "Tl"]);
     // Kalibriert bleibt bei der konfigurierten Ergebnisliste
     expect(kal.map((c) => c.label)).toEqual(["SiO₂", "Al₂O₃"]);
   });

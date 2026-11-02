@@ -63,6 +63,12 @@ interface Props {
   caseElementKeys?: string[] | null;
   /** Elementbereich des Messfalls (z. B. Standardlos „B-U“). */
   elementRange?: string | null;
+  /**
+   * Dynamische Elementübernahme ohne Bereichsgrenze (reguläre RFA über die
+   * 17er-Basis hinaus bzw. Messfall „Externe Analyse“). Nur bei RFA-/
+   * Elementanalyse-Dienstleistungen gesetzt.
+   */
+  dynamicElements?: boolean;
   /** Zulässige Datei-Importer (leer = alle registrierten). */
   allowedImporters?: string[] | null;
   /** Zuordnung für die dauerhafte Speicherung importierter Messkurven. */
@@ -82,7 +88,7 @@ interface Props {
 
 export default function MeasurementImportDialog({
   open, onOpenChange, defaultProfileId, targets: baseTargets, currentValues, allowedImporters, caseElementKeys,
-  elementRange, curveContext, curveDefaults, allowedEvaluations, enableEvaluation = false,
+  elementRange, dynamicElements = false, curveContext, curveDefaults, allowedEvaluations, enableEvaluation = false,
   onApply, canManageProfiles = true,
 }: Props) {
   const [profileId, setProfileId] = useState<string>(defaultProfileId ?? "");
@@ -145,14 +151,14 @@ export default function MeasurementImportDialog({
       measurementReadings.map((c) => ({ ...c.reading, sourceName: c.cls.parameter, unit: c.reading.unit ?? c.cls.unit })),
       profile,
       baseTargets,
-      { caseElementKeys, elementRange }
+      { caseElementKeys, elementRange, dynamicElements }
     );
     return base.map((r, i) => {
       const o = overrides[i];
       if (o === undefined) return r;
       return { ...r, targetFieldKey: o === "__none__" ? null : o, origin: "manual" as const };
     });
-  }, [measurementReadings, profile, baseTargets, overrides, caseElementKeys, elementRange]);
+  }, [measurementReadings, profile, baseTargets, overrides, caseElementKeys, elementRange, dynamicElements]);
 
   /** Zielliste inkl. dynamischer Bereichs-Elemente (Standardlos). */
   const targets = useMemo(() => withDynamicTargets(rows, baseTargets), [rows, baseTargets]);

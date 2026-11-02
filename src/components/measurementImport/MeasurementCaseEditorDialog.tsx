@@ -11,10 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { elementLibrary, libraryElement, formatElementKey, elementKey, parseElementRange } from "@/lib/elementKeys";
-import { Checkbox } from "@/components/ui/checkbox";
+import { EXTERNAL_ANALYSIS_CASE_KEY } from "@/lib/rfaFixedElements";
 import { curveEvaluations } from "@/lib/curves/evaluations";
 import { emptyCurveConfig, readCaseCurveConfig, type CaseCurveConfig } from "@/lib/measurementBlocks";
 import { toast } from "sonner";
@@ -73,12 +74,28 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
   const [instances, setInstances] = useState<DraftInstance[]>([]);
   const [elements, setElements] = useState<DraftElement[]>([]);
   const [elementRange, setElementRange] = useState("");
+  const [externalAnalysis, setExternalAnalysis] = useState(false);
   const parsedRange = parseElementRange(elementRange);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["measurement-import-profiles"],
     queryFn: () => api.measurementImportProfiles.list(),
   });
+
+  /**
+   * Der Modus „Vollständige externe Analyse“ ist über den technischen
+   * Schlüssel `external_analysis` gekennzeichnet. Wegen des globalen
+   * UNIQUE-Constraints auf `case_key` kann es systemweit nur EINEN solchen
+   * Messfall geben – besteht er bereits, ist die Option gesperrt.
+   */
+  const { data: allCases = [] } = useQuery({
+    queryKey: ["measurement-cases"],
+    queryFn: () => api.measurementCases.list(),
+  });
+  const externalCaseExists = (allCases as any[]).some(
+    (c) => c.case_key === EXTERNAL_ANALYSIS_CASE_KEY && c.id !== caseDef?.id
+  );
+  const isExternalCase = caseDef?.case_key === EXTERNAL_ANALYSIS_CASE_KEY;
 
   useEffect(() => {
     if (!open) return;
@@ -87,6 +104,7 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
     setMethod(caseDef?.method ?? "");
     setIsActive(caseDef?.is_active !== false);
     setElementRange(caseDef?.element_range ?? "");
+    setExternalAnalysis(caseDef?.case_key === EXTERNAL_ANALYSIS_CASE_KEY);
     setInstances(
       (caseDef?.instances ?? []).map((i: MeasurementCaseInstance) => ({
         id: i.id,
@@ -140,8 +158,11 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
           element_range: rangeValue,
         });
       } else {
+        // Neue Messfälle: der Modus „Vollständige externe Analyse“ erhält den
+        // festen technischen Schlüssel; alle anderen behalten den Namens-Slug.
+        // Bestehende Messfälle behalten ihren bisherigen Schlüssel unverändert.
         target = await api.measurementCases.create({
-          case_key: slug(name),
+          case_key: externalAnalysis ? EXTERNAL_ANALYSIS_CASE_KEY : slug(name),
           name: name.trim(),
           description: description.trim() || null,
           method: method.trim() || null,
@@ -209,6 +230,28 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
             <Label htmlFor="case-active" className="text-xs">
               Aktiv – nur aktive Messfälle stehen bei neuen Messungen zur Auswahl
             </Label>
+          </div>
+
+          <div className="rounded border p-2 space-y-1">
+            <label className="flex items-center gap-2 text-xs">
+              <Checkbox
+                checked={externalAnalysis}
+                disabled={!!caseDef || externalCaseExists}
+                onCheckedChange={(c) => setExternalAnalysis(c === true)}
+                id="case-external-analysis"
+              />
+              <span>
+                Vollständige externe Analyse – alle erkannten Elemente der Messdatei werden
+                dynamisch als Ergebnisse übernommen (keine 17er-Begrenzung)
+              </span>
+            </label>
+            <p className="text-[11px] text-muted-foreground">
+              Wirkt nur bei RFA-/Elementanalyse-Dienstleistungen. Der technische Schlüssel
+              lautet „{EXTERNAL_ANALYSIS_CASE_KEY}“ und kann systemweit nur einmal vergeben
+              werden. Bestehende Messfälle behalten ihren bisherigen Schlüssel.
+              {externalCaseExists && " Es existiert bereits ein Messfall mit diesem Schlüssel."}
+              {isExternalCase && " Dieser Messfall ist die externe Analyse."}
+            </p>
           </div>
 
           <CaseElementsEditor value={elements} onChange={setElements} />

@@ -44,7 +44,7 @@ import {
   buildServiceResultCandidates,
   type OfficialResultCandidate,
 } from "@/lib/officialResults";
-import { isRfaService } from "@/lib/rfaFixedElements";
+import { isRfaService, isValidResultValue } from "@/lib/rfaFixedElements";
 
 /**
  * Task-focused execution view for a measurement (Messdienstleister workflow).
@@ -398,6 +398,8 @@ function TaskExecutionPageInner() {
 
     const knownKeys = new Set(candidates.keys());
     const activeKeys = new Set<string>();
+    /** Nachvollziehbar gemeldete Einheitenkonflikte (kein stilles Überschreiben). */
+    const unitConflicts: string[] = [];
 
     for (const candidate of candidates.values()) {
       const { key, value: raw } = candidate;
@@ -418,7 +420,8 @@ function TaskExecutionPageInner() {
       const resultName = key;
       activeKeys.add(resultName);
 
-      // Numeric single value → store in `value`; everything else → JSON in `remarks`.
+      // Numeric single value → store in `value`; qualifizierte Textwerte
+      // („< 0,01“, „n.b.“) → `text_value`; alles andere → JSON in `remarks`.
       const payload: any = {
         result_name: resultName,
         display_label: candidate.label,
@@ -432,6 +435,7 @@ function TaskExecutionPageInner() {
         measured_by: user?.id ?? null,
         measured_at: measuredAt,
         value: null,
+        text_value: null,
         remarks: null,
         // Zuordnung zur konkreten Messung (Messdatenblock). Ohne Block bleibt
         // die Zuordnung leer – bestehende Ergebnisse ändern sich dadurch nicht.
@@ -447,11 +451,11 @@ function TaskExecutionPageInner() {
         } else {
           // Zahlenwerte aus Messdatenimporten kommen auch in deutscher
           // Schreibweise („0,293“). Sie müssen als Zahl gespeichert werden,
-          // sonst fehlen sie in der Ergebnisdatenbank.
-          const text = raw.trim();
-          const numeric = /^[+-]?(\d+([.,]\d+)?|[.,]\d+)([eE][+-]?\d+)?$/.test(text);
-          const num = numeric ? parseFloat(text.replace(",", ".")) : NaN;
-          if (numeric && !isNaN(num)) payload.value = num;
+          // sonst fehlen sie in der Ergebnisdatenbank. Qualifizierte
+          // Textwerte (Grenzwerte, „n.b.“/„n.n.“) gehören in `text_value`.
+          const parsed = isValidResultValue(raw);
+          if (parsed.numericValue != null) payload.value = parsed.numericValue;
+          else if (parsed.textValue != null) payload.text_value = parsed.textValue;
           else payload.remarks = raw;
         }
       } else {
@@ -461,6 +465,17 @@ function TaskExecutionPageInner() {
 
       const prev = existingByName.get(resultName);
       if (prev) {
+        // Einheitenkonflikt: ein gespeicherter Wert wird niemals stillschweigend
+        // mit einer abweichenden Einheit überschrieben. Der Bestand bleibt
+        // unverändert, der Konflikt wird nachvollziehbar gemeldet.
+        const prevUnitNorm = String(prev.unit ?? "").trim().toLowerCase();
+        const nextUnitNorm = String(payload.unit ?? "").trim().toLowerCase();
+        if (prevUnitNorm && nextUnitNorm && prevUnitNorm !== nextUnitNorm) {
+          unitConflicts.push(
+            `„${candidate.label}“: gespeichert ${prev.unit}, Import ${payload.unit} – Wert nicht überschrieben`
+          );
+          continue;
+        }
         await api.measurementResults.update(prev.id, payload);
       } else {
         await api.measurementResults.create({
@@ -468,6 +483,11 @@ function TaskExecutionPageInner() {
           ...payload,
         });
       }
+    }
+    if (unitConflicts.length) {
+      toast.warning("Einheitenkonflikt beim Speichern", {
+        description: unitConflicts.slice(0, 5).join("\n"),
+      });
     }
 
     // Delete only values belonging to a currently known definition that was
