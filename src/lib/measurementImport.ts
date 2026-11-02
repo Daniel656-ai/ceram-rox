@@ -279,21 +279,29 @@ export function targetElementKey(t: TargetCandidate): string | null {
  *  - Elementfelder des Formulars außerhalb der Messfall-Liste sind KEINE
  *    Ziele (sie würden sonst Ergebnisse außerhalb des Messfalls erzeugen);
  *  - Nicht-Element-Felder (z. B. Feuchte) bleiben unverändert erhalten.
- * Ohne Messfall-Liste bleibt die Formularliste unverändert.
+ * Ohne Messfall-Liste bleibt die Formularliste unverändert – außer bei einer
+ * regulären RFA-Messung (`rfaDefault`): dann gilt die vollständige
+ * 17er-Standardliste, damit kein gültiges RFA-Element nur deshalb im
+ * Sammelfeld landet, weil kein physisches Formularfeld existiert.
+ * Ein ausdrücklich konfigurierter Messfall (eigene Elementliste oder
+ * Elementbereich) hat immer Vorrang und wird nie überschrieben.
  */
 export function buildCaseTargets(
   spec: Array<{ key: string; label?: string | null; unit?: string | null }>,
   formTargets: TargetCandidate[],
-  elementRange?: string | null
+  elementRange?: string | null,
+  rfaDefault?: boolean
 ): TargetCandidate[] {
   const parsedRange = parseElementRange(elementRange);
   // Bereichs-Messfall („Standardlos“, „Oberfläche“): die 17 Standardelemente
   // sind immer Ziele – in fester Reihenfolge, unabhängig vom Import.
-  const effective = parsedRange
-    ? withFixedRfaElements(
-        spec.map((s) => ({ key: s.key, label: s.label ?? s.key, official: true, unit: s.unit ?? null }))
-      )
-    : spec;
+  // Reguläre RFA ohne Messfall: dieselbe 17er-Struktur als Standard-Zielliste.
+  const effective =
+    parsedRange || (rfaDefault && spec.length === 0)
+      ? withFixedRfaElements(
+          spec.map((s) => ({ key: s.key, label: s.label ?? s.key, official: true, unit: s.unit ?? null }))
+        )
+      : spec;
   if (!effective.length) {
     const range = parsedRange;
     if (!range) return formTargets;
