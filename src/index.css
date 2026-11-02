@@ -245,9 +245,10 @@ input[type="number"] {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
-.m3-list-display [data-repeater-key="m3_rows"] table { font-size: 20px; min-width: 680px; }
+.m3-list-display [data-repeater-key="m3_rows"] table { font-size: 13px; min-width: 560px; }
 .m3-list-display [data-repeater-key="m3_rows"] th,
-.m3-list-display [data-repeater-key="m3_rows"] td { padding: 14px 16px; line-height: 1.35; }
+.m3-list-display [data-repeater-key="m3_rows"] td { padding: 6px 10px; line-height: 1.3; }
+.m3-list-display [data-repeater-key="m3_rows"] th { white-space: pre-line; }
 .m3-list-display [data-repeater-key="m3_rows"] th,
 .m3-list-display [data-repeater-key="m3_rows"] th > div:first-child { font-weight: 700; }
-.m3-list-display [data-repeater-key="m3_rows"] input { font-size: 18px; min-height: 44px; }
+.m3-list-display [data-repeater-key="m3_rows"] input { font-size: 13px; min-height: 30px; }

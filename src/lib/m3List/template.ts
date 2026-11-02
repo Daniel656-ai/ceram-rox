@@ -103,8 +103,15 @@ export function m3DisplayFields(fields: FormField[]): FormField[] {
     const meta = (metadata.repeater ?? {}) as Record<string, unknown>;
     const layout = normalizeRepeaterLayout(meta.layout, fields.filter((c) => c.parent_field_id === f.id).map((c) => c.field_key));
     const items = layout.items.map((item) => {
-      const adapt = (leaf: typeof item) => leaf.type === "field" && leaf.key === "element_count" ? { ...leaf, label_override: "Elementnummer" } : leaf;
-      return item.type === "group" ? { ...item, children: item.children.map((leaf) => leaf.type === "field" && leaf.key === "element_count" ? { ...leaf, label_override: "Elementnummer" } : leaf) } : adapt(item);
+      const adapt = (leaf: typeof item) => {
+        if (leaf.type !== "field") return leaf;
+        if (leaf.key === "element_count") return { ...leaf, label_override: "Elementnummer" };
+        // Gewünschter Umbruch der Spaltenüberschrift: „Verantwortlich /“ bleibt
+        // in einer Zeile, „bearbeitet“ steht in der nächsten (pre-line CSS).
+        if (leaf.key === "row_responsible") return { ...leaf, label_override: "Verantwortlich /\nbearbeitet" };
+        return leaf;
+      };
+      return item.type === "group" ? { ...item, children: item.children.map(adapt) } : adapt(item);
     });
     return { ...f, metadata: { ...metadata, repeater: { ...meta, layout: { ...layout, items } } } } as FormField;
   });

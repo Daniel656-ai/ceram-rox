@@ -17,7 +17,7 @@ describe("m³-PDF", () => {
     expect(m.rows).toHaveLength(3);
     expect(m.rows[1].test).toBe(true);
     expect(m.rows[0].pieces).toBe("00010");
-    expect(m.totals).toContain("Gesamt: 431 Stk");
+    expect(m.totals).toBe("Reguläre Elementanzahl: 430 Stk · Bench-Zusatz: 1 Stk");
     expect(m.testNotice).toContain("m³-Zeile 2");
     expect(m.originalNote).toContain("Originalversion");
     expect(m.header.find(([k]) => k === "Auftrag")?.[1]).toBe("A123");
