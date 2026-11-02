@@ -105,27 +105,50 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
 
   text(model.title, M, 14, true);
   y += 2;
-  const pairs = (list: [string, string][]) => {
+
+  // Zweispaltiger Kopfbereich: links Auftragsdetails, rechts Berechnungen + Labormessungen.
+  // Beide Spalten beginnen oben bündig; danach läuft die m³-Tabelle über die volle Breite.
+  const GAP = 6;
+  const LEFT_W = 96;
+  const RIGHT_X = M + LEFT_W + GAP;
+  const RIGHT_W = PAGE_W - M - RIGHT_X;
+  /** Rendert ein Label/Wert-Paar in einer Spalte mit Umbruch; liefert die neue y-Position. */
+  const colPairs = (list: [string, string][], x: number, w: number, startY: number, labelW: number) => {
+    let cy = startY;
     for (const [k, v] of list) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      const lines = doc.splitTextToSize(v, PAGE_W - 2 * M - 55) as string[];
-      ensure(lines.length * LINE);
+      const lines = doc.splitTextToSize(v, w - labelW) as string[];
       doc.setFont("helvetica", "bold");
-      doc.text(k, M, y + 4);
+      doc.text(k, x, cy + 4);
       doc.setFont("helvetica", "normal");
-      doc.text(lines, M + 55, y + 4);
-      y += lines.length * LINE;
+      doc.text(lines, x + labelW, cy + 4);
+      cy += lines.length * LINE;
     }
+    return cy;
   };
-  pairs(model.header);
-  y += 2;
-  text("Labormessungen", M, 11, true);
-  text(model.labTests, M);
-  y += 2;
-  text("Berechnungen", M, 11, true);
-  pairs(model.calc);
-  y += 3;
+  const colHeading = (t: string, x: number, cy: number) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(t, x, cy + 4);
+    return cy + LINE + 1;
+  };
+
+  const colTop = y;
+  let leftY = colHeading("Auftragsdetails", M, colTop);
+  leftY = colPairs(model.header, M, LEFT_W, leftY, 48);
+
+  let rightY = colHeading("Berechnungen", RIGHT_X, colTop);
+  rightY = colPairs(model.calc, RIGHT_X, RIGHT_W, rightY, 42);
+  rightY += 2;
+  rightY = colHeading("Labormessungen", RIGHT_X, rightY);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const labLines = doc.splitTextToSize(model.labTests, RIGHT_W) as string[];
+  doc.text(labLines, RIGHT_X, rightY + 4);
+  rightY += labLines.length * LINE;
+
+  y = Math.max(leftY, rightY) + 3;
 
   // Tabelle mit Kopfzeilen-Wiederholung
   const cols = [
