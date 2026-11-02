@@ -4,18 +4,23 @@ import { matchesOrderKindFilter } from "@/lib/orders/orderKind";
 
 const services = (...categories: string[]) => categories.map(category => ({ measurement_services: { category } }));
 
+const identity = (number: string, technicalNumber: string, hasExperimentNumber: boolean, missingExperimentNumber: boolean, extra: object = {}) => ({
+  number, technicalNumber, hasExperimentNumber, missingExperimentNumber,
+  experimentNumberSource: null, experimentNumberConflicts: [], ...extra,
+});
+
 describe("Pilot Plant display identity", () => {
   it("leads with an existing manual experiment number without changing it", () => {
     const order = { id: "order-uuid", order_kind: "pilot_plant", order_number: "ABC260001", pp_experiment_number: "V26-027_custom_CC" };
     const before = JSON.stringify(order);
-    expect(orderIdentity(order)).toEqual({ number: "V26-027_custom_CC", technicalNumber: "ABC260001", hasExperimentNumber: true, missingExperimentNumber: false });
+    expect(orderIdentity(order)).toEqual(identity("V26-027_custom_CC", "ABC260001", true, false, { experimentNumberSource: "pp_experiment_number" }));
     expect(JSON.stringify(order)).toBe(before);
     expect(order.id).toBe("order-uuid");
   });
 
   it("does not invent a number or derive one from reference_number", () => {
     const order = { order_kind: "pilot_plant", order_number: "SW-260025", reference_number: "V26-027", pp_experiment_number: null };
-    expect(orderIdentity(order)).toEqual({ number: "SW-260025", technicalNumber: "SW-260025", hasExperimentNumber: false, missingExperimentNumber: true });
+    expect(orderIdentity(order)).toEqual(identity("SW-260025", "SW-260025", false, true));
     expect(order.pp_experiment_number).toBeNull();
   });
 
