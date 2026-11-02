@@ -193,7 +193,7 @@ describe("RFA-Standardfallback: reguläre RFA ohne Messfall", () => {
   it("explizite Messfall-Spezifikation am Eintrag hat Vorrang vor dem Fallback", () => {
     const entry: Record<string, unknown> = {
       [INSTANCE_ID_KEY]: "m1", [INSTANCE_LABEL_KEY]: "Messung 1",
-      [CASE_ELEMENT_SPEC_KEY]: JSON.stringify([{ key: "SiO2", label: "SiO2", official: true }]),
+      [CASE_ELEMENT_SPEC_KEY]: [{ key: "SiO2", label: "SiO2", official: true }],
       sio2_percent: 55.2,
       [elementValueKey("TiO2")]: 0.8,
     };
