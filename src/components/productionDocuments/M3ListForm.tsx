@@ -26,6 +26,7 @@ import { ensureM3Template, m3DisplayFields } from "@/lib/m3List/template";
 import { ensureM3Constants, readM3Constants } from "@/lib/m3List/constants";
 import { deriveM3Values, stripDerivedValues } from "@/lib/m3List/derive";
 import { splitLayoutAtField } from "@/lib/m3List/layoutSplit";
+import { compactM3UpperLayout } from "@/lib/m3List/upperLayout";
 import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
 import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
 import { M3_ROWS_KEY } from "@/lib/m3List/template";
@@ -149,6 +150,10 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   const layoutSplit = useMemo(
     () => (repeaterFieldId ? splitLayoutAtField(layout, repeaterFieldId) : null),
     [layout, repeaterFieldId]
+  );
+  const upperLayout = useMemo(
+    () => layoutSplit?.found ? compactM3UpperLayout(layoutSplit.before) : null,
+    [layoutSplit]
   );
 
   const { data: permissions } = useQuery({
@@ -378,10 +383,10 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </div>
       </div>
 
-      {!!typedFields.length && layoutSplit?.found && layoutSplit.before.nodes.length > 0 && (
-        <div className="m3-list-display">
+      {!!typedFields.length && upperLayout && upperLayout.nodes.length > 0 && (
+        <div className="m3-list-display m3-upper-display">
           <FormLayoutRenderer
-            layout={layoutSplit.before}
+            layout={upperLayout}
             fields={typedFields}
             permissions={permissions}
             values={displayValues}

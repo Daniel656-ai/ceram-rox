@@ -254,3 +254,10 @@ input[type="number"] {
 .m3-list-display [data-repeater-key="m3_rows"] td :is(input, button, span, div, p),
 .m3-list-display [data-repeater-key="m3_rows"] th :is(span, div) { font-size: inherit; font-weight: 700; }
 .m3-list-display [data-repeater-key="m3_rows"] input { font-size: 16px; min-height: 34px; font-weight: 700; }
+
+/* Base the upper layout on its own available width, not the window/dialog. */
+.m3-upper-display { container-type: inline-size; }
+.m3-upper-display .m3-upper-columns { grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 760px) {
+  .m3-upper-display .m3-upper-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
