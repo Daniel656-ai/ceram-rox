@@ -398,6 +398,8 @@ function TaskExecutionPageInner() {
 
     const knownKeys = new Set(candidates.keys());
     const activeKeys = new Set<string>();
+    /** Nachvollziehbar gemeldete Einheitenkonflikte (kein stilles Überschreiben). */
+    const unitConflicts: string[] = [];
 
     for (const candidate of candidates.values()) {
       const { key, value: raw } = candidate;
