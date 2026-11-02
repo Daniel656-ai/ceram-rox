@@ -14,6 +14,16 @@
 
 import type { CaseElementSpec } from "@/lib/measurementBlocks";
 import { elementKey, elementLibrary, elementSortValue, formatElementKey } from "@/lib/elementKeys";
+import { detectAnalysisKey } from "@/lib/customerDocumentation/serviceChapters";
+
+/**
+ * Eindeutige RFA-Erkennung über die zentrale Dienstleistungsklassifizierung
+ * (`detectAnalysisKey` – die einzige Stelle, die Dienstleistungsnamen fachlich
+ * interpretiert). Es entsteht keine zweite Namensregel.
+ */
+export function isRfaService(serviceName: string | null | undefined): boolean {
+  return detectAnalysisKey(serviceName) === "rfa";
+}
 
 /** Feste Ergebnisstruktur (Position 1–17) inklusive originaler Einheit. */
 export const RFA_FIXED_ELEMENTS: ReadonlyArray<{ key: string; unit: string }> = [
