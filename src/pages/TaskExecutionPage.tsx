@@ -44,7 +44,7 @@ import {
   buildServiceResultCandidates,
   type OfficialResultCandidate,
 } from "@/lib/officialResults";
-import { isRfaService } from "@/lib/rfaFixedElements";
+import { isRfaService, isValidResultValue } from "@/lib/rfaFixedElements";
 
 /**
  * Task-focused execution view for a measurement (Messdienstleister workflow).

@@ -6,7 +6,7 @@ import { evaluateFormula } from "@/lib/formulaEngine";
 import {
   fieldElementKey, formatElementKey, parseElementRange, elementInRange, elementSortValue,
 } from "@/lib/elementKeys";
-import { withFixedRfaElements, isValidResultValue, fixedElementUnit } from "@/lib/rfaFixedElements";
+import { withFixedRfaElements, isValidResultValue, fixedElementUnit, isExternalAnalysisCaseKey } from "@/lib/rfaFixedElements";
 import {
   readResultConditions, collectResultConditions, buildConditionLabel, conditionsToContext,
 } from "@/lib/fieldLinks";
@@ -99,10 +99,14 @@ export function buildLinkedFormResultCandidates(
         if (ek && !byElement.has(ek)) byElement.set(ek, c);
       }
       const range = parseElementRange(instance.elementRange);
-      // Messfall „Externe Analyse“ (nur bei RFA-Dienstleistungen, vom Aufrufer
-      // geprüft): keine 17er-Basis, kein Bereich – alle erkannten Elemente mit
-      // gültigem Messwert werden dynamisch offizielle Ergebnisse.
-      const external = options.externalAnalysis === true;
+      // Messfall „Externe Analyse“ (nur bei RFA-Dienstleistungen – der
+      // Aufrufer setzt `rfaDefault` nur dann): keine 17er-Basis, kein
+      // Bereich – alle erkannten Elemente mit gültigem Messwert werden
+      // dynamisch offizielle Ergebnisse. Maßgeblich ist ausschließlich der
+      // am Messblock-Eintrag gespeicherte Messfall-Schlüssel.
+      const external =
+        options.externalAnalysis === true ||
+        (options.rfaDefault === true && isExternalAnalysisCaseKey(instance.caseKey));
       // Bereichs-Messfälle („Standardlos“, „Oberfläche“): feste 17er-Struktur
       // zuerst, danach dynamisch die tatsächlich gemessenen Elemente.
       // Reguläre RFA ohne ausdrücklichen Messfall (keine Elementliste, kein
