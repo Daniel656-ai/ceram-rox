@@ -30,7 +30,7 @@ import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
 import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
 import { M3_ROWS_KEY } from "@/lib/m3List/template";
 import { normalizeSamplingKey, selectableSamplingCodes, toggleSamplingCode, benchExtraTestPieces } from "@/lib/samplingCodeMap";
-import { canUseTestMarking, resolveTestMarking, applyTestMarking } from "@/lib/m3List/testMarking";
+import { canUseTestMarking, resolveTestMarkingRows, toggleTestMarkingRow, buildTestNotice } from "@/lib/m3List/testMarking";
 import { Input } from "@/components/ui/input";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -124,12 +124,13 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   const setStoredKey = (key: string, v: unknown) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }));
   const mayMarkTest = canUseTestMarking(customRoleNames ?? []);
   const derivedRows = (Array.isArray(derived.values[M3_ROWS_KEY]) ? derived.values[M3_ROWS_KEY] : []) as Record<string, unknown>[];
-  const testMarking = resolveTestMarking(stored ?? {}, derivedRows);
-  const testIndex = testMarking.rowIndex;
+  const testMarking = resolveTestMarkingRows(stored ?? {}, derivedRows);
+  const testIndices = testMarking.rowIndices;
+  const testNotice = buildTestNotice(testIndices);
   // The legacy count field is text only in this view; calculation and save use derived.values.
   const displayValues = { ...derived.values, [M3_ROWS_KEY]: derivedRows.map((r) => ({ ...r, element_count: r.element_number ?? "—" })) };
-  const setTestRow = (i: number | null) =>
-    setStored((prev) => applyTestMarking(prev ?? {}, M3_ROWS_KEY, i, () => crypto.randomUUID()));
+  const setTestRow = (i: number, checked: boolean) =>
+    setStored((prev) => toggleTestMarkingRow(prev ?? {}, M3_ROWS_KEY, i, checked, () => crypto.randomUUID()));
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);
