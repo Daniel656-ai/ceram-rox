@@ -11,10 +11,10 @@ import {
   readMeasurementCaseConfig, buildEntriesFromCase, entriesMatchCase, instanceImportDone,
   CASE_ID_KEY, CASE_INSTANCE_KEY, IMPORT_PROFILE_KEY, CASE_CURVE_KEY, CASE_ELEMENTS_KEY,
   readCaseCurveConfig, hasCurveConfig, type CaseTemplate,
-  CASE_ELEMENT_SPEC_KEY, CASE_ELEMENT_RANGE_KEY, caseElementSpec, caseElementRangeFor, readCaseElementSpec, elementFromValueKey,
+  CASE_ELEMENT_SPEC_KEY, CASE_ELEMENT_RANGE_KEY, CASE_KEY_KEY, caseElementSpec, caseElementRangeFor, readCaseElementSpec, elementFromValueKey,
 } from "@/lib/measurementBlocks";
 import { buildCaseTargets } from "@/lib/measurementImport";
-import { effectiveElementRange, isRfaService } from "@/lib/rfaFixedElements";
+import { effectiveElementRange, isRfaService, isExternalAnalysisCaseKey } from "@/lib/rfaFixedElements";
 
 
 import {
@@ -670,9 +670,20 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
    */
   // Reguläre RFA ohne ausdrücklichen Messfall: vollständige 17er-Zielliste.
   const rfaDefault = isRfaService(runtime?.serviceName);
+  /**
+   * Modus „Externe Analyse“: ausschließlich der Messfall-Schlüssel
+   * (`case_key === "external_analysis"`) aktiviert ihn – und nur bei einer
+   * fachlich als RFA/Elementanalyse klassifizierten Dienstleistung.
+   * `element_range === "ALL"` allein aktiviert den Modus niemals.
+   */
+  const caseKey = useMemo(() => {
+    const v = read(CASE_KEY_KEY);
+    return typeof v === "string" && v.trim() ? v.trim() : null;
+  }, [read]);
+  const externalAnalysis = rfaDefault && isExternalAnalysisCaseKey(caseKey);
   const targets = useMemo(
-    () => buildCaseTargets(caseSpec, formTargets, caseRange, rfaDefault),
-    [caseSpec, formTargets, caseRange, rfaDefault]
+    () => buildCaseTargets(caseSpec, formTargets, caseRange, rfaDefault, externalAnalysis),
+    [caseSpec, formTargets, caseRange, rfaDefault, externalAnalysis]
   );
 
   const currentValues = useMemo(() => {
@@ -839,6 +850,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           allowedImporters={cfg.importers}
           caseElementKeys={caseElements}
           elementRange={caseRange}
+          dynamicElements={rfaDefault || externalAnalysis}
           curveContext={
             runtime && importSnapshot
               ? {
@@ -1636,6 +1648,7 @@ function MeasurementBlockField({
         .map((c) => ({
           id: c.id,
           name: c.name,
+          case_key: c.case_key ?? null,
           elements: c.elements ?? [],
           element_range: c.element_range ?? null,
           instances: c.instances ?? [],
