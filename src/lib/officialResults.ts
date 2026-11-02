@@ -171,7 +171,10 @@ export function buildLinkedFormResultCandidates(
       // Sortiert nach Ordnungszahl, ohne feste Liste. Nur gültige Messwerte
       // (isValidResultValue: 0 und Grenzwerttexte sind gültig) werden
       // Ergebnisfelder.
-      if (range || options.rfaDefault || external) {
+      // Eine ausdrückliche Messfall-Spezifikation bleibt strikt – dynamische
+      // Übernahme nur bei Bereich, externer Analyse oder regulärer RFA ohne
+      // konfigurierte Elementliste.
+      if (range || external || (options.rfaDefault && instance.elementSpec.length === 0)) {
         const inScope = (el: string) => !range || elementInRange(el, range);
         const dyn: Array<{ key: string; child: FormField | null }> = [];
         for (const [k, v] of Object.entries(instance.values)) {
