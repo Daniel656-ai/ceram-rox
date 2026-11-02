@@ -267,6 +267,8 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </span>
       </div>
 
+      {/* Beprobungsauftrag, Beprobung und freie Toleranzen platzsparend nebeneinander. */}
+      <div className="grid gap-3 lg:grid-cols-3">
       <div className="rounded-md border p-3 text-sm flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="font-medium">Beprobungsauftrag</div>
