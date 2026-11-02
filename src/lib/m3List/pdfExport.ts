@@ -63,12 +63,13 @@ export function buildM3PdfModel(
       volume: s(r.volume_m3),
       pieces: Object.prototype.hasOwnProperty.call(r, "element_number") ? s(r.element_number) : formatElementNumber(r.element_count),
       laborKat: s(r.row_labor_kat),
-      responsible: s(r.row_responsible),
+      // Leere Verantwortlichkeitsfelder bleiben vollständig leer (kein „—“).
+      responsible: r.row_responsible == null || r.row_responsible === "" ? "" : String(r.row_responsible),
       test: opts.testRowIndex === i,
     })),
     totals: `Reguläre Elementanzahl: ${s(values.regular_element_total)} Stk · Bench-Zusatz: ${s(
       values.bench_extra_pieces ?? 0
-    )} Stk · Gesamt: ${s(values.total_element_count)} Stk`,
+    )} Stk`,
     testNotice:
       opts.testRowIndex != null && opts.testRowIndex >= 0 && opts.testRowIndex < rows.length
         ? `TEST: Bitte die komplette Charge der m³-Zeile ${opts.testRowIndex + 1} mit einem zusätzlichen Stempel ‚TEST …‘ versehen!`
@@ -127,9 +128,11 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
   // Tabelle mit Kopfzeilen-Wiederholung
   const cols = [
     { h: "Zeile", w: 18 }, { h: "m³", w: 22 }, { h: "Elementnummer", w: 43 },
-    { h: "Labor-Kats", w: 30 }, { h: "Verantwortlich / bearbeitet", w: 47 }, { h: "TEST", w: 22 },
+    { h: "Labor-Kats", w: 30 }, { h: "Verantwortlich /\nbearbeitet", w: 47 }, { h: "TEST", w: 22 },
   ];
-  const TABLE_SIZE = 18, TABLE_LINE = 7.5, PAD = 2;
+  const TABLE_SIZE = 10, TABLE_LINE = 5, PAD = 2;
+  /** Grundlinienversatz passend zur Schriftgröße. */
+  const BASELINE = TABLE_SIZE * 0.35;
   const chargeColors = { background: [255, 235, 59], foreground: [211, 47, 47] } as const;
   const chargeText = model.testNotice ? `Gesamte Charge · ${model.testNotice}` : "Gesamte Charge";
   doc.setFont("helvetica", "bold");
