@@ -80,6 +80,7 @@
   "order_number": "Auftrags-Nr.",
   "technical_number": "ROX-Auftrag: {{number}}",
   "without_experiment_number": "(ohne Versuchsnummer)",
+  "experiment_number_conflict": "Hinweis: Abweichende Versuchsnummern in weiteren Datenfeldern: {{values}} (angezeigt wird der vorrangige Wert; keine automatische Korrektur)",
   "project_number": "Projekt-Nr.",
   "project_name": "Projektname",
   "order_type": "Auftragstyp",
