@@ -260,6 +260,14 @@ export interface MapOptions {
    * festen Liste.
    */
   elementRange?: string | null;
+  /**
+   * Dynamische Elementübernahme ohne Bereichsgrenze (reguläre RFA über die
+   * 17er-Basis hinaus bzw. Messfall „Externe Analyse“): jedes eindeutig
+   * erkannte Element der Messdatei ohne eigenes Ergebnisfeld erhält
+   * dynamisch das Ziel `element:<Key>`. Nur bei RFA-/Elementanalyse-
+   * Dienstleistungen aktiv – andere Dienstleistungen bleiben unverändert.
+   */
+  dynamicElements?: boolean;
 }
 
 /** Element-Schlüssel eines Zielfelds (konfiguriert oder abgeleitet). */
