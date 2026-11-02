@@ -16,6 +16,8 @@ export interface RuntimeMeasurementContext {
   /** Probennummer derselben Probe (Abgleich mit Dateiinhalten). */
   sampleNumber?: string | null;
   serviceId?: string | null;
+  /** Name der Dienstleistung (z. B. für die RFA-Standard-Elementliste). */
+  serviceName?: string | null;
   /** public.profiles.id – nicht die Auth-Benutzer-ID. */
   profileId?: string | null;
   /**

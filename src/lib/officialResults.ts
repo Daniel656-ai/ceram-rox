@@ -49,6 +49,7 @@ export function buildLinkedFormResultCandidates(
   calculations: FormCalculation[],
   taskValues: Record<string, unknown>,
   globalConstants: GlobalConstantLike[] = [],
+  options: { rfaDefault?: boolean } = {},
 ): OfficialResultCandidate[] {
   const prefix = `form:${formId}:`;
   const localValues: Record<string, unknown> = {};
