@@ -122,7 +122,7 @@ describe("RFA: Messfall → Import → Ergebnis (Akzeptanztests)", () => {
     expect(official.slice(17).map((c) => c.label)).toEqual(["B₂O₃", "U"]);
   });
 
-  it("Standardlos: Elemente mit 0, leer oder null erscheinen nicht", () => {
+  it("Standardlos: leere/null-Werte erscheinen nicht; 0 ist ein gültiger Messwert", () => {
     const caseDef = makeCase([], "B-U");
     const entry = buildEntriesFromCase(caseDef, childDefs)[0];
     entry[elementValueKey("Rb")] = 0.014;
@@ -134,7 +134,8 @@ describe("RFA: Messfall → Import → Ergebnis (Akzeptanztests)", () => {
     const official = buildLinkedFormResultCandidates("f1", [block, ...formChildren, importField], [], {
       "form:f1:messungen": [entry],
     }).filter((c) => c.official);
-    expect(official.slice(17).map((c) => c.label)).toEqual(["Rb", "SrO"]);
+    // 0 ist ein gültiger Messwert (ZrO₂, Cr₂O₃); leer (Ni) und null (Cu) nicht.
+    expect(official.slice(17).map((c) => c.label)).toEqual(["Cr₂O₃", "Rb", "SrO", "ZrO₂"]);
     // As/Pb behalten ppm
     expect(official.find((c) => c.label === "As")!.unit).toBe("ppm");
   });
