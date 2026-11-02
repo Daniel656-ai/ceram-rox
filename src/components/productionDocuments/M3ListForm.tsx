@@ -25,6 +25,7 @@ import { useProductionReleaseRevision } from "@/hooks/useProductionDocuments";
 import { ensureM3Template, m3DisplayFields } from "@/lib/m3List/template";
 import { ensureM3Constants, readM3Constants } from "@/lib/m3List/constants";
 import { deriveM3Values, stripDerivedValues } from "@/lib/m3List/derive";
+import { splitLayoutAtField } from "@/lib/m3List/layoutSplit";
 import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
 import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
 import { M3_ROWS_KEY } from "@/lib/m3List/template";
@@ -134,6 +135,21 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     const normalized = normalizeLayout(form?.layout);
     return normalized.nodes.length ? normalized : autoLayout(typedFields);
   }, [form?.layout, typedFields]);
+
+  /**
+   * Der Block „Gesamte Charge“ steht in der Bildschirmansicht direkt oberhalb
+   * der m³-Tabelle: Der Layoutbaum wird am Repeater-Feld geteilt, der Teil
+   * davor wird separat darüber gerendert. Reine Darstellung – das
+   * gespeicherte Layout bleibt unverändert.
+   */
+  const repeaterFieldId = useMemo(
+    () => typedFields.find((f) => f.field_key === M3_ROWS_KEY)?.id ?? null,
+    [typedFields]
+  );
+  const layoutSplit = useMemo(
+    () => (repeaterFieldId ? splitLayoutAtField(layout, repeaterFieldId) : null),
+    [layout, repeaterFieldId]
+  );
 
   const { data: permissions } = useQuery({
     queryKey: ["form-field-permissions", formId, role, typedFields.length],
