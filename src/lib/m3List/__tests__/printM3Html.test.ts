@@ -45,19 +45,24 @@ describe("buildM3PrintHtml", () => {
     expect(html).toContain("@page { size: A4");
   });
 
-  it("erhält Summen, TEST-Markierung und Hinweise", () => {
-    expect(html).toContain("Reguläre Elementanzahl: 250 Stk · Bench-Zusatz: 2 Stk · Gesamt: 252 Stk");
+  it("erhält Summen ohne Gesamtzeile, TEST-Markierung und Hinweise", () => {
+    expect(html).toContain("Reguläre Elementanzahl: 250 Stk · Bench-Zusatz: 2 Stk");
+    expect(html).not.toContain("Gesamt: 252");
     expect(html).toContain('<tr class="test">');
     expect(html).toContain("m³-Zeile 1 mit einem zusätzlichen Stempel");
     expect(html).toContain("• Hinweis X");
     expect(html).toContain("unveränderliche Originalversion");
   });
 
-  it("escaped HTML-artige Eingaben und zeigt leere Zeilen als —", () => {
+  it("bricht die Überschrift „Verantwortlich / bearbeitet“ gewünscht um", () => {
+    expect(html).toContain("<th>Verantwortlich /<br>bearbeitet</th>");
+  });
+
+  it("escaped HTML-artige Eingaben; leere Verantwortlich-Zellen bleiben leer", () => {
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
     expect(html).toContain("Müller &amp; &lt;b&gt;Co&lt;/b&gt;");
-    expect(html).toContain("<tr><td>2</td><td>—</td><td>—</td><td>—</td><td>—</td><td></td></tr>");
+    expect(html).toContain("<tr><td>2</td><td>—</td><td>—</td><td>—</td><td></td><td></td></tr>");
   });
 
   it("zeigt Hinweis ohne Zeilen", () => {
