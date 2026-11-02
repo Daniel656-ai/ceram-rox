@@ -1,9 +1,9 @@
 # Roadmap
 
 ## m³-Schriftgestaltung und Platzoptimierung (02.11.2026)
-- [ ] Seitliche Anordnung wartet auf Zuordnung: vorhandene Liste hat Kopfdaten, Kontrollfelder und Berechnungen, aber keinen separaten Abschnitt Auftragsdetails/Labormessungen. Keine Felder spekulativ verschoben.
+- [x] Bestätigte seitliche Anordnung: Kopfdaten links, Kontrollfelder und Berechnungen rechts; lokal ohne Persistenz, schmale Fenster stapeln die Bereiche.
 - [x] Tabelleninhalt und Überschriften fett, zwei Schriftstufen größer in Bildschirm (13 → 16 px), HTML (9 → 12 pt) und PDF (10 → 12 pt).
-- [x] 104 m³-Tests und gesamte Suite (900 Tests, 119 Dateien) bestanden; Build OK. Bestehende Liste angemeldet ohne Schreiben geprüft: Bildschirm, HTML-Druck und PDF vollständig, beide Druckwege eine A4-Seite. Dokumentation: m3-typography-review.md.
+- [x] 106 m³-Tests und gesamte Suite (902 Tests, 120 Dateien) bestanden; Build OK. Bestehende Liste angemeldet ohne Schreiben geprüft: Bildschirm, HTML-Druck und PDF vollständig, beide Druckwege eine A4-Seite. Zweispaltenansicht bei 1280/1112 px, gestapelt bei 760/480 px. Dokumentation: m3-typography-review.md.
 - [ ] Desktop-Abnahme: benötigt tatsächliche ROX-Desktop-Anwendung, aus Sandbox nicht verfügbar.
 
 ## Ergebnisänderung und -ergänzung (freigegeben 30.10.2026) — umgesetzt
