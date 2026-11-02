@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { resolveExperimentNumber } from "@/lib/orders/orderIdentity";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   PilotPlantBlock,
