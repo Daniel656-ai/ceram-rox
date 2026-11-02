@@ -440,7 +440,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           </div>
         )}
         {testIndex != null && testIndex < derivedRows.length && (
-          <div className="m3-charge-active rounded-md border-2 p-3 text-lg font-bold">
+          <div className="m3-charge-active rounded-md border-2 p-2 text-sm font-bold">
             Bitte die komplette Charge, in welcher die gekennzeichnete{" "}
             <span>m³-Zeile {testIndex + 1}</span>{" "}
             enthalten ist, mit einem zusätzlichen Stempel ‚TEST …‘ versehen!
@@ -456,7 +456,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       {!!typedFields.length && (
         <div className="m3-list-display">
         <FormLayoutRenderer
-          layout={layout}
+          layout={layoutSplit?.found ? layoutSplit.at : layout}
           fields={typedFields}
           permissions={permissions}
           values={displayValues}
