@@ -405,7 +405,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
       </Dialog>
 
       <Dialog open={!!formRequestId} onOpenChange={(v) => !v && setFormRequestId(null)}>
-        <DialogContent className="max-w-5xl max-h-[88vh] overflow-y-auto">
+        <DialogContent className="w-[92vw] max-w-7xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>m³-Liste</DialogTitle>
             <DialogDescription>

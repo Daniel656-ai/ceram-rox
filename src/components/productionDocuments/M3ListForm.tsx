@@ -30,7 +30,7 @@ import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
 import { M3_LAB_SELECTION_KEY } from "@/lib/m3List/derive";
 import { M3_ROWS_KEY } from "@/lib/m3List/template";
 import { normalizeSamplingKey, selectableSamplingCodes, toggleSamplingCode, benchExtraTestPieces } from "@/lib/samplingCodeMap";
-import { canUseTestMarking, resolveTestMarking, applyTestMarking } from "@/lib/m3List/testMarking";
+import { canUseTestMarking, resolveTestMarkingRows, toggleTestMarkingRow, buildTestNotice } from "@/lib/m3List/testMarking";
 import { Input } from "@/components/ui/input";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -124,12 +124,13 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   const setStoredKey = (key: string, v: unknown) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }));
   const mayMarkTest = canUseTestMarking(customRoleNames ?? []);
   const derivedRows = (Array.isArray(derived.values[M3_ROWS_KEY]) ? derived.values[M3_ROWS_KEY] : []) as Record<string, unknown>[];
-  const testMarking = resolveTestMarking(stored ?? {}, derivedRows);
-  const testIndex = testMarking.rowIndex;
+  const testMarking = resolveTestMarkingRows(stored ?? {}, derivedRows);
+  const testIndices = testMarking.rowIndices;
+  const testNotice = buildTestNotice(testIndices);
   // The legacy count field is text only in this view; calculation and save use derived.values.
   const displayValues = { ...derived.values, [M3_ROWS_KEY]: derivedRows.map((r) => ({ ...r, element_count: r.element_number ?? "—" })) };
-  const setTestRow = (i: number | null) =>
-    setStored((prev) => applyTestMarking(prev ?? {}, M3_ROWS_KEY, i, () => crypto.randomUUID()));
+  const setTestRow = (i: number, checked: boolean) =>
+    setStored((prev) => toggleTestMarkingRow(prev ?? {}, M3_ROWS_KEY, i, checked, () => crypto.randomUUID()));
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);
@@ -266,6 +267,8 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </span>
       </div>
 
+      {/* Beprobungsauftrag, Beprobung und freie Toleranzen platzsparend nebeneinander. */}
+      <div className="grid gap-3 lg:grid-cols-3">
       <div className="rounded-md border p-3 text-sm flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="font-medium">Beprobungsauftrag</div>
@@ -377,6 +380,8 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           Aktuell: L {String(derived.values.length_tolerance ?? "–")} · D {String(derived.values.diameter_tolerance ?? "–")}
         </div>
       </div>
+      </div>
+
 
       {!!typedFields.length && layoutSplit?.found && layoutSplit.before.nodes.length > 0 && (
         <div className="m3-list-display">
@@ -390,14 +395,14 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </div>
       )}
 
-      <div className={`m3-charge-block rounded-md border-2 p-3 space-y-2 ${testIndex != null ? "m3-charge-active" : "bg-muted/30"}`}>
+      <div className={`m3-charge-block rounded-md border-2 p-3 space-y-2 ${testIndices.length ? "m3-charge-active" : "bg-muted/30"}`}>
         <div className="text-base font-bold">Gesamte Charge</div>
         {derivedRows.length === 0 ? (
           <div className="text-xs text-muted-foreground">Noch keine m³-Zeilen.</div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {derivedRows.map((r, i) => {
-              const marked = testIndex === i;
+              const marked = testIndices.includes(i);
               return (
                 <div key={i} className="flex flex-wrap items-center gap-2 rounded border px-2 py-1 text-sm">
                   <span>m³-Zeile {i + 1}</span>
@@ -414,7 +419,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
                     <label className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={marked}
-                        onCheckedChange={(v) => setTestRow(v === true ? i : null)}
+                        onCheckedChange={(v) => setTestRow(i, v === true)}
                       />
                       Gesamte Charge mit TEST stempeln
                     </label>
@@ -436,14 +441,12 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
               ? "Eine ältere TEST-Kennzeichnung war nur über die Zeilenposition gespeichert und wird nicht automatisch zugeordnet. Bitte die Zeile erneut kennzeichnen."
               : testMarking.status === "ambiguous"
                 ? "Die TEST-Kennzeichnung ist nicht eindeutig (Zeile wurde dupliziert). Bitte die Zeile erneut kennzeichnen."
-                : "Die gekennzeichnete m³-Zeile ist nicht mehr vorhanden. Bitte prüfen."}
+                : "Die gekennzeichneten m³-Zeilen sind nicht mehr vorhanden. Bitte prüfen."}
           </div>
         )}
-        {testIndex != null && testIndex < derivedRows.length && (
+        {testNotice && (
           <div className="m3-charge-active rounded-md border-2 p-2 text-sm font-bold">
-            Bitte die komplette Charge, in welcher die gekennzeichnete{" "}
-            <span>m³-Zeile {testIndex + 1}</span>{" "}
-            enthalten ist, mit einem zusätzlichen Stempel ‚TEST …‘ versehen!
+            {testNotice}
           </div>
         )}
         {!mayMarkTest && (
@@ -478,7 +481,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           onClick={async () => {
             setPrinting(true);
             try {
-              await printM3List(derived.values, { notices: derived.notices, testRowIndex: testIndex });
+              await printM3List(derived.values, { notices: derived.notices, testRowIndices: testIndices });
             } catch (e) {
               toast.error(e instanceof Error ? `Drucken fehlgeschlagen: ${e.message}` : "Drucken fehlgeschlagen.");
             } finally {
@@ -492,7 +495,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           variant="outline"
           onClick={() => {
             try {
-              downloadM3Pdf(derived.values, { notices: derived.notices, testRowIndex: testIndex });
+              downloadM3Pdf(derived.values, { notices: derived.notices, testRowIndices: testIndices });
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "PDF-Download fehlgeschlagen.");
             }

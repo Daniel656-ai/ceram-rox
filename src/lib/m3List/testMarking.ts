@@ -13,6 +13,8 @@ export const TEST_MARKING_ROLES = ["Administrator", "Messdienstleister", "Teamle
 /** Altwert (Position) – nur noch lesend, wird nicht mehr geschrieben. */
 export const TEST_MARKING_KEY = "test_charge_row_index";
 export const TEST_MARKING_ROW_ID_KEY = "test_charge_row_id";
+/** Mehrfachauswahl: stabile Zeilen-IDs aller gekennzeichneten m³-Zeilen. */
+export const TEST_MARKING_ROW_IDS_KEY = "test_charge_row_ids";
 export const M3_ROW_ID_FIELD = "__m3_row_id";
 
 const norm = (s: string) => s.trim().toLowerCase();
@@ -81,4 +83,103 @@ export function applyTestMarking(
   }
   next[TEST_MARKING_ROW_ID_KEY] = id;
   return next;
+}
+
+/**
+ * Liest die gekennzeichneten Zeilen-IDs. Abwärtskompatibel: Fehlt das Array,
+ * gilt die bisherige Einzel-ID als einelementige Auswahl. Ungültige Einträge
+ * (keine nicht-leeren Strings) werden verworfen, Duplikate entfernt.
+ */
+export function readTestMarkingRowIds(stored: Record<string, unknown>): string[] {
+  const raw = stored[TEST_MARKING_ROW_IDS_KEY];
+  if (Array.isArray(raw)) {
+    return [...new Set(raw.filter((v): v is string => typeof v === "string" && v.length > 0))];
+  }
+  const single = stored[TEST_MARKING_ROW_ID_KEY];
+  return typeof single === "string" && single ? [single] : [];
+}
+
+export interface TestMarkingRowsResolution {
+  /** Aufgelöste Zeilenpositionen (aufsteigend, ohne Duplikate). */
+  rowIndices: number[];
+  status: TestMarkingStatus;
+}
+
+/**
+ * Ermittelt alle gekennzeichneten Zeilen ausschließlich über stabile Zeilen-IDs.
+ * Nicht mehr vorhandene IDs werden ignoriert; gar keine Auflösung trotz
+ * gespeicherter IDs gilt als „missing", eine mehrdeutige ID als „ambiguous".
+ */
+export function resolveTestMarkingRows(
+  stored: Record<string, unknown>,
+  rows: Record<string, unknown>[]
+): TestMarkingRowsResolution {
+  const ids = readTestMarkingRowIds(stored);
+  if (ids.length) {
+    const indices = new Set<number>();
+    let ambiguous = false;
+    for (const id of ids) {
+      const hits = rows.map((r, i) => (r?.[M3_ROW_ID_FIELD] === id ? i : -1)).filter((i) => i >= 0);
+      if (hits.length > 1) ambiguous = true;
+      else if (hits.length === 1) indices.add(hits[0]);
+    }
+    if (ambiguous) return { rowIndices: [], status: "ambiguous" };
+    if (!indices.size) return { rowIndices: [], status: "missing" };
+    return { rowIndices: [...indices].sort((a, b) => a - b), status: "ok" };
+  }
+  if (readTestMarkingIndex(stored) != null) return { rowIndices: [], status: "legacy_index" };
+  return { rowIndices: [], status: "none" };
+}
+
+/**
+ * Markiert oder entmarkiert genau eine Zeile unabhängig von den übrigen.
+ * Vergibt der Zeile bei Bedarf eine stabile ID; vorhandene IDs werden nie
+ * überschrieben (außer bei Duplikaten). Der Altschlüssel
+ * `test_charge_row_id` bleibt synchron zur ersten ausgewählten ID.
+ */
+export function toggleTestMarkingRow(
+  stored: Record<string, unknown>,
+  rowsKey: string,
+  rowIndex: number,
+  checked: boolean,
+  newId: () => string
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...stored };
+  delete next[TEST_MARKING_KEY];
+  const rows = Array.isArray(stored[rowsKey]) ? [...(stored[rowsKey] as Record<string, unknown>[])] : [];
+  if (rowIndex < 0 || rowIndex >= rows.length) return stored;
+
+  let ids = readTestMarkingRowIds(stored);
+  if (checked) {
+    const row = { ...(rows[rowIndex] ?? {}) };
+    let id = typeof row[M3_ROW_ID_FIELD] === "string" ? (row[M3_ROW_ID_FIELD] as string) : "";
+    const duplicate = id && rows.some((r, i) => i !== rowIndex && r?.[M3_ROW_ID_FIELD] === id);
+    if (!id || duplicate) {
+      id = newId();
+      row[M3_ROW_ID_FIELD] = id;
+      rows[rowIndex] = row;
+      next[rowsKey] = rows;
+    }
+    if (!ids.includes(id)) ids = [...ids, id];
+  } else {
+    // Ohne Zeilen-ID kann die Zeile nicht gekennzeichnet sein – nichts zu tun.
+    const rowId = rows[rowIndex]?.[M3_ROW_ID_FIELD];
+    if (typeof rowId === "string" && rowId) ids = ids.filter((v) => v !== rowId);
+  }
+  next[TEST_MARKING_ROW_IDS_KEY] = ids;
+  next[TEST_MARKING_ROW_ID_KEY] = ids[0] ?? null;
+  return next;
+}
+
+/**
+ * Dynamischer Hinweistext für eine oder mehrere gekennzeichnete Zeilen.
+ * Erwartet 0-basierte Zeilenpositionen; die Anzeige zählt ab 1.
+ */
+export function buildTestNotice(rowIndices: number[]): string | null {
+  const nums = [...new Set(rowIndices.filter((i) => i >= 0))].sort((a, b) => a - b).map((i) => i + 1);
+  if (!nums.length) return null;
+  const list = nums.length === 1 ? String(nums[0]) : `${nums.slice(0, -1).join(", ")} und ${nums[nums.length - 1]}`;
+  return nums.length === 1
+    ? `TEST: Bitte die komplette Charge der m³-Zeile ${list} mit einem zusätzlichen Stempel ‚TEST …‘ versehen!`
+    : `TEST: Bitte die kompletten Chargen der m³-Zeilen ${list} mit einem zusätzlichen Stempel ‚TEST …‘ versehen!`;
 }

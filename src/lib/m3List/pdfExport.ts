@@ -9,6 +9,7 @@
 import { jsPDF } from "jspdf";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 import { formatElementNumber } from "./calculations";
+import { buildTestNotice } from "./testMarking";
 
 export interface M3PdfRow {
   index: number;
@@ -35,9 +36,13 @@ const s = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : S
 
 export function buildM3PdfModel(
   values: Record<string, unknown>,
-  opts: { notices: string[]; testRowIndex: number | null }
+  opts: { notices: string[]; testRowIndex?: number | null; testRowIndices?: number[] }
 ): M3PdfModel {
   const rows = (Array.isArray(values[M3_ROWS_KEY]) ? values[M3_ROWS_KEY] : []) as Record<string, unknown>[];
+  /** Mehrfachauswahl hat Vorrang; der bisherige Einzelindex bleibt gültig. */
+  const testIndices = new Set(
+    opts.testRowIndices ?? (opts.testRowIndex != null && opts.testRowIndex >= 0 ? [opts.testRowIndex] : [])
+  );
   return {
     title: `m³-Liste ${s(values.release_label)}`,
     header: [
@@ -65,15 +70,12 @@ export function buildM3PdfModel(
       laborKat: s(r.row_labor_kat),
       // Leere Verantwortlichkeitsfelder bleiben vollständig leer (kein „—“).
       responsible: r.row_responsible == null || r.row_responsible === "" ? "" : String(r.row_responsible),
-      test: opts.testRowIndex === i,
+      test: testIndices.has(i),
     })),
     totals: `Reguläre Elementanzahl: ${s(values.regular_element_total)} Stk · Bench-Zusatz: ${s(
       values.bench_extra_pieces ?? 0
     )} Stk`,
-    testNotice:
-      opts.testRowIndex != null && opts.testRowIndex >= 0 && opts.testRowIndex < rows.length
-        ? `TEST: Bitte die komplette Charge der m³-Zeile ${opts.testRowIndex + 1} mit einem zusätzlichen Stempel ‚TEST …‘ versehen!`
-        : null,
+    testNotice: buildTestNotice([...testIndices].filter((i) => i < rows.length)),
     notices: opts.notices,
     originalNote:
       "Hinweis: Eine unveränderliche Originalversion ist für diese m³-Liste nicht vorhanden. Abweichungen gegenüber dem Original können daher nicht ausgewiesen werden.",
