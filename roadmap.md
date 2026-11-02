@@ -1,15 +1,9 @@
 # Roadmap
 
-## Offen
-1. **Versuchsnummern historische Pilot-Plant-Aufträge** (freigegeben, Frontend/Logik):
-   - Phase 1: Bestandsanalyse (orderIdentity, experimentNumber, PilotPlantProcessPanel, CreateOrderPage, api/orders, backendConfig)
-   - Phase 2: Zentrale Auflösung mit Priorität pp_experiment_number > pp.stammdaten.versuchsnummer > template.values.versuchsnummer + Konflikterkennung
-   - Phase 3: 15 historische Aufträge einzeln prüfen (Cloud-Datenbestand; Firmen-Backend ggf. nicht erreichbar → ausweisen)
-   - Phase 4: Tests (10 Kernfälle) + Regressionen, Typecheck, Build
-   - Phase 5: Web-Abnahme; Desktop-Abnahme getrennt ausweisen
-   - Abschlussbericht nach /mnt/documents
-2. **m³-Liste PDF-Layout Ursachenanalyse** (NUR Analyse, keine Implementierung):
-   - Prüfen ob buildM3PdfModel zweispaltig rendert oder nur Textreihenfolge; Regressionstest bewerten; Bericht liefern
+## Erledigt
+1. **Versuchsnummern historische Pilot-Plant-Aufträge** – zentrale Fallback-Auflösung implementiert (orderIdentity.resolveExperimentNumber, Priorität Spalte > Legacy > Template, Konflikterkennung + Hinweis in Detailansicht, Ergebnis-DB-Select erweitert). 939 Tests, tsgo, Build OK. Web-Abnahme (Cloud-Daten) bestanden. 15 Aufträge geprüft: Cloud überall „Fehlt". Bericht: /mnt/documents/ROX-Versuchsnummern-historische-Auftraege-Abschlussbericht.md
+2. **m³-PDF-Layout-Ursachenanalyse** – abgeschlossen, keine Implementierung. Ursache: HTML-Druckweg (printM3Html) blieb einspaltig; Test prüft nur Text, nicht Geometrie. Bericht: /mnt/documents/ROX-m3-Liste-PDF-Layout-Ursachenanalyse.md
 
-## Schutzregeln
-Keine DB-/Backend-/Auth-/RLS-/Storage-/Secrets-/Env-/Tauri-Änderungen. Keine produktiven Datenänderungen.
+## Offen (blockiert durch externe Faktoren)
+- Desktop-/Tauri-Abnahme beider Themen – produktive Desktop-App/Firmen-Backend von hier nicht erreichbar.
+- m³-HTML-Druck-Korrektur – wartet auf ausdrückliche Freigabe (Analyseauftrag war bewusst ohne Umsetzung).
