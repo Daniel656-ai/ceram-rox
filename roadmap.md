@@ -1,5 +1,11 @@
 # Roadmap
 
+## m³-Schriftgestaltung und Platzoptimierung (02.11.2026)
+- [ ] Bestehende Abschnittsstruktur prüfen und ohne persistente Änderungen kompakt anordnen.
+- [ ] Tabelleninhalt und Überschriften fett, zwei Schriftstufen größer in Bildschirm, HTML und PDF.
+- [ ] Vorhandene Tests ausführen, Bildschirm und A4-Druck separat prüfen; Dateien und Ergebnisse dokumentieren.
+- [ ] Desktop-Abnahme: benötigt tatsächliche ROX-Desktop-Anwendung, aus Sandbox nicht verfügbar.
+
 ## Ergebnisänderung und -ergänzung (freigegeben 30.10.2026) — umgesetzt
 
 - [x] Finalen SQL-Entwurf gegen reales Web-Schema verifiziert (Spaltentypen, Constraints, FKs, RLS, Berechtigungsfunktionen, 0 Dubletten)
