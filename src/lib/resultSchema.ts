@@ -175,7 +175,9 @@ export function resultCell(record: ResultRecord, key: string): ResultCellValue {
 
   if (!hit) return { present: false, value: null, text: null };
   if (hit.value === null || hit.value === undefined) {
-    const text = (hit.remarks || "").trim();
+    // Qualifizierte Textwerte („< 0,01“, „n.b.“) stehen in `text_value`;
+    // `remarks` bleibt der Altbestand für komplexe JSON-Werte.
+    const text = ((hit as any).text_value || hit.remarks || "").trim();
     return { present: text !== "", value: null, text: text || null };
   }
   return { present: true, value: hit.value, text: null };
