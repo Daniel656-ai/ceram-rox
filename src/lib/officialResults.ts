@@ -6,7 +6,7 @@ import { evaluateFormula } from "@/lib/formulaEngine";
 import {
   fieldElementKey, formatElementKey, parseElementRange, elementInRange, elementSortValue,
 } from "@/lib/elementKeys";
-import { withFixedRfaElements, isPositiveMeasurement, fixedElementUnit } from "@/lib/rfaFixedElements";
+import { withFixedRfaElements, isValidResultValue, fixedElementUnit } from "@/lib/rfaFixedElements";
 import {
   readResultConditions, collectResultConditions, buildConditionLabel, conditionsToContext,
 } from "@/lib/fieldLinks";
@@ -49,7 +49,7 @@ export function buildLinkedFormResultCandidates(
   calculations: FormCalculation[],
   taskValues: Record<string, unknown>,
   globalConstants: GlobalConstantLike[] = [],
-  options: { rfaDefault?: boolean } = {},
+  options: { rfaDefault?: boolean; externalAnalysis?: boolean } = {},
 ): OfficialResultCandidate[] {
   const prefix = `form:${formId}:`;
   const localValues: Record<string, unknown> = {};
@@ -99,13 +99,17 @@ export function buildLinkedFormResultCandidates(
         if (ek && !byElement.has(ek)) byElement.set(ek, c);
       }
       const range = parseElementRange(instance.elementRange);
+      // Messfall „Externe Analyse“ (nur bei RFA-Dienstleistungen, vom Aufrufer
+      // geprüft): keine 17er-Basis, kein Bereich – alle erkannten Elemente mit
+      // gültigem Messwert werden dynamisch offizielle Ergebnisse.
+      const external = options.externalAnalysis === true;
       // Bereichs-Messfälle („Standardlos“, „Oberfläche“): feste 17er-Struktur
-      // zuerst, danach dynamisch die tatsächlich gemessenen Elemente (> 0).
+      // zuerst, danach dynamisch die tatsächlich gemessenen Elemente.
       // Reguläre RFA ohne ausdrücklichen Messfall (keine Elementliste, kein
       // Bereich): dieselbe 17er-Standardstruktur – ein konfigurierter Messfall
       // hat immer Vorrang und wird nie überschrieben.
       const spec =
-        range || (options.rfaDefault && instance.elementSpec.length === 0)
+        !external && (range || (options.rfaDefault && instance.elementSpec.length === 0))
           ? withFixedRfaElements(instance.elementSpec)
           : instance.elementSpec;
       // Einheiten des Messdatenimports je Zielfeld – dadurch behalten auch
@@ -157,23 +161,26 @@ export function buildLinkedFormResultCandidates(
         });
       }
 
-      // Bereichs-Messfall (z. B. Standardlos „B-U“): alle importierten
-      // Elemente innerhalb des Bereichs sind Ergebnisse – sortiert nach
-      // Ordnungszahl, ohne feste Liste.
-      if (range) {
+      // Dynamische Elementübernahme: Bereichs-Messfall (z. B. Standardlos
+      // „B-U“) → alle importierten Elemente innerhalb des Bereichs; reguläre
+      // RFA → über die 17er-Basis hinaus; externe Analyse → ohne Begrenzung.
+      // Sortiert nach Ordnungszahl, ohne feste Liste. Nur gültige Messwerte
+      // (isValidResultValue: 0 und Grenzwerttexte sind gültig) werden
+      // Ergebnisfelder.
+      if (range || options.rfaDefault || external) {
+        const inScope = (el: string) => !range || elementInRange(el, range);
         const dyn: Array<{ key: string; child: FormField | null }> = [];
         for (const [k, v] of Object.entries(instance.values)) {
           const el = elementFromValueKey(k);
-          if (!el || usedElementKeys.has(el) || !elementInRange(el, range)) continue;
-          // Nur tatsächlich gemessene Elemente (> 0) werden Ergebnisfelder.
-          if (!isPositiveMeasurement(v)) continue;
+          if (!el || usedElementKeys.has(el) || !inScope(el)) continue;
+          if (!isValidResultValue(v).isValid) continue;
           dyn.push({ key: el, child: null });
         }
         for (const child of valueChildren) {
           if (usedIds.has(child.id)) continue;
           const ek = fieldElementKey(child as any);
-          if (!ek || usedElementKeys.has(ek) || !elementInRange(ek, range)) continue;
-          if (!isPositiveMeasurement(instance.values[child.field_key])) continue;
+          if (!ek || usedElementKeys.has(ek) || !inScope(ek)) continue;
+          if (!isValidResultValue(instance.values[child.field_key]).isValid) continue;
           usedIds.add(child.id);
           dyn.push({ key: ek, child });
         }
