@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { elementLibrary, libraryElement, formatElementKey, elementKey, parseElementRange } from "@/lib/elementKeys";
+import { EXTERNAL_ANALYSIS_CASE_KEY } from "@/lib/rfaFixedElements";
 import { Checkbox } from "@/components/ui/checkbox";
 import { curveEvaluations } from "@/lib/curves/evaluations";
 import { emptyCurveConfig, readCaseCurveConfig, type CaseCurveConfig } from "@/lib/measurementBlocks";
@@ -73,12 +74,28 @@ export default function MeasurementCaseEditorDialog({ open, onOpenChange, caseDe
   const [instances, setInstances] = useState<DraftInstance[]>([]);
   const [elements, setElements] = useState<DraftElement[]>([]);
   const [elementRange, setElementRange] = useState("");
+  const [externalAnalysis, setExternalAnalysis] = useState(false);
   const parsedRange = parseElementRange(elementRange);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["measurement-import-profiles"],
     queryFn: () => api.measurementImportProfiles.list(),
   });
+
+  /**
+   * Der Modus „Vollständige externe Analyse“ ist über den technischen
+   * Schlüssel `external_analysis` gekennzeichnet. Wegen des globalen
+   * UNIQUE-Constraints auf `case_key` kann es systemweit nur EINEN solchen
+   * Messfall geben – besteht er bereits, ist die Option gesperrt.
+   */
+  const { data: allCases = [] } = useQuery({
+    queryKey: ["measurement-cases"],
+    queryFn: () => api.measurementCases.list(),
+  });
+  const externalCaseExists = (allCases as any[]).some(
+    (c) => c.case_key === EXTERNAL_ANALYSIS_CASE_KEY && c.id !== caseDef?.id
+  );
+  const isExternalCase = caseDef?.case_key === EXTERNAL_ANALYSIS_CASE_KEY;
 
   useEffect(() => {
     if (!open) return;
