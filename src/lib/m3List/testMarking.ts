@@ -162,8 +162,9 @@ export function toggleTestMarkingRow(
     }
     if (!ids.includes(id)) ids = [...ids, id];
   } else {
+    // Ohne Zeilen-ID kann die Zeile nicht gekennzeichnet sein – nichts zu tun.
     const rowId = rows[rowIndex]?.[M3_ROW_ID_FIELD];
-    ids = typeof rowId === "string" ? ids.filter((v) => v !== rowId) : ids.filter((_, i) => i !== ids.indexOf(String(rowId)));
+    if (typeof rowId === "string" && rowId) ids = ids.filter((v) => v !== rowId);
   }
   next[TEST_MARKING_ROW_IDS_KEY] = ids;
   next[TEST_MARKING_ROW_ID_KEY] = ids[0] ?? null;
