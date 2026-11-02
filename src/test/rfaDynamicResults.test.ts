@@ -15,7 +15,7 @@ import { elementLibrary, elementKey } from "@/lib/elementKeys";
  */
 
 const targets = (keys: string[]) =>
-  keys.map((k) => ({ field_key: k, label: k, official: true, unit: null as string | null }));
+  keys.map((k) => ({ field_key: k, display_name: k, official: true, unit: null as string | null }));
 
 const reading = (name: string, value: string, unit: string | null = "%") =>
   ({
