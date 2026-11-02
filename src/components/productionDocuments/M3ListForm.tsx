@@ -395,14 +395,14 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </div>
       )}
 
-      <div className={`m3-charge-block rounded-md border-2 p-3 space-y-2 ${testIndex != null ? "m3-charge-active" : "bg-muted/30"}`}>
+      <div className={`m3-charge-block rounded-md border-2 p-3 space-y-2 ${testIndices.length ? "m3-charge-active" : "bg-muted/30"}`}>
         <div className="text-base font-bold">Gesamte Charge</div>
         {derivedRows.length === 0 ? (
           <div className="text-xs text-muted-foreground">Noch keine m³-Zeilen.</div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {derivedRows.map((r, i) => {
-              const marked = testIndex === i;
+              const marked = testIndices.includes(i);
               return (
                 <div key={i} className="flex flex-wrap items-center gap-2 rounded border px-2 py-1 text-sm">
                   <span>m³-Zeile {i + 1}</span>
@@ -419,7 +419,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
                     <label className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={marked}
-                        onCheckedChange={(v) => setTestRow(v === true ? i : null)}
+                        onCheckedChange={(v) => setTestRow(i, v === true)}
                       />
                       Gesamte Charge mit TEST stempeln
                     </label>
@@ -441,14 +441,12 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
               ? "Eine ältere TEST-Kennzeichnung war nur über die Zeilenposition gespeichert und wird nicht automatisch zugeordnet. Bitte die Zeile erneut kennzeichnen."
               : testMarking.status === "ambiguous"
                 ? "Die TEST-Kennzeichnung ist nicht eindeutig (Zeile wurde dupliziert). Bitte die Zeile erneut kennzeichnen."
-                : "Die gekennzeichnete m³-Zeile ist nicht mehr vorhanden. Bitte prüfen."}
+                : "Die gekennzeichneten m³-Zeilen sind nicht mehr vorhanden. Bitte prüfen."}
           </div>
         )}
-        {testIndex != null && testIndex < derivedRows.length && (
+        {testNotice && (
           <div className="m3-charge-active rounded-md border-2 p-2 text-sm font-bold">
-            Bitte die komplette Charge, in welcher die gekennzeichnete{" "}
-            <span>m³-Zeile {testIndex + 1}</span>{" "}
-            enthalten ist, mit einem zusätzlichen Stempel ‚TEST …‘ versehen!
+            {testNotice}
           </div>
         )}
         {!mayMarkTest && (
