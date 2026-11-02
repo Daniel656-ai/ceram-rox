@@ -258,6 +258,13 @@ function OrderDetailPageInner() {
           {orderIdentity(order as any).missingExperimentNumber && (
             <p className="text-sm text-muted-foreground">{t("without_experiment_number")}</p>
           )}
+          {orderIdentity(order as any).experimentNumberConflicts.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {t("experiment_number_conflict", {
+                values: orderIdentity(order as any).experimentNumberConflicts.map((c: { value: string }) => c.value).join(", "),
+              })}
+            </p>
+          )}
           <p className="text-muted-foreground">
             {(order as any).projects?.project_number ? `Projekt: ${(order as any).projects.project_number} · ` : ""}{ORDER_TYPE_LABELS[(order as any).order_type as keyof typeof ORDER_TYPE_LABELS]}
             {creatorName ? ` · Auftraggeber: ${creatorName}` : ""}

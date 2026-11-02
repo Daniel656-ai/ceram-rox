@@ -80,6 +80,7 @@
   "order_number": "Order No.",
   "technical_number": "ROX order: {{number}}",
   "without_experiment_number": "(without experiment number)",
+  "experiment_number_conflict": "Note: differing experiment numbers in other data fields: {{values}} (the higher-priority value is shown; no automatic correction)",
   "project_number": "Project No.",
   "project_name": "Project Name",
   "order_type": "Order Type",
