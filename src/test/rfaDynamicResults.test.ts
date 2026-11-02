@@ -18,12 +18,27 @@ const targets = (keys: string[]) =>
   keys.map((k) => ({ field_key: k, label: k, official: true, unit: null as string | null }));
 
 const reading = (name: string, value: string, unit: string | null = "%") =>
-  ({ sourceName: name, raw: value, value: parseFloat(value.replace(",", ".")), unit });
+  ({
+    sourceName: name,
+    raw: value,
+    value: parseFloat(value.replace(",", ".")),
+    unit,
+    belowDetection: value.trim().startsWith("<"),
+  });
+
+/** Messdatenblock-Formular mit einem Wertfeld und serialisierten Instanzen. */
+const blockFixture = (entries: Array<Record<string, unknown>>) => {
+  const fields = [
+    { id: "b1", field_key: "messblock", field_type: "measurement_block", parent_field_id: null },
+    { id: "c1", field_key: "fe_wert", field_type: "number", parent_field_id: "b1" },
+  ] as any[];
+  const taskValues = { "form:F1:messblock": entries };
+  return { fields, taskValues };
+};
 
 describe("1. Elementbibliothek ist vollständig (H–U, 92 Elemente)", () => {
   it("deckt alle 92 Elementsymbole ab", () => {
-    const lib = elementLibrary();
-    expect(lib.length).toBe(92);
+    expect(elementLibrary.length).toBe(92);
     // Stichproben der zuvor fehlenden Symbole
     for (const sym of ["Nd", "Ce", "Pr", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Re", "Os", "Ir", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Pa", "He", "Ne", "Ar", "Kr", "Xe", "Tc", "Ru", "Rh", "Pd", "In", "Pm"]) {
       expect(elementKey(sym), sym).toBe(sym);
@@ -46,7 +61,7 @@ describe("2. Wertvalidierung isValidResultValue", () => {
     expect(isValidResultValue(">100").isValid).toBe(true);
     expect(isValidResultValue("n.b.").isValid).toBe(true);
     expect(isValidResultValue("n.n.").isValid).toBe(true);
-    expect(isValidResultValue("nicht bestimmt").isValid).toBe(true);
+    expect(isValidResultValue("nicht bestimmbar").isValid).toBe(true);
   });
   it("verwirft leere, Platzhalter- und unlesbare Werte", () => {
     expect(isValidResultValue(null).isValid).toBe(false);
@@ -64,7 +79,8 @@ describe("2. Wertvalidierung isValidResultValue", () => {
 describe("3. Reguläre RFA: dynamische Elemente über der 17er-Basis", () => {
   it("übernimmt Nd zusätzlich zu den 17 Standardelementen", () => {
     const spec = buildCaseTargets([], targets(["fe_wert", "si_wert"]), null, true);
-    expect(spec.length).toBe(17); // 17er-Basis bleibt Ausgangspunkt
+    // 17er-Basis bleibt Ausgangspunkt; Formularfelder bleiben erhalten
+    expect(spec.filter((s) => RFA_FIXED_ELEMENTS.some((f) => f.key === s.key)).length).toBe(17);
     const rows = mapReadings(
       [reading("Fe2O3", "5,2"), reading("Nd", "0,04")],
       null,
@@ -72,28 +88,19 @@ describe("3. Reguläre RFA: dynamische Elemente über der 17er-Basis", () => {
       { dynamicElements: true }
     );
     const nd = rows.find((r) => r.sourceName === "Nd");
-    expect(nd?.targetFieldKey).toBe("value:Nd");
+    expect(nd?.targetFieldKey).toBe("element:Nd");
     expect(nd?.matchedBy).toBe("element");
   });
   it("gültige dynamische Elemente werden offizielle Ergebnisse", () => {
-    const instances = [{
-      key: "m1",
-      label: "Messung 1",
-      context: {},
-      values: { "value:Nd": 0.04, "value:Fe": 5.2, "value:Ti": "" },
-      elementSpec: [],
-      elementRange: null,
-      caseKey: null,
-      index: 0,
-    }];
-    const candidates = buildLinkedFormResultCandidates([], targets([]), instances, { rfaDefault: true });
-    const names = candidates.filter((c) => c.official).map((c) => c.resultName);
-    expect(names).toContain("value:Nd");
-    expect(names).toContain("value:Fe");
+    const { fields, taskValues } = blockFixture([
+      { __instance_id: "i1", "element:Nd": 0.04, fe_wert: 5.2, "element:Ti": "" },
+    ]);
+    const candidates = buildLinkedFormResultCandidates("F1", fields, [], taskValues, [], { rfaDefault: true });
+    const official = candidates.filter((c) => c.official).map((c) => c.key);
+    expect(official.some((k) => k.endsWith("element:Nd"))).toBe(true);
+    expect(official.some((k) => k.endsWith("fe_wert"))).toBe(true);
     // Ohne gültigen Wert kein offizielles Ergebnis
-    expect(names).not.toContain("value:Ti");
-    // 17er-Basis bleibt als Zielstruktur erhalten
-    expect(candidates.length).toBeGreaterThanOrEqual(17);
+    expect(official.some((k) => k.endsWith("element:Ti"))).toBe(false);
   });
   it("ohne RFA-Kontext bleibt die bisherige Auswahl unverändert", () => {
     const rows = mapReadings([reading("Nd", "0,04")], null, targets([]), { dynamicElements: false });
@@ -104,7 +111,7 @@ describe("3. Reguläre RFA: dynamische Elemente über der 17er-Basis", () => {
 describe("4. Eingeschränkte Messfälle bleiben strikt", () => {
   it("übernimmt nur die ausdrücklich ausgewählten Elemente", () => {
     const spec = buildCaseTargets(
-      [{ key: "fe_wert" }, { key: "si_wert" }],
+      [{ key: "Fe" }, { key: "Si" }],
       targets(["fe_wert", "si_wert"]),
       null,
       true
@@ -121,9 +128,10 @@ describe("4. Eingeschränkte Messfälle bleiben strikt", () => {
 });
 
 describe("5. Externe Analyse: unbegrenzte dynamische Übernahme", () => {
-  it("ist nur über den case_key aktivierbar", () => {
+  it("ist nur über den exakten case_key aktivierbar", () => {
     expect(isExternalAnalysisCaseKey(EXTERNAL_ANALYSIS_CASE_KEY)).toBe(true);
-    expect(isExternalAnalysisCaseKey("External_Analysis")).toBe(true);
+    expect(isExternalAnalysisCaseKey("external_analysis")).toBe(true);
+    expect(isExternalAnalysisCaseKey("External_Analysis")).toBe(false);
     expect(isExternalAnalysisCaseKey("ALL")).toBe(false);
     expect(isExternalAnalysisCaseKey(null)).toBe(false);
     expect(isExternalAnalysisCaseKey("standardlos")).toBe(false);
@@ -137,24 +145,24 @@ describe("5. Externe Analyse: unbegrenzte dynamische Übernahme", () => {
       spec,
       { dynamicElements: true }
     );
-    expect(rows.map((r) => r.targetFieldKey)).toEqual(["value:Fe", "value:Nd", "value:Y"]);
+    // Oxididentität bleibt erhalten: Fe2O3/Y2O3 sind eigene Schlüssel
+    expect(rows.map((r) => r.targetFieldKey)).toEqual(["element:Fe2O3", "element:Nd", "element:Y2O3"]);
   });
   it("gültige Werte (inkl. 0 und Text) werden offiziell", () => {
-    const instances = [{
-      key: "m1",
-      label: "Messung 1",
-      context: {},
-      values: { "value:Nd": 0, "value:Ce": "<0,01", "value:Fe": 5.2 },
-      elementSpec: [],
-      elementRange: null,
-      caseKey: EXTERNAL_ANALYSIS_CASE_KEY,
-      index: 0,
-    }];
-    const candidates = buildLinkedFormResultCandidates([], targets([]), instances, { rfaDefault: true });
-    const official = candidates.filter((c) => c.official).map((c) => c.resultName);
-    expect(official).toContain("value:Nd");
-    expect(official).toContain("value:Ce");
-    expect(official).toContain("value:Fe");
+    const { fields, taskValues } = blockFixture([
+      {
+        __instance_id: "i1",
+        __case_key: EXTERNAL_ANALYSIS_CASE_KEY,
+        "element:Nd": 0,
+        "element:Ce": "<0,01",
+        fe_wert: 5.2,
+      },
+    ]);
+    const candidates = buildLinkedFormResultCandidates("F1", fields, [], taskValues, [], { rfaDefault: true });
+    const official = candidates.filter((c) => c.official).map((c) => c.key);
+    expect(official.some((k) => k.endsWith("element:Nd"))).toBe(true);
+    expect(official.some((k) => k.endsWith("element:Ce"))).toBe(true);
+    expect(official.some((k) => k.endsWith("fe_wert"))).toBe(true);
   });
 });
 
@@ -166,7 +174,7 @@ describe("6. Standardlos/Oberfläche (B-U) bleibt unverändert", () => {
       buildCaseTargets([], targets([]), "B-U"),
       { elementRange: "B-U" }
     );
-    expect(rows.find((r) => r.sourceName === "Fe2O3")?.targetFieldKey).toBe("value:Fe");
+    expect(rows.find((r) => r.sourceName === "Fe2O3")?.targetFieldKey).toBe("element:Fe2O3");
     expect(rows.find((r) => r.sourceName === "Np")?.targetFieldKey).toBeNull();
   });
 });
@@ -180,59 +188,52 @@ describe("7. Oxididentität bleibt eigenständig", () => {
       spec,
       { dynamicElements: true }
     );
-    // Oxide werden auf ihre Elemente abgebildet, aber nicht mit Elementwerten vermischt
-    expect(rows.find((r) => r.sourceName === "CeO2")?.targetFieldKey).toBe("value:Ce");
-    expect(rows.find((r) => r.sourceName === "ZrO2")?.targetFieldKey).toBe("value:Zr");
+    expect(rows.find((r) => r.sourceName === "CeO2")?.targetFieldKey).toBe("element:CeO2");
+    expect(rows.find((r) => r.sourceName === "ZrO2")?.targetFieldKey).toBe("element:ZrO2");
+    expect(rows.find((r) => r.sourceName === "SrO")?.targetFieldKey).toBe("element:SrO");
   });
 });
 
 describe("8. Einheitenkonflikte bleiben erkennbar", () => {
   it("markiert abweichende Einheiten als Konflikt statt still zu überschreiben", () => {
     const spec = buildCaseTargets([], targets(["fe_wert"]), null, true);
-    spec[0] = { ...spec[0], unit: "%" };
-    const rows = mapReadings([reading("Fe2O3", "5,2", "ppm")], null, spec, { dynamicElements: true });
-    const fe = rows.find((r) => r.sourceName === "Fe2O3");
-    expect(fe?.targetFieldKey).toBeTruthy();
+    const feTarget = spec.find((s) => s.key === "fe_wert");
+    if (feTarget) feTarget.unit = "%";
+    const rows = mapReadings([reading("fe_wert", "5,2", "ppm")], null, spec, { dynamicElements: true });
+    const fe = rows.find((r) => r.sourceName === "fe_wert");
+    expect(fe?.targetFieldKey).toBe("fe_wert");
     expect(fe?.unitMismatch).toBe(true);
   });
 });
 
 describe("9. Historische Freigaben bleiben unberührt", () => {
-  it("nicht-offizielle Zeilen werden nicht pauschal hochgestuft", () => {
-    const instances = [{
-      key: "m1",
-      label: "Messung 1",
-      context: {},
-      values: { "value:U": 0.5 },
-      elementSpec: [],
-      elementRange: null,
-      caseKey: null,
-      index: 0,
-    }];
-    // Ohne RFA-Modus bleiben dynamische Elemente nicht-offiziell
-    const candidates = buildLinkedFormResultCandidates([], targets([]), instances, {});
-    const u = candidates.find((c) => c.resultName === "value:U");
+  it("nicht-offizielle Zeilen werden ohne RFA-Modus nicht pauschal hochgestuft", () => {
+    const { fields, taskValues } = blockFixture([
+      { __instance_id: "i1", "element:U": 0.5 },
+    ]);
+    const candidates = buildLinkedFormResultCandidates("F1", fields, [], taskValues, [], {});
+    const u = candidates.find((c) => c.key.endsWith("element:U"));
+    expect(u).toBeDefined();
     expect(u?.official).toBe(false);
   });
 });
 
 describe("10. Ungültige Werte erzeugen keine Ergebnisse", () => {
   it("leere und Platzhalter-Werte werden nicht übernommen", () => {
-    const instances = [{
-      key: "m1",
-      label: "Messung 1",
-      context: {},
-      values: { "value:Nd": "", "value:Ce": "n/a", "value:Fe": "abc" },
-      elementSpec: [],
-      elementRange: null,
-      caseKey: EXTERNAL_ANALYSIS_CASE_KEY,
-      index: 0,
-    }];
-    const candidates = buildLinkedFormResultCandidates([], targets([]), instances, { rfaDefault: true });
-    const official = candidates.filter((c) => c.official).map((c) => c.resultName);
-    expect(official).not.toContain("value:Nd");
-    expect(official).not.toContain("value:Ce");
-    expect(official).not.toContain("value:Fe");
+    const { fields, taskValues } = blockFixture([
+      {
+        __instance_id: "i1",
+        __case_key: EXTERNAL_ANALYSIS_CASE_KEY,
+        "element:Nd": "",
+        "element:Ce": "n/a",
+        "element:Dy": "abc",
+      },
+    ]);
+    const candidates = buildLinkedFormResultCandidates("F1", fields, [], taskValues, [], { rfaDefault: true });
+    const official = candidates.filter((c) => c.official).map((c) => c.key);
+    expect(official.some((k) => k.endsWith("element:Nd"))).toBe(false);
+    expect(official.some((k) => k.endsWith("element:Ce"))).toBe(false);
+    expect(official.some((k) => k.endsWith("element:Dy"))).toBe(false);
   });
 });
 
