@@ -16,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import { elementLibrary, libraryElement, formatElementKey, elementKey, parseElementRange } from "@/lib/elementKeys";
 import { EXTERNAL_ANALYSIS_CASE_KEY } from "@/lib/rfaFixedElements";
-import { Checkbox } from "@/components/ui/checkbox";
 import { curveEvaluations } from "@/lib/curves/evaluations";
 import { emptyCurveConfig, readCaseCurveConfig, type CaseCurveConfig } from "@/lib/measurementBlocks";
 import { toast } from "sonner";
