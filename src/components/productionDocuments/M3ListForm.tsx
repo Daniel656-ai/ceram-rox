@@ -481,7 +481,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           onClick={async () => {
             setPrinting(true);
             try {
-              await printM3List(derived.values, { notices: derived.notices, testRowIndex: testIndex });
+              await printM3List(derived.values, { notices: derived.notices, testRowIndices: testIndices });
             } catch (e) {
               toast.error(e instanceof Error ? `Drucken fehlgeschlagen: ${e.message}` : "Drucken fehlgeschlagen.");
             } finally {
@@ -495,7 +495,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           variant="outline"
           onClick={() => {
             try {
-              downloadM3Pdf(derived.values, { notices: derived.notices, testRowIndex: testIndex });
+              downloadM3Pdf(derived.values, { notices: derived.notices, testRowIndices: testIndices });
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "PDF-Download fehlgeschlagen.");
             }
