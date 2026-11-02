@@ -332,7 +332,7 @@ function StammdatenView({ order }: { order: any }) {
     <Card className="bg-muted/20">
       <CardHeader className="pb-2"><CardTitle className="text-sm">Stammdaten</CardTitle></CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-        <Field label="Versuchsnummer" value={st.versuchsnummer ?? order?.pp_experiment_number} />
+        <Field label="Versuchsnummer" value={resolveExperimentNumber(order ?? {}).value} />
         <Field label="Versuchsart" value={st.versuchsart ?? order?.pp_experiment_kind} />
         <Field label="Datum" value={st.experiment_date ?? order?.pp_experiment_date} />
         <Field label="Frühere Versuche" value={st.previous_experiments ?? order?.pp_previous_experiments} />

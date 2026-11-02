@@ -13,7 +13,7 @@ export const measurementResults = {
       original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
       measurement_services(service_name, category, standard_duration_hours),
       measurement_orders(
-        id, order_number, order_type, order_kind, pp_experiment_number, created_by, notes,
+        id, order_number, order_type, order_kind, pp_experiment_number, shared_form_data, created_by, notes,
         order_measurements(measurement_services(category)),
         projects(project_number, project_name),
         samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
