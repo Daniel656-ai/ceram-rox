@@ -13,6 +13,8 @@ export const TEST_MARKING_ROLES = ["Administrator", "Messdienstleister", "Teamle
 /** Altwert (Position) – nur noch lesend, wird nicht mehr geschrieben. */
 export const TEST_MARKING_KEY = "test_charge_row_index";
 export const TEST_MARKING_ROW_ID_KEY = "test_charge_row_id";
+/** Mehrfachauswahl: stabile Zeilen-IDs aller gekennzeichneten m³-Zeilen. */
+export const TEST_MARKING_ROW_IDS_KEY = "test_charge_row_ids";
 export const M3_ROW_ID_FIELD = "__m3_row_id";
 
 const norm = (s: string) => s.trim().toLowerCase();
