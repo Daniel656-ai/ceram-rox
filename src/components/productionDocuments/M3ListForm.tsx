@@ -378,8 +378,20 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </div>
       </div>
 
-      <div className={`m3-charge-block rounded-md border-2 p-4 space-y-3 ${testIndex != null ? "m3-charge-active" : "bg-muted/30"}`}>
-        <div className="text-xl font-bold">Gesamte Charge</div>
+      {!!typedFields.length && layoutSplit?.found && layoutSplit.before.nodes.length > 0 && (
+        <div className="m3-list-display">
+          <FormLayoutRenderer
+            layout={layoutSplit.before}
+            fields={typedFields}
+            permissions={permissions}
+            values={displayValues}
+            onChange={(key, v) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }))}
+          />
+        </div>
+      )}
+
+      <div className={`m3-charge-block rounded-md border-2 p-3 space-y-2 ${testIndex != null ? "m3-charge-active" : "bg-muted/30"}`}>
+        <div className="text-base font-bold">Gesamte Charge</div>
         {derivedRows.length === 0 ? (
           <div className="text-xs text-muted-foreground">Noch keine m³-Zeilen.</div>
         ) : (
@@ -387,7 +399,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
             {derivedRows.map((r, i) => {
               const marked = testIndex === i;
               return (
-                <div key={i} className="flex flex-wrap items-center gap-3 rounded border px-3 py-2 text-lg">
+                <div key={i} className="flex flex-wrap items-center gap-2 rounded border px-2 py-1 text-sm">
                   <span>m³-Zeile {i + 1}</span>
                   <span
                     className={
@@ -399,7 +411,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
                     {String(r.element_number ?? "—")}
                   </span>
                   {mayMarkTest && (
-                    <label className="flex items-center gap-2 text-base">
+                    <label className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={marked}
                         onCheckedChange={(v) => setTestRow(v === true ? i : null)}
@@ -415,8 +427,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         {derivedRows.length > 0 && (
           <div className="text-sm tabular-nums">
             Reguläre Elementanzahl: {String(derived.values.regular_element_total ?? "—")} Stk · Bench-Zusatz:{" "}
-            {String(derived.values.bench_extra_pieces ?? 0)} Stk ·{" "}
-            <span className="font-semibold">Gesamt: {String(derived.values.total_element_count ?? "—")} Stk</span>
+            {String(derived.values.bench_extra_pieces ?? 0)} Stk
           </div>
         )}
         {(testMarking.status === "legacy_index" || testMarking.status === "missing" || testMarking.status === "ambiguous") && (
