@@ -44,6 +44,7 @@ import {
   buildServiceResultCandidates,
   type OfficialResultCandidate,
 } from "@/lib/officialResults";
+import { isRfaService } from "@/lib/rfaFixedElements";
 
 /**
  * Task-focused execution view for a measurement (Messdienstleister workflow).
@@ -356,6 +357,10 @@ function TaskExecutionPageInner() {
         definition.calculations,
         values,
         globalConstants,
+        // Reguläre RFA ohne ausdrücklichen Messfall: alle 17 Standardelemente
+        // sind offizielle Ergebnisparameter (konfigurierte Messfälle behalten
+        // Vorrang – siehe buildLinkedFormResultCandidates).
+        { rfaDefault: isRfaService((measurement as any)?.measurement_services?.service_name) },
       )) {
         candidates.set(candidate.key, candidate);
       }
@@ -1004,6 +1009,7 @@ function TaskExecutionPageInner() {
                     sampleId: sample?.id ?? null,
                     sampleNumber: sample?.sample_number ?? null,
                     serviceId: serviceId ?? null,
+                    serviceName: m.measurement_services?.service_name ?? null,
                     profileId: profile?.id ?? null,
                     persistResults:
                       canEdit && !isCompleted
