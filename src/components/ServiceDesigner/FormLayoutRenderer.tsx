@@ -850,7 +850,7 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
           allowedImporters={cfg.importers}
           caseElementKeys={caseElements}
           elementRange={caseRange}
-          dynamicElements={rfaDefault || externalAnalysis}
+          dynamicElements={externalAnalysis || (rfaDefault && caseElements.length === 0 && !caseRange)}
           curveContext={
             runtime && importSnapshot
               ? {

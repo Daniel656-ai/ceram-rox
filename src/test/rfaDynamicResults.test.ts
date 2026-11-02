@@ -84,7 +84,7 @@ describe("3. Reguläre RFA: dynamische Elemente über der 17er-Basis", () => {
   it("übernimmt Nd zusätzlich zu den 17 Standardelementen", () => {
     const spec = buildCaseTargets([], targets(["fe_wert", "si_wert"]), null, true);
     // 17er-Basis bleibt Ausgangspunkt; Formularfelder bleiben erhalten
-    expect(spec.filter((s) => RFA_FIXED_ELEMENTS.some((f) => f.key === s.field_key)).length).toBe(17);
+    expect(spec.filter((s) => RFA_FIXED_ELEMENTS.some((f) => f.key === (s as any).element_key)).length).toBe(17);
     const rows = mapReadings(
       [reading("Fe2O3", "5,2"), reading("Nd", "0,04")],
       null,
@@ -201,7 +201,7 @@ describe("7. Oxididentität bleibt eigenständig", () => {
 describe("8. Einheitenkonflikte bleiben erkennbar", () => {
   it("markiert abweichende Einheiten als Konflikt statt still zu überschreiben", () => {
     const spec = buildCaseTargets([], targets(["fe_wert"]), null, true);
-    const feTarget = spec.find((s) => s.key === "fe_wert");
+    const feTarget = spec.find((s) => s.field_key === "fe_wert");
     if (feTarget) feTarget.unit = "%";
     const rows = mapReadings([reading("fe_wert", "5,2", "ppm")], null, spec, { dynamicElements: true });
     const fe = rows.find((r) => r.sourceName === "fe_wert");

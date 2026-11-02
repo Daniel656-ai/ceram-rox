@@ -435,7 +435,12 @@ export function mapReadings(
       // erkannt. Ob es ein offizielles Ergebnis ist, entscheidet der Messfall.
       const t = byElement.get(detected) ?? canon.get(detected.toLowerCase());
       if (t) { targetFieldKey = t.field_key; origin = "auto"; matchedBy = "element"; }
-      else if (elementInRange(detected, range) || options.dynamicElements) {
+      else if (
+        elementInRange(detected, range) ||
+        // Dynamische Übernahme nur ohne eingeschränkten Messfall – eine
+        // ausdrückliche Elementauswahl bleibt immer strikt.
+        (options.dynamicElements && !(options.caseElementKeys?.length))
+      ) {
         // Bereichs-Messfall (z. B. Standardlos „B-U“), reguläre RFA über die
         // 17er-Basis hinaus oder externe Analyse: dynamisches Ziel.
         targetFieldKey = elementValueKey(detected); origin = "auto"; matchedBy = "element";
