@@ -668,9 +668,11 @@ function MeasurementImportControl({ field, allFields, readonly }: { field: FormF
    * (`element:<Key>`); Formular-Elementfelder außerhalb der Messfall-Liste
    * sind keine Ziele. Ohne Messfall gilt weiterhin die Formularliste.
    */
+  // Reguläre RFA ohne ausdrücklichen Messfall: vollständige 17er-Zielliste.
+  const rfaDefault = isRfaService(runtime?.serviceName);
   const targets = useMemo(
-    () => buildCaseTargets(caseSpec, formTargets, caseRange),
-    [caseSpec, formTargets, caseRange]
+    () => buildCaseTargets(caseSpec, formTargets, caseRange, rfaDefault),
+    [caseSpec, formTargets, caseRange, rfaDefault]
   );
 
   const currentValues = useMemo(() => {

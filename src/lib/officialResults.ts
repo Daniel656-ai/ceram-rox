@@ -101,7 +101,13 @@ export function buildLinkedFormResultCandidates(
       const range = parseElementRange(instance.elementRange);
       // Bereichs-Messfälle („Standardlos“, „Oberfläche“): feste 17er-Struktur
       // zuerst, danach dynamisch die tatsächlich gemessenen Elemente (> 0).
-      const spec = range ? withFixedRfaElements(instance.elementSpec) : instance.elementSpec;
+      // Reguläre RFA ohne ausdrücklichen Messfall (keine Elementliste, kein
+      // Bereich): dieselbe 17er-Standardstruktur – ein konfigurierter Messfall
+      // hat immer Vorrang und wird nie überschrieben.
+      const spec =
+        range || (options.rfaDefault && instance.elementSpec.length === 0)
+          ? withFixedRfaElements(instance.elementSpec)
+          : instance.elementSpec;
       // Einheiten des Messdatenimports je Zielfeld – dadurch behalten auch
       // Ergebnisse ohne eigenes Formularfeld ihre originale Einheit (z. B. ppm).
       const importUnits: Record<string, string | null> = {};
