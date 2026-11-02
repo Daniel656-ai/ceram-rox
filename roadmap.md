@@ -1,5 +1,11 @@
 # Roadmap
 
+## m³-Schriftgestaltung und Platzoptimierung (02.11.2026)
+- [ ] Seitliche Anordnung wartet auf Zuordnung: vorhandene Liste hat Kopfdaten, Kontrollfelder und Berechnungen, aber keinen separaten Abschnitt Auftragsdetails/Labormessungen. Keine Felder spekulativ verschoben.
+- [x] Tabelleninhalt und Überschriften fett, zwei Schriftstufen größer in Bildschirm (13 → 16 px), HTML (9 → 12 pt) und PDF (10 → 12 pt).
+- [x] 104 m³-Tests und gesamte Suite (900 Tests, 119 Dateien) bestanden; Build OK. Bestehende Liste angemeldet ohne Schreiben geprüft: Bildschirm, HTML-Druck und PDF vollständig, beide Druckwege eine A4-Seite. Dokumentation: m3-typography-review.md.
+- [ ] Desktop-Abnahme: benötigt tatsächliche ROX-Desktop-Anwendung, aus Sandbox nicht verfügbar.
+
 ## Ergebnisänderung und -ergänzung (freigegeben 30.10.2026) — umgesetzt
 
 - [x] Finalen SQL-Entwurf gegen reales Web-Schema verifiziert (Spaltentypen, Constraints, FKs, RLS, Berechtigungsfunktionen, 0 Dubletten)

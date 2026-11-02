@@ -130,7 +130,7 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
     { h: "Zeile", w: 18 }, { h: "m³", w: 22 }, { h: "Elementnummer", w: 43 },
     { h: "Labor-Kats", w: 30 }, { h: "Verantwortlich /\nbearbeitet", w: 47 }, { h: "TEST", w: 22 },
   ];
-  const TABLE_SIZE = 10, TABLE_LINE = 5, PAD = 2;
+  const TABLE_SIZE = 12, TABLE_LINE = 5.5, PAD = 2;
   /** Grundlinienversatz passend zur Schriftgröße. */
   const BASELINE = TABLE_SIZE * 0.35;
   const chargeColors = { background: [255, 235, 59], foreground: [211, 47, 47] } as const;
@@ -170,9 +170,8 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
   head();
   for (const r of model.rows) {
     const cells = [String(r.index), r.volume, r.pieces, r.laborKat, r.responsible, r.test ? "TEST" : ""];
-    doc.setFont("helvetica", "normal");
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(TABLE_SIZE);
-    doc.setFont("helvetica", r.test ? "bold" : "normal");
     const wrapped = cells.map((c, i) => doc.splitTextToSize(c, cols[i].w - 2 * PAD) as string[]);
     const h = Math.max(...wrapped.map((w) => w.length)) * TABLE_LINE + 2 * PAD;
     ensure(h, head);
@@ -183,7 +182,7 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
     }
     let x = M;
     wrapped.forEach((w, i) => {
-      doc.setFont("helvetica", r.test ? "bold" : "normal");
+      doc.setFont("helvetica", "bold");
       doc.text(w, x + PAD, y + PAD + BASELINE, { lineHeightFactor: TABLE_LINE / (TABLE_SIZE * 25.4 / 72) });
       doc.rect(x, y, cols[i].w, h);
       x += cols[i].w;

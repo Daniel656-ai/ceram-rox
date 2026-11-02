@@ -43,9 +43,9 @@ table { border-collapse: collapse; width: 100%; }
 .kv th { text-align: left; width: 55mm; padding: 0.6mm 2mm 0.6mm 0; vertical-align: top; }
 .kv td { padding: 0.6mm 0; white-space: pre-wrap; word-break: break-word; }
 .rows thead { display: table-header-group; }
-.rows { table-layout: fixed; font-size: 9pt; }
+.rows { table-layout: fixed; font-size: 12pt; font-weight: bold; }
 .rows th, .rows td { border: 0.2mm solid #999; padding: 1mm 1.5mm; line-height: 1.25; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-.rows th { font-weight: bold; }
+.rows th, .rows td { font-weight: bold; }
 .rows tr { break-inside: avoid; }
 :root { --charge-background: #ffeb3b; --charge-foreground: #d32f2f; }
 .charge { border: 0.4mm solid #999; padding: 2mm; font-size: 10pt; font-weight: bold; margin: 2mm 0; break-inside: avoid; }
