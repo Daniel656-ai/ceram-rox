@@ -135,6 +135,8 @@ export interface MeasurementInstance {
   elementSpec: CaseElementSpec[];
   /** Vom Messfall vorgegebener Elementbereich (z. B. „B-U“), sonst null. */
   elementRange: string | null;
+  /** Technischer Schlüssel des angewendeten Messfalls, sonst null. */
+  caseKey: string | null;
   index: number;
 }
 
@@ -189,6 +191,10 @@ export function readInstances(
         typeof e[CASE_ELEMENT_RANGE_KEY] === "string" && (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
           ? (e[CASE_ELEMENT_RANGE_KEY] as string).trim()
           : effectiveElementRange(null, [explicit], Object.values(context)),
+      caseKey:
+        typeof e[CASE_KEY_KEY] === "string" && (e[CASE_KEY_KEY] as string).trim()
+          ? (e[CASE_KEY_KEY] as string).trim()
+          : null,
       index,
     };
 
