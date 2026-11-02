@@ -9,6 +9,7 @@
 import { jsPDF } from "jspdf";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 import { formatElementNumber } from "./calculations";
+import { buildTestNotice } from "./testMarking";
 
 export interface M3PdfRow {
   index: number;
@@ -35,9 +36,13 @@ const s = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : S
 
 export function buildM3PdfModel(
   values: Record<string, unknown>,
-  opts: { notices: string[]; testRowIndex: number | null }
+  opts: { notices: string[]; testRowIndex?: number | null; testRowIndices?: number[] }
 ): M3PdfModel {
   const rows = (Array.isArray(values[M3_ROWS_KEY]) ? values[M3_ROWS_KEY] : []) as Record<string, unknown>[];
+  /** Mehrfachauswahl hat Vorrang; der bisherige Einzelindex bleibt gültig. */
+  const testIndices = new Set(
+    opts.testRowIndices ?? (opts.testRowIndex != null && opts.testRowIndex >= 0 ? [opts.testRowIndex] : [])
+  );
   return {
     title: `m³-Liste ${s(values.release_label)}`,
     header: [
