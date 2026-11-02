@@ -37,6 +37,20 @@ describe("m³-PDF", () => {
     expect(pdf).toContain("1. 0.92 0.23 rg");
     expect(pdf).toContain("0.827 0.184 0.184 rg");
   });
+  it("zweispaltiger Kopf: Auftragsdetails links, Berechnungen und Labormessungen rechts", () => {
+    const m = buildM3PdfModel(values(2), { notices: [], testRowIndices: [0, 1] });
+    const pdf = renderM3Pdf(m).output();
+    const renderedText = Array.from(pdf.matchAll(/\(([^()]*)\) Tj/g), (match) => match[1]).join("");
+    expect(renderedText).toContain("Auftragsdetails");
+    expect(renderedText).toContain("Berechnungen");
+    expect(renderedText).toContain("Labormessungen");
+    // Reihenfolge im Kopf: Berechnungen vor Labormessungen; Tabelle erst nach dem Kopf.
+    expect(renderedText.indexOf("Berechnungen")).toBeLessThan(renderedText.indexOf("Labormessungen"));
+    expect(renderedText.indexOf("Labormessungen")).toBeLessThan(renderedText.indexOf("m³-Tabelle"));
+    // Mehrfach-TEST-Hinweis im Chargenblock.
+    expect(m.testNotice).toContain("m³-Zeilen 1 und 2");
+    expect(pdf).toContain("Gesamte Charge");
+  });
   it("neutrales PDF enthält keine aktive Chargenfüllung und keine ungültige Nummer", () => {
     const m = buildM3PdfModel({ m3_rows: [{ element_count: -1 }, { element_count: 970, element_number: null }] }, { notices: [], testRowIndex: null });
     expect(m.rows.map((r) => r.pieces)).toEqual(["—", "—"]);
