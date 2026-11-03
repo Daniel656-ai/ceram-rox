@@ -1,4 +1,6 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
+import { ClipboardList } from "lucide-react";
+import RequesterConditionsPanel from "@/components/results/RequesterConditionsPanel";
 import RichText from "@/components/forms/RichText";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { toUnicode } from "@/lib/richText";
@@ -42,6 +44,7 @@ export default function ResultsMatrixTable({
 }) {
   const { t } = useTranslation("orders");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const precisionDefinitions = useResultDisplayPrecision(records);
   const identWidth = useMemo(
     () => IDENT_COLUMNS.reduce((s, c) => s + c.width, 0),
@@ -51,6 +54,8 @@ export default function ResultsMatrixTable({
   // Mehrere eigenständige Messungen derselben Tätigkeit (Messdatenblock)
   // erscheinen als eigene, direkt vergleichbare Zeilen.
   const rows = useMemo(() => expandByMeasurementInstance(records), [records]);
+  const rowKey = (r: ResultRecord) => `${r.measurementId}:${r.instanceKey ?? ""}`;
+  const selected = selectedKey ? rows.find((r) => rowKey(r) === selectedKey) ?? null : null;
 
   if (rows.length === 0) {
     return (
@@ -132,7 +137,18 @@ export default function ResultsMatrixTable({
                   className={`${stickyCell} font-mono text-xs`}
                   style={{ left: OFFSETS[3], width: IDENT_COLUMNS[3].width, maxWidth: IDENT_COLUMNS[3].width }}
                 >
-                  {r.measurementNumber}
+                  <div className="flex items-center justify-between gap-1">
+                    <span>{r.measurementNumber}</span>
+                    <button
+                      type="button"
+                      className={`rounded p-0.5 hover:bg-accent ${selectedKey === rowKey(r) ? "text-primary" : "text-muted-foreground"}`}
+                      aria-label="Auftraggeber-Vorgaben anzeigen"
+                      title="Auftraggeber-Vorgaben anzeigen"
+                      onClick={() => setSelectedKey(selectedKey === rowKey(r) ? null : rowKey(r))}
+                    >
+                      <ClipboardList className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   {r.instanceLabel ? (
                     <div className="font-sans text-[11px] text-muted-foreground truncate" title={r.instanceLabel}>
                       {r.instanceLabel}
@@ -161,6 +177,7 @@ export default function ResultsMatrixTable({
         </tbody>
         </table>
       </HorizontalScrollArea>
+      <RequesterConditionsPanel record={selected} onClose={() => setSelectedKey(null)} />
     </div>
   );
 }

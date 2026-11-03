@@ -56,6 +56,8 @@ export interface ResultRecord {
   instanceKey?: string | null;
   instanceLabel?: string | null;
   instanceContext?: Record<string, string> | null;
+  /** Read-only: shared_form_data des Auftrags, nur für durchlaufgebundene Vorgaben. */
+  orderSharedFormData?: unknown;
 }
 
 /**
@@ -157,6 +159,7 @@ export function useResultsDatabase() {
             (m.measurement_results || []).filter((r: any) => r.is_official === true)
           ),
           remarks: order?.notes || "",
+          orderSharedFormData: order?.shared_form_data ?? null,
         };
       });
 
