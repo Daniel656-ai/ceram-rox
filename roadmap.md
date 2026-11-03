@@ -3,6 +3,7 @@
 ## Aktuell: Erweiterte Auftragssuche und persönliche Filter
 - Vorhandene Proben-/Projektfilter, Speicherung und tatsächliche Zuordnungen untersuchen.
 - Suche/Filter in Alle Aufträge additiv erweitern und vorhandene persönliche Speicherung wiederverwenden; bei notwendiger Strukturänderung stoppen.
+- Präzisierung: Grundansicht alle leseberechtigten Aufträge; persönliche Filter optional in drei Modi, vollständiges Zurücksetzen. Vorhandene Speicherung ist lokal, keine benannten Ansichten oder Gerätesynchronisierung vorhanden.
 - Fachliche Tests und Web-Prüfung durchführen; Desktop-Abnahme separat und Einschränkungen im Bericht benennen.
 
 ## Erledigt
