@@ -54,8 +54,8 @@ describe("buildM3PrintHtml", () => {
     expect(left?.querySelector("h2")?.textContent).toBe("Auftragsdetails");
     expect(Array.from(right?.querySelectorAll("h2") ?? [], (h) => h.textContent))
       .toEqual(["Berechnungen", "Labormessungen"]);
-    expect(left?.querySelector(".kv")?.rows.length).toBe(model.header.length);
-    expect(right?.querySelector(".kv")?.rows.length).toBe(model.calc.length);
+    expect(left?.querySelector<HTMLTableElement>(".kv")?.rows.length).toBe(model.header.length);
+    expect(right?.querySelector<HTMLTableElement>(".kv")?.rows.length).toBe(model.calc.length);
     expect(right?.querySelector("p")?.textContent).toBe(model.labTests);
     const charge = body.querySelector(".charge");
     const rows = body.querySelector(".rows");
