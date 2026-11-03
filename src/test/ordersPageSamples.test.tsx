@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import OrdersPage from "@/pages/OrdersPage";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const state = vi.hoisted(() => ({
   role: "master",
@@ -29,11 +30,11 @@ vi.mock("@/components/measurementRun/MeasurementRunPicker", () => ({ default: ()
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "de" } }) }));
 
 function open() {
-  render(<MemoryRouter initialEntries={["/auftraege"]}><Routes>
+  render(<TooltipProvider><MemoryRouter initialEntries={["/auftraege"]}><Routes>
     <Route path="/auftraege" element={<OrdersPage />} />
     <Route path="/proben/:id" element={<div data-testid="sample-target" />} />
     <Route path="/auftraege/:id" element={<div data-testid="order-target" />} />
-  </Routes></MemoryRouter>);
+  </Routes></MemoryRouter></TooltipProvider>);
 }
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
