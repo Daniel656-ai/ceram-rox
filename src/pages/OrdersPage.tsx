@@ -531,7 +531,7 @@ function DurchfuehrerTasksView({
     : dir === "asc" ? <ArrowUp className="h-3 w-3 inline ml-1" />
     : <ArrowDown className="h-3 w-3 inline ml-1" />;
 
-  const renderSortableHead = ({
+  const SortableHead = ({
     label, sortKey, spec, setter, storageKey, className,
   }: {
     label: string;
