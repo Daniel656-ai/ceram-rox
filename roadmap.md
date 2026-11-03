@@ -1,5 +1,10 @@
 # Roadmap
 
+## Aktuell: Auftraggeber-Vorgaben in der Ergebnisdatenbank
+- Freigegebene reine Leseansicht: sichere Ergebnis-/Durchlaufbindung und ursprüngliche historische Vorgaben zuerst prüfen.
+- Bei fehlender Herkunftssicherheit oder erforderlicher Strukturänderung Umsetzung stoppen und separaten Vorschlag vorlegen.
+- Web- und Desktop-Abnahme getrennt dokumentieren; keine produktiven Testdaten oder Backendänderungen.
+
 ## Aktuell: Erweiterte Auftragssuche und persönliche Filter
 - Vorhandene Proben-/Projektfilter, Speicherung und tatsächliche Zuordnungen untersuchen.
 - Suche/Filter in Alle Aufträge additiv erweitern und vorhandene persönliche Speicherung wiederverwenden; bei notwendiger Strukturänderung stoppen.
