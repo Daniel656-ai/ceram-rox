@@ -14,7 +14,7 @@ export const measurementResults = {
     const rows = await unwrap(dbClient.from("order_measurements").select(`
       id, order_id, sample_id, service_id,
       measurement_parameters(id,order_measurement_id,parameter_name,parameter_value,unit),
-      measurement_results(id,result_name,instance_key,instance_label,remarks)
+      measurement_results(id,result_name,instance_key,instance_label,instance_context,remarks)
     `).in("id", ids));
     const structures = new Map<string, { checked: boolean; repeated: boolean }>();
     await Promise.all([...new Set(rows.map(r => r.service_id))].map(async serviceId => {

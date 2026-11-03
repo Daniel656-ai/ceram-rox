@@ -1,5 +1,7 @@
 {
   "requester_task_warning": "Vorgaben der Messaufgabe – historische Zuordnung zum Ergebnis nicht nachgewiesen",
+  "requester_task_source": "Gespeicherte Vorgaben der ausgewählten Messaufgabe",
+  "requester_single_run": "Durchlauf: Klassischer Einzeldurchlauf",
   "work_plan_title": "Arbeitsplanung",
   "work_plan_subtitle": "Ihre zugewiesenen Aufgaben",
   "project": "Projekt",

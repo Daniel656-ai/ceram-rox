@@ -1,5 +1,7 @@
 {
   "requester_task_warning": "Measurement task specifications – historical association with the result has not been established",
+  "requester_task_source": "Stored specifications of the selected measurement task",
+  "requester_single_run": "Run: Classic single run",
   "work_plan_title": "Work Planning",
   "work_plan_subtitle": "Your assigned tasks",
   "project": "Project",

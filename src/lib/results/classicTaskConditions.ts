@@ -8,7 +8,7 @@ export interface ClassicTaskSource {
   structureChecked: boolean;
   repeatedStructure: boolean;
   parameters: MeasurementParameter[];
-  results: Array<{ id: string; result_name: string; instance_key: string | null; instance_label: string | null; remarks: string | null }>;
+  results: Array<{ id: string; result_name: string; instance_key: string | null; instance_label: string | null; remarks: string | null; instance_context?: unknown }>;
 }
 
 /** No historical claim: only the single uninstanced task scope in the complete read. */
@@ -23,6 +23,8 @@ export function classicTaskEntries(record: {
     s.sampleId !== record.sampleId || s.serviceId !== record.serviceId || record.instanceKey ||
     !s.results.length || !record.outputResults.length) return null;
   if (s.results.some(r => r.instance_key || r.instance_label || /\[[^\]]+\]/.test(r.result_name))) return null;
+  if (new Set(s.results.map(r => r.id)).size !== s.results.length || new Set(s.results.map(r => r.result_name)).size !== s.results.length) return null;
+  if (s.results.some(r => r.instance_context && typeof r.instance_context === "object" && Object.keys(r.instance_context).length > 0)) return null;
   if (record.outputResults.some(r => r.instance_key || !s.results.some(all => all.id === r.id))) return null;
   // JSON series/objects can contain additional runs even without official result keys.
   const complex = (raw: string | null) => {

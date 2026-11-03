@@ -69,4 +69,12 @@ describe("classic single-task specifications, never a historical snapshot", () =
     const r = record(); r.outputResults = [{ ...result, instance_key: "foreign" }];
     expect(resolveRequesterConditions(r).status).toBe("unavailable");
   });
+  it("rejects a context found only on a nonofficial result", () => {
+    const r = record(); r.classicTaskSource.results[0].instance_context = { T: "400" };
+    expect(resolveRequesterConditions(r).status).toBe("unavailable");
+  });
+  it("rejects duplicate uninstanced result identities rather than assuming one run", () => {
+    const r = record(); r.classicTaskSource.results.push({ ...r.classicTaskSource.results[0], id: "r2" });
+    expect(resolveRequesterConditions(r).status).toBe("unavailable");
+  });
 });

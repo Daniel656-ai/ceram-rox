@@ -31,6 +31,7 @@ export default function RequesterConditionsPanel({
                 <div>Probe: <span className="font-mono">{record.sampleNumber || "–"}</span>{record.sampleName ? ` · ${record.sampleName}` : ""}</div>
                 <div>Messung: <span className="font-mono">{record.measurementNumber}</span> · {record.serviceName}</div>
                 {record.instanceLabel && <div>Durchlauf: {record.instanceLabel}</div>}
+                {!record.instanceLabel && res?.status === "task_parameters" && <div>{t("requester_single_run")}</div>}
               </div>
             </SheetDescription>
           )}
@@ -49,7 +50,7 @@ export default function RequesterConditionsPanel({
                   ))}
                 </dl>
                 <p className="text-xs text-muted-foreground">
-                  Quelle: {res.sources.map((s) => SOURCE_LABEL[s]).join(" · ")}
+                  Quelle: {res.sources.map((s) => s === "measurement_parameters" ? t("requester_task_source") : SOURCE_LABEL[s]).join(" · ")}
                 </p>
               </>
             ) : (
