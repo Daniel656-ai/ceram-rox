@@ -45,6 +45,30 @@ describe("buildM3PrintHtml", () => {
     expect(html).toContain("@page { size: A4");
   });
 
+  it("ordnet Kopfspalten und anschließende Vollbreitenbereiche im Dokumentfluss zu", () => {
+    const body = new DOMParser().parseFromString(html, "text/html").body;
+    const head = body.querySelector(".print-head");
+    const left = head?.querySelector(":scope > .print-head-left");
+    const right = head?.querySelector(":scope > .print-head-right");
+    expect(head?.children).toHaveLength(2);
+    expect(left?.querySelector("h2")?.textContent).toBe("Auftragsdetails");
+    expect(Array.from(right?.querySelectorAll("h2") ?? [], (h) => h.textContent))
+      .toEqual(["Berechnungen", "Labormessungen"]);
+    expect(left?.querySelector(".kv")?.rows.length).toBe(model.header.length);
+    expect(right?.querySelector(".kv")?.rows.length).toBe(model.calc.length);
+    expect(right?.querySelector("p")?.textContent).toBe(model.labTests);
+    const charge = body.querySelector(".charge");
+    const rows = body.querySelector(".rows");
+    expect(head?.nextElementSibling).toBe(charge);
+    expect(charge?.nextElementSibling?.textContent).toBe("m³-Tabelle");
+    expect(charge?.nextElementSibling?.nextElementSibling).toBe(rows);
+    for (const element of [charge, rows, ...body.querySelectorAll(".totals, .small")]) {
+      expect(element?.parentElement).toBe(body);
+      expect(head?.contains(element)).toBe(false);
+    }
+    expect(rows?.nextElementSibling?.className).toBe("totals");
+  });
+
   it("erhält Summen ohne Gesamtzeile, TEST-Markierung und Hinweise", () => {
     expect(html).toContain("Reguläre Elementanzahl: 250 Stk · Bench-Zusatz: 2 Stk");
     expect(html).not.toContain("Gesamt: 252");

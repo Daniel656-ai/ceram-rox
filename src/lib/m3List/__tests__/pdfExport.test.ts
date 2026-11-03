@@ -1,4 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+const textSpy = vi.hoisted(() => vi.fn());
+vi.mock("jspdf", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("jspdf")>();
+  return {
+    ...actual,
+    jsPDF: class extends actual.jsPDF {
+      constructor() {
+        super({ unit: "mm", format: "a4" });
+        const original = this.text;
+        this.text = vi.fn((...args: Parameters<typeof this.text>) => {
+          textSpy(...args);
+          return Reflect.apply(original, this, args);
+        });
+      }
+    },
+  };
+});
 import { buildM3PdfModel, renderM3Pdf } from "../pdfExport";
 
 const values = (n: number) => ({
@@ -37,8 +54,13 @@ describe("m³-PDF", () => {
     expect(pdf).toContain("1. 0.92 0.23 rg");
     expect(pdf).toContain("0.827 0.184 0.184 rg");
   });
-  it("zweispaltiger Kopf: Auftragsdetails links, Berechnungen und Labormessungen rechts", () => {
+  it.each(["links", "rechts"])("zweispaltiger Kopf mit längerer Spalte %s: echte X/Y-Geometrie", (longer) => {
     const m = buildM3PdfModel(values(2), { notices: [], testRowIndices: [0, 1] });
+    // Kurze/mehrzeilige Inhalte erzwingen beide Varianten der längeren Kopfspalte.
+    m.header = [["Links", longer === "links" ? "L1\nL2\nL3\nL4\nL5\nL6\nL7\nL8" : "L1"]];
+    m.calc = [["Rechts", longer === "rechts" ? "R1\nR2\nR3\nR4\nR5\nR6\nR7\nR8" : "R1"]];
+    m.labTests = "Labor-Ende";
+    textSpy.mockClear();
     const pdf = renderM3Pdf(m).output();
     const renderedText = Array.from(pdf.matchAll(/\(([^()]*)\) Tj/g), (match) => match[1]).join("");
     expect(renderedText).toContain("Auftragsdetails");
@@ -50,6 +72,31 @@ describe("m³-PDF", () => {
     // Mehrfach-TEST-Hinweis im Chargenblock.
     expect(m.testNotice).toContain("m³-Zeilen 1 und 2");
     expect(pdf).toContain("Gesamte Charge");
+    const calls = textSpy.mock.calls.map(([text, x, y]) => ({
+      text: Array.isArray(text) ? text.join("\n") : String(text), x: Number(x), y: Number(y),
+      lines: Array.isArray(text) ? text.length : 1,
+    }));
+    const find = (label: string) => {
+      const call = calls.find((c) => c.text.startsWith(label));
+      if (!call) throw new Error(`Fehlender Zeichenaufruf: ${label}`);
+      return call;
+    };
+    const left = find("Auftragsdetails"), right = find("Berechnungen");
+    expect(left.x).toBe(14);
+    expect(right.x).toBe(116);
+    expect(left.y).toBe(right.y);
+    const leftValue = find("L1"), rightEnd = find("Labor-Ende");
+    // colPairs verwendet 5 mm pro Textzeile; Grundlinie liegt 4 mm unter cy.
+    const leftBottom = leftValue.y - 4 + leftValue.lines * 5;
+    const rightBottom = rightEnd.y - 4 + rightEnd.lines * 5;
+    expect(longer === "links" ? leftBottom > rightBottom : rightBottom > leftBottom).toBe(true);
+    const charge = find("Gesamte Charge");
+    // 3 mm Abstand zum längeren Kopf, 2 mm Zellrand und 12 pt * 0.35 Grundlinienversatz.
+    expect(charge.y).toBeCloseTo(Math.max(leftBottom, rightBottom) + 3 + 2 + 12 * 0.35);
+    expect(charge.y).toBeGreaterThan(Math.max(leftBottom, rightBottom));
+    expect(find("m³-Tabelle").y).toBeGreaterThan(charge.y);
+    expect(find(m.totals).y).toBeGreaterThan(find("m³-Tabelle").y);
+    expect(find(m.originalNote.slice(0, 20)).y).toBeGreaterThan(find(m.totals).y);
   });
   it("neutrales PDF enthält keine aktive Chargenfüllung und keine ungültige Nummer", () => {
     const m = buildM3PdfModel({ m3_rows: [{ element_count: -1 }, { element_count: 970, element_number: null }] }, { notices: [], testRowIndex: null });
