@@ -19,7 +19,9 @@ export function OrderListFilters({ columns, rows, filters, setFilter }: {
       }))].sort();
       return <div key={column.key} className="flex items-center text-sm">
         <span>{column.header}</span>
-        <ColumnFilterPopover column={column} value={filters[column.key]} options={values} onChange={v => setFilter(column.key, v)} />
+        <ColumnFilterPopover column={column} value={filters[column.key]} options={values} onChange={v => setFilter(column.key, v)}
+          labels={{ title: String(column.header), trigger: t("filters.open", { name: column.header }), reset: t("filters.reset"), search: t("filters.search"), empty: t("filters.empty") }} />
+        {filters[column.key]?.kind === "status" && <span className="ml-1 max-w-48 truncate text-xs text-primary" title={(filters[column.key] as { values: string[] }).values.map(v => column.statusLabels?.[v] ?? v).join(", ")}>{(filters[column.key] as { values: string[] }).values.map(v => column.statusLabels?.[v] ?? v).join(", ")}</span>}
         {isFilterActive(filters[column.key]) && <Button variant="ghost" size="icon" className="h-6 w-6" title={t("filters.remove", { name: column.header })} onClick={() => setFilter(column.key, null)}><X className="h-3 w-3" /></Button>}
       </div>;
     })}
@@ -27,5 +29,6 @@ export function OrderListFilters({ columns, rows, filters, setFilter }: {
       onValueChange={v => setFilter("mine", v === "__none__" ? null : { kind: "status", values: [v] })}
       triggerClassName="w-[240px]" options={[{ value: "__none__", label: t("filters.mine_all") },
         ...["created", "assigned", "either"].map(v => ({ value: v, label: t(`filters.mine_${v}`) }))]} />
+    {filters.mine && <Button variant="ghost" size="icon" className="h-6 w-6" title={t("filters.remove", { name: t("filters.mine") })} onClick={() => setFilter("mine", null)}><X className="h-3 w-3" /></Button>}
   </div>;
 }

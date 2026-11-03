@@ -80,7 +80,8 @@
     "requester": "Auftraggeber", "project": "Projekt", "kind": "Auftragstyp", "type": "Auftragsart", "status": "Status",
     "responsible": "Verantwortlicher (Messungen)", "creator": "Ersteller", "mine": "Meine Aufträge",
     "mine_all": "Alle berechtigten Aufträge", "mine_created": "Von mir erstellt", "mine_assigned": "Mir zugewiesene Messungen", "mine_either": "Beides zusammen",
-    "reset": "Filter zurücksetzen", "remove": "Filter entfernen: {{name}}", "count": "{{count}} Aufträge"
+    "reset": "Filter zurücksetzen", "remove": "Filter entfernen: {{name}}", "count": "{{count}} Aufträge",
+    "open": "Filter: {{name}}", "search": "Suchen …", "empty": "Keine Werte vorhanden."
   },
   "all_status": "Alle Status",
   "order_number": "Auftrags-Nr.",

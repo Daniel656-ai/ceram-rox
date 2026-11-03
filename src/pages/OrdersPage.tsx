@@ -1,5 +1,5 @@
 import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
-import { resolveOrderKind, matchesOrderKindFilter, type OrderKindFilter } from "@/lib/orders/orderKind";
+import { resolveOrderKind } from "@/lib/orders/orderKind";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
 import {
@@ -71,6 +71,7 @@ function OrdersOverview() {
   const { search, setSearch } = personalTable;
   // Provider task controls stay independent of the optional all-orders filters.
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [providerSearch, setProviderSearch] = useState("");
   const kindLabel = (o: any) => t(`orders:kind.${resolveOrderKind(o)}`);
   const [ordersView, setOrdersView] = useState<"requester" | "provider">("requester");
   type SortKey = "order_number" | "project_number" | "project_name" | "order_kind" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
@@ -106,7 +107,7 @@ function OrdersOverview() {
   };
   const SortableHead = ({ sortKey, children }: { sortKey: SortKey; children: React.ReactNode }) => {
     const active = sort?.key === sortKey;
-    const Icon = active ? (sort!.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+    const Icon = active ? (sort?.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
     return (
       <TableHead>
         <button
@@ -122,10 +123,7 @@ function OrdersOverview() {
   };
 
 
-  const visibleOrders = orders;
-
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
     const result = personalTable.allFilteredRows;
     if (!sort) return result;
     const { key, dir } = sort;
@@ -146,14 +144,14 @@ function OrdersOverview() {
   const isProvider = hasRole("durchfuehrer");
   const isDualRole = isRequester && isProvider && role !== "master";
   if (isProvider && !isRequester && role !== "master") {
-    return <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />;
+    return <DurchfuehrerTasksView search={providerSearch} setSearch={setProviderSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />;
   }
 
   if (isDualRole && ordersView === "provider") {
     return (
       <div className="space-y-4">
         <DualRoleSwitch value={ordersView} onChange={setOrdersView} />
-        <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+        <DurchfuehrerTasksView search={providerSearch} setSearch={setProviderSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
       </div>
     );
   }

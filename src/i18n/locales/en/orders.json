@@ -80,7 +80,8 @@
     "requester": "Requester", "project": "Project", "kind": "Order type", "type": "Order kind", "status": "Status",
     "responsible": "Responsible (measurements)", "creator": "Creator", "mine": "My orders",
     "mine_all": "All readable orders", "mine_created": "Created by me", "mine_assigned": "Measurements assigned to me", "mine_either": "Both combined",
-    "reset": "Reset filters", "remove": "Remove filter: {{name}}", "count": "{{count}} orders"
+    "reset": "Reset filters", "remove": "Remove filter: {{name}}", "count": "{{count}} orders",
+    "open": "Filter: {{name}}", "search": "Search …", "empty": "No values available."
   },
   "all_status": "All Status",
   "order_number": "Order No.",
