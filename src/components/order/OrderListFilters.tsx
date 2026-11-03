@@ -3,8 +3,9 @@ import type { DataTableColumn } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { X, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { OrderFilterRow } from "@/lib/orders/orderFilterColumns";
 
-export function OrderListFilters({ columns, rows, table }: { columns: DataTableColumn<any>[]; rows: any[]; table: DataTableApi<any> }) {
+export function OrderListFilters({ columns, rows, table }: { columns: DataTableColumn<OrderFilterRow>[]; rows: OrderFilterRow[]; table: DataTableApi<OrderFilterRow> }) {
   const { t } = useTranslation("orders");
   return <div className="space-y-2">
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
