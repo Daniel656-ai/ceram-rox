@@ -8,9 +8,11 @@
 - [ ] Web-/Desktop-Abnahme der Funktion: erst nach geklärtem Umfang und Implementierung möglich; Firmenumgebung hier nicht erreichbar.
 
 ## Aktuell: Erweiterte Auftragssuche und persönliche Filter
-- Vorhandene Proben-/Projektfilter, Speicherung und tatsächliche Zuordnungen untersuchen.
-- Suche/Filter in Alle Aufträge additiv erweitern und vorhandene persönliche Speicherung wiederverwenden; bei notwendiger Strukturänderung stoppen.
-- Fachliche Tests und Web-Prüfung durchführen; Desktop-Abnahme separat und Einschränkungen im Bericht benennen.
+- [x] Nachforderung gelesen und aktuellen Code geprüft: frühere dokumentierte Filtererweiterung im aktuellen Stand nicht vorhanden.
+- [x] Fehlende Suche und kombinierbare Filter additiv mit vorhandener Proben-/Projektfilterverwaltung ergänzt; Liste/Sortierung/Links erhalten.
+- [x] 974 Regressionstests und angemeldete Web-Prüfung mit 48 echten Aufträgen bestanden; keine produktiven Schreiboperationen.
+- [x] Abschlussbericht ROX-Auftragsfilter-Nachforderung-Abschlussbericht.md erstellt.
+- [ ] Maßgebliche Desktop-Abnahme blockiert: Firmeninstallation/Desktop-Binary nicht erreichbar; Web-Prüfung ersetzt sie nicht.
 
 ## Erledigt
 1. **Versuchsnummern historische Pilot-Plant-Aufträge** – zentrale Fallback-Auflösung implementiert (orderIdentity.resolveExperimentNumber, Priorität Spalte > Legacy > Template, Konflikterkennung + Hinweis in Detailansicht, Ergebnis-DB-Select erweitert). 939 Tests, tsgo, Build OK. Web-Abnahme (Cloud-Daten) bestanden. 15 Aufträge geprüft: Cloud überall „Fehlt". Bericht: /mnt/documents/ROX-Versuchsnummern-historische-Auftraege-Abschlussbericht.md
