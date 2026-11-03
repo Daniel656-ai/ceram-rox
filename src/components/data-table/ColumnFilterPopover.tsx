@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ColumnFilterValue, DataTableColumn, DatePreset } from "./types";
 import { isFilterActive } from "./dataTableUtils";
+import { filterOptions, shouldShowSearch } from "@/lib/ui/optionFilter";
 
 const DATE_PRESETS: { value: DatePreset; label: string }[] = [
   { value: "all", label: "Alle" },
@@ -38,6 +39,7 @@ interface Props<T> {
 
 export function ColumnFilterPopover<T>({ column, value, onChange, options = [] }: Props<T>) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const active = isFilterActive(value);
   const type = column.type ?? "text";
 
@@ -119,7 +121,8 @@ export function ColumnFilterPopover<T>({ column, value, onChange, options = [] }
             {statusValues.length === 0 && (
               <p className="text-xs text-muted-foreground">Keine Werte vorhanden.</p>
             )}
-            {statusValues.map((s) => {
+            {shouldShowSearch(statusValues.length) && <Input placeholder="Suchen …" value={query} onChange={e => setQuery(e.target.value)} />}
+            {filterOptions(statusValues.map(s => ({ value: s, label: column.statusLabels?.[s] ?? s })), query).map(({ value: s }) => {
               const checked = value?.kind === "status" && value.values.includes(s);
               return (
                 <label key={s} className="flex items-center gap-2 text-sm">

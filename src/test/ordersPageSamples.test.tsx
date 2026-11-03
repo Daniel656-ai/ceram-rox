@@ -24,6 +24,7 @@ vi.mock("@/hooks/useMeasurements", () => ({
 }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "user" }, role: state.role, hasRole: (role: string) => state.role === role }) }));
 vi.mock("@/hooks/useProjectMembers", () => ({ useIsAnyProjectLead: () => ({ data: false }) }));
+vi.mock("@/hooks/useUsers", () => ({ useUsers: () => ({ data: [] }) }));
 vi.mock("@/components/measurementRun/MeasurementRunPicker", () => ({ default: () => null }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "de" } }) }));
 
@@ -37,10 +38,10 @@ function open() {
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
 });
-afterEach(() => { cleanup(); state.role = "master"; sessionStorage.clear(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); state.role = "master"; sessionStorage.clear(); localStorage.clear(); vi.unstubAllGlobals(); });
 
 describe("order overview regression with readable sample links", () => {
-  it("keeps existing search fields and does not silently add sample-name search", () => {
+  it("keeps existing search fields and includes sample numbers and names", () => {
     open();
     const input = screen.getByPlaceholderText("orders:search_placeholder");
     fireEvent.change(input, { target: { value: "TE123" } });
@@ -48,7 +49,7 @@ describe("order overview regression with readable sample links", () => {
     fireEvent.change(input, { target: { value: "ABC260001" } });
     expect(screen.getAllByRole("link").filter(link => link.getAttribute("href")?.startsWith("/proben/"))).toHaveLength(1);
     fireEvent.change(input, { target: { value: "P260002" } });
-    expect(screen.queryByRole("link", { name: "B" })).toBeNull();
+    expect(screen.getByRole("link", { name: "B" })).toBeTruthy();
     fireEvent.change(input, { target: { value: "Second" } });
     expect(screen.getByRole("link", { name: "B" }).getAttribute("href")).toBe("/proben/s2");
   });
