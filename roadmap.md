@@ -6,4 +6,7 @@
 
 ## Offen (blockiert durch externe Faktoren)
 - Desktop-/Tauri-Abnahme beider Themen – produktive Desktop-App/Firmen-Backend von hier nicht erreichbar.
-- m³-HTML-Druck-Korrektur – wartet auf ausdrückliche Freigabe (Analyseauftrag war bewusst ohne Umsetzung).
+## Aktuell freigegeben
+- m³-HTML-Druckkopf zweispaltig angleichen, Struktur- und jsPDF-Geometrietests ergänzen.
+- Betroffene und vollständige Tests ausführen; beide A4-Ausgaben getrennt visuell prüfen; Abschlussbericht erstellen.
+- Keine Daten-, Backend-, Konfigurations-, Berechtigungs- oder nativen Änderungen.
