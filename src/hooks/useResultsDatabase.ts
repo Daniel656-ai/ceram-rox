@@ -111,8 +111,8 @@ export function useResultsDatabase() {
       // aber keinen Eintrag. Normale Messwerte (measurement_parameters) sind
       // bewusst nicht Teil dieser Sicht.
       const measurements = await api.measurementResults.listOfficialDatabase();
-      const taskSources = await api.measurementResults.listRequesterTaskSources((measurements ?? []).map(m => m.id)).catch(() => []);
-      const taskSourceById = new Map(taskSources.map(source => [source.measurementId, source]));
+      const taskSources: ClassicTaskSource[] = await api.measurementResults.listRequesterTaskSources((measurements ?? []).map(m => m.id)).catch(() => []);
+      const taskSourceById = new Map<string, ClassicTaskSource>(taskSources.map(source => [source.measurementId, source] as const));
       // Preserve the existing optional name-resolution behavior.
       const profiles = await api.measurementResults.listDatabaseProfiles().catch(() => []);
       

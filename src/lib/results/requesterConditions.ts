@@ -12,7 +12,8 @@
  *     im gesamten Auftrag genau einmal vorkommt. Gelesen wird nur `__context`.
  *
  * Niemals: Positions-Fallbacks (`idx_*`), Anzeigenamen, aktuelle auftragsweite
- * Werte ohne Durchlauf-ID oder flache measurement_parameters. Widersprechen
+ * Werte ohne Durchlauf-ID als Durchlaufbedingungen. Flache measurement_parameters
+ * sind nur separat gekennzeichnete Messaufgabenvorgaben nach klassischer Prüfung. Widersprechen
  * sich Quellen, gilt der Durchlauf als nicht eindeutig. Nichts wird geschrieben.
  */
 import type { ResultRecord } from "@/hooks/useResultsDatabase";
