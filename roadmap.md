@@ -1,10 +1,10 @@
 # Roadmap
 
-## Aktuell: Erweiterte Auftragssuche und persönliche Filter
-- Vorhandene Proben-/Projektfilter, Speicherung und tatsächliche Zuordnungen untersuchen.
-- Suche/Filter in Alle Aufträge additiv erweitern und vorhandene persönliche Speicherung wiederverwenden; bei notwendiger Strukturänderung stoppen.
-- Präzisierung: Grundansicht alle leseberechtigten Aufträge; persönliche Filter optional in drei Modi, vollständiges Zurücksetzen. Vorhandene Speicherung ist lokal, keine benannten Ansichten oder Gerätesynchronisierung vorhanden.
-- Fachliche Tests und Web-Prüfung durchführen; Desktop-Abnahme separat und Einschränkungen im Bericht benennen.
+## Erledigt: Erweiterte Auftragssuche und persönliche Filter
+- Vorhandene Proben-/Projektfilter und lokale Speicherung wiederverwendet, Suche und kombinierbare Filter ergänzt; Grundansicht alle leseberechtigten Aufträge und vollständiges Zurücksetzen erhalten.
+- Optionale persönliche Filter in drei Modi, je Benutzer isolierte Auftrags-Speicherkennung; keine neue Ansichts-/Speicherarchitektur.
+- 959 Tests bestanden, Web-Build OK; angemeldete Suche, Kombination, Navigation/Neuladen und Reset von 48 echten lesbaren Aufträgen geprüft. Bericht: /mnt/documents/ROX-Erweiterte-Auftragssuche-Abschlussbericht.md.
+- Offen: Desktop-/Mehrkonto-/echte Logout-Login-Abnahme benötigt erreichbare Installation/Konten; benannte/default und synchronisierte Ansichten benötigen gesondert freigegebenes Speicherkonzept.
 
 ## Erledigt
 1. **Versuchsnummern historische Pilot-Plant-Aufträge** – zentrale Fallback-Auflösung implementiert (orderIdentity.resolveExperimentNumber, Priorität Spalte > Legacy > Template, Konflikterkennung + Hinweis in Detailansicht, Ergebnis-DB-Select erweitert). 939 Tests, tsgo, Build OK. Web-Abnahme (Cloud-Daten) bestanden. 15 Aufträge geprüft: Cloud überall „Fehlt". Bericht: /mnt/documents/ROX-Versuchsnummern-historische-Auftraege-Abschlussbericht.md
