@@ -88,7 +88,7 @@ function OrdersOverview() {
     }
   };
   const headerFilters = (filterKeys: string[]) => <OrderListFilters columns={filterColumns} rows={orders} table={orderTable} filterKeys={filterKeys} />;
-  const SortableHead = ({ sortKey, children, filterKeys = [] }: { sortKey: SortKey; children: React.ReactNode; filterKeys?: string[] }) => {
+  const renderSortableHead = ({ sortKey, children, filterKeys = [] }: { sortKey: SortKey; children: React.ReactNode; filterKeys?: string[] }) => {
     const active = sort?.key === sortKey;
     const Icon = active ? (sort?.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
     return (
@@ -231,16 +231,16 @@ function OrdersOverview() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead sortKey="order_number" filterKeys={["requester", "responsible", "mine"]}>{t("orders:order_number")}</SortableHead>
+                {renderSortableHead({ sortKey: "order_number", filterKeys: ["requester", "responsible", "mine"], children: t("orders:order_number") })}
                 <TableHead><div className="flex items-center">{t("samples:sample_name")}{headerFilters(["sample"])}</div></TableHead>
-                <SortableHead sortKey="project_number" filterKeys={["project_number"]}>{t("orders:project_number")}</SortableHead>
-                <SortableHead sortKey="project_name" filterKeys={["project"]}>{t("orders:project_name")}</SortableHead>
-                <SortableHead sortKey="order_kind" filterKeys={["kind"]}>{t("orders:kind_label")}</SortableHead>
-                <SortableHead sortKey="order_type" filterKeys={["type"]}>{t("orders:order_type")}</SortableHead>
-                <SortableHead sortKey="ranking">{t("orders:priority")}</SortableHead>
-                <SortableHead sortKey="status" filterKeys={["status"]}>{t("common:status")}</SortableHead>
-                <SortableHead sortKey="due_date">{t("orders:due_date")}</SortableHead>
-                <SortableHead sortKey="created_at" filterKeys={["creator"]}>{t("common:created")}</SortableHead>
+                {renderSortableHead({ sortKey: "project_number", filterKeys: ["project_number"], children: t("orders:project_number") })}
+                {renderSortableHead({ sortKey: "project_name", filterKeys: ["project"], children: t("orders:project_name") })}
+                {renderSortableHead({ sortKey: "order_kind", filterKeys: ["kind"], children: t("orders:kind_label") })}
+                {renderSortableHead({ sortKey: "order_type", filterKeys: ["type"], children: t("orders:order_type") })}
+                {renderSortableHead({ sortKey: "ranking", children: t("orders:priority") })}
+                {renderSortableHead({ sortKey: "status", filterKeys: ["status"], children: t("common:status") })}
+                {renderSortableHead({ sortKey: "due_date", children: t("orders:due_date") })}
+                {renderSortableHead({ sortKey: "created_at", filterKeys: ["creator"], children: t("common:created") })}
                 {canShowActions && <TableHead className="w-[100px]">{t("common:actions")}</TableHead>}
               </TableRow>
 
@@ -531,7 +531,7 @@ function DurchfuehrerTasksView({
     : dir === "asc" ? <ArrowUp className="h-3 w-3 inline ml-1" />
     : <ArrowDown className="h-3 w-3 inline ml-1" />;
 
-  const SortableHead = ({
+  const renderSortableHead = ({
     label, sortKey, spec, setter, storageKey, className,
   }: {
     label: string;
