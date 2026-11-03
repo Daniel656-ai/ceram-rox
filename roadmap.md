@@ -1,9 +1,11 @@
 # Roadmap
 
 ## Aktuell: Auftraggeber-Vorgaben in der Ergebnisdatenbank
-- Freigegebene reine Leseansicht: sichere Ergebnis-/Durchlaufbindung und ursprüngliche historische Vorgaben zuerst prüfen.
-- Bei fehlender Herkunftssicherheit oder erforderlicher Strukturänderung Umsetzung stoppen und separaten Vorschlag vorlegen.
-- Web- und Desktop-Abnahme getrennt dokumentieren; keine produktiven Testdaten oder Backendänderungen.
+- [x] Aktuellen Code und Cloud-Daten rein lesend auf Ergebnis-/Durchlaufbindung und ursprüngliche historische Vorgaben geprüft.
+- [x] Fehlende vollständige historische Herkunft festgestellt; keine aktuelle Auftragsvorgabe als historische Bedingung verwendet.
+- [x] Befund und separaten Umsetzungsvorschlag im Prüfbericht dokumentiert; keine Anwendungs-, Datenbank- oder Konfigurationsänderung.
+- [ ] Umsetzung blockiert: Freigabe für begrenzte Anzeige vorhandenen Ergebniskontexts oder gesonderte Erfassungs-/Herkunftssicherung erforderlich.
+- [ ] Web-/Desktop-Abnahme der Funktion: erst nach geklärtem Umfang und Implementierung möglich; Firmenumgebung hier nicht erreichbar.
 
 ## Aktuell: Erweiterte Auftragssuche und persönliche Filter
 - Vorhandene Proben-/Projektfilter, Speicherung und tatsächliche Zuordnungen untersuchen.
