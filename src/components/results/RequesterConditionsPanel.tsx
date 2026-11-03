@@ -1,10 +1,12 @@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { ResultRecord } from "@/hooks/useResultsDatabase";
 import { resolveRequesterConditions } from "@/lib/results/requesterConditions";
+import { useTranslation } from "react-i18next";
 
 const SOURCE_LABEL = {
   result_context: "Am Ergebnis gespeicherter Kontext",
   run_entry: "Durchlauf mit eindeutiger Kennung im Auftragsformular",
+  measurement_parameters: "measurement_parameters der ausgewählten Messaufgabe",
 } as const;
 
 /** Nicht blockierendes, rein lesendes Seitenpanel für eine Ergebniszeile. */
@@ -15,6 +17,7 @@ export default function RequesterConditionsPanel({
   record: ResultRecord | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("measurements");
   const res = record ? resolveRequesterConditions(record) : null;
   return (
     <Sheet open={!!record} onOpenChange={(o) => !o && onClose()} modal={false}>
@@ -34,13 +37,14 @@ export default function RequesterConditionsPanel({
         </SheetHeader>
         {res && (
           <div className="mt-4 space-y-3 text-sm">
-            {res.status === "assigned" ? (
+            {res.status !== "unavailable" ? (
               <>
+                {res.status === "task_parameters" && <p className="rounded-md border border-dashed px-3 py-2 text-muted-foreground" role="status">{t("requester_task_warning")}</p>}
                 <dl className="divide-y rounded-md border">
                   {res.entries.map((e) => (
-                    <div key={e.key} className="flex justify-between gap-3 px-3 py-1.5">
+                    <div key={e.id ?? e.key} className="flex justify-between gap-3 px-3 py-1.5">
                       <dt className="text-muted-foreground">{e.key}</dt>
-                      <dd className="font-mono text-right break-words">{e.value}</dd>
+                      <dd className="font-mono text-right break-words whitespace-pre-wrap">{e.value}{e.unit ? ` ${e.unit}` : ""}</dd>
                     </div>
                   ))}
                 </dl>

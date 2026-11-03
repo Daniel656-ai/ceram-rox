@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { orderElementResults } from "@/lib/rfaFixedElements";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
+import type { ClassicTaskSource } from "@/lib/results/classicTaskConditions";
 
 
 export interface ResultRecord {
@@ -58,6 +59,8 @@ export interface ResultRecord {
   instanceContext?: Record<string, string> | null;
   /** Read-only: shared_form_data des Auftrags, nur für durchlaufgebundene Vorgaben. */
   orderSharedFormData?: unknown;
+  /** Separate read-only task evidence; never input/output columns or calculations. */
+  classicTaskSource?: ClassicTaskSource;
 }
 
 /**
@@ -108,6 +111,8 @@ export function useResultsDatabase() {
       // aber keinen Eintrag. Normale Messwerte (measurement_parameters) sind
       // bewusst nicht Teil dieser Sicht.
       const measurements = await api.measurementResults.listOfficialDatabase();
+      const taskSources = await api.measurementResults.listRequesterTaskSources((measurements ?? []).map(m => m.id)).catch(() => []);
+      const taskSourceById = new Map(taskSources.map(source => [source.measurementId, source]));
       // Preserve the existing optional name-resolution behavior.
       const profiles = await api.measurementResults.listDatabaseProfiles().catch(() => []);
       
@@ -160,6 +165,7 @@ export function useResultsDatabase() {
           ),
           remarks: order?.notes || "",
           orderSharedFormData: order?.shared_form_data ?? null,
+          classicTaskSource: taskSourceById.get(m.id),
         };
       });
 

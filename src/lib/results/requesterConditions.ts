@@ -16,13 +16,14 @@
  * sich Quellen, gilt der Durchlauf als nicht eindeutig. Nichts wird geschrieben.
  */
 import type { ResultRecord } from "@/hooks/useResultsDatabase";
+import { classicTaskEntries } from "./classicTaskConditions";
 
-export type RequesterConditionSource = "result_context" | "run_entry";
+export type RequesterConditionSource = "result_context" | "run_entry" | "measurement_parameters";
 
 export interface RequesterConditionsResolution {
-  status: "assigned" | "unavailable";
+  status: "assigned" | "task_parameters" | "unavailable";
   reason?: "no_binding" | "positional_only" | "inconsistent_results" | "ambiguous_run_entry" | "source_conflict";
-  entries: Array<{ key: string; value: string }>;
+  entries: Array<{ key: string; value: string; unit?: string | null; id?: string }>;
   sources: RequesterConditionSource[];
 }
 
@@ -65,7 +66,7 @@ const unavailable = (reason: RequesterConditionsResolution["reason"]): Requester
   ({ status: "unavailable", reason, entries: [], sources: [] });
 
 export function resolveRequesterConditions(
-  record: Pick<ResultRecord, "instanceKey" | "outputResults"> & { orderSharedFormData?: unknown },
+  record: Pick<ResultRecord, "instanceKey" | "outputResults"> & Partial<Pick<ResultRecord, "measurementId" | "orderId" | "sampleId" | "serviceId" | "classicTaskSource">> & { orderSharedFormData?: unknown },
 ): RequesterConditionsResolution {
   const key = (record.instanceKey ?? "").trim();
   const results = record.outputResults ?? [];
@@ -99,7 +100,11 @@ export function resolveRequesterConditions(
       if (k in resultCtx && resultCtx[k] !== runCtx[k]) return unavailable("source_conflict");
     }
   }
-  if (!resultCtx && !runCtx) return unavailable("no_binding");
+  if (!resultCtx && !runCtx) {
+    const entries = classicTaskEntries(record);
+    if (entries) return { status: "task_parameters", entries, sources: ["measurement_parameters"] };
+    return unavailable("no_binding");
+  }
 
   const merged: Ctx = { ...(runCtx ?? {}), ...(resultCtx ?? {}) };
   const sources: RequesterConditionSource[] = [];

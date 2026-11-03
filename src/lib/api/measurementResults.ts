@@ -2,8 +2,40 @@ import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 import { buildLinkedFormValues } from "@/lib/linkedFormValues";
 import type { PrecisionDefinitions } from "@/lib/resultDisplayPrecision";
+import type { ClassicTaskSource } from "@/lib/results/classicTaskConditions";
+import { serviceFormLinks } from "./serviceFormLinks";
+import { serviceFormLayouts } from "./serviceFormLayouts";
+import { formFields } from "./formFields";
 
 export const measurementResults = {
+  /** Supplemental read, never used for matrix values or official-result selection. */
+  listRequesterTaskSources: async (ids: string[]): Promise<ClassicTaskSource[]> => {
+    if (!ids.length) return [];
+    const rows = await unwrap(dbClient.from("order_measurements").select(`
+      id, order_id, sample_id, service_id,
+      measurement_parameters(id,order_measurement_id,parameter_name,parameter_value,unit),
+      measurement_results(id,result_name,instance_key,instance_label,remarks)
+    `).in("id", ids));
+    const structures = new Map<string, { checked: boolean; repeated: boolean }>();
+    await Promise.all([...new Set(rows.map(r => r.service_id))].map(async serviceId => {
+      try {
+        const [links, employee, customer, fields] = await Promise.all([
+          serviceFormLinks.listForService(serviceId), serviceFormLayouts.get(serviceId, "employee"),
+          serviceFormLayouts.get(serviceId, "customer"),
+          unwrap(dbClient.from("service_data_fields").select("field_type").eq("service_id", serviceId)),
+        ]);
+        const linked = await Promise.all(links.map(l => formFields.listForForm(l.form_definition_id)));
+        const repeated = fields.some(f => f.field_type === "repeater") ||
+          linked.flat().some(f => f.field_type === "measurement_block" || f.field_type === "repeater") ||
+          [employee, customer].some(layout => layout?.layout?.sections?.some(section => section.repeatable?.enabled));
+        structures.set(serviceId, { checked: true, repeated });
+      } catch { structures.set(serviceId, { checked: false, repeated: false }); }
+    }));
+    return rows.map(r => ({ measurementId: r.id, orderId: r.order_id, sampleId: r.sample_id,
+      serviceId: r.service_id, structureChecked: structures.get(r.service_id)?.checked === true,
+      repeatedStructure: structures.get(r.service_id)?.repeated === true,
+      parameters: r.measurement_parameters, results: r.measurement_results }));
+  },
   /** Official result database, with read-only order identity metadata. */
   listOfficialDatabase: () => unwrap(
     dbClient.from("order_measurements").select(`
