@@ -154,6 +154,7 @@ export function matchesFilter<T>(
       return (filter.value === "true") === Boolean(raw);
     case "status":
       if (!filter.values.length) return true;
+      if (Array.isArray(raw)) return raw.some((v) => filter.values.includes(String(v)));
       return filter.values.includes(String(raw ?? ""));
     case "date": {
       const range = resolveDateRange(filter.value);

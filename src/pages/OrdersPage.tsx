@@ -1,5 +1,5 @@
 import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
-import { resolveOrderKind, matchesOrderKindFilter, type OrderKindFilter } from "@/lib/orders/orderKind";
+import { resolveOrderKind } from "@/lib/orders/orderKind";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
 import {
@@ -28,8 +28,18 @@ import { useIsAnyProjectLead } from "@/hooks/useProjectMembers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import MeasurementRunPicker from "@/components/measurementRun/MeasurementRunPicker";
+import { useUsers } from "@/hooks/useUsers";
+import { useDataTable } from "@/components/data-table/useDataTable";
+import { orderFilterColumns } from "@/lib/orders/orderFilterColumns";
+import { OrderListFilters } from "@/components/order/OrderListFilters";
+import { orderSamples } from "@/lib/orders/orderSamples";
 
 export default function OrdersPage() {
+  const { user } = useAuth();
+  return <OrdersOverview key={user?.id ?? "signed-out"} />;
+}
+
+function OrdersOverview() {
   const { user, role, hasRole } = useAuth();
   const { t, i18n } = useTranslation(["orders", "common", "measurements", "samples"]);
   const { data: orders = [], isLoading } = useOrders();
@@ -39,9 +49,29 @@ export default function OrdersPage() {
   const copyOrder = useCopyOrder();
   const navigate = useNavigate();
   const updateRanking = useUpdateOrderRanking();
-  const [search, setSearch] = useState("");
+  const { data: users = [] } = useUsers();
+  const personName = (id: string) => {
+    const person = users.find((u: any) => u.user_id === id);
+    return person ? `${person.first_name ?? ""} ${person.last_name ?? ""}`.trim() || person.short_code || id : id ?? "";
+  };
+  const filterColumns = useMemo(() => {
+    const columns = orderFilterColumns(user?.id, personName, key => t(`orders:${key}`));
+    const labels: Record<string, Record<string, string>> = { requester: {}, creator: {}, responsible: {}, project: {}, sample: {}, status: {}, order_type: {} };
+    for (const o of orders as any[]) {
+      labels.requester[o.created_by] = labels.creator[o.created_by] = personName(o.created_by);
+      for (const m of o.order_measurements ?? []) if (m.assigned_to) labels.responsible[m.assigned_to] = personName(m.assigned_to);
+      if (o.project_id) labels.project[o.project_id] = `${o.projects?.project_number ?? ""} · ${o.projects?.project_name ?? ""}`;
+      for (const s of orderSamples(o)) labels.sample[s.id] = `${s.sample_number ?? ""} · ${s.sample_name ?? ""}`;
+      labels.status[o.status] = t(`common:status_${o.status}`, { defaultValue: o.status });
+      labels.order_type[o.order_type] = t(`common:order_type_${o.order_type}`, { defaultValue: o.order_type });
+    }
+    return columns.map(c => labels[c.key] ? { ...c, statusLabels: labels[c.key] } : c);
+  }, [orders, users, user?.id, i18n.language, t]);
+  const personalTable = useDataTable({ tableId: `orders.${user?.id ?? "signed-out"}`, rows: orders, columns: filterColumns, paginated: false });
+  const { search, setSearch } = personalTable;
+  // Provider task controls stay independent of the optional all-orders filters.
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [kindFilter, setKindFilter] = useState<OrderKindFilter>("all");
+  const [providerSearch, setProviderSearch] = useState("");
   const kindLabel = (o: any) => t(`orders:kind.${resolveOrderKind(o)}`);
   const [ordersView, setOrdersView] = useState<"requester" | "provider">("requester");
   type SortKey = "order_number" | "project_number" | "project_name" | "order_kind" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
@@ -77,7 +107,7 @@ export default function OrdersPage() {
   };
   const SortableHead = ({ sortKey, children }: { sortKey: SortKey; children: React.ReactNode }) => {
     const active = sort?.key === sortKey;
-    const Icon = active ? (sort!.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+    const Icon = active ? (sort?.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
     return (
       <TableHead>
         <button
@@ -93,20 +123,8 @@ export default function OrdersPage() {
   };
 
 
-  const visibleOrders = orders;
-
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    const result = visibleOrders.filter((o: any) => {
-      const matchesSearch = !q ||
-        orderIdentity(o).number.toLowerCase().includes(q) ||
-        o.order_number?.toLowerCase().includes(q) ||
-        o.projects?.project_number?.toLowerCase().includes(q) ||
-        o.projects?.project_name?.toLowerCase().includes(q) ||
-        kindLabel(o).toLowerCase().includes(q);
-      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-      return matchesSearch && matchesStatus && matchesOrderKindFilter(o, kindFilter);
-    });
+    const result = personalTable.allFilteredRows;
     if (!sort) return result;
     const { key, dir } = sort;
     const mult = dir === "asc" ? 1 : -1;
@@ -118,7 +136,7 @@ export default function OrdersPage() {
       return String(av).localeCompare(String(bv), i18n.language, { numeric: true, sensitivity: "base" }) * mult;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleOrders, search, statusFilter, kindFilter, sort, i18n.language]);
+  }, [personalTable.allFilteredRows, sort, i18n.language]);
 
   // Mehrfachrollen additiv: Auftraggeber-Rechte gehen durch eine zusätzliche
   // Messdienstleister-Rolle nicht verloren.
@@ -126,14 +144,14 @@ export default function OrdersPage() {
   const isProvider = hasRole("durchfuehrer");
   const isDualRole = isRequester && isProvider && role !== "master";
   if (isProvider && !isRequester && role !== "master") {
-    return <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />;
+    return <DurchfuehrerTasksView search={providerSearch} setSearch={setProviderSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />;
   }
 
   if (isDualRole && ordersView === "provider") {
     return (
       <div className="space-y-4">
         <DualRoleSwitch value={ordersView} onChange={setOrdersView} />
-        <DurchfuehrerTasksView search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+        <DurchfuehrerTasksView search={providerSearch} setSearch={setProviderSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
       </div>
     );
   }
@@ -210,28 +228,10 @@ export default function OrdersPage() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t("common:status")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("orders:all_status")}</SelectItem>
-            <SelectItem value="open">{t("common:status_open")}</SelectItem>
-            <SelectItem value="in_progress">{t("common:status_in_progress")}</SelectItem>
-            <SelectItem value="completed">{t("common:status_completed")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as OrderKindFilter)}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder={t("orders:kind_label")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("orders:all_kinds")}</SelectItem>
-            <SelectItem value="labor">{t("orders:kind.labor")}</SelectItem>
-            <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
-          </SelectContent>
-        </Select>
+        <Button variant="outline" onClick={personalTable.reset} disabled={!personalTable.hasActiveState}>{t("orders:filters.reset")}</Button>
+        <span className="self-center text-sm text-muted-foreground">{t("orders:filters.count", { count: filtered.length })}</span>
       </div>
+      <OrderListFilters columns={filterColumns} rows={orders} filters={personalTable.filters} setFilter={personalTable.setFilter} />
 
       <Card>
         <CardContent className="p-0">

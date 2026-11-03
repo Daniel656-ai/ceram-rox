@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ColumnFilterValue, DataTableColumn, DatePreset } from "./types";
 import { isFilterActive } from "./dataTableUtils";
+import { filterOptions, shouldShowSearch } from "@/lib/ui/optionFilter";
 
 const DATE_PRESETS: { value: DatePreset; label: string }[] = [
   { value: "all", label: "Alle" },
@@ -34,21 +35,24 @@ interface Props<T> {
   onChange: (value: ColumnFilterValue | null) => void;
   /** Distinct values found in the data (used for status filters without explicit order). */
   options?: string[];
+  labels?: { title: string; reset: string; search: string; empty: string; trigger: string };
 }
 
-export function ColumnFilterPopover<T>({ column, value, onChange, options = [] }: Props<T>) {
+export function ColumnFilterPopover<T>({ column, value, onChange, options = [], labels }: Props<T>) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const active = isFilterActive(value);
   const type = column.type ?? "text";
 
   const statusValues = column.statusOrder?.length ? column.statusOrder : options;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={v => { setOpen(v); if (!v) setQuery(""); }}>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`Filter für Spalte`}
+          aria-label={labels?.trigger ?? "Filter für Spalte"}
+          title={labels?.trigger ?? "Filter für Spalte"}
           className={cn(
             "ml-1 inline-flex h-5 w-5 items-center justify-center rounded transition-colors",
             active
@@ -60,7 +64,7 @@ export function ColumnFilterPopover<T>({ column, value, onChange, options = [] }
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-3 p-3">
-        <p className="text-xs font-medium text-muted-foreground">Spaltenfilter</p>
+        <p className="text-xs font-medium text-muted-foreground">{labels?.title ?? "Spaltenfilter"}</p>
 
         {type === "number" ? (
           <div className="flex gap-2">
@@ -117,9 +121,10 @@ export function ColumnFilterPopover<T>({ column, value, onChange, options = [] }
         ) : type === "status" ? (
           <div className="max-h-52 space-y-2 overflow-y-auto">
             {statusValues.length === 0 && (
-              <p className="text-xs text-muted-foreground">Keine Werte vorhanden.</p>
+              <p className="text-xs text-muted-foreground">{labels?.empty ?? "Keine Werte vorhanden."}</p>
             )}
-            {statusValues.map((s) => {
+            {shouldShowSearch(statusValues.length) && <Input placeholder={labels?.search ?? "Suchen …"} value={query} onChange={e => setQuery(e.target.value)} />}
+            {filterOptions(statusValues.map(s => ({ value: s, label: column.statusLabels?.[s] ?? s })), query).map(({ value: s }) => {
               const checked = value?.kind === "status" && value.values.includes(s);
               return (
                 <label key={s} className="flex items-center gap-2 text-sm">
@@ -217,7 +222,7 @@ export function ColumnFilterPopover<T>({ column, value, onChange, options = [] }
               setOpen(false);
             }}
           >
-            Zurücksetzen
+            {labels?.reset ?? "Zurücksetzen"}
           </Button>
         </div>
       </PopoverContent>
