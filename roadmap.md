@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Aktuell: Auftragsfilter in Tabellenüberschriften
-- [ ] Vorhandenes Probenfilter-Konzept auf die erste Auftrags-Tabellenzeile übertragen, ohne Spalten oder Filterlogik zu ändern.
-- [ ] Bestehende Filtertests und angemeldete Webprüfung mit vorhandenen Aufträgen durchführen; geänderte Dateien dokumentieren.
+- [x] Vorhandenes Probenfilter-Konzept auf die erste Auftrags-Tabellenzeile übertragen, ohne Spalten oder Filterlogik zu ändern.
+- [x] 31 relevante Tests und angemeldete Webprüfung mit 48 vorhandenen Aufträgen bestanden; Änderungen im Abschlussbericht dokumentiert.
 - [ ] Desktopprüfung blockiert: bedienbare Tauri-Unternehmensinstallation nicht verfügbar.
 
 ## Aktuell: Auftraggeber-Vorgaben in der Ergebnisdatenbank
