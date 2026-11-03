@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Aktuell: Vorgaben klassischer Einzeldurchläufe
-- [ ] Bestehende Repeater-Zuordnung erhalten; lesende Messaufgabenquelle und belastbare Einzeldurchlauf-Prüfung ergänzen.
-- [ ] Separat gekennzeichnete Messaufgaben-Vorgaben im vorhandenen Panel anzeigen; Ergebniserfassung und Matrix unverändert.
-- [ ] Zuordnung/Isolation/Mehrfachdurchläufe testen und Web-Verhalten prüfen; Bericht erstellen.
+- [x] Bestehende Repeater-Zuordnung erhalten; lesende Messaufgabenquelle und konservative Einzeldurchlauf-Prüfung ergänzt.
+- [x] Separat gekennzeichnete Messaufgaben-Vorgaben im vorhandenen Panel; Ergebniserfassung und Matrix unverändert.
+- [x] 995 Tests bestanden; echtes Webpanel ohne vorhandene Parameter und lokale positive Anzeige geprüft; Abschlussbericht erstellt.
 - [ ] Desktop-Abnahme blockiert: Firmeninstallation hier nicht erreichbar.
 
 ## Aktuell: Auftraggeber-Vorgaben in der Ergebnisdatenbank
