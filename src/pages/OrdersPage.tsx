@@ -22,7 +22,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, Copy, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox } from "lucide-react";
+import { Plus, Search, Trash2, Copy, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox, RotateCcw } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
@@ -86,19 +87,31 @@ function OrdersOverview() {
       case "created_at": return o.created_at ? new Date(o.created_at).getTime() : 0;
     }
   };
-  const SortableHead = ({ sortKey, children }: { sortKey: SortKey; children: React.ReactNode }) => {
+  const headerFilters = (filterKeys: string[]) => <OrderListFilters columns={filterColumns} rows={orders} table={orderTable} filterKeys={filterKeys} />;
+  const renderSortableHead = ({ sortKey, children, filterKeys = [] }: { sortKey: SortKey; children: React.ReactNode; filterKeys?: string[] }) => {
     const active = sort?.key === sortKey;
     const Icon = active ? (sort?.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
     return (
       <TableHead>
-        <button
-          type="button"
+        <div className="flex items-center">
+        <Button
+          variant="ghost"
           onClick={() => applySort(sortKey)}
-          className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+          className="h-auto justify-start gap-1 whitespace-normal p-0 text-left font-medium hover:bg-transparent"
         >
           {children}
           <Icon className={`h-3.5 w-3.5 ${active ? "text-foreground" : "text-muted-foreground/60"}`} />
-        </button>
+        </Button>
+        {headerFilters(filterKeys)}
+        {sortKey === "order_number" && <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="ml-1 h-5 w-5 shrink-0" aria-label={t("orders:filters.reset")} disabled={!orderTable.hasActiveState} onClick={orderTable.reset}>
+              <RotateCcw className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("orders:filters.reset")}</TooltipContent>
+        </Tooltip>}
+        </div>
       </TableHead>
     );
   };
@@ -211,7 +224,6 @@ function OrdersOverview() {
             className="pl-9"
           />
         </div>
-        <OrderListFilters columns={filterColumns} rows={orders} table={orderTable} />
       </div>
 
       <Card>
@@ -219,16 +231,16 @@ function OrdersOverview() {
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHead sortKey="order_number">{t("orders:order_number")}</SortableHead>
-                <TableHead>{t("samples:sample_name")}</TableHead>
-                <SortableHead sortKey="project_number">{t("orders:project_number")}</SortableHead>
-                <SortableHead sortKey="project_name">{t("orders:project_name")}</SortableHead>
-                <SortableHead sortKey="order_kind">{t("orders:kind_label")}</SortableHead>
-                <SortableHead sortKey="order_type">{t("orders:order_type")}</SortableHead>
-                <SortableHead sortKey="ranking">{t("orders:priority")}</SortableHead>
-                <SortableHead sortKey="status">{t("common:status")}</SortableHead>
-                <SortableHead sortKey="due_date">{t("orders:due_date")}</SortableHead>
-                <SortableHead sortKey="created_at">{t("common:created")}</SortableHead>
+                {renderSortableHead({ sortKey: "order_number", filterKeys: ["requester", "responsible", "mine"], children: t("orders:order_number") })}
+                <TableHead><div className="flex items-center">{t("samples:sample_name")}{headerFilters(["sample"])}</div></TableHead>
+                {renderSortableHead({ sortKey: "project_number", filterKeys: ["project_number"], children: t("orders:project_number") })}
+                {renderSortableHead({ sortKey: "project_name", filterKeys: ["project"], children: t("orders:project_name") })}
+                {renderSortableHead({ sortKey: "order_kind", filterKeys: ["kind"], children: t("orders:kind_label") })}
+                {renderSortableHead({ sortKey: "order_type", filterKeys: ["type"], children: t("orders:order_type") })}
+                {renderSortableHead({ sortKey: "ranking", children: t("orders:priority") })}
+                {renderSortableHead({ sortKey: "status", filterKeys: ["status"], children: t("common:status") })}
+                {renderSortableHead({ sortKey: "due_date", children: t("orders:due_date") })}
+                {renderSortableHead({ sortKey: "created_at", filterKeys: ["creator"], children: t("common:created") })}
                 {canShowActions && <TableHead className="w-[100px]">{t("common:actions")}</TableHead>}
               </TableRow>
 
