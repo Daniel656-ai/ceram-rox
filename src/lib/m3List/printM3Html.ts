@@ -42,6 +42,13 @@ h2 { font-size: 11pt; margin: 4mm 0 1.5mm; break-after: avoid; }
 table { border-collapse: collapse; width: 100%; }
 .kv th { text-align: left; width: 55mm; padding: 0.6mm 2mm 0.6mm 0; vertical-align: top; }
 .kv td { padding: 0.6mm 0; white-space: pre-wrap; word-break: break-word; }
+.print-head { display: grid; grid-template-columns: minmax(0, 96fr) minmax(0, 80fr); gap: 6mm; align-items: start; }
+.print-head > section { min-width: 0; }
+.print-head > section > h2:first-child { margin-top: 0; }
+.print-head .kv { table-layout: fixed; }
+.print-head .kv th { width: 50%; overflow-wrap: anywhere; }
+.print-head-right .kv th { width: 52.5%; }
+@media (max-width: 600px) { .print-head { grid-template-columns: minmax(0, 1fr); } }
 .rows thead { display: table-header-group; }
 .rows { table-layout: fixed; font-size: 12pt; font-weight: bold; }
 .rows th, .rows td { border: 0.2mm solid #999; padding: 1mm 1.5mm; line-height: 1.25; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
@@ -56,13 +63,20 @@ table { border-collapse: collapse; width: 100%; }
 p { margin: 1mm 0; white-space: pre-wrap; }
 </style></head><body>
 <h1>${escapeHtml(model.title)}</h1>
+<div class="print-head">
+<section class="print-head-left">
+<h2>Auftragsdetails</h2>
 ${pairs(model.header)}
-<h2>Labormessungen</h2>
-<p>${escapeHtml(model.labTests)}</p>
+</section>
+<section class="print-head-right">
 <h2>Berechnungen</h2>
 ${pairs(model.calc)}
-<h2>m³-Tabelle</h2>
+<h2>Labormessungen</h2>
+<p>${escapeHtml(model.labTests)}</p>
+</section>
+</div>
 <div class="charge${model.testNotice ? " charge-active" : ""}">Gesamte Charge${model.testNotice ? `<p>${escapeHtml(model.testNotice)}</p>` : ""}</div>
+<h2>m³-Tabelle</h2>
 <table class="rows"><thead><tr><th style="width:18mm">Zeile</th><th style="width:22mm">m³</th><th style="width:43mm">Elementnummer</th><th style="width:30mm">Labor-Kats</th><th>Verantwortlich /<br>bearbeitet</th><th style="width:22mm">TEST</th></tr></thead>
 <tbody>${rows}</tbody></table>
 <p class="totals">${escapeHtml(model.totals)}</p>

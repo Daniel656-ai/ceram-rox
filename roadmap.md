@@ -6,4 +6,10 @@
 
 ## Offen (blockiert durch externe Faktoren)
 - Desktop-/Tauri-Abnahme beider Themen – produktive Desktop-App/Firmen-Backend von hier nicht erreichbar.
-- m³-HTML-Druck-Korrektur – wartet auf ausdrückliche Freigabe (Analyseauftrag war bewusst ohne Umsetzung).
+## Neu erledigt
+- m³-HTML-Druckkopf zweispaltig angeglichen; DOM-Strukturtests und echte jsPDF-X/Y-Tests für beide längeren Spalten ergänzt. 941 Tests bestanden, automatischer Web-Build OK.
+- Beide Ausgabeaktionen mit lokalen Prüfdaten ausgeführt; A4-Dateien getrennt visuell geprüft, 120/120 Zeilen je Ausgabe nachgewiesen. Bericht: /mnt/documents/ROX-m3-HTML-Druck-Abschlussbericht.md.
+
+## Weitere externe Abnahme offen
+- Nativer Druckdialog „Als PDF speichern“: nicht automatisiert bedienbar; Chromium-A4-Druck-PDF und iframe-Aufruf geprüft.
+- Neuer Desktop-Build und Installation: Desktop-/Firmenumgebung hier nicht verfügbar; keine nativen Änderungen.
