@@ -4,7 +4,7 @@ import { orderIdentity, type OrderIdentitySource } from "./orderIdentity";
 import { resolveOrderKind } from "./orderKind";
 
 type Profile = { user_id: string; first_name?: string | null; last_name?: string | null };
-export type OrderFilterRow = OrderSampleSource & OrderIdentitySource & {
+export type OrderFilterRow = Omit<OrderSampleSource, "order_measurements"> & Omit<OrderIdentitySource, "order_measurements"> & {
   created_by?: string | null; project_id?: string | null;
   projects?: { project_number?: string | null; project_name?: string | null } | null;
   customer_name?: string | null; reference_number?: string | null; notes?: string | null;
