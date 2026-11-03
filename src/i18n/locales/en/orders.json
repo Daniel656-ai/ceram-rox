@@ -75,7 +75,14 @@
   "subtitle": "Overview and management of your orders",
   "new_order": "New Order",
   "excel_import": "Excel Import",
-  "search_placeholder": "Project number or name...",
+  "search_placeholder": "Order, sample, project, requester or experiment number…",
+  "filters": {
+    "requester": "Requester", "project": "Project", "project_number": "Project number",
+    "sample": "Sample / sample name", "kind": "Order category (Lab / Pilot Plant)", "type": "Order type",
+    "status": "Order status", "responsible": "Responsible (measurements)", "creator": "Creator", "mine": "My orders",
+    "mine_created": "Created by me", "mine_assigned": "Measurements assigned to me", "mine_either": "Created or assigned",
+    "reset": "Reset filters", "search": "Search…", "empty": "No matching values", "count": "{{count}} of {{total}} orders"
+  },
   "all_status": "All Status",
   "order_number": "Order No.",
   "technical_number": "ROX order: {{number}}",

@@ -1,5 +1,9 @@
 import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
-import { resolveOrderKind, matchesOrderKindFilter, type OrderKindFilter } from "@/lib/orders/orderKind";
+import { resolveOrderKind } from "@/lib/orders/orderKind";
+import { orderFilterColumns } from "@/lib/orders/orderFilterColumns";
+import { OrderListFilters } from "@/components/order/OrderListFilters";
+import { useDataTable } from "@/components/data-table";
+import { useUsers } from "@/hooks/useUsers";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
 import {
@@ -30,6 +34,11 @@ import { useTranslation } from "react-i18next";
 import MeasurementRunPicker from "@/components/measurementRun/MeasurementRunPicker";
 
 export default function OrdersPage() {
+  const { user } = useAuth();
+  return <OrdersOverview key={user?.id ?? "signed-out"} />;
+}
+
+function OrdersOverview() {
   const { user, role, hasRole } = useAuth();
   const { t, i18n } = useTranslation(["orders", "common", "measurements", "samples"]);
   const { data: orders = [], isLoading } = useOrders();
@@ -41,7 +50,9 @@ export default function OrdersPage() {
   const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [kindFilter, setKindFilter] = useState<OrderKindFilter>("all");
+  const { data: users = [] } = useUsers();
+  const filterColumns = useMemo(() => orderFilterColumns(orders, users, user?.id, t), [orders, users, user?.id, t, i18n.language]);
+  const orderTable = useDataTable({ tableId: `orders.${user?.id ?? "signed-out"}`, rows: orders, columns: filterColumns, paginated: false });
   const kindLabel = (o: any) => t(`orders:kind.${resolveOrderKind(o)}`);
   const [ordersView, setOrdersView] = useState<"requester" | "provider">("requester");
   type SortKey = "order_number" | "project_number" | "project_name" | "order_kind" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
@@ -77,7 +88,7 @@ export default function OrdersPage() {
   };
   const SortableHead = ({ sortKey, children }: { sortKey: SortKey; children: React.ReactNode }) => {
     const active = sort?.key === sortKey;
-    const Icon = active ? (sort!.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+    const Icon = active ? (sort?.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
     return (
       <TableHead>
         <button
@@ -93,20 +104,10 @@ export default function OrdersPage() {
   };
 
 
-  const visibleOrders = orders;
+  const visibleOrders = orderTable.allFilteredRows;
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    const result = visibleOrders.filter((o: any) => {
-      const matchesSearch = !q ||
-        orderIdentity(o).number.toLowerCase().includes(q) ||
-        o.order_number?.toLowerCase().includes(q) ||
-        o.projects?.project_number?.toLowerCase().includes(q) ||
-        o.projects?.project_name?.toLowerCase().includes(q) ||
-        kindLabel(o).toLowerCase().includes(q);
-      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-      return matchesSearch && matchesStatus && matchesOrderKindFilter(o, kindFilter);
-    });
+    const result = visibleOrders;
     if (!sort) return result;
     const { key, dir } = sort;
     const mult = dir === "asc" ? 1 : -1;
@@ -118,7 +119,7 @@ export default function OrdersPage() {
       return String(av).localeCompare(String(bv), i18n.language, { numeric: true, sensitivity: "base" }) * mult;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleOrders, search, statusFilter, kindFilter, sort, i18n.language]);
+  }, [visibleOrders, sort, i18n.language]);
 
   // Mehrfachrollen additiv: Auftraggeber-Rechte gehen durch eine zusätzliche
   // Messdienstleister-Rolle nicht verloren.
@@ -200,37 +201,17 @@ export default function OrdersPage() {
         )}
       </div>
 
-      <div className="flex gap-3">
+      <div className="space-y-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t("orders:search_placeholder")}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            value={orderTable.search}
+            onChange={e => orderTable.setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t("common:status")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("orders:all_status")}</SelectItem>
-            <SelectItem value="open">{t("common:status_open")}</SelectItem>
-            <SelectItem value="in_progress">{t("common:status_in_progress")}</SelectItem>
-            <SelectItem value="completed">{t("common:status_completed")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as OrderKindFilter)}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder={t("orders:kind_label")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("orders:all_kinds")}</SelectItem>
-            <SelectItem value="labor">{t("orders:kind.labor")}</SelectItem>
-            <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
-          </SelectContent>
-        </Select>
+        <OrderListFilters columns={filterColumns} rows={orders} table={orderTable} />
       </div>
 
       <Card>
