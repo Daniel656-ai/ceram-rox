@@ -49,7 +49,7 @@ describe("read-only order mass types", () => {
   it("skips invalid higher-priority values for a known lower-priority source", () => {
     expect(resolveOrderMasseType(pp({ pp_masse_type: "unknown", shared_form_data: { template: { values: { massetyp: "", masse_type: "DK" } } } }))).toEqual(["DK"]);
   });
-  it.each([null, "", "unknown"])("returns no type for missing or unknown %s", value => {
+  it.each([null, "", "unknown", "constructor", "__proto__"])("returns no type for missing or unknown %s", value => {
     expect(resolveOrderMasseType(labor(value))).toEqual([]);
     expect(resolveOrderMasseType(pp({ pp_masse_type: value, shared_form_data: [] }))).toEqual([]);
   });

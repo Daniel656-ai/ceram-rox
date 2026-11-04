@@ -20,7 +20,9 @@ const CATEGORY_TYPES: Record<string, MasseType> = {
 };
 
 function normalize(value: unknown): MasseType | undefined {
-  return typeof value === "string" ? CATEGORY_TYPES[value.trim().toLowerCase()] : undefined;
+  if (typeof value !== "string") return undefined;
+  const key = value.trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(CATEGORY_TYPES, key) ? CATEGORY_TYPES[key] : undefined;
 }
 
 function read(root: unknown, path: string[]): unknown {
