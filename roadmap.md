@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Aktuell: Massetyp in Alle Aufträge
-- [ ] Zentrale lesende Auflösung, neue Spalte mit bestehenden Filtern/Suche und GK-/KK-Kategorien ergänzen.
-- [ ] Regressionstests, Webprüfung mit bestehenden Daten und Abschlussbericht.
+- [x] Zentrale lesende Auflösung, neue Spalte mit bestehenden Filtern/Suche und GK-/KK-Kategorien ergänzt.
+- [x] 1021 Tests in 126 Dateien bestanden; Webprüfung mit 48 bestehenden Aufträgen, Abschlussbericht erstellt.
 - [ ] Maßgebliche Desktop-Abnahme blockiert: Tauri-Unternehmensinstallation hier nicht verfügbar.
 
 ## Aktuell: Auftragsfilter in Tabellenüberschriften
