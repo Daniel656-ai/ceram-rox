@@ -2,6 +2,7 @@ import type { DataTableColumn } from "@/components/data-table/types";
 import { orderSamples, type OrderSampleSource } from "./orderSamples";
 import { orderIdentity, type OrderIdentitySource } from "./orderIdentity";
 import { resolveOrderKind } from "./orderKind";
+import { MASSE_TYPES, resolveOrderMasseType, orderMasseTypeFilterValues } from "./orderMasseType";
 
 type Profile = { user_id: string; first_name?: string | null; last_name?: string | null };
 export type OrderFilterRow = Omit<OrderSampleSource, "order_measurements"> & Omit<OrderIdentitySource, "order_measurements"> & {
@@ -9,6 +10,7 @@ export type OrderFilterRow = Omit<OrderSampleSource, "order_measurements"> & Omi
   projects?: { project_number?: string | null; project_name?: string | null } | null;
   customer_name?: string | null; reference_number?: string | null; notes?: string | null;
   order_type?: string | null; status?: string | null;
+  pp_masse_type?: string | null;
   order_measurements?: Array<{ assigned_to?: string | null } & NonNullable<OrderSampleSource["order_measurements"]>[number] & { measurement_services?: { category?: string | null } | null }>;
 };
 
@@ -33,12 +35,17 @@ export function orderFilterColumns(rows: OrderFilterRow[], profiles: Profile[], 
       orderIdentity(o).number, o.order_number, o.projects?.project_number, o.projects?.project_name,
       names[o.created_by], o.customer_name, o.reference_number, o.notes, t(`orders:kind.${resolveOrderKind(o)}`),
       ...orderSamples(o).flatMap(s => [s.sample_number, s.sample_name]),
+      ...resolveOrderMasseType(o),
     ].filter(Boolean).join("\n") },
     status("requester", o => o.created_by, personLabels),
     status("project", o => o.project_id, projects),
     status("project_number", o => o.projects?.project_number),
     status("sample", o => orderSamples(o).map(s => s.id), samples),
     status("kind", resolveOrderKind, { labor: t("orders:kind.labor"), pilot_plant: t("orders:kind.pilot_plant") }, ["labor", "pilot_plant"]),
+    status("mass_type", orderMasseTypeFilterValues, {
+      ...Object.fromEntries(MASSE_TYPES.map(type => [type, type])),
+      stationaerer_katalysator: t("samples:category_stationaerer_katalysator"),
+    }, [...MASSE_TYPES, "stationaerer_katalysator"]),
     status("type", o => o.order_type, Object.fromEntries(["customer", "production", "rnd"].map(k => [k, t(`common:order_type_${k}`)]))),
     status("status", o => o.status, Object.fromEntries(["open", "in_progress", "completed"].map(k => [k, t(`common:status_${k}`)]))),
     status("responsible", assigned, personLabels),

@@ -2,6 +2,7 @@ export type OrderSampleRef = {
   id: string;
   sample_name: string | null;
   sample_number: string | null;
+  category?: string | null;
 };
 
 type LinkedSample = OrderSampleRef & {

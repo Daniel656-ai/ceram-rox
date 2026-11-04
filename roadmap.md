@@ -1,5 +1,10 @@
 # Roadmap
 
+## Aktuell: Massetyp in Alle Aufträge
+- [x] Zentrale lesende Auflösung, neue Spalte mit bestehenden Filtern/Suche und GK-/KK-Kategorien ergänzt.
+- [x] 1021 Tests in 126 Dateien bestanden; Webprüfung mit 48 bestehenden Aufträgen, Abschlussbericht erstellt.
+- [ ] Maßgebliche Desktop-Abnahme blockiert: Tauri-Unternehmensinstallation hier nicht verfügbar.
+
 ## Aktuell: Auftragsfilter in Tabellenüberschriften
 - [x] Vorhandenes Probenfilter-Konzept auf die erste Auftrags-Tabellenzeile übertragen, ohne Spalten oder Filterlogik zu ändern.
 - [x] 31 relevante Tests und angemeldete Webprüfung mit 48 vorhandenen Aufträgen bestanden; Änderungen im Abschlussbericht dokumentiert.

@@ -1,5 +1,6 @@
 import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
+import { resolveOrderMasseType } from "@/lib/orders/orderMasseType";
 import { orderFilterColumns } from "@/lib/orders/orderFilterColumns";
 import { OrderListFilters } from "@/components/order/OrderListFilters";
 import { useDataTable } from "@/components/data-table";
@@ -56,7 +57,7 @@ function OrdersOverview() {
   const orderTable = useDataTable({ tableId: `orders.${user?.id ?? "signed-out"}`, rows: orders, columns: filterColumns, paginated: false });
   const kindLabel = (o: any) => t(`orders:kind.${resolveOrderKind(o)}`);
   const [ordersView, setOrdersView] = useState<"requester" | "provider">("requester");
-  type SortKey = "order_number" | "project_number" | "project_name" | "order_kind" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
+  type SortKey = "order_number" | "project_number" | "project_name" | "order_kind" | "mass_type" | "order_type" | "ranking" | "status" | "due_date" | "created_at";
   type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
   const [sort, setSort] = useState<SortState>(() => {
     try {
@@ -78,6 +79,7 @@ function OrdersOverview() {
     switch (key) {
       case "order_number": return orderIdentity(o).number;
       case "order_kind": return kindLabel(o);
+      case "mass_type": return resolveOrderMasseType(o).join(", ");
       case "project_number": return o.projects?.project_number ?? "";
       case "project_name": return o.projects?.project_name ?? "";
       case "order_type": return o.order_type ?? "";
@@ -236,6 +238,7 @@ function OrdersOverview() {
                 {renderSortableHead({ sortKey: "project_number", filterKeys: ["project_number"], children: t("orders:project_number") })}
                 {renderSortableHead({ sortKey: "project_name", filterKeys: ["project"], children: t("orders:project_name") })}
                 {renderSortableHead({ sortKey: "order_kind", filterKeys: ["kind"], children: t("orders:kind_label") })}
+                {renderSortableHead({ sortKey: "mass_type", filterKeys: ["mass_type"], children: t("orders:filters.mass_type") })}
                 {renderSortableHead({ sortKey: "order_type", filterKeys: ["type"], children: t("orders:order_type") })}
                 {renderSortableHead({ sortKey: "ranking", children: t("orders:priority") })}
                 {renderSortableHead({ sortKey: "status", filterKeys: ["status"], children: t("common:status") })}
@@ -247,9 +250,9 @@ function OrdersOverview() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={canShowActions ? 11 : 10} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={canShowActions ? 12 : 11} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={canShowActions ? 11 : 10} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={canShowActions ? 12 : 11} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
               ) : (
                 filtered.map((o: any) => (
                   <TableRow key={o.id}>
@@ -287,6 +290,7 @@ function OrdersOverview() {
                     </TableCell>
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
                     <TableCell>{kindLabel(o)}</TableCell>
+                    <TableCell className="whitespace-normal">{resolveOrderMasseType(o).join(", ") || "–"}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}</TableCell>
                     <TableCell>
                       {role === "master" ? (
