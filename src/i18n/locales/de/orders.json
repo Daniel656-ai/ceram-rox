@@ -77,6 +77,7 @@
   "excel_import": "Excel-Import",
   "search_placeholder": "Auftrag, Probe, Projekt, Auftraggeber oder Versuchsnummer…",
   "filters": {
+    "mass_type": "Massetyp",
     "requester": "Auftraggeber", "project": "Projekt", "project_number": "Projektnummer",
     "sample": "Probe / Probenname", "kind": "Auftragstyp (Labor / Pilot Plant)", "type": "Auftragsart",
     "status": "Auftragsstatus", "responsible": "Verantwortlicher (Messungen)", "creator": "Ersteller", "mine": "Meine Aufträge",

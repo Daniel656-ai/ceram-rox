@@ -77,6 +77,7 @@
   "excel_import": "Excel Import",
   "search_placeholder": "Order, sample, project, requester or experiment number…",
   "filters": {
+    "mass_type": "Mass type",
     "requester": "Requester", "project": "Project", "project_number": "Project number",
     "sample": "Sample / sample name", "kind": "Order category (Lab / Pilot Plant)", "type": "Order type",
     "status": "Order status", "responsible": "Responsible (measurements)", "creator": "Creator", "mine": "My orders",
