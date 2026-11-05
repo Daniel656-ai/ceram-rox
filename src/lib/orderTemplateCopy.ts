@@ -225,7 +225,7 @@ export async function buildPayloadFromOrder(
         if (candidate) {
           if (!templateInputAllowed(candidate.def)) continue;
           const parsed = parseTemplateInput(p.parameter_value, candidate.def);
-          const ownerFields = candidate.key.startsWith("form:")
+          const ownerFields: Parameters<typeof copyTemplateInputs>[1] = candidate.key.startsWith("form:")
             ? linkedDefinitions.find(link => candidate.key.startsWith(`form:${link.formId}:`))?.fields ?? [] : fields;
           const copied = copyTemplateInputs({ [candidate.def.field_key]: parsed }, ownerFields);
           if (candidate.def.field_key in copied) values[candidate.key] = copied[candidate.def.field_key];
