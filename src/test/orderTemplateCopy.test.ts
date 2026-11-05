@@ -111,11 +111,11 @@ describe("consolidation of per-sample fanned-out rows", () => {
   it("differing measurement conditions are detected and never merged", async () => {
     mocks.get.mockResolvedValue(fanOutSource({ differingValue: true }));
     const { payload } = await buildPayloadFromOrder("source", DEFAULT_COPY_OPTIONS);
-    // s1 fan-out is broken by one differing row → 5 s1 cards + 1 s2 card.
-    expect(payload.measurements).toHaveLength(6);
+    // The 4 identical s1 rows still merge; the differing row stays separate → 3 cards.
+    expect(payload.measurements).toHaveLength(3);
     const values = (payload.measurements ?? []).map((m) => payload.measurementFormValues?.[m.uid]);
     expect(values.filter((v) => v?.text === "999")).toHaveLength(1);
-    expect(values.filter((v) => v?.text === "014")).toHaveLength(5);
+    expect(values.filter((v) => v?.text === "014")).toHaveLength(2);
   });
 
   it("consciously double-booked services on the same sample are preserved", async () => {
