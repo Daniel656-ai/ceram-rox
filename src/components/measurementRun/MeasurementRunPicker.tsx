@@ -158,6 +158,15 @@ export default function MeasurementRunPicker({
           const allSel = selectable.length > 0 && selectable.every((m) => selected.has(m.id));
           const someSel = selectable.some((m) => selected.has(m.id));
           const freeCount = g.items.filter((m) => m.__free).length;
+          // Externe Fach-App (Extruder/Staucher): nur wenn die Gruppe eindeutig
+          // einer konfigurierten Leistung entspricht und Master/Qualifikation vorliegt.
+          const groupServiceNames = new Set(g.items.map((m) => m.measurement_services?.service_name).filter(Boolean));
+          const groupServiceId = g.items.find((m) => m.service_id)?.service_id ?? null;
+          const groupApp = groupServiceNames.size === 1
+            ? externalAppForService([...groupServiceNames][0] as string)
+            : null;
+          const showGroupApp =
+            !!groupApp && canOpenExternalApp(role, qualifiedServiceIds ?? null, groupServiceId);
           return (
             <div key={key} className="border rounded-md">
               <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
