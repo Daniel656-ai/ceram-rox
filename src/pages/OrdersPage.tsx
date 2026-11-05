@@ -635,6 +635,14 @@ function DurchfuehrerTasksView({
 
       {/* Temporärer Messdurchlauf: eigene + freie qualifizierte Aufgaben; freie werden beim Start über die bestehende Übernahme übernommen */}
       <MeasurementRunPicker tasks={assigned} freeTasks={free} otherTasks={others} claim={(id) => claim.mutateAsync(id)} />
+      {(filterActive || search.trim() !== "" || statusFilter !== "all") &&
+        ![...assigned, ...free, ...others].some((m: any) => m.status !== "completed") && (
+        <Card>
+          <CardContent className="py-4 text-sm text-muted-foreground" data-testid="run-filter-empty">
+            {t("orders:task_filter_run_empty")}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 1) Meine zugewiesenen Aufgaben */}
       <Card>

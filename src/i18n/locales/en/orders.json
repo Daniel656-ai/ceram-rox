@@ -212,5 +212,6 @@
   "task_filter_only_competent": "Only my competences",
   "task_filter_reset": "Reset",
   "task_filter_competence_error": "Competences could not be loaded – the competence filter therefore shows no tasks.",
-  "task_filter_competence_loading": "Loading competences…"
+  "task_filter_competence_loading": "Loading competences…",
+  "task_filter_run_empty": "No open tasks in the measurement run match the selected service, competence, search or status filter."
 }

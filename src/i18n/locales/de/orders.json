@@ -212,5 +212,6 @@
   "task_filter_only_competent": "Nur mit eigener Kompetenz",
   "task_filter_reset": "Zurücksetzen",
   "task_filter_competence_error": "Kompetenzen konnten nicht geladen werden – der Kompetenzfilter zeigt daher keine Aufgaben an.",
-  "task_filter_competence_loading": "Kompetenzen werden geladen…"
+  "task_filter_competence_loading": "Kompetenzen werden geladen…",
+  "task_filter_run_empty": "Keine offenen Aufgaben für die gewählte Dienstleistungs-, Kompetenz-, Such- bzw. Statusfilterung im Messdurchlauf vorhanden."
 }
