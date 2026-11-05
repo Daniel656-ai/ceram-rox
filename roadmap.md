@@ -1,5 +1,11 @@
 # Roadmap
 
+## Aktuell: Frühere Aufträge als Vorlage (Teil A)
+- [x] Konsolidierung probenweise gefächerter, fachlich identischer Dienstleistungszeilen zu Vorlagenkarten; Mehrfachbuchungen und abweichende Bedingungen bleiben eigenständig.
+- [x] 1030 Tests bestanden, Build OK, Web-Prüfung mit SW-260004 (3 Karten erhalten), Abschlussbericht erstellt.
+- [ ] Desktop-Abnahme blockiert: Tauri-Unternehmensinstallation nicht erreichbar.
+- [ ] Teil B (gespeicherte Aufgaben-Templates): nicht freigegeben, nicht begonnen.
+
 ## Aktuell: Massetyp in Alle Aufträge
 - [x] Zentrale lesende Auflösung, neue Spalte mit bestehenden Filtern/Suche und GK-/KK-Kategorien ergänzt.
 - [x] 1021 Tests in 126 Dateien bestanden; Webprüfung mit 48 bestehenden Aufträgen, Abschlussbericht erstellt.

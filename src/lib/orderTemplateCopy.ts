@@ -50,6 +50,71 @@ const newUid = () =>
 
 const deepCopy = <T,>(v: T): T => (v == null ? v : JSON.parse(JSON.stringify(v)));
 
+/** Schlüssel, die bei jedem Kopiervorgang neu vergeben werden und daher nie Teil eines Wertvergleichs sein dürfen. */
+const VOLATILE_KEYS = new Set(["__id", "__instance_id"]);
+
+/** Stabile, schlüsselsortierte JSON-Darstellung ohne flüchtige Identitäten. */
+function stableStringify(v: unknown): string {
+  if (v == null || typeof v !== "object") return JSON.stringify(v ?? null);
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  const entries = Object.entries(v as Record<string, unknown>)
+    .filter(([k]) => !VOLATILE_KEYS.has(k))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, val]) => `${JSON.stringify(k)}:${stableStringify(val)}`);
+  return `{${entries.join(",")}}`;
+}
+
+/**
+ * Fingerabdruck einer Dienstleistungskonfiguration anhand ihrer tatsächlichen
+ * fachlichen Werte (Leistung + Formularwerte + Parameter). Frisch vergebene
+ * Zeilen-Identitäten (__id/__instance_id) fließen nicht ein.
+ */
+export function templateRowFingerprint(
+  serviceId: string,
+  values: Record<string, unknown>,
+  params: Record<string, string>
+): string {
+  return stableStringify({ serviceId, values, params });
+}
+
+export interface TemplateRowRef {
+  sample_id?: string | null;
+  fingerprint: string;
+}
+
+/**
+ * Fasst Dienstleistungszeilen eines Quellauftrags zu Vorlagenkarten zusammen.
+ *
+ * Zusammengeführt werden ausschließlich Zeilen, die eindeutig aus der
+ * probenweisen Fächerung stammen: gleiche Leistung, identische fachliche
+ * Werte und jede Zeile einer eigenen Probe zugeordnet. Bewusst mehrfach
+ * gebuchte Leistungen (gleiche Probe oder ohne Probenbezug) und Zeilen mit
+ * abweichenden Messbedingungen bleiben immer eigenständige Karten — es wird
+ * nie still zusammengeführt und nie automatisch eine Probe ausgewählt.
+ *
+ * Rückgabe: Gruppen von Zeilenindizes in Reihenfolge des ersten Auftretens;
+ * jede Gruppe wird genau eine Vorlagenkarte.
+ */
+export function consolidateTemplateRows(rows: TemplateRowRef[]): number[][] {
+  const byFingerprint = new Map<string, number[]>();
+  rows.forEach((row, i) => {
+    const list = byFingerprint.get(row.fingerprint) ?? [];
+    list.push(i);
+    byFingerprint.set(row.fingerprint, list);
+  });
+  const groups: number[][] = [];
+  for (const indexes of byFingerprint.values()) {
+    const sampleIds = indexes.map((i) => rows[i].sample_id ?? null);
+    const isSampleFanOut =
+      indexes.length > 1 &&
+      sampleIds.every((id) => id != null) &&
+      new Set(sampleIds).size === sampleIds.length;
+    if (isSampleFanOut) groups.push([indexes[0]]);
+    else for (const i of indexes) groups.push([i]);
+  }
+  return groups;
+}
+
 /** Baut aus einem bestehenden Auftrag einen unabhängigen Entwurfs-Payload. */
 export async function buildPayloadFromOrder(
   orderId: string,
@@ -84,15 +149,29 @@ export async function buildPayloadFromOrder(
   }
 
   if (opts.services) {
+    // Zuerst pro Ausführungszeile die fachlichen Werte aufbereiten, danach
+    // eindeutige probenweise Fächerungen zu je einer Vorlagenkarte bündeln.
+    interface RowBuild {
+      service_id: string;
+      service_name: string;
+      source_package_id: string | null;
+      source_package_name: string | null;
+      sample_id: string | null;
+      values: Record<string, unknown>;
+      params: Record<string, string>;
+    }
+    const rows: RowBuild[] = [];
     for (const m of order.order_measurements ?? []) {
-      const uid = newUid();
-      payload.measurements?.push({
-        uid, service_id: m.service_id,
+      const row: RowBuild = {
+        service_id: m.service_id,
         service_name: m.measurement_services?.service_name ?? "Dienstleistung",
-        origin: "manual",
         source_package_id: opts.packages ? m.source_package_id ?? null : null,
         source_package_name: opts.packages ? m.source_package_name_snapshot ?? null : null,
-      });
+        sample_id: m.sample_id ?? null,
+        values: {},
+        params: {},
+      };
+      rows.push(row);
       if (!opts.conditions) continue;
       const [fields, links, legacyDefinitions, layout] = await Promise.all([
         api.serviceDataFields.listForService(m.service_id),
@@ -104,8 +183,8 @@ export async function buildPayloadFromOrder(
         formId: link.form_definition_id,
         fields: await api.formFields.listForForm(link.form_definition_id),
       })));
-      const values: Record<string, unknown> = {};
-      const params: Record<string, string> = {};
+      const values = row.values;
+      const params = row.params;
       const seenParameterNames = new Set<string>();
       for (const p of m.measurement_parameters ?? []) {
         const name = String(p.parameter_name ?? "");
@@ -130,19 +209,40 @@ export async function buildPayloadFromOrder(
         }
         const section = layout?.layout?.sections?.find(sec => sec.repeatable?.enabled && (sec.repeatable.storage_key || `repeat:${sec.id}`) === name);
         if (section) {
-          let rows: unknown;
-          try { rows = JSON.parse(p.parameter_value); } catch { throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`); }
-          if (!Array.isArray(rows)) throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`);
+          let parsedRows: unknown;
+          try { parsedRows = JSON.parse(p.parameter_value); } catch { throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`); }
+          if (!Array.isArray(parsedRows)) throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`);
           const childFields = fields.filter(f => section.fields.some(ref => ref.field_id === f.id));
-          values[name] = rows.map(row => ({ ...copyTemplateInputs(row, childFields), __id: newUid() }));
+          values[name] = parsedRows.map(r => ({ ...copyTemplateInputs(r, childFields), __id: newUid() }));
           continue;
         }
         const definitions = legacyDefinitions.filter(d => d.parameter_name === name);
         if (definitions.length === 1) params[definitions[0].id] = String(p.parameter_value ?? "");
         else throw new Error(`Vorgabe „${name}“ hat keine eindeutige Felddefinition; Vorlage nicht erstellt.`);
       }
-      if (payload.measurementFormValues) payload.measurementFormValues[uid] = values;
-      if (payload.measurementParams) payload.measurementParams[uid] = params;
+    }
+    // Konsolidierung: probenweise gefächerte, fachlich identische Zeilen
+    // werden zu je einer Vorlagenkarte; die neue Probenanzahl ist dadurch
+    // unabhängig von der ursprünglichen. Abweichende Messbedingungen und
+    // bewusste Mehrfachbuchungen bleiben eigenständige Karten.
+    const groups = consolidateTemplateRows(
+      rows.map((r) => ({ sample_id: r.sample_id, fingerprint: templateRowFingerprint(r.service_id, r.values, r.params) }))
+    );
+    for (const group of groups) {
+      const row = rows[group[0]];
+      const uid = newUid();
+      payload.measurements?.push({
+        uid,
+        service_id: row.service_id,
+        service_name: row.service_name,
+        origin: "manual",
+        source_package_id: row.source_package_id,
+        source_package_name: row.source_package_name,
+      });
+      if (opts.conditions) {
+        if (payload.measurementFormValues) payload.measurementFormValues[uid] = row.values;
+        if (payload.measurementParams) payload.measurementParams[uid] = row.params;
+      }
     }
   }
 
