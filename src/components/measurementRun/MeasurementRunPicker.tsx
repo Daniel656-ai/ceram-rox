@@ -10,6 +10,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { ChevronDown, ChevronRight, PlayCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQualifiedServiceIds } from "@/hooks/useMeasurements";
+import { canOpenExternalApp, externalAppForService } from "@/lib/externalApps";
+import { ExternalAppButton } from "@/components/ExternalAppButton";
 
 /**
  * Gruppenschlüssel des Messarbeitsplatzes – dynamisch aus vorhandenen Daten:
@@ -45,6 +49,8 @@ export default function MeasurementRunPicker({
   claim?: (id: string) => Promise<unknown>;
 }) {
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const { data: qualifiedServiceIds } = useQualifiedServiceIds();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [starting, setStarting] = useState(false);
