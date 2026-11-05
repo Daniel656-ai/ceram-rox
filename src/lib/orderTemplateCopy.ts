@@ -183,8 +183,8 @@ export async function buildPayloadFromOrder(
         formId: link.form_definition_id,
         fields: await api.formFields.listForForm(link.form_definition_id),
       })));
-      const values: Record<string, unknown> = {};
-      const params: Record<string, string> = {};
+      const values = row.values;
+      const params = row.params;
       const seenParameterNames = new Set<string>();
       for (const p of m.measurement_parameters ?? []) {
         const name = String(p.parameter_name ?? "");
@@ -209,11 +209,11 @@ export async function buildPayloadFromOrder(
         }
         const section = layout?.layout?.sections?.find(sec => sec.repeatable?.enabled && (sec.repeatable.storage_key || `repeat:${sec.id}`) === name);
         if (section) {
-          let rows: unknown;
-          try { rows = JSON.parse(p.parameter_value); } catch { throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`); }
-          if (!Array.isArray(rows)) throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`);
+          let parsedRows: unknown;
+          try { parsedRows = JSON.parse(p.parameter_value); } catch { throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`); }
+          if (!Array.isArray(parsedRows)) throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`);
           const childFields = fields.filter(f => section.fields.some(ref => ref.field_id === f.id));
-          values[name] = rows.map(row => ({ ...copyTemplateInputs(row, childFields), __id: newUid() }));
+          values[name] = parsedRows.map(r => ({ ...copyTemplateInputs(r, childFields), __id: newUid() }));
           continue;
         }
         const definitions = legacyDefinitions.filter(d => d.parameter_name === name);
