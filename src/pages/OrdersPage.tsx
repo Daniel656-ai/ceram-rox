@@ -1,3 +1,7 @@
+import { TaskServiceFilterPopover } from "@/components/orders/TaskServiceFilterPopover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useServices, useMyQualifiedServiceIds } from "@/hooks/useMeasurements";
+import { loadTaskFilterState, saveTaskFilterState, effectiveServiceIds, buildTaskServicePredicate, isTaskFilterActive, DEFAULT_TASK_FILTER, type TaskFilterState, type CompetenceState } from "@/lib/tasks/taskServiceFilter";
 import { TaskOrderIdentity } from "@/components/orders/TaskOrderIdentity";
 import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
@@ -26,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Search, Trash2, Copy, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox, RotateCcw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 
@@ -385,6 +389,26 @@ function DurchfuehrerTasksView({
   const { data: freeTasks = [], isLoading: isLoadingFree } = useUnassignedQualifiedMeasurements();
   const { data: otherOpen = [] } = useOpenMeasurementsOverview();
   const claim = useClaimMeasurement();
+  const { user: authUser, role: authRole } = useAuth();
+  const { data: activeServices } = useServices();
+  const qualifiedQuery = useMyQualifiedServiceIds();
+  const [filterState, setFilterStateRaw] = useState<TaskFilterState>(() => loadTaskFilterState(authUser?.id));
+  // Benutzerwechsel: eigenen Stand laden, nie den des Vorgängers überschreiben.
+  useEffect(() => { setFilterStateRaw(loadTaskFilterState(authUser?.id)); }, [authUser?.id]);
+  const setFilterState = (next: TaskFilterState) => { setFilterStateRaw(next); saveTaskFilterState(authUser?.id, next); };
+  const knownServiceIds = useMemo(() => (activeServices ? (activeServices as any[]).map((s) => s.id) : null), [activeServices]);
+  const effIds = useMemo(() => effectiveServiceIds(filterState.serviceIds, knownServiceIds), [filterState.serviceIds, knownServiceIds]);
+  const competence: CompetenceState = authRole === "master"
+    ? { status: "ready", isMaster: true, serviceIds: [] }
+    : qualifiedQuery.isError ? { status: "error" }
+    : qualifiedQuery.data ? { status: "ready", isMaster: false, serviceIds: qualifiedQuery.data }
+    : { status: "loading" };
+  const servicePredicate = useMemo(
+    () => buildTaskServicePredicate(effIds, filterState.onlyCompetent, competence),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [effIds, filterState.onlyCompetent, competence.status, qualifiedQuery.data, authRole],
+  );
+  const filterActive = isTaskFilterActive(filterState, effIds);
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
   // -------- Sortierung (einheitlich mit Rohstoffverwaltung / OrdersPage) --------
@@ -488,26 +512,26 @@ function DurchfuehrerTasksView({
       m.measurement_orders?.projects?.project_number?.toLowerCase().includes(q) ||
       m.measurement_orders?.projects?.project_name?.toLowerCase().includes(q);
     const matchesStatus = statusFilter === "all" || m.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && servicePredicate(m.service_id);
   };
 
   const assigned = useMemo(
     () => (myMeasurements as any[]).filter(matches).sort(buildComparator(sortAssigned)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [myMeasurements, search, statusFilter, sortAssigned, i18n.language]
+    [myMeasurements, search, statusFilter, sortAssigned, i18n.language, servicePredicate]
   );
 
   const free = useMemo(
     () => (freeTasks as any[]).filter(matches).sort(buildComparator(sortFree)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [freeTasks, search, statusFilter, sortFree, i18n.language]
+    [freeTasks, search, statusFilter, sortFree, i18n.language, servicePredicate]
   );
 
   // Nur sichtbar: fremd zugewiesene bzw. nicht qualifizierte offene Aufgaben.
   const others = useMemo(
     () => (otherOpen as any[]).filter(matches),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [otherOpen, search, statusFilter]
+    [otherOpen, search, statusFilter, servicePredicate]
   );
 
   const handleClaim = async (id: string, label: string) => {
@@ -572,7 +596,7 @@ function DurchfuehrerTasksView({
       </div>
 
       {/* Gemeinsame Filter für beide Bereiche */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder={t("orders:search_placeholder")} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
@@ -586,10 +610,39 @@ function DurchfuehrerTasksView({
             <SelectItem value="completed">{t("common:status_completed")}</SelectItem>
           </SelectContent>
         </Select>
+        <TaskServiceFilterPopover
+          services={(activeServices as any[]) ?? []}
+          selectedIds={effIds}
+          onChange={(ids) => setFilterState({ ...filterState, serviceIds: ids })}
+        />
+        <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+          <Checkbox
+            checked={filterState.onlyCompetent}
+            onCheckedChange={(v) => setFilterState({ ...filterState, onlyCompetent: v === true })}
+          />
+          {t("orders:task_filter_only_competent")}
+        </label>
+        <Button variant="ghost" size="sm" className="self-center" disabled={!filterActive} onClick={() => setFilterState({ ...DEFAULT_TASK_FILTER })}>
+          <RotateCcw className="h-4 w-4 mr-1" />{t("orders:task_filter_reset")}
+        </Button>
       </div>
+      {filterState.onlyCompetent && competence.status === "error" && (
+        <p className="text-sm text-destructive">{t("orders:task_filter_competence_error")}</p>
+      )}
+      {filterState.onlyCompetent && competence.status === "loading" && (
+        <p className="text-sm text-muted-foreground">{t("orders:task_filter_competence_loading")}</p>
+      )}
 
       {/* Temporärer Messdurchlauf: eigene + freie qualifizierte Aufgaben; freie werden beim Start über die bestehende Übernahme übernommen */}
       <MeasurementRunPicker tasks={assigned} freeTasks={free} otherTasks={others} claim={(id) => claim.mutateAsync(id)} />
+      {(filterActive || search.trim() !== "" || statusFilter !== "all") &&
+        ![...assigned, ...free, ...others].some((m: any) => m.status !== "completed") && (
+        <Card>
+          <CardContent className="py-4 text-sm text-muted-foreground" data-testid="run-filter-empty">
+            {t("orders:task_filter_run_empty")}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 1) Meine zugewiesenen Aufgaben */}
       <Card>
