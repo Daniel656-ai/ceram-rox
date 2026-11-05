@@ -1,3 +1,4 @@
+import { TaskOrderIdentity } from "@/components/orders/TaskOrderIdentity";
 import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
 import { resolveOrderMasseType } from "@/lib/orders/orderMasseType";
@@ -483,6 +484,7 @@ function DurchfuehrerTasksView({
       m.measurement_number?.toLowerCase().includes(q) ||
       m.measurement_services?.service_name?.toLowerCase().includes(q) ||
       m.measurement_orders?.order_number?.toLowerCase().includes(q) ||
+      (m.measurement_orders ? orderIdentity(m.measurement_orders).number.toLowerCase().includes(q) : false) ||
       m.measurement_orders?.projects?.project_number?.toLowerCase().includes(q) ||
       m.measurement_orders?.projects?.project_name?.toLowerCase().includes(q);
     const matchesStatus = statusFilter === "all" || m.status === statusFilter;
@@ -620,7 +622,7 @@ function DurchfuehrerTasksView({
                     <Link to={`/aufgaben/${m.id}`} className="text-primary hover:underline">{m.measurement_number}</Link>
                   </TableCell>
                   <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
-                  <TableCell className="font-mono">{m.measurement_orders?.order_number || "–"}</TableCell>
+                  <TableCell><TaskOrderIdentity order={m.measurement_orders} /></TableCell>
                   <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                   <TableCell>
                     {m.measurement_orders?.projects?.project_number ? (
@@ -674,7 +676,7 @@ function DurchfuehrerTasksView({
                   <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
                   <TableCell className="font-mono">
                     <Link to={`/auftraege/${m.order_id}`} className="text-primary hover:underline">
-                      {m.measurement_orders?.order_number || "–"}
+                      <TaskOrderIdentity order={m.measurement_orders} />
                     </Link>
                   </TableCell>
                   <TableCell>

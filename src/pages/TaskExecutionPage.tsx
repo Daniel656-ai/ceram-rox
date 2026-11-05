@@ -1,3 +1,4 @@
+import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SpecChangeHistory, groupSpecChanges } from "@/components/order/SpecAmendment";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -812,6 +813,7 @@ function TaskExecutionPageInner() {
 
   /** Fälligkeit: eigenes Datum der Messung, sonst des Auftrags – nie abgeleitet. */
   const dueRaw: string | null = m.due_date ?? order?.due_date ?? null;
+  const orderIdent = order ? orderIdentity(order) : null;
   const dueLabel = dueRaw ? new Date(dueRaw).toLocaleDateString("de-AT") : "Keine Fälligkeit";
 
   return (
@@ -826,6 +828,7 @@ function TaskExecutionPageInner() {
           </h1>
           <p className="text-muted-foreground text-sm">
             Aufgabe {m.measurement_number}
+            {orderIdent?.hasExperimentNumber ? <> · Versuchsnummer <span className="font-semibold text-foreground">{orderIdent.number}</span></> : ""}
             {order?.order_number ? ` · Auftrag ${order.order_number}` : ""}
             {project?.project_number ? ` · Projekt ${project.project_number}` : ""}
           </p>
@@ -911,6 +914,14 @@ function TaskExecutionPageInner() {
           <CardTitle className="text-sm">Auftragsdaten</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          {orderIdent && (orderIdent.hasExperimentNumber || orderIdent.missingExperimentNumber) && (
+            <div className="col-span-2 md:col-span-4">
+              <p className="text-muted-foreground text-xs">Versuchsnummer</p>
+              {orderIdent.hasExperimentNumber
+                ? <p className="text-lg font-bold font-mono">{orderIdent.number}</p>
+                : <p className="text-xs italic text-muted-foreground">Keine Versuchsnummer gespeichert</p>}
+            </div>
+          )}
           <div>
             <p className="text-muted-foreground text-xs">Auftragsnummer</p>
             <p className="font-medium font-mono">{order?.order_number || "Keine Auftragsnummer"}</p>
@@ -1360,7 +1371,7 @@ function RunNavigation({
               <span className="mr-1">{symbol}</span>
               <span className="font-mono">{it?.samples?.sample_number || it?.measurement_number || "…"}</span>
               {it?.measurement_orders?.order_number && (
-                <span className="ml-1 opacity-70">· {it.measurement_orders.order_number}</span>
+                <span className="ml-1 opacity-70">· {orderIdentity(it.measurement_orders).number}</span>
               )}
             </Button>
           );
