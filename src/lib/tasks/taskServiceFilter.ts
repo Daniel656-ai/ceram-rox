@@ -17,8 +17,8 @@ export function parseTaskFilterState(raw: string | null | undefined): TaskFilter
   try {
     const v = JSON.parse(raw);
     if (!v || typeof v !== "object") return { ...DEFAULT_TASK_FILTER };
-    const serviceIds = Array.isArray(v.serviceIds)
-      ? Array.from(new Set(v.serviceIds.filter((x: unknown): x is string => typeof x === "string" && x.length > 0)))
+    const serviceIds: string[] = Array.isArray(v.serviceIds)
+      ? Array.from(new Set<string>((v.serviceIds as unknown[]).filter((x: unknown): x is string => typeof x === "string" && x.length > 0)))
       : [];
     return { serviceIds, onlyCompetent: v.onlyCompetent === true };
   } catch {
