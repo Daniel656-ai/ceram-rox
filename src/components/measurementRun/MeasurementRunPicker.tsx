@@ -1,3 +1,5 @@
+import { TaskOrderIdentity } from "@/components/orders/TaskOrderIdentity";
+import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -101,7 +103,7 @@ export default function MeasurementRunPicker({
           ok.push(m.id);
         } catch (err: any) {
           const msg = String(err?.message || "");
-          const label = `${m.samples?.sample_number || m.measurement_number} (${m.measurement_orders?.order_number || "–"})`;
+          const label = `${m.samples?.sample_number || m.measurement_number} (${m.measurement_orders ? orderIdentity(m.measurement_orders).number || "–" : "–"})`;
           const reason = msg.includes("already assigned")
             ? "inzwischen von einem anderen Mitarbeiter übernommen"
             : msg.includes("already completed")
@@ -186,7 +188,7 @@ export default function MeasurementRunPicker({
                       <Badge variant={m.__free ? "secondary" : "outline"} className="min-w-28 justify-center truncate max-w-48" title={m.__blocked || undefined}>
                         {m.__blocked ? m.__blocked : m.__free ? "Verfügbar" : "Mir zugewiesen"}
                       </Badge>
-                      <span className="font-mono text-muted-foreground">{m.measurement_orders?.order_number || "–"}</span>
+                      <TaskOrderIdentity order={m.measurement_orders} compact className="w-32" />
                       <span className="text-muted-foreground w-24 truncate">{m.measurement_orders?.projects?.project_number || ""}</span>
                       <PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} />
                       <span className="w-24 text-muted-foreground">

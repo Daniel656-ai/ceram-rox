@@ -193,7 +193,7 @@ export const measurements = {
       : unwrap(
           dbClient
             .from("order_measurements")
-            .select("id, status, measurement_number, measurement_services(service_name), samples!order_measurements_sample_id_fkey(sample_number, sample_name), measurement_orders(order_number)")
+            .select("id, status, measurement_number, measurement_services(service_name), samples!order_measurements_sample_id_fkey(sample_number, sample_name), measurement_orders(order_number, order_kind, pp_experiment_number, shared_form_data)")
             .in("id", ids)
         ),
   /** Full detail for a single measurement (used by task execution view). */
@@ -202,7 +202,7 @@ export const measurements = {
       dbClient
         .from("order_measurements")
         .select(
-          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, work_instructions), measurement_results(*), measurement_parameters(*), samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), measurement_orders(id, order_number, order_type, notes, created_by, project_id, sample_id, priority, due_date, status, projects(id, project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name))"
+          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, work_instructions), measurement_results(*), measurement_parameters(*), samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), measurement_orders(id, order_number, order_kind, pp_experiment_number, shared_form_data, order_type, notes, created_by, project_id, sample_id, priority, due_date, status, projects(id, project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name))"
         )
         .eq("id", id)
         .single()
