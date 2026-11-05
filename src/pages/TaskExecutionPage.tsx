@@ -1,4 +1,7 @@
-import { orderIdentity } from "@/lib/orders/orderIdentity";
+import { orderIdentity, resolveExperimentNumber } from "@/lib/orders/orderIdentity";
+import { canOpenExternalApp, externalAppForService, externalAppUrl } from "@/lib/externalApps";
+import { ExternalAppButton } from "@/components/ExternalAppButton";
+import { useQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SpecChangeHistory, groupSpecChanges } from "@/components/order/SpecAmendment";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
