@@ -115,6 +115,36 @@ export function consolidateTemplateRows(rows: TemplateRowRef[]): number[][] {
   return groups;
 }
 
+interface ResolvableField { field_key: string; display_name?: string | null; archived?: boolean | null }
+
+/**
+ * Ordnet eine gespeicherte Vorgabe (parameter_name) genau einer aktiven
+ * Felddefinition zu. Reihenfolge: direkte Dienstleistungsfelder (field_key,
+ * dann display_name), erst danach verknüpfte Formulare (ebenso). Archivierte
+ * Felder zählen nie. Mehrere gleichrangige Treffer derselben Stufe sind ein
+ * echter Konflikt → Abbruch, nie Auswahl des ersten Treffers.
+ */
+export function resolveParameterField<F extends ResolvableField>(
+  name: string,
+  serviceFields: F[],
+  linkedDefinitions: { formId: string; fields: F[] }[],
+): { key: string; def: F } | undefined {
+  const active = (f: F) => f.archived !== true;
+  const conflict = () => new Error(`Vorgabe „${name}“ ist nicht eindeutig zugeordnet; Vorlage nicht erstellt.`);
+  const pick = <T,>(hits: T[]): T | undefined => {
+    if (hits.length > 1) throw conflict();
+    return hits[0];
+  };
+  const direct = serviceFields.filter(active);
+  const directHit =
+    pick(direct.filter(f => f.field_key === name)) ??
+    pick(direct.filter(f => f.display_name === name));
+  if (directHit) return { key: directHit.field_key, def: directHit };
+  const linked = linkedDefinitions.flatMap(link =>
+    link.fields.filter(active).map(f => ({ key: `form:${link.formId}:${f.field_key}`, def: f })));
+  return pick(linked.filter(c => c.def.field_key === name)) ?? pick(linked.filter(c => c.def.display_name === name));
+}
+
 /** Baut aus einem bestehenden Auftrag einen unabhängigen Entwurfs-Payload. */
 export async function buildPayloadFromOrder(
   orderId: string,
@@ -191,13 +221,7 @@ export async function buildPayloadFromOrder(
         if (!name) continue;
         if (seenParameterNames.has(name)) throw new Error(`Vorgabe „${name}“ ist mehrfach gespeichert und nicht eindeutig; Vorlage nicht erstellt.`);
         seenParameterNames.add(name);
-        const candidates = [
-          ...fields.filter(f => f.field_key === name || f.display_name === name).map(f => ({ key: f.field_key, def: f })),
-          ...linkedDefinitions.flatMap(link => link.fields.filter(f => f.field_key === name || f.display_name === name)
-            .map(f => ({ key: `form:${link.formId}:${f.field_key}`, def: f }))),
-        ];
-        if (candidates.length > 1) throw new Error(`Vorgabe „${name}“ ist nicht eindeutig zugeordnet; Vorlage nicht erstellt.`);
-        const candidate = candidates[0];
+        const candidate = resolveParameterField(name, fields, linkedDefinitions);
         if (candidate) {
           if (!templateInputAllowed(candidate.def)) continue;
           const parsed = parseTemplateInput(p.parameter_value, candidate.def);
