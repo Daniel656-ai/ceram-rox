@@ -58,9 +58,7 @@ export function canOpenExternalApp(
 ): boolean {
   if (role === "master") return true;
   if (!serviceId || !qualifiedServiceIds) return false;
-  return qualifiedServiceIds instanceof Set
-    ? qualifiedServiceIds.has(serviceId)
-    : qualifiedServiceIds.includes(serviceId);
+  return Array.from(qualifiedServiceIds).includes(serviceId);
 }
 
 /** Erkennung der Tauri-Desktop-Laufzeit (WebView). */
