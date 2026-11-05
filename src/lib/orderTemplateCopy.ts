@@ -149,15 +149,29 @@ export async function buildPayloadFromOrder(
   }
 
   if (opts.services) {
+    // Zuerst pro Ausführungszeile die fachlichen Werte aufbereiten, danach
+    // eindeutige probenweise Fächerungen zu je einer Vorlagenkarte bündeln.
+    interface RowBuild {
+      service_id: string;
+      service_name: string;
+      source_package_id: string | null;
+      source_package_name: string | null;
+      sample_id: string | null;
+      values: Record<string, unknown>;
+      params: Record<string, string>;
+    }
+    const rows: RowBuild[] = [];
     for (const m of order.order_measurements ?? []) {
-      const uid = newUid();
-      payload.measurements?.push({
-        uid, service_id: m.service_id,
+      const row: RowBuild = {
+        service_id: m.service_id,
         service_name: m.measurement_services?.service_name ?? "Dienstleistung",
-        origin: "manual",
         source_package_id: opts.packages ? m.source_package_id ?? null : null,
         source_package_name: opts.packages ? m.source_package_name_snapshot ?? null : null,
-      });
+        sample_id: m.sample_id ?? null,
+        values: {},
+        params: {},
+      };
+      rows.push(row);
       if (!opts.conditions) continue;
       const [fields, links, legacyDefinitions, layout] = await Promise.all([
         api.serviceDataFields.listForService(m.service_id),
