@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildPayloadFromDraft, buildPayloadFromOrder, DEFAULT_COPY_OPTIONS } from "@/lib/orderTemplateCopy";
+import { buildPayloadFromDraft, buildPayloadFromOrder, consolidateTemplateRows, DEFAULT_COPY_OPTIONS, diffAgainstBaseline, templateRowFingerprint } from "@/lib/orderTemplateCopy";
 import { copyTemplateInputs } from "@/lib/orderTemplateInputs";
 const mocks = vi.hoisted(() => ({ get: vi.fn(), fields: vi.fn(), links: vi.fn(), formFields: vi.fn(), definitions: vi.fn(), layout: vi.fn() }));
 vi.mock("@/lib/api", () => ({ api: { orders: { get: mocks.get }, serviceDataFields: { listForService: mocks.fields }, serviceFormLinks: { listForService: mocks.links }, formFields: { listForForm: mocks.formFields }, serviceParameters: { listForService: mocks.definitions }, serviceFormLayouts: { get: mocks.layout } } }));
