@@ -50,6 +50,71 @@ const newUid = () =>
 
 const deepCopy = <T,>(v: T): T => (v == null ? v : JSON.parse(JSON.stringify(v)));
 
+/** Schlüssel, die bei jedem Kopiervorgang neu vergeben werden und daher nie Teil eines Wertvergleichs sein dürfen. */
+const VOLATILE_KEYS = new Set(["__id", "__instance_id"]);
+
+/** Stabile, schlüsselsortierte JSON-Darstellung ohne flüchtige Identitäten. */
+function stableStringify(v: unknown): string {
+  if (v == null || typeof v !== "object") return JSON.stringify(v ?? null);
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  const entries = Object.entries(v as Record<string, unknown>)
+    .filter(([k]) => !VOLATILE_KEYS.has(k))
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, val]) => `${JSON.stringify(k)}:${stableStringify(val)}`);
+  return `{${entries.join(",")}}`;
+}
+
+/**
+ * Fingerabdruck einer Dienstleistungskonfiguration anhand ihrer tatsächlichen
+ * fachlichen Werte (Leistung + Formularwerte + Parameter). Frisch vergebene
+ * Zeilen-Identitäten (__id/__instance_id) fließen nicht ein.
+ */
+export function templateRowFingerprint(
+  serviceId: string,
+  values: Record<string, unknown>,
+  params: Record<string, string>
+): string {
+  return stableStringify({ serviceId, values, params });
+}
+
+export interface TemplateRowRef {
+  sample_id?: string | null;
+  fingerprint: string;
+}
+
+/**
+ * Fasst Dienstleistungszeilen eines Quellauftrags zu Vorlagenkarten zusammen.
+ *
+ * Zusammengeführt werden ausschließlich Zeilen, die eindeutig aus der
+ * probenweisen Fächerung stammen: gleiche Leistung, identische fachliche
+ * Werte und jede Zeile einer eigenen Probe zugeordnet. Bewusst mehrfach
+ * gebuchte Leistungen (gleiche Probe oder ohne Probenbezug) und Zeilen mit
+ * abweichenden Messbedingungen bleiben immer eigenständige Karten — es wird
+ * nie still zusammengeführt und nie automatisch eine Probe ausgewählt.
+ *
+ * Rückgabe: Gruppen von Zeilenindizes in Reihenfolge des ersten Auftretens;
+ * jede Gruppe wird genau eine Vorlagenkarte.
+ */
+export function consolidateTemplateRows(rows: TemplateRowRef[]): number[][] {
+  const byFingerprint = new Map<string, number[]>();
+  rows.forEach((row, i) => {
+    const list = byFingerprint.get(row.fingerprint) ?? [];
+    list.push(i);
+    byFingerprint.set(row.fingerprint, list);
+  });
+  const groups: number[][] = [];
+  for (const indexes of byFingerprint.values()) {
+    const sampleIds = indexes.map((i) => rows[i].sample_id ?? null);
+    const isSampleFanOut =
+      indexes.length > 1 &&
+      sampleIds.every((id) => id != null) &&
+      new Set(sampleIds).size === sampleIds.length;
+    if (isSampleFanOut) groups.push([indexes[0]]);
+    else for (const i of indexes) groups.push([i]);
+  }
+  return groups;
+}
+
 /** Baut aus einem bestehenden Auftrag einen unabhängigen Entwurfs-Payload. */
 export async function buildPayloadFromOrder(
   orderId: string,
