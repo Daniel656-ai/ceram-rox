@@ -1,8 +1,9 @@
 /**
  * Anzeige der Spalte „Auftrag“ in der m³-Übersicht (nur Darstellung).
- * Soll: erste 9 Zeichen von production_releases.article_number + " " + projects.project_name,
- * Projekt ausschließlich über production_releases.project_id.
- * Kein Ersatz durch interne ROX-Auftragsnummer oder Freitext.
+ * Soll: erste 9 Zeichen von production_releases.article_number + " " + Projektname.
+ * Projektname: zuerst über production_releases.project_id (projects.project_name),
+ * sonst der in derselben Freigabe gespeicherte production_releases.project_name.
+ * Kein Ersatz durch interne ROX-Auftragsnummer, keine Namensähnlichkeit.
  */
 export interface M3OrderLabel {
   label: string | null;
@@ -17,24 +18,26 @@ export function articlePrefix(articleNumber: string | null | undefined): string 
 }
 
 export function m3OrderLabel(
-  release: { article_number?: string | null; project_id?: string | null } | null | undefined,
+  release:
+    | { article_number?: string | null; project_id?: string | null; project_name?: string | null }
+    | null
+    | undefined,
   projectNameById: Map<string, string | null | undefined>
 ): M3OrderLabel {
   if (!release) return { label: null, complete: false, problem: "Keine Produktionsfreigabe hinterlegt" };
   const an = articlePrefix(release.article_number);
-  if (!release.project_id) {
-    return { label: an, complete: false, problem: "Projektzuordnung fehlt in der Produktionsfreigabe" };
+  const linked = release.project_id ? projectNameById.get(release.project_id)?.trim() || null : null;
+  const own = release.project_name?.trim() || null;
+  const pn = linked ?? own;
+  if (!pn) {
+    const problem =
+      release.project_id && !projectNameById.has(release.project_id)
+        ? "Verknüpftes Projekt nicht gefunden"
+        : "Projektzuordnung fehlt in der Produktionsfreigabe";
+    return { label: an, complete: false, problem };
   }
-  if (!projectNameById.has(release.project_id)) {
-    return { label: an, complete: false, problem: "Verknüpftes Projekt nicht gefunden" };
-  }
-  const pn = projectNameById.get(release.project_id)?.trim() || null;
-  if (!an || !pn) {
-    return {
-      label: [an, pn].filter(Boolean).join(" ") || null,
-      complete: false,
-      problem: !an ? "Artikelnummer fehlt in der Produktionsfreigabe" : "Projektname fehlt",
-    };
+  if (!an) {
+    return { label: pn, complete: false, problem: "Artikelnummer fehlt in der Produktionsfreigabe" };
   }
   return { label: `${an} ${pn}`, complete: true, problem: null };
 }
