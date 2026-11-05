@@ -189,6 +189,16 @@ export default function MeasurementRunPicker({
                 </button>
                 {freeCount > 0 && <Badge variant="secondary">{freeCount} verfügbar</Badge>}
                 <Badge variant="outline">{g.items.length}</Badge>
+                {showGroupApp && groupApp && (
+                  <ExternalAppButton
+                    app={groupApp}
+                    url={groupApp.startUrl}
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                )}
               </div>
               {isOpen && (
                 <div className="divide-y">
