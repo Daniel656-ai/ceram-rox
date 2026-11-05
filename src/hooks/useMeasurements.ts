@@ -283,3 +283,13 @@ export function useReassignMeasurement() {
     },
   });
 }
+
+/** Eigene Kompetenzen (nur Anzeige-Filter); Master gelten wie bisher als für alle qualifiziert. */
+export function useMyQualifiedServiceIds() {
+  const { user, role } = useAuth();
+  return useQuery({
+    queryKey: ["my-qualified-service-ids", user?.id],
+    queryFn: () => api.measurements.listQualifiedServiceIds(user!.id),
+    enabled: !!user && role !== "master",
+  });
+}

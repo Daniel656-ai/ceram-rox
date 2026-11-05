@@ -22,6 +22,8 @@ vi.mock("@/hooks/useMeasurements", () => ({
   useUnassignedQualifiedMeasurements: () => ({ data: [] }),
   useOpenMeasurementsOverview: () => ({ data: [] }),
   useClaimMeasurement: () => ({ mutateAsync: vi.fn() }),
+  useServices: () => ({ data: [] }),
+  useMyQualifiedServiceIds: () => ({ data: [] }),
 }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "user" }, role: state.role, hasRole: (role: string) => state.role === role }) }));
 vi.mock("@/hooks/useProjectMembers", () => ({ useIsAnyProjectLead: () => ({ data: false }) }));
