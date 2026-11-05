@@ -78,6 +78,9 @@ function TaskExecutionPageInner() {
 
   const serviceId: string | undefined = (measurement as any)?.service_id;
 
+  // Externe Fach-App (Extruder/Staucher): sichtbar für Master oder Qualifizierte.
+  const { data: qualifiedServiceIds } = useQualifiedServiceIds();
+
   /**
    * Werte vorangegangener Workflow-Schritte des Auftrags. Grundlage für
    * Feldverknüpfungen und darauf aufbauende Berechnungen (kein zweiter
@@ -819,6 +822,15 @@ function TaskExecutionPageInner() {
   const orderIdent = order ? orderIdentity(order) : null;
   const dueLabel = dueRaw ? new Date(dueRaw).toLocaleDateString("de-AT") : "Keine Fälligkeit";
 
+  // Externe Fach-App: Versuchsnummer aus pp_experiment_number, ersatzweise
+  // shared_form_data (zentral aufgelöst); ohne Nummer wird die Startseite verlinkt.
+  const externalApp = externalAppForService(m.measurement_services?.service_name);
+  const externalAppVisible =
+    !!externalApp && canOpenExternalApp(role, qualifiedServiceIds ?? null, serviceId ?? null);
+  const externalAppLink = externalApp
+    ? externalAppUrl(externalApp, order ? resolveExperimentNumber(order).value : null)
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -837,6 +849,9 @@ function TaskExecutionPageInner() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {externalAppVisible && externalApp && externalAppLink && (
+            <ExternalAppButton app={externalApp} url={externalAppLink} />
+          )}
           {canReassign && (
             <Button size="sm" variant="outline" onClick={() => setReassignOpen(true)}>
               Zuweisung ändern
