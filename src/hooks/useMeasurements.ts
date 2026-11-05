@@ -16,6 +16,19 @@ export function useAllServices() {
   });
 }
 
+/**
+ * Eigene Qualifikationen laut Kompetenzmatrix (mdl_service_permissions).
+ * Rein lesend; dieselbe Quelle wie „Meine Aufgaben" und claim_measurement.
+ */
+export function useQualifiedServiceIds() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["qualified-service-ids", user?.id],
+    queryFn: () => api.measurements.listQualifiedServiceIds(user!.id),
+    enabled: !!user,
+  });
+}
+
 export function useMyMeasurements() {
   const { user } = useAuth();
   return useQuery({

@@ -10,6 +10,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { ChevronDown, ChevronRight, PlayCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQualifiedServiceIds } from "@/hooks/useMeasurements";
+import { canOpenExternalApp, externalAppForService } from "@/lib/externalApps";
+import { ExternalAppButton } from "@/components/ExternalAppButton";
 
 /**
  * Gruppenschlüssel des Messarbeitsplatzes – dynamisch aus vorhandenen Daten:
@@ -45,6 +49,8 @@ export default function MeasurementRunPicker({
   claim?: (id: string) => Promise<unknown>;
 }) {
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const { data: qualifiedServiceIds } = useQualifiedServiceIds();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [starting, setStarting] = useState(false);
@@ -152,6 +158,15 @@ export default function MeasurementRunPicker({
           const allSel = selectable.length > 0 && selectable.every((m) => selected.has(m.id));
           const someSel = selectable.some((m) => selected.has(m.id));
           const freeCount = g.items.filter((m) => m.__free).length;
+          // Externe Fach-App (Extruder/Staucher): nur wenn die Gruppe eindeutig
+          // einer konfigurierten Leistung entspricht und Master/Qualifikation vorliegt.
+          const groupServiceNames = new Set(g.items.map((m) => m.measurement_services?.service_name).filter(Boolean));
+          const groupServiceId = g.items.find((m) => m.service_id)?.service_id ?? null;
+          const groupApp = groupServiceNames.size === 1
+            ? externalAppForService([...groupServiceNames][0] as string)
+            : null;
+          const showGroupApp =
+            !!groupApp && canOpenExternalApp(role, qualifiedServiceIds ?? null, groupServiceId);
           return (
             <div key={key} className="border rounded-md">
               <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
@@ -174,6 +189,16 @@ export default function MeasurementRunPicker({
                 </button>
                 {freeCount > 0 && <Badge variant="secondary">{freeCount} verfügbar</Badge>}
                 <Badge variant="outline">{g.items.length}</Badge>
+                {showGroupApp && groupApp && (
+                  <ExternalAppButton
+                    app={groupApp}
+                    url={groupApp.startUrl}
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                )}
               </div>
               {isOpen && (
                 <div className="divide-y">

@@ -7,6 +7,13 @@
   ],
   "permissions": [
     "core:default",
-    "process:default"
+    "process:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "http://172.30.100.162:8080/*" },
+        { "url": "http://172.30.100.162:8081/*" }
+      ]
+    }
   ]
 }
