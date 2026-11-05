@@ -124,12 +124,12 @@ interface ResolvableField { field_key: string; display_name?: string | null; arc
  * Felder zählen nie. Mehrere gleichrangige Treffer derselben Stufe sind ein
  * echter Konflikt → Abbruch, nie Auswahl des ersten Treffers.
  */
-export function resolveParameterField<F extends ResolvableField>(
+export function resolveParameterField<S extends ResolvableField, L extends ResolvableField>(
   name: string,
-  serviceFields: F[],
-  linkedDefinitions: { formId: string; fields: F[] }[],
-): { key: string; def: F } | undefined {
-  const active = (f: F) => f.archived !== true;
+  serviceFields: S[],
+  linkedDefinitions: { formId: string; fields: L[] }[],
+): { key: string; def: S | L } | undefined {
+  const active = (f: ResolvableField) => f.archived !== true;
   const conflict = () => new Error(`Vorgabe „${name}“ ist nicht eindeutig zugeordnet; Vorlage nicht erstellt.`);
   const pick = <T,>(hits: T[]): T | undefined => {
     if (hits.length > 1) throw conflict();
