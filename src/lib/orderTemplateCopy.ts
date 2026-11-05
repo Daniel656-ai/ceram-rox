@@ -220,8 +220,29 @@ export async function buildPayloadFromOrder(
         if (definitions.length === 1) params[definitions[0].id] = String(p.parameter_value ?? "");
         else throw new Error(`Vorgabe „${name}“ hat keine eindeutige Felddefinition; Vorlage nicht erstellt.`);
       }
-      if (payload.measurementFormValues) payload.measurementFormValues[uid] = values;
-      if (payload.measurementParams) payload.measurementParams[uid] = params;
+    }
+    // Konsolidierung: probenweise gefächerte, fachlich identische Zeilen
+    // werden zu je einer Vorlagenkarte; die neue Probenanzahl ist dadurch
+    // unabhängig von der ursprünglichen. Abweichende Messbedingungen und
+    // bewusste Mehrfachbuchungen bleiben eigenständige Karten.
+    const groups = consolidateTemplateRows(
+      rows.map((r) => ({ sample_id: r.sample_id, fingerprint: templateRowFingerprint(r.service_id, r.values, r.params) }))
+    );
+    for (const group of groups) {
+      const row = rows[group[0]];
+      const uid = newUid();
+      payload.measurements?.push({
+        uid,
+        service_id: row.service_id,
+        service_name: row.service_name,
+        origin: "manual",
+        source_package_id: row.source_package_id,
+        source_package_name: row.source_package_name,
+      });
+      if (opts.conditions) {
+        if (payload.measurementFormValues) payload.measurementFormValues[uid] = row.values;
+        if (payload.measurementParams) payload.measurementParams[uid] = row.params;
+      }
     }
   }
 
