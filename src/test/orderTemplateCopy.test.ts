@@ -51,7 +51,7 @@ describe("safe independent templates", () => {
     expect(a.payload.measurements?.[0].uid).not.toBe(b.payload.measurements?.[0].uid);
   });
   it("refuses ambiguous labels instead of guessing or losing a requirement", async () => {
-    mocks.fields.mockResolvedValue([f("text"), f("temperature")]);
+    mocks.fields.mockResolvedValue([f("text"), f("a", "text", { display_name: "temperature" }), f("b", "text", { display_name: "temperature" })]);
     await expect(buildPayloadFromOrder("source", DEFAULT_COPY_OPTIONS)).rejects.toThrow("nicht eindeutig");
   });
   it("copies draft duplicates and false/zero, clears old date, number and sample by default", () => {
