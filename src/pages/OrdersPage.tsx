@@ -676,13 +676,14 @@ function DurchfuehrerTasksView({
                 <SortableHead label={t("common:status")} sortKey="status" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:due_date")} sortKey="due_date" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <TableHead className="w-[60px]">{t("orders:sla_column")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoadingMine ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : assigned.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
               ) : assigned.map((m: any) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-mono font-medium">
@@ -701,6 +702,12 @@ function DurchfuehrerTasksView({
                   <TableCell><StatusBadge status={m.status} /></TableCell>
                   <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
                   <TableCell>{fmtDate(m.due_date)}</TableCell>
+                  <TableCell>
+                    <SlaBadge
+                      result={computeServiceSla(slaInputFromMeasurement(m), m.measurement_orders?.due_date ?? null)}
+                      dueDate={m.measurement_orders?.due_date ?? null}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -729,14 +736,15 @@ function DurchfuehrerTasksView({
                 <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:due_date")} sortKey="due_date" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <TableHead className="w-[60px]">{t("orders:sla_column")}</TableHead>
                 <TableHead className="w-[180px] text-right">Aktion</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoadingFree ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : free.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Aktuell keine freien Aufträge für deine Qualifikationen.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Aktuell keine freien Aufträge für deine Qualifikationen.</TableCell></TableRow>
               ) : free.map((m: any) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-mono font-medium">{m.measurement_number}</TableCell>
@@ -755,6 +763,12 @@ function DurchfuehrerTasksView({
                   </TableCell>
                   <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
                   <TableCell>{fmtDate(m.due_date)}</TableCell>
+                  <TableCell>
+                    <SlaBadge
+                      result={computeServiceSla(slaInputFromMeasurement(m), m.measurement_orders?.due_date ?? null)}
+                      dueDate={m.measurement_orders?.due_date ?? null}
+                    />
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       size="sm"
