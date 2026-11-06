@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Crosshair, Maximize2, Redo2, RotateCcw, Undo2, ZoomIn } from "lucide-react";
 import {
   CartesianGrid, Label as RLabel, Legend, Line, LineChart, ReferenceArea, ReferenceDot, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -9,7 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { downsample, curveOf, type MeasurementDataset } from "@/lib/curves/dataset";
+import { overviewMinMax, sliceRangeExact, xExtent, type MeasurementDataset } from "@/lib/curves/dataset";
+import {
+  clampRange, initHistory, panBy, pixelToX, pushView, redoView, resetView, undoView, wheelFactor, zoomAt,
+  type XRange, type ZoomHistory,
+} from "@/lib/curves/zoom";
+import { CurveViewerNavigator } from "./CurveViewerNavigator";
 import { DraggableMarkerLabel } from "./DraggableMarkerLabel";
 
 export interface CurveSelection {
@@ -82,21 +88,24 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
 
   const xChannel = channels.find((c) => c.key === xKey) ?? null;
 
-  const xValues = useMemo(() => {
-    const idx = channels.findIndex((c) => c.key === xKey);
-    if (idx < 0) return [] as number[];
-    return dataset.rows.map((r) => r[idx]).filter((v) => Number.isFinite(v));
-  }, [dataset, channels, xKey]);
+  const extent = useMemo(() => xExtent(dataset, xKey), [dataset, xKey]);
+  const xMin = extent?.min ?? 0;
+  const xMax = extent?.max ?? 0;
+  const fullRange = useMemo<XRange>(() => ({ from: xMin, to: xMax }), [xMin, xMax]);
 
-  const xMin = xValues.length ? Math.min(...xValues) : 0;
-  const xMax = xValues.length ? Math.max(...xValues) : 0;
-
+  // Fachlicher Auswertungsbereich (evalRange) – unabhängig vom Zoom.
   const [from, setFrom] = useState(xMin);
   const [to, setTo] = useState(xMax);
   const [dragStart, setDragStart] = useState<number | null>(null);
   const [dragEnd, setDragEnd] = useState<number | null>(null);
 
-  useEffect(() => { setFrom(xMin); setTo(xMax); }, [xMin, xMax]);
+  // Sichtbereich (viewRange) inkl. Historie – beeinflusst keine Berechnung.
+  const [history, setHistory] = useState<ZoomHistory>(() => initHistory(fullRange));
+  const [liveView, setLiveView] = useState<XRange | null>(null);
+  const view = liveView ?? history.current;
+  const [mode, setMode] = useState<"zoom" | "eval">("zoom");
+
+  useEffect(() => { setFrom(xMin); setTo(xMax); setHistory(resetView({ from: xMin, to: xMax })); setLiveView(null); }, [xMin, xMax]);
 
   /**
    * Gespeicherte Signalzuordnung übernehmen, sobald sie (z. B. nach dem Laden
@@ -119,31 +128,123 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
   }, [xKey, yKeys.join("|"), y2Key, from, to]);
 
 
-  /** Alle gewählten Kurven auf gemeinsame X-Werte gelegt. */
-  const chartData = useMemo(() => {
-    const active = [...yKeys, ...(y2Key ? [y2Key] : [])];
-    const byX = new Map<number, Record<string, number>>();
-    for (const key of active) {
-      for (const p of downsample(curveOf(dataset, xKey, key), 1500)) {
-        const row = byX.get(p.x) ?? { x: p.x };
-        row[key] = p.y;
-        byX.set(p.x, row);
-      }
-    }
-    return [...byX.values()].sort((a, b) => a.x - b.x);
-  }, [dataset, xKey, yKeys, y2Key]);
+  const activeKeys = useMemo(() => [...yKeys, ...(y2Key ? [y2Key] : [])], [yKeys, y2Key]);
+
+  /**
+   * Detaildiagramm: sämtliche Originalmesspunkte im Sichtbereich, je Zeile
+   * genau ein Messpunkt (keine Reduktion, kein Zusammenführen gleicher X-Werte).
+   */
+  const chartData = useMemo(
+    () => sliceRangeExact(dataset, xKey, activeKeys, view.from, view.to),
+    [dataset, xKey, activeKeys, view.from, view.to],
+  );
+
+  /** Gesamtübersicht – einmalig je Kanalwahl aufbereitet (nur optisch reduziert). */
+  const overview = useMemo(
+    () => activeKeys.map((k) => overviewMinMax(dataset, xKey, k, 400)),
+    [dataset, xKey, activeKeys],
+  );
 
   const toggleY = (key: string) =>
     setYKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
-  const commitDrag = () => {
-    if (dragStart != null && dragEnd != null && dragStart !== dragEnd) {
-      setFrom(Math.min(dragStart, dragEnd));
-      setTo(Math.max(dragStart, dragEnd));
+  const commitView = (next: XRange) => {
+    setLiveView(null);
+    setHistory((h) => pushView(h, clampRange(next, fullRange)));
+  };
+
+  // ---------- Pointer-Interaktion im Hauptdiagramm ----------
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const setWrapRef = (el: HTMLDivElement | null) => {
+    wrapRef.current = el;
+    if (chartRef) (chartRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+  };
+  const dragRef = useRef<{ kind: "select" | "pan"; startClientX: number; origin: XRange; moved: boolean } | null>(null);
+
+  /** Tatsächliche Zeichenfläche (DPI-/Größenunabhängig über getBoundingClientRect). */
+  const plotRect = () => {
+    const el = wrapRef.current;
+    if (!el) return null;
+    const grid = el.querySelector(".recharts-cartesian-grid") as SVGGElement | null;
+    const r = grid?.getBoundingClientRect();
+    if (r && r.width > 0) return { left: r.left, width: r.width };
+    const w = el.getBoundingClientRect();
+    return { left: w.left, width: w.width };
+  };
+  const clientToX = (clientX: number, range: XRange = view) => {
+    const r = plotRect();
+    if (!r) return range.from;
+    return pixelToX(clientX - r.left, r.width, range);
+  };
+
+  const MIN_DRAG_PX = 5;
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || chartData.length === 0) return;
+    const r = plotRect();
+    if (!r || e.clientX < r.left || e.clientX > r.left + r.width) return;
+    const kind = e.shiftKey ? "pan" : "select";
+    dragRef.current = { kind, startClientX: e.clientX, origin: view, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (kind === "select") { setDragStart(clientToX(e.clientX)); setDragEnd(null); }
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    if (Math.abs(e.clientX - d.startClientX) >= MIN_DRAG_PX) d.moved = true;
+    if (d.kind === "pan") {
+      const r = plotRect();
+      if (!r) return;
+      const dx = -((e.clientX - d.startClientX) / r.width) * (d.origin.to - d.origin.from);
+      setLiveView(panBy(d.origin, fullRange, dx));
+    } else if (d.moved) {
+      setDragEnd(clientToX(e.clientX, d.origin));
+    }
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!d) return;
+    if (d.kind === "pan") {
+      if (liveView) commitView(liveView);
+    } else if (d.moved && dragStart != null && dragEnd != null && dragStart !== dragEnd) {
+      const lo = Math.min(dragStart, dragEnd);
+      const hi = Math.max(dragStart, dragEnd);
+      if (mode === "eval") { setFrom(lo); setTo(hi); }
+      else commitView({ from: lo, to: hi });
     }
     setDragStart(null);
     setDragEnd(null);
   };
+
+  // Mausrad-Zoom: nativer, nicht-passiver Listener (Seite scrollt nicht mit).
+  const wheelRef = useRef<(e: WheelEvent) => void>(() => {});
+  const wheelCommitTimer = useRef<number | undefined>();
+  wheelRef.current = (e: WheelEvent) => {
+    if (chartData.length === 0 && view.from === fullRange.from && view.to === fullRange.to) return;
+    const r = plotRect();
+    if (!r) return;
+    e.preventDefault();
+    const base = liveView ?? history.current;
+    const anchor = pixelToX(e.clientX - r.left, r.width, base);
+    const next = zoomAt(base, fullRange, anchor, wheelFactor(e.deltaY, e.deltaMode));
+    setLiveView(next);
+    window.clearTimeout(wheelCommitTimer.current);
+    wheelCommitTimer.current = window.setTimeout(() => commitView(next), 300);
+  };
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => wheelRef.current(e);
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => { el.removeEventListener("wheel", handler); window.clearTimeout(wheelCommitTimer.current); };
+  }, [channels.length]);
+
+  const isFullView = view.from === fullRange.from && view.to === fullRange.to;
+  const panStep = (dir: -1 | 1) => commitView(panBy(view, fullRange, dir * (view.to - view.from) * 0.25));
 
   const leftUnits = [...new Set(yKeys.map((k) => channels.find((c) => c.key === k)?.unit ?? "").filter(Boolean))];
   const y2Channel = y2Key ? channels.find((c) => c.key === y2Key) ?? null : null;
@@ -202,21 +303,76 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
         </div>
       </div>
 
-      <div ref={chartRef} className="rounded border bg-background p-2" style={{ height: chartHeight }}>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-md border p-0.5" role="group" aria-label="Bedienmodus Diagramm">
+          <Button type="button" size="sm" variant={mode === "zoom" ? "default" : "ghost"} className="h-7"
+            aria-pressed={mode === "zoom"} onClick={() => setMode("zoom")}>
+            <ZoomIn className="h-3.5 w-3.5 mr-1" /> Zoom-Modus
+          </Button>
+          <Button type="button" size="sm" variant={mode === "eval" ? "secondary" : "ghost"} className="h-7"
+            aria-pressed={mode === "eval"} onClick={() => setMode("eval")}>
+            <Crosshair className="h-3.5 w-3.5 mr-1" /> Auswertungsmodus
+          </Button>
+        </div>
+        <Button type="button" size="sm" variant="outline" className="h-7" title="Zoom rückgängig"
+          disabled={!history.past.length} onClick={() => { setLiveView(null); setHistory(undoView); }}>
+          <Undo2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button type="button" size="sm" variant="outline" className="h-7" title="Zoom wiederholen"
+          disabled={!history.future.length} onClick={() => { setLiveView(null); setHistory(redoView); }}>
+          <Redo2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button type="button" size="sm" variant="outline" className="h-7" title="Nach links verschieben"
+          disabled={isFullView} onClick={() => panStep(-1)}>
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </Button>
+        <Button type="button" size="sm" variant="outline" className="h-7" title="Nach rechts verschieben"
+          disabled={isFullView} onClick={() => panStep(1)}>
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
+        <Button type="button" size="sm" variant="outline" className="h-7" disabled={isFullView}
+          onClick={() => commitView(fullRange)}>
+          <Maximize2 className="h-3.5 w-3.5 mr-1" /> Gesamter Messbereich
+        </Button>
+        <Button type="button" size="sm" variant="outline" className="h-7"
+          disabled={isFullView && !history.past.length && !history.future.length}
+          onClick={() => { setLiveView(null); setHistory(resetView(fullRange)); }}>
+          <RotateCcw className="h-3.5 w-3.5 mr-1" /> Zoom zurücksetzen
+        </Button>
+        <Button type="button" size="sm" variant="ghost" className="h-7" disabled={isFullView}
+          title="Auswertungsbereich ausdrücklich auf den sichtbaren Bereich setzen"
+          onClick={() => { setFrom(view.from); setTo(view.to); }}>
+          Auswertungsbereich an Ansicht anpassen
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {chartData.length.toLocaleString("de-AT")} Originalmesspunkte sichtbar
+        </span>
+      </div>
+
+      <div
+        ref={setWrapRef}
+        data-testid="curve-main-chart"
+        data-mode={mode}
+        className={`rounded border bg-background p-2 select-none touch-none ${mode === "eval" ? "ring-2 ring-accent cursor-col-resize" : "cursor-crosshair"}`}
+        style={{ height: chartHeight }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onDoubleClick={() => { if (!isFullView) commitView(fullRange); }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
             margin={{ top: 8, right: y2Channel ? 40 : 24, bottom: 40, left: 24 }}
 
-            onMouseDown={(e: any) => e?.activeLabel != null && setDragStart(Number(e.activeLabel))}
-            onMouseMove={(e: any) => dragStart != null && e?.activeLabel != null && setDragEnd(Number(e.activeLabel))}
-            onMouseUp={commitDrag}
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis
               dataKey="x"
               type="number"
-              domain={["dataMin", "dataMax"]}
+              domain={[view.from, view.to]}
+              allowDataOverflow
               tickFormatter={fmt}
               tick={{ fontSize: 11 }}
               label={{
@@ -258,11 +414,11 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
 
             {yKeys.map((k, i) => (
               <Line key={k} yAxisId="left" type="monotone" dataKey={k} dot={false} strokeWidth={2}
-                stroke={COLORS[i % COLORS.length]} isAnimationActive={false} connectNulls />
+                stroke={COLORS[i % COLORS.length]} isAnimationActive={false} connectNulls={false} />
             ))}
             {y2Channel && (
               <Line yAxisId="right" type="monotone" dataKey={y2Channel.key} dot={false} strokeWidth={2}
-                strokeDasharray="4 2" stroke={COLORS[(yKeys.length) % COLORS.length]} isAnimationActive={false} connectNulls />
+                strokeDasharray="4 2" stroke={COLORS[(yKeys.length) % COLORS.length]} isAnimationActive={false} connectNulls={false} />
             )}
             {markers.map((m, mi) => (
               <ReferenceLine
@@ -271,6 +427,7 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
                 x={m.x}
                 stroke="hsl(var(--destructive))"
                 strokeWidth={1}
+                ifOverflow="hidden"
               >
                 <RLabel value={`${fmt(m.x)}${xChannel?.unit ? ` ${xChannel.unit}` : ""}`} position="top" fontSize={10} />
               </ReferenceLine>
@@ -287,6 +444,7 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
                     r={4}
                     fill="hsl(var(--destructive))"
                     stroke="hsl(var(--background))"
+                    ifOverflow="hidden"
                   >
                     {showMarkerValues && (
                       <RLabel
@@ -303,17 +461,28 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
                 ))
             )}
             {dragStart != null && dragEnd != null && (
-              <ReferenceArea yAxisId="left" x1={dragStart} x2={dragEnd} strokeOpacity={0.3} />
+              <ReferenceArea yAxisId="left" x1={dragStart} x2={dragEnd} strokeOpacity={0.3}
+                fill={mode === "eval" ? "hsl(var(--accent))" : "hsl(var(--primary))"} fillOpacity={0.15} ifOverflow="hidden" />
             )}
             {dragStart == null && (
               <>
-                <ReferenceLine yAxisId="left" x={from} stroke="hsl(var(--primary))" strokeDasharray="4 2" />
-                <ReferenceLine yAxisId="left" x={to} stroke="hsl(var(--primary))" strokeDasharray="4 2" />
+                <ReferenceLine yAxisId="left" x={from} stroke="hsl(var(--primary))" strokeDasharray="4 2" ifOverflow="hidden" />
+                <ReferenceLine yAxisId="left" x={to} stroke="hsl(var(--primary))" strokeDasharray="4 2" ifOverflow="hidden" />
               </>
             )}
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Navigator liegt bewusst außerhalb des Diagrammcontainers (chartRef/PDF). */}
+      <CurveViewerNavigator
+        full={fullRange}
+        view={view}
+        series={overview}
+        colors={COLORS}
+        onChange={setLiveView}
+        onCommit={commitView}
+      />
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
@@ -327,10 +496,12 @@ export default function CurveViewer({ dataset, defaults, onSelectionChange, heig
             onChange={(e) => setTo(Number(e.target.value))} />
         </div>
         <Button type="button" variant="outline" size="sm" onClick={() => { setFrom(xMin); setTo(xMax); }}>
-          Gesamter Bereich
+          Auswertung: gesamter Bereich
         </Button>
         <p className="text-xs text-muted-foreground">
-          Ausgewählter Bereich: {fmt(from)}–{fmt(to)}{xChannel?.unit ? ` ${xChannel.unit}` : ""} · im Diagramm ziehen zum Markieren
+          Ausgewählter Bereich: {fmt(from)}–{fmt(to)}{xChannel?.unit ? ` ${xChannel.unit}` : ""} · {mode === "zoom"
+            ? "Zoom-Modus: ziehen = vergrößern, Mausrad = zoomen, Umschalt+Ziehen = verschieben, Doppelklick = Gesamtbereich"
+            : "Auswertungsmodus: im Diagramm ziehen legt den Auswertungsbereich fest"}
         </p>
       </div>
     </div>
