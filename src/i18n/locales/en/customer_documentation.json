@@ -65,5 +65,38 @@
     "open_order": "Open order",
     "no_rows": "No customer documentation requested yet.",
     "loading": "Loading …"
+  },
+  "modular_report": {
+    "default_title": "Test Report",
+    "yes": "Yes",
+    "no": "No",
+    "no_data": "No matching data is available for this module.",
+    "modules": {
+      "cover": "Cover and Order Information",
+      "objective": "Objective and Problem Statement",
+      "samples": "Sample Overview",
+      "requester_specs": "Customer Specifications and Test Conditions",
+      "activity": "Activity",
+      "chemical": "Chemical Analysis / XRF",
+      "optical": "Visual Inspection and Photo Documentation",
+      "assessment": "Assessment and Summary"
+    },
+    "fields": {
+      "order_number": "Order number",
+      "customer": "Customer",
+      "project": "Project",
+      "samples": "Samples",
+      "report_date": "Report date",
+      "author": "Prepared by"
+    },
+    "col_sample": "Sample",
+    "col_analysis": "Analysis / conditions",
+    "col_parameter": "Parameter",
+    "col_value": "Value",
+    "col_unit": "Unit",
+    "col_service": "Service",
+    "col_sample_number": "Sample number",
+    "col_sample_name": "Name",
+    "col_description": "Description"
   }
 }

@@ -65,5 +65,38 @@
     "open_order": "Auftrag öffnen",
     "no_rows": "Noch keine Kundendokumentation angefordert.",
     "loading": "Wird geladen …"
+  },
+  "modular_report": {
+    "default_title": "Ergebnisbericht",
+    "yes": "Ja",
+    "no": "Nein",
+    "no_data": "Für dieses Modul liegen keine passenden Daten vor.",
+    "modules": {
+      "cover": "Deckblatt und Auftragsinformationen",
+      "objective": "Zielsetzung und Problemstellung",
+      "samples": "Probenübersicht",
+      "requester_specs": "Auftraggeber-Vorgaben und Prüfbedingungen",
+      "activity": "Aktivität",
+      "chemical": "Chemische Analyse / RFA",
+      "optical": "Optische Überprüfung und Fotodokumentation",
+      "assessment": "Bewertung und Zusammenfassung"
+    },
+    "fields": {
+      "order_number": "Auftragsnummer",
+      "customer": "Kunde / Auftraggeber",
+      "project": "Projekt",
+      "samples": "Proben",
+      "report_date": "Berichtsdatum",
+      "author": "Bearbeiter"
+    },
+    "col_sample": "Probe",
+    "col_analysis": "Analyse / Bedingungen",
+    "col_parameter": "Parameter",
+    "col_value": "Wert",
+    "col_unit": "Einheit",
+    "col_service": "Dienstleistung",
+    "col_sample_number": "Probennummer",
+    "col_sample_name": "Bezeichnung",
+    "col_description": "Beschreibung"
   }
 }
