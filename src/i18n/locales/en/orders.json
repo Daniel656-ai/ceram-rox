@@ -213,5 +213,25 @@
   "task_filter_reset": "Reset",
   "task_filter_competence_error": "Competences could not be loaded – the competence filter therefore shows no tasks.",
   "task_filter_competence_loading": "Loading competences…",
-  "task_filter_run_empty": "No open tasks in the measurement run match the selected service, competence, search or status filter."
+  "task_filter_run_empty": "No open tasks in the measurement run match the selected service, competence, search or status filter.",
+  "sla_column": "Due",
+  "sla_monitoring": "Due date monitoring",
+  "sla": {
+    "label_green": "On schedule",
+    "label_yellow": "Early warning",
+    "label_red": "Overdue",
+    "label_neutral": "No due date monitoring",
+    "label_completed": "Completed",
+    "tooltip_green": "On schedule: the completion date is outside the service-specific early warning period.",
+    "tooltip_yellow": "Early warning: the completion date is approaching or due today. Please schedule the required work steps in time.",
+    "tooltip_red": "Overdue: the agreed completion date has passed by at least one calendar day.",
+    "tooltip_neutral": "No active due date monitoring: no due date is set for this order or no open service is enabled for monitoring.",
+    "tooltip_completed": "Completed: all services of this order are done.",
+    "due_on": "Due on {{date}}",
+    "days_remaining": "{{count}} calendar day remaining",
+    "days_remaining_plural": "{{count}} calendar days remaining",
+    "days_overdue": "{{count}} calendar day overdue",
+    "days_overdue_plural": "{{count}} calendar days overdue",
+    "warning_days": "Early warning period of this service: {{count}} days"
+  }
 }
