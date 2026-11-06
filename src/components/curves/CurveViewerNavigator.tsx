@@ -58,8 +58,8 @@ export function CurveViewerNavigator({ full, view, series, colors, onChange, onC
     else {
       // Klick außerhalb: Fenster auf diese Stelle zentrieren.
       const c = full.from + (px / w) * span;
-      const w = view.to - view.from;
-      origin = clampRange({ from: c - w / 2, to: c + w / 2 }, full);
+      const vw = view.to - view.from;
+      origin = clampRange({ from: c - vw / 2, to: c + vw / 2 }, full);
       onChange(origin);
       mode = "move";
     }
