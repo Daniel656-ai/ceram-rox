@@ -10,6 +10,17 @@ import { downloadText } from "@/lib/curves/export";
 import type { CustomerDocumentation, DocField } from "./chapters";
 import { docLocale, docT, type DocLanguage } from "./i18n";
 
+// Die Standardschriften von jsPDF kennen keine Tief-/Hochstellungen. Für das
+// PDF werden sie durch normale Ziffern ersetzt; Anzeige und CSV bleiben
+// unverändert. Gemeinsam genutzt vom modularen Ergebnisbericht.
+const SUBSCRIPTS: Record<string, string> = {
+  "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
+  "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
+  "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
+};
+export const pdfSafeText = (v: unknown) =>
+  String(v ?? "").replace(/[₀-₉⁰¹²³⁴]/g, (c) => SUBSCRIPTS[c] ?? c);
+
 const cell = (v: string) => (/[";\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 
 function fieldLabel(t: ReturnType<typeof docT>, f: DocField): string {
@@ -77,16 +88,7 @@ export async function exportCustomerDocumentationPdf(opts: {
   const locale = docLocale(lang);
   const { default: jsPDF } = await import("jspdf");
 
-  // Die Standardschriften von jsPDF kennen keine Tief-/Hochstellungen. Für das
-  // PDF werden sie durch normale Ziffern ersetzt; Anzeige und CSV bleiben
-  // unverändert.
-  const SUBSCRIPTS: Record<string, string> = {
-    "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
-    "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
-    "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
-  };
-  const safe = (v: unknown) =>
-    String(v ?? "").replace(/[₀-₉⁰¹²³⁴]/g, (c) => SUBSCRIPTS[c] ?? c);
+  const safe = pdfSafeText;
   const clip = (v: unknown, max: number) => {
     const s = safe(v);
     return s.length > max ? `${s.slice(0, max - 1)}…` : s;
