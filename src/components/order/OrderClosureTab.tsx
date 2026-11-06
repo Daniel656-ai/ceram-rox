@@ -102,7 +102,6 @@ export default function OrderClosureTab({ order }: { order: any }) {
           serviceName={m.measurement_services?.service_name}
         />
       ))}
-
     </div>
   );
 }
