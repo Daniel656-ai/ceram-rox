@@ -15,8 +15,9 @@ import { FileText, Plus, Download, Eye, Printer, History, CheckCircle2, Trash2 }
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
 import type { OrderReportVersion } from "@/lib/api/orderReports";
+import { ModularReportBuilder } from "@/components/order/modularReport/ModularReportBuilder";
 
-export default function OrderReportTab({ orderId }: { orderId: string }) {
+export default function OrderReportTab({ orderId, order }: { orderId: string; order?: any }) {
   const qc = useQueryClient();
   const { role, user } = useAuth();
   const { hasPermission } = usePermissions();
@@ -154,6 +155,8 @@ export default function OrderReportTab({ orderId }: { orderId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {order && report && <ModularReportBuilder order={order} report={report} canSave={canGenerate} />}
 
       <Card>
         <CardHeader>
