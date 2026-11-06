@@ -253,6 +253,7 @@ function OrdersOverview() {
                 {renderSortableHead({ sortKey: "ranking", children: t("orders:priority") })}
                 {renderSortableHead({ sortKey: "status", filterKeys: ["status"], children: t("common:status") })}
                 {renderSortableHead({ sortKey: "due_date", children: t("orders:due_date") })}
+                {showSla && <TableHead className="w-[60px]">{t("orders:sla_column")}</TableHead>}
                 {renderSortableHead({ sortKey: "created_at", filterKeys: ["creator"], children: t("common:created") })}
                 {canShowActions && <TableHead className="w-[100px]">{t("common:actions")}</TableHead>}
               </TableRow>
@@ -260,9 +261,9 @@ function OrdersOverview() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={canShowActions ? 12 : 11} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={(canShowActions ? 12 : 11) + (showSla ? 1 : 0)} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={canShowActions ? 12 : 11} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={(canShowActions ? 12 : 11) + (showSla ? 1 : 0)} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
               ) : (
                 filtered.map((o: any) => (
                   <TableRow key={o.id}>
@@ -324,6 +325,14 @@ function OrdersOverview() {
                     </TableCell>
                     <TableCell><StatusBadge status={o.status} /></TableCell>
                     <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
+                    {showSla && (
+                      <TableCell>
+                        <SlaBadge
+                          result={aggregateSla(((o as any).order_measurements || []).map(slaInputFromMeasurement), o.due_date)}
+                          dueDate={o.due_date}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>{new Date(o.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
                     {canShowActions && (
                       <TableCell>
