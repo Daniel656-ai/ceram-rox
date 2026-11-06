@@ -13,7 +13,15 @@ const FIELDS = `id, change_type, order_id, order_measurement_id, measurement_res
 
 export interface ResultCorrection {
   id: string;
-  change_type: "value" | "sample_reassignment";
+  change_type:
+    | "value"
+    | "sample_reassignment"
+    | "ergänzt"
+    | "entfernt"
+    | "datei_ersetzt"
+    | "datei_ergaenzt"
+    | "dokument_ersetzt"
+    | "dokument_ergaenzt";
   order_id: string | null;
   order_measurement_id: string;
   measurement_result_id: string | null;

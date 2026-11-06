@@ -1,10 +1,22 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { History, PencilLine, FlaskConical } from "lucide-react";
+import { History, PencilLine, FlaskConical, PlusCircle, Trash2, FilePlus2, FileSymlink } from "lucide-react";
 import { useMeasurementCorrections, useCorrectionAuthors } from "@/hooks/useResultCorrections";
 import type { ResultCorrection } from "@/lib/api/resultCorrections";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
+
+/** Einheitliche Bezeichnung je Änderungsart (Historie ist unveränderbar). */
+const CHANGE_TYPE_META: Record<ResultCorrection["change_type"], { label: string; icon: typeof PencilLine }> = {
+  value: { label: "Wertkorrektur", icon: PencilLine },
+  sample_reassignment: { label: "Probenzuordnung geändert", icon: FlaskConical },
+  "ergänzt": { label: "Ergebnis ergänzt", icon: PlusCircle },
+  entfernt: { label: "Ergebnis entfernt", icon: Trash2 },
+  datei_ersetzt: { label: "Datei ersetzt", icon: FileSymlink },
+  datei_ergaenzt: { label: "Datei ergänzt", icon: FilePlus2 },
+  dokument_ersetzt: { label: "Dokument ersetzt", icon: FileSymlink },
+  dokument_ergaenzt: { label: "Dokument ergänzt", icon: FilePlus2 },
+};
 
 function fmtValue(v: number | null, text: string | null, unit: string | null) {
   const base = v !== null && v !== undefined ? nf.format(v) : text ?? "–";
