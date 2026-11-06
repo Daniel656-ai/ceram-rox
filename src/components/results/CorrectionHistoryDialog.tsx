@@ -107,6 +107,36 @@ export default function CorrectionHistoryDialog({
                       Betroffene Ergebnisse: {e.affected_result_count ?? 0}
                     </div>
                   </div>
+                ) : isFileChange ? (
+                  <div className="space-y-0.5">
+                    <div className="font-medium">{e.parameter_label || e.parameter_name || "Datei"}</div>
+                    <div className="font-mono text-xs">
+                      {e.old_text && (
+                        <>
+                          <span className="text-muted-foreground line-through">{e.old_text}</span>
+                          <span className="mx-2">→</span>
+                        </>
+                      )}
+                      <span>{e.new_text || "–"}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    <div className="font-medium">{e.parameter_label || e.parameter_name}</div>
+                    <div className="font-mono text-xs">
+                      {e.change_type !== "ergänzt" && (
+                        <>
+                          <span className="text-muted-foreground line-through">
+                            {fmtValue(e.old_value, e.old_text, e.unit)}
+                          </span>
+                          <span className="mx-2">→</span>
+                        </>
+                      )}
+                      {e.change_type !== "entfernt" && (
+                        <span>{fmtValue(e.new_value, e.new_text, e.unit)}</span>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 <div className="text-xs">
@@ -114,7 +144,8 @@ export default function CorrectionHistoryDialog({
                   {e.reason}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </DialogContent>
