@@ -4,6 +4,7 @@ import type {
   ReplaceResultsPayload,
   ReplaceResultsSummary,
 } from "@/lib/results/replaceResults";
+import type { AmendmentPayload } from "@/lib/amendment/payload";
 
 const FIELDS = `id, change_type, order_id, order_measurement_id, measurement_result_id, service_id,
   parameter_name, parameter_label, unit, old_value, new_value, old_text, new_text,
@@ -104,4 +105,50 @@ export const resultCorrections = {
         p_replaces_dataset_id: params.replacesDatasetId ?? null,
       })
     ) as Promise<ReplaceResultsSummary>,
+
+  /**
+   * Nachträgliche Korrektur einer abgeschlossenen Dienstleistung
+   * (RPC `amend_completed_measurement`, Freigabevorlage v4, Entscheidung G1).
+   * Serverseitig erzwungen: Status „completed", Berechtigung (zugeordneter
+   * Messdienstleister oder Master/results.correct), Begründungspflicht,
+   * Sperre neuer Messblock-Ergebnisse, vollständige Historie, Idempotenz
+   * über `operationId`, atomarer Rollback bei Teilfehlern.
+   */
+  amendCompleted: (params: AmendmentPayload) =>
+    unwrap(
+      (dbClient as any).rpc("amend_completed_measurement", {
+        p_order_measurement_id: params.orderMeasurementId,
+        p_operation_id: params.operationId,
+        p_reason: params.reason,
+        p_values: params.values,
+        p_remove: params.remove,
+        p_files: params.files,
+        p_new_raw_dataset_id: null,
+        p_replaces_dataset_id: null,
+      })
+    ) as Promise<{
+      success: boolean;
+      already_completed: boolean;
+      operation_id: string;
+      updated: number;
+      added: number;
+      removed: number;
+      files: number;
+      unchanged: number;
+    }>,
+
+  /** Dateiversionen einer Dienstleistung inkl. Ersetzungskette (RPC `rox_file_versions`). */
+  fileVersions: (measurementId: string) =>
+    unwrap(
+      (dbClient as any).rpc("rox_file_versions", { _measurement_id: measurementId })
+    ) as Promise<
+      Array<{
+        kind: "upload" | "document";
+        file_id: string;
+        is_current: boolean;
+        replaced_by: string | null;
+        replaced_at: string | null;
+        replace_reason: string | null;
+      }>
+    >,
 };

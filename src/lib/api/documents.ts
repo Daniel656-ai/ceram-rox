@@ -4,6 +4,43 @@ import { unwrap, run } from "./_helpers";
 const MEASUREMENT_BUCKET = "measurement-documents";
 
 export const documents = {
+  /** Dokumente einer Dienstleistung (Messdokumente), chronologisch. */
+  listForMeasurement: (measurementId: string) =>
+    unwrap(
+      dbClient
+        .from("documents")
+        .select("id, order_measurement_id, file_name, file_type, storage_path, uploaded_by, uploaded_at")
+        .eq("order_measurement_id", measurementId)
+        .order("uploaded_at", { ascending: true })
+    ) as Promise<
+      Array<{
+        id: string;
+        order_measurement_id: string;
+        file_name: string;
+        file_type: string | null;
+        storage_path: string;
+        uploaded_by: string;
+        uploaded_at: string;
+      }>
+    >,
+
+  /**
+   * Nur Storage-Upload ohne Datenbankeintrag – für die nachträgliche
+   * Korrektur, bei der die RPC `amend_completed_measurement` den
+   * Datenbankeintrag atomar mit der Historie schreibt.
+   */
+  async uploadOnly(args: { measurementId: string; file: File; userId: string }) {
+    const path = `${args.userId}/${args.measurementId}/${Date.now()}_${args.file.name}`;
+    const { error: uploadErr } = await dbClient.storage.from(MEASUREMENT_BUCKET).upload(path, args.file);
+    if (uploadErr) throw uploadErr;
+    return { path };
+  },
+
+  /** Entfernt ein verwaistes Storage-Objekt (Bereinigung nach abgebrochener Korrektur). */
+  async removeStorageObject(path: string) {
+    await dbClient.storage.from(MEASUREMENT_BUCKET).remove([path]);
+  },
+
   async upload(args: { measurementId: string; file: File; userId: string }) {
     const path = `${args.userId}/${args.measurementId}/${Date.now()}_${args.file.name}`;
     const { error: uploadErr } = await dbClient.storage.from(MEASUREMENT_BUCKET).upload(path, args.file);
