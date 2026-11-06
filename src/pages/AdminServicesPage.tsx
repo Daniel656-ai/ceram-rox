@@ -630,6 +630,66 @@ function EditServiceDialog({
               )}
             </div>
           </div>
+          <div className="rounded-md border p-3 space-y-3">
+            <div>
+              <Label className="text-sm font-medium">{t("admin:sla_section")}</Label>
+              <p className="text-xs text-muted-foreground mt-1">{t("admin:sla_section_hint")}</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Switch
+                checked={!!form.sla_monitoring_enabled}
+                onCheckedChange={(v) => setForm((f: any) => ({ ...f, sla_monitoring_enabled: !!v }))}
+              />
+              {t("admin:sla_monitoring_enabled")}
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t("admin:sla_yellow_warning_days")}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.sla_yellow_warning_days}
+                  onChange={e => setForm((f: any) => ({ ...f, sla_yellow_warning_days: e.target.value }))}
+                  disabled={!form.sla_monitoring_enabled}
+                />
+              </div>
+              <div>
+                <Label>{t("admin:sla_reminder_interval_days")}</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={form.sla_reminder_interval_days}
+                  onChange={e => setForm((f: any) => ({ ...f, sla_reminder_interval_days: e.target.value }))}
+                  disabled={!form.sla_monitoring_enabled}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>{t("admin:sla_notification_roles")}</Label>
+              <div className="flex flex-wrap gap-4 mt-1">
+                {(["durchfuehrer", "master", "auftraggeber"] as const).map((r) => (
+                  <label key={r} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={(form.sla_notification_roles ?? []).includes(r)}
+                      disabled={!form.sla_monitoring_enabled}
+                      onCheckedChange={(v) =>
+                        setForm((f: any) => {
+                          const cur: string[] = Array.isArray(f.sla_notification_roles) ? f.sla_notification_roles : [];
+                          return {
+                            ...f,
+                            sla_notification_roles: v === true ? [...cur, r] : cur.filter((x) => x !== r),
+                          };
+                        })
+                      }
+                    />
+                    {t(`admin:sla_role_${r}`)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
           <div>
             <Label>Arbeitsanweisung</Label>
             <Textarea value={form.work_instructions ?? ""} onChange={e => setForm((f: any) => ({ ...f, work_instructions: e.target.value }))} rows={3} />
