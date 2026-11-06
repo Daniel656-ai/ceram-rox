@@ -106,6 +106,26 @@ export const orderUploads = {
     });
   },
 
+  /**
+   * Nur Storage-Upload ohne Datenbankeintrag – für die nachträgliche
+   * Korrektur, bei der die RPC `amend_completed_measurement` den
+   * Datenbankeintrag atomar mit der Historie schreibt.
+   */
+  async uploadOnly(args: { measurementId: string; fieldKey: string; file: File }): Promise<{ path: string }> {
+    const safe = args.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `orders/${args.measurementId}/${args.fieldKey}/${Date.now()}_${safe}`;
+    const { error: upErr } = await dbClient.storage
+      .from(ORDER_UPLOADS_BUCKET)
+      .upload(path, args.file, { upsert: false, contentType: args.file.type });
+    if (upErr) throw storageError(upErr as any);
+    return { path };
+  },
+
+  /** Entfernt ein verwaistes Storage-Objekt (Bereinigung nach abgebrochener Korrektur). */
+  async removeStorageObject(path: string) {
+    await dbClient.storage.from(ORDER_UPLOADS_BUCKET).remove([path]);
+  },
+
   async remove(id: string) {
     const row = (await unwrap(
       dbClient.from("order_upload_files" as any).select("storage_path").eq("id", id).single()
