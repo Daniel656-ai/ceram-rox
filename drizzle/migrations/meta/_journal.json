@@ -169,6 +169,13 @@
       "when": 1793967968023,
       "tag": "0023_amend_completed_measurement",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793975157238,
+      "tag": "0024_create_historian",
+      "breakpoints": true
     }
   ]
 }
