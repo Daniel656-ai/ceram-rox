@@ -1,0 +1,1 @@
+- Detail chart uses only `sliceRangeExact` (one row per original row, missing = null, no x-merge); reduction (`overviewMinMax`) only in the navigator; zoom state (`zoom.ts`) never changes the evaluation range — preserves data integrity.
