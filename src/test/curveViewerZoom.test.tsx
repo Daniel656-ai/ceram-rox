@@ -20,6 +20,7 @@ function mockRects(container: HTMLElement) {
   (Element.prototype as any).releasePointerCapture ??= () => {};
 }
 
+(globalThis as any).ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
 afterEach(cleanup);
 
 describe("CurveViewer Zoom/Auswertung", () => {

@@ -24,7 +24,7 @@ const HANDLE_PX = 6;
 export function CurveViewerNavigator({ full, view, series, colors, onChange, onCommit, height = 56 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const drag = useRef<{ mode: DragMode; startX: number; origin: XRange; last: XRange } | null>(null);
+  const drag = useRef<{ mode: DragMode; startX: number; origin: XRange; last: XRange; w: number } | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -39,7 +39,6 @@ export function CurveViewerNavigator({ full, view, series, colors, onChange, onC
 
   const span = full.to - full.from || 1;
   const toPx = (x: number) => ((x - full.from) / span) * width;
-  const pxToUnits = (px: number) => (px / (width || 1)) * span;
 
   const left = toPx(view.from);
   const right = toPx(view.to);
@@ -47,7 +46,10 @@ export function CurveViewerNavigator({ full, view, series, colors, onChange, onC
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
+    const w = rect.width || 1;
     const px = e.clientX - rect.left;
+    const left = ((view.from - full.from) / span) * w;
+    const right = ((view.to - full.from) / span) * w;
     let mode: DragMode;
     let origin = view;
     if (Math.abs(px - left) <= HANDLE_PX) mode = "left";
@@ -55,21 +57,21 @@ export function CurveViewerNavigator({ full, view, series, colors, onChange, onC
     else if (px > left && px < right) mode = "move";
     else {
       // Klick außerhalb: Fenster auf diese Stelle zentrieren.
-      const c = full.from + pxToUnits(px);
+      const c = full.from + (px / w) * span;
       const w = view.to - view.from;
       origin = clampRange({ from: c - w / 2, to: c + w / 2 }, full);
       onChange(origin);
       mode = "move";
     }
     e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { mode, startX: e.clientX, origin, last: origin };
+    drag.current = { mode, startX: e.clientX, origin, last: origin, w };
     e.preventDefault();
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (!d) return;
-    const dx = pxToUnits(e.clientX - d.startX);
+    const dx = ((e.clientX - d.startX) / d.w) * span;
     const minW = span * 1e-6;
     let next: XRange;
     if (d.mode === "move") next = clampRange({ from: d.origin.from + dx, to: d.origin.to + dx }, full);
