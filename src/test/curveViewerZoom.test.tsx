@@ -21,6 +21,12 @@ function mockRects(container: HTMLElement) {
 }
 
 (globalThis as any).ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
+if (typeof (globalThis as any).PointerEvent === "undefined") {
+  (globalThis as any).PointerEvent = class extends MouseEvent {
+    pointerId: number;
+    constructor(type: string, init: any = {}) { super(type, init); this.pointerId = init.pointerId ?? 1; }
+  };
+}
 afterEach(cleanup);
 
 describe("CurveViewer Zoom/Auswertung", () => {
