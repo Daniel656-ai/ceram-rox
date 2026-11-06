@@ -72,7 +72,7 @@ export default function OrderClosureTab({ order }: { order: any }) {
         </CardContent>
       </Card>
 
-      {showReport && <OrderReportTab orderId={order.id} />}
+      {showReport && <OrderReportTab orderId={order.id} order={order} />}
 
       <Card>
         <CardHeader className="py-3">

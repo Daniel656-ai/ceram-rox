@@ -8,6 +8,7 @@ export interface OrderReport {
   order_id: string;
   current_version_no: number;
   auto_generated: boolean;
+  draft_overrides?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -87,6 +88,19 @@ export const orderReports = {
         .update({ approved_by: userId, approved_at: new Date().toISOString() } as any)
         .eq("id", versionId)
     ),
+
+  /**
+   * Speichert den auftragsspezifischen modularen Berichtsentwurf in
+   * `draft_overrides.modular_report`; andere Schlüssel bleiben erhalten.
+   * Nutzt die bestehende Schreibberechtigung (master / reports.generate).
+   */
+  async saveModularDraft(reportId: string, draft: unknown): Promise<void> {
+    const current = (await unwrap(
+      dbClient.from("order_reports" as any).select("draft_overrides").eq("id", reportId).single()
+    )) as unknown as { draft_overrides: Record<string, unknown> | null };
+    const next = { ...(current?.draft_overrides ?? {}), modular_report: draft };
+    await run(dbClient.from("order_reports" as any).update({ draft_overrides: next } as any).eq("id", reportId));
+  },
 
   deleteVersion: (versionId: string) =>
     run(dbClient.from("order_report_versions" as any).delete().eq("id", versionId)),
