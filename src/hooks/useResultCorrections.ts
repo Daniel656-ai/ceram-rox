@@ -3,12 +3,25 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { ReplaceResultsPayload } from "@/lib/results/replaceResults";
+import type { AmendmentPayload } from "@/lib/amendment/payload";
 
 /** Darf der aktuelle Benutzer gespeicherte Messergebnisse korrigieren? */
 export function useCanCorrectResults(): boolean {
   const { role } = useAuth();
   const { hasPermission } = usePermissions();
   return role === "master" || hasPermission("results.correct" as any);
+}
+
+/**
+ * Darf der aktuelle Benutzer diese abgeschlossene Dienstleistung nachträglich
+ * korrigieren? Reine Anzeige-Steuerung – die RPC `amend_completed_measurement`
+ * prüft serverseitig erneut (zugeordneter Messdienstleister oder
+ * Master/results.correct).
+ */
+export function useCanAmendMeasurement(measurement: { assigned_to?: string | null } | null | undefined): boolean {
+  const { user } = useAuth();
+  const canCorrect = useCanCorrectResults();
+  return !!measurement && (canCorrect || (!!user && measurement.assigned_to === user.id));
 }
 
 export function useOrderCorrections(orderId: string | undefined) {
@@ -59,6 +72,28 @@ export function useReplaceMeasurementResults() {
     mutationFn: (params: ReplaceResultsPayload) =>
       api.resultCorrections.replaceResults(params),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Nachträgliche Korrektur einer abgeschlossenen Dienstleistung
+ * (RPC `amend_completed_measurement`). Die Dienstleistung bleibt
+ * abgeschlossen; Historie und Idempotenz werden serverseitig erzwungen.
+ */
+export function useAmendCompletedMeasurement() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (params: AmendmentPayload) => api.resultCorrections.amendCompleted(params),
+    onSuccess: invalidate,
+  });
+}
+
+/** Dateiversionen inkl. Ersetzungskette einer Dienstleistung. */
+export function useFileVersions(measurementId: string | undefined) {
+  return useQuery({
+    queryKey: ["file-versions", measurementId],
+    queryFn: () => api.resultCorrections.fileVersions(measurementId!),
+    enabled: !!measurementId,
   });
 }
 

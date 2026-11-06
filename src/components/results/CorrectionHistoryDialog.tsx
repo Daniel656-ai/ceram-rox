@@ -1,10 +1,22 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { History, PencilLine, FlaskConical } from "lucide-react";
+import { History, PencilLine, FlaskConical, PlusCircle, Trash2, FilePlus2, FileSymlink } from "lucide-react";
 import { useMeasurementCorrections, useCorrectionAuthors } from "@/hooks/useResultCorrections";
 import type { ResultCorrection } from "@/lib/api/resultCorrections";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
+
+/** Einheitliche Bezeichnung je Änderungsart (Historie ist unveränderbar). */
+const CHANGE_TYPE_META: Record<ResultCorrection["change_type"], { label: string; icon: typeof PencilLine }> = {
+  value: { label: "Wertkorrektur", icon: PencilLine },
+  sample_reassignment: { label: "Probenzuordnung geändert", icon: FlaskConical },
+  "ergänzt": { label: "Ergebnis ergänzt", icon: PlusCircle },
+  entfernt: { label: "Ergebnis entfernt", icon: Trash2 },
+  datei_ersetzt: { label: "Datei ersetzt", icon: FileSymlink },
+  datei_ergaenzt: { label: "Datei ergänzt", icon: FilePlus2 },
+  dokument_ersetzt: { label: "Dokument ersetzt", icon: FileSymlink },
+  dokument_ergaenzt: { label: "Dokument ergänzt", icon: FilePlus2 },
+};
 
 function fmtValue(v: number | null, text: string | null, unit: string | null) {
   const base = v !== null && v !== undefined ? nf.format(v) : text ?? "–";
@@ -64,36 +76,25 @@ export default function CorrectionHistoryDialog({
           </p>
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-            {entries.map((e) => (
+            {entries.map((e) => {
+              const meta = CHANGE_TYPE_META[e.change_type] ?? CHANGE_TYPE_META.value;
+              const Icon = meta.icon;
+              const isFileChange =
+                e.change_type === "datei_ersetzt" || e.change_type === "datei_ergaenzt" ||
+                e.change_type === "dokument_ersetzt" || e.change_type === "dokument_ergaenzt";
+              return (
               <div key={e.id} className="border rounded-md p-3 space-y-1 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  {e.change_type === "value" ? (
-                    <Badge variant="secondary" className="text-[10px] gap-1">
-                      <PencilLine className="h-3 w-3" /> Wertkorrektur
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-[10px] gap-1">
-                      <FlaskConical className="h-3 w-3" /> Probenzuordnung geändert
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className="text-[10px] gap-1">
+                    <Icon className="h-3 w-3" /> {meta.label}
+                  </Badge>
                   <span className="text-xs text-muted-foreground">{fmtDateTime(e.changed_at)}</span>
                   <span className="text-xs text-muted-foreground">
                     · {authors?.get(e.changed_by) || "Benutzer"}
                   </span>
                 </div>
 
-                {e.change_type === "value" ? (
-                  <div className="space-y-0.5">
-                    <div className="font-medium">{e.parameter_label || e.parameter_name}</div>
-                    <div className="font-mono text-xs">
-                      <span className="text-muted-foreground line-through">
-                        {fmtValue(e.old_value, e.old_text, e.unit)}
-                      </span>
-                      <span className="mx-2">→</span>
-                      <span>{fmtValue(e.new_value, e.new_text, e.unit)}</span>
-                    </div>
-                  </div>
-                ) : (
+                {e.change_type === "sample_reassignment" ? (
                   <div className="space-y-0.5">
                     <div className="font-mono text-xs">
                       <span className="text-muted-foreground line-through">
@@ -106,6 +107,36 @@ export default function CorrectionHistoryDialog({
                       Betroffene Ergebnisse: {e.affected_result_count ?? 0}
                     </div>
                   </div>
+                ) : isFileChange ? (
+                  <div className="space-y-0.5">
+                    <div className="font-medium">{e.parameter_label || e.parameter_name || "Datei"}</div>
+                    <div className="font-mono text-xs">
+                      {e.old_text && (
+                        <>
+                          <span className="text-muted-foreground line-through">{e.old_text}</span>
+                          <span className="mx-2">→</span>
+                        </>
+                      )}
+                      <span>{e.new_text || "–"}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    <div className="font-medium">{e.parameter_label || e.parameter_name}</div>
+                    <div className="font-mono text-xs">
+                      {e.change_type !== "ergänzt" && (
+                        <>
+                          <span className="text-muted-foreground line-through">
+                            {fmtValue(e.old_value, e.old_text, e.unit)}
+                          </span>
+                          <span className="mx-2">→</span>
+                        </>
+                      )}
+                      {e.change_type !== "entfernt" && (
+                        <span>{fmtValue(e.new_value, e.new_text, e.unit)}</span>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 <div className="text-xs">
@@ -113,7 +144,8 @@ export default function CorrectionHistoryDialog({
                   {e.reason}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </DialogContent>
