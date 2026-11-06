@@ -188,7 +188,8 @@ function TaskExecutionPageInner() {
 
   // „Nachträglich korrigieren": nur Anzeige-Steuerung; die RPC
   // `amend_completed_measurement` prüft die Berechtigung serverseitig erneut.
-  const canAmend = isCompleted && useCanAmendMeasurement(measurement as any);
+  const canAmendBase = useCanAmendMeasurement(measurement as any);
+  const canAmend = isCompleted && canAmendBase;
   const [amendOpen, setAmendOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -1124,11 +1125,62 @@ function TaskExecutionPageInner() {
 
       {isCompleted && (
         <Card className="border-green-500/40 bg-green-500/5">
-          <CardContent className="py-4 flex items-center gap-2 text-sm">
+          <CardContent className="py-4 flex flex-wrap items-center gap-2 text-sm">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
-            Diese Messung wurde bereits abgeschlossen. Ergebnisse sind schreibgeschützt.
+            <span className="flex-1">
+              Diese Messung wurde bereits abgeschlossen. Ergebnisse sind schreibgeschützt.
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+              <History className="h-4 w-4 mr-2" /> Korrekturhistorie
+            </Button>
+            {canAmend && (
+              <Button variant="outline" size="sm" onClick={() => setAmendOpen(true)}>
+                <PencilLine className="h-4 w-4 mr-2" /> Nachträglich korrigieren
+              </Button>
+            )}
           </CardContent>
         </Card>
+      )}
+
+      {isCompleted && (
+        <>
+          <AmendCompletedDialog
+            open={amendOpen}
+            onOpenChange={setAmendOpen}
+            measurementId={m.id}
+            serviceId={serviceId}
+            addableFields={[
+              ...(serviceFields as any[])
+                .filter((f) => !f.archived && f.field_type !== "measurement_block")
+                .map((f) => ({
+                  key: f.field_key as string,
+                  label: (f.result_label || f.display_name || f.field_key) as string,
+                  unit: (f.unit ?? null) as string | null,
+                })),
+              ...(linkedMeta ?? [])
+                .filter((lm) => !isBlockEntryResultName(lm.key))
+                .map((lm) => ({ key: lm.key, label: lm.label, unit: null as string | null })),
+            ]}
+            fileFields={(serviceFields as any[])
+              .filter((f) => !f.archived && (f.field_type === "file" || f.field_type === "image"))
+              .map((f) => ({
+                key: f.field_key as string,
+                label: (f.display_name || f.field_key) as string,
+              }))}
+            onSaved={() => {
+              qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
+              qc.invalidateQueries({ queryKey: ["measurement-results"] });
+              qc.invalidateQueries({ queryKey: ["result-corrections"] });
+            }}
+          />
+          <CorrectionHistoryDialog
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            measurementId={m.id}
+            measurementNumber={m.measurement_number}
+            title="Korrekturhistorie der abgeschlossenen Dienstleistung"
+          />
+        </>
       )}
 
       <Dialog open={completeOpen} onOpenChange={setCompleteOpen}>
