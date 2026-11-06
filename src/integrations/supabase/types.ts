@@ -10455,6 +10455,19 @@ export type Database = {
         }
         Returns: string
       }
+      amend_completed_measurement: {
+        Args: {
+          p_files?: Json
+          p_new_raw_dataset_id?: string
+          p_operation_id: string
+          p_order_measurement_id: string
+          p_reason: string
+          p_remove?: Json
+          p_replaces_dataset_id?: string
+          p_values?: Json
+        }
+        Returns: Json
+      }
       amend_order_spec: {
         Args: {
           p_label?: string
@@ -11150,6 +11163,66 @@ export type Database = {
         Returns: {
           requires_kneading: boolean
           template_id: string
+        }[]
+      }
+      rox_assert_storage_object: {
+        Args: {
+          _bucket: string
+          _field_key: string
+          _measurement_id: string
+          _path: string
+          _uid: string
+        }
+        Returns: undefined
+      }
+      rox_file_versions: {
+        Args: { _measurement_id: string }
+        Returns: {
+          file_id: string
+          is_current: boolean
+          kind: string
+          replace_reason: string
+          replaced_at: string
+          replaced_by: string
+        }[]
+      }
+      rox_is_calc_condition_met: {
+        Args: {
+          _cond_key: string
+          _form_id: string
+          _measurement_id: string
+          _remove: Json
+          _values: Json
+        }
+        Returns: boolean
+      }
+      rox_is_versioned_file: {
+        Args: { _id: string; _kind: string }
+        Returns: boolean
+      }
+      rox_is_versioned_storage_path: {
+        Args: { _bucket: string; _path: string }
+        Returns: boolean
+      }
+      rox_jsonb_diff: {
+        Args: { a: Json; b: Json; p?: string }
+        Returns: {
+          change: string
+          new_value: Json
+          old_value: Json
+          path: string
+        }[]
+      }
+      rox_result_definition: {
+        Args: { _result_name: string; _service_id: string }
+        Returns: {
+          field_key: string
+          form_id: string
+          kind: string
+          known: boolean
+          label: string
+          official: boolean
+          unit: string
         }[]
       }
       service_required_services: {
