@@ -698,6 +698,20 @@ function EditServiceDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
           <Button onClick={async () => {
+            // SLA-Validierung: ganze Kalendertage, Vorwarnzeit >= 0, Intervall >= 1.
+            const warnDays = Number(form.sla_yellow_warning_days);
+            const reminderDays = Number(form.sla_reminder_interval_days);
+            if (!Number.isInteger(warnDays) || warnDays < 0) {
+              toast.error(t("admin:sla_invalid_warning_days"));
+              return;
+            }
+            if (!Number.isInteger(reminderDays) || reminderDays < 1) {
+              toast.error(t("admin:sla_invalid_reminder_interval"));
+              return;
+            }
+            const roles = Array.isArray(form.sla_notification_roles) && form.sla_notification_roles.length > 0
+              ? form.sla_notification_roles
+              : ["durchfuehrer"];
             await api.serviceDependencies.setForService(service.id, depIds);
             await onSave(service.id, {
             service_name: form.service_name,
@@ -708,6 +722,10 @@ function EditServiceDialog({
             ...(canEditRates ? { hourly_rate: form.hourly_rate } : {}),
             work_instructions: form.work_instructions || null,
             process_template_id: form.process_template_id && form.process_template_id !== "__none__" ? form.process_template_id : null,
+            sla_monitoring_enabled: !!form.sla_monitoring_enabled,
+            sla_yellow_warning_days: warnDays,
+            sla_reminder_interval_days: reminderDays,
+            sla_notification_roles: roles,
             });
           }}>Speichern</Button>
 
