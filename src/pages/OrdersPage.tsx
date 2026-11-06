@@ -1,4 +1,7 @@
 import { TaskServiceFilterPopover } from "@/components/orders/TaskServiceFilterPopover";
+import { SlaBadge } from "@/components/sla/SlaBadge";
+import { aggregateSla, computeServiceSla, slaInputFromMeasurement } from "@/lib/sla/slaCalculator";
+import { isExternalCustomer } from "@/lib/auth/externalCustomer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useServices, useMyQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { loadTaskFilterState, saveTaskFilterState, effectiveServiceIds, buildTaskServicePredicate, isTaskFilterActive, DEFAULT_TASK_FILTER, type TaskFilterState, type CompetenceState } from "@/lib/tasks/taskServiceFilter";
@@ -46,7 +49,9 @@ export default function OrdersPage() {
 }
 
 function OrdersOverview() {
-  const { user, role, hasRole } = useAuth();
+  const { user, role, hasRole, customRoleIds } = useAuth();
+  // Externe Kunden erhalten keinerlei Ampelanzeige (Spiegel der DB-Funktion is_external_customer).
+  const showSla = !isExternalCustomer(customRoleIds);
   const { t, i18n } = useTranslation(["orders", "common", "measurements", "samples"]);
   const { data: orders = [], isLoading } = useOrders();
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
