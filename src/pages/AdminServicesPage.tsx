@@ -473,6 +473,7 @@ function EditServiceDialog({
   onSave: (id: string, updates: Record<string, any>) => Promise<void>;
   canEditRates: boolean;
 }) {
+  const { t } = useTranslation(["admin", "common"]);
   const [form, setForm] = useState<any>({});
   const [depIds, setDepIds] = useState<string[]>([]);
 
@@ -512,6 +513,12 @@ function EditServiceDialog({
         
         process_template_id: service.process_template_id ?? "__none__",
         active: !!service.active,
+        sla_monitoring_enabled: service.sla_monitoring_enabled === true,
+        sla_yellow_warning_days: service.sla_yellow_warning_days ?? 5,
+        sla_reminder_interval_days: service.sla_reminder_interval_days ?? 3,
+        sla_notification_roles: Array.isArray(service.sla_notification_roles) && service.sla_notification_roles.length > 0
+          ? service.sla_notification_roles
+          : ["durchfuehrer"],
       });
     }
   }, [service]);
@@ -623,6 +630,66 @@ function EditServiceDialog({
               )}
             </div>
           </div>
+          <div className="rounded-md border p-3 space-y-3">
+            <div>
+              <Label className="text-sm font-medium">{t("admin:sla_section")}</Label>
+              <p className="text-xs text-muted-foreground mt-1">{t("admin:sla_section_hint")}</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Switch
+                checked={!!form.sla_monitoring_enabled}
+                onCheckedChange={(v) => setForm((f: any) => ({ ...f, sla_monitoring_enabled: !!v }))}
+              />
+              {t("admin:sla_monitoring_enabled")}
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t("admin:sla_yellow_warning_days")}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={form.sla_yellow_warning_days}
+                  onChange={e => setForm((f: any) => ({ ...f, sla_yellow_warning_days: e.target.value }))}
+                  disabled={!form.sla_monitoring_enabled}
+                />
+              </div>
+              <div>
+                <Label>{t("admin:sla_reminder_interval_days")}</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={form.sla_reminder_interval_days}
+                  onChange={e => setForm((f: any) => ({ ...f, sla_reminder_interval_days: e.target.value }))}
+                  disabled={!form.sla_monitoring_enabled}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>{t("admin:sla_notification_roles")}</Label>
+              <div className="flex flex-wrap gap-4 mt-1">
+                {(["durchfuehrer", "master", "auftraggeber"] as const).map((r) => (
+                  <label key={r} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={(form.sla_notification_roles ?? []).includes(r)}
+                      disabled={!form.sla_monitoring_enabled}
+                      onCheckedChange={(v) =>
+                        setForm((f: any) => {
+                          const cur: string[] = Array.isArray(f.sla_notification_roles) ? f.sla_notification_roles : [];
+                          return {
+                            ...f,
+                            sla_notification_roles: v === true ? [...cur, r] : cur.filter((x) => x !== r),
+                          };
+                        })
+                      }
+                    />
+                    {t(`admin:sla_role_${r}`)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
           <div>
             <Label>Arbeitsanweisung</Label>
             <Textarea value={form.work_instructions ?? ""} onChange={e => setForm((f: any) => ({ ...f, work_instructions: e.target.value }))} rows={3} />
@@ -631,6 +698,20 @@ function EditServiceDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Abbrechen</Button>
           <Button onClick={async () => {
+            // SLA-Validierung: ganze Kalendertage, Vorwarnzeit >= 0, Intervall >= 1.
+            const warnDays = Number(form.sla_yellow_warning_days);
+            const reminderDays = Number(form.sla_reminder_interval_days);
+            if (!Number.isInteger(warnDays) || warnDays < 0) {
+              toast.error(t("admin:sla_invalid_warning_days"));
+              return;
+            }
+            if (!Number.isInteger(reminderDays) || reminderDays < 1) {
+              toast.error(t("admin:sla_invalid_reminder_interval"));
+              return;
+            }
+            const roles = Array.isArray(form.sla_notification_roles) && form.sla_notification_roles.length > 0
+              ? form.sla_notification_roles
+              : ["durchfuehrer"];
             await api.serviceDependencies.setForService(service.id, depIds);
             await onSave(service.id, {
             service_name: form.service_name,
@@ -641,6 +722,10 @@ function EditServiceDialog({
             ...(canEditRates ? { hourly_rate: form.hourly_rate } : {}),
             work_instructions: form.work_instructions || null,
             process_template_id: form.process_template_id && form.process_template_id !== "__none__" ? form.process_template_id : null,
+            sla_monitoring_enabled: !!form.sla_monitoring_enabled,
+            sla_yellow_warning_days: warnDays,
+            sla_reminder_interval_days: reminderDays,
+            sla_notification_roles: roles,
             });
           }}>Speichern</Button>
 

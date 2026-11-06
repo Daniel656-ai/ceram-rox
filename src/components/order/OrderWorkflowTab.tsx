@@ -7,6 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { useOrderAuditLog } from "@/hooks/useOrders";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SlaBadge } from "@/components/sla/SlaBadge";
+import { aggregateSla, computeServiceSla, slaInputFromMeasurement } from "@/lib/sla/slaCalculator";
+import { isExternalCustomer } from "@/lib/auth/externalCustomer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +64,9 @@ export default function OrderWorkflowTab({
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, role } = useAuth();
+  const { user, role, customRoleIds } = useAuth();
+  // Externe Kunden erhalten keinerlei Ampelanzeige.
+  const showSla = !isExternalCustomer(customRoleIds);
   const { data: users = [] } = useUsers();
   const { data: auditLogs = [] } = useOrderAuditLog(order.id);
 
@@ -166,6 +171,12 @@ export default function OrderWorkflowTab({
               <div className="flex items-center gap-2">
                 <span className="font-medium">{g.name}</span>
                 <StatusBadge status={serviceStatus(g.tasks)} />
+                {showSla && (
+                  <SlaBadge
+                    result={aggregateSla(g.tasks.map(slaInputFromMeasurement), order.due_date)}
+                    dueDate={order.due_date}
+                  />
+                )}
                 <Badge variant="outline" className="text-xs">
                   {g.tasks.length} Aufgabe{g.tasks.length === 1 ? "" : "n"}
                 </Badge>
@@ -179,6 +190,7 @@ export default function OrderWorkflowTab({
                     <TableHead>Start</TableHead>
                     <TableHead>Abschluss</TableHead>
                     <TableHead>Status</TableHead>
+                    {showSla && <TableHead className="w-[60px]">Termin</TableHead>}
                     <TableHead className="text-right">Aktion</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -213,6 +225,14 @@ export default function OrderWorkflowTab({
                             : "–"}
                       </TableCell>
                       <TableCell><StatusBadge status={t.status} /></TableCell>
+                      {showSla && (
+                        <TableCell>
+                          <SlaBadge
+                            result={computeServiceSla(slaInputFromMeasurement(t), order.due_date)}
+                            dueDate={order.due_date}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         {canOpenTask(t) ? (
                           <Button

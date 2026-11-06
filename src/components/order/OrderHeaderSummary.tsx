@@ -5,6 +5,8 @@ import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/StatusBadge";
 import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
+import { SlaBadge } from "@/components/sla/SlaBadge";
+import { aggregateSla, slaInputFromMeasurement } from "@/lib/sla/slaCalculator";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -14,9 +16,12 @@ import { useTranslation } from "react-i18next";
 export default function OrderHeaderSummary({
   order,
   creatorName,
+  showSla = true,
 }: {
   order: any;
   creatorName?: string;
+  /** SLA-Ampel ausblenden (externe Kunden erhalten keine Ampelanzeige). */
+  showSla?: boolean;
 }) {
   const { t } = useTranslation("orders");
   const identity = orderIdentity(order);
@@ -61,6 +66,14 @@ export default function OrderHeaderSummary({
           {new Date(order.created_at).toLocaleDateString("de-AT")}
         </Item>
         <Item label="Proben">{links.length}</Item>
+        {showSla && (
+          <Item label={t("sla_monitoring")}>
+            <SlaBadge
+              result={aggregateSla(measurements.map(slaInputFromMeasurement), order.due_date)}
+              dueDate={order.due_date}
+            />
+          </Item>
+        )}
         <div className="md:col-span-3 lg:col-span-6">
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
             <span>Fortschritt der Dienstleistungen</span>

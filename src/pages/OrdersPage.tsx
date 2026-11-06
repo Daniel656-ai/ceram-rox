@@ -1,4 +1,7 @@
 import { TaskServiceFilterPopover } from "@/components/orders/TaskServiceFilterPopover";
+import { SlaBadge } from "@/components/sla/SlaBadge";
+import { aggregateSla, computeServiceSla, slaInputFromMeasurement } from "@/lib/sla/slaCalculator";
+import { isExternalCustomer } from "@/lib/auth/externalCustomer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useServices, useMyQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { loadTaskFilterState, saveTaskFilterState, effectiveServiceIds, buildTaskServicePredicate, isTaskFilterActive, DEFAULT_TASK_FILTER, type TaskFilterState, type CompetenceState } from "@/lib/tasks/taskServiceFilter";
@@ -46,7 +49,9 @@ export default function OrdersPage() {
 }
 
 function OrdersOverview() {
-  const { user, role, hasRole } = useAuth();
+  const { user, role, hasRole, customRoleIds } = useAuth();
+  // Externe Kunden erhalten keinerlei Ampelanzeige (Spiegel der DB-Funktion is_external_customer).
+  const showSla = !isExternalCustomer(customRoleIds);
   const { t, i18n } = useTranslation(["orders", "common", "measurements", "samples"]);
   const { data: orders = [], isLoading } = useOrders();
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
@@ -248,6 +253,7 @@ function OrdersOverview() {
                 {renderSortableHead({ sortKey: "ranking", children: t("orders:priority") })}
                 {renderSortableHead({ sortKey: "status", filterKeys: ["status"], children: t("common:status") })}
                 {renderSortableHead({ sortKey: "due_date", children: t("orders:due_date") })}
+                {showSla && <TableHead className="w-[60px]">{t("orders:sla_column")}</TableHead>}
                 {renderSortableHead({ sortKey: "created_at", filterKeys: ["creator"], children: t("common:created") })}
                 {canShowActions && <TableHead className="w-[100px]">{t("common:actions")}</TableHead>}
               </TableRow>
@@ -255,9 +261,9 @@ function OrdersOverview() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={canShowActions ? 12 : 11} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={(canShowActions ? 12 : 11) + (showSla ? 1 : 0)} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={canShowActions ? 12 : 11} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={(canShowActions ? 12 : 11) + (showSla ? 1 : 0)} className="text-center py-8 text-muted-foreground">{t("orders:no_orders")}</TableCell></TableRow>
               ) : (
                 filtered.map((o: any) => (
                   <TableRow key={o.id}>
@@ -319,6 +325,14 @@ function OrdersOverview() {
                     </TableCell>
                     <TableCell><StatusBadge status={o.status} /></TableCell>
                     <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
+                    {showSla && (
+                      <TableCell>
+                        <SlaBadge
+                          result={aggregateSla(((o as any).order_measurements || []).map(slaInputFromMeasurement), o.due_date)}
+                          dueDate={o.due_date}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>{new Date(o.created_at).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE")}</TableCell>
                     {canShowActions && (
                       <TableCell>
@@ -662,13 +676,14 @@ function DurchfuehrerTasksView({
                 <SortableHead label={t("common:status")} sortKey="status" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:due_date")} sortKey="due_date" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <TableHead className="w-[60px]">{t("orders:sla_column")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoadingMine ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : assigned.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
               ) : assigned.map((m: any) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-mono font-medium">
@@ -687,6 +702,12 @@ function DurchfuehrerTasksView({
                   <TableCell><StatusBadge status={m.status} /></TableCell>
                   <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
                   <TableCell>{fmtDate(m.due_date)}</TableCell>
+                  <TableCell>
+                    <SlaBadge
+                      result={computeServiceSla(slaInputFromMeasurement(m), m.measurement_orders?.due_date ?? null)}
+                      dueDate={m.measurement_orders?.due_date ?? null}
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -715,14 +736,15 @@ function DurchfuehrerTasksView({
                 <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:due_date")} sortKey="due_date" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <TableHead className="w-[60px]">{t("orders:sla_column")}</TableHead>
                 <TableHead className="w-[180px] text-right">Aktion</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoadingFree ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : free.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Aktuell keine freien Aufträge für deine Qualifikationen.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Aktuell keine freien Aufträge für deine Qualifikationen.</TableCell></TableRow>
               ) : free.map((m: any) => (
                 <TableRow key={m.id}>
                   <TableCell className="font-mono font-medium">{m.measurement_number}</TableCell>
@@ -741,6 +763,12 @@ function DurchfuehrerTasksView({
                   </TableCell>
                   <TableCell><PriorityBadge ranking={m.ranking ?? m.measurement_orders?.ranking} /></TableCell>
                   <TableCell>{fmtDate(m.due_date)}</TableCell>
+                  <TableCell>
+                    <SlaBadge
+                      result={computeServiceSla(slaInputFromMeasurement(m), m.measurement_orders?.due_date ?? null)}
+                      dueDate={m.measurement_orders?.due_date ?? null}
+                    />
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       size="sm"

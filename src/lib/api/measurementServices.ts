@@ -82,6 +82,11 @@ export const measurementServices = {
       archived_at?: string | null;
       /** Prozessvorlage, die beim Buchen dieser Dienstleistung ausgeführt wird. */
       process_template_id?: string | null;
+      /** SLA-Terminüberwachung (Phase 1): Aktivierung, Vorwarnzeit, Erinnerungsintervall, Empfängerrollen. */
+      sla_monitoring_enabled?: boolean;
+      sla_yellow_warning_days?: number;
+      sla_reminder_interval_days?: number;
+      sla_notification_roles?: string[];
     }
   ) =>
     run(

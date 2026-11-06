@@ -213,5 +213,25 @@
   "task_filter_reset": "Zurücksetzen",
   "task_filter_competence_error": "Kompetenzen konnten nicht geladen werden – der Kompetenzfilter zeigt daher keine Aufgaben an.",
   "task_filter_competence_loading": "Kompetenzen werden geladen…",
-  "task_filter_run_empty": "Keine offenen Aufgaben für die gewählte Dienstleistungs-, Kompetenz-, Such- bzw. Statusfilterung im Messdurchlauf vorhanden."
+  "task_filter_run_empty": "Keine offenen Aufgaben für die gewählte Dienstleistungs-, Kompetenz-, Such- bzw. Statusfilterung im Messdurchlauf vorhanden.",
+  "sla_column": "Termin",
+  "sla_monitoring": "Terminüberwachung",
+  "sla": {
+    "label_green": "Termin im Plan",
+    "label_yellow": "Vorwarnung",
+    "label_red": "Termin überschritten",
+    "label_neutral": "Keine Terminüberwachung",
+    "label_completed": "Abgeschlossen",
+    "tooltip_green": "Termin im Plan: Der Fertigstellungstermin liegt außerhalb der dienstleistungsspezifischen Vorwarnzeit.",
+    "tooltip_yellow": "Vorwarnung: Der Fertigstellungstermin nähert sich oder ist heute fällig. Bitte rechtzeitig die erforderlichen Arbeitsschritte einplanen.",
+    "tooltip_red": "Termin überschritten: Der vereinbarte Fertigstellungstermin ist mindestens einen Kalendertag überschritten.",
+    "tooltip_neutral": "Keine aktive Terminüberwachung: Für diesen Auftrag ist kein Fälligkeitsdatum hinterlegt oder es ist keine offene Dienstleistung für die Terminüberwachung aktiviert.",
+    "tooltip_completed": "Abgeschlossen: Alle Dienstleistungen dieses Auftrags sind erledigt.",
+    "due_on": "Fälligkeit am {{date}}",
+    "days_remaining": "Noch {{count}} Kalendertag",
+    "days_remaining_plural": "Noch {{count}} Kalendertage",
+    "days_overdue": "{{count}} Kalendertag im Verzug",
+    "days_overdue_plural": "{{count}} Kalendertage im Verzug",
+    "warning_days": "Vorwarnzeit dieser Dienstleistung: {{count}} Tage"
+  }
 }

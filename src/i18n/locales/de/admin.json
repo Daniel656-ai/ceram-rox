@@ -246,5 +246,16 @@
   "renumber_reason": "Begründung (mind. {{min}} Zeichen)",
   "renumber_confirm": "Ich bestätige die Neu-Nummerierung von {{count}} Auftrag/Aufträgen.",
   "renumber_execute": "Neu nummerieren",
-  "renumber_success": "{{count}} Auftrag/Aufträge neu nummeriert"
+  "renumber_success": "{{count}} Auftrag/Aufträge neu nummeriert",
+  "sla_section": "Terminüberwachung (SLA)",
+  "sla_section_hint": "Steuert die Ampel in Auftrags- und Aufgabenansichten. Benachrichtigungen werden in dieser Phase noch nicht versendet; Intervall und Empfängerrollen werden nur gespeichert.",
+  "sla_monitoring_enabled": "Terminüberwachung aktiv",
+  "sla_yellow_warning_days": "Vorwarnzeit (Kalendertage)",
+  "sla_reminder_interval_days": "Erinnerungsintervall (Tage)",
+  "sla_notification_roles": "Benachrichtigungsrollen (für spätere Benachrichtigung)",
+  "sla_role_master": "Master",
+  "sla_role_durchfuehrer": "Messdienstleister",
+  "sla_role_auftraggeber": "Auftraggeber",
+  "sla_invalid_warning_days": "Vorwarnzeit muss mindestens 0 Tage betragen.",
+  "sla_invalid_reminder_interval": "Erinnerungsintervall muss mindestens 1 Tag betragen."
 }

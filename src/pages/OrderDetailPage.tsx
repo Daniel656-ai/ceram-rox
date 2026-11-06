@@ -43,6 +43,7 @@ import AdminDeleteMeasurementsCard from "@/components/order/AdminDeleteMeasureme
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
+import { isExternalCustomer } from "@/lib/auth/externalCustomer";
 
 
 function OrderDetailPageInner() {
@@ -51,8 +52,10 @@ function OrderDetailPageInner() {
   const [searchParams] = useSearchParams();
   const measurementFilter = searchParams.get("measurement");
   const navigate = useNavigate();
-  const { user, role, hasRole } = useAuth();
+  const { user, role, hasRole, customRoleIds } = useAuth();
   const { hasPermission } = usePermissions();
+  // Externe Kunden erhalten keinerlei Ampelanzeige.
+  const showSla = !isExternalCustomer(customRoleIds);
   const canViewPersonnelCosts = role === "master" || hasPermission("costs.view_personnel");
   const canViewHourlyRates = role === "master" || hasPermission("costs.view_hourly_rates");
   const { data: order, isLoading } = useOrderDetail(id);
@@ -330,7 +333,7 @@ function OrderDetailPageInner() {
         </Tabs>
       )}
 
-      <OrderHeaderSummary order={order} creatorName={creatorName} />
+      <OrderHeaderSummary order={order} creatorName={creatorName} showSla={showSla} />
 
       {order.order_type !== "rnd" && <OrderProductionDocuments order={order} />}
 
