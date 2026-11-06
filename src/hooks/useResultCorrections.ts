@@ -75,6 +75,28 @@ export function useReplaceMeasurementResults() {
   });
 }
 
+/**
+ * Nachträgliche Korrektur einer abgeschlossenen Dienstleistung
+ * (RPC `amend_completed_measurement`). Die Dienstleistung bleibt
+ * abgeschlossen; Historie und Idempotenz werden serverseitig erzwungen.
+ */
+export function useAmendCompletedMeasurement() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (params: AmendmentPayload) => api.resultCorrections.amendCompleted(params),
+    onSuccess: invalidate,
+  });
+}
+
+/** Dateiversionen inkl. Ersetzungskette einer Dienstleistung. */
+export function useFileVersions(measurementId: string | undefined) {
+  return useQuery({
+    queryKey: ["file-versions", measurementId],
+    queryFn: () => api.resultCorrections.fileVersions(measurementId!),
+    enabled: !!measurementId,
+  });
+}
+
 export function useReassignMeasurementSample() {
   const invalidate = useInvalidate();
   return useMutation({
