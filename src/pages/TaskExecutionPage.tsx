@@ -30,7 +30,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/StatusBadge";
-import { ArrowLeft, CheckCircle2, ClipboardList } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ClipboardList, History, PencilLine } from "lucide-react";
+import AmendCompletedDialog from "@/components/measurementRun/AmendCompletedDialog";
+import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
+import { useCanAmendMeasurement } from "@/hooks/useResultCorrections";
+import { isBlockEntryResultName } from "@/lib/amendment/payload";
 import OrderUploadedFiles from "@/components/OrderUploadedFiles";
 import RichText from "@/components/forms/RichText";
 import ServiceLinkedForms, { linkedFormValueKey } from "@/components/ServiceLinkedForms";
@@ -181,6 +185,12 @@ function TaskExecutionPageInner() {
   }, [measurement, role, user]);
 
   const isCompleted = (measurement as any)?.status === "completed";
+
+  // „Nachträglich korrigieren": nur Anzeige-Steuerung; die RPC
+  // `amend_completed_measurement` prüft die Berechtigung serverseitig erneut.
+  const canAmend = isCompleted && useCanAmendMeasurement(measurement as any);
+  const [amendOpen, setAmendOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // „Zuweisung ändern": nur Anzeige-Steuerung; die Datenbank prüft erneut.
   const [reassignOpen, setReassignOpen] = useState(false);
