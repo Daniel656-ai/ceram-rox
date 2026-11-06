@@ -138,3 +138,106 @@ export function trapezoidArea(points: CurvePoint[], baseline: (x: number) => num
   }
   return area;
 }
+
+/**
+ * Detaildiagramm-Zeile: genau ein Originalmesspunkt (eine Zeile aus
+ * `dataset.rows`). Fehlende/ungültige Kanalwerte bleiben `null` (nie 0).
+ */
+export interface ExactRow {
+  /** Index der Originalzeile in `dataset.rows`. */
+  rowIndex: number;
+  x: number;
+  [key: string]: number | null;
+}
+
+/**
+ * Exakte Extraktion aller Originalmesspunkte im X-Bereich [from, to].
+ * - keine Reduktion, Glättung, Interpolation oder Rundung
+ * - doppelte X-Werte bleiben als eigene Zeilen erhalten (kein Map-Merge)
+ * - ursprüngliche Reihenfolge der Messpunkte bleibt erhalten
+ * - Kanalzuordnung über die Originalzeile, fehlende Werte => null
+ * Zeilen ohne gültigen X-Wert können keiner Zeitposition zugeordnet werden
+ * und werden nicht gezeichnet (Rohdaten bleiben unverändert).
+ */
+export function sliceRangeExact(
+  ds: MeasurementDataset,
+  xKey: string,
+  yKeys: string[],
+  from: number,
+  to: number,
+): ExactRow[] {
+  const xi = channelIndex(ds, xKey);
+  if (xi < 0) return [];
+  const lo = Math.min(from, to);
+  const hi = Math.max(from, to);
+  const cols = yKeys.map((k) => [k, channelIndex(ds, k)] as const);
+  const out: ExactRow[] = [];
+  for (let r = 0; r < ds.rows.length; r++) {
+    const row = ds.rows[r];
+    const x = row[xi];
+    if (!Number.isFinite(x) || x < lo || x > hi) continue;
+    const entry: ExactRow = { rowIndex: r, x };
+    for (const [k, ci] of cols) {
+      const v = ci < 0 ? NaN : row[ci];
+      entry[k] = Number.isFinite(v) ? v : null;
+    }
+    out.push(entry);
+  }
+  return out;
+}
+
+/** Gültiger X-Wertebereich eines Kanals (ohne Spread, auch für große Reihen). */
+export function xExtent(ds: MeasurementDataset, xKey: string): { min: number; max: number } | null {
+  const xi = channelIndex(ds, xKey);
+  if (xi < 0) return null;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const r of ds.rows) {
+    const x = r[xi];
+    if (!Number.isFinite(x)) continue;
+    if (x < min) min = x;
+    if (x > max) max = x;
+  }
+  return Number.isFinite(min) ? { min, max } : null;
+}
+
+export interface OverviewSeries {
+  key: string;
+  points: CurvePoint[];
+  yMin: number;
+  yMax: number;
+}
+
+/**
+ * Min-Max-Bucketing NUR für die optische Gesamtübersicht (Navigator).
+ * Je X-Bucket bleiben Minimum und Maximum (Originalpunkte) erhalten.
+ * Darf nie für das Detaildiagramm oder Berechnungen verwendet werden.
+ */
+export function overviewMinMax(ds: MeasurementDataset, xKey: string, yKey: string, buckets = 400): OverviewSeries {
+  const pts = curveOf(ds, xKey, yKey);
+  let yMin = Infinity;
+  let yMax = -Infinity;
+  for (const p of pts) { if (p.y < yMin) yMin = p.y; if (p.y > yMax) yMax = p.y; }
+  if (pts.length <= buckets * 2) return { key: yKey, points: pts, yMin, yMax };
+  let xMin = Infinity;
+  let xMax = -Infinity;
+  for (const p of pts) { if (p.x < xMin) xMin = p.x; if (p.x > xMax) xMax = p.x; }
+  const span = xMax - xMin || 1;
+  const mins: (CurvePoint | null)[] = new Array(buckets).fill(null);
+  const maxs: (CurvePoint | null)[] = new Array(buckets).fill(null);
+  for (const p of pts) {
+    const b = Math.min(buckets - 1, Math.floor(((p.x - xMin) / span) * buckets));
+    if (!mins[b] || p.y < mins[b]!.y) mins[b] = p;
+    if (!maxs[b] || p.y > maxs[b]!.y) maxs[b] = p;
+  }
+  const out: CurvePoint[] = [];
+  for (let b = 0; b < buckets; b++) {
+    const a = mins[b];
+    const c = maxs[b];
+    if (!a || !c) continue;
+    if (a === c) out.push(a);
+    else if (a.x <= c.x) out.push(a, c);
+    else out.push(c, a);
+  }
+  return { key: yKey, points: out, yMin, yMax };
+}
