@@ -76,36 +76,25 @@ export default function CorrectionHistoryDialog({
           </p>
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-            {entries.map((e) => (
+            {entries.map((e) => {
+              const meta = CHANGE_TYPE_META[e.change_type] ?? CHANGE_TYPE_META.value;
+              const Icon = meta.icon;
+              const isFileChange =
+                e.change_type === "datei_ersetzt" || e.change_type === "datei_ergaenzt" ||
+                e.change_type === "dokument_ersetzt" || e.change_type === "dokument_ergaenzt";
+              return (
               <div key={e.id} className="border rounded-md p-3 space-y-1 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  {e.change_type === "value" ? (
-                    <Badge variant="secondary" className="text-[10px] gap-1">
-                      <PencilLine className="h-3 w-3" /> Wertkorrektur
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-[10px] gap-1">
-                      <FlaskConical className="h-3 w-3" /> Probenzuordnung geändert
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className="text-[10px] gap-1">
+                    <Icon className="h-3 w-3" /> {meta.label}
+                  </Badge>
                   <span className="text-xs text-muted-foreground">{fmtDateTime(e.changed_at)}</span>
                   <span className="text-xs text-muted-foreground">
                     · {authors?.get(e.changed_by) || "Benutzer"}
                   </span>
                 </div>
 
-                {e.change_type === "value" ? (
-                  <div className="space-y-0.5">
-                    <div className="font-medium">{e.parameter_label || e.parameter_name}</div>
-                    <div className="font-mono text-xs">
-                      <span className="text-muted-foreground line-through">
-                        {fmtValue(e.old_value, e.old_text, e.unit)}
-                      </span>
-                      <span className="mx-2">→</span>
-                      <span>{fmtValue(e.new_value, e.new_text, e.unit)}</span>
-                    </div>
-                  </div>
-                ) : (
+                {e.change_type === "sample_reassignment" ? (
                   <div className="space-y-0.5">
                     <div className="font-mono text-xs">
                       <span className="text-muted-foreground line-through">
