@@ -1666,6 +1666,63 @@ export type Database = {
         }
         Relationships: []
       }
+      historian: {
+        Row: {
+          action: string
+          actor_source: string
+          changed_by: string | null
+          changed_fields: string[]
+          db_role: string
+          entity_id: string
+          entity_type: string
+          event_id: string
+          id: number
+          occurred_at: string
+          order_id: string | null
+          order_measurement_id: string | null
+          project_id: string | null
+          sample_id: string | null
+          summary: string | null
+          txid: number
+        }
+        Insert: {
+          action: string
+          actor_source: string
+          changed_by?: string | null
+          changed_fields?: string[]
+          db_role?: string
+          entity_id: string
+          entity_type: string
+          event_id?: string
+          id?: never
+          occurred_at?: string
+          order_id?: string | null
+          order_measurement_id?: string | null
+          project_id?: string | null
+          sample_id?: string | null
+          summary?: string | null
+          txid?: number
+        }
+        Update: {
+          action?: string
+          actor_source?: string
+          changed_by?: string | null
+          changed_fields?: string[]
+          db_role?: string
+          entity_id?: string
+          entity_type?: string
+          event_id?: string
+          id?: never
+          occurred_at?: string
+          order_id?: string | null
+          order_measurement_id?: string | null
+          project_id?: string | null
+          sample_id?: string | null
+          summary?: string | null
+          txid?: number
+        }
+        Relationships: []
+      }
       inventory_movements: {
         Row: {
           batch_id: string | null
@@ -10455,6 +10512,7 @@ export type Database = {
         }
         Returns: string
       }
+      admin_purge_historian_retention: { Args: never; Returns: number }
       amend_completed_measurement: {
         Args: {
           p_files?: Json
@@ -10952,6 +11010,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      historian_purge_retention: { Args: never; Returns: number }
       insert_snippet_into_template: {
         Args: { _snippet_id: string; _target_template_id: string }
         Returns: number
