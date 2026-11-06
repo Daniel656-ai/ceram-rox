@@ -473,6 +473,7 @@ function EditServiceDialog({
   onSave: (id: string, updates: Record<string, any>) => Promise<void>;
   canEditRates: boolean;
 }) {
+  const { t } = useTranslation(["admin", "common"]);
   const [form, setForm] = useState<any>({});
   const [depIds, setDepIds] = useState<string[]>([]);
 
@@ -512,6 +513,12 @@ function EditServiceDialog({
         
         process_template_id: service.process_template_id ?? "__none__",
         active: !!service.active,
+        sla_monitoring_enabled: service.sla_monitoring_enabled === true,
+        sla_yellow_warning_days: service.sla_yellow_warning_days ?? 5,
+        sla_reminder_interval_days: service.sla_reminder_interval_days ?? 3,
+        sla_notification_roles: Array.isArray(service.sla_notification_roles) && service.sla_notification_roles.length > 0
+          ? service.sla_notification_roles
+          : ["durchfuehrer"],
       });
     }
   }, [service]);
