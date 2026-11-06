@@ -176,6 +176,13 @@
       "when": 1793975157238,
       "tag": "0024_create_historian",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793976955891,
+      "tag": "0025_sla_fields_measurement_services",
+      "breakpoints": true
     }
   ]
 }

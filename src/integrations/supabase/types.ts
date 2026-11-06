@@ -2812,6 +2812,10 @@ export type Database = {
           responsible_user_id: string | null
           sampling_code: string | null
           service_name: string
+          sla_monitoring_enabled: boolean
+          sla_notification_roles: string[]
+          sla_reminder_interval_days: number
+          sla_yellow_warning_days: number
           standard_duration_hours: number
           updated_at: string
           work_instructions: string | null
@@ -2833,6 +2837,10 @@ export type Database = {
           responsible_user_id?: string | null
           sampling_code?: string | null
           service_name: string
+          sla_monitoring_enabled?: boolean
+          sla_notification_roles?: string[]
+          sla_reminder_interval_days?: number
+          sla_yellow_warning_days?: number
           standard_duration_hours?: number
           updated_at?: string
           work_instructions?: string | null
@@ -2854,6 +2862,10 @@ export type Database = {
           responsible_user_id?: string | null
           sampling_code?: string | null
           service_name?: string
+          sla_monitoring_enabled?: boolean
+          sla_notification_roles?: string[]
+          sla_reminder_interval_days?: number
+          sla_yellow_warning_days?: number
           standard_duration_hours?: number
           updated_at?: string
           work_instructions?: string | null
