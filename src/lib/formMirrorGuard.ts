@@ -18,7 +18,7 @@ export interface MirrorDecision {
   /** Darf der eigene Feldwert überschrieben werden? */
   write: boolean;
   /** Zu schreibender Wert (nur relevant, wenn write === true). */
-  value: string;
+  value: any;
 }
 
 /**
@@ -38,7 +38,8 @@ export function linkedMirrorDecision(opts: {
   srcRaw: unknown;
   ownRaw: unknown;
 }): MirrorDecision {
-  const next = opts.srcRaw == null ? "" : String(opts.srcRaw);
+  // Rohwert unverändert durchreichen (bisheriges Verhalten: srcRaw ?? "").
+  const next = opts.srcRaw ?? "";
   if (!opts.interactive) return { write: false, value: next };
   if (!opts.sameForm && !opts.sourcesReady) return { write: false, value: next };
   if ((opts.ownRaw ?? "") === next) return { write: false, value: next };
