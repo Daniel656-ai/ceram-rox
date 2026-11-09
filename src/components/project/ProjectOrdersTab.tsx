@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ClipboardList } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { orderSamples, samplesMatchSearch } from "@/lib/orders/orderSamples";
+import { SampleLinks } from "@/components/orders/SampleLinks";
 
 const d = (v?: string | null) => (v ? new Date(v).toLocaleDateString("de-DE") : "–");
 
@@ -26,6 +29,7 @@ interface Props {
 }
 
 export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
+  const { t } = useTranslation("samples");
   const [search, setSearch] = useState("");
 
   const rows = useMemo(() => {
@@ -46,6 +50,10 @@ export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
         title: o.notes || o.customer_name || o.reference_number || "–",
         status: o.status,
         sampleCount: linkedSamples.size,
+        samples: orderSamples({ ...o, order_samples: [
+          ...(o.order_samples ?? []),
+          ...(sampleLinks ?? []).filter((link: any) => link.order_id === o.id),
+        ] }),
         services,
         progress: ms.length > 0 ? Math.round((completed / ms.length) * 100) : 0,
         createdAt: o.created_at,
@@ -57,7 +65,7 @@ export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
   const filtered = rows.filter((r) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return `${r.orderNumber} ${r.title} ${r.services.join(" ")}`.toLowerCase().includes(q);
+    return `${r.orderNumber} ${r.title} ${r.services.join(" ")}`.toLowerCase().includes(q) || samplesMatchSearch(r.samples, q);
   });
 
   return (
@@ -82,6 +90,7 @@ export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead>Auftragsnummer</TableHead>
+              <TableHead>{t("sample_designation", "Probenbezeichnung")}</TableHead>
               <TableHead>Bezeichnung</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Proben</TableHead>
@@ -94,7 +103,7 @@ export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Keine Aufträge in diesem Projekt.
                 </TableCell>
               </TableRow>
@@ -106,6 +115,7 @@ export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
                       {r.orderNumber}
                     </Link>
                   </TableCell>
+                  <TableCell><SampleLinks samples={r.samples} /></TableCell>
                   <TableCell className="max-w-xs truncate">{r.title}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={STATUS_STYLE[r.status] || ""}>
