@@ -8,11 +8,13 @@ import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle2, ChevronsUpDown, GripVertical, Plus, SeparatorHorizontal, Trash2 } from "lucide-react";
 import { formatQuantity } from "@/lib/formatQuantity";
+import { compareStock, convertQuantity, defaultRecipeUnit } from "@/lib/recipeUnits";
 import {
   appendRowToSection,
   appendSection,
@@ -25,7 +27,7 @@ import {
   type RecipeMaterialRow,
 } from "@/lib/recipeSections";
 
-/** Rohstoffzeile einer Rezeptur (unverändertes Format). */
+/** Rohstoffzeile einer Rezeptur (unverändertes Format, plus optionale Lot-Felder). */
 export type RecipeRow = RecipeMaterialRow;
 
 interface Props {
@@ -46,7 +48,16 @@ interface MaterialOption {
   haystack: string;
 }
 
-const GRID = "grid grid-cols-[auto_minmax(180px,2fr)_100px_80px_1fr_auto] items-center gap-2";
+/** Radix-Select: leere Auswahl ist immer "__none__", nie ein leerer String. */
+const NO_LOT = "__none__";
+
+/**
+ * Einheitliche Spaltendefinition für Kopfzeile und Datenzeilen.
+ * Feste Breiten für Drag-Handle, Bestandsstatus und Löschaktion, damit sich
+ * die Spalten nicht verschieben, wenn ein Bestands-Badge ein- oder ausgeblendet wird.
+ */
+const GRID =
+  "grid grid-cols-[24px_minmax(160px,2fr)_minmax(150px,1.4fr)_90px_64px_minmax(110px,1fr)_150px_32px] items-center gap-2 px-1";
 
 function MaterialPicker({
   options, valueId, disabled, onSelect,
@@ -124,13 +135,27 @@ function SortableRow({ id, disabled, children }: { id: string; disabled?: boolea
   );
 }
 
+/** Lesbare Bezeichnung eines Gebindes für die Lot-Auswahl. */
+function containerLabel(c: any): string {
+  const lot = c.raw_material_batches?.batch_number ?? null;
+  const avail = Number(c.current_quantity ?? 0) - Number(c.reserved_quantity ?? 0);
+  const parts = [
+    lot ? `Lot ${lot}` : (c.container_name || c.container_code || "Gebinde"),
+    c.container_code || null,
+    `verf.: ${formatQuantity(avail)} ${c.unit ?? ""}`.trim(),
+  ];
+  return parts.filter(Boolean).join(" · ");
+}
+
 /**
  * Rezeptur / Rohstoffliste (Auftraggeber) mit Zugabefolge.
  * Es werden ausschließlich bestehende Rohstoffe der Rohstoffverwaltung
  * ausgewählt (Referenz auf `raw_materials.id`); Stammdaten werden hier nie
  * verändert oder neu angelegt. Die Reihenfolge der Positionen ist Teil des
  * gespeicherten Werts (Array-Reihenfolge). Abschnittswechsel markieren
- * Teilprozessschritte mit eigener Zugabezeit.
+ * Teilprozessschritte mit eigener Zugabezeit. Optional kann pro Zeile ein
+ * vorhandenes Gebinde (Lotnummer) zugeordnet werden – als Snapshot, ohne
+ * Reservierung oder Bestandsbuchung.
  */
 export default function RawMaterialRecipeField({ value, onChange, readonly }: Props) {
   const entries: RecipeEntry[] = Array.isArray(value) ? value : [];
@@ -166,6 +191,25 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
     [materials]
   );
 
+  /** Wählbare Gebinde je Rohstoff (Status- und Archivierungsregeln der Gebindeverwaltung). */
+  const containersByMaterial = useMemo(() => {
+    const m = new Map<string, any[]>();
+    for (const c of containers as any[]) {
+      if (c.status === "entsorgt" || c.status === "gesperrt") continue;
+      const list = m.get(c.raw_material_id) ?? [];
+      list.push(c);
+      m.set(c.raw_material_id, list);
+    }
+    return m;
+  }, [containers]);
+
+  const containerById = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const c of containers as any[]) m.set(c.id, c);
+    return m;
+  }, [containers]);
+
+  /** Gesamtverfügbarkeit je Rohstoff in der Gebinde-/Stammdateneinheit. */
   const availableByMaterial = useMemo(() => {
     const m = new Map<string, number>();
     for (const c of containers as any[]) {
@@ -198,33 +242,87 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
     onChange(arrayMove(entries, from, to));
   };
 
+  interface Shortage {
+    name: string;
+    required: number;
+    available: number;
+    unit: string;
+    container?: boolean;
+  }
+
+  /**
+   * Fehlmengen in der Eingabeeinheit der jeweiligen Zeile. Der Vergleich
+   * selbst läuft über `compareStock` in der Bestandseinheit; inkompatible
+   * Einheiten lösen keinen Alarm aus.
+   */
   const shortages = useMemo(() => {
-    const list: Array<{ name: string; required: number; available: number; unit: string }> = [];
+    const list: Shortage[] = [];
     for (const e of entries) {
       if (isSectionEntry(e)) continue;
       const r = e as RecipeRow;
       if (!r.raw_material_id) continue;
       const req = Number(r.quantity);
       if (!isFinite(req) || req <= 0) continue;
-      const avail = availableByMaterial.get(r.raw_material_id) ?? 0;
-      if (avail < req) {
-        const mat = materialById.get(r.raw_material_id);
-        list.push({
-          name: mat?.material_name ?? "Unbekannt",
-          required: req,
-          available: avail,
-          unit: r.unit || mat?.unit || "",
-        });
+      const mat = materialById.get(r.raw_material_id);
+      const entryUnit = r.unit || mat?.unit || "";
+      const stockUnit = mat?.unit || entryUnit;
+      const name = mat?.material_name ?? "Unbekannt";
+
+      // Prüfung 1: Gesamtbestand des Rohstoffs (wie bisher, jetzt einheitenbereinigt).
+      const total = compareStock(req, entryUnit, availableByMaterial.get(r.raw_material_id) ?? 0, stockUnit);
+      if (total?.short) {
+        list.push({ name, required: req, available: convertQuantity(total.available, total.unit, entryUnit) ?? total.available, unit: entryUnit });
+      }
+
+      // Prüfung 2: ausgewähltes Gebinde (zusätzlich, unabhängig vom Gesamtbestand).
+      if (r.container_id) {
+        const c = containerById.get(r.container_id);
+        if (c) {
+          const cAvail = Number(c.current_quantity ?? 0) - Number(c.reserved_quantity ?? 0);
+          const cc = compareStock(req, entryUnit, cAvail, c.unit ?? stockUnit);
+          if (cc?.short) {
+            list.push({
+              name: `${name} (Lot ${r.lot_number ?? c.raw_material_batches?.batch_number ?? "?"})`,
+              required: req,
+              available: convertQuantity(cc.available, cc.unit, entryUnit) ?? cc.available,
+              unit: entryUnit,
+              container: true,
+            });
+          }
+        }
+        // Gebinde nicht mehr auffindbar (archiviert/gelöscht): Snapshot bleibt, kein Alarm.
       }
     }
     return list;
-  }, [entries, availableByMaterial, materialById]);
+  }, [entries, availableByMaterial, materialById, containerById]);
 
   const renderRow = (index: number, row: RecipeRow) => {
     const mat = materialById.get(row.raw_material_id);
     const req = Number(row.quantity);
-    const avail = availableByMaterial.get(row.raw_material_id) ?? 0;
-    const short = row.raw_material_id && isFinite(req) && req > 0 && avail < req;
+    const entryUnit = row.unit || mat?.unit || "";
+    const stockUnit = mat?.unit || entryUnit;
+    const hasReq = !!row.raw_material_id && isFinite(req) && req > 0;
+
+    // Gesamtbestand in der Eingabeeinheit anzeigen (Fallback: Bestandseinheit).
+    const totalAvail = availableByMaterial.get(row.raw_material_id) ?? 0;
+    const totalCmp = hasReq ? compareStock(req, entryUnit, totalAvail, stockUnit) : null;
+    const totalShort = !!totalCmp?.short;
+    const availDisplay = convertQuantity(totalAvail, stockUnit, entryUnit);
+    const availText = availDisplay !== null ? `${formatQuantity(availDisplay)} ${entryUnit}` : `${formatQuantity(totalAvail)} ${stockUnit}`;
+
+    // Gebinde-Auswahl: nur Gebinde des gewählten Rohstoffs; gespeichertes,
+    // inzwischen nicht mehr gelistetes Gebinde bleibt als Snapshot sichtbar.
+    const lotOptions = row.raw_material_id ? containersByMaterial.get(row.raw_material_id) ?? [] : [];
+    const selectedContainer = row.container_id ? containerById.get(row.container_id) : null;
+    const snapshotMissing = !!row.container_id && !lotOptions.some((c) => c.id === row.container_id);
+
+    // Zusatzprüfung Gebindebestand.
+    let containerShort = false;
+    if (hasReq && selectedContainer) {
+      const cAvail = Number(selectedContainer.current_quantity ?? 0) - Number(selectedContainer.reserved_quantity ?? 0);
+      containerShort = !!compareStock(req, entryUnit, cAvail, selectedContainer.unit ?? stockUnit)?.short;
+    }
+
     return (
       <SortableRow key={rowId(index)} id={rowId(index)} disabled={readonly}>
         <MaterialPicker
@@ -233,9 +331,48 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
           disabled={readonly}
           onSelect={(v) => {
             const chosen = options.find((o) => o.id === v);
-            update(index, { raw_material_id: v, unit: row.unit || chosen?.unit || "" });
+            const materialChanged = v !== row.raw_material_id;
+            update(index, {
+              raw_material_id: v,
+              // Feststoffe (kg) standardmäßig in g; Flüssigkeiten behalten ihre Einheit.
+              unit: row.unit || defaultRecipeUnit(chosen?.unit),
+              // Bei Rohstoffwechsel passt eine alte Gebindezuordnung nicht mehr.
+              ...(materialChanged ? { container_id: null, lot_number: null } : {}),
+            });
           }}
         />
+        <Select
+          value={row.container_id ?? NO_LOT}
+          disabled={readonly || !row.raw_material_id}
+          onValueChange={(v) => {
+            if (v === NO_LOT) {
+              update(index, { container_id: null, lot_number: null });
+              return;
+            }
+            const c = lotOptions.find((x) => x.id === v);
+            update(index, {
+              container_id: v,
+              lot_number: c?.raw_material_batches?.batch_number ?? null,
+            });
+          }}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Keine bestimmte Lot" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_LOT}>Keine bestimmte Lot</SelectItem>
+            {lotOptions.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {containerLabel(c)}
+              </SelectItem>
+            ))}
+            {snapshotMissing && (
+              <SelectItem value={row.container_id as string} disabled>
+                Lot {row.lot_number ?? "unbekannt"} (nicht mehr verfügbar)
+              </SelectItem>
+            )}
+          </SelectContent>
+        </Select>
         <Input
           type="number"
           step="any"
@@ -249,7 +386,7 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
           onChange={(e) => update(index, { unit: e.target.value })}
           disabled={readonly}
           className="h-8"
-          placeholder={mat?.unit ?? "kg"}
+          placeholder={defaultRecipeUnit(mat?.unit) || "kg"}
         />
         <Input
           value={row.note ?? ""}
@@ -258,13 +395,22 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
           className="h-8"
           placeholder="optional"
         />
+        {/* Feste Spalte: Badge-Fläche bleibt auch leer erhalten, damit sich nichts verschiebt. */}
         <div className="flex items-center gap-1">
-          {row.raw_material_id && isFinite(req) && req > 0 && (
-            <Badge variant={short ? "destructive" : "secondary"} className="text-[10px]">
-              {short ? <AlertTriangle className="mr-0.5 h-3 w-3" /> : <CheckCircle2 className="mr-0.5 h-3 w-3" />}
-              {formatQuantity(avail)} {row.unit || mat?.unit || ""}
+          {hasReq && (
+            <Badge variant={totalShort ? "destructive" : "secondary"} className="text-[10px]">
+              {totalShort ? <AlertTriangle className="mr-0.5 h-3 w-3" /> : <CheckCircle2 className="mr-0.5 h-3 w-3" />}
+              {availText}
             </Badge>
           )}
+          {hasReq && containerShort && (
+            <Badge variant="destructive" className="text-[10px]" title="Der Bestand des gewählten Gebindes reicht nicht aus">
+              <AlertTriangle className="mr-0.5 h-3 w-3" />
+              Gebinde zu klein
+            </Badge>
+          )}
+        </div>
+        <div>
           {!readonly && (
             <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove(index)}>
               <Trash2 className="h-3 w-3" />
@@ -334,12 +480,15 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
                     <p className="pl-2 text-xs text-muted-foreground">Noch keine Rohstoffe in diesem Abschnitt.</p>
                   ) : (
                     <div className="space-y-1">
-                      <div className={`${GRID} px-1 text-[10px] uppercase text-muted-foreground`}>
-                        <div className="w-4">#</div>
+                      {/* Kopfzeile: identische Grid-Definition und Abstände wie die Datenzeilen. */}
+                      <div className={`${GRID} text-[10px] uppercase text-muted-foreground`}>
+                        <div>#</div>
                         <div>Rohstoff</div>
+                        <div>Lot / Gebinde</div>
                         <div>Sollmenge</div>
                         <div>Einheit</div>
                         <div>Bemerkung</div>
+                        <div>Bestand</div>
                         <div />
                       </div>
                       {section.rows.map(({ index, row }) => renderRow(index, row))}
@@ -364,6 +513,7 @@ export default function RawMaterialRecipeField({ value, onChange, readonly }: Pr
                   verfügbar {formatQuantity(s.available)} {s.unit}
                   {" — "}
                   <strong>fehlt {formatQuantity(s.required - s.available)} {s.unit}</strong>
+                  {s.container && " (gewähltes Gebinde)"}
                 </li>
               ))}
             </ul>

@@ -1,6 +1,15 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
-## Aktuelle Freigabe: Durchgängige Probenbezeichnung
+## Aktuelle Freigabe: Erweiterung intelligenter Rohstoff-Repeater (g, Lot, Layout)
+- [x] `recipeUnits.ts`: zentrale Einheitenumrechnung (g↔kg, ml↔l), `defaultRecipeUnit` (Feststoffe→g), `compareStock` in Bestandseinheit; inkompatible Einheiten → kein Alarm.
+- [x] `RecipeMaterialRow` additiv um `container_id`/`lot_number` (Snapshot) erweitert; `stripRecipeLotAssignments` für Vorlagenkopien.
+- [x] `RawMaterialRecipeField.tsx`: Lot-/Gebindeauswahl (nur passende, aktive Gebinde; Snapshot bei archiviertem Gebinde), zweistufige Bestandsprüfung (Gesamt + Gebinde), einheitliches 8-Spalten-Grid mit festen Breiten für Handle/Badge/Löschen.
+- [x] `orderTemplateInputs.ts`: Vorlagenkopien setzen `container_id`/`lot_number` zurück; `RecipeDocumentationCard.tsx` zeigt Lot an.
+- [x] 1.245 Tests (24 neue), Typprüfung bestanden. Keine DB-/Backend-/Infrastrukturänderungen.
+- [ ] Web-Abnahme mit echten Rezepturen/Gebinden: blockiert – keine Schreibzugriffe/Testdaten im Produktivbestand erlaubt.
+- [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang zur Firmeninstallation.
+
+## Freigabe: Durchgängige Probenbezeichnung
 - [x] Zentrale Fallbacks und stabile Mehrprobenanzeige, Aufgaben-/Projekt-/Dashboard-Spalten und Suche additiv ergänzt; vorhandene SELECTs unverändert.
 - [x] 1.226 Tests bestanden, automatische Buildprüfung erfolgreich; angemeldete Web-Prüfung von Auftragsanzeige, Probenlink und Dashboard-Suche ohne Produktivschreibzugriffe; Abschlussbericht erstellt.
 - [ ] Vollständige Web-Abnahme: Aufgaben-/Projektansicht und Sonderfälle benötigen passende erreichbare Bestandsdaten/Ansichten; separate Typprüfung nicht ausgeführt.

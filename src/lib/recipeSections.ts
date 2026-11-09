@@ -13,6 +13,13 @@ export interface RecipeMaterialRow {
   quantity: number | string;
   unit: string;
   note?: string;
+  /**
+   * Optionale Gebindezuordnung (rein additiv). Snapshot zum Auswahlzeitpunkt –
+   * die historische Anzeige hängt nicht von der aktuellen Gebindeverfügbarkeit ab.
+   */
+  container_id?: string | null;
+  /** Lotnummer = Chargennummer (batch_number) des gewählten Gebindes (Snapshot). */
+  lot_number?: string | null;
   kind?: undefined;
 }
 
@@ -111,6 +118,21 @@ export function updateSectionMarker(
 /** Anzeigename eines Abschnitts. */
 export function sectionTitle(section: RecipeSection, position: number): string {
   return section.label?.trim() || `Teilprozessschritt ${position + 1}`;
+}
+
+/**
+ * Entfernt Gebinde-/Lotzuordnungen aus allen Rohstoffzeilen (für
+ * Vorlagenkopien: eine neue Auftragskopie übernimmt keine ungeprüfte alte
+ * Gebindezuordnung). Rohstoff, Menge, Einheit, Bemerkung und Abschnitte
+ * bleiben unverändert.
+ */
+export function stripRecipeLotAssignments(entries: RecipeEntry[] | undefined): RecipeEntry[] {
+  const list = Array.isArray(entries) ? entries : [];
+  return list.map((e) => {
+    if (isSectionEntry(e)) return e;
+    const { container_id: _c, lot_number: _l, ...rest } = e as RecipeMaterialRow;
+    return rest as RecipeMaterialRow;
+  });
 }
 
 /**

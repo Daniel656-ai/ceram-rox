@@ -113,6 +113,9 @@ export default function RecipeDocumentationCard({ orderId }: { orderId: string }
                                   ? `${formatQuantity(qty)} ${r.row.unit || mat?.unit || ""}`.trim()
                                   : "—"}
                               </span>
+                              {r.row.lot_number && (
+                                <span className="text-xs text-muted-foreground">· Lot {r.row.lot_number}</span>
+                              )}
                               {r.row.note && (
                                 <span className="text-xs text-muted-foreground">· {r.row.note}</span>
                               )}

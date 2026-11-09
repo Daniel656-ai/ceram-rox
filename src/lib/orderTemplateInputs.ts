@@ -1,5 +1,6 @@
 import type { FormField } from "@/lib/api/formFields";
 import { containerLayout } from "@/lib/scopedMeasurementValues";
+import { stripRecipeLotAssignments, type RecipeEntry } from "@/lib/recipeSections";
 
 type InputDefinition = Partial<Omit<FormField, "field_type">> & { field_key: string; field_type: string };
 const excludedKeys = new Set(["versuchsnummer", "pp_experiment_number", "order_number", "sample_number", "measurement_number"]);
@@ -48,6 +49,10 @@ export function copyTemplateInputs(values: Record<string, unknown>, fields: Inpu
         if (!entry || typeof entry !== "object") throw new Error(`Nicht lesbarer Wiederholungsbereich: ${key}`);
         return { ...copyTemplateInputs(entry as Record<string, unknown>, children, definitionScope), __instance_id: crypto.randomUUID() };
       });
+    } else if (field.field_type === "raw_material_recipe" && Array.isArray(raw)) {
+      // Vorlagenkopien übernehmen keine ungeprüfte alte Gebindezuordnung:
+      // container_id/lot_number werden zurückgesetzt, alle übrigen Werte bleiben.
+      output[key] = stripRecipeLotAssignments(structuredClone(raw) as RecipeEntry[]);
     } else output[key] = structuredClone(raw);
   }
   return output;
