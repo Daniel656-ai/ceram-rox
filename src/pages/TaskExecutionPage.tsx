@@ -1137,8 +1137,38 @@ function TaskExecutionPageInner() {
               Bitte im Service- und Prozessdesigner ein Formular der Rolle
               „Messdienstleister" zuordnen.
             </p>
+          ) : !initialized ? (
+            // Strikte Render-Schranke: Das Formular wird erst gemountet, wenn
+            // der frische Datenbankabruf abgeschlossen und die initiale
+            // Hydration erfolgt ist. So können Repeater, Messblöcke und
+            // verschachtelte Temperatur-Repeater vorher keine leeren
+            // Initialisierungs- oder Auto-Seed-Aktionen auslösen.
+            isError && !isFetching ? (
+              <div className="flex flex-wrap items-center gap-3 py-6 text-sm">
+                <p className="text-destructive">Messdaten konnten nicht geladen werden.</p>
+                <Button size="sm" variant="outline" onClick={() => refetch()}>
+                  Erneut versuchen
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Messdaten werden geladen …
+              </div>
+            )
           ) : (
             <>
+              {serverConflict && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-warning bg-warning/10 px-3 py-2 text-sm">
+                  <span className="flex-1">
+                    In einer parallelen Sitzung wurden neuere Werte gespeichert.
+                    Ihre Eingaben bleiben erhalten und werden nicht überschrieben.
+                  </span>
+                  <Button size="sm" variant="outline" onClick={adoptServerValues}>
+                    Serverstand übernehmen (eigene Eingaben verwerfen)
+                  </Button>
+                </div>
+              )}
               {canSwitchFormView && (
                 <Tabs value={formView} onValueChange={(v) => setFormView(v as "customer" | "employee")} className="mb-3">
                   <TabsList>
@@ -1152,7 +1182,7 @@ function TaskExecutionPageInner() {
                   serviceId={serviceId}
                   roleView={roleView}
                   values={values}
-                  onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
+                  onChange={handleFieldChange}
                 />
               )}
               <ServiceLinkedForms
@@ -1163,7 +1193,7 @@ function TaskExecutionPageInner() {
                 formData={linkedFormData as any}
                 linkSourcesReady={linkSourcesReady}
                 values={values}
-                onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
+                onChange={handleFieldChange}
               />
             </>
           )}
