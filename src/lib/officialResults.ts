@@ -364,6 +364,61 @@ export function buildLinkedFormResultCandidates(
 
 
 /**
+ * Eindeutig verwaiste Repeater-Ergebniszeilen bestimmen.
+ *
+ * Nur Zeilen, deren Zugehörigkeit zweifelsfrei bewiesen ist, werden gemeldet:
+ * - der Ergebnisname gehört zu einem Repeater des aktuell verknüpften Formulars
+ *   (Speicherschlüssel stimmt überein), UND
+ * - die Zeilenkennung ist eine stabile Instanzkennung (`__instance_id`),
+ *   keine positionsbasierte `idx_`-Kennung, UND
+ * - diese Instanzkennung kommt in den aktuell gespeicherten Zeilen nicht mehr
+ *   vor (die Zeile wurde also tatsächlich entfernt).
+ *
+ * Historische Ergebnisse anderer Feldstrukturen, positionsbasierte Kennungen
+ * und unbekannte Speicherschlüssel werden NIEMALS gemeldet – im Zweifel
+ * unterbleibt die Bereinigung.
+ */
+export function collectStaleRepeaterInstanceKeys(
+  formId: string,
+  fields: FormField[],
+  taskValues: Record<string, unknown>,
+  existingResultNames: string[],
+): Set<string> {
+  const prefix = `form:${formId}:`;
+  const repeaters = fields.filter((f) => f.field_type === "repeater" && !f.parent_field_id);
+  const out = new Set<string>();
+  if (repeaters.length === 0 || existingResultNames.length === 0) return out;
+
+  const localValues: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(taskValues)) {
+    if (key.startsWith(prefix)) localValues[key.slice(prefix.length)] = value;
+  }
+
+  for (const repeater of repeaters) {
+    const storageKey = readRepeaterMeta(repeater).storage_key || repeater.field_key;
+    const entries = Array.isArray(localValues[storageKey]) ? (localValues[storageKey] as unknown[]) : [];
+    const activeIds = new Set(
+      entries
+        .map((e) => (e as Record<string, unknown> | null)?.[INSTANCE_ID_KEY])
+        .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+    );
+    const rowPattern = new RegExp(
+      `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${storageKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\[([^\\]]+)\\]\\..+$`
+    );
+    for (const name of existingResultNames) {
+      const m = rowPattern.exec(name);
+      if (!m) continue;
+      const instanceId = m[1];
+      // Positionsbasierte Kennungen (Altdaten ohne __instance_id) sind nach
+      // Entfernen/Verschieben mehrdeutig – sie bleiben immer erhalten.
+      if (instanceId.startsWith("idx_")) continue;
+      if (!activeIds.has(instanceId)) out.add(name);
+    }
+  }
+  return out;
+}
+
+/**
  * Builds the snapshot for the classic service form. Computed fields can depend
  * on other computed fields, so evaluation is repeated until no value changes.
  */
