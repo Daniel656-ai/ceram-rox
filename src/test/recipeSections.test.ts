@@ -66,4 +66,36 @@ describe("recipeSections", () => {
     expect(hasSections(next)).toBe(false);
     expect(groupRecipeSections(next)[0].rows.map((r) => r.row.raw_material_id)).toEqual(["a", "c"]);
   });
+
+  it("stripRecipeLotAssignments entfernt nur Gebinde-/Lot-Felder", () => {
+    const value: RecipeEntry[] = [
+      { raw_material_id: "a", quantity: 500, unit: "g", note: "n", container_id: "c-1", lot_number: "L1" },
+      { kind: "section", offset_minutes: 10 },
+      { raw_material_id: "b", quantity: 2, unit: "kg" },
+    ];
+    const next = stripRecipeLotAssignments(value);
+    expect(next[0]).toEqual({ raw_material_id: "a", quantity: 500, unit: "g", note: "n" });
+    expect(next[1]).toEqual({ kind: "section", offset_minutes: 10 });
+    expect(next[2]).toEqual({ raw_material_id: "b", quantity: 2, unit: "kg" });
+    // Quelle bleibt unverändert.
+    expect((value[0] as any).container_id).toBe("c-1");
+  });
+
+  it("parseRecipeValue akzeptiert Zeilen mit Lot-Feldern und historische ohne", () => {
+    const withLot = JSON.stringify([
+      { raw_material_id: "a", quantity: 500, unit: "g", container_id: "c-1", lot_number: "L1" },
+    ]);
+    const withoutLot = JSON.stringify([{ raw_material_id: "b", quantity: 2, unit: "kg" }]);
+    expect(parseRecipeValue(withLot)).toHaveLength(1);
+    expect(parseRecipeValue(withoutLot)).toHaveLength(1);
+  });
+
+  it("gruppiert Zeilen mit Lot-Feldern unverändert in Abschnitte", () => {
+    const value: RecipeEntry[] = [
+      { raw_material_id: "a", quantity: 500, unit: "g", container_id: "c-1", lot_number: "L1" },
+    ];
+    const sections = groupRecipeSections(value);
+    expect(sections[0].rows[0].row.lot_number).toBe("L1");
+    expect(sections[0].rows[0].row.container_id).toBe("c-1");
+  });
 });
