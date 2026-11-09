@@ -24,3 +24,11 @@ describe("billing", () => {
     expect(canEditBilled({ created_by: "u1" }, null, false)).toBe(false);
   });
 });
+
+describe("billing – Wechsel der Auftragsart", () => {
+  it("gespeicherter Wert bleibt erhalten und erscheint bei Kundenauftrag wieder", () => {
+    const stored = { is_billed: true };
+    expect(resolveBilled({ ...stored, order_type: "rnd" })).toBeNull();
+    expect(resolveBilled({ ...stored, order_type: "customer" })).toBe(true);
+  });
+});

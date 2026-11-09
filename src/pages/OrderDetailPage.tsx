@@ -438,6 +438,10 @@ function OrderDetailPageInner() {
                 </Select>
               </div>
             )}
+            {/* Verrechnungsstatus: nur Kundenaufträge, speichert sofort über set_order_billed */}
+            {editOrderType === "customer" && (order as any).order_type === "customer" && (
+              <BillingStatusControl order={order as any} canEdit={canEditBilled(order as any, user?.id, role === "master")} />
+            )}
             {canEditDelete && (
               <div>
                 <Label>Fälligkeitsdatum</Label>
