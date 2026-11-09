@@ -26,6 +26,7 @@ import {
 import { releaseRun } from "@/lib/measurementRun/leaveRun";
 import { leaveTask, needsBackDialog, backTarget, type BackChoice } from "@/lib/measurementRun/taskBack";
 import { collectMirroredFieldKeys, mayDeleteStoredRow } from "@/lib/measurementRun/persistGuard";
+import { extractInitialValues, resolveServerSync } from "@/lib/measurementRun/hydrationGuard";
 import ReassignMeasurementDialog from "@/components/measurementRun/ReassignMeasurementDialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -69,17 +70,18 @@ function TaskExecutionPageInner() {
   const qc = useQueryClient();
   const { user, profile, role, hasRole } = useAuth();
 
-  // Im Messdurchlauf wird die Probe beim Wechsel immer frisch geladen: der
-  // Zwischenspeicher könnte einen Stand vor dem letzten Autosave enthalten.
-  const inRun = new URLSearchParams(window.location.search)
-    .get("run")?.split(",").includes(measurementId ?? "") ?? false;
-  const { data: measurement, isLoading, isFetchedAfterMount } = useQuery({
+  // Beim Öffnen jeder Dienstleistung wird einheitlich der aktuelle
+  // Datenbankstand abgerufen – auch außerhalb des Messdurchlaufs. Ein
+  // möglicherweise veralteter Query-Cache darf die initiale Hydration nicht
+  // grundlegen (Messwertverlust-Risiko).
+  const { data: measurement, isLoading, isFetchedAfterMount, isError, isFetching, refetch } = useQuery({
     queryKey: ["measurement-task", measurementId],
     queryFn: () => api.measurements.get(measurementId!),
     enabled: !!measurementId,
-    ...(inRun ? { refetchOnMount: "always" as const } : {}),
+    refetchOnMount: "always",
   });
-  const hydrationReady = !inRun || isFetchedAfterMount;
+  // Die initiale Hydration wartet einheitlich auf den frischen Serverabruf.
+  const hydrationReady = isFetchedAfterMount;
 
   const serviceId: string | undefined = (measurement as any)?.service_id;
 
@@ -161,28 +163,63 @@ function TaskExecutionPageInner() {
 
   const [values, setValues] = useState<Record<string, any>>({});
   const [initialized, setInitialized] = useState(false);
+  /** Abweichender Serverstand bei offenen lokalen Eingaben (Konflikthinweis). */
+  const [serverConflict, setServerConflict] = useState<Record<string, any> | null>(null);
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+  /** Lokale, noch nicht erfolgreich gespeicherte Benutzereingaben. */
+  const dirtyRef = useRef(false);
+  /** Zählt Benutzereingaben – erkennt Eingaben während eines Speichervorgangs. */
+  const editCounterRef = useRef(0);
+  /** Zuletzt übernommener Serverstand (Erkennung echter Serveränderungen). */
+  const lastServerRef = useRef<Record<string, any> | null>(null);
+  /** Spät gebundene Prüfung auf ungespeicherte Autosave-Änderungen. */
+  const hasUnsavedRef = useRef<() => boolean>(() => false);
 
-  // Preload existing results into the form (so partial saves resume nicely).
+  /** Benutzereingabe: markiert den Stand als geändert und aktualisiert ihn. */
+  const handleFieldChange = (key: string, v: any) => {
+    dirtyRef.current = true;
+    editCounterRef.current += 1;
+    setValues((prev) => ({ ...prev, [key]: v }));
+  };
+
+  // Initiale Hydration ausschließlich aus dem frischen Serverstand. Spätere
+  // Hintergrund-Updates werden nur übernommen, wenn keine ungespeicherten
+  // lokalen Eingaben vorliegen – andernfalls Konflikthinweis statt
+  // stillschweigendem Überschreiben (resolveServerSync, rein geprüft).
   useEffect(() => {
-    if (initialized || !measurement || !hydrationReady) return;
-    const initial: Record<string, any> = {};
-    for (const r of (measurement as any).measurement_results ?? []) {
-      const key = r.result_name;
-      if (!key) continue;
-      if (r.value != null) initial[key] = String(r.value);
-      else if (r.remarks != null) {
-        // Repeatable / complex values were stored as JSON in remarks.
-        try {
-          const parsed = JSON.parse(r.remarks);
-          initial[key] = parsed;
-        } catch {
-          initial[key] = r.remarks;
-        }
-      }
+    if (!measurement || !hydrationReady) return;
+    const serverValues = extractInitialValues(measurement);
+    const decision = resolveServerSync({
+      initialized,
+      dirty: dirtyRef.current || hasUnsavedRef.current(),
+      currentValues: valuesRef.current,
+      lastServerValues: lastServerRef.current,
+      serverValues,
+    });
+    if (decision.action === "hydrate" || decision.action === "adopt") {
+      lastServerRef.current = serverValues;
+      setValues(serverValues);
+      setInitialized(true);
+      dirtyRef.current = false;
+      setServerConflict(null);
+    } else if (decision.action === "conflict") {
+      lastServerRef.current = serverValues;
+      setServerConflict(serverValues);
+    } else {
+      // „none": Serverstand inhaltlich gleich – still als neuen Stand merken,
+      // ohne die Anzeige anzufassen (kein erneuter Autosave-Zyklus).
+      lastServerRef.current = serverValues;
     }
-    setValues(initial);
-    setInitialized(true);
-  }, [measurement, initialized, hydrationReady]);
+  }, [measurement, hydrationReady, initialized]);
+
+  /** Verwirft lokale Eingaben ausdrücklich und übernimmt den Serverstand. */
+  const adoptServerValues = () => {
+    if (!serverConflict) return;
+    setValues(serverConflict);
+    dirtyRef.current = false;
+    setServerConflict(null);
+  };
 
   const canEdit = useMemo(() => {
     if (!measurement) return false;
@@ -666,7 +703,9 @@ function TaskExecutionPageInner() {
   const handleSaveDraft = async () => {
     setSubmitting(true);
     try {
+      const editsAtStart = editCounterRef.current;
       await persist();
+      if (editCounterRef.current === editsAtStart) dirtyRef.current = false;
       toast.success("Zwischenstand gespeichert");
       qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
     } catch (err: any) {
@@ -692,11 +731,18 @@ function TaskExecutionPageInner() {
     enabled: canEdit && !isCompleted && hasForm,
     ready: initialized,
     values,
-    save: () => persist(false, { draftOnly: true }),
+    save: async () => {
+      // Eingaben während des Speicherns bleiben als „geändert" markiert.
+      const editsAtStart = editCounterRef.current;
+      await persist(false, { draftOnly: true });
+      if (editCounterRef.current === editsAtStart) dirtyRef.current = false;
+    },
   });
+  hasUnsavedRef.current = autosave.hasUnsaved;
   // „Ansicht aktualisieren": offenen Zwischenstand zuerst sichern; scheitert
-  // das, wird nicht aktualisiert. Ohne Autosave bleiben die Eingaben im
-  // Formular erhalten (Werte werden nur einmalig aus dem Server übernommen).
+  // das, wird nicht aktualisiert. Ohne ungespeicherte Eingaben wird ein
+  // neuerer Serverstand automatisch übernommen, mit offenen Eingaben als
+  // Konflikt angezeigt statt überschrieben.
   useRefreshGuard(async () => {
     await autosave.flush();
     if (autosave.hasUnsaved()) throw new Error("unsaved");
@@ -1092,8 +1138,38 @@ function TaskExecutionPageInner() {
               Bitte im Service- und Prozessdesigner ein Formular der Rolle
               „Messdienstleister" zuordnen.
             </p>
+          ) : !initialized ? (
+            // Strikte Render-Schranke: Das Formular wird erst gemountet, wenn
+            // der frische Datenbankabruf abgeschlossen und die initiale
+            // Hydration erfolgt ist. So können Repeater, Messblöcke und
+            // verschachtelte Temperatur-Repeater vorher keine leeren
+            // Initialisierungs- oder Auto-Seed-Aktionen auslösen.
+            isError && !isFetching ? (
+              <div className="flex flex-wrap items-center gap-3 py-6 text-sm">
+                <p className="text-destructive">Messdaten konnten nicht geladen werden.</p>
+                <Button size="sm" variant="outline" onClick={() => refetch()}>
+                  Erneut versuchen
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Messdaten werden geladen …
+              </div>
+            )
           ) : (
             <>
+              {serverConflict && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded border border-warning bg-warning/10 px-3 py-2 text-sm">
+                  <span className="flex-1">
+                    In einer parallelen Sitzung wurden neuere Werte gespeichert.
+                    Ihre Eingaben bleiben erhalten und werden nicht überschrieben.
+                  </span>
+                  <Button size="sm" variant="outline" onClick={adoptServerValues}>
+                    Serverstand übernehmen (eigene Eingaben verwerfen)
+                  </Button>
+                </div>
+              )}
               {canSwitchFormView && (
                 <Tabs value={formView} onValueChange={(v) => setFormView(v as "customer" | "employee")} className="mb-3">
                   <TabsList>
@@ -1107,7 +1183,7 @@ function TaskExecutionPageInner() {
                   serviceId={serviceId}
                   roleView={roleView}
                   values={values}
-                  onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
+                  onChange={handleFieldChange}
                 />
               )}
               <ServiceLinkedForms
@@ -1118,7 +1194,7 @@ function TaskExecutionPageInner() {
                 formData={linkedFormData as any}
                 linkSourcesReady={linkSourcesReady}
                 values={values}
-                onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
+                onChange={handleFieldChange}
               />
             </>
           )}
