@@ -251,11 +251,52 @@ export function buildLinkedFormResultCandidates(
     }
   }
 
+  // Wiederholbereiche: jede Zeile erzeugt eigenständige, eindeutig zugeordnete
+  // Ergebnisse – analog zum Messdatenblock über dasselbe Instanzkonzept
+  // (readInstances/instanceResultKey). Die Instanzkennung ist die gespeicherte
+  // `__instance_id` der Zeile; Altdaten ohne Kennung fallen auf die
+  // positionsbasierte Kennung `idx_<n>` zurück (Konvention aus readInstances).
+  // Der Repeater-Container selbst wird niemals ein offizielles Ergebnis.
+  for (const repeater of repeaters) {
+    const repMeta = readRepeaterMeta(repeater);
+    const storageKey = repMeta.storage_key || repeater.field_key;
+    const children = repeaterChildren(fields, repeater.id).filter(
+      (c) =>
+        c.field_type !== "repeater" &&
+        c.field_type !== "measurement_block" &&
+        c.field_type !== "measurement_import"
+    );
+    if (children.length === 0) continue;
+    const instances = readInstances(localValues[storageKey], {
+      min_entries: 0,
+      item_label: repMeta.item_label ?? "Eintrag",
+      add_label: repMeta.add_label ?? "Eintrag hinzufügen",
+      context_fields: [],
+    }, toBlockChildDefs(children));
+    for (const instance of instances) {
+      for (const child of children) {
+        instanceCandidates.push({
+          kind: "field" as const,
+          key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
+          label: child.result_label || child.display_name || child.field_key,
+          unit: child.unit ?? null,
+          value: instance.values[child.field_key],
+          official: child.is_result === true,
+          instanceKey: instance.instanceId,
+          instanceLabel: instance.label,
+          instanceContext: null,
+        });
+      }
+    }
+  }
+
   const all: OfficialResultCandidate[] = [
     ...fields
       .filter((field) =>
         !blockChildIds.has(field.id) &&
+        !repeaterChildIds.has(field.id) &&
         field.field_type !== "measurement_block" &&
+        field.field_type !== "repeater" &&
         (field.metadata as any)?.global_field_source !== "constant"
       )
       .map((field) => {
