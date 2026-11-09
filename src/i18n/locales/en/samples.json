@@ -4,6 +4,7 @@
   "new_sample": "New Sample",
   "create_title": "Create New Sample",
   "sample_name": "Sample Name",
+  "sample_designation": "Sample designation",
   "sample_name_required": "Sample Name *",
   "sample_number": "Sample No.",
   "project_number": "Project Number *",
