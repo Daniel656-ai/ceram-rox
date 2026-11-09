@@ -163,28 +163,63 @@ function TaskExecutionPageInner() {
 
   const [values, setValues] = useState<Record<string, any>>({});
   const [initialized, setInitialized] = useState(false);
+  /** Abweichender Serverstand bei offenen lokalen Eingaben (Konflikthinweis). */
+  const [serverConflict, setServerConflict] = useState<Record<string, any> | null>(null);
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+  /** Lokale, noch nicht erfolgreich gespeicherte Benutzereingaben. */
+  const dirtyRef = useRef(false);
+  /** Zählt Benutzereingaben – erkennt Eingaben während eines Speichervorgangs. */
+  const editCounterRef = useRef(0);
+  /** Zuletzt übernommener Serverstand (Erkennung echter Serveränderungen). */
+  const lastServerRef = useRef<Record<string, any> | null>(null);
+  /** Spät gebundene Prüfung auf ungespeicherte Autosave-Änderungen. */
+  const hasUnsavedRef = useRef<() => boolean>(() => false);
 
-  // Preload existing results into the form (so partial saves resume nicely).
+  /** Benutzereingabe: markiert den Stand als geändert und aktualisiert ihn. */
+  const handleFieldChange = (key: string, v: any) => {
+    dirtyRef.current = true;
+    editCounterRef.current += 1;
+    setValues((prev) => ({ ...prev, [key]: v }));
+  };
+
+  // Initiale Hydration ausschließlich aus dem frischen Serverstand. Spätere
+  // Hintergrund-Updates werden nur übernommen, wenn keine ungespeicherten
+  // lokalen Eingaben vorliegen – andernfalls Konflikthinweis statt
+  // stillschweigendem Überschreiben (resolveServerSync, rein geprüft).
   useEffect(() => {
-    if (initialized || !measurement || !hydrationReady) return;
-    const initial: Record<string, any> = {};
-    for (const r of (measurement as any).measurement_results ?? []) {
-      const key = r.result_name;
-      if (!key) continue;
-      if (r.value != null) initial[key] = String(r.value);
-      else if (r.remarks != null) {
-        // Repeatable / complex values were stored as JSON in remarks.
-        try {
-          const parsed = JSON.parse(r.remarks);
-          initial[key] = parsed;
-        } catch {
-          initial[key] = r.remarks;
-        }
-      }
+    if (!measurement || !hydrationReady) return;
+    const serverValues = extractInitialValues(measurement);
+    const decision = resolveServerSync({
+      initialized,
+      dirty: dirtyRef.current || hasUnsavedRef.current(),
+      currentValues: valuesRef.current,
+      lastServerValues: lastServerRef.current,
+      serverValues,
+    });
+    if (decision.action === "hydrate" || decision.action === "adopt") {
+      lastServerRef.current = serverValues;
+      setValues(serverValues);
+      setInitialized(true);
+      dirtyRef.current = false;
+      setServerConflict(null);
+    } else if (decision.action === "conflict") {
+      lastServerRef.current = serverValues;
+      setServerConflict(serverValues);
+    } else {
+      // „none": Serverstand inhaltlich gleich – still als neuen Stand merken,
+      // ohne die Anzeige anzufassen (kein erneuter Autosave-Zyklus).
+      lastServerRef.current = serverValues;
     }
-    setValues(initial);
-    setInitialized(true);
-  }, [measurement, initialized, hydrationReady]);
+  }, [measurement, hydrationReady, initialized]);
+
+  /** Verwirft lokale Eingaben ausdrücklich und übernimmt den Serverstand. */
+  const adoptServerValues = () => {
+    if (!serverConflict) return;
+    setValues(serverConflict);
+    dirtyRef.current = false;
+    setServerConflict(null);
+  };
 
   const canEdit = useMemo(() => {
     if (!measurement) return false;
