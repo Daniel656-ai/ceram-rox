@@ -740,8 +740,9 @@ function TaskExecutionPageInner() {
   });
   hasUnsavedRef.current = autosave.hasUnsaved;
   // „Ansicht aktualisieren": offenen Zwischenstand zuerst sichern; scheitert
-  // das, wird nicht aktualisiert. Ohne Autosave bleiben die Eingaben im
-  // Formular erhalten (Werte werden nur einmalig aus dem Server übernommen).
+  // das, wird nicht aktualisiert. Ohne ungespeicherte Eingaben wird ein
+  // neuerer Serverstand automatisch übernommen, mit offenen Eingaben als
+  // Konflikt angezeigt statt überschrieben.
   useRefreshGuard(async () => {
     await autosave.flush();
     if (autosave.hasUnsaved()) throw new Error("unsaved");

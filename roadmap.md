@@ -1,6 +1,13 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
-## Aktuelle Freigabe: kritische Behebung Messwertverlust (Phase 1+2)
+## Aktuelle Freigabe: Abschließende Absicherung Hydration/Autosave/Repeater (A+B+C)
+- [x] A: Einheitlicher frischer Datenbankabruf (`refetchOnMount: "always"` überall, Hydration erst nach `isFetchedAfterMount`).
+- [x] B: Strikte Render-Schranke – Formular mountet erst nach abgeschlossener Hydration („Messdaten werden geladen …", Fehler mit Wiederholen).
+- [x] C: Dirty-Tracking – Hintergrund-Updates nur ohne lokale Eingaben, sonst sichtbarer Konflikthinweis mit optionalem Übernehmen; `hydrationGuard.ts` + 14 Tests.
+- [ ] Sieben Abnahmeszenarien Web: blockiert – keine Schreibzugriffe/Testdaten im Produktivbestand erlaubt.
+- [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang zur Firmeninstallation.
+
+## Freigabe: kritische Behebung Messwertverlust (Phase 1+2)
 - [x] Phase 1: Spiegel-Schutz (LinkedFieldControl/MasterDataFieldControl spiegeln erst nach erfolgreichem Laden/eindeutiger Auflösung) + Löschschutz für gespiegelte Felder im Entwurfsspeichern.
 - [x] Phase 2: Autosave auch außerhalb des Messdurchlaufs, sichtbarer Speicherstatus, Warnung beim Schließen mit ungespeicherten Änderungen, serialisierte Speicherung, Freigabe nur nach erfolgreichem Speichern.
 - [x] 1.189 Tests, Typprüfung, Build bestanden; Web-Bearbeitungsseite lesend geprüft (Statusanzeige sichtbar, Werte hydriert, keine neuen Fehler).
