@@ -251,7 +251,7 @@ export async function buildPayloadFromOrder(
         const name = String(p.parameter_name ?? "");
         if (!name) continue;
         if ((parameterCounts.get(name) ?? 0) > 1) {
-          warn(name, linkedDefinitions.filter(link => link.fields.some(f => f.archived !== true && (f.field_key === name || f.display_name === name))).map(link => link.formId));
+          warn(name, linkedDefinitions.filter(link => link.fields.some(f => (f as ResolvableField).archived !== true && (f.field_key === name || f.display_name === name))).map(link => link.formId));
           continue;
         }
         let candidate;
