@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
 interface Args {
-  /** Nur innerhalb eines aktiven Messdurchlaufs und bei bearbeitbarer Messung. */
+  /** Bei bearbeitbarer, nicht abgeschlossener Messung mit Formular. */
   enabled: boolean;
   /** Erst nach dem Laden der gespeicherten Werte beobachten. */
   ready: boolean;
@@ -15,7 +15,8 @@ interface Args {
 }
 
 /**
- * Autosave für den temporären Messdurchlauf.
+ * Autosave für die Dienstleistungsbearbeitung (Messdurchlauf und
+ * Einzelbearbeitung).
  *
  * - Es läuft immer höchstens EIN Speichervorgang; Änderungen während des
  *   Speicherns führen danach zu genau einem weiteren Lauf mit dem neuesten
@@ -78,12 +79,30 @@ export function useMeasurementAutosave({ enabled, ready, values, save, delayMs =
     return () => clearTimeout(timer);
   }, [values, enabled, ready, delayMs, flush]);
 
-  // Beim Verlassen der Seite offenen Stand noch sichern.
+  // Beim Verlassen der Seite offenen Stand noch sichern. Fehler werden
+  // protokolliert (eine Anzeige ist beim Unmount nicht mehr möglich); der
+  // Fehlerzustand wurde bereits beim fehlgeschlagenen Versuch gesetzt.
   useEffect(() => () => {
     if (enabledRef.current && savedVersion.current < version.current) {
-      void flush().catch(() => {});
+      void flush().catch((err) => {
+        console.error("Zwischenspeicherung beim Verlassen fehlgeschlagen", err);
+      });
     }
   }, [flush]);
+
+  // Schließen des Fensters mit ungespeicherten Änderungen: warnen, statt
+  // unbemerkt Daten zu verlieren (Browser und Desktop-WebView).
+  useEffect(() => {
+    if (!enabled) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      if (savedVersion.current < version.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [enabled]);
 
   const hasUnsaved = () => savedVersion.current < version.current;
 
