@@ -1140,6 +1140,11 @@ function TaskExecutionPageInner() {
 
       {canEdit && hasForm && !isCompleted && (
         <div className="flex items-center justify-end gap-2 sticky bottom-0 bg-background/95 border-t py-3">
+          {!runMode && (
+            <span className={`text-xs mr-auto ${autosave.state === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+              {AUTOSAVE_STATUS_TEXT[autosave.state]}
+            </span>
+          )}
           <Button variant="outline" onClick={handleSaveDraft} disabled={submitting}>
             Zwischenstand speichern
           </Button>
@@ -1427,6 +1432,15 @@ export default function TaskExecutionPage() {
   );
 }
 
+/** Sichtbarer Speicherstatus der automatischen Zwischenspeicherung. */
+const AUTOSAVE_STATUS_TEXT: Record<AutosaveState, string> = {
+  idle: "Automatisches Zwischenspeichern aktiv",
+  pending: "Änderungen werden gleich gespeichert …",
+  saving: "Wird gespeichert …",
+  saved: "Zwischenstand gespeichert",
+  error: "Speichern fehlgeschlagen – bitte erneut versuchen",
+};
+
 /** Kompakte Navigation innerhalb des temporären Messdurchlaufs. */
 function RunNavigation({
   ids, items, activeId, autosaveState, autosaveActive, onSelect, onLeave,
@@ -1440,13 +1454,7 @@ function RunNavigation({
   onLeave: () => void;
 }) {
   const byId = new Map(items.map((i) => [i.id, i]));
-  const statusText: Record<AutosaveState, string> = {
-    idle: "Automatisches Zwischenspeichern aktiv",
-    pending: "Änderungen werden gleich gespeichert …",
-    saving: "Wird gespeichert …",
-    saved: "Zwischenstand gespeichert",
-    error: "Speichern fehlgeschlagen – bitte erneut versuchen",
-  };
+  const statusText = AUTOSAVE_STATUS_TEXT;
   return (
     <Card>
       <CardHeader className="py-3 flex flex-row items-center justify-between gap-3 flex-wrap space-y-0">
