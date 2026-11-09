@@ -121,6 +121,21 @@ export function sectionTitle(section: RecipeSection, position: number): string {
 }
 
 /**
+ * Entfernt Gebinde-/Lotzuordnungen aus allen Rohstoffzeilen (für
+ * Vorlagenkopien: eine neue Auftragskopie übernimmt keine ungeprüfte alte
+ * Gebindezuordnung). Rohstoff, Menge, Einheit, Bemerkung und Abschnitte
+ * bleiben unverändert.
+ */
+export function stripRecipeLotAssignments(entries: RecipeEntry[] | undefined): RecipeEntry[] {
+  const list = Array.isArray(entries) ? entries : [];
+  return list.map((e) => {
+    if (isSectionEntry(e)) return e;
+    const { container_id: _c, lot_number: _l, ...rest } = e as RecipeMaterialRow;
+    return rest as RecipeMaterialRow;
+  });
+}
+
+/**
  * Erkennt einen gespeicherten Rezepturwert (Array oder JSON-String) und gibt
  * dessen Einträge zurück – sonst `null`. Rein lesend, kein zweiter Speicherort.
  */
