@@ -1031,7 +1031,7 @@ export default function CreateOrderPage() {
           <CardContent className="space-y-4">
             <div>
               <Label>{t("orders:order_type")} *</Label>
-              <Select value={orderType} onValueChange={(v) => { setOrderType(v); if (v !== "customer") setIsBilled(false); }}>
+              <Select value={orderType} onValueChange={setOrderType}>
                 <SelectTrigger><SelectValue placeholder={t("orders:choose_type")} /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
