@@ -13,6 +13,13 @@ export interface RecipeMaterialRow {
   quantity: number | string;
   unit: string;
   note?: string;
+  /**
+   * Optionale Gebindezuordnung (rein additiv). Snapshot zum Auswahlzeitpunkt –
+   * die historische Anzeige hängt nicht von der aktuellen Gebindeverfügbarkeit ab.
+   */
+  container_id?: string | null;
+  /** Lotnummer = Chargennummer (batch_number) des gewählten Gebindes (Snapshot). */
+  lot_number?: string | null;
   kind?: undefined;
 }
 
