@@ -17,7 +17,7 @@ import { AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import {
   buildValidatedPayloadFromDraft, buildPayloadFromOrder, COPY_OPTION_LABELS,
-  DEFAULT_COPY_OPTIONS, type CopyOptions,
+  DEFAULT_COPY_OPTIONS, type CopyOptions, type TemplateCopyWarning,
 } from "@/lib/orderTemplateCopy";
 import type { OrderDraft } from "@/lib/api/orderDrafts";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,8 @@ export default function UseAsTemplateDialog({
   const [opts, setOpts] = useState<CopyOptions>(DEFAULT_COPY_OPTIONS);
   const [pickedOrderId, setPickedOrderId] = useState<string>(sourceOrderId ?? "");
   const [busy, setBusy] = useState(false);
+  const [copyWarnings, setCopyWarnings] = useState<TemplateCopyWarning[]>([]);
+  const [createdDraftId, setCreatedDraftId] = useState<string | null>(null);
 
   const needsOrderPicker = !sourceDraft && !sourceOrderId;
   const { data: orders = [], isLoading, isError } = useQuery({
@@ -62,6 +64,7 @@ export default function UseAsTemplateDialog({
     try {
       let payload;
       let label: string;
+      let warnings: TemplateCopyWarning[] = [];
       const orderId = sourceOrderId || pickedOrderId || null;
 
       if (sourceDraft) {
@@ -71,6 +74,7 @@ export default function UseAsTemplateDialog({
         const res = await buildPayloadFromOrder(orderId, opts);
         payload = res.payload;
         label = res.label;
+        warnings = res.warnings;
       } else {
         toast.error("Bitte eine Vorlage auswählen");
         setBusy(false);
@@ -95,6 +99,11 @@ export default function UseAsTemplateDialog({
       });
 
       qc.invalidateQueries({ queryKey: ["order-drafts"] });
+      if (warnings.length) {
+        setCopyWarnings(warnings);
+        setCreatedDraftId(draft.id);
+        return;
+      }
       onOpenChange(false);
       toast.success("Neuer Entwurf aus Vorlage erstellt");
       navigate(`/auftraege/neu?draft=${draft.id}`);
@@ -106,7 +115,10 @@ export default function UseAsTemplateDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={value => {
+      if (!value) { setCopyWarnings([]); setCreatedDraftId(null); }
+      onOpenChange(value);
+    }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Als Vorlage für neuen Auftrag verwenden</DialogTitle>
@@ -115,6 +127,20 @@ export default function UseAsTemplateDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {createdDraftId ? (
+          <Alert role="alert">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <p>Der Entwurf wurde erstellt. Folgende Vorgaben konnten nicht eindeutig zugeordnet werden und müssen manuell geprüft werden:</p>
+              <ul className="mt-2 max-h-64 overflow-y-auto space-y-2 break-words">
+                {copyWarnings.map(w => <li key={`${w.measurementId}:${w.parameterName}`}>
+                  <strong>{w.serviceName}</strong>: {w.parameterName}
+                  {w.formIds.length > 0 && <span className="block text-xs text-muted-foreground">Formulare: {w.formIds.join(", ")}</span>}
+                </li>)}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        ) : <>
         {needsOrderPicker && (
           <div className="space-y-2">
             <Label>Vorlage (bestehender Auftrag)</Label>
@@ -164,13 +190,22 @@ export default function UseAsTemplateDialog({
             Entwurf.
           </AlertDescription>
         </Alert>
+        </>}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
+          {createdDraftId ? <Button onClick={() => {
+            const id = createdDraftId;
+            setCopyWarnings([]);
+            setCreatedDraftId(null);
+            onOpenChange(false);
+            navigate(`/auftraege/neu?draft=${id}`);
+          }}>Entwurf prüfen</Button> : <>
+          <Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>Abbrechen</Button>
           <Button onClick={handleCreate} disabled={busy || (needsOrderPicker && (!pickedOrderId || isLoading || isError))}>
             <Copy className="h-4 w-4 mr-2" />
             {busy ? "Erstelle…" : "Entwurf erstellen"}
           </Button>
+          </>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

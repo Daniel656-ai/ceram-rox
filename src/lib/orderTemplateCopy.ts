@@ -117,22 +117,37 @@ export function consolidateTemplateRows(rows: TemplateRowRef[]): number[][] {
 
 interface ResolvableField { field_key: string; display_name?: string | null; archived?: boolean | null }
 
+export interface TemplateCopyWarning {
+  serviceId: string;
+  serviceName: string;
+  measurementId: string;
+  parameterName: string;
+  formIds: string[];
+}
+
+class ParameterFieldConflict extends Error {
+  constructor(name: string, readonly formIds: string[] = []) {
+    super(`Vorgabe „${name}“ ist nicht eindeutig zugeordnet.`);
+  }
+}
+
 /**
  * Ordnet eine gespeicherte Vorgabe (parameter_name) genau einer aktiven
  * Felddefinition zu. Reihenfolge: direkte Dienstleistungsfelder (field_key,
  * dann display_name), erst danach verknüpfte Formulare (ebenso). Archivierte
  * Felder zählen nie. Mehrere gleichrangige Treffer derselben Stufe sind ein
- * echter Konflikt → Abbruch, nie Auswahl des ersten Treffers.
+ * echter Konflikt. Ergebnisnamen dürfen nur verknüpfte Feldidentitäten
+ * disambiguieren; Ergebniswerte werden weder gelesen noch kopiert.
  */
 export function resolveParameterField<S extends ResolvableField, L extends ResolvableField>(
   name: string,
   serviceFields: S[],
   linkedDefinitions: { formId: string; fields: L[] }[],
+  resultIdentities: readonly { result_name?: string | null }[] = [],
 ): { key: string; def: S | L } | undefined {
   const active = (f: ResolvableField) => f.archived !== true;
-  const conflict = () => new Error(`Vorgabe „${name}“ ist nicht eindeutig zugeordnet; Vorlage nicht erstellt.`);
   const pick = <T,>(hits: T[]): T | undefined => {
-    if (hits.length > 1) throw conflict();
+    if (hits.length > 1) throw new ParameterFieldConflict(name);
     return hits[0];
   };
   const direct = serviceFields.filter(active);
@@ -141,17 +156,24 @@ export function resolveParameterField<S extends ResolvableField, L extends Resol
     pick(direct.filter(f => f.display_name === name));
   if (directHit) return { key: directHit.field_key, def: directHit };
   const linked = linkedDefinitions.flatMap(link =>
-    link.fields.filter(active).map(f => ({ key: `form:${link.formId}:${f.field_key}`, def: f })));
-  return pick(linked.filter(c => c.def.field_key === name)) ?? pick(linked.filter(c => c.def.display_name === name));
+    link.fields.filter(active).map(f => ({ key: `form:${link.formId}:${f.field_key}`, def: f, formId: link.formId })));
+  const keyHits = linked.filter(c => c.def.field_key === name);
+  const hits = keyHits.length ? keyHits : linked.filter(c => c.def.display_name === name);
+  if (hits.length <= 1) return hits[0];
+  const identities = new Set(resultIdentities.map(r => r.result_name));
+  const identified = hits.filter(c => identities.has(c.key));
+  if (identified.length === 1) return identified[0];
+  throw new ParameterFieldConflict(name, [...new Set(hits.map(c => c.formId))]);
 }
 
 /** Baut aus einem bestehenden Auftrag einen unabhängigen Entwurfs-Payload. */
 export async function buildPayloadFromOrder(
   orderId: string,
   opts: CopyOptions
-): Promise<{ payload: OrderDraftPayload; label: string }> {
+): Promise<{ payload: OrderDraftPayload; label: string; warnings: TemplateCopyWarning[] }> {
   const order = await api.orders.get(orderId);
   if (!order) throw new Error("Auftrag nicht gefunden");
+  const warnings: TemplateCopyWarning[] = [];
 
   const payload: OrderDraftPayload = {
     selectedProjectId: order.project_id ?? "",
@@ -215,13 +237,31 @@ export async function buildPayloadFromOrder(
       })));
       const values = row.values;
       const params = row.params;
-      const seenParameterNames = new Set<string>();
+      const parameterCounts = new Map<string, number>();
+      for (const p of m.measurement_parameters ?? []) {
+        const name = String(p.parameter_name ?? "");
+        parameterCounts.set(name, (parameterCounts.get(name) ?? 0) + 1);
+      }
+      const warn = (parameterName: string, formIds: string[] = []) => {
+        if (!warnings.some(w => w.measurementId === m.id && w.parameterName === parameterName)) {
+          warnings.push({ serviceId: m.service_id, serviceName: row.service_name, measurementId: m.id, parameterName, formIds });
+        }
+      };
       for (const p of m.measurement_parameters ?? []) {
         const name = String(p.parameter_name ?? "");
         if (!name) continue;
-        if (seenParameterNames.has(name)) throw new Error(`Vorgabe „${name}“ ist mehrfach gespeichert und nicht eindeutig; Vorlage nicht erstellt.`);
-        seenParameterNames.add(name);
-        const candidate = resolveParameterField(name, fields, linkedDefinitions);
+        if ((parameterCounts.get(name) ?? 0) > 1) {
+          warn(name, linkedDefinitions.filter(link => link.fields.some(f => f.archived !== true && (f.field_key === name || f.display_name === name))).map(link => link.formId));
+          continue;
+        }
+        let candidate;
+        try {
+          candidate = resolveParameterField(name, fields, linkedDefinitions, m.measurement_results ?? []);
+        } catch (error) {
+          if (!(error instanceof ParameterFieldConflict)) throw error;
+          warn(name, error.formIds);
+          continue;
+        }
         if (candidate) {
           if (!templateInputAllowed(candidate.def)) continue;
           const parsed = parseTemplateInput(p.parameter_value, candidate.def);
@@ -242,7 +282,7 @@ export async function buildPayloadFromOrder(
         }
         const definitions = legacyDefinitions.filter(d => d.parameter_name === name);
         if (definitions.length === 1) params[definitions[0].id] = String(p.parameter_value ?? "");
-        else throw new Error(`Vorgabe „${name}“ hat keine eindeutige Felddefinition; Vorlage nicht erstellt.`);
+        else warn(name);
       }
     }
     // Konsolidierung: probenweise gefächerte, fachlich identische Zeilen
@@ -278,7 +318,7 @@ export async function buildPayloadFromOrder(
   }
 
   const label = order.order_number ? `Auftrag ${order.order_number}` : "Auftrag";
-  return { payload: deepCopy(payload), label };
+  return { payload: deepCopy(payload), label, warnings };
 }
 
 /** Baut aus einem bestehenden Entwurf einen unabhängigen Entwurfs-Payload. */
