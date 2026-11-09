@@ -703,7 +703,9 @@ function TaskExecutionPageInner() {
   const handleSaveDraft = async () => {
     setSubmitting(true);
     try {
+      const editsAtStart = editCounterRef.current;
       await persist();
+      if (editCounterRef.current === editsAtStart) dirtyRef.current = false;
       toast.success("Zwischenstand gespeichert");
       qc.invalidateQueries({ queryKey: ["measurement-task", measurementId] });
     } catch (err: any) {
@@ -729,8 +731,14 @@ function TaskExecutionPageInner() {
     enabled: canEdit && !isCompleted && hasForm,
     ready: initialized,
     values,
-    save: () => persist(false, { draftOnly: true }),
+    save: async () => {
+      // Eingaben während des Speicherns bleiben als „geändert" markiert.
+      const editsAtStart = editCounterRef.current;
+      await persist(false, { draftOnly: true });
+      if (editCounterRef.current === editsAtStart) dirtyRef.current = false;
+    },
   });
+  hasUnsavedRef.current = autosave.hasUnsaved;
   // „Ansicht aktualisieren": offenen Zwischenstand zuerst sichern; scheitert
   // das, wird nicht aktualisiert. Ohne Autosave bleiben die Eingaben im
   // Formular erhalten (Werte werden nur einmalig aus dem Server übernommen).
