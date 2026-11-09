@@ -2337,6 +2337,7 @@ export type Database = {
           customer_name: string | null
           due_date: string | null
           id: string
+          is_billed: boolean
           is_pilot_plant_process: boolean
           notes: string | null
           order_kind: Database["public"]["Enums"]["order_kind"]
@@ -2368,6 +2369,7 @@ export type Database = {
           customer_name?: string | null
           due_date?: string | null
           id?: string
+          is_billed?: boolean
           is_pilot_plant_process?: boolean
           notes?: string | null
           order_kind?: Database["public"]["Enums"]["order_kind"]
@@ -2401,6 +2403,7 @@ export type Database = {
           customer_name?: string | null
           due_date?: string | null
           id?: string
+          is_billed?: boolean
           is_pilot_plant_process?: boolean
           notes?: string | null
           order_kind?: Database["public"]["Enums"]["order_kind"]
@@ -11302,6 +11305,10 @@ export type Database = {
           service_id: string
           service_name: string
         }[]
+      }
+      set_order_billed: {
+        Args: { p_order_id: string; p_value: boolean }
+        Returns: boolean
       }
       snapshot_template: { Args: { _template_id: string }; Returns: Json }
       start_mixture_batch:
