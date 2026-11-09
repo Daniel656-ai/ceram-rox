@@ -71,6 +71,7 @@ import { walkNodes } from "@/lib/api/formDefinitionLayout";
 import { readValueSource, isSameFormLink, isPreviousServiceLink, isLinkedFormLink, resolveLinkedValue, linkedFieldScope, linkOriginLabel, numericValue, type StepData, type LinkedFormData } from "@/lib/fieldLinks";
 import { createContext as createReactContext } from "react";
 import { readMasterDataRef, resolveMasterDataRef, type MasterDataRef } from "@/lib/masterDataRef";
+import { linkedMirrorDecision, masterDataMirrorDecision } from "@/lib/formMirrorGuard";
 import { multiSelectInitialValue } from "@/lib/multiSelectDefaults";
 import { runtimeKind } from "@/lib/api/backendConfig";
 import { globalConstantScope, isGlobalConstant, parseGlobalConstantValue } from "@/lib/globalConstants";
@@ -2236,6 +2237,7 @@ export default function FormLayoutRenderer({
   readOnly = false,
   stepData,
   formData,
+  linkSourcesReady = true,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
@@ -2375,6 +2377,7 @@ export default function FormLayoutRenderer({
   return (
     <PermissionsCtx.Provider value={permissions ?? null}>
       <StepDataCtx.Provider value={stepData ?? EMPTY_STEP_DATA}>
+      <LinkSourcesReadyCtx.Provider value={linkSourcesReady}>
       <FormDataCtx.Provider value={formData ?? EMPTY_FORM_DATA}>
       <CalcResultsCtx.Provider value={calcResults}>
       <LocalCalcsCtx.Provider value={localCalcs}>
@@ -2388,6 +2391,7 @@ export default function FormLayoutRenderer({
       </LocalCalcsCtx.Provider>
       </CalcResultsCtx.Provider>
       </FormDataCtx.Provider>
+      </LinkSourcesReadyCtx.Provider>
       </StepDataCtx.Provider>
     </PermissionsCtx.Provider>
   );
