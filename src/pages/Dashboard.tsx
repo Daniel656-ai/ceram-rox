@@ -18,6 +18,8 @@ import { GitHubCommitStatus } from "@/components/GitHubCommitStatus";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { orderSamples, samplesMatchSearch } from "@/lib/orders/orderSamples";
+import { SampleLinks } from "@/components/orders/SampleLinks";
 
 export default function Dashboard() {
   const { user, profile, role } = useAuth();
@@ -30,22 +32,7 @@ export default function Dashboard() {
   // Fetch all measurements with related data for search
   const { data: allMeasurements = [] } = useQuery({
     queryKey: ["dashboard-all-measurements"],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("order_measurements")
-        .select(`
-          id, measurement_number, status, assigned_to,
-          measurement_services(service_name),
-          measurement_orders(
-            id, order_number, order_type,
-            projects(project_number, project_name),
-            samples(sample_number, sample_name)
-          )
-        `)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => api.measurements.listForDashboardSearch(),
     enabled: !!user,
   });
 
@@ -54,13 +41,16 @@ export default function Dashboard() {
 
   const q = search.toLowerCase().trim();
   const hasSearch = q.length >= 2;
+  // Reuse hydrated order relations, never turn the search projection's unkeyed
+  // order-level sample into an invented task-specific sample link.
+  const samplesByOrder = useMemo(() => new Map((orders as any[]).map(order => [order.id, orderSamples(order)])), [orders]);
 
   // Filtered samples
   const filteredSamples = useMemo(() => {
     if (!hasSearch) return [];
     return (samples as any[]).filter((s: any) =>
-      s.sample_number.toLowerCase().includes(q) ||
-      s.sample_name.toLowerCase().includes(q) ||
+      (s.sample_number || "").toLowerCase().includes(q) ||
+      (s.sample_name || "").toLowerCase().includes(q) ||
       (s.description || "").toLowerCase().includes(q)
     ).slice(0, 10);
   }, [samples, q, hasSearch]);
@@ -72,7 +62,8 @@ export default function Dashboard() {
       (o.order_number || "").toLowerCase().includes(q) ||
       (o.projects?.project_number || "").toLowerCase().includes(q) ||
       (o.projects?.project_name || "").toLowerCase().includes(q) ||
-      (o.notes || "").toLowerCase().includes(q)
+      (o.notes || "").toLowerCase().includes(q) ||
+      samplesMatchSearch(orderSamples(o), q)
     ).slice(0, 10);
   }, [orders, q, hasSearch]);
 
@@ -86,9 +77,10 @@ export default function Dashboard() {
       (m.measurement_orders?.projects?.project_number || "").toLowerCase().includes(q) ||
       (m.measurement_orders?.projects?.project_name || "").toLowerCase().includes(q) ||
       (m.measurement_orders?.samples?.sample_number || "").toLowerCase().includes(q) ||
-      (m.measurement_orders?.samples?.sample_name || "").toLowerCase().includes(q)
+      (m.measurement_orders?.samples?.sample_name || "").toLowerCase().includes(q) ||
+      samplesMatchSearch(samplesByOrder.get(m.measurement_orders?.id) ?? [], q)
     ).slice(0, 10);
-  }, [allMeasurements, q, hasSearch]);
+  }, [allMeasurements, q, hasSearch, samplesByOrder]);
 
   // Filtered projects
   const filteredProjects = useMemo(() => {
@@ -227,6 +219,7 @@ export default function Dashboard() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Auftragsnr.</TableHead>
+                          <TableHead>{t("samples:sample_designation", "Probenbezeichnung")}</TableHead>
                           <TableHead>{t("common:project")}</TableHead>
                           <TableHead>{t("common:status")}</TableHead>
                           <TableHead className="w-16"></TableHead>
@@ -236,6 +229,7 @@ export default function Dashboard() {
                         {filteredOrders.map((o: any) => (
                           <TableRow key={o.id}>
                             <TableCell className="font-medium">{o.order_number || "–"}</TableCell>
+                            <TableCell><SampleLinks samples={orderSamples(o)} /></TableCell>
                             <TableCell>{o.projects?.project_number} {o.projects?.project_name ? `– ${o.projects.project_name}` : ""}</TableCell>
                             <TableCell><StatusBadge status={o.status} /></TableCell>
                             <TableCell>
@@ -265,6 +259,7 @@ export default function Dashboard() {
                           <TableHead>Aufg.-Nr.</TableHead>
                           <TableHead>Dienstleistung</TableHead>
                           <TableHead>Auftrag</TableHead>
+                          <TableHead>{t("samples:sample_designation", "Probenbezeichnung")}</TableHead>
                           <TableHead>{t("common:status")}</TableHead>
                           <TableHead className="w-16"></TableHead>
                         </TableRow>
@@ -275,6 +270,7 @@ export default function Dashboard() {
                             <TableCell className="font-medium">{m.measurement_number}</TableCell>
                             <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
                             <TableCell>{m.measurement_orders?.order_number || "–"}</TableCell>
+                            <TableCell><SampleLinks samples={samplesByOrder.get(m.measurement_orders?.id) ?? []} /></TableCell>
                             <TableCell><StatusBadge status={m.status} /></TableCell>
                             <TableCell>
                               <Button variant="ghost" size="icon" asChild>

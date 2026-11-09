@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { orderSampleLinks, orderSamples } from "@/lib/orders/orderSamples";
+import { orderSampleLinks, orderSamples, samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
 
 const sample = (id: string, name = "Probe", number = "P260001") => ({ id, sample_name: name, sample_number: number });
 
@@ -57,7 +57,40 @@ describe("readable current order samples", () => {
     })).toEqual([]);
   });
   it("does not use the UUID as a label for an unnamed sample", () => {
-    expect(orderSampleLinks({ id: "o1", sample_id: "s1", current_sample: sample("s1", " ") })).toEqual([]);
+    expect(orderSampleLinks({ id: "o1", sample_id: "s1", current_sample: sample("s1", " ") }))
+      .toEqual([{ id: "s1", href: "/proben/s1", label: "P260001" }]);
+  });
+  it("keeps readable samples when both labels are absent", () => {
+    expect(orderSampleLinks({ id: "o1", sample_id: "s1", current_sample: { id: "s1", sample_name: null, sample_number: null } }))
+      .toEqual([{ id: "s1", href: "/proben/s1", label: "–" }]);
+  });
+  it("prefers trimmed names to numbers", () => {
+    expect(orderSampleLinks({ id: "o1", sample_id: "s1", current_sample: sample("s1", " Name ") })[0].label).toBe("Name");
+  });
+  it("has stable ordering independently of relation order", () => {
+    const links = [{ sample_id: "s2", samples: sample("s2") }, { sample_id: "s1", samples: sample("s1") }];
+    expect(orderSampleLinks({ id: "o1", order_samples: links }).map(s => s.id)).toEqual(["s1", "s2"]);
+    expect(orderSampleLinks({ id: "o1", order_samples: [...links].reverse() }).map(s => s.id)).toEqual(["s1", "s2"]);
+  });
+  it("uses existing project relation aliases with UUID validation", () => {
+    expect(orderSamples({ id: "o1", sample_id: "s1", samples: sample("s1"), order_measurements: [{ sample_id: "s2", samples: sample("s2") }] }).map(s => s.id)).toEqual(["s1", "s2"]);
+    expect(orderSamples({ id: "o1", sample_id: "s1", samples: sample("s2") })).toEqual([]);
+  });
+  it.each(["open", "in_progress", "completed"])("retains labels independently of status %s", status => {
+    const order = { id: "o1", status, sample_id: "s1", current_sample: sample("s1") };
+    expect(orderSampleLinks(order)[0].href).toBe("/proben/s1");
+  });
+  it("searches name and number case-insensitively, tolerating missing names", () => {
+    expect(samplesMatchSearch([sample("s1", "Katalysator")], "KATAL")).toBe(true);
+    expect(samplesMatchSearch([sample("s1", "")], "p260001")).toBe(true);
+    expect(samplesMatchSearch([{ id: "s1", sample_name: null, sample_number: null }], "missing")).toBe(false);
+    expect(samplesMatchSearch([sample("s1")], "missing")).toBe(false);
+  });
+  it("only uses a task's own matching hydrated sample", () => {
+    expect(taskSamples({ sample_id: "s1", samples: sample("s1") }).map(s => s.id)).toEqual(["s1"]);
+    expect(taskSamples({ sample_id: "s1", samples: sample("s2") })).toEqual([]);
+    expect(taskSamples({ sample_id: "s1", samples: null })).toEqual([]);
+    expect(taskSamples({ samples: sample("s1") })).toEqual([]);
   });
   it("preserves input data, order fields and measurement metadata", () => {
     const order = { id: "o1", order_number: "ABC260001", order_kind: "labor", status: "open", ranking: 2,
