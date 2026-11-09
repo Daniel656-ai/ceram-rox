@@ -44,9 +44,18 @@ export function resolveResultPrecision(
     const block = /^(.+)\[([^\]]+)\]\.(.+)$/.exec(key);
     if (block) {
       if (result.instance_key && result.instance_key !== block[2]) return undefined;
+      // Instanz-Ergebnisse stammen aus Messdatenblöcken ODER Wiederholbereichen
+      // (Repeater) – beide nutzen dieselbe Schlüsselstruktur `key[instanz].feld`.
       const parents = fields.filter((f) => {
-        const meta = f.metadata?.measurement_block as { storage_key?: string } | undefined;
-        return f.field_type === "measurement_block" && (meta?.storage_key || f.field_key) === block[1];
+        if (f.field_type === "measurement_block") {
+          const meta = f.metadata?.measurement_block as { storage_key?: string } | undefined;
+          return (meta?.storage_key || f.field_key) === block[1];
+        }
+        if (f.field_type === "repeater") {
+          const meta = f.metadata?.repeater as { storage_key?: string } | undefined;
+          return (meta?.storage_key || f.field_key) === block[1];
+        }
+        return false;
       });
       if (parents.length !== 1) return undefined;
       candidates = fields
