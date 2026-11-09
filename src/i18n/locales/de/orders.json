@@ -233,5 +233,14 @@
     "days_overdue": "{{count}} Kalendertag im Verzug",
     "days_overdue_plural": "{{count}} Kalendertage im Verzug",
     "warning_days": "Vorwarnzeit dieser Dienstleistung: {{count}} Tage"
+  },
+  "billing": {
+    "billed": "Verrechnet",
+    "billed_yes": "Verrechnet: Ja",
+    "billed_no": "Verrechnet: Nein",
+    "yes": "Ja",
+    "no": "Nein",
+    "save_error": "Verrechnungsstatus konnte nicht gespeichert werden",
+    "saved": "Verrechnungsstatus gespeichert"
   }
 }

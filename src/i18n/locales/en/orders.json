@@ -233,5 +233,14 @@
     "days_overdue": "{{count}} calendar day overdue",
     "days_overdue_plural": "{{count}} calendar days overdue",
     "warning_days": "Early warning period of this service: {{count}} days"
+  },
+  "billing": {
+    "billed": "Invoiced",
+    "billed_yes": "Invoiced: Yes",
+    "billed_no": "Invoiced: No",
+    "yes": "Yes",
+    "no": "No",
+    "save_error": "Billing status could not be saved",
+    "saved": "Billing status saved"
   }
 }

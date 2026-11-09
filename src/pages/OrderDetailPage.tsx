@@ -6,6 +6,8 @@ import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMe
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderRunSheetButton } from "@/components/OrderRunSheet";
+import { BillingStatusControl } from "@/components/orders/BillingStatus";
+import { canEditBilled } from "@/lib/orders/billing";
 import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -281,6 +283,7 @@ function OrderDetailPageInner() {
         )}
         {(order as any).workflow_status && <WorkflowStatusBadge status={(order as any).workflow_status} />}
         <StatusBadge status={order.status} />
+        <BillingStatusControl order={order as any} canEdit={canEditBilled(order as any, user?.id, role === "master")} />
         {/* Kopierfunktion temporär deaktiviert – Handler/Hook bleiben erhalten */}
         <OrderRunSheetButton order={order} />
         {(canEditDelete || canEditPriority) && (

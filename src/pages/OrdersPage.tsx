@@ -43,6 +43,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsAnyProjectLead } from "@/hooks/useProjectMembers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { BillingStatusText } from "@/components/orders/BillingStatus";
 import MeasurementRunPicker from "@/components/measurementRun/MeasurementRunPicker";
 
 export default function OrdersPage() {
@@ -304,7 +305,7 @@ function OrdersOverview() {
                     <TableCell>{o.projects?.project_name || "–"}</TableCell>
                     <TableCell>{kindLabel(o)}</TableCell>
                     <TableCell className="whitespace-normal">{resolveOrderMasseType(o).join(", ") || "–"}</TableCell>
-                    <TableCell>{t(`common:order_type_${o.order_type}`)}</TableCell>
+                    <TableCell>{t(`common:order_type_${o.order_type}`)}<BillingStatusText order={o as any} /></TableCell>
                     <TableCell>
                       {role === "master" ? (
                         <Select
