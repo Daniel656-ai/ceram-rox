@@ -1197,8 +1197,16 @@ function RepeaterField({
     else root?.set(storageKey, updated);
   };
 
+  // Repeater mit als offizielle Ergebnisse gekennzeichneten Unterfeldern
+  // benötigen stabile Zeilenkennungen (`__instance_id`) – dieselbe Konvention
+  // wie beim Messdatenblock. Repeater ohne Ergebnisunterfelder (z. B. m³-Liste,
+  // MS-Auswahl) bleiben unverändert.
+  const needsInstanceIds = !managed && children.some((c) => c.is_result === true);
+  const makeUnmanagedEntry = (): Record<string, any> =>
+    needsInstanceIds ? { [INSTANCE_ID_KEY]: newInstanceId() } : {};
+
   const add = () => {
-    const next = [...latest.current, managed ? newTemperatureEntry() : {}];
+    const next = [...latest.current, managed ? newTemperatureEntry() : makeUnmanagedEntry()];
     updateEntries(next);
   };
   // MS-Auswahl und „Mundstück MS“ sind nur über die Reihenfolge verknüpft:
@@ -1234,17 +1242,31 @@ function RepeaterField({
   };
   const duplicateAt = (i: number) => {
     if (meta.max_entries != null && entries.length >= meta.max_entries) return;
+    const copy = managed ? duplicateScopedEntry(entries[i] ?? {}) : JSON.parse(JSON.stringify(entries[i] ?? {}));
+    // Duplikate erhalten IMMER eine neue Zeilenkennung – Ergebnisse dürfen
+    // sich niemals zwei Zeilen teilen.
+    if (!managed && typeof copy[INSTANCE_ID_KEY] === "string") copy[INSTANCE_ID_KEY] = newInstanceId();
     const next = entries.slice();
-    next.splice(i + 1, 0, managed ? duplicateScopedEntry(entries[i] ?? {}) : JSON.parse(JSON.stringify(entries[i] ?? {})));
+    next.splice(i + 1, 0, copy);
     updateEntries(next);
   };
 
-  // Auto-seed min_entries in interactive mode
-  if (interactive && !readonly && meta.min_entries && entries.length < meta.min_entries) {
-    const seeded = entries.slice();
-    while (seeded.length < meta.min_entries) seeded.push(managed ? newTemperatureEntry() : {});
-    // Defer to avoid setState during render
-    queueMicrotask(() => updateEntries(seeded));
+  // Auto-seed min_entries + fehlende stabile Zeilenkennungen (Altdaten)
+  // ergänzen – in einem einzigen Update, damit sich keine zwei Microtasks
+  // mit veraltetem Stand überschreiben.
+  if (interactive && !readonly) {
+    const needsId = needsInstanceIds && entries.some((e) => typeof e?.[INSTANCE_ID_KEY] !== "string");
+    const needsSeed = !!meta.min_entries && entries.length < meta.min_entries;
+    if (needsId || needsSeed) {
+      const seeded = entries.map((e) =>
+        needsInstanceIds && typeof e?.[INSTANCE_ID_KEY] !== "string"
+          ? { ...(e ?? {}), [INSTANCE_ID_KEY]: newInstanceId() }
+          : e
+      );
+      while (seeded.length < (meta.min_entries ?? 0)) seeded.push(managed ? newTemperatureEntry() : makeUnmanagedEntry());
+      // Defer to avoid setState during render
+      queueMicrotask(() => updateEntries(seeded));
+    }
   }
 
   return (
