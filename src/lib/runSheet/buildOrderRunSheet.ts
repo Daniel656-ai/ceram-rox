@@ -4,6 +4,8 @@
  * Probe). Keine Deduplizierung zwischen Quellen, nichts wird gespeichert.
  */
 import { orderIdentity } from "@/lib/orders/orderIdentity";
+import { resolveOrderKind } from "@/lib/orders/orderKind";
+import { sortPppServices, type PppGroup, type PppLists } from "./pppGroups";
 
 export interface OrderRunSheetField {
   id: string; field_key: string; display_name?: string | null; unit?: string | null;
@@ -22,8 +24,12 @@ export interface OrderRunSheet {
   /** Letzte order_spec_updated-Änderung dieses Auftrags (nur Dienstleistungsvorgaben). */
   lastSpecChange: string | null;
   form: { key: string; label: string | null; unit: string | null; raw: unknown; colLabels: Map<string, string> }[];
+  /** true = Pilot Plant: Dienstleistungen nach Stammdatenlisten gruppiert. */
+  grouped: boolean;
   services: {
     measurementId: string; measurementNumber: string | null; serviceName: string; sampleNumber: string | null;
+    serviceId: string | null; status: string | null;
+    pppGroup: PppGroup | null; pppReason?: string;
     params: { id: string; name: string; raw: string | null; unit: string | null }[];
   }[];
 }
@@ -37,6 +43,7 @@ export function buildOrderRunSheet(
   order: any,
   fields: OrderRunSheetField[],
   events: { event_type: string; order_id?: string | null; created_at: string }[],
+  pppLists: PppLists = { masse: null, produkt: null },
 ): OrderRunSheet {
   const id = orderIdentity(order);
   const values = (order?.shared_form_data?.template?.values ?? {}) as Record<string, unknown>;
@@ -60,17 +67,23 @@ export function buildOrderRunSheet(
     if (!used.has(k)) form.push({ key: k, label: null, unit: null, raw: values[k], colLabels: new Map() });
   }
 
-  const services: OrderRunSheet["services"] = ((order?.order_measurements ?? []) as any[])
+  const base = ((order?.order_measurements ?? []) as any[])
     .filter((m) => !m.order_id || m.order_id === order.id)
     .map((m) => ({
       measurementId: m.id,
       measurementNumber: m.measurement_number ?? null,
       serviceName: m.measurement_services?.service_name ?? "–",
       sampleNumber: m.samples?.sample_number ?? null,
+      serviceId: m.service_id ?? null,
+      status: m.status ?? null,
       params: ((m.measurement_parameters ?? []) as any[]).map((p) => ({
         id: p.id, name: p.parameter_name, raw: p.parameter_value ?? null, unit: p.unit?.trim() || null,
       })),
     }));
+  const grouped = !!order && resolveOrderKind(order) === "pilot_plant";
+  const services: OrderRunSheet["services"] = grouped
+    ? sortPppServices(base, pppLists)
+    : base.map((s) => ({ ...s, pppGroup: null }));
 
   let last: string | null = null;
   for (const e of events) {
@@ -88,6 +101,7 @@ export function buildOrderRunSheet(
     notes: order?.notes?.trim() || null,
     lastSpecChange: last,
     form,
+    grouped,
     services,
   };
 }
