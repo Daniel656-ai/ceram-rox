@@ -542,13 +542,14 @@ function TaskExecutionPageInner() {
     }
   };
 
-  // Im Messdurchlauf laufen alle Speichervorgänge strikt nacheinander und
-  // jeweils mit dem neuesten Stand. Einzelaufruf: unverändert direkt.
+  // Alle Speichervorgänge laufen strikt nacheinander und jeweils mit dem
+  // neuesten Stand – so können sich manuelles Speichern und Autosave (jetzt
+  // auch außerhalb des Messdurchlaufs) nie überholen oder Zeilen doppelt
+  // anlegen.
   const persistRef = useRef(persistResults);
   persistRef.current = persistResults;
   const persistLock = useRef<Promise<unknown>>(Promise.resolve());
   const persist = (req = false, opts: { draftOnly?: boolean } = {}): Promise<void> => {
-    if (!runModeRef.current) return persistResults(req, opts);
     const p = persistLock.current.then(
       () => persistRef.current(req, opts),
       () => persistRef.current(req, opts),
@@ -684,8 +685,11 @@ function TaskExecutionPageInner() {
   const runMode = runIds.length > 0 && !!measurementId && runIds.includes(measurementId);
   const runParam = searchParams.get("run") || "";
 
+  // Automatische Zwischenspeicherung – im Messdurchlauf UND in der
+  // Einzelbearbeitung, damit Eingaben bei regulärer Navigation oder beim
+  // Schließen der Anwendung nicht unbemerkt verloren gehen.
   const autosave = useMeasurementAutosave({
-    enabled: runMode && canEdit && !isCompleted && hasForm,
+    enabled: canEdit && !isCompleted && hasForm,
     ready: initialized,
     values,
     save: () => persist(false, { draftOnly: true }),
@@ -780,12 +784,11 @@ function TaskExecutionPageInner() {
   };
   const saveBeforeBack = async () => {
     if (!hasForm) return;
-    if (runMode) {
-      await autosave.flush();
-      if (autosave.hasUnsaved()) throw new Error("Zwischenstand nicht gespeichert");
-    } else {
-      await persist(false, { draftOnly: true });
-    }
+    // Einheitlich über den Autosave-Stand: speichert den neuesten Stand und
+    // stellt sicher, dass kein älterer, noch laufender Speichervorgang
+    // überholt. Freigabe/Verlassen nur bei erfolgreichem Speichern.
+    await autosave.flush();
+    if (autosave.hasUnsaved()) throw new Error("Zwischenstand nicht gespeichert");
   };
   const handleBack = async (choice: BackChoice) => {
     if (backBusyRef.current || !user?.id || !measurementId) return;
@@ -1113,6 +1116,7 @@ function TaskExecutionPageInner() {
                 context={roleView === "customer" ? "customer" : "employee"}
                 stepData={stepData as any}
                 formData={linkedFormData as any}
+                linkSourcesReady={linkSourcesReady}
                 values={values}
                 onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
               />
