@@ -52,6 +52,7 @@ import { ORDER_PRIORITY_LABELS, type OrderPriority } from "@/lib/types";
 import {
   buildLinkedFormResultCandidates,
   buildServiceResultCandidates,
+  collectStaleRepeaterInstanceKeys,
   type OfficialResultCandidate,
 } from "@/lib/officialResults";
 import { isRfaService } from "@/lib/rfaFixedElements";
@@ -544,6 +545,23 @@ function TaskExecutionPageInner() {
           order_measurement_id: measurementId,
           ...payload,
         });
+      }
+    }
+
+    // Eindeutig verwaiste Repeater-Ergebnisse: Die Zeilenkennung ist eine
+    // stabile Instanzkennung, der Repeater gehört zum aktuell verknüpften
+    // Formular und die Kennung kommt in den gespeicherten Zeilen nicht mehr
+    // vor – die Zeile wurde also nachweislich entfernt. Positionsbasierte
+    // Kennungen (Altdaten) und fremde/historische Strukturen werden niemals
+    // gemeldet; im Zweifel unterbleibt die Bereinigung.
+    for (const definition of linkedDefinitions) {
+      for (const stale of collectStaleRepeaterInstanceKeys(
+        definition.formId,
+        definition.fields,
+        values,
+        existing.map((r) => r.result_name as string),
+      )) {
+        knownKeys.add(stale);
       }
     }
 
