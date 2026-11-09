@@ -4,6 +4,7 @@
   "new_sample": "Neue Probe",
   "create_title": "Neue Probe erstellen",
   "sample_name": "Probenname",
+  "sample_designation": "Probenbezeichnung",
   "sample_name_required": "Probenname *",
   "sample_number": "Proben-Nr.",
   "project_number": "Projektnummer *",

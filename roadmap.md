@@ -1,5 +1,11 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
+## Aktuelle Freigabe: Durchgängige Probenbezeichnung
+- [x] Zentrale Fallbacks und stabile Mehrprobenanzeige, Aufgaben-/Projekt-/Dashboard-Spalten und Suche additiv ergänzt; vorhandene SELECTs unverändert.
+- [x] 1.226 Tests bestanden, automatische Buildprüfung erfolgreich; angemeldete Web-Prüfung von Auftragsanzeige, Probenlink und Dashboard-Suche ohne Produktivschreibzugriffe; Abschlussbericht erstellt.
+- [ ] Vollständige Web-Abnahme: Aufgaben-/Projektansicht und Sonderfälle benötigen passende erreichbare Bestandsdaten/Ansichten; separate Typprüfung nicht ausgeführt.
+- [ ] Tauri-Abnahme: blockiert durch fehlenden Zugang zur Firmeninstallation.
+
 ## Aktuelle Freigabe: Offizielle Messergebnisse aus Repeater-Unterfeldern
 - [x] Repeater-Unterfelder in `buildLinkedFormResultCandidates` über Instanzkonzept (`__instance_id`, `idx_<n>`-Rückfall) als Ergebniskandidaten; Container nie offiziell; flache Suche für Unterfelder entfernt.
 - [x] `repeaterAggregateScope` in die Abschluss-Berechnungsauswertung eingebunden (Aggregate wie in der Formularanzeige).

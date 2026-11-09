@@ -15,6 +15,8 @@ import { useDataTable } from "@/components/data-table";
 import { useUsers } from "@/hooks/useUsers";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
+import { samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
+import { SampleLinks } from "@/components/orders/SampleLinks";
 import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
@@ -244,7 +246,7 @@ function OrdersOverview() {
             <TableHeader>
               <TableRow>
                 {renderSortableHead({ sortKey: "order_number", filterKeys: ["requester", "responsible", "mine"], children: t("orders:order_number") })}
-                <TableHead><div className="flex items-center">{t("samples:sample_name")}{headerFilters(["sample"])}</div></TableHead>
+                <TableHead><div className="flex items-center">{t("samples:sample_designation", "Probenbezeichnung")}{headerFilters(["sample"])}</div></TableHead>
                 {renderSortableHead({ sortKey: "project_number", filterKeys: ["project_number"], children: t("orders:project_number") })}
                 {renderSortableHead({ sortKey: "project_name", filterKeys: ["project"], children: t("orders:project_name") })}
                 {renderSortableHead({ sortKey: "order_kind", filterKeys: ["kind"], children: t("orders:kind_label") })}
@@ -398,7 +400,7 @@ function DurchfuehrerTasksView({
   statusFilter: string;
   setStatusFilter: (v: string) => void;
 }) {
-  const { t, i18n } = useTranslation(["orders", "common", "measurements"]);
+  const { t, i18n } = useTranslation(["orders", "common", "measurements", "samples"]);
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
   const { data: freeTasks = [], isLoading: isLoadingFree } = useUnassignedQualifiedMeasurements();
   const { data: otherOpen = [] } = useOpenMeasurementsOverview();
@@ -524,7 +526,8 @@ function DurchfuehrerTasksView({
       m.measurement_orders?.order_number?.toLowerCase().includes(q) ||
       (m.measurement_orders ? orderIdentity(m.measurement_orders).number.toLowerCase().includes(q) : false) ||
       m.measurement_orders?.projects?.project_number?.toLowerCase().includes(q) ||
-      m.measurement_orders?.projects?.project_name?.toLowerCase().includes(q);
+      m.measurement_orders?.projects?.project_name?.toLowerCase().includes(q) ||
+      samplesMatchSearch(taskSamples(m), q);
     const matchesStatus = statusFilter === "all" || m.status === statusFilter;
     return matchesSearch && matchesStatus && servicePredicate(m.service_id);
   };
@@ -671,6 +674,7 @@ function DurchfuehrerTasksView({
                 <SortableHead label="Aufgaben-Nr." sortKey="measurement_number" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label="Dienstleistung" sortKey="service" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:order_number")} sortKey="order_number" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
+                <TableHead>{t("samples:sample_designation", "Probenbezeichnung")}</TableHead>
                 <SortableHead label="Ersteller" sortKey="creator" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("common:status")} sortKey="status" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
@@ -691,6 +695,7 @@ function DurchfuehrerTasksView({
                   </TableCell>
                   <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
                   <TableCell><TaskOrderIdentity order={m.measurement_orders} /></TableCell>
+                  <TableCell><SampleLinks samples={taskSamples(m)} /></TableCell>
                   <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                   <TableCell>
                     {m.measurement_orders?.projects?.project_number ? (
@@ -733,6 +738,7 @@ function DurchfuehrerTasksView({
                 <SortableHead label="Aufgaben-Nr." sortKey="measurement_number" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label="Dienstleistung" sortKey="service" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:order_number")} sortKey="order_number" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
+                <TableHead>{t("samples:sample_designation", "Probenbezeichnung")}</TableHead>
                 <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:due_date")} sortKey="due_date" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
@@ -754,6 +760,7 @@ function DurchfuehrerTasksView({
                       <TaskOrderIdentity order={m.measurement_orders} />
                     </Link>
                   </TableCell>
+                  <TableCell><SampleLinks samples={taskSamples(m)} /></TableCell>
                   <TableCell>
                     {m.measurement_orders?.projects?.project_number ? (
                       <Link to={`/projekte/${m.measurement_orders.project_id}`} className="text-destructive underline underline-offset-2 hover:opacity-80">
