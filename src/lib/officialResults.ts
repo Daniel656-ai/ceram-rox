@@ -20,6 +20,7 @@ import {
   readBlockChildRole,
   elementValueKey,
   elementFromValueKey,
+  INSTANCE_ID_KEY,
 } from "@/lib/measurementBlocks";
 import { globalConstantScope, type GlobalConstantLike } from "@/lib/globalConstants";
 
