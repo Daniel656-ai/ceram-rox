@@ -26,6 +26,7 @@ import {
 import { releaseRun } from "@/lib/measurementRun/leaveRun";
 import { leaveTask, needsBackDialog, backTarget, type BackChoice } from "@/lib/measurementRun/taskBack";
 import { collectMirroredFieldKeys, mayDeleteStoredRow } from "@/lib/measurementRun/persistGuard";
+import { extractInitialValues, resolveServerSync } from "@/lib/measurementRun/hydrationGuard";
 import ReassignMeasurementDialog from "@/components/measurementRun/ReassignMeasurementDialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -69,17 +70,18 @@ function TaskExecutionPageInner() {
   const qc = useQueryClient();
   const { user, profile, role, hasRole } = useAuth();
 
-  // Im Messdurchlauf wird die Probe beim Wechsel immer frisch geladen: der
-  // Zwischenspeicher könnte einen Stand vor dem letzten Autosave enthalten.
-  const inRun = new URLSearchParams(window.location.search)
-    .get("run")?.split(",").includes(measurementId ?? "") ?? false;
-  const { data: measurement, isLoading, isFetchedAfterMount } = useQuery({
+  // Beim Öffnen jeder Dienstleistung wird einheitlich der aktuelle
+  // Datenbankstand abgerufen – auch außerhalb des Messdurchlaufs. Ein
+  // möglicherweise veralteter Query-Cache darf die initiale Hydration nicht
+  // grundlegen (Messwertverlust-Risiko).
+  const { data: measurement, isLoading, isFetchedAfterMount, isError, isFetching, refetch } = useQuery({
     queryKey: ["measurement-task", measurementId],
     queryFn: () => api.measurements.get(measurementId!),
     enabled: !!measurementId,
-    ...(inRun ? { refetchOnMount: "always" as const } : {}),
+    refetchOnMount: "always",
   });
-  const hydrationReady = !inRun || isFetchedAfterMount;
+  // Die initiale Hydration wartet einheitlich auf den frischen Serverabruf.
+  const hydrationReady = isFetchedAfterMount;
 
   const serviceId: string | undefined = (measurement as any)?.service_id;
 
