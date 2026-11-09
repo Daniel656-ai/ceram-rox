@@ -279,5 +279,21 @@
   "runsheet_without_sample": "without sample",
   "runsheet_no_services": "No services",
   "runsheet_state_services": "Change state of service specifications",
-  "runsheet_state_form": "Change state of order form"
+  "runsheet_state_form": "Change state of order form",
+  "runsheet_grp_mass": "II. Mass preparation and shaping",
+  "runsheet_grp_product": "III. Product processing and tests",
+  "runsheet_grp_unassigned": "Services without clear assignment",
+  "runsheet_unassigned_hint": "These services are not clearly assigned to a master data list (PPP_Masse/PPP_Produkt) and are shown in entry order.",
+  "runsheet_sub_knetung": "Kneading",
+  "runsheet_sub_extrusion": "Extrusion",
+  "runsheet_sub_masse": "Mass characterisation",
+  "runsheet_sub_produkt": "Product-specific tests",
+  "runsheet_target": "Target",
+  "runsheet_actual": "Actual / result",
+  "runsheet_date": "Date",
+  "runsheet_initials": "Initials",
+  "runsheet_remark": "Remark",
+  "runsheet_status_open": "Open",
+  "runsheet_status_in_progress": "In progress",
+  "runsheet_status_completed": "Completed"
 }

@@ -279,5 +279,21 @@
   "runsheet_without_sample": "ohne Probe",
   "runsheet_no_services": "Keine Dienstleistungen",
   "runsheet_state_services": "Änderungsstand Dienstleistungsvorgaben",
-  "runsheet_state_form": "Änderungsstand Auftragsformular"
+  "runsheet_state_form": "Änderungsstand Auftragsformular",
+  "runsheet_grp_mass": "II. Masseaufbereitung und Formgebung",
+  "runsheet_grp_product": "III. Produktverarbeitung und Prüfungen",
+  "runsheet_grp_unassigned": "Nicht eindeutig zugeordnete Dienstleistungen",
+  "runsheet_unassigned_hint": "Diese Dienstleistungen sind keiner Stammdatenliste (PPP_Masse/PPP_Produkt) eindeutig zugeordnet und werden in Erfassungsreihenfolge gezeigt.",
+  "runsheet_sub_knetung": "Knetung",
+  "runsheet_sub_extrusion": "Extrusion",
+  "runsheet_sub_masse": "Massecharakterisierungen",
+  "runsheet_sub_produkt": "Produktspezifische Prüfungen",
+  "runsheet_target": "Soll",
+  "runsheet_actual": "Ist-Wert / Ergebnis",
+  "runsheet_date": "Datum",
+  "runsheet_initials": "Handzeichen",
+  "runsheet_remark": "Bemerkung",
+  "runsheet_status_open": "Offen",
+  "runsheet_status_in_progress": "In Bearbeitung",
+  "runsheet_status_completed": "Abgeschlossen"
 }
