@@ -1292,7 +1292,7 @@ function RepeaterField({
               size="sm" variant="ghost" type="button" className="h-6 text-[11px]"
               onClick={() => {
                 const next = entries.slice();
-                while (next.length < planned) next.push(managed ? newTemperatureEntry() : {});
+                while (next.length < planned) next.push(managed ? newTemperatureEntry() : makeUnmanagedEntry());
                 updateEntries(next);
               }}
             >
