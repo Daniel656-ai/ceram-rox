@@ -67,11 +67,26 @@ export function buildLinkedFormResultCandidates(
       .map((f) => f.id)
   );
 
+  // Wiederholbereiche (Repeater) der obersten Ebene: ihre Unterfelder liegen
+  // verschachtelt im Eintrags-Array und dürfen nicht flach gesucht werden.
+  // Verschachtelte Repeater (parent_field_id gesetzt) leben innerhalb ihrer
+  // Elterneinträge und sind hier nicht Teil der flachen Wertebene.
+  const repeaters = fields.filter((f) => f.field_type === "repeater" && !f.parent_field_id);
+  const repeaterChildIds = new Set(
+    fields
+      .filter((f) => f.parent_field_id && repeaters.some((r) => r.id === f.parent_field_id))
+      .map((f) => f.id)
+  );
+
   const constantValues = globalConstantScope(globalConstants);
+  // Berechnungen über Repeater-Zeilen erhalten ihre Eingabewerte über dieselbe
+  // Aggregat-Spiegelung wie die Formularanzeige (repeaterAggregateScope) –
+  // keine zweite Berechnungslogik.
+  const aggregates = repeaterAggregateScope(fields, localValues);
   const calculated = evaluateLocalCalculations(
     calculations,
-    { ...localValues, ...constantValues },
-    [...fields.map((field) => field.field_key), ...Object.keys(constantValues)],
+    { ...localValues, ...constantValues, ...aggregates },
+    [...fields.map((field) => field.field_key), ...Object.keys(constantValues), ...Object.keys(aggregates)],
   );
 
   // Messdatenblöcke: jede Messung erzeugt eigenständige, eindeutig
