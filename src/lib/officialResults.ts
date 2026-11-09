@@ -1,8 +1,10 @@
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import type { FormField } from "@/lib/api/formFields";
+import { readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import { evaluateLocalCalculations } from "@/lib/localCalculations";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import {
   fieldElementKey, formatElementKey, parseElementRange, elementInRange, elementSortValue,
 } from "@/lib/elementKeys";
@@ -18,6 +20,7 @@ import {
   readBlockChildRole,
   elementValueKey,
   elementFromValueKey,
+  INSTANCE_ID_KEY,
 } from "@/lib/measurementBlocks";
 import { globalConstantScope, type GlobalConstantLike } from "@/lib/globalConstants";
 
@@ -65,11 +68,26 @@ export function buildLinkedFormResultCandidates(
       .map((f) => f.id)
   );
 
+  // Wiederholbereiche (Repeater) der obersten Ebene: ihre Unterfelder liegen
+  // verschachtelt im Eintrags-Array und dürfen nicht flach gesucht werden.
+  // Verschachtelte Repeater (parent_field_id gesetzt) leben innerhalb ihrer
+  // Elterneinträge und sind hier nicht Teil der flachen Wertebene.
+  const repeaters = fields.filter((f) => f.field_type === "repeater" && !f.parent_field_id);
+  const repeaterChildIds = new Set(
+    fields
+      .filter((f) => f.parent_field_id && repeaters.some((r) => r.id === f.parent_field_id))
+      .map((f) => f.id)
+  );
+
   const constantValues = globalConstantScope(globalConstants);
+  // Berechnungen über Repeater-Zeilen erhalten ihre Eingabewerte über dieselbe
+  // Aggregat-Spiegelung wie die Formularanzeige (repeaterAggregateScope) –
+  // keine zweite Berechnungslogik.
+  const aggregates = repeaterAggregateScope(fields, localValues);
   const calculated = evaluateLocalCalculations(
     calculations,
-    { ...localValues, ...constantValues },
-    [...fields.map((field) => field.field_key), ...Object.keys(constantValues)],
+    { ...localValues, ...constantValues, ...aggregates },
+    [...fields.map((field) => field.field_key), ...Object.keys(constantValues), ...Object.keys(aggregates)],
   );
 
   // Messdatenblöcke: jede Messung erzeugt eigenständige, eindeutig
@@ -234,11 +252,52 @@ export function buildLinkedFormResultCandidates(
     }
   }
 
+  // Wiederholbereiche: jede Zeile erzeugt eigenständige, eindeutig zugeordnete
+  // Ergebnisse – analog zum Messdatenblock über dasselbe Instanzkonzept
+  // (readInstances/instanceResultKey). Die Instanzkennung ist die gespeicherte
+  // `__instance_id` der Zeile; Altdaten ohne Kennung fallen auf die
+  // positionsbasierte Kennung `idx_<n>` zurück (Konvention aus readInstances).
+  // Der Repeater-Container selbst wird niemals ein offizielles Ergebnis.
+  for (const repeater of repeaters) {
+    const repMeta = readRepeaterMeta(repeater);
+    const storageKey = repMeta.storage_key || repeater.field_key;
+    const children = repeaterChildren(fields, repeater.id).filter(
+      (c) =>
+        c.field_type !== "repeater" &&
+        c.field_type !== "measurement_block" &&
+        c.field_type !== "measurement_import"
+    );
+    if (children.length === 0) continue;
+    const instances = readInstances(localValues[storageKey], {
+      min_entries: 0,
+      item_label: repMeta.item_label ?? "Eintrag",
+      add_label: repMeta.add_label ?? "Eintrag hinzufügen",
+      context_fields: [],
+    }, toBlockChildDefs(children));
+    for (const instance of instances) {
+      for (const child of children) {
+        instanceCandidates.push({
+          kind: "field" as const,
+          key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
+          label: child.result_label || child.display_name || child.field_key,
+          unit: child.unit ?? null,
+          value: instance.values[child.field_key],
+          official: child.is_result === true,
+          instanceKey: instance.instanceId,
+          instanceLabel: instance.label,
+          instanceContext: null,
+        });
+      }
+    }
+  }
+
   const all: OfficialResultCandidate[] = [
     ...fields
       .filter((field) =>
         !blockChildIds.has(field.id) &&
+        !repeaterChildIds.has(field.id) &&
         field.field_type !== "measurement_block" &&
+        field.field_type !== "repeater" &&
         (field.metadata as any)?.global_field_source !== "constant"
       )
       .map((field) => {
@@ -304,6 +363,61 @@ export function buildLinkedFormResultCandidates(
 }
 
 
+
+/**
+ * Eindeutig verwaiste Repeater-Ergebniszeilen bestimmen.
+ *
+ * Nur Zeilen, deren Zugehörigkeit zweifelsfrei bewiesen ist, werden gemeldet:
+ * - der Ergebnisname gehört zu einem Repeater des aktuell verknüpften Formulars
+ *   (Speicherschlüssel stimmt überein), UND
+ * - die Zeilenkennung ist eine stabile Instanzkennung (`__instance_id`),
+ *   keine positionsbasierte `idx_`-Kennung, UND
+ * - diese Instanzkennung kommt in den aktuell gespeicherten Zeilen nicht mehr
+ *   vor (die Zeile wurde also tatsächlich entfernt).
+ *
+ * Historische Ergebnisse anderer Feldstrukturen, positionsbasierte Kennungen
+ * und unbekannte Speicherschlüssel werden NIEMALS gemeldet – im Zweifel
+ * unterbleibt die Bereinigung.
+ */
+export function collectStaleRepeaterInstanceKeys(
+  formId: string,
+  fields: FormField[],
+  taskValues: Record<string, unknown>,
+  existingResultNames: string[],
+): Set<string> {
+  const prefix = `form:${formId}:`;
+  const repeaters = fields.filter((f) => f.field_type === "repeater" && !f.parent_field_id);
+  const out = new Set<string>();
+  if (repeaters.length === 0 || existingResultNames.length === 0) return out;
+
+  const localValues: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(taskValues)) {
+    if (key.startsWith(prefix)) localValues[key.slice(prefix.length)] = value;
+  }
+
+  for (const repeater of repeaters) {
+    const storageKey = readRepeaterMeta(repeater).storage_key || repeater.field_key;
+    const entries = Array.isArray(localValues[storageKey]) ? (localValues[storageKey] as unknown[]) : [];
+    const activeIds = new Set(
+      entries
+        .map((e) => (e as Record<string, unknown> | null)?.[INSTANCE_ID_KEY])
+        .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+    );
+    const rowPattern = new RegExp(
+      `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${storageKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\[([^\\]]+)\\]\\..+$`
+    );
+    for (const name of existingResultNames) {
+      const m = rowPattern.exec(name);
+      if (!m) continue;
+      const instanceId = m[1];
+      // Positionsbasierte Kennungen (Altdaten ohne __instance_id) sind nach
+      // Entfernen/Verschieben mehrdeutig – sie bleiben immer erhalten.
+      if (instanceId.startsWith("idx_")) continue;
+      if (!activeIds.has(instanceId)) out.add(name);
+    }
+  }
+  return out;
+}
 
 /**
  * Builds the snapshot for the classic service form. Computed fields can depend

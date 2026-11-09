@@ -1,6 +1,16 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
-## Aktuelle Freigabe: Abschließende Absicherung Hydration/Autosave/Repeater (A+B+C)
+## Aktuelle Freigabe: Offizielle Messergebnisse aus Repeater-Unterfeldern
+- [x] Repeater-Unterfelder in `buildLinkedFormResultCandidates` über Instanzkonzept (`__instance_id`, `idx_<n>`-Rückfall) als Ergebniskandidaten; Container nie offiziell; flache Suche für Unterfelder entfernt.
+- [x] `repeaterAggregateScope` in die Abschluss-Berechnungsauswertung eingebunden (Aggregate wie in der Formularanzeige).
+- [x] `resolveResultPrecision` erkennt Repeater-Unterfelder (2/3 Nachkommastellen je Unterfeld).
+- [x] Stabile Zeilenkennungen für Ergebnis-Repeater im Renderer (Vergabe + Selbstheilung bei Altdaten, frische Kennung beim Duplizieren).
+- [x] Bereinigung: nur nachweislich entfernte Zeilen mit stabiler Kennung (`collectStaleRepeaterInstanceKeys`); historische/flache/positionsbasierte Ergebnisse bleiben unberührt.
+- [x] 1.217 Tests (17 neue), Typprüfung bestanden. Keine DB-/Backend-/Infrastrukturänderungen.
+- [ ] Web-Abnahme mit echter Aktivitätsmessung: blockiert – keine Schreibzugriffe/Testdaten im Produktivbestand erlaubt.
+- [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang zur Firmeninstallation.
+
+## Freigabe: Abschließende Absicherung Hydration/Autosave/Repeater (A+B+C)
 - [x] A: Einheitlicher frischer Datenbankabruf (`refetchOnMount: "always"` überall, Hydration erst nach `isFetchedAfterMount`).
 - [x] B: Strikte Render-Schranke – Formular mountet erst nach abgeschlossener Hydration („Messdaten werden geladen …", Fehler mit Wiederholen).
 - [x] C: Dirty-Tracking – Hintergrund-Updates nur ohne lokale Eingaben, sonst sichtbarer Konflikthinweis mit optionalem Übernehmen; `hydrationGuard.ts` + 14 Tests.
