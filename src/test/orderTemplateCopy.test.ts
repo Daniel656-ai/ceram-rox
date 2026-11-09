@@ -50,9 +50,14 @@ describe("safe independent templates", () => {
     expect(JSON.stringify(order)).toBe(before);
     expect(a.payload.measurements?.[0].uid).not.toBe(b.payload.measurements?.[0].uid);
   });
-  it("refuses ambiguous labels instead of guessing or losing a requirement", async () => {
+  it("skips ambiguous labels with a warning and keeps the other requirements", async () => {
     mocks.fields.mockResolvedValue([f("text"), f("a", "text", { display_name: "temperature" }), f("b", "text", { display_name: "temperature" })]);
-    await expect(buildPayloadFromOrder("source", DEFAULT_COPY_OPTIONS)).rejects.toThrow("nicht eindeutig");
+    const { payload, warnings } = await buildPayloadFromOrder("source", DEFAULT_COPY_OPTIONS);
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0]).toMatchObject({ parameterName: "temperature", serviceName: "S" });
+    for (const m of payload.measurements ?? []) {
+      expect(payload.measurementFormValues?.[m.uid]).toEqual({ text: "014", "form:f:enabled": false });
+    }
   });
   it("copies draft duplicates and false/zero, clears old date, number and sample by default", () => {
     const old = { dueDate: "2020-01-01", selectedSampleIds: ["sample"], dynamicValues: { versuchsnummer: "OLD", points: [{ value: 0, flag: false }] }, measurements: [1,2].map(n => ({ uid: String(n), service_id: "s", service_name: "S", origin: "template" as const })) };

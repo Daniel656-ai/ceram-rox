@@ -1,5 +1,12 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
+## Aktuelle Freigabe: eindeutige Feldzuordnung bei Vorlagenkopien
+- [x] Exakte Formularidentitäten ausschließlich als Identifikationsindex nutzen; uneindeutige Parameter mit Warnung überspringen.
+- [x] Warnungen im Vorlagendialog anzeigen; 1.170 Tests und automatische Typ-/Buildprüfung bestanden.
+- [x] Angemeldete Web-Neuanlage ohne Datenänderungen geprüft; technischer Änderungsbericht erstellt.
+- [ ] Web-Abnahme am echten Gasfeldauftrag: blockiert durch fehlenden Vorlagenzugang der verfügbaren Sitzung; keine Rechteänderung.
+- [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang zur Firmeninstallation.
+
 Auftrag: ROX_-_Umsetzung_Nachträgliche_Korrektur_pasted.md (freigegeben, Basis v4-Vorlage, G1)
 
 ## Erledigt
