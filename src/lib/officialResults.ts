@@ -1,8 +1,10 @@
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import type { FormField } from "@/lib/api/formFields";
+import { readRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import type { ServiceDataField } from "@/lib/api/serviceDesigner";
 import { evaluateLocalCalculations } from "@/lib/localCalculations";
 import { evaluateFormula } from "@/lib/formulaEngine";
+import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import {
   fieldElementKey, formatElementKey, parseElementRange, elementInRange, elementSortValue,
 } from "@/lib/elementKeys";
