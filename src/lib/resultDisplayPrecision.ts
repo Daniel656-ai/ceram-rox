@@ -63,7 +63,7 @@ export function resolveResultPrecision(
         .map((f) => f.decimal_places);
     } else {
       candidates = [
-        ...fields.filter((f) => f.field_key === key && !fields.some((p) => p.id === f.parent_field_id && p.field_type === "measurement_block"))
+        ...fields.filter((f) => f.field_key === key && !fields.some((p) => p.id === f.parent_field_id && (p.field_type === "measurement_block" || p.field_type === "repeater")))
           .map((f) => f.decimal_places),
         ...definitions.calculations.filter((c) => c.form_id === formId && c.calc_key === key).map((c) => c.decimals),
       ];
