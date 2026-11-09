@@ -5,8 +5,10 @@ import {
   groupRecipeSections,
   hasSections,
   isSectionEntry,
+  parseRecipeValue,
   removeSectionMarker,
   sectionTitle,
+  stripRecipeLotAssignments,
   updateSectionMarker,
   type RecipeEntry,
 } from "@/lib/recipeSections";
