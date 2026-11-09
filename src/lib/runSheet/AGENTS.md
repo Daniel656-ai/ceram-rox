@@ -1,0 +1,1 @@
+- Pilot-plant order run-sheet services are grouped only by the pure `sortPppServices` (`pppGroups.ts`): Knetung/Extrusion fixed, then master-data lists `ppp_masse`/`ppp_produkt` in list order (service_id link first, else exact label match); unmatched/ambiguous go to a visible "unassigned" group — never name/sample_id heuristics, nothing persisted.
