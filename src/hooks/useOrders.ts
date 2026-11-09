@@ -97,3 +97,14 @@ export function useOrderAuditLog(orderId: string | undefined) {
     enabled: !!orderId,
   });
 }
+
+export function useSetOrderBilled() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, value }: { id: string; value: boolean }) => api.orders.setBilled(id, value),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order"] });
+    },
+  });
+}

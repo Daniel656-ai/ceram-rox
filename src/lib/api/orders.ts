@@ -64,8 +64,19 @@ export const orders = {
     pp_experiment_kind?: string | null;
     pp_masse_type?: "DK" | "GK" | "KK" | "MK" | "PK" | null;
     pp_remarks?: string | null;
+    is_billed?: boolean;
   }) =>
     unwrap(dbClient.from("measurement_orders").insert(order as any).select().single()),
+
+  /** Verrechnungsstatus ändern – einziger Weg, auch für abgeschlossene Aufträge. */
+  setBilled: async (orderId: string, value: boolean): Promise<boolean> => {
+    const { data, error } = await dbClient.rpc("set_order_billed" as any, {
+      p_order_id: orderId,
+      p_value: value,
+    } as any);
+    if (error) throw new Error(error.message);
+    return data as unknown as boolean;
+  },
 
   update: (
     id: string,

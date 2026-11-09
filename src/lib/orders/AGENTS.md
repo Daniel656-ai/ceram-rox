@@ -1,0 +1,1 @@
+- Order billing status (is_billed, customer orders only) is resolved via src/lib/orders/billing.ts and changed after creation only through RPC set_order_billed (creator/master, row lock, activity_log) — order lock trigger stays untouched.

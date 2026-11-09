@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { billedForCreate } from "@/lib/orders/billing";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -195,6 +196,7 @@ export default function CreateOrderPage() {
   // Single order state
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [orderType, setOrderType] = useState<string>("");
+  const [isBilled, setIsBilled] = useState(false);
   const [orderKind, setOrderKind] = useState<"labor" | "pilot_plant">("labor");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
@@ -280,7 +282,7 @@ export default function CreateOrderPage() {
     if (!id) {
       setDraftLoading(false);
       if (loadedDraft) {
-        setSelectedProjectId(""); setOrderType(""); setOrderKind("labor"); setDueDate(""); setNotes("");
+        setSelectedProjectId(""); setOrderType(""); setIsBilled(false); setOrderKind("labor"); setDueDate(""); setNotes("");
         setMeasurements([]); setSelectedSampleIds([]); setProcessTemplateId("__none__");
         setMeasurementParams({}); setMeasurementFormValues({}); setDynamicValues({});
         reconcileAllowed.current = true;
@@ -338,7 +340,7 @@ export default function CreateOrderPage() {
     if (!await beforeDraftSwitch()) return;
     localCreatedId.current = null;
     setDraftId(null); setLoadedDraft(null); setDraftLoadFailed(false);
-    setSelectedProjectId(""); setOrderType(""); setOrderKind("labor"); setDueDate(""); setNotes("");
+    setSelectedProjectId(""); setOrderType(""); setIsBilled(false); setOrderKind("labor"); setDueDate(""); setNotes("");
     setMeasurements([]); setSelectedSampleIds([]); setProcessTemplateId("__none__");
     setMeasurementParams({}); setMeasurementFormValues({}); setDynamicValues({});
     reconcileAllowed.current = true;
@@ -622,6 +624,7 @@ export default function CreateOrderPage() {
 
       const order = await createOrder.mutateAsync({
         project_id: projectId, order_type: orderType as any, created_by: user.id,
+        is_billed: billedForCreate(orderType, isBilled),
         due_date: dueDate || undefined, notes: notes || undefined,
         sample_id: selectedSampleIds[0] || undefined,
         order_kind: orderKind,
@@ -1028,13 +1031,25 @@ export default function CreateOrderPage() {
           <CardContent className="space-y-4">
             <div>
               <Label>{t("orders:order_type")} *</Label>
-              <Select value={orderType} onValueChange={setOrderType}>
+              <Select value={orderType} onValueChange={(v) => { setOrderType(v); if (v !== "customer") setIsBilled(false); }}>
                 <SelectTrigger><SelectValue placeholder={t("orders:choose_type")} /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
+            {orderType === "customer" && (
+              <div>
+                <Label>{t("orders:billing.billed")}</Label>
+                <Select value={isBilled ? "yes" : "no"} onValueChange={(v) => setIsBilled(v === "yes")}>
+                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no">{t("orders:billing.no")}</SelectItem>
+                    <SelectItem value="yes">{t("orders:billing.yes")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>{t("orders:kind_label")} *</Label>
               <Select
