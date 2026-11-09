@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ClipboardList } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { orderSamples, samplesMatchSearch } from "@/lib/orders/orderSamples";
+import { orderSamples, samplesMatchSearch, type OrderSampleRef } from "@/lib/orders/orderSamples";
 import { SampleLinks } from "@/components/orders/SampleLinks";
 
 const d = (v?: string | null) => (v ? new Date(v).toLocaleDateString("de-DE") : "–");
@@ -26,9 +26,10 @@ const STATUS_LABEL: Record<string, string> = {
 interface Props {
   orders: any[];
   sampleLinks: any[];
+  samples?: Array<OrderSampleRef & { order_id?: string | null; pilot_plant_order_id?: string | null }>;
 }
 
-export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
+export function ProjectOrdersTab({ orders, sampleLinks, samples = [] }: Props) {
   const { t } = useTranslation("samples");
   const [search, setSearch] = useState("");
 
@@ -50,7 +51,13 @@ export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
         title: o.notes || o.customer_name || o.reference_number || "–",
         status: o.status,
         sampleCount: linkedSamples.size,
-        samples: orderSamples({ ...o, order_samples: [
+        samples: orderSamples({ ...o,
+          linked_samples: samples,
+          produced_samples: samples,
+          order_measurements: ms.map((measurement: any) => ({ ...measurement,
+            current_sample: measurement.current_sample ?? measurement.samples ?? samples.find(sample => sample.id === measurement.sample_id),
+          })),
+          order_samples: [
           ...(o.order_samples ?? []),
           ...(sampleLinks ?? []).filter((link: any) => link.order_id === o.id),
         ] }),
@@ -60,7 +67,7 @@ export function ProjectOrdersTab({ orders, sampleLinks }: Props) {
         completedAt: o.status === "completed" ? o.updated_at : null,
       };
     });
-  }, [orders, sampleLinks]);
+  }, [orders, sampleLinks, samples]);
 
   const filtered = rows.filter((r) => {
     if (!search) return true;

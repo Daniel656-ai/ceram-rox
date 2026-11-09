@@ -578,7 +578,7 @@ export default function ProjectDetailPage() {
         </TabsContent>
 
         <TabsContent value="orders">
-          <ProjectOrdersTab orders={orders as any[]} sampleLinks={orderSampleLinks as any[]} />
+          <ProjectOrdersTab orders={orders as any[]} sampleLinks={orderSampleLinks as any[]} samples={samples as any[]} />
         </TabsContent>
 
         <TabsContent value="services">
