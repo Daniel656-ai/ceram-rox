@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { releaseRun } from "@/lib/measurementRun/leaveRun";
 import { leaveTask, needsBackDialog, backTarget, type BackChoice } from "@/lib/measurementRun/taskBack";
+import { collectMirroredFieldKeys, mayDeleteStoredRow } from "@/lib/measurementRun/persistGuard";
 import ReassignMeasurementDialog from "@/components/measurementRun/ReassignMeasurementDialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -91,7 +92,7 @@ function TaskExecutionPageInner() {
    * Speicherort – es wird die bestehende `shared_form_data` gelesen).
    */
   const orderId: string | undefined = (measurement as any)?.order_id;
-  const { data: stepData = {} } = useQuery({
+  const { data: stepData = {}, isLoading: stepDataLoading } = useQuery({
     queryKey: ["order-shared-form-data", orderId],
     queryFn: () => api.orderSharedFormData.get(orderId!),
     enabled: !!orderId,
@@ -118,11 +119,16 @@ function TaskExecutionPageInner() {
     setActiveTaskContext({ orderMeasurementId: activeMeasurementId, sampleId: activeSampleId });
     return () => clearActiveTaskContext(activeMeasurementId);
   }, [activeMeasurementId, activeSampleId]);
-  const { data: linkedFormData = {} } = useQuery({
+  const { data: linkedFormData = {}, isLoading: linkedFormDataLoading } = useQuery({
     queryKey: ["order-linked-form-values", orderId, sampleId, measurementId],
     queryFn: () => api.measurementResults.listFormValuesForOrder(orderId!, sampleId, measurementId),
     enabled: !!orderId,
   });
+
+  // Spiegel-Effekte verknüpfter Felder dürfen gespeicherte Werte erst
+  // überschreiben, wenn beide Quelldatenabfragen erfolgreich abgeschlossen
+  // sind (deaktivierte Abfragen – z. B. ohne Auftrag – gelten als bereit).
+  const linkSourcesReady = !stepDataLoading && !linkedFormDataLoading;
 
   /**
    * Strikte Rollentrennung: Der Messdienstleister sieht ausschließlich das
@@ -364,6 +370,15 @@ function TaskExecutionPageInner() {
       api.globalFields.list().then((fields) => fields.filter((field) => field.data_source === "constant")),
     ]);
 
+    // Gespiegelte Felder (Wertquelle/Stammdaten) sind schreibgeschützt – eine
+    // Leerung kann nur aus einem technischen Zustand stammen. Ihre Schlüssel
+    // werden beim Entwurfsspeichern vor der Löschlogik geschützt.
+    const mirroredKeys = collectMirroredFieldKeys(
+      freshServiceFields as any[],
+      linkedDefinitions as any,
+      linkedFormValueKey,
+    );
+
     const candidates = new Map<string, OfficialResultCandidate>();
     for (const candidate of buildServiceResultCandidates(freshServiceFields, values)) {
       candidates.set(candidate.key, candidate);
@@ -429,6 +444,13 @@ function TaskExecutionPageInner() {
         // stored official result. On final completion it is rejected above;
         // during draft saves the last valid official value is retained.
         if (candidate.kind === "calculation" && candidate.official && prev?.is_official === true) {
+          activeKeys.add(key);
+        }
+        // Gespiegeltes Feld mit bereits gespeicherter Zeile: Beim
+        // Entwurfsspeichern nie löschen – die Leerung stammt nicht vom
+        // Benutzer (das Feld ist schreibgeschützt), sondern aus einem
+        // vorübergehend nicht aufgelösten Quellzustand.
+        if (prev && !mayDeleteStoredRow({ draftOnly: !!opts.draftOnly, mirrored: mirroredKeys.has(key) })) {
           activeKeys.add(key);
         }
         continue;
@@ -520,13 +542,14 @@ function TaskExecutionPageInner() {
     }
   };
 
-  // Im Messdurchlauf laufen alle Speichervorgänge strikt nacheinander und
-  // jeweils mit dem neuesten Stand. Einzelaufruf: unverändert direkt.
+  // Alle Speichervorgänge laufen strikt nacheinander und jeweils mit dem
+  // neuesten Stand – so können sich manuelles Speichern und Autosave (jetzt
+  // auch außerhalb des Messdurchlaufs) nie überholen oder Zeilen doppelt
+  // anlegen.
   const persistRef = useRef(persistResults);
   persistRef.current = persistResults;
   const persistLock = useRef<Promise<unknown>>(Promise.resolve());
   const persist = (req = false, opts: { draftOnly?: boolean } = {}): Promise<void> => {
-    if (!runModeRef.current) return persistResults(req, opts);
     const p = persistLock.current.then(
       () => persistRef.current(req, opts),
       () => persistRef.current(req, opts),
@@ -662,8 +685,11 @@ function TaskExecutionPageInner() {
   const runMode = runIds.length > 0 && !!measurementId && runIds.includes(measurementId);
   const runParam = searchParams.get("run") || "";
 
+  // Automatische Zwischenspeicherung – im Messdurchlauf UND in der
+  // Einzelbearbeitung, damit Eingaben bei regulärer Navigation oder beim
+  // Schließen der Anwendung nicht unbemerkt verloren gehen.
   const autosave = useMeasurementAutosave({
-    enabled: runMode && canEdit && !isCompleted && hasForm,
+    enabled: canEdit && !isCompleted && hasForm,
     ready: initialized,
     values,
     save: () => persist(false, { draftOnly: true }),
@@ -758,12 +784,11 @@ function TaskExecutionPageInner() {
   };
   const saveBeforeBack = async () => {
     if (!hasForm) return;
-    if (runMode) {
-      await autosave.flush();
-      if (autosave.hasUnsaved()) throw new Error("Zwischenstand nicht gespeichert");
-    } else {
-      await persist(false, { draftOnly: true });
-    }
+    // Einheitlich über den Autosave-Stand: speichert den neuesten Stand und
+    // stellt sicher, dass kein älterer, noch laufender Speichervorgang
+    // überholt. Freigabe/Verlassen nur bei erfolgreichem Speichern.
+    await autosave.flush();
+    if (autosave.hasUnsaved()) throw new Error("Zwischenstand nicht gespeichert");
   };
   const handleBack = async (choice: BackChoice) => {
     if (backBusyRef.current || !user?.id || !measurementId) return;
@@ -1091,6 +1116,7 @@ function TaskExecutionPageInner() {
                 context={roleView === "customer" ? "customer" : "employee"}
                 stepData={stepData as any}
                 formData={linkedFormData as any}
+                linkSourcesReady={linkSourcesReady}
                 values={values}
                 onChange={(key, v) => setValues((prev) => ({ ...prev, [key]: v }))}
               />
@@ -1114,6 +1140,11 @@ function TaskExecutionPageInner() {
 
       {canEdit && hasForm && !isCompleted && (
         <div className="flex items-center justify-end gap-2 sticky bottom-0 bg-background/95 border-t py-3">
+          {!runMode && (
+            <span className={`text-xs mr-auto ${autosave.state === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+              {AUTOSAVE_STATUS_TEXT[autosave.state]}
+            </span>
+          )}
           <Button variant="outline" onClick={handleSaveDraft} disabled={submitting}>
             Zwischenstand speichern
           </Button>
@@ -1401,6 +1432,15 @@ export default function TaskExecutionPage() {
   );
 }
 
+/** Sichtbarer Speicherstatus der automatischen Zwischenspeicherung. */
+const AUTOSAVE_STATUS_TEXT: Record<AutosaveState, string> = {
+  idle: "Automatisches Zwischenspeichern aktiv",
+  pending: "Änderungen werden gleich gespeichert …",
+  saving: "Wird gespeichert …",
+  saved: "Zwischenstand gespeichert",
+  error: "Speichern fehlgeschlagen – bitte erneut versuchen",
+};
+
 /** Kompakte Navigation innerhalb des temporären Messdurchlaufs. */
 function RunNavigation({
   ids, items, activeId, autosaveState, autosaveActive, onSelect, onLeave,
@@ -1414,13 +1454,7 @@ function RunNavigation({
   onLeave: () => void;
 }) {
   const byId = new Map(items.map((i) => [i.id, i]));
-  const statusText: Record<AutosaveState, string> = {
-    idle: "Automatisches Zwischenspeichern aktiv",
-    pending: "Änderungen werden gleich gespeichert …",
-    saving: "Wird gespeichert …",
-    saved: "Zwischenstand gespeichert",
-    error: "Speichern fehlgeschlagen – bitte erneut versuchen",
-  };
+  const statusText = AUTOSAVE_STATUS_TEXT;
   return (
     <Card>
       <CardHeader className="py-3 flex flex-row items-center justify-between gap-3 flex-wrap space-y-0">

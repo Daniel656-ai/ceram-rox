@@ -71,6 +71,7 @@ import { walkNodes } from "@/lib/api/formDefinitionLayout";
 import { readValueSource, isSameFormLink, isPreviousServiceLink, isLinkedFormLink, resolveLinkedValue, linkedFieldScope, linkOriginLabel, numericValue, type StepData, type LinkedFormData } from "@/lib/fieldLinks";
 import { createContext as createReactContext } from "react";
 import { readMasterDataRef, resolveMasterDataRef, type MasterDataRef } from "@/lib/masterDataRef";
+import { linkedMirrorDecision, masterDataMirrorDecision } from "@/lib/formMirrorGuard";
 import { multiSelectInitialValue } from "@/lib/multiSelectDefaults";
 import { runtimeKind } from "@/lib/api/backendConfig";
 import { globalConstantScope, isGlobalConstant, parseGlobalConstantValue } from "@/lib/globalConstants";
@@ -91,6 +92,14 @@ export const useStepData = () => useContext(StepDataCtx);
 const EMPTY_FORM_DATA: LinkedFormData = {};
 const FormDataCtx = createReactContext<LinkedFormData>(EMPTY_FORM_DATA);
 export const useLinkedFormData = () => useContext(FormDataCtx);
+
+/**
+ * Sind die asynchronen Quelldaten verknüpfter Felder (Workflow-Schrittdaten,
+ * verknüpfte Formulare) vollständig geladen? Erst dann dürfen Spiegel-Effekte
+ * eigene gespeicherte Werte überschreiben. Standard `true` bewahrt das
+ * bisherige Verhalten aller Stellen mit synchronen/statischen Daten.
+ */
+const LinkSourcesReadyCtx = createReactContext<boolean>(true);
 
 /* ----------------------------------------------------------------
  * Context: permissions + interactive value binding
@@ -1022,16 +1031,21 @@ function LinkedFieldControl({ field, valueSource }: { field: FormField; valueSou
   const read = useScopeReader();
   const stepData = useStepData();
   const formData = useLinkedFormData();
-  const srcRaw = valueSource && valueSource.source.kind === "form_field"
-    ? read(valueSource.source.field_key)
+  const sourcesReady = useContext(LinkSourcesReadyCtx);
+  const sameForm = !!valueSource && valueSource.source.kind === "form_field";
+  const srcRaw = sameForm
+    ? read(valueSource!.source.field_key)
     : resolveLinkedValue(valueSource, { stepData, formData });
   const ownRaw = read(field.field_key);
 
+  // Niemals spiegeln, solange die Quelldaten noch laden: ein gespeicherter
+  // eigener Wert darf erst überschrieben werden, wenn die Quelle erfolgreich
+  // geladen und eindeutig aufgelöst ist (sonst löscht der nächste
+  // Speicherlauf die zugehörige Ergebniszeile).
   useEffect(() => {
-    if (!interactive) return;
-    const next = srcRaw ?? "";
-    if ((ownRaw ?? "") !== next) setValue(next);
-  }, [srcRaw, ownRaw, interactive, setValue]);
+    const d = linkedMirrorDecision({ interactive, sameForm, sourcesReady, srcRaw, ownRaw });
+    if (d.write) setValue(d.value);
+  }, [srcRaw, ownRaw, interactive, sameForm, sourcesReady, setValue]);
 
   const shown = srcRaw == null || srcRaw === "" ? "" : String(srcRaw);
   return (
@@ -1055,7 +1069,7 @@ function LinkedFieldControl({ field, valueSource }: { field: FormField; valueSou
 function MasterDataFieldControl({ field, mdRef }: { field: FormField; mdRef: MasterDataRef }) {
   const { setValue, interactive } = useBinding(field.field_key);
   const read = useScopeReader();
-  const { data: catalog = [] } = useQuery({
+  const { data: catalog = [], isSuccess: catalogReady } = useQuery({
     queryKey: ["master-data-catalog"],
     queryFn: () => api.masterData.catalog(),
     staleTime: 5 * 60 * 1000,
@@ -1064,11 +1078,27 @@ function MasterDataFieldControl({ field, mdRef }: { field: FormField; mdRef: Mas
   const ownRaw = read(field.field_key);
   const next = res.status === "ok" ? String(res.value) : "";
 
+  // Spiegeln erst nach erfolgreichem Katalog-Laden UND eindeutiger Auflösung.
+  // Während des Ladens oder bei ungültiger Referenz bleibt der eigene
+  // gespeicherte Wert unverändert (kein Überschreiben mit "").
   useEffect(() => {
-    if (!interactive) return;
-    if ((ownRaw ?? "") !== next) setValue(next);
-  }, [next, ownRaw, interactive, setValue]);
+    const d = masterDataMirrorDecision({
+      interactive,
+      catalogReady,
+      resolved: res.status === "ok",
+      value: res.status === "ok" ? res.value : null,
+      ownRaw,
+    });
+    if (d.write) setValue(d.value);
+  }, [res, catalogReady, ownRaw, interactive, setValue]);
 
+  if (!catalogReady) {
+    return (
+      <div className="flex min-h-9 items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/40 text-xs text-muted-foreground">
+        <span>Stammdaten werden geladen …</span>
+      </div>
+    );
+  }
   if (res.status !== "ok") {
     return (
       <div className="flex min-h-9 items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/50 bg-destructive/5 text-xs text-destructive">
@@ -2207,6 +2237,7 @@ export default function FormLayoutRenderer({
   readOnly = false,
   stepData,
   formData,
+  linkSourcesReady = true,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
@@ -2223,6 +2254,11 @@ export default function FormLayoutRenderer({
   stepData?: StepData;
   /** Werte anderer verknüpfter Formulare desselben Vorgangs (form_id -> Werte). */
   formData?: LinkedFormData;
+  /**
+   * Sind die asynchronen Quelldaten verknüpfter Felder vollständig geladen?
+   * Standard `true` (synchrone/statische Aufrufer bleiben unverändert).
+   */
+  linkSourcesReady?: boolean;
 }) {
   const interactive = !readOnly && !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
@@ -2341,6 +2377,7 @@ export default function FormLayoutRenderer({
   return (
     <PermissionsCtx.Provider value={permissions ?? null}>
       <StepDataCtx.Provider value={stepData ?? EMPTY_STEP_DATA}>
+      <LinkSourcesReadyCtx.Provider value={linkSourcesReady}>
       <FormDataCtx.Provider value={formData ?? EMPTY_FORM_DATA}>
       <CalcResultsCtx.Provider value={calcResults}>
       <LocalCalcsCtx.Provider value={localCalcs}>
@@ -2354,6 +2391,7 @@ export default function FormLayoutRenderer({
       </LocalCalcsCtx.Provider>
       </CalcResultsCtx.Provider>
       </FormDataCtx.Provider>
+      </LinkSourcesReadyCtx.Provider>
       </StepDataCtx.Provider>
     </PermissionsCtx.Provider>
   );

@@ -1,6 +1,13 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
-## Aktuelle Freigabe: eindeutige Feldzuordnung bei Vorlagenkopien
+## Aktuelle Freigabe: kritische Behebung Messwertverlust (Phase 1+2)
+- [x] Phase 1: Spiegel-Schutz (LinkedFieldControl/MasterDataFieldControl spiegeln erst nach erfolgreichem Laden/eindeutiger Auflösung) + Löschschutz für gespiegelte Felder im Entwurfsspeichern.
+- [x] Phase 2: Autosave auch außerhalb des Messdurchlaufs, sichtbarer Speicherstatus, Warnung beim Schließen mit ungespeicherten Änderungen, serialisierte Speicherung, Freigabe nur nach erfolgreichem Speichern.
+- [x] 1.189 Tests, Typprüfung, Build bestanden; Web-Bearbeitungsseite lesend geprüft (Statusanzeige sichtbar, Werte hydriert, keine neuen Fehler).
+- [ ] Web-Abnahme der zehn Testszenarien mit echten Eingaben: blockiert – keine Testdaten/Schreibzugriffe im Produktivbestand erlaubt.
+- [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang zur Firmeninstallation.
+
+## Freigabe: eindeutige Feldzuordnung bei Vorlagenkopien
 - [x] Exakte Formularidentitäten ausschließlich als Identifikationsindex nutzen; uneindeutige Parameter mit Warnung überspringen.
 - [x] Warnungen im Vorlagendialog anzeigen; 1.170 Tests und automatische Typ-/Buildprüfung bestanden.
 - [x] Angemeldete Web-Neuanlage ohne Datenänderungen geprüft; technischer Änderungsbericht erstellt.
