@@ -36,6 +36,8 @@ interface SingleProps {
   stepData?: Record<string, Record<string, unknown> | undefined>;
   /** Werte anderer verknüpfter Formulare desselben Vorgangs (form_id -> Werte). */
   formData?: Record<string, Record<string, unknown> | undefined>;
+  /** Sind die asynchronen Quelldaten verknüpfter Felder vollständig geladen? */
+  linkSourcesReady?: boolean;
 }
 
 /**
@@ -44,7 +46,7 @@ interface SingleProps {
  * stammen aus den Rollenansichten des Formulars – nicht aus separaten
  * Rollenformularen.
  */
-function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly, stepData, formData }: SingleProps) {
+function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly, stepData, formData, linkSourcesReady }: SingleProps) {
   const { data: form } = useQuery({
     queryKey: ["form-definition", formId],
     queryFn: () => api.formDefinitions.get(formId),
@@ -173,6 +175,7 @@ function LinkedForm({ formId, context, legacyRole, values, onChange, readOnly, s
         formId={formId}
         stepData={stepData}
         formData={formData}
+        linkSourcesReady={linkSourcesReady}
       />
     </div>
   );
@@ -189,6 +192,8 @@ interface Props {
   stepData?: Record<string, Record<string, unknown> | undefined>;
   /** Werte anderer verknüpfter Formulare desselben Vorgangs (form_id -> Werte). */
   formData?: Record<string, Record<string, unknown> | undefined>;
+  /** Sind die asynchronen Quelldaten verknüpfter Felder vollständig geladen? */
+  linkSourcesReady?: boolean;
 }
 
 /**
@@ -197,7 +202,7 @@ interface Props {
  * Kontexts. Die Dienstleistung verknüpft nur noch EIN Formular – die
  * Rollentrennung erfolgt über dessen Rollenansichten.
  */
-export default function ServiceLinkedForms({ serviceId, context, values, onChange, readOnly, stepData, formData }: Props) {
+export default function ServiceLinkedForms({ serviceId, context, values, onChange, readOnly, stepData, formData, linkSourcesReady }: Props) {
   const { data: links = [] } = useQuery({
     queryKey: ["service-form-links", serviceId],
     queryFn: () => api.serviceFormLinks.listForService(serviceId),
@@ -219,6 +224,7 @@ export default function ServiceLinkedForms({ serviceId, context, values, onChang
           readOnly={readOnly}
           stepData={stepData}
           formData={formData}
+          linkSourcesReady={linkSourcesReady}
         />
       ))}
     </div>
