@@ -8,6 +8,7 @@ import { dmcSvg } from "@/components/SampleRunSheet";
 import { buildOrderRunSheet, orderDmcPayload } from "@/lib/runSheet/buildOrderRunSheet";
 import { escHtml as esc, specValueHtml, RUN_SHEET_CSS } from "@/lib/runSheet/specHtml";
 import { printHtml } from "@/lib/runSheet/printHtml";
+import { PPP_LIST_KEYS } from "@/lib/runSheet/pppGroups";
 import { specLabelOf } from "@/lib/specValues";
 import { ORDER_PRIORITY_LABELS, type OrderPriority } from "@/lib/types";
 import type { RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
@@ -24,13 +25,19 @@ export function OrderRunSheetButton({ order }: { order: any }) {
     setBusy(true);
     try {
       const formId = order?.shared_form_data?.template?.form_definition_id as string | undefined;
-      const [fields, events, mats] = await Promise.all([
+      const [fields, events, mats, lists] = await Promise.all([
         formId ? api.formFields.listForForm(formId) : Promise.resolve([]),
         api.activityLog.listForOrder(order.id),
         api.rawMaterials.list(),
+        api.globalLists.list(),
       ]);
+      const listItems = async (key: string) => {
+        const l = (lists as any[]).find((x) => String(x.list_key ?? "").toLowerCase() === key);
+        return l ? ((await api.globalListItems.list(l.id)) as any[]) : null;
+      };
+      const [masse, produkt] = await Promise.all([listItems(PPP_LIST_KEYS.masse), listItems(PPP_LIST_KEYS.produkt)]);
       const materials = new Map((mats as any[]).map((m) => [m.id as string, m as RawMaterialLookup]));
-      const sheet = buildOrderRunSheet(order, fields as any[], events as any[]);
+      const sheet = buildOrderRunSheet(order, fields as any[], events as any[], { masse, produkt });
       const payload = orderDmcPayload(sheet.number);
       const printedAt = fmt(new Date().toISOString());
       const dash = (v: string | null) => esc(v ?? "–");
@@ -41,17 +48,30 @@ export function OrderRunSheetButton({ order }: { order: any }) {
             sheet.form.map((f) => `<tr><td>${f.label ? esc(f.label) : `${esc(f.key)}<br><span class="warn">${esc(t("runsheet_missing_def"))}</span>`}</td><td>${specValueHtml(f.raw, f.unit, materials, f.colLabels)}</td></tr>`).join("")
           }</tbody></table>`;
 
+      const g = sheet.grouped;
+      const svcBlock = (s: typeof sheet.services[number]) => `
+          <section class="${g ? "svc" : ""}">
+            <h3>${esc(s.serviceName)}${s.measurementNumber ? ` <span class="muted">· ${esc(s.measurementNumber)}</span>` : ""}
+              ${s.sampleNumber ? `<span class="muted">· ${esc(t("runsheet_sample"))} ${esc(s.sampleNumber)}</span>` : g ? "" : `<span class="muted">· ${esc(t("runsheet_without_sample"))}</span>`}
+              ${g && s.status ? `<span class="status">${esc(t(`runsheet_status_${s.status}`, s.status))}</span>` : ""}</h3>
+            ${s.params.length === 0 ? `<p class="muted">${esc(t("runsheet_no_specs"))}</p>`
+              : `<table><thead><tr><th>${esc(t("runsheet_param"))}</th><th>${esc(g ? t("runsheet_target") : t("runsheet_value"))}</th><th>${esc(t("runsheet_unit"))}</th>${g ? `<th class="write">${esc(t("runsheet_actual"))}</th>` : ""}</tr></thead><tbody>${
+                  s.params.map((p) => `<tr><td>${esc(specLabelOf(p.name))}</td><td>${specValueHtml(p.raw, null, materials)}</td><td>${dash(p.unit)}</td>${g ? `<td class="write"></td>` : ""}</tr>`).join("")
+                }</tbody></table>`}
+            ${g ? `<div class="sign"><span>${esc(t("runsheet_date"))}: </span><span>${esc(t("runsheet_initials"))}: </span><span>${esc(t("runsheet_remark"))}: </span></div>` : ""}
+          </section>`;
+      const sub = (key: string, items: typeof sheet.services) =>
+        items.length ? `<div class="grp-sub">${esc(t(key))}</div>${items.map(svcBlock).join("")}` : "";
+      const by = (grp: string) => sheet.services.filter((s) => s.pppGroup === grp);
       const svcHtml = sheet.services.length === 0
         ? `<p class="muted">${esc(t("runsheet_no_services"))}</p>`
-        : sheet.services.map((s) => `
-          <section>
-            <h3>${esc(s.serviceName)}${s.measurementNumber ? ` <span class="muted">· ${esc(s.measurementNumber)}</span>` : ""}
-              <span class="muted">· ${s.sampleNumber ? `${esc(t("runsheet_sample"))} ${esc(s.sampleNumber)}` : esc(t("runsheet_without_sample"))}</span></h3>
-            ${s.params.length === 0 ? `<p class="muted">${esc(t("runsheet_no_specs"))}</p>`
-              : `<table><thead><tr><th>${esc(t("runsheet_param"))}</th><th>${esc(t("runsheet_value"))}</th><th>${esc(t("runsheet_unit"))}</th></tr></thead><tbody>${
-                  s.params.map((p) => `<tr><td>${esc(specLabelOf(p.name))}</td><td>${specValueHtml(p.raw, null, materials)}</td><td>${dash(p.unit)}</td></tr>`).join("")
-                }</tbody></table>`}
-          </section>`).join("");
+        : !g ? sheet.services.map(svcBlock).join("")
+        : [
+            (by("knetung").length + by("extrusion").length + by("masse").length)
+              ? `<div class="grp">${esc(t("runsheet_grp_mass"))}</div>${sub("runsheet_sub_knetung", by("knetung"))}${sub("runsheet_sub_extrusion", by("extrusion"))}${sub("runsheet_sub_masse", by("masse"))}` : "",
+            by("produkt").length ? `<div class="grp">${esc(t("runsheet_grp_product"))}</div>${sub("runsheet_sub_produkt", by("produkt"))}` : "",
+            by("unassigned").length ? `<div class="grp">${esc(t("runsheet_grp_unassigned"))}</div><p class="warn">${esc(t("runsheet_unassigned_hint"))}</p>${by("unassigned").map(svcBlock).join("")}` : "",
+          ].join("");
 
       const prio = sheet.priority ? (ORDER_PRIORITY_LABELS[sheet.priority as OrderPriority] ?? sheet.priority) : null;
       await printHtml(`<!DOCTYPE html><html><head><meta charset="utf-8">

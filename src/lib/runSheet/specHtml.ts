@@ -58,4 +58,12 @@ export const RUN_SHEET_CSS = `
   th { background: #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   table.inner { width: auto; font-size: 9pt; }
   table.inner th, table.inner td { padding: 0.6mm 1.5mm; }
+  .grp { margin: 6mm 0 2mm; padding: 1.5mm 3mm; background: #d9d9d9; font-weight: bold; font-size: 11.5pt; break-after: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .grp-sub { margin: 3mm 0 1mm; font-weight: bold; color: #333; border-bottom: 1px solid #999; break-after: avoid; }
+  section.svc { break-inside: avoid; border: 1px solid #ccc; padding: 1.5mm 2.5mm 2mm; margin: 2mm 0; }
+  section.svc h3 { margin-top: 0.5mm; }
+  .status { float: right; font-size: 8.5pt; border: 1px solid #888; padding: 0.3mm 1.5mm; font-weight: normal; }
+  th.write, td.write { width: 32%; height: 7mm; }
+  .sign { display: flex; gap: 6mm; margin-top: 2mm; font-size: 9pt; }
+  .sign span { flex: 1; border-bottom: 1px solid #777; padding-bottom: 4mm; }
 `;
