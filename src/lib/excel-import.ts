@@ -36,7 +36,7 @@ export interface ParsedImportOrder {
 }
 
 export const VALID_ORDER_TYPES = ["customer", "production", "rnd"];
-export const VALID_PRIORITIES = ["normal", "wichtig", "hoechste"];
+export const VALID_PRIORITIES = ["niedrig", "normal", "hoch", "sehr_hoch", "wichtig", "hoechste"];
 
 export const ORDER_TYPE_MAP: Record<string, string> = {
   kundenauftrag: "customer",
@@ -49,7 +49,12 @@ export const ORDER_TYPE_MAP: Record<string, string> = {
 };
 
 export const PRIORITY_MAP: Record<string, string> = {
+  niedrig: "niedrig",
   normal: "normal",
+  hoch: "hoch",
+  "sehr hoch": "sehr_hoch",
+  sehr_hoch: "sehr_hoch",
+  // Historische Bezeichnungen bleiben importierbar.
   wichtig: "wichtig",
   höchste: "hoechste",
   hoechste: "hoechste",

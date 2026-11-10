@@ -163,9 +163,10 @@ export default function BatchPlanningPage() {
                   <Select value={priority} onValueChange={setPriority}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="niedrig">Niedrig</SelectItem>
                       <SelectItem value="normal">Normal</SelectItem>
-                      <SelectItem value="wichtig">Wichtig</SelectItem>
-                      <SelectItem value="hoechste">Höchste</SelectItem>
+                      <SelectItem value="hoch">Hoch</SelectItem>
+                      <SelectItem value="sehr_hoch">Sehr hoch</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
