@@ -1,8 +1,8 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
 ## Freigabe: Individuelle AV-Werte (2026-11-10)
-- [ ] Zeilenlokalen AV-Vorrang ausschließlich für platzierte K-Wert-Berechnungen ergänzen; Vorgabe/Formeln/Historie unverändert.
-- [ ] Werte 40/50/60, Einzeländerung 55, JSON-Wiederöffnung und unveränderte Integritätsprüfung testen; Abschlussbericht.
+- [x] Zeilenlokalen AV-Vorrang ausschließlich für platzierte K-Wert-Berechnungen ergänzt; Vorgabe/Formeln/Historie unverändert.
+- [x] Werte 40/50/60, Einzeländerung 55, JSON-Wiederöffnung und unveränderte Integritätsprüfung getestet; 1305 Tests bestanden, Abschlussbericht erstellt.
 - [ ] Vollständige Web-Schreibabnahme: benötigt isolierte reale NOx-Formularkonfiguration, keine Produktiv-Testdaten verändern.
 - [ ] Tauri-Abnahme: benötigt erreichbare Unternehmensinstallation.
 
