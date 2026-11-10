@@ -21,12 +21,31 @@ import {
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
 
+/** Lesbare, verlustfreie Darstellung komplexer JSON-Werte (z. B. Repeater-Einträge). */
+function fmtJsonValue(parsed: unknown): string {
+  const entry = (obj: Record<string, unknown>) =>
+    Object.entries(obj)
+      .filter(([k]) => !k.startsWith("__"))
+      .map(([k, v]) => `${k}: ${typeof v === "object" && v !== null ? fmtJsonValue(v) : String(v)}`)
+      .join(", ");
+  if (Array.isArray(parsed))
+    return parsed
+      .map((item, i) => {
+        const inner = typeof item === "object" && item !== null && !Array.isArray(item)
+          ? entry(item as Record<string, unknown>)
+          : String(item);
+        return parsed.length > 1 ? `Eintrag ${i + 1} – ${inner}` : inner;
+      })
+      .join(" | ");
+  if (typeof parsed === "object" && parsed !== null) return entry(parsed as Record<string, unknown>);
+  return String(parsed);
+}
+
 function fmtValue(r: SampleResultValue): string {
   if (r.value !== null && r.value !== undefined) return nf.format(r.value);
   if (r.remarks) {
     try {
-      const parsed = JSON.parse(r.remarks);
-      return typeof parsed === "string" ? parsed : JSON.stringify(parsed);
+      return fmtJsonValue(JSON.parse(r.remarks));
     } catch {
       return r.remarks;
     }
