@@ -251,6 +251,7 @@
     "empty": "Select a service on the left – its form will appear here.",
     "removeTitle": "Permanently remove service?",
     "removeWarning": "This service already contains entries. Removing it will permanently and irreversibly delete all of its entries.",
-    "removeConfirm": "Delete permanently"
+    "removeConfirm": "Delete permanently",
+    "noCustomerForms": "No additional requester information is required for the selected services."
   }
 }
