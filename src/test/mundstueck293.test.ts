@@ -22,14 +22,13 @@ describe("Mundstück 293/1 – Anzahl", () => {
 });
 
 describe("Mundstück 293/1 – Planung", () => {
-  it("hängt beide Auto-Einträge am Ende an (RW vor Schwindung) mit ms-Kennung", () => {
+  it("RW und Schwindung zugleich: 293_1 nur einmal (RW-Eintrag), mit ms-Kennung", () => {
     const p = planMundstueck293({ rw: true, schw: true, brennCount: 4, msAuswahl: [user], mundstueckMs: [{ pressdruck_1: 70 }] });
     expect(p.msAuswahl).toEqual([
       user,
       { ms: "293_1", anzahl: 3, laenge: 200, zweck: ZWECK_RW, auto: true },
-      { ms: "293_1", anzahl: 3, laenge: 150, zweck: ZWECK_SCHW, auto: true },
     ]);
-    expect(p.mundstueckMs).toEqual([{ pressdruck_1: 70 }, { ms: "293_1" }, { ms: "293_1" }]);
+    expect(p.mundstueckMs).toEqual([{ pressdruck_1: 70 }, { ms: "293_1" }]);
   });
 
   it("ist idempotent", () => {
@@ -69,12 +68,12 @@ describe("Mundstück 293/1 – Planung", () => {
     expect(p2.orphaned).toBe(1);
   });
 
-  it("vorderer Auto-Eintrag fällt weg, hinterer bleibt – Werte bleiben beim richtigen Mundstück", () => {
+  it("RW fällt weg (ohne Werte), Schwindung übernimmt 293_1 – Paarung bleibt positionsgleich", () => {
     const p1 = planMundstueck293({ rw: true, schw: true, brennCount: 2, msAuswahl: [user], mundstueckMs: [{ p: "3001" }] });
-    const ms = [{ p: "3001" }, { ms: "293_1" }, { ms: "293_1", pressdruck_1: 88 }];
+    const ms = [{ p: "3001" }, { ms: "293_1" }];
     const p2 = planMundstueck293({ rw: false, schw: true, brennCount: 2, msAuswahl: p1.msAuswahl, mundstueckMs: ms });
     expect(p2.msAuswahl.map((r) => r.zweck ?? r.ms)).toEqual(["3001", ZWECK_SCHW]);
-    expect(p2.mundstueckMs).toEqual([{ p: "3001" }, { ms: "293_1", pressdruck_1: 88 }]);
+    expect(p2.mundstueckMs).toEqual([{ p: "3001" }, { ms: "293_1" }]);
   });
 
   it("keine doppelten Auto-Einträge", () => {
@@ -98,9 +97,9 @@ describe("Schwindungs-Mundstücke – generische Automatik", () => {
     expect(schwindungMs("BET")).toBeNull();
   });
 
-  it("bookedCases sammelt alle Schwindungs-Mundstücke, mehrfach zählt einmal", () => {
+  it("bookedCases leitet keine Schwindungs-Mundstücke mehr aus Leistungsnamen ab", () => {
     expect(bookedCases(["Schwindung 3001", "Schwindung 293/1", "schwindung 3001"]).schwMs)
-      .toEqual(["3001", "293/1"]);
+      .toEqual([]);
     expect(bookedCases(["Schwindung"]).schwMs).toEqual([]);
   });
 

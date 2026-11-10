@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // In-Memory-Datenbestand für order_measurements/measurement_results.
 let db: { measurements: any[] } = { measurements: [] };
+let extra: { order?: any; fields?: any[] } = {};
 const writes: any[] = [];
 const allResults = () => db.measurements.flatMap((m) => m.measurement_results);
 
@@ -25,6 +26,8 @@ vi.mock("@/lib/api/client", () => {
       return b;
     };
     b.eq = (_col: string, val: string) => {
+      if (table === "measurement_orders") return Promise.resolve({ data: extra.order ? [extra.order] : [], error: null });
+      if (table === "form_fields") return Promise.resolve({ data: extra.fields ?? [], error: null });
       if (table === "order_measurements") return Promise.resolve({ data: JSON.parse(JSON.stringify(db.measurements)), error: null });
       if (op === "update") {
         writes.push({ table, op, id: val, p: payload });
@@ -51,6 +54,7 @@ const schwOriginal = () => [
 
 beforeEach(() => {
   writes.length = 0;
+  extra = {};
   db = {
     measurements: [
       { id: "ext", measurement_services: { service_name: "Extrusion" }, measurement_results: [row("e-ausw", "ms_auswahl_1", [user])] },
@@ -94,5 +98,25 @@ describe("mundstueck293.syncOrder – nur Extrusion", () => {
     expect(writes).toEqual([]);
     expect(parsed("ext", "ms_auswahl_1")).toEqual(after1);
     expect(db.measurements[1].measurement_results).toEqual(schwOriginal());
+  });
+});
+
+describe("mundstueck293.syncOrder – Schwindungs-Mundstück aus analyse_ppp", () => {
+  it("speichert den Optionswert 293_1 nicht doppelt neben RW und 3001 als Optionswert", async () => {
+    extra = {
+      order: { shared_form_data: { template: { values: { analyse_ppp: ["extrusion", "schwindung_ms_293_1", "schwindung_ms_3001", "schwindung_ms_4711"] } } } },
+      fields: [
+        { id: "p", field_key: "ms_auswahl_1", parent_field_id: null },
+        { id: "c", field_key: "ms", parent_field_id: "p", select_options: [{ label: "293/1", value: "293_1" }, { label: "3001", value: "3001" }], metadata: {} },
+      ],
+    };
+    db.measurements = [
+      { id: "ext", measurement_services: { service_name: "Extrusion" }, measurement_results: [row("e-ausw", "ms_auswahl_1", []), row("e-brenn", "brennen_1", brennen4)] },
+      { id: "rw", measurement_services: { service_name: "Raumgewicht" }, measurement_results: [] },
+    ];
+    await mundstueck293.syncOrder("o1");
+    const a = parsed("ext", "ms_auswahl_1");
+    expect(a.map((r: any) => [r.ms, r.zweck])).toEqual([["293_1", "Raumgewicht / Wasseraufnahme"], ["3001", "Schwindung"]]);
+    expect(parsed("ext", "mundstueck_ms_1")).toEqual([{ ms: "293_1" }, { ms: "3001" }]);
   });
 });

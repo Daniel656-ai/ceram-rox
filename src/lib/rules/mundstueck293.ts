@@ -48,15 +48,63 @@ export function schwindungMs(serviceName: string | null | undefined): string | n
   return ms || null;
 }
 
-/** Welche Fälle sind laut gebuchten Leistungen nötig (mehrfach zählt einmal)? */
+/** Präfix der Schwindungs-Mundstück-Schlüssel in `analyse_ppp`. */
+export const SCHWINDUNG_KEY_PREFIX = "schwindung_ms_";
+export const ANALYSE_PPP_KEY = "analyse_ppp";
+export const MS_FIELD_KEY = "ms";
+
+/**
+ * MS-Kandidat aus einem `analyse_ppp`-Schlüssel: „schwindung_ms_293_1“ → „293_1“.
+ * Keine numerische Konvertierung, führende Nullen/Unterstriche bleiben erhalten.
+ */
+export function msFromSchwindungKey(key: unknown): string | null {
+  const k = String(key ?? "").trim();
+  if (!k.toLowerCase().startsWith(SCHWINDUNG_KEY_PREFIX)) return null;
+  const rest = k.slice(SCHWINDUNG_KEY_PREFIX.length);
+  return rest || null;
+}
+
+/**
+ * Kandidat gegen die Optionswerte des Feldes „ms“ prüfen. Nur bei genau einer
+ * passenden Option (Vergleich ohne Groß/Klein) wird deren `value` exakt
+ * zurückgegeben; keine oder mehrdeutige Treffer → null. Labels werden nie genutzt.
+ */
+export function resolveMsOptionValue(candidate: string, optionValues: string[]): string | null {
+  const c = candidate.trim().toLowerCase();
+  const hits = Array.from(new Set(optionValues.filter((v) => String(v).trim().toLowerCase() === c)));
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/**
+ * MS-Auswahlwerte aller in `analyse_ppp` gewählten Schwindungs-Schlüssel.
+ * Keine Rückfalllogik auf Leistungsnamen; nicht auflösbare Schlüssel landen in `rejected`.
+ */
+export function schwMsFromAnalysePpp(
+  selected: unknown,
+  optionValues: string[]
+): { values: string[]; rejected: string[] } {
+  const list = Array.isArray(selected) ? selected : selected == null || selected === "" ? [] : [selected];
+  const values: string[] = [];
+  const rejected: string[] = [];
+  for (const e of list) {
+    const key = typeof e === "object" && e !== null ? (e as Row).value : e;
+    const cand = msFromSchwindungKey(key);
+    if (!cand) continue;
+    const v = resolveMsOptionValue(cand, optionValues);
+    if (v == null) { rejected.push(String(key)); continue; }
+    if (!values.includes(v)) values.push(v);
+  }
+  return { values, rejected };
+}
+
+/**
+ * Welche Fälle sind laut gebuchten Leistungen nötig (mehrfach zählt einmal)?
+ * `schwMs` bleibt hier leer: Schwindungs-Mundstücke kommen ausschließlich aus
+ * `analyse_ppp` (siehe `schwMsFromAnalysePpp`), nie aus dem Leistungsnamen.
+ */
 export function bookedCases(serviceNames: Array<string | null | undefined>) {
   const names = new Set(serviceNames.map(norm));
   const schwMs: string[] = [];
-  const seen = new Set<string>();
-  for (const n of serviceNames) {
-    const ms = schwindungMs(n);
-    if (ms && !seen.has(normMs(ms))) { seen.add(normMs(ms)); schwMs.push(ms); }
-  }
   return {
     rw: names.has("raumgewicht") || names.has("wasseraufnahme"),
     schw: names.has("schwindung"),
@@ -89,7 +137,7 @@ export const isAutoEntry = (r: unknown) => !!r && typeof r === "object" && (r as
 export interface Mundstueck293Input {
   rw: boolean;
   schw: boolean;
-  /** MS-Nummern aller gebuchten „Schwindung <ms>“-Leistungen (Originalschreibweise). */
+  /** Validierte MS-Auswahlwerte (Optionswerte) aus `analyse_ppp`. */
   schwMs?: string[];
   brennCount: number;
   msAuswahl: unknown;
@@ -113,10 +161,15 @@ export function planMundstueck293(input: Mundstueck293Input): Mundstueck293Plan 
   type Desired = { ms: string; zweck: string; anzahl: number; laenge: number };
   const desired: Desired[] = [];
   const desiredSeen = new Set<string>();
+  const desiredMs = new Set<string>();
   const pushDesired = (d: Desired) => {
     const k = `${d.zweck}|${normMs(d.ms)}`;
-    if (desiredSeen.has(k)) return; // „293/1“ und „293_1“ nur einmal je Zweck
+    if (desiredSeen.has(k)) return;
+    // Zweckunabhängig: ein Schwindungs-Eintrag entfällt, wenn das Mundstück
+    // bereits (z. B. für Raumgewicht / Wasseraufnahme) vorgesehen ist.
+    if (d.zweck === ZWECK_SCHW && desiredMs.has(normMs(d.ms))) return;
     desiredSeen.add(k);
+    desiredMs.add(normMs(d.ms));
     desired.push(d);
   };
   if (input.rw) pushDesired({ ms: MS_293, zweck: ZWECK_RW, anzahl: rwAnzahl(input.brennCount), laenge: 200 });
@@ -146,12 +199,21 @@ export function planMundstueck293(input: Mundstueck293Input): Mundstueck293Plan 
       });
       return;
     }
+    // Paarung unsicher (Mundstück-Zeile trägt eine andere Kennung): unverändert erhalten.
+    if (m && m.ms != null && m.ms !== "" && normMs(m.ms) !== normMs(a.ms)) { orphanPairs.push({ a, m }); return; }
     // Nicht mehr benötigt (oder Duplikat): nur entfernen, wenn keine Werte erfasst sind.
     if (mundstueckRowHasValues(m)) orphanPairs.push({ a: { ...a, verwaist: true }, m });
   });
 
+  // Bereits vorhandene Mundstücke (Auftraggeber, nicht-Schwindungs-Auto-Einträge,
+  // erhaltene Einträge) blockieren einen weiteren Schwindungs-Eintrag – zweckunabhängig.
+  const presentMs = new Set<string>([
+    ...userMs,
+    ...orphanPairs.filter((p) => p.a.zweck !== ZWECK_SCHW).map((p) => normMs(p.a.ms)),
+    ...desired.filter((d) => d.zweck !== ZWECK_SCHW).map((d) => normMs(d.ms)),
+  ]);
   const autoPairs: Pair[] = desired
-    .filter((d) => d.zweck !== ZWECK_SCHW || !userMs.has(normMs(d.ms)))
+    .filter((d) => d.zweck !== ZWECK_SCHW || !presentMs.has(normMs(d.ms)))
     .map((d) =>
       autoByKey.get(keyOf(d.zweck, d.ms)) ?? {
         a: { ms: d.ms, anzahl: d.anzahl, laenge: d.laenge, zweck: d.zweck, auto: true },
