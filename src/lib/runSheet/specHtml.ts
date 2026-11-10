@@ -20,12 +20,15 @@ export function specValueHtml(
   unit: string | null | undefined,
   materials: Map<string, RawMaterialLookup>,
   colLabels?: Map<string, string>,
+  opts?: { hideIndex?: boolean },
 ): string {
   const shape = specValueShape(raw);
   if (shape.kind === "table") {
     const label = (c: string) => colLabels?.get(c) ?? specColLabel(c);
-    return `<table class="inner"><thead><tr><th>#</th>${shape.cols.map((c) => `<th>${escHtml(label(c))}</th>`).join("")}</tr></thead><tbody>${
-      shape.rows.map((r, i) => `<tr><td>${i + 1}</td>${shape.cols.map((c) => `<td>${cell(c, r[c], materials)}</td>`).join("")}</tr>`).join("")
+    const idxHead = opts?.hideIndex ? "" : "<th>#</th>";
+    const idxCell = (i: number) => (opts?.hideIndex ? "" : `<td>${i + 1}</td>`);
+    return `<table class="inner"><thead><tr>${idxHead}${shape.cols.map((c) => `<th>${escHtml(label(c))}</th>`).join("")}</tr></thead><tbody>${
+      shape.rows.map((r, i) => `<tr>${idxCell(i)}${shape.cols.map((c) => `<td>${cell(c, r[c], materials)}</td>`).join("")}</tr>`).join("")
     }</tbody></table>`;
   }
   if (shape.kind === "list") {
@@ -63,7 +66,12 @@ export const RUN_SHEET_CSS = `
   section.svc { break-inside: avoid; border: 1px solid #ccc; padding: 1.5mm 2.5mm 2mm; margin: 2mm 0; }
   section.svc h3 { margin-top: 0.5mm; }
   .status { float: right; font-size: 8.5pt; border: 1px solid #888; padding: 0.3mm 1.5mm; font-weight: normal; }
-  th.write, td.write { width: 32%; height: 7mm; }
-  .sign { display: flex; gap: 6mm; margin-top: 2mm; font-size: 9pt; }
-  .sign span { flex: 1; border-bottom: 1px solid #777; padding-bottom: 4mm; }
+  .logo { max-height: 16mm; max-width: 52mm; object-fit: contain; display: block; margin-bottom: 2mm; }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: start; }
+  .cols2 > section { break-inside: avoid; }
+  .mshead { margin: 2.5mm 0 1mm; font-weight: bold; font-size: 10pt; break-after: avoid; }
+  .kv { margin: 0.8mm 0; }
+  .kv b { font-weight: bold; }
+  ul.plain { margin: 1mm 0 2mm; padding-left: 5mm; }
+  ul.plain li { margin: 0.4mm 0; }
 `;
