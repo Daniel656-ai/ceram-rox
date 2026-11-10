@@ -89,6 +89,8 @@ export const isAutoEntry = (r: unknown) => !!r && typeof r === "object" && (r as
 export interface Mundstueck293Input {
   rw: boolean;
   schw: boolean;
+  /** MS-Nummern aller gebuchten „Schwindung <ms>“-Leistungen (Originalschreibweise). */
+  schwMs?: string[];
   brennCount: number;
   msAuswahl: unknown;
   mundstueckMs: unknown;
