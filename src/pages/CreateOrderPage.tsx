@@ -1003,8 +1003,7 @@ export default function CreateOrderPage() {
 
       {mode === "single" ? (
       <form onSubmit={handleSubmit} onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
-      <div className={pilotSingle ? "space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start" : "space-y-6"}>
-      <div className="space-y-6 min-w-0">
+      <div className="space-y-6">
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -1087,6 +1086,8 @@ export default function CreateOrderPage() {
           </CardContent>
         </Card>
 
+      <div className={pilotSingle ? "space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start" : "space-y-6"}>
+      <div className="space-y-6 min-w-0">
         {/* Dynamic, template-driven form for the selected Auftragsart.
             Fields, sections, labels and validations come exclusively from the
             configured template — never from code. */}
@@ -1316,7 +1317,7 @@ export default function CreateOrderPage() {
       </div>
 
       {pilotSingle && (
-        <div className="min-w-0 xl:sticky xl:top-6">
+        <div className="min-w-0">
           <ServiceTabsCard
             measurements={measurements}
             activeUid={serviceTab.active}
@@ -1329,6 +1330,7 @@ export default function CreateOrderPage() {
           />
         </div>
       )}
+      </div>
       </div>
 
       <AlertDialog open={!!pendingDeselection} onOpenChange={(open) => { if (!open) setPendingDeselection(null); }}>

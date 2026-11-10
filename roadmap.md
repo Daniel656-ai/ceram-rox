@@ -1,5 +1,10 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
+## Freigabe: Auftragsdetails oberhalb Pilot-Plant-Spalten (2026-11-10)
+- [x] Nur Layout in CreateOrderPage geändert: Auftragsdetails volle Breite, darunter gemeinsame Spalten ab 1.024 px; rechte Sticky-Regel entfernt.
+- [x] Web-Abnahme: identische Oberkante bei 1.326/1.024 px, gestapelt bei 1.023/800 px ohne horizontalen Überlauf; Reiter/Werterhalt, Sicherheitsabfrage, Entfernung, Entwurfswiederherstellung und leere Neuauswahl geprüft; Labor/Batch geprüft. 61 gezielte und 1.385 Gesamttests bestanden, Build OK, keine Laufzeitfehler; Testentwürfe entfernt, Abschlussbericht erstellt.
+- [ ] Native Tauri-Abnahme: benötigt erreichbare Unternehmensinstallation; gemeinsame Frontend-Struktur wird im Web geprüft.
+
 ## Freigabe: Sicherheitsabfrage Pilot-Plant-Dienstleistung (2026-11-10)
 - [x] Checkbox-Abwahl vor Zustandsänderung bestätigen; Abbrechen erhält Auswahl, Werte und Reiter.
 - [x] Bestätigte Entfernung bereinigt UID-Daten und Reiter; Entwurf und erneute Auswahl getestet.
