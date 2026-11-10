@@ -52,8 +52,13 @@ export interface KnetungBlock {
   otherParams: RunSheetParam[];
 }
 
+/** Eine kombinierte Kopfzeilen-Angabe (Bezeichnung + formatierter Ist-Text aus dem gespeicherten Wert). */
+export interface RunSheetLineValue { label: string; text: string }
+
 export interface OrderRunSheet {
   number: string;
+  /** Technische Auftragsnummer (order_number) – im Kopf die allein sichtbare Nummer. */
+  orderNumber: string | null;
   /** Nur gesetzt, wenn abweichend von der angezeigten Nummer. */
   technicalNumber: string | null;
   customerName: string | null;
@@ -68,6 +73,9 @@ export interface OrderRunSheet {
   form: { key: string; label: string | null; unit: string | null; raw: unknown; colLabels: Map<string, string> }[];
   /** Die drei PPP-Auswahllisten (aus dem Formular herausgelöst). */
   pppSelections: PppSelection[];
+  /** V2O5-Gehalt und Massetyp (aus dem Formular herausgelöst, eine gemeinsame Zeile). */
+  v2o5: RunSheetLineValue | null;
+  masseTyp: RunSheetLineValue | null;
   /** true = Pilot Plant: Dienstleistungen nach Stammdatenlisten gruppiert. */
   grouped: boolean;
   services: OrderRunSheetService[];
