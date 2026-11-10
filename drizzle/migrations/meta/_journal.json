@@ -190,6 +190,13 @@
       "when": 1794239482789,
       "tag": "0026_order_is_billed",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794296205440,
+      "tag": "0027_order_priority_add_levels",
+      "breakpoints": true
     }
   ]
 }
