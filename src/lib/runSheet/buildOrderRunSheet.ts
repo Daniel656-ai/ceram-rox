@@ -297,7 +297,8 @@ export function orderDmcPayload(number: string): string | null {
 export function runSheetFileName(number: string): string {
   const safe = number
     .trim()
-    .replace(/[\\/:*?"<>|-]/g, "-")
+    .replace(/\s+/g, "_")
+    .replace(/[\\/:*?"<>|]/g, "-")
     .replace(/\s+/g, "_")
     .replace(/-{2,}/g, "-")
     .replace(/^[-.]+|[-.]+$/g, "");
