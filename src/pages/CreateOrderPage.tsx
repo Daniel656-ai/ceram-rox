@@ -23,12 +23,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff } from "lucide-react";
+import { ArrowLeft, AlertCircle, Zap, CheckCircle2, ClipboardList, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
-import ServiceBookingForm, { useServiceHasFormLayout } from "@/components/ServiceBookingForm";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
-import ServiceLinkedForms, { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
+import { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
+import MeasurementRow from "@/components/order/MeasurementRow";
+import ServiceTabsCard from "@/components/order/ServiceTabsCard";
+import { nextActiveServiceTab, EMPTY_ACTIVE_TAB, type ActiveServiceTabState } from "@/lib/orderCreation/activeServiceTab";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { buildFormValueResultPayload } from "@/lib/orderFormValueHandover";
 import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
 import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
@@ -63,105 +66,6 @@ const newUid = () =>
     ? crypto.randomUUID()
     : `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-/**
- * Zeigt bei der Aufgabenerstellung ausschließlich das Auftraggeberformular
- * ("customer") der Dienstleistung. Existiert dafür keine Konfiguration, wird
- * KEIN Formularbereich gerendert – kein Fallback auf Messdienstleister-
- * formulare oder das alte Parametersystem.
- */
-function ServiceCustomerForm({
-  serviceId, formValues, onFormChange,
-}: {
-  serviceId: string;
-  formValues: Record<string, any>;
-  onFormChange: (key: string, value: any) => void;
-}) {
-  const { data: hasCustomer, isLoading } = useServiceHasFormLayout(serviceId, "customer");
-  if (isLoading || !hasCustomer) return null;
-
-  return (
-    <div className="mt-2 pl-2 border-l-2 border-primary/30">
-      <ServiceBookingForm
-        serviceId={serviceId}
-        roleView="customer"
-        values={formValues}
-        onChange={onFormChange}
-        compact
-      />
-    </div>
-  );
-}
-
-/**
- * Hinweis auf interne Arbeitsschritte, die beim Buchen dieser Dienstleistung
- * automatisch mit erzeugt werden. Der Auftraggeber muss sie nicht auswählen.
- */
-function RequiredStepsHint({ serviceId }: { serviceId: string }) {
-  const { data: required = [] } = useQuery({
-    queryKey: ["service-required-services", serviceId],
-    queryFn: () => api.serviceDependencies.requiredServices(serviceId),
-    enabled: !!serviceId,
-    staleTime: 5 * 60 * 1000,
-  });
-  if (required.length === 0) return null;
-  return (
-    <p className="text-xs text-muted-foreground mt-1">
-      Automatisch enthaltene Arbeitsschritte:{" "}
-      {required.map((r) => r.service_name).join(", ")}
-    </p>
-  );
-}
-
-/**
- * Eine gebuchte Dienstleistung des Auftrags samt ihrem Auftraggeberformular.
- * Identische Darstellung für Positionen aus der Auswahl und für zusätzlich
- * gebuchte Dienstleistungen – es gibt nur eine Datenhaltung.
- */
-function MeasurementRow({
-  m, index, t, formValues, onFormChange, onDuplicate, onRemove,
-}: {
-  m: SelectedMeasurement;
-  index: number;
-  t: (key: string, opts?: any) => string;
-  formValues: Record<string, any>;
-  onFormChange: (key: string, value: any) => void;
-  onDuplicate: () => void;
-  onRemove: () => void;
-}) {
-  return (
-    <div className="p-3 border rounded-md space-y-2">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-[120px]">
-          <p className="font-medium text-sm flex items-center gap-2 flex-wrap">
-            <span className="text-muted-foreground">#{index + 1}</span>
-            <span>{m.service_name}</span>
-            {m.source_package_name ? (
-              <Badge variant="secondary" className="font-normal">
-                <Layers className="h-3 w-3 mr-1" /> {m.source_package_name}
-              </Badge>
-            ) : m.origin === "rule" ? (
-              <Badge variant="secondary" className="font-normal">durch Regel ausgelöst</Badge>
-            ) : m.origin === "template" ? (
-              <Badge variant="secondary" className="font-normal">aus Auswahl</Badge>
-            ) : (
-              <Badge variant="outline" className="font-normal">manuell</Badge>
-            )}
-          </p>
-          <RequiredStepsHint serviceId={m.service_id} />
-        </div>
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={onDuplicate} title={t("orders:duplicate", { defaultValue: "Duplizieren" })}><Copy className="h-4 w-4" /></Button>
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onRemove}><Trash2 className="h-4 w-4" /></Button>
-      </div>
-      <ServiceCustomerForm serviceId={m.service_id} formValues={formValues} onFormChange={onFormChange} />
-      <ServiceLinkedForms
-        serviceId={m.service_id}
-        context="customer"
-        values={formValues}
-        onChange={onFormChange}
-      />
-    </div>
-  );
-}
 
 
 export default function CreateOrderPage() {
@@ -207,6 +111,11 @@ export default function CreateOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
   const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
+  // Aktiver Dienstleistungsreiter (Pilot Plant): zuletzt ausgewählte bzw.
+  // bewusst angeklickte Position ist aktiv – niemals automatisch die erste.
+  const [serviceTab, setServiceTab] = useState<ActiveServiceTabState>(EMPTY_ACTIVE_TAB);
+  const pendingAddedUids = useRef<string[]>([]);
+  const [confirmRemoveUid, setConfirmRemoveUid] = useState<string | null>(null);
 
   // Dynamic template-driven values keyed by field_key (loaded per order kind
   // from order_kind_form_templates). No hardcoded field list.
@@ -237,9 +146,10 @@ export default function CreateOrderPage() {
     selectedProjectId, orderType, orderKind, priority, dueDate, notes,
     measurements, selectedSampleIds, processTemplateId,
     measurementParams, measurementFormValues, dynamicValues, dynamicFormId,
+    activeMeasurementUid: serviceTab.active, serviceTabOrder: serviceTab.order,
   }), [selectedProjectId, orderType, orderKind, priority, dueDate, notes, measurements,
        selectedSampleIds, processTemplateId, measurementParams,
-       measurementFormValues, dynamicValues, dynamicFormId]);
+       measurementFormValues, dynamicValues, dynamicFormId, serviceTab]);
 
   const draftTitle = useMemo(() => {
     const proj = (projects as any[]).find((p) => p.id === selectedProjectId);
@@ -314,6 +224,11 @@ export default function CreateOrderPage() {
         setMeasurementFormValues((p.measurementFormValues ?? {}) as any);
         setDynamicValues((p.dynamicValues ?? {}) as any);
         setDynamicFormId(p.dynamicFormId ?? null);
+        // Zuletzt aktiver Reiter wird mit dem Entwurf wiederhergestellt.
+        setServiceTab({
+          active: p.activeMeasurementUid ?? null,
+          order: (p.serviceTabOrder ?? []) as string[],
+        });
         setDraftId(d.id);
         setLoadedDraft({ ...d, payload: p });
       })
@@ -404,9 +319,11 @@ export default function CreateOrderPage() {
   const addService = (serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
     if (!svc) return;
+    const uid = newUid();
+    pendingAddedUids.current.push(uid);
     setMeasurements((prev) => [
       ...prev,
-      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, origin: "manual" },
+      { uid, service_id: serviceId, service_name: svc.service_name, origin: "manual" },
     ]);
   };
 
@@ -436,15 +353,17 @@ export default function CreateOrderPage() {
     setUnresolvedSelection(plan.unresolved);
     if (plan.add.length === 0 && plan.remove.length === 0) return;
 
+    const additions: SelectedMeasurement[] = plan.add.map((a) => ({
+      uid: newUid(),
+      service_id: a.service.id,
+      service_name: a.service.service_name,
+      origin: "template",
+      selection_token: a.token,
+    }));
+    // Zuletzt über die Checkbox ausgewählte Dienstleistung wird aktiver Reiter.
+    pendingAddedUids.current.push(...additions.map((a) => a.uid));
     setMeasurements((prev) => {
       const kept = prev.filter((m) => !plan.remove.includes(m.uid));
-      const additions: SelectedMeasurement[] = plan.add.map((a) => ({
-        uid: newUid(),
-        service_id: a.service.id,
-        service_name: a.service.service_name,
-        origin: "template",
-        selection_token: a.token,
-      }));
       return [...kept, ...additions];
     });
     if (plan.remove.length > 0) {
@@ -462,6 +381,17 @@ export default function CreateOrderPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dynamicValues, templateFields, services, draftLoading, templateReady, servicesReady]);
+
+  // Aktiven Reiter nachführen: neu hinzugekommene Positionen aktivieren,
+  // abgewählte aus der Reihenfolge entfernen, Fallback bei Abwahl des Aktiven.
+  useEffect(() => {
+    const added = pendingAddedUids.current;
+    pendingAddedUids.current = [];
+    setServiceTab((prev) =>
+      nextActiveServiceTab({ prev, visibleUids: measurements.map((m) => m.uid), addedUids: added })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [measurements]);
 
 
   // ---------------------------------------------------------------------
@@ -535,6 +465,7 @@ export default function CreateOrderPage() {
         toast.info(`Alle Dienstleistungen aus "${pkg.name}" sind bereits enthalten.`);
         return prev;
       }
+      pendingAddedUids.current.push(...additions.map((a) => a.uid));
       toast.success(`${additions.length} Dienstleistung(en) aus "${pkg.name}" hinzugefügt`);
       return [...prev, ...additions];
     });
@@ -560,8 +491,18 @@ export default function CreateOrderPage() {
     setMeasurementFormValues((prev) => { const next = { ...prev }; delete next[uid]; return next; });
   };
 
+  /**
+   * Papierkorb: endgültige Entfernung. Sind bereits Eingaben vorhanden,
+   * nur nach ausdrücklicher Bestätigung des Datenverlusts.
+   */
+  const requestRemoveMeasurement = (uid: string) => {
+    if (draftPositionEdited(draftPayload, uid)) setConfirmRemoveUid(uid);
+    else removeMeasurement(uid);
+  };
+
   const duplicateMeasurement = (uid: string) => {
     const newUidValue = newUid();
+    pendingAddedUids.current.push(newUidValue);
     setMeasurements((prev) => {
       const idx = prev.findIndex((m) => m.uid === uid);
       if (idx === -1) return prev;
@@ -979,8 +920,11 @@ export default function CreateOrderPage() {
       </span>
     ) : autosave.state === "dirty" ? <span className="text-xs text-muted-foreground">{t("orders:draftSafety.unsaved")}</span> : null;
 
+  // Zweispaltiger Dienstleistungsbereich nur für die Pilot-Plant-Einzelauftragserstellung.
+  const pilotSingle = mode === "single" && orderKind === "pilot_plant";
+
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className={pilotSingle ? "space-y-6 max-w-none" : "space-y-6 max-w-3xl"}>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
@@ -1029,7 +973,9 @@ export default function CreateOrderPage() {
       </div>
 
       {mode === "single" ? (
-      <form onSubmit={handleSubmit} className="space-y-6" onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
+      <form onSubmit={handleSubmit} onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
+      <div className={pilotSingle ? "space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start" : "space-y-6"}>
+      <div className="space-y-6 min-w-0">
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -1127,13 +1073,15 @@ export default function CreateOrderPage() {
         {/* Die im Auftraggeberformular ausgewählten Dienstleistungen erscheinen
             sofort mit ihrem bestehenden Auftraggeberformular – noch ohne
             Speicherung. Erst „Auftrag erstellen“ legt sie dauerhaft an. */}
-        {(templateMeasurements.length > 0 || unresolvedSelection.length > 0) && (
+        {/* Pilot Plant: die Formulare erscheinen als Reiter im rechten Bereich;
+            hier nur noch der Hinweis auf nicht aufgelöste Auswahlen. */}
+        {((!pilotSingle && templateMeasurements.length > 0) || unresolvedSelection.length > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Ausgewählte Dienstleistungen</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {templateMeasurements.map((m, idx) => (
+              {!pilotSingle && templateMeasurements.map((m, idx) => (
                 <MeasurementRow
                   key={m.uid}
                   m={m}
@@ -1142,7 +1090,7 @@ export default function CreateOrderPage() {
                   formValues={measurementFormValues[m.uid] || {}}
                   onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
                   onDuplicate={() => duplicateMeasurement(m.uid)}
-                  onRemove={() => removeMeasurement(m.uid)}
+                  onRemove={() => requestRemoveMeasurement(m.uid)}
                 />
               ))}
               {unresolvedSelection.length > 0 && (
@@ -1265,7 +1213,7 @@ export default function CreateOrderPage() {
 
             {measurements.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("orders:no_measurements_hint")}</p>
-            ) : (
+            ) : pilotSingle ? null : (
               <div className="space-y-3">
                 {extraMeasurements.map((m, idx) => (
                   <MeasurementRow
@@ -1276,7 +1224,7 @@ export default function CreateOrderPage() {
                     formValues={measurementFormValues[m.uid] || {}}
                     onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
                     onDuplicate={() => duplicateMeasurement(m.uid)}
-                    onRemove={() => removeMeasurement(m.uid)}
+                    onRemove={() => requestRemoveMeasurement(m.uid)}
                   />
                 ))}
               </div>
@@ -1336,6 +1284,45 @@ export default function CreateOrderPage() {
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>{t("common:cancel")}</Button>
           {draftsEnabled && saveIndicator}
         </div>
+      </div>
+
+      {pilotSingle && (
+        <div className="min-w-0 xl:sticky xl:top-6">
+          <ServiceTabsCard
+            measurements={measurements}
+            activeUid={serviceTab.active}
+            onActivate={(uid) => setServiceTab((prev) => nextActiveServiceTab({ prev, visibleUids: measurements.map((m) => m.uid), clickedUid: uid }))}
+            formValues={measurementFormValues}
+            onFormChange={updateFormValue}
+            onDuplicate={duplicateMeasurement}
+            onRemove={requestRemoveMeasurement}
+            t={t}
+          />
+        </div>
+      )}
+      </div>
+
+      {/* Sicherheitsabfrage: endgültiges Löschen einer bearbeiteten Position. */}
+      <AlertDialog open={!!confirmRemoveUid} onOpenChange={(open) => { if (!open) setConfirmRemoveUid(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("orders:serviceTabs.removeTitle", { defaultValue: "Dienstleistung endgültig entfernen?" })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("orders:serviceTabs.removeWarning", {
+                defaultValue: "Zu dieser Dienstleistung wurden bereits Eingaben erfasst. Das Entfernen löscht alle ihre Eingaben endgültig und unwiderruflich.",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (confirmRemoveUid) removeMeasurement(confirmRemoveUid); setConfirmRemoveUid(null); }}
+            >
+              {t("orders:serviceTabs.removeConfirm", { defaultValue: "Endgültig löschen" })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       </form>
       ) : (

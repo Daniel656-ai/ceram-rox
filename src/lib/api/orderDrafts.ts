@@ -34,6 +34,10 @@ export interface OrderDraftPayload {
   measurementFormValues?: Record<string, Record<string, unknown>>;
   dynamicValues?: Record<string, unknown>;
   dynamicFormId?: string | null;
+  /** Zuletzt aktiver Dienstleistungsreiter (Pilot Plant) – reine Anzeige. */
+  activeMeasurementUid?: string | null;
+  /** Aktivierungsreihenfolge der Reiter (uids). */
+  serviceTabOrder?: string[];
 }
 
 export interface OrderDraft {
