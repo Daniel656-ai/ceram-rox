@@ -242,5 +242,12 @@
     "no": "Nein",
     "save_error": "Verrechnungsstatus konnte nicht gespeichert werden",
     "saved": "Verrechnungsstatus gespeichert"
+  },
+  "serviceTabs": {
+    "title": "Dienstleistungen",
+    "empty": "Wählen Sie links eine Dienstleistung aus – ihr Formular erscheint hier.",
+    "removeTitle": "Dienstleistung endgültig entfernen?",
+    "removeWarning": "Zu dieser Dienstleistung wurden bereits Eingaben erfasst. Das Entfernen löscht alle ihre Eingaben endgültig und unwiderruflich.",
+    "removeConfirm": "Endgültig löschen"
   }
 }
