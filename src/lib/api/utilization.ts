@@ -9,7 +9,8 @@ export const utilization = {
     unwrap(
       dbClient
         .from("order_measurements")
-        .select("workstation_id, actual_duration_hours, measurement_services(standard_duration_hours)")
+        .select("workstation_id, actual_duration_hours, measurement_services(standard_duration_hours), measurement_orders!inner(order_type)")
+        .neq("measurement_orders.order_type", "internal")
         .not("workstation_id", "is", null)
         .gte("updated_at", startIso)
         .lte("updated_at", endIso)

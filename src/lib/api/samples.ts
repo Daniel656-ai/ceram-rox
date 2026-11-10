@@ -10,6 +10,7 @@ const SAMPLE_SELECT =
   "*, projects(project_number, project_name), storage_locations:location_id(id, hall, room, shelf, position)";
 
 export const samples = {
+  listMeasurementTypes: () => unwrap(dbClient.from("measurement_orders").select("sample_id, order_measurements(service_id, measurement_services:service_id(service_name))").neq("order_type", "internal").not("sample_id", "is", null)),
   list: () =>
     unwrap(
       dbClient.from("samples").select(SAMPLE_SELECT).order("created_at", { ascending: false })
@@ -33,6 +34,7 @@ export const samples = {
       dbClient
         .from("measurement_orders")
         .select("id, order_number")
+        .neq("order_type", "internal")
         .eq("sample_id", sampleId)
     );
     const orderIds = (orders || []).map((o: any) => o.id);
@@ -86,6 +88,7 @@ export const samples = {
     let direct = dbClient
       .from("measurement_orders")
       .select(`sample_id, ${ORDER_REF_SELECT}`)
+      .neq("order_type", "internal")
       .not("sample_id", "is", null);
     if (sampleId) direct = direct.eq("sample_id", sampleId);
     let viaJoin = dbClient
@@ -107,7 +110,7 @@ export const samples = {
       edges.push({ sample_id: r.id, order: r.o1 });
       edges.push({ sample_id: r.id, order: r.o2 });
     }
-    return edges;
+    return edges.filter(edge => edge.order && edge.order.order_type !== "internal");
   },
 
   /** List all samples belonging to a given order (via samples.order_id). */

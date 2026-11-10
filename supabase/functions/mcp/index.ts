@@ -72,7 +72,7 @@ var list_orders_default = defineTool2({
     const sb = supabaseForUser2(ctx);
     let query = sb.from("measurement_orders").select(
       "id, order_number, order_type, status, priority, due_date, created_at, project_id, projects(project_number, project_name)"
-    ).order("created_at", { ascending: false }).limit(limit ?? 50);
+    ).neq("order_type", "internal").order("created_at", { ascending: false }).limit(limit ?? 50);
     if (project_id) query = query.eq("project_id", project_id);
     const { data, error } = await query;
     if (error) {

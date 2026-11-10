@@ -21,6 +21,7 @@ export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
   customer: "Kundenauftrag",
   production: "Produktionsauftrag",
   rnd: "F&E-Auftrag",
+  internal: "Interne Prüfung",
 };
 
 export const MEASUREMENT_STATUS_LABELS: Record<MeasurementStatus, string> = {

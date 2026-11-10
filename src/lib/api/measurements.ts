@@ -1,25 +1,30 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 
-const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours, sla_monitoring_enabled, sla_yellow_warning_days, workstation_id, workstations!measurement_services_workstation_id_fkey(id, name)), workstations!order_measurements_workstation_id_fkey(id, name), samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), measurement_orders(*, projects(project_number, project_name))`;
+const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours, sla_monitoring_enabled, sla_yellow_warning_days, workstation_id, workstations!measurement_services_workstation_id_fkey(id, name)), workstations!order_measurements_workstation_id_fkey(id, name), samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), measurement_orders!inner(*, projects(project_number, project_name))`;
 
 export const measurements = {
+  listForLabPlanning: () => unwrap(dbClient.from("order_measurements").select(`id, measurement_number, status, assigned_to, due_date, priority, ranking,
+    planned_start_date, planned_end_date, measurement_services(service_name, category, standard_duration_hours),
+    measurement_orders!inner(order_number, order_type, projects(project_number, project_name), samples(sample_number, sample_name))`)
+    .neq("measurement_orders.order_type", "internal").order("ranking", { ascending: true, nullsFirst: false }).order("priority", { ascending: false }).order("due_date")),
   /** Existing dashboard projection, unchanged; the order sample is not a task sample. */
   listForDashboardSearch: () => unwrap(dbClient.from("order_measurements").select(`
           id, measurement_number, status, assigned_to,
           measurement_services(service_name),
-          measurement_orders(
+          measurement_orders!inner(
             id, order_number, order_type,
             projects(project_number, project_name),
             samples(sample_number, sample_name)
           )
-        `).order("created_at", { ascending: false })),
+        `).neq("measurement_orders.order_type", "internal").order("created_at", { ascending: false })),
   /** Compact projection for ServiceStatistics widget, filtered by created_at range. */
   listForServiceStats: (fromIso: string, toIso: string) =>
     unwrap(
       dbClient
         .from("order_measurements")
-        .select("service_id, status, actual_duration_hours, planned_hours, updated_at, created_at")
+        .select("service_id, status, actual_duration_hours, planned_hours, updated_at, created_at, measurement_orders!inner(order_type)")
+        .neq("measurement_orders.order_type", "internal")
         .gte("created_at", fromIso)
         .lte("created_at", toIso)
     ),
@@ -30,6 +35,7 @@ export const measurements = {
       dbClient
         .from("order_measurements")
         .select(MY_MEASUREMENT_SELECT)
+        .neq("measurement_orders.order_type", "internal")
         .eq("assigned_to", userId)
     ),
 
@@ -47,6 +53,7 @@ export const measurements = {
     let q = dbClient
       .from("order_measurements")
       .select(MY_MEASUREMENT_SELECT)
+        .neq("measurement_orders.order_type", "internal")
       .is("assigned_to", null)
       .neq("status", "completed");
     if (serviceIds.length > 0) q = q.in("service_id", serviceIds);
@@ -60,6 +67,7 @@ export const measurements = {
       dbClient
         .from("order_measurements")
         .select(MY_MEASUREMENT_SELECT)
+        .neq("measurement_orders.order_type", "internal")
         .is("assigned_to", null)
         .neq("status", "completed")
     ),
@@ -78,6 +86,7 @@ export const measurements = {
       dbClient
         .from("order_measurements")
         .select(MY_MEASUREMENT_SELECT)
+        .neq("measurement_orders.order_type", "internal")
         .neq("status", "completed")
     ),
 
@@ -149,7 +158,7 @@ export const measurements = {
     unwrap(
       dbClient
         .from("order_measurements")
-        .select("id, sample_id, measurement_number, measurement_services(service_name), measurement_parameters(id, parameter_name, parameter_value, unit), measurement_orders(id, order_number, order_kind, pp_experiment_number, customer_name, order_measurements(measurement_services(category)))")
+        .select("id, sample_id, measurement_number, measurement_services(service_name), measurement_parameters(id, parameter_name, parameter_value, unit), measurement_orders!inner(id, order_number, order_kind, pp_experiment_number, customer_name, order_measurements(measurement_services(category)))")
         .eq("sample_id", sampleId)
         .order("created_at", { ascending: true })
     ),
@@ -203,7 +212,7 @@ export const measurements = {
       : unwrap(
           dbClient
             .from("order_measurements")
-            .select("id, status, measurement_number, measurement_services(service_name), samples!order_measurements_sample_id_fkey(sample_number, sample_name), measurement_orders(order_number, order_kind, pp_experiment_number, shared_form_data)")
+            .select("id, status, measurement_number, measurement_services(service_name), samples!order_measurements_sample_id_fkey(sample_number, sample_name), measurement_orders!inner(order_number, order_kind, pp_experiment_number, shared_form_data)")
             .in("id", ids)
         ),
   /** Full detail for a single measurement (used by task execution view). */
@@ -212,8 +221,9 @@ export const measurements = {
       dbClient
         .from("order_measurements")
         .select(
-          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, work_instructions), measurement_results(*), measurement_parameters(*), samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), measurement_orders(id, order_number, order_kind, pp_experiment_number, shared_form_data, order_type, notes, created_by, project_id, sample_id, priority, due_date, status, projects(id, project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name))"
+          "*, measurement_services(id, service_name, category, hourly_rate, standard_duration_hours, work_instructions), measurement_results(*), measurement_parameters(*), samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), measurement_orders!inner(id, order_number, order_kind, pp_experiment_number, shared_form_data, order_type, notes, created_by, project_id, sample_id, priority, due_date, status, projects(id, project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name))"
         )
+        .neq("measurement_orders.order_type", "internal")
         .eq("id", id)
         .single()
     ),

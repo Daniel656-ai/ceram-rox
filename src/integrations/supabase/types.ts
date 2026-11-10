@@ -601,6 +601,24 @@ export type Database = {
           },
         ]
       }
+      equipment_rpc_guard: {
+        Row: {
+          action: string
+          equipment_id: string
+          transaction_id: number
+        }
+        Insert: {
+          action: string
+          equipment_id: string
+          transaction_id: number
+        }
+        Update: {
+          action?: string
+          equipment_id?: string
+          transaction_id?: number
+        }
+        Relationships: []
+      }
       form_calculations: {
         Row: {
           calc_key: string
@@ -9901,6 +9919,177 @@ export type Database = {
         }
         Relationships: []
       }
+      test_equipment: {
+        Row: {
+          active: boolean
+          active_measurement_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          history_locked: boolean
+          id: string
+          interval_days: number
+          maintenance: boolean
+          manual_lock: boolean
+          name: string
+          next_due_date: string | null
+          responsible_name: string | null
+          responsible_user_id: string | null
+          service_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          active_measurement_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          history_locked?: boolean
+          id?: string
+          interval_days: number
+          maintenance?: boolean
+          manual_lock?: boolean
+          name: string
+          next_due_date?: string | null
+          responsible_name?: string | null
+          responsible_user_id?: string | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          active_measurement_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          history_locked?: boolean
+          id?: string
+          interval_days?: number
+          maintenance?: boolean
+          manual_lock?: boolean
+          name?: string
+          next_due_date?: string | null
+          responsible_name?: string | null
+          responsible_user_id?: string | null
+          service_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_equipment_active_measurement_id_fkey"
+            columns: ["active_measurement_id"]
+            isOneToOne: true
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_equipment_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_equipment_checks: {
+        Row: {
+          correction_reason: string | null
+          corrects_check_id: string | null
+          created_at: string
+          created_by: string
+          equipment_id: string
+          id: string
+          interval_days: number
+          notes: string | null
+          order_measurement_id: string
+          performed_at: string
+          performed_by: string
+          performed_by_name: string
+          result_summary: string
+          root_check_id: string | null
+          service_id: string
+          status: string
+          values: Json
+          version: number
+        }
+        Insert: {
+          correction_reason?: string | null
+          corrects_check_id?: string | null
+          created_at?: string
+          created_by: string
+          equipment_id: string
+          id?: string
+          interval_days: number
+          notes?: string | null
+          order_measurement_id: string
+          performed_at: string
+          performed_by: string
+          performed_by_name: string
+          result_summary: string
+          root_check_id?: string | null
+          service_id: string
+          status: string
+          values?: Json
+          version?: number
+        }
+        Update: {
+          correction_reason?: string | null
+          corrects_check_id?: string | null
+          created_at?: string
+          created_by?: string
+          equipment_id?: string
+          id?: string
+          interval_days?: number
+          notes?: string | null
+          order_measurement_id?: string
+          performed_at?: string
+          performed_by?: string
+          performed_by_name?: string
+          result_summary?: string
+          root_check_id?: string | null
+          service_id?: string
+          status?: string
+          values?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_equipment_checks_corrects_check_id_fkey"
+            columns: ["corrects_check_id"]
+            isOneToOne: true
+            referencedRelation: "test_equipment_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_equipment_checks_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "test_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_equipment_checks_order_measurement_id_fkey"
+            columns: ["order_measurement_id"]
+            isOneToOne: false
+            referencedRelation: "order_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_equipment_checks_root_check_id_fkey"
+            columns: ["root_check_id"]
+            isOneToOne: false
+            referencedRelation: "test_equipment_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_equipment_checks_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_events: {
         Row: {
           action: string
@@ -10600,6 +10789,10 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      cancel_equipment_check_order: {
+        Args: { _equipment_id: string; _reason: string }
+        Returns: undefined
+      }
       check_user_absence_conflict: {
         Args: { _end: string; _start: string; _user_id: string }
         Returns: {
@@ -10645,6 +10838,17 @@ export type Database = {
         }
         Returns: string
       }
+      correct_equipment_check: {
+        Args: {
+          _check_id: string
+          _notes: string
+          _reason: string
+          _status: string
+          _summary: string
+          _values: Json
+        }
+        Returns: string
+      }
       correct_measurement_result: {
         Args: { p_new_value: number; p_reason: string; p_result_id: string }
         Returns: string
@@ -10668,6 +10872,14 @@ export type Database = {
         Returns: undefined
       }
       count_service_references: { Args: { _service_id: string }; Returns: Json }
+      create_equipment_check_order: {
+        Args: {
+          _assigned_to: string
+          _due_date?: string
+          _equipment_id: string
+        }
+        Returns: string
+      }
       create_mixture_recipe_version:
         | {
             Args: { _copy_from?: string; _mixture_id: string; _notes?: string }
@@ -10706,6 +10918,69 @@ export type Database = {
         Args: { _version_a: string; _version_b: string }
         Returns: Json
       }
+      equipment_audit: {
+        Args: { _event: string; _id: string; _metadata: Json }
+        Returns: undefined
+      }
+      equipment_can_manage: { Args: never; Returns: boolean }
+      equipment_can_read: { Args: { _id: string }; Returns: boolean }
+      equipment_guard_begin: {
+        Args: { _action: string; _id: string }
+        Returns: undefined
+      }
+      equipment_guard_end: { Args: never; Returns: undefined }
+      equipment_lock_active: {
+        Args: { _id: string }
+        Returns: {
+          actual_duration_hours: number | null
+          analysis_request_id: string | null
+          assigned_to: string | null
+          created_at: string
+          depends_on_step_keys: string[]
+          due_date: string | null
+          duration_deviation_reason: string | null
+          estimated_delivery_date: string | null
+          id: string
+          measurement_number: string
+          order_id: string
+          origin: string
+          original_sample_id: string | null
+          planned_end_date: string | null
+          planned_hours: number | null
+          planned_start_date: string | null
+          priority: number
+          processing_time_hours: number
+          ranking: number | null
+          sample_id: string | null
+          service_id: string
+          source_measurement_id: string | null
+          source_package_id: string | null
+          source_package_name_snapshot: string | null
+          source_step_key: string | null
+          status: Database["public"]["Enums"]["measurement_status"]
+          updated_at: string
+          workstation_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "order_measurements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      equipment_qualified_users: {
+        Args: { _equipment_id: string }
+        Returns: {
+          first_name: string
+          last_name: string
+          user_id: string
+        }[]
+      }
+      equipment_recompute: { Args: { _id: string }; Returns: undefined }
+      equipment_require_qualified: {
+        Args: { _service: string; _user: string }
+        Returns: undefined
+      }
       expand_order_workflows: { Args: { _order_id: string }; Returns: number }
       expand_service_workflow: {
         Args: { _measurement_id: string }
@@ -10738,6 +11013,10 @@ export type Database = {
           quantity: number
           status: string
         }[]
+      }
+      get_equipment_check_context: {
+        Args: { _equipment_id: string }
+        Returns: Json
       }
       get_order_preparation_overview: {
         Args: { _order_id: string }
@@ -11185,6 +11464,16 @@ export type Database = {
         }
         Returns: string
       }
+      record_equipment_check: {
+        Args: {
+          _equipment_id: string
+          _notes: string
+          _status: string
+          _summary: string
+          _values: Json
+        }
+        Returns: string
+      }
       record_mixture_weighing: {
         Args: {
           _actual_quantity: number
@@ -11299,6 +11588,14 @@ export type Database = {
           unit: string
         }[]
       }
+      save_equipment_check_draft: {
+        Args: { _equipment_id: string; _values: Json }
+        Returns: undefined
+      }
+      save_test_equipment: {
+        Args: { _id: string; _input: Json }
+        Returns: string
+      }
       service_required_services: {
         Args: { _service_id: string }
         Returns: {
@@ -11306,11 +11603,19 @@ export type Database = {
           service_name: string
         }[]
       }
+      set_equipment_state: {
+        Args: { _action: string; _equipment_id: string; _reason: string }
+        Returns: undefined
+      }
       set_order_billed: {
         Args: { p_order_id: string; p_value: boolean }
         Returns: boolean
       }
       snapshot_template: { Args: { _template_id: string }; Returns: Json }
+      start_equipment_check: {
+        Args: { _equipment_id: string }
+        Returns: undefined
+      }
       start_mixture_batch:
         | { Args: { _batch_id: string }; Returns: undefined }
         | {
@@ -11558,7 +11863,7 @@ export type Database = {
         | "hoch"
         | "sehr_hoch"
       order_status: "open" | "in_progress" | "completed"
-      order_type: "customer" | "production" | "rnd"
+      order_type: "customer" | "production" | "rnd" | "internal"
       order_workflow_status_new:
         | "entwurf"
         | "geplant"
@@ -11918,7 +12223,7 @@ export const Constants = {
         "sehr_hoch",
       ],
       order_status: ["open", "in_progress", "completed"],
-      order_type: ["customer", "production", "rnd"],
+      order_type: ["customer", "production", "rnd", "internal"],
       order_workflow_status_new: [
         "entwurf",
         "geplant",

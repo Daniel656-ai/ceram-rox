@@ -79,11 +79,7 @@ export default function SamplesPage() {
   const { data: sampleMeasurementTypes = new Map<string, string[]>() } = useQuery({
     queryKey: ["sample-measurement-types"],
     queryFn: async () => {
-      const { data, error } = await api
-        .from("measurement_orders")
-        .select("sample_id, order_measurements(service_id, measurement_services:service_id(service_name))")
-        .not("sample_id", "is", null);
-      if (error) throw error;
+      const data = await api.samples.listMeasurementTypes();
       const map = new Map<string, string[]>();
       for (const order of (data || [])) {
         if (!order.sample_id) continue;

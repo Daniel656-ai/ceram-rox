@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest";
 import { resolveBilled, billedForCreate, canEditBilled } from "@/lib/orders/billing";
 
 describe("billing", () => {
+  it("internal checks never affect billing", () => {
+    expect(billedForCreate("internal", true)).toBe(false);
+    expect(resolveBilled({ order_type: "internal", is_billed: true })).toBeNull();
+  });
   it("neuer Kundenauftrag ohne Auswahl = Nein", () => expect(billedForCreate("customer", false)).toBe(false));
   it("Kundenauftrag mit Ja speicherbar", () => expect(billedForCreate("customer", true)).toBe(true));
   it("Wechsel auf andere Auftragsart speichert Nein", () => {

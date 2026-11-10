@@ -12,14 +12,14 @@ export const measurementResults = {
       samples!order_measurements_sample_id_fkey(id, sample_number, sample_name),
       original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
       measurement_services(service_name, category, standard_duration_hours),
-      measurement_orders(
+      measurement_orders!inner(
         id, order_number, order_type, order_kind, pp_experiment_number, shared_form_data, created_by, notes,
         order_measurements(measurement_services(category)),
         projects(project_number, project_name),
         samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
       ),
       measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
-    `).eq("measurement_results.is_official", true).order("updated_at", { ascending: false })
+    `).neq("measurement_orders.order_type", "internal").eq("measurement_results.is_official", true).order("updated_at", { ascending: false })
   ),
   listDatabaseProfiles: () => unwrap(dbClient.from("profiles").select("user_id, first_name, last_name")),
   /** Read-only display metadata. Missing access/schema retains the old formatting. */
@@ -97,11 +97,12 @@ export const measurementResults = {
       dbClient
         .from("order_measurements")
         .select(
-          `id, measurement_number,
+          `id, measurement_number, measurement_orders!inner(order_type),
            measurement_services(service_name),
            samples:samples!order_measurements_sample_id_fkey(sample_number, sample_name),
            measurement_results(id, result_name, display_label, remarks, measured_at)`
         )
+        .neq("measurement_orders.order_type", "internal")
         .eq("order_id", orderId)
         .order("created_at", { ascending: true })
     ),
@@ -129,9 +130,10 @@ export const measurementResults = {
       dbClient
         .from("order_measurements")
         .select(
-          `id, sample_id, updated_at,
+          `id, sample_id, updated_at, measurement_orders!inner(order_type),
            measurement_results(result_name, value, remarks, measured_at, is_official)`
         )
+        .neq("measurement_orders.order_type", "internal")
         .eq("order_id", orderId)
         .order("created_at", { ascending: true })
     )) as any[];

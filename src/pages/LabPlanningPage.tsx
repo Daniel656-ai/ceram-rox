@@ -22,21 +22,7 @@ function useLabMeasurements() {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["lab-planning-measurements"],
-    queryFn: async () => {
-      const { data, error } = await api
-        .from("order_measurements")
-        .select(`
-          id, measurement_number, status, assigned_to, due_date, priority, ranking,
-          planned_start_date, planned_end_date,
-          measurement_services(service_name, category, standard_duration_hours),
-          measurement_orders(order_number, projects(project_number, project_name), samples(sample_number, sample_name))
-        `)
-        .order("ranking", { ascending: true, nullsFirst: false })
-        .order("priority", { ascending: false })
-        .order("due_date");
-      if (error) throw error;
-      return data;
-    },
+    queryFn: api.measurements.listForLabPlanning,
     enabled: !!user,
   });
 }
@@ -67,11 +53,7 @@ export default function LabPlanningPage() {
 
   const handleDrop = async (measurementId: string, newStatus: string) => {
     try {
-      const { error } = await api
-        .from("order_measurements")
-        .update({ status: newStatus as any })
-        .eq("id", measurementId);
-      if (error) throw error;
+      await api.measurements.updateStatus(measurementId, newStatus);
       qc.invalidateQueries({ queryKey: ["lab-planning-measurements"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["my-measurements"] });
