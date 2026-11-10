@@ -97,3 +97,50 @@ describe("nested renderer, no backend writes", () => {
     } finally { fields[1].metadata = saved; }
   });
 });
+
+describe("AV renderer save/reopen and unchanged integrity protection", () => {
+  const avFields = [
+    f("b", "runs", "Durchläufe", "measurement_block", { measurement_block: { layout: layout([ref("p", "points")]) } }),
+    f("p", "points", "Temperaturpunkte", "repeater", { repeater: { layout: layout([
+      ref("t", "temperature"), ref("av", "av"),
+      { id: "pk", type: "calculation", calc_id: "k", calc_key: "k_wert", width: 12 },
+    ]) } }),
+    f("t", "temperature", "Temperatur"), f("av", "av", "AV"), f("av1", "av_1", "AV1"),
+  ];
+  // Synthetic acceptance formula, not the unverified Excel formula.
+  const avCalcs = [{ ...calcs[0], id: "k", calc_key: "k_wert", display_name: "K-Wert", formula: "temperature * av_1" }];
+  const seed = { av_1: 25, runs: [{ __instance_id: "A", points: [
+    { __instance_id: "T1", temperature: 200, av: 40, k_wert: 8000 },
+    { __instance_id: "T2", temperature: 280, av: 50, k_wert: 14000 },
+    { __instance_id: "T3", temperature: 360, av: 60, k_wert: 21600 },
+  ] }] };
+  function AvHarness({ restored = seed }: { restored?: typeof seed }) {
+    const [state, setState] = useState<Record<string, unknown>>(restored);
+    return <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <FormLayoutRenderer fields={avFields} layout={formLayout} localCalculations={avCalcs} values={state}
+        onChange={(key, value) => setState((previous) => ({ ...previous, [key]: value }))} />
+      <output data-testid="values">{JSON.stringify(state)}</output>
+    </QueryClientProvider>;
+  }
+  it("edits 50 to 55, reopens saved JSON and keeps all row results consistent", async () => {
+    render(<AvHarness />);
+    await waitFor(() => expect(screen.getAllByRole("spinbutton")).toHaveLength(6));
+    const inputs = screen.getAllByRole("spinbutton");
+    expect(inputs.map((i) => (i as HTMLInputElement).value)).toEqual(["200", "40", "280", "50", "360", "60"]);
+    fireEvent.change(inputs[3], { target: { value: "55" } });
+    await waitFor(() => expect(values().runs[0].points.map((p: { k_wert: number }) => p.k_wert)).toEqual([8000, 15400, 21600]));
+    expect(values().av_1).toBe(25);
+    const saved = JSON.parse(JSON.stringify(values()));
+    cleanup();
+    render(<AvHarness restored={saved} />);
+    await waitFor(() => expect(screen.getAllByRole("spinbutton")[3]).toHaveValue(55));
+    expect(values()).toEqual(saved);
+    expect(screen.queryByText("Gespeicherter Wert stimmt nicht mit den aktuellen Eingaben überein")).toBeNull();
+  });
+  it("still rejects an inconsistent historical K value without rewriting it", () => {
+    const historical = { ...seed, runs: [{ ...seed.runs[0], points: [{ ...seed.runs[0].points[0], k_wert: 123 }] }] };
+    render(<AvHarness restored={historical} />);
+    expect(values().runs[0].points[0].k_wert).toBe(123);
+    expect(screen.getByText("Gespeicherter Wert stimmt nicht mit den aktuellen Eingaben überein")).toBeTruthy();
+  });
+});

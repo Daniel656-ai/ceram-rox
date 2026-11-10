@@ -117,7 +117,9 @@ export function evaluateLocalCalculations(
   calcs: FormCalculation[],
   values: Record<string, unknown>,
   /** Feldschlüssel des Formulars – auch ohne Wert gültige Eingangsgrößen. */
-  knownFieldKeys: Iterable<string> = []
+  knownFieldKeys: Iterable<string> = [],
+  /** Per-calculation input overlays never leak into another calculation's scope. */
+  calculationInputs: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {},
 ): Record<string, LocalCalcResult> {
   const { ordered, cyclic } = orderCalculations(calcs);
   const out: Record<string, LocalCalcResult> = {};
@@ -137,7 +139,7 @@ export function evaluateLocalCalculations(
       out[c.calc_key] = { value: null, error: null };
       continue;
     }
-    const res = evaluateFormula(c.formula, ctx, { knownReferences: known });
+    const res = evaluateFormula(c.formula, { ...ctx, ...calculationInputs[c.calc_key] }, { knownReferences: known });
     const value = res.value == null || res.error
       ? null
       : applyRounding(res.value, c.decimals ?? 2, (c.rounding as CalcRounding) ?? "round");

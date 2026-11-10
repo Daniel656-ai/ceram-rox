@@ -4,6 +4,34 @@ import type { FormCalculation } from "@/lib/api/formCalculations";
 import { readMeasurementBlockMeta, newInstanceId, INSTANCE_ID_KEY } from "@/lib/measurementBlocks";
 import { normalizeRepeaterLayout, type RepeaterLayout } from "@/lib/repeaterLayout";
 import { evaluateLocalCalculations, buildFormulaFromTokens, type LocalCalcResult } from "@/lib/localCalculations";
+import { extractReferences } from "@/lib/formulaEngine";
+import { isLinkedField } from "@/lib/fieldLinks";
+
+/** Deliberately exact identities, not a general AV alias/renaming rule. */
+function localKValueInputs(owner: FormField, fields: FormField[], calcs: FormCalculation[], own: Record<string, unknown>) {
+  if (owner.field_type !== "repeater") return {};
+  const localAv = containerFields(owner, fields, calcs).filter((f) =>
+    f.form_id === owner.form_id && f.field_key.toLowerCase() === "av" &&
+    ["number", "decimal"].includes(f.field_type) && !f.readonly &&
+    !isLinkedField(f as FormField & { data_source?: unknown }));
+  if (localAv.length !== 1) return {};
+  const raw = own[localAv[0].field_key];
+  // No verified Excel fallback: missing/invalid local AV is not calculable.
+  const value = typeof raw === "number" && Number.isFinite(raw) ? raw :
+    typeof raw === "string" && /^[-+]?(?:\d+(?:[.,]\d+)?|[.,]\d+)$/.test(raw.trim())
+      ? Number(raw.trim().replace(",", ".")) : null;
+  const placed = new Set(containerLayout(owner, fields, calcs).items.flatMap((i) => i.type === "group" ? i.children : [i])
+    .flatMap((i) => i.type === "calculation" ? [i.calc_key] : []));
+  const overrides: Record<string, Record<string, unknown>> = {};
+  for (const c of calcs) {
+    if (c.form_id !== owner.form_id || !placed.has(c.calc_key) ||
+      !(c.calc_key.toLowerCase() === "k_wert" || c.display_name?.trim().toLowerCase() === "k-wert")) continue;
+    const references = extractReferences(c.formula || "").filter((key) =>
+      ["av_1", "av1"].includes(key.toLowerCase()) && fields.some((f) => f.form_id === owner.form_id && f.field_key === key));
+    if (references.length) overrides[c.calc_key] = Object.fromEntries(references.map((key) => [key, value]));
+  }
+  return overrides;
+}
 
 /** Only the approved block -> repeater nesting, never arbitrary recursion. */
 export function eligibleLocalReferences(owner: FormField, fields: FormField[]): FormField[] {
@@ -72,7 +100,7 @@ export function evaluateScopedEntry(
   for (const c of definitions) values[c.calc_key] = null;
   return evaluateLocalCalculations(definitions, values, [
     ...fields.map((f) => f.field_key), ...Object.keys(parent), ...Object.keys(own),
-  ]);
+  ], localKValueInputs(owner, fields, definitions, own));
 }
 
 function calculatedEntry(owner: FormField, fields: FormField[], calcs: FormCalculation[], root: Record<string, unknown>, entry: Record<string, unknown>, parent: Record<string, unknown>) {
