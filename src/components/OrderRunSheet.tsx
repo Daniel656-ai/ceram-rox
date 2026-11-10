@@ -8,7 +8,7 @@ import { dmcSvg } from "@/components/SampleRunSheet";
 import { buildOrderRunSheet, orderDmcPayload } from "@/lib/runSheet/buildOrderRunSheet";
 import { escHtml as esc, specValueHtml, RUN_SHEET_CSS } from "@/lib/runSheet/specHtml";
 import { printHtml } from "@/lib/runSheet/printHtml";
-import { PPP_LIST_KEYS } from "@/lib/runSheet/pppGroups";
+import { PPP_LIST_KEYS, resolvePppList } from "@/lib/runSheet/pppGroups";
 import { specLabelOf } from "@/lib/specValues";
 import { ORDER_PRIORITY_LABELS, type OrderPriority } from "@/lib/types";
 import type { RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
@@ -32,8 +32,14 @@ export function OrderRunSheetButton({ order }: { order: any }) {
         api.globalLists.list(),
       ]);
       const listItems = async (key: string) => {
-        const l = (lists as any[]).find((x) => String(x.list_key ?? "").toLowerCase() === key);
-        return l ? ((await api.globalListItems.list(l.id)) as any[]) : null;
+        const res = resolvePppList(lists as any[], key);
+        if (res.reason !== "ok") {
+          // Ursache nachvollziehbar protokollieren; betroffene Dienstleistungen
+          // bleiben sichtbar in der Fallback-Gruppe.
+          console.warn(`[OrderRunSheet] Stammdatenliste "${key}" nicht auflösbar: ${res.reason}`);
+          return null;
+        }
+        return (await api.globalListItems.list(res.list!.id)) as any[];
       };
       const [masse, produkt] = await Promise.all([listItems(PPP_LIST_KEYS.masse), listItems(PPP_LIST_KEYS.produkt)]);
       const materials = new Map((mats as any[]).map((m) => [m.id as string, m as RawMaterialLookup]));
