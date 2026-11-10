@@ -225,6 +225,13 @@
       "when": 1794300934128,
       "tag": "0031_equipment_identity_and_isolation",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794301143271,
+      "tag": "0032_equipment_explicit_write_privileges",
+      "breakpoints": true
     }
   ]
 }
