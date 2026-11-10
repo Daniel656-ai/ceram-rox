@@ -2,6 +2,11 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import RichText from "@/components/forms/RichText";
 import { toUnicode } from "@/lib/richText";
 import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { useSampleResultsDatabase } from "@/hooks/useSampleResultsDatabase";
+import SampleOverviewTable from "@/components/results/SampleOverviewTable";
+import SampleResultsView from "@/components/results/SampleResultsView";
+import ResultDetailInspector from "@/components/results/ResultDetailInspector";
+import { groupRecordsBySample, matchesSampleFilters, type SampleGroup, type SampleMeasurementRecord } from "@/lib/results/sampleResultsAggregation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +45,11 @@ const CHART_COLORS = [
 export default function ResultsDatabasePage() {
   const { data: records = [], isLoading } = useResultsDatabase();
   const { data: paramDefs = [] } = useAllServiceParameterDefs();
+
+  // Probenbezogene 3-Ebenen-Sicht (alle Werte: offiziell + vorläufig).
+  const { data: sampleRecords = [] } = useSampleResultsDatabase();
+  const [selectedSample, setSelectedSample] = useState<SampleGroup | null>(null);
+  const [inspectedMeasurement, setInspectedMeasurement] = useState<SampleMeasurementRecord | null>(null);
 
   /**
    * Stabile Ergebnisstruktur: aus den definierten Ergebnisparametern je
