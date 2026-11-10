@@ -156,7 +156,7 @@ export function OrderRunSheetButton({ order }: { order: any }) {
             ${logo ? `<img class="logo" src="${logo}" alt="">` : ""}
             <h1>${esc(t("runsheet_order_title"))}</h1>
             <dl>
-              <dt>${esc(t("runsheet_order"))}</dt><dd>${dash(sheet.number || null)}${sheet.technicalNumber ? ` <span class="muted">(${esc(t("runsheet_technical"))} ${esc(sheet.technicalNumber)})</span>` : ""}</dd>
+              <dt>${esc(t("runsheet_order"))}</dt><dd>${dash(sheet.orderNumber ?? sheet.number ?? null)}</dd>
               <dt>${esc(t("runsheet_project"))}</dt><dd>${dash(sheet.project)}</dd>
               <dt>${esc(t("runsheet_due"))}</dt><dd>${dash(sheet.dueDate ? fmtDate(sheet.dueDate) : null)}</dd>
               <dt>${esc(t("runsheet_priority"))}</dt><dd>${dash(prio)}</dd>
@@ -167,6 +167,7 @@ export function OrderRunSheetButton({ order }: { order: any }) {
         </header>
         ${sheet.notes ? `<h2>${esc(t("runsheet_notes"))}</h2><p>${esc(sheet.notes)}</p>` : ""}
         <h2>${esc(t("runsheet_form_section"))}</h2>
+        ${v2o5MasseLine ? `<p class="kv">${v2o5MasseLine}</p>` : ""}
         ${formHtml}
         ${g ? svcHtml : `<h2>${esc(t("runsheet_services_section"))}</h2>${svcHtml}`}
         </div>
