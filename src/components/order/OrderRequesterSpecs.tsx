@@ -34,10 +34,12 @@ function RawCell({ col, value, materials }: { col: string | null; value: unknown
 
 const colLabel = specColLabel;
 
-function ValueView({ raw, unit, materials }: { raw: unknown; unit?: string | null; materials: Map<string, RawMaterialLookup> }) {
+function ValueView({ raw, unit, materials, serviceName }: { raw: unknown; unit?: string | null; materials: Map<string, RawMaterialLookup>; serviceName?: string | null }) {
   const shape = specValueShape(raw);
   if (shape.kind === "table") {
-    const { rows, cols } = shape;
+    const { rows } = shape;
+    // Nur Knetung: technische container_id-Spalte ausblenden (Anzeige-only).
+    const cols = specTableCols(shape.cols, serviceName);
     return (
       <div className="overflow-x-auto">
         <table className="text-xs border rounded">
@@ -177,7 +179,7 @@ export default function OrderRequesterSpecs({ order }: { order: any }) {
                   </dt>
                   <dd className="space-y-1">
                     <div className="flex items-start gap-2">
-                      <div className="flex-1"><ValueView raw={e.raw} unit={e.unit} materials={materialById} /></div>
+                      <div className="flex-1"><ValueView raw={e.raw} unit={e.unit} materials={materialById} serviceName={g.name} /></div>
                       {canAmend && e.params.some((p) => p.status !== "completed") && (
                         <Button
                           type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs"
