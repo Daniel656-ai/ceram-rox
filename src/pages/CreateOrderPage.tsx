@@ -31,6 +31,7 @@ import { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
 import MeasurementRow from "@/components/order/MeasurementRow";
 import ServiceTabsCard from "@/components/order/ServiceTabsCard";
 import { nextActiveServiceTab, EMPTY_ACTIVE_TAB, type ActiveServiceTabState } from "@/lib/orderCreation/activeServiceTab";
+import { planPilotServiceDeselection, removeDraftServices } from "@/lib/orderCreation/serviceDeselection";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { buildFormValueResultPayload } from "@/lib/orderFormValueHandover";
 import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
@@ -116,6 +117,7 @@ export default function CreateOrderPage() {
   const [serviceTab, setServiceTab] = useState<ActiveServiceTabState>(EMPTY_ACTIVE_TAB);
   const pendingAddedUids = useRef<string[]>([]);
   const [confirmRemoveUid, setConfirmRemoveUid] = useState<string | null>(null);
+  const [pendingDeselection, setPendingDeselection] = useState<{ patch: Record<string, unknown>; uids: string[]; names: string[] } | null>(null);
 
   // Dynamic template-driven values keyed by field_key (loaded per order kind
   // from order_kind_form_templates). No hardcoded field list.
@@ -162,6 +164,7 @@ export default function CreateOrderPage() {
     !!notes || !!orderType || !!dueDate || hasDraftValue(dynamicValues);
 
   const urlDraftId = searchParams.get("draft");
+  useEffect(() => { setPendingDeselection(null); }, [urlDraftId, orderKind, mode]);
   const draftHydrated = !urlDraftId || urlDraftId === localCreatedId.current || loadedDraft?.id === urlDraftId;
   const autosaveEnabled = draftsEnabled && mode === "single" && !draftLoading && draftHydrated && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
   const autosave = useOrderDraftAutosave({
@@ -335,6 +338,30 @@ export default function CreateOrderPage() {
   const formValuesRef = useRef(measurementFormValues);
   formValuesRef.current = measurementFormValues;
   const [unresolvedSelection, setUnresolvedSelection] = useState<string[]>([]);
+
+  const handleDynamicChange = (patch: Record<string, unknown>) => {
+    if ((loadedDraft && !reconcileAllowed.current) || pendingDeselection) return;
+    if (orderKind === "pilot_plant" && mode === "single") {
+      const removal = planPilotServiceDeselection({ values: dynamicValues, patch, fields: templateFields, services, measurements });
+      if (removal.names.length > 0) {
+        setPendingDeselection({ patch, ...removal });
+        return;
+      }
+    }
+    setDynamicValues(prev => ({ ...prev, ...patch }));
+  };
+
+  const confirmServiceDeselection = () => {
+    if (!pendingDeselection) return;
+    const next = removeDraftServices(draftPayload, pendingDeselection.uids, pendingDeselection.patch);
+    setMeasurements((next.measurements ?? []) as SelectedMeasurement[]);
+    setMeasurementParams(next.measurementParams ?? {});
+    setMeasurementFormValues(next.measurementFormValues ?? {});
+    setDynamicValues(next.dynamicValues ?? {});
+    setServiceTab({ active: next.activeMeasurementUid ?? null, order: next.serviceTabOrder ?? [] });
+    pendingAddedUids.current = pendingAddedUids.current.filter(uid => !pendingDeselection.uids.includes(uid));
+    setPendingDeselection(null);
+  };
 
   /** Aktueller Abgleich Auswahl -> echte Positionen (eine einzige Quelle). */
   const buildServicePlan = (current: SelectedMeasurement[]) =>
@@ -533,6 +560,8 @@ export default function CreateOrderPage() {
 
   const updateFormValue = (uid: string, key: string, value: any) => {
     if (loadedDraft && !reconcileAllowed.current) return;
+    // An unmounted Pilot-Plant form must not resurrect a confirmed removal.
+    if (orderKind === "pilot_plant" && !measurementsRef.current.some(m => m.uid === uid)) return;
     setMeasurementFormValues((prev) => ({ ...prev, [uid]: { ...(prev[uid] || {}), [key]: value } }));
   };
 
@@ -1064,7 +1093,7 @@ export default function CreateOrderPage() {
         <OrderKindDynamicForm
           orderKind={orderKind}
           values={dynamicValues}
-          onChange={(patch) => { if (loadedDraft && !reconcileAllowed.current) return; setDynamicValues((prev) => ({ ...prev, ...patch })); }}
+          onChange={handleDynamicChange}
           onTemplateResolved={setDynamicFormId}
           onFieldsResolved={setTemplateFields}
           onReady={onTemplateReady}
@@ -1301,6 +1330,21 @@ export default function CreateOrderPage() {
         </div>
       )}
       </div>
+
+      <AlertDialog open={!!pendingDeselection} onOpenChange={(open) => { if (!open) setPendingDeselection(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("orders:serviceTabs.deselectTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("orders:serviceTabs.deselectWarning", { name: pendingDeselection?.names.join(", ") ?? "" })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmServiceDeselection}>{t("orders:serviceTabs.deselectConfirm")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Sicherheitsabfrage: endgültiges Löschen einer bearbeiteten Position. */}
       <AlertDialog open={!!confirmRemoveUid} onOpenChange={(open) => { if (!open) setConfirmRemoveUid(null); }}>

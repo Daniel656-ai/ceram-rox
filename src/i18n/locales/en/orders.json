@@ -244,6 +244,9 @@
     "saved": "Billing status saved"
   },
   "serviceTabs": {
+    "deselectTitle": "Remove service?",
+    "deselectWarning": "Do you really want to remove the service {{name}} from this order? Requester data already entered for this service will be deleted.",
+    "deselectConfirm": "Remove service",
     "title": "Services",
     "empty": "Select a service on the left – its form will appear here.",
     "removeTitle": "Permanently remove service?",

@@ -244,6 +244,9 @@
     "saved": "Verrechnungsstatus gespeichert"
   },
   "serviceTabs": {
+    "deselectTitle": "Dienstleistung entfernen?",
+    "deselectWarning": "Möchtest du die Dienstleistung {{name}} wirklich aus diesem Auftrag entfernen? Bereits eingegebene Auftraggeberdaten dieser Dienstleistung werden dabei gelöscht.",
+    "deselectConfirm": "Dienstleistung entfernen",
     "title": "Dienstleistungen",
     "empty": "Wählen Sie links eine Dienstleistung aus – ihr Formular erscheint hier.",
     "removeTitle": "Dienstleistung endgültig entfernen?",
