@@ -11558,7 +11558,7 @@ export type Database = {
         | "hoch"
         | "sehr_hoch"
       order_status: "open" | "in_progress" | "completed"
-      order_type: "customer" | "production" | "rnd"
+      order_type: "customer" | "production" | "rnd" | "internal"
       order_workflow_status_new:
         | "entwurf"
         | "geplant"
@@ -11918,7 +11918,7 @@ export const Constants = {
         "sehr_hoch",
       ],
       order_status: ["open", "in_progress", "completed"],
-      order_type: ["customer", "production", "rnd"],
+      order_type: ["customer", "production", "rnd", "internal"],
       order_workflow_status_new: [
         "entwurf",
         "geplant",

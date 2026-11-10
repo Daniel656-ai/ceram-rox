@@ -204,6 +204,13 @@
       "when": 1794296212542,
       "tag": "0028_priority_enum_to_int_four_levels",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794299460912,
+      "tag": "0029_equipment_internal_order_type",
+      "breakpoints": true
     }
   ]
 }
