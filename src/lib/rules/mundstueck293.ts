@@ -108,23 +108,40 @@ export function planMundstueck293(input: Mundstueck293Input): Mundstueck293Plan 
   const auswahlIn: Row[] = Array.isArray(input.msAuswahl) ? (input.msAuswahl as Row[]) : [];
   const msIn: Row[] = Array.isArray(input.mundstueckMs) ? (input.mundstueckMs as Row[]) : [];
 
-  const desired: Array<{ zweck: string; anzahl: number; laenge: number }> = [];
-  if (input.rw) desired.push({ zweck: ZWECK_RW, anzahl: rwAnzahl(input.brennCount), laenge: 200 });
-  if (input.schw) desired.push({ zweck: ZWECK_SCHW, anzahl: 3, laenge: 150 });
+  // Soll-Einträge: RW (293/1, brenntemperaturabhängig) unverändert; je gebuchter
+  // „Schwindung <ms>“-Leistung ein eigener Eintrag mit der Originalschreibweise.
+  type Desired = { ms: string; zweck: string; anzahl: number; laenge: number };
+  const desired: Desired[] = [];
+  const desiredSeen = new Set<string>();
+  const pushDesired = (d: Desired) => {
+    const k = normMs(d.ms);
+    if (desiredSeen.has(k)) return; // „293/1“ und „293_1“ nur einmal
+    desiredSeen.add(k);
+    desired.push(d);
+  };
+  if (input.rw) pushDesired({ ms: MS_293, zweck: ZWECK_RW, anzahl: rwAnzahl(input.brennCount), laenge: 200 });
+  if (input.schw) pushDesired({ ms: MS_293, zweck: ZWECK_SCHW, anzahl: 3, laenge: 150 });
+  for (const ms of input.schwMs ?? []) pushDesired({ ms, zweck: ZWECK_SCHW, anzahl: 3, laenge: 150 });
+
+  // Auftraggeber-Einträge haben Vorrang: kein Auto-Eintrag für bereits gewählte Mundstücke.
+  const userMs = new Set(
+    auswahlIn.filter((a) => !isAutoEntry(a)).map((a) => normMs((a as Row).ms))
+  );
 
   type Pair = { a: Row; m: Row | undefined };
   const userPairs: Pair[] = [];
-  const autoByZweck = new Map<string, Pair>();
+  const autoByKey = new Map<string, Pair>();
   const orphanPairs: Pair[] = [];
+  const keyOf = (zweck: unknown, ms: unknown) => `${zweck}|${normMs(ms)}`;
 
   auswahlIn.forEach((a, i) => {
     const m = msIn[i];
     if (!isAutoEntry(a)) { userPairs.push({ a, m }); return; }
-    const want = desired.find((d) => d.zweck === a.zweck);
-    if (want && !autoByZweck.has(want.zweck)) {
+    const want = desired.find((d) => keyOf(d.zweck, d.ms) === keyOf(a.zweck, a.ms));
+    if (want && !autoByKey.has(keyOf(want.zweck, want.ms))) {
       const { verwaist: _v, ...rest } = a;
-      autoByZweck.set(want.zweck, {
-        a: { ...rest, ms: MS_293, anzahl: want.anzahl, laenge: want.laenge, zweck: want.zweck, auto: true },
+      autoByKey.set(keyOf(want.zweck, want.ms), {
+        a: { ...rest, ms: want.ms, anzahl: want.anzahl, laenge: want.laenge, zweck: want.zweck, auto: true },
         m,
       });
       return;
@@ -133,12 +150,14 @@ export function planMundstueck293(input: Mundstueck293Input): Mundstueck293Plan 
     if (mundstueckRowHasValues(m)) orphanPairs.push({ a: { ...a, verwaist: true }, m });
   });
 
-  const autoPairs: Pair[] = desired.map((d) =>
-    autoByZweck.get(d.zweck) ?? {
-      a: { ms: MS_293, anzahl: d.anzahl, laenge: d.laenge, zweck: d.zweck, auto: true },
-      m: undefined,
-    }
-  );
+  const autoPairs: Pair[] = desired
+    .filter((d) => d.zweck !== ZWECK_SCHW || !userMs.has(normMs(d.ms)))
+    .map((d) =>
+      autoByKey.get(keyOf(d.zweck, d.ms)) ?? {
+        a: { ms: d.ms, anzahl: d.anzahl, laenge: d.laenge, zweck: d.zweck, auto: true },
+        m: undefined,
+      }
+    );
 
   const pairs = [...userPairs, ...autoPairs, ...orphanPairs];
   const msAuswahl = pairs.map((p) => p.a);
