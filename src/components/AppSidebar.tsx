@@ -70,6 +70,7 @@ export function AppSidebar() {
 
   // Build navigation items based on permissions AND nav visibility
   const navItems = [
+    { title: t("equipment:title"), url: "/pruefmittel", icon: ShieldCheck, show: role === "master" || role === "durchfuehrer" || hasPerm("equipment.view") || hasPerm("equipment.manage"), nav: role === "master" ? null : "nav.equipment" },
     { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard, show: true, nav: "nav.dashboard" },
     
     { title: role === "master" ? t("navigation:all_orders") : role === "durchfuehrer" ? t("navigation:my_orders") : t("navigation:orders"), url: "/auftraege", icon: ClipboardList, show: hasPerm("orders.view") || hasPerm("orders.create"), nav: "nav.orders" },

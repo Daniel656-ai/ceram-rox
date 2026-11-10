@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import EquipmentPage from "./pages/EquipmentPage";
 import OrdersPage from "./pages/OrdersPage";
 import CreateOrderPage from "./pages/CreateOrderPage";
 import ImportOrderPage from "./pages/ImportOrderPage";
@@ -91,6 +92,7 @@ const App = () => (
               }
             >
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/pruefmittel" element={<EquipmentPage />} />
               <Route path="/auftraege" element={<OrdersPage />} />
               <Route path="/auftraege/neu" element={<CreateOrderPage />} />
               <Route path="/auftraege/import" element={<ImportOrderPage />} />

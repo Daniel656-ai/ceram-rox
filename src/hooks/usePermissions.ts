@@ -4,6 +4,8 @@ import { useCallback } from "react";
 // All available permission keys in the system.
 // SINGLE SOURCE OF TRUTH — also used by scripts/audit-permissions.ts
 export const ALL_PERMISSIONS = [
+  "equipment.view",
+  "equipment.manage",
   // Samples
   "samples.create",
   "samples.view",
@@ -87,6 +89,7 @@ export type PermissionKey = (typeof ALL_PERMISSIONS)[number];
 
 // Navigation visibility permission keys
 export const NAV_PERMISSIONS = [
+  "nav.equipment",
   "nav.dashboard",
   "nav.orders",
   "nav.projects",
@@ -112,6 +115,7 @@ export const NAV_PERMISSIONS = [
 export type NavPermissionKey = (typeof NAV_PERMISSIONS)[number];
 
 export const NAV_PERMISSION_LABELS: Record<NavPermissionKey, { de: string; en: string }> = {
+  "nav.equipment": { de: "Prüfmittelüberwachung / Regelkarten", en: "Equipment monitoring / Control charts" },
   "nav.dashboard": { de: "Dashboard", en: "Dashboard" },
   "nav.orders": { de: "Messaufträge", en: "Measurement Orders" },
   "nav.projects": { de: "Projekte", en: "Projects" },
@@ -140,6 +144,7 @@ export interface NavTreeNode {
 }
 
 export const NAV_TREE: NavTreeNode[] = [
+  { key: "nav.equipment" },
   { key: "nav.dashboard" },
   { key: "nav.orders" },
   { key: "nav.projects" },
@@ -167,6 +172,8 @@ export const NAV_TREE: NavTreeNode[] = [
 ];
 
 export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }> = {
+  "equipment.view": { de: "Prüfmittel lesen", en: "View equipment" },
+  "equipment.manage": { de: "Prüfmittel verwalten", en: "Manage equipment" },
   "samples.create": { de: "Proben anlegen", en: "Create samples" },
   "samples.view": { de: "Proben ansehen", en: "View samples" },
   "samples.edit": { de: "Proben bearbeiten", en: "Edit samples" },
@@ -232,6 +239,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, { de: string; en: string }
 };
 
 export const PERMISSION_GROUPS: { key: string; labelDe: string; labelEn: string; permissions: PermissionKey[] }[] = [
+  { key: "equipment", labelDe: "Prüfmittelüberwachung", labelEn: "Equipment monitoring", permissions: ["equipment.view", "equipment.manage"] },
   { key: "samples", labelDe: "Proben", labelEn: "Samples", permissions: ["samples.create", "samples.view", "samples.edit"] },
   { key: "measurements", labelDe: "Aufgaben", labelEn: "Tasks", permissions: ["measurements.enter", "measurements.view", "results.correct"] },
   { key: "orders", labelDe: "Aufträge", labelEn: "Orders", permissions: ["orders.create", "orders.view", "orders.edit", "orders.delete", "orders.drafts.manage", "orders.use_as_template"] },
