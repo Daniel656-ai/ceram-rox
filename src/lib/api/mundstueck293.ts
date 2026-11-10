@@ -1,8 +1,8 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 import {
-  planMundstueck293, bookedCases, countBrenntemperaturen,
-  MS_AUSWAHL_KEY, MUNDSTUECK_MS_KEY, BRENNEN_KEY, EXTRUSION_SERVICE_NAME,
+  planMundstueck293, bookedCases, countBrenntemperaturen, schwMsFromAnalysePpp,
+  ANALYSE_PPP_KEY, MS_FIELD_KEY, MS_AUSWAHL_KEY, MUNDSTUECK_MS_KEY, BRENNEN_KEY, EXTRUSION_SERVICE_NAME,
 } from "@/lib/rules/mundstueck293";
 
 /**
@@ -16,6 +16,41 @@ const parse = (r: any): unknown => {
   if (r.remarks == null) return r.value ?? undefined;
   try { return JSON.parse(r.remarks); } catch { return r.remarks; }
 };
+
+/** Ausgewählte `analyse_ppp`-Schlüssel des Auftrags (shared_form_data.template.values). */
+async function readAnalysePpp(orderId: string): Promise<unknown> {
+  const rows = (await unwrap(
+    dbClient.from("measurement_orders" as any).select("shared_form_data").eq("id", orderId)
+  )) as any[] | null;
+  const sfd = Array.isArray(rows) ? rows[0]?.shared_form_data : null;
+  return sfd?.template?.values?.[ANALYSE_PPP_KEY];
+}
+
+/**
+ * Optionswerte (`value`) des Unterfeldes „ms“ im Repeater „ms_auswahl_1“ des
+ * Formulars – aus verknüpfter Stammdatenliste, sonst aus den Formular-Optionen.
+ */
+async function readMsOptionValues(formId: string): Promise<string[]> {
+  const fields = (await unwrap(
+    dbClient.from("form_fields" as any).select("id, field_key, parent_field_id, select_options, metadata").eq("form_id", formId)
+  )) as any[] | null;
+  if (!Array.isArray(fields)) return [];
+  const parents = fields.filter((f) => f.field_key === MS_AUSWAHL_KEY);
+  const msFields = fields.filter((f) => f.field_key === MS_FIELD_KEY && parents.some((p) => p.id === f.parent_field_id));
+  if (msFields.length !== 1) return []; // fehlend oder mehrdeutig: keine Auto-Einträge
+  const f = msFields[0];
+  const listId = f.metadata?.global_list_id;
+  if (listId) {
+    const items = (await unwrap(
+      dbClient.from("global_list_items" as any).select("item_value, is_active, archived_at").eq("list_id", listId)
+    )) as any[] | null;
+    return (items ?? []).filter((i) => i.is_active !== false && !i.archived_at).map((i) => String(i.item_value ?? "")).filter(Boolean);
+  }
+  return (Array.isArray(f.select_options) ? f.select_options : [])
+    .map((o: any) => (o && typeof o === "object" ? o.value : o))
+    .filter((v: unknown) => v != null && v !== "")
+    .map(String);
+}
 
 export interface Mundstueck293Change { measurementId: string; key: string; value: unknown }
 
@@ -31,6 +66,8 @@ export const mundstueck293 = {
     if (!ms?.length) return out;
 
     const cases = bookedCases(ms.map((m) => m.measurement_services?.service_name));
+    const analysePpp = await readAnalysePpp(orderId);
+    const msOptionsByForm = new Map<string, string[]>();
     const suffix = (k: string) => (name: string) => typeof name === "string" && name.startsWith("form:") && name.endsWith(`:${k}`);
 
     // Brennen: zuerst dieselbe Messung, sonst irgendeine Messung des Auftrags mit demselben Formular.
@@ -57,8 +94,11 @@ export const mundstueck293 = {
         const brennRow = results.find((r) => r.result_name === `form:${fid}:${BRENNEN_KEY}`);
         const brennen = brennRow ? parse(brennRow) : brennenByForm.get(fid);
 
+        if (!msOptionsByForm.has(fid)) msOptionsByForm.set(fid, await readMsOptionValues(fid));
+        const { values: schwMs } = schwMsFromAnalysePpp(analysePpp, msOptionsByForm.get(fid)!);
+
         const plan = planMundstueck293({
-          ...cases, brennCount: countBrenntemperaturen(brennen), msAuswahl: auswahl, mundstueckMs: mundstueck,
+          ...cases, schwMs, brennCount: countBrenntemperaturen(brennen), msAuswahl: auswahl, mundstueckMs: mundstueck,
         });
         out.orphaned += plan.orphaned;
         if (!plan.changedAuswahl) continue;
