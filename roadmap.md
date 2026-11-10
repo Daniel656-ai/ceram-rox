@@ -91,3 +91,9 @@ Auftrag: ROX_-_Umsetzung_Nachträgliche_Korrektur_pasted.md (freigegeben, Basis 
 - [x] 1.320 Tests (8 neue), Typprüfung, Build bestanden; Web-Sichtprüfung aller drei Ebenen + Matrix/Statistik ohne JS-Fehler.
 - [ ] Web-Abnahme mit echten Korrekturen/Schreibvorgängen: blockiert – keine Schreibzugriffe im Produktivbestand erlaubt.
 - [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang zur Firmeninstallation.
+
+## Freigabe: PDF-Dateiname mit Versuchsnummer + container_id aus Knetung
+- [x] Drucktitel = `Laufzettel_<Versuchsnummer>` (resolveExperimentNumber-Priorität via orderIdentity), Rückfall Auftragsnummer, Dateizeichen bereinigt, führende Nullen erhalten; gilt für Web und Tauri (gleicher Iframe-Druckweg).
+- [x] container_id nur aus der Knetungs-Rohstofftabelle entfernt (stripContainerId, reine Darstellung); 5 Spalten unverändert.
+- [x] 7 neue Tests; Web-Prüfung an echten Aufträgen: Laufzettel_3121 (mit Versuchsnr.) und Laufzettel_SW-260026 (Rückfall) bestätigt.
+- [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang; Knetung mit echtem container_id dort prüfen.
