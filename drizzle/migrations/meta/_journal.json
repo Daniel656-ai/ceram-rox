@@ -218,6 +218,13 @@
       "when": 1794299650539,
       "tag": "0030_equipment_monitoring_phase1",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794300934128,
+      "tag": "0031_equipment_identity_and_isolation",
+      "breakpoints": true
     }
   ]
 }

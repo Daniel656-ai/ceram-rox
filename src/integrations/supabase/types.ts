@@ -10789,10 +10789,19 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
-      cancel_equipment_check_order: {
-        Args: { _equipment_id: string; _reason: string }
-        Returns: undefined
-      }
+      cancel_equipment_check_order:
+        | {
+            Args: { _equipment_id: string; _reason: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _equipment_id: string
+              _expected_measurement_id: string
+              _reason: string
+            }
+            Returns: undefined
+          }
       check_user_absence_conflict: {
         Args: { _end: string; _start: string; _user_id: string }
         Returns: {
@@ -10918,6 +10927,10 @@ export type Database = {
         Args: { _version_a: string; _version_b: string }
         Returns: Json
       }
+      equipment_assert_active: {
+        Args: { _expected: string; _id: string }
+        Returns: undefined
+      }
       equipment_audit: {
         Args: { _event: string; _id: string; _metadata: Json }
         Returns: undefined
@@ -10968,6 +10981,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      equipment_measurement_is_internal: {
+        Args: { _id: string }
+        Returns: boolean
+      }
       equipment_qualified_users: {
         Args: { _equipment_id: string }
         Returns: {
@@ -11012,6 +11029,15 @@ export type Database = {
           position_no: number
           quantity: number
           status: string
+        }[]
+      }
+      get_equipment_audit: {
+        Args: { _equipment_id: string }
+        Returns: {
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
         }[]
       }
       get_equipment_check_context: {
@@ -11464,16 +11490,28 @@ export type Database = {
         }
         Returns: string
       }
-      record_equipment_check: {
-        Args: {
-          _equipment_id: string
-          _notes: string
-          _status: string
-          _summary: string
-          _values: Json
-        }
-        Returns: string
-      }
+      record_equipment_check:
+        | {
+            Args: {
+              _equipment_id: string
+              _notes: string
+              _status: string
+              _summary: string
+              _values: Json
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _equipment_id: string
+              _expected_measurement_id: string
+              _notes: string
+              _status: string
+              _summary: string
+              _values: Json
+            }
+            Returns: string
+          }
       record_mixture_weighing: {
         Args: {
           _actual_quantity: number
@@ -11588,10 +11626,16 @@ export type Database = {
           unit: string
         }[]
       }
-      save_equipment_check_draft: {
-        Args: { _equipment_id: string; _values: Json }
-        Returns: undefined
-      }
+      save_equipment_check_draft:
+        | { Args: { _equipment_id: string; _values: Json }; Returns: undefined }
+        | {
+            Args: {
+              _equipment_id: string
+              _expected_measurement_id: string
+              _values: Json
+            }
+            Returns: undefined
+          }
       save_test_equipment: {
         Args: { _id: string; _input: Json }
         Returns: string
@@ -11612,10 +11656,12 @@ export type Database = {
         Returns: boolean
       }
       snapshot_template: { Args: { _template_id: string }; Returns: Json }
-      start_equipment_check: {
-        Args: { _equipment_id: string }
-        Returns: undefined
-      }
+      start_equipment_check:
+        | { Args: { _equipment_id: string }; Returns: undefined }
+        | {
+            Args: { _equipment_id: string; _expected_measurement_id: string }
+            Returns: undefined
+          }
       start_mixture_batch:
         | { Args: { _batch_id: string }; Returns: undefined }
         | {
