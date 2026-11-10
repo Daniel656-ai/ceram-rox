@@ -22,6 +22,28 @@ export const measurementResults = {
     `).neq("measurement_orders.order_type", "internal").eq("measurement_results.is_official", true).order("updated_at", { ascending: false })
   ),
   listDatabaseProfiles: () => unwrap(dbClient.from("profiles").select("user_id, first_name, last_name")),
+  /**
+   * Probenbezogene Ergebnissicht: lädt ALLE gespeicherten Ergebniswerte
+   * (offizielle und vorläufige/Arbeitswerte) je Messung. Rein lesend; die
+   * Kennzeichnung erfolgt ausschließlich über `is_official` am Datensatz.
+   * Die offizielle Ergebnisdatenbank (`listOfficialDatabase`) bleibt
+   * unverändert.
+   */
+  listSampleDatabase: () => unwrap(
+    dbClient.from("order_measurements").select(`
+      id, measurement_number, status, assigned_to, actual_duration_hours, service_id,
+      created_at, updated_at, sample_id, original_sample_id,
+      samples!order_measurements_sample_id_fkey(id, sample_number, sample_name),
+      original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
+      measurement_services(service_name, category, standard_duration_hours),
+      measurement_orders!inner(
+        id, order_number, order_type, order_kind, pp_experiment_number, shared_form_data, created_by, notes,
+        projects(project_number, project_name),
+        samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
+      ),
+      measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
+    `).neq("measurement_orders.order_type", "internal").order("updated_at", { ascending: false })
+  ),
   /** Read-only display metadata. Missing access/schema retains the old formatting. */
   listDisplayPrecisionDefinitions: async (serviceIds: string[], formIds: string[]): Promise<PrecisionDefinitions> => {
     const [fields, calculations, serviceFields] = await Promise.all([

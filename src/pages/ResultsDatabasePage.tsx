@@ -2,6 +2,11 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import RichText from "@/components/forms/RichText";
 import { toUnicode } from "@/lib/richText";
 import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { useSampleResultsDatabase } from "@/hooks/useSampleResultsDatabase";
+import SampleOverviewTable from "@/components/results/SampleOverviewTable";
+import SampleResultsView from "@/components/results/SampleResultsView";
+import ResultDetailInspector from "@/components/results/ResultDetailInspector";
+import { groupRecordsBySample, matchesSampleFilters, type SampleGroup, type SampleMeasurementRecord } from "@/lib/results/sampleResultsAggregation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +45,11 @@ const CHART_COLORS = [
 export default function ResultsDatabasePage() {
   const { data: records = [], isLoading } = useResultsDatabase();
   const { data: paramDefs = [] } = useAllServiceParameterDefs();
+
+  // Probenbezogene 3-Ebenen-Sicht (alle Werte: offiziell + vorläufig).
+  const { data: sampleRecords = [] } = useSampleResultsDatabase();
+  const [selectedSample, setSelectedSample] = useState<SampleGroup | null>(null);
+  const [inspectedMeasurement, setInspectedMeasurement] = useState<SampleMeasurementRecord | null>(null);
 
   /**
    * Stabile Ergebnisstruktur: aus den definierten Ergebnisparametern je
@@ -137,6 +147,25 @@ export default function ResultsDatabasePage() {
       return true;
     });
   }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, conditionKey, conditionValue, sampleFilter, dateFrom, dateTo, searchText]);
+
+  // Probengruppen aus denselben globalen Filtern (wirken in allen drei Ansichten gleich).
+  const filteredSampleRecords = useMemo(
+    () =>
+      sampleRecords.filter((r) =>
+        matchesSampleFilters(r, {
+          serviceFilter, projectFilter, creatorFilter, technicianFilter,
+          sampleFilter, dateFrom, dateTo, searchText,
+        })
+      ),
+    [sampleRecords, serviceFilter, projectFilter, creatorFilter, technicianFilter, sampleFilter, dateFrom, dateTo, searchText]
+  );
+  const sampleGroups = useMemo(() => groupRecordsBySample(filteredSampleRecords), [filteredSampleRecords]);
+  // Ausgewählte Probe immer aus den aktuell gefilterten Gruppen auflösen,
+  // damit Filteränderungen sofort wirken.
+  const activeSample = useMemo(
+    () => (selectedSample ? sampleGroups.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null : null),
+    [selectedSample, sampleGroups]
+  );
 
   const clearFilters = () => {
     setServiceFilter("all");
@@ -516,9 +545,10 @@ export default function ResultsDatabasePage() {
             {filteredRecords.length} von {records.length} Messungen mit offiziellem Ergebnis
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Die Ergebnisdatenbank zeigt ausschließlich Ergebnisse an, die ausdrücklich als
-            offizielles Ergebnis freigegeben wurden. Erledigte Tätigkeiten und nicht-offizielle
-            Messwerte bleiben in den Auftrags- und Arbeitsansichten sichtbar.
+            Die Probenübersicht zeigt alle gespeicherten Messwerte einer Probe – offizielle
+            Ergebnisse sind deutlich hervorgehoben, vorläufige Arbeitswerte gekennzeichnet.
+            Ergebnismatrix und Statistik &amp; Diagramme basieren unverändert ausschließlich
+            auf ausdrücklich freigegebenen offiziellen Ergebnissen.
           </p>
 
         </div>
@@ -615,11 +645,29 @@ export default function ResultsDatabasePage() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="table">
+      <Tabs defaultValue="samples">
         <TabsList>
-          <TabsTrigger value="table">Tabelle</TabsTrigger>
+          <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
+          <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
           <TabsTrigger value="statistics">Statistik & Diagramme</TabsTrigger>
         </TabsList>
+
+        {/* Sample View (3 Ebenen) */}
+        <TabsContent value="samples">
+          {activeSample ? (
+            <SampleResultsView
+              group={activeSample}
+              onBack={() => setSelectedSample(null)}
+              onOpenInspector={setInspectedMeasurement}
+            />
+          ) : (
+            <SampleOverviewTable groups={sampleGroups} onSelect={setSelectedSample} />
+          )}
+          <ResultDetailInspector
+            measurement={inspectedMeasurement}
+            onClose={() => setInspectedMeasurement(null)}
+          />
+        </TabsContent>
 
         {/* Table View */}
         <TabsContent value="table">
