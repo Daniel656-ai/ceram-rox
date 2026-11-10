@@ -144,7 +144,6 @@ export interface NavTreeNode {
 }
 
 export const NAV_TREE: NavTreeNode[] = [
-  { key: "nav.equipment" },
   { key: "nav.dashboard" },
   { key: "nav.orders" },
   { key: "nav.projects" },
@@ -154,6 +153,7 @@ export const NAV_TREE: NavTreeNode[] = [
   { key: "nav.mixtures" },
   { key: "nav.consumables" },
   { key: "nav.lab_planning" },
+  { key: "nav.equipment" },
   { key: "nav.calendar" },
   { key: "nav.portfolios" },
   { key: "nav.production_releases" },

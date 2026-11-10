@@ -70,7 +70,6 @@ export function AppSidebar() {
 
   // Build navigation items based on permissions AND nav visibility
   const navItems = [
-    { title: t("equipment:title"), url: "/pruefmittel", icon: ShieldCheck, show: role === "master" || role === "durchfuehrer" || hasPerm("equipment.view") || hasPerm("equipment.manage"), nav: role === "master" ? null : "nav.equipment" },
     { title: t("navigation:dashboard"), url: "/dashboard", icon: LayoutDashboard, show: true, nav: "nav.dashboard" },
     
     { title: role === "master" ? t("navigation:all_orders") : role === "durchfuehrer" ? t("navigation:my_orders") : t("navigation:orders"), url: "/auftraege", icon: ClipboardList, show: hasPerm("orders.view") || hasPerm("orders.create"), nav: "nav.orders" },
@@ -85,6 +84,7 @@ export function AppSidebar() {
     { title: t("navigation:mixtures"), url: "/mischungen", icon: FlaskRound, show: hasPerm("raw_materials.manage") || hasPerm("samples.view") || hasPerm("mixtures.view"), nav: "nav.mixtures" as string | null },
     
     { title: t("navigation:lab_planning"), url: "/laborplanung", icon: Kanban, show: (hasPerm("measurements.view") || hasPerm("measurements.enter")) && role !== "auftraggeber", nav: "nav.lab_planning" },
+    { title: t("equipment:title"), url: "/pruefmittel", icon: ShieldCheck, show: role === "master" || role === "durchfuehrer" || hasPerm("equipment.view") || hasPerm("equipment.manage"), nav: role === "master" ? null : "nav.equipment" },
     { title: t("navigation:calendar"), url: "/kalender", icon: CalendarClock, show: isAdmin || hasPerm("absences.manage_all") || role === "durchfuehrer" || role === "master", nav: "nav.calendar" },
   ].filter((item) => item.show && (item.nav === null || hasNavPerm(item.nav)));
 
