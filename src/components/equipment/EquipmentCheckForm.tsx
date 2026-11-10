@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import ServiceLinkedForms from "@/components/ServiceLinkedForms";
+import ServiceBookingForm from "@/components/ServiceBookingForm";
 import { useRefreshGuard } from "@/lib/refreshGuard";
 
 export function EquipmentCheckForm({ equipment, correction, onDone }: { equipment: Equipment; correction?: EquipmentCheck; onDone: () => Promise<void> }) {
@@ -38,7 +39,10 @@ export function EquipmentCheckForm({ equipment, correction, onDone }: { equipmen
   return <div className="space-y-4">
     <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{t(correction ? "correction" : "open_check")}</h3><span className="text-sm text-muted-foreground">{t(dirty ? "dirty" : "saved")}</span></div>
     {context && <p className="text-sm text-muted-foreground">{context.order_number} · {context.measurement_number}</p>}
-    {(correction?.service_id ?? equipment.service_id) && <ServiceLinkedForms serviceId={correction?.service_id ?? equipment.service_id ?? ""} context="employee" values={values} onChange={(key, value) => { markDirty(); setValues(previous => ({ ...previous, [key]: value })); }} linkSourcesReady={hydrated} />}
+    {(correction?.service_id ?? equipment.service_id) && <>
+      <ServiceBookingForm serviceId={correction?.service_id ?? equipment.service_id ?? ""} roleView="employee" values={values} onChange={(key, value) => { markDirty(); setValues(previous => ({ ...previous, [key]: value })); }} />
+      <ServiceLinkedForms serviceId={correction?.service_id ?? equipment.service_id ?? ""} context="employee" values={values} onChange={(key, value) => { markDirty(); setValues(previous => ({ ...previous, [key]: value })); }} linkSourcesReady={hydrated} />
+    </>}
     <div className="space-y-1"><Label>{t("result")}</Label><SearchableSelect value={status} onValueChange={value => { markDirty(); setStatus(value as typeof status); }} options={[{ value: "bestanden", label: t("passed") }, { value: "nicht_bestanden", label: t("failed") }]} /></div>
     <div className="space-y-1"><Label htmlFor="check-summary">{t("summary")}</Label><Textarea id="check-summary" required value={summary} onChange={e => { markDirty(); setSummary(e.target.value); }} /></div>
     <div className="space-y-1"><Label htmlFor="check-notes">{t("notes")}</Label><Textarea id="check-notes" value={notes} onChange={e => { markDirty(); setNotes(e.target.value); }} /></div>
