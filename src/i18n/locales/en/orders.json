@@ -242,5 +242,12 @@
     "no": "No",
     "save_error": "Billing status could not be saved",
     "saved": "Billing status saved"
+  },
+  "serviceTabs": {
+    "title": "Services",
+    "empty": "Select a service on the left – its form will appear here.",
+    "removeTitle": "Permanently remove service?",
+    "removeWarning": "This service already contains entries. Removing it will permanently and irreversibly delete all of its entries.",
+    "removeConfirm": "Delete permanently"
   }
 }
