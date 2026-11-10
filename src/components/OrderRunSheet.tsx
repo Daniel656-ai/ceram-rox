@@ -67,14 +67,14 @@ export function OrderRunSheetButton({ order }: { order: any }) {
         const plain = s.params.filter((p) => !consumed.has(p.id));
         const msHtml = s.msGroups.map((grp) => `
             <div class="mshead">${esc(grp.label)}</div>
-            <table class="inner"><thead><tr>${grp.cols.map((c) => `<th>${esc(specLabelOf(c))}</th>`).join("")}</tr></thead><tbody>${
+            ${grp.cols.length === 0 ? "" : `<table class="inner"><thead><tr>${grp.cols.map((c) => `<th>${esc(specLabelOf(c))}</th>`).join("")}</tr></thead><tbody>${
               grp.rows.map((r) => `<tr>${grp.cols.map((c) => {
                 const v = r[c];
                 if (isEmptySpecValue(v)) return "<td>–</td>";
                 const d = rawMaterialValueLabel(c, v, materials);
                 return `<td>${esc(d ? d.label : primSpecValue(v))}</td>`;
               }).join("")}</tr>`).join("")
-            }</tbody></table>`).join("");
+            }</tbody></table>`}`).join("");
         const paramsHtml = plain.length === 0 ? ""
           : `<table><thead><tr><th>${esc(t("runsheet_param"))}</th><th>${esc(g ? t("runsheet_target") : t("runsheet_value"))}</th></tr></thead><tbody>${
               plain.map((p) => `<tr><td>${esc(specLabelOf(p.name))}</td><td>${specValueHtml(p.raw, p.unit, materials, undefined, { hideIndex: true })}</td></tr>`).join("")
@@ -119,9 +119,9 @@ export function OrderRunSheetButton({ order }: { order: any }) {
           }</tbody></table>` : ""}
           ${knetungSvc.map((s) => s.msGroups.map((grp) => `
             <div class="mshead">${esc(grp.label)}</div>
-            <table class="inner"><thead><tr>${grp.cols.map((c) => `<th>${esc(specLabelOf(c))}</th>`).join("")}</tr></thead><tbody>${
+            ${grp.cols.length === 0 ? "" : `<table class="inner"><thead><tr>${grp.cols.map((c) => `<th>${esc(specLabelOf(c))}</th>`).join("")}</tr></thead><tbody>${
               grp.rows.map((r) => `<tr>${grp.cols.map((c) => `<td>${isEmptySpecValue(r[c]) ? "–" : esc(primSpecValue(r[c]))}</td>`).join("")}</tr>`).join("")
-            }</tbody></table>`).join("")).join("")}
+            }</tbody></table>`}`).join("")).join("")}
         </section>`;
       const selectionsHtml = !g ? "" : `
         <section>
