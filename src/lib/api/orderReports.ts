@@ -47,6 +47,12 @@ export const orderReports = {
     }
   },
 
+  /** Rein lesend: vorhandenen Berichtsdatensatz eines Auftrags laden (legt keinen an). */
+  getForOrder: (orderId: string) =>
+    unwrap(
+      dbClient.from("order_reports" as any).select("*").eq("order_id", orderId).maybeSingle()
+    ) as unknown as Promise<OrderReport | null>,
+
   listVersions: (reportId: string) =>
     unwrap(
       dbClient
