@@ -100,7 +100,8 @@ export function OrderRunSheetButton({ order }: { order: any }) {
 
       const rohstoffCell = (row: Record<string, unknown>, col: typeof ROHSTOFF_COLS[number]) => {
         const k = Object.keys(row).find((key) => col.match.test(key));
-        const v = k ? row[k] : null;
+        // container_id wird in der Knetungs-Rohstofftabelle nicht angezeigt (nur Darstellung).
+        const v = k ? stripContainerId(row[k]) : null;
         if (isEmptySpecValue(v)) return "–";
         const d = col.material ? rawMaterialValueLabel(k!, v, materials) : null;
         return esc(d ? d.label : primSpecValue(v));
@@ -143,8 +144,12 @@ export function OrderRunSheetButton({ order }: { order: any }) {
           ].join("");
 
       const prio = sheet.priority ? (ORDER_PRIORITY_LABELS[sheet.priority as OrderPriority] ?? sheet.priority) : null;
+      // Dokumenttitel = vorgeschlagener PDF-Dateiname („Als PDF speichern"):
+      // Versuchsnummer, ohne Versuchsnummer die Auftragsnummer (sheet.number
+      // ist bereits die aufgelöste Anzeigenummer). Gilt für Web und Tauri,
+      // da beide denselben Druckweg (verstecktes Iframe) nutzen.
       await printHtml(`<!DOCTYPE html><html><head><meta charset="utf-8">
-        <title>${esc(t("runsheet_order_title"))} – ${esc(sheet.number)}</title>
+        <title>${esc(runSheetFileName(sheet.number))}</title>
         <style>${RUN_SHEET_CSS}</style></head><body><div class="page">
         <header>
           <div>
