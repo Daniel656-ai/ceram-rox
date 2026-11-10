@@ -10,7 +10,7 @@ import {
   AmendableParam, SpecAmendDialog, SpecChangeHistory, groupSpecChanges,
 } from "@/components/order/SpecAmendment";
 import { rawMaterialValueLabel, type RawMaterialLookup } from "@/lib/rawMaterials/displayLabel";
-import { parseSpecValue, isEmptySpecValue, primSpecValue, specLabelOf, specColLabel, specValueShape } from "@/lib/specValues";
+import { parseSpecValue, isEmptySpecValue, primSpecValue, specLabelOf, specColLabel, specValueShape, specTableCols } from "@/lib/specValues";
 
 /**
  * Read-only „Auftraggeber-Vorgaben“: zeigt die bei der Auftragserstellung

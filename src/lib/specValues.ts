@@ -33,6 +33,19 @@ export const specLabelOf = (name: string) => name.replace(/^repeat:/, "");
 
 export const specColLabel = (c: string) => (RAW_MATERIAL_ID_KEYS.has(c) ? "Rohstoff" : c);
 
+/** Knetung heißt im Katalog exakt „Knetung“ (gleiche Regel wie pppGroups). */
+export const isKnetungService = (name: string) =>
+  name.trim().toLowerCase().replace(/\s+/g, " ") === "knetung";
+
+/**
+ * Sichtbare Tabellenspalten eines Vorgabewerts. Nur bei der Dienstleistung
+ * Knetung wird die technische `container_id`-Spalte ausgeblendet (reine
+ * Anzeige; gespeicherte Werte und Zuordnung bleiben unverändert). Alle
+ * anderen Dienstleistungen sehen unverändert alle Spalten.
+ */
+export const specTableCols = (cols: string[], serviceName?: string | null): string[] =>
+  serviceName != null && isKnetungService(serviceName) ? cols.filter((c) => c !== "container_id") : cols;
+
 export type SpecValueShape =
   | { kind: "table"; cols: string[]; rows: Record<string, unknown>[] }
   | { kind: "list"; items: unknown[] }
