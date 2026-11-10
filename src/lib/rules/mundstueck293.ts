@@ -29,12 +29,38 @@ type Row = Record<string, unknown>;
 
 const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
 
+/**
+ * Normalisierte Mundstück-Kennung für Vergleiche: „293/1“ und „293_1“
+ * gelten als identisch. Nur für den Duplikatvergleich – die
+ * Originalschreibweise vorhandener Einträge wird nie verändert.
+ */
+export const normMs = (s: unknown) =>
+  String(s ?? "").trim().toLowerCase().replace(/_/g, "/").replace(/\s+/g, " ");
+
+/**
+ * MS-Nummer aus einem Leistungsnamen „Schwindung <ms>“ lesen.
+ * Schreibweise (Schrägstriche, führende Nullen, Groß/Klein) bleibt erhalten.
+ */
+export function schwindungMs(serviceName: string | null | undefined): string | null {
+  const m = /^schwindung\s+(.+)$/i.exec(String(serviceName ?? "").trim());
+  if (!m) return null;
+  const ms = m[1].trim().replace(/\s+/g, " ");
+  return ms || null;
+}
+
 /** Welche Fälle sind laut gebuchten Leistungen nötig (mehrfach zählt einmal)? */
 export function bookedCases(serviceNames: Array<string | null | undefined>) {
   const names = new Set(serviceNames.map(norm));
+  const schwMs: string[] = [];
+  const seen = new Set<string>();
+  for (const n of serviceNames) {
+    const ms = schwindungMs(n);
+    if (ms && !seen.has(normMs(ms))) { seen.add(normMs(ms)); schwMs.push(ms); }
+  }
   return {
     rw: names.has("raumgewicht") || names.has("wasseraufnahme"),
     schw: names.has("schwindung"),
+    schwMs,
   };
 }
 
