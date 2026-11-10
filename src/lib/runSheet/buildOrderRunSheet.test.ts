@@ -78,4 +78,74 @@ describe("Auftrags-Laufzettel", () => {
     expect(specValueShape(["a", "", "b"])).toEqual({ kind: "list", items: ["a", "b"] });
     expect(specValueShape("5")).toEqual({ kind: "single", value: "5" });
   });
+  it("Erstellungsdatum wird aus created_at übernommen", () => {
+    const s = buildOrderRunSheet(baseOrder({ created_at: "2026-03-04T09:30:00Z" }), [], []);
+    expect(s.createdAt).toBe("2026-03-04T09:30:00Z");
+    expect(buildOrderRunSheet(baseOrder(), [], []).createdAt).toBeNull();
+  });
+  it("PPP-Auswahllisten werden aus dem Formular herausgelöst, Werte lesbar", () => {
+    const s = buildOrderRunSheet(baseOrder({ shared_form_data: { template: { values: {
+      gewuenschte_pilot_plant_prozesse: ["Knetung", "Extrusion"],
+      standardpruefungen_ppp: ["Feuchte"],
+      analyse_ppp: ["Schwindung", "RFA"],
+      bemerkung: "bleibt",
+    } } } }), [
+      { id: "1", field_key: "gewuenschte_pilot_plant_prozesse", display_name: "Gewünschte Pilot Plant Prozesse" },
+      { id: "2", field_key: "standardpruefungen_ppp", display_name: "Standardprüfungen PPP" },
+      { id: "3", field_key: "analyse_ppp", display_name: "Analyse PPP" },
+      { id: "4", field_key: "bemerkung", display_name: "Bemerkung" },
+    ], []);
+    expect(s.pppSelections.map((x) => [x.id, x.label, x.values])).toEqual([
+      ["prozesse", "Gewünschte Pilot Plant Prozesse", ["Knetung", "Extrusion"]],
+      ["standard", "Standardprüfungen PPP", ["Feuchte"]],
+      ["analyse", "Analyse PPP", ["Schwindung", "RFA"]],
+    ]);
+    expect(s.form.map((f) => f.key)).toEqual(["bemerkung"]);
+  });
+  it("Mundstückgruppen: echter MS-Wert statt Zeilenindex, führende Nullen bleiben", () => {
+    const s = buildOrderRunSheet(baseOrder({ order_measurements: [{ id: "m1", order_id: "O1",
+      measurement_services: { service_name: "Extrusion" },
+      measurement_parameters: [p("r1", "repeat:r19l4e74", JSON.stringify([
+        { __id: "a", mundstucke: "3001", laenge: 100 },
+        { __id: "b", mundstucke: "0293/1", laenge: 80 },
+        { __id: "c", mundstucke: "3001", laenge: 90 },
+      ]))] }] }), [], []);
+    const grp = s.services[0].msGroups;
+    expect(grp.map((x) => x.label)).toEqual(["Mundstück 3001", "Mundstück 0293/1"]);
+    expect(grp[0].rows).toHaveLength(2);
+    expect(grp[0].cols).toEqual(["laenge"]);
+    expect(grp.every((x) => x.paramId === "r1")).toBe(true);
+  });
+  it("Mundstück ohne Wert: neutraler Fallback, kein Index", () => {
+    const s = buildOrderRunSheet(baseOrder({ order_measurements: [{ id: "m1", order_id: "O1",
+      measurement_services: { service_name: "Extrusion" },
+      measurement_parameters: [p("r1", "repeat:x", JSON.stringify([{ ms: "" }]))] }] }), [], []);
+    expect(s.services[0].msGroups[0].label).toBe("Mundstück nicht angegeben");
+  });
+  it("Knetung: vorbereitende Tätigkeiten, Knetdauer und Rohstoffe werden aufgelöst", () => {
+    const s = buildOrderRunSheet(baseOrder({ order_kind: "pilot_plant", order_measurements: [{ id: "m1", order_id: "O1",
+      measurement_services: { service_name: "Knetung" },
+      measurement_parameters: [
+        p("1", "vorbereitende_taetigkeiten", "Mischung homogenisieren"),
+        p("2", "knetdauer", "4", "h"),
+        p("3", "repeat:rezeptur", JSON.stringify([{ rohstoff: "mat-1", menge: 500, einheit: "g", lot_number: "L7", bemerkung: "frisch" }])),
+        p("4", "wasserzugabe", "12", "%"),
+      ] }] }), [], []);
+    expect(s.knetung).not.toBeNull();
+    expect(s.knetung!.vorbereitendeTaetigkeiten).toBe("Mischung homogenisieren");
+    expect(s.knetung!.knetdauer).toEqual({ value: "4", unit: "h" });
+    expect(s.knetung!.rohstoffe).toHaveLength(1);
+    expect(s.knetung!.otherParams.map((x) => x.name)).toEqual(["wasserzugabe"]);
+  });
+  it("Knetung ohne vorbereitende Tätigkeiten: null (Darstellung zeigt Gedankenstrich), kein Bemerkungs-Rückfall", () => {
+    const s = buildOrderRunSheet(baseOrder({ order_kind: "pilot_plant",
+      shared_form_data: { template: { values: { bemerkung_versuch: "nicht verwenden" } } },
+      order_measurements: [{ id: "m1", order_id: "O1", measurement_services: { service_name: "Knetung" }, measurement_parameters: [] }] }), [], []);
+    expect(s.knetung!.vorbereitendeTaetigkeiten).toBeNull();
+  });
+  it("Indexspalte der Wertetabellen ist im Laufzettel unterdrückt", () => {
+    const html = specValueHtml('[{"a":1},{"a":2}]', null, noMat, undefined, { hideIndex: true });
+    expect(html).not.toContain("<th>#</th>");
+    expect(specValueHtml('[{"a":1}]', null, noMat)).toContain("<th>#</th>");
+  });
 });
