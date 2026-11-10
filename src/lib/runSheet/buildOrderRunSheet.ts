@@ -310,6 +310,7 @@ export function buildOrderRunSheet(
 
   return {
     number: id.number,
+    orderNumber: order?.order_number ?? null,
     technicalNumber: id.technicalNumber && id.technicalNumber !== id.number ? id.technicalNumber : null,
     customerName: order?.customer_name?.trim() || null,
     project: order?.projects ? [order.projects.project_number, order.projects.project_name].filter(Boolean).join(" – ") || null : null,
@@ -320,6 +321,8 @@ export function buildOrderRunSheet(
     lastSpecChange: last,
     form,
     pppSelections,
+    v2o5,
+    masseTyp,
     grouped,
     services,
     knetung,
@@ -328,4 +331,19 @@ export function buildOrderRunSheet(
 
 export function orderDmcPayload(number: string): string | null {
   return number.trim() ? `ROX|A:${number}` : null;
+}
+
+/**
+ * Dateiname des Laufzettel-PDFs (über den Dokumenttitel des Druck-Iframes):
+ * `Laufzettel_<Versuchsnummer>`, sonst `Laufzettel_<Auftragsnummer>`.
+ * Führende Nullen bleiben erhalten (reine Zeichenkette, kein Number-Cast);
+ * dateiungültige Zeichen werden durch `-` ersetzt, Leerzeichen durch `_`.
+ */
+export function runSheetFileName(number: string): string {
+  const clean = number
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[\\/:*?"<>|%-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `Laufzettel_${clean || "Auftrag"}`;
 }
