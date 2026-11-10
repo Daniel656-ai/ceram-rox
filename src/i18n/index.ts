@@ -1,6 +1,8 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
+import equipmentDe from "./locales/de/equipment.json";
+import equipmentEn from "./locales/en/equipment.json";
 
 import commonDe from "./locales/de/common.json";
 import navigationDe from "./locales/de/navigation.json";
@@ -34,6 +36,7 @@ import mixturesEn from "./locales/en/mixtures.json";
 
 const resources = {
   de: {
+    equipment: equipmentDe,
     common: commonDe,
     navigation: navigationDe,
     auth: authDe,
@@ -50,6 +53,7 @@ const resources = {
     mixtures: mixturesDe,
   },
   en: {
+    equipment: equipmentEn,
     common: commonEn,
     navigation: navigationEn,
     auth: authEn,
