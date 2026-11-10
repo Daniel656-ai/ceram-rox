@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   planMundstueck293, bookedCases, rwAnzahl, countBrenntemperaturen, removePairedRow,
-  ZWECK_RW, ZWECK_SCHW,
+  schwindungMs, ZWECK_RW, ZWECK_SCHW,
 } from "@/lib/rules/mundstueck293";
 
 const user = { ms: "3001", upm: 10, anzahl: 1, laenge: 800 };
@@ -15,9 +15,9 @@ describe("Mundstück 293/1 – Anzahl", () => {
     expect(countBrenntemperaturen([{ temp: "" }, {}, { temp: 900 }])).toBe(1);
   });
   it("Leistungen zählen einmal, auch mehrfach gebucht", () => {
-    expect(bookedCases(["Raumgewicht", "Wasseraufnahme", "Raumgewicht"])).toEqual({ rw: true, schw: false });
-    expect(bookedCases(["Schwindung", " schwindung "])).toEqual({ rw: false, schw: true });
-    expect(bookedCases(["BET"])).toEqual({ rw: false, schw: false });
+    expect(bookedCases(["Raumgewicht", "Wasseraufnahme", "Raumgewicht"])).toEqual({ rw: true, schw: false, schwMs: [] });
+    expect(bookedCases(["Schwindung", " schwindung "])).toEqual({ rw: false, schw: true, schwMs: [] });
+    expect(bookedCases(["BET"])).toEqual({ rw: false, schw: false, schwMs: [] });
   });
 });
 
