@@ -148,6 +148,25 @@ export default function ResultsDatabasePage() {
     });
   }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, conditionKey, conditionValue, sampleFilter, dateFrom, dateTo, searchText]);
 
+  // Probengruppen aus denselben globalen Filtern (wirken in allen drei Ansichten gleich).
+  const filteredSampleRecords = useMemo(
+    () =>
+      sampleRecords.filter((r) =>
+        matchesSampleFilters(r, {
+          serviceFilter, projectFilter, creatorFilter, technicianFilter,
+          sampleFilter, dateFrom, dateTo, searchText,
+        })
+      ),
+    [sampleRecords, serviceFilter, projectFilter, creatorFilter, technicianFilter, sampleFilter, dateFrom, dateTo, searchText]
+  );
+  const sampleGroups = useMemo(() => groupRecordsBySample(filteredSampleRecords), [filteredSampleRecords]);
+  // Ausgewählte Probe immer aus den aktuell gefilterten Gruppen auflösen,
+  // damit Filteränderungen sofort wirken.
+  const activeSample = useMemo(
+    () => (selectedSample ? sampleGroups.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null : null),
+    [selectedSample, sampleGroups]
+  );
+
   const clearFilters = () => {
     setServiceFilter("all");
     setProjectFilter("all");
@@ -625,11 +644,29 @@ export default function ResultsDatabasePage() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="table">
+      <Tabs defaultValue="samples">
         <TabsList>
-          <TabsTrigger value="table">Tabelle</TabsTrigger>
+          <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
+          <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
           <TabsTrigger value="statistics">Statistik & Diagramme</TabsTrigger>
         </TabsList>
+
+        {/* Sample View (3 Ebenen) */}
+        <TabsContent value="samples">
+          {activeSample ? (
+            <SampleResultsView
+              group={activeSample}
+              onBack={() => setSelectedSample(null)}
+              onOpenInspector={setInspectedMeasurement}
+            />
+          ) : (
+            <SampleOverviewTable groups={sampleGroups} onSelect={setSelectedSample} />
+          )}
+          <ResultDetailInspector
+            measurement={inspectedMeasurement}
+            onClose={() => setInspectedMeasurement(null)}
+          />
+        </TabsContent>
 
         {/* Table View */}
         <TabsContent value="table">
