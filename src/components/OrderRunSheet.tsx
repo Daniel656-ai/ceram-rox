@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { dmcSvg } from "@/components/SampleRunSheet";
-import { buildOrderRunSheet, orderDmcPayload, runSheetFileName, type OrderRunSheetService } from "@/lib/runSheet/buildOrderRunSheet";
+import { buildOrderRunSheet, orderDmcPayload, runSheetFileName, runSheetOrderLabel, type OrderRunSheetService } from "@/lib/runSheet/buildOrderRunSheet";
 import { escHtml as esc, specValueHtml, RUN_SHEET_CSS } from "@/lib/runSheet/specHtml";
 import { printHtml } from "@/lib/runSheet/printHtml";
 import { PPP_LIST_KEYS } from "@/lib/runSheet/pppGroups";
@@ -156,7 +156,7 @@ export function OrderRunSheetButton({ order }: { order: any }) {
             ${logo ? `<img class="logo" src="${logo}" alt="">` : ""}
             <h1>${esc(t("runsheet_order_title"))}</h1>
             <dl>
-              <dt>${esc(t("runsheet_order"))}</dt><dd>${dash(sheet.orderNumber ?? sheet.number ?? null)}</dd>
+              <dt>${esc(t("runsheet_order"))}</dt><dd>${dash(runSheetOrderLabel(sheet))}</dd>
               <dt>${esc(t("runsheet_project"))}</dt><dd>${dash(sheet.project)}</dd>
               <dt>${esc(t("runsheet_due"))}</dt><dd>${dash(sheet.dueDate ? fmtDate(sheet.dueDate) : null)}</dd>
               <dt>${esc(t("runsheet_priority"))}</dt><dd>${dash(prio)}</dd>

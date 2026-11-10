@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildOrderRunSheet, orderDmcPayload, runSheetFileName } from "./buildOrderRunSheet";
+import { buildOrderRunSheet, orderDmcPayload, runSheetFileName, runSheetOrderLabel } from "./buildOrderRunSheet";
 import { specValueHtml } from "./specHtml";
 import { specValueShape, specTableCols, isKnetungService } from "@/lib/specValues";
 
@@ -167,6 +167,25 @@ describe("Auftrags-Laufzettel", () => {
     expect(s.orderNumber).toBe("SW-260025");
     expect(s.number).toBe("3121");
     expect(runSheetFileName(s.number)).toBe("Laufzettel_3121");
+  });
+  it("Kopfzeile: Versuchsnummer und Auftragsnummer gemeinsam (3121 – SW-260010)", () => {
+    const s = buildOrderRunSheet(baseOrder({
+      order_kind: "pilot_plant", order_number: "SW-260010", pp_experiment_number: "3121",
+    }), [], []);
+    expect(runSheetOrderLabel(s)).toBe("3121 – SW-260010");
+    // Dateiname und DMC nutzen weiterhin nur die Versuchsnummer.
+    expect(runSheetFileName(s.number)).toBe("Laufzettel_3121");
+    expect(orderDmcPayload(s.number)).toBe("ROX|A:3121");
+  });
+  it("Kopfzeile ohne Versuchsnummer: nur die Auftragsnummer", () => {
+    const s = buildOrderRunSheet(baseOrder({ order_number: "SW-260010" }), [], []);
+    expect(runSheetOrderLabel(s)).toBe("SW-260010");
+  });
+  it("Kopfzeile: führende Nullen und Schrägstriche bleiben unverändert", () => {
+    const s = buildOrderRunSheet(baseOrder({
+      order_kind: "pilot_plant", order_number: "TT-260027", pp_experiment_number: "0293/1",
+    }), [], []);
+    expect(runSheetOrderLabel(s)).toBe("0293/1 – TT-260027");
   });
   it("V2O5-Gehalt und Massetyp werden aus dem Formular gelöst und gemeinsam geführt", () => {
     const s = buildOrderRunSheet(baseOrder({
