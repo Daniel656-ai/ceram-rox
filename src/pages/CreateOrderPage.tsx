@@ -920,8 +920,11 @@ export default function CreateOrderPage() {
       </span>
     ) : autosave.state === "dirty" ? <span className="text-xs text-muted-foreground">{t("orders:draftSafety.unsaved")}</span> : null;
 
+  // Zweispaltiger Dienstleistungsbereich nur für die Pilot-Plant-Einzelauftragserstellung.
+  const pilotSingle = mode === "single" && orderKind === "pilot_plant";
+
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className={pilotSingle ? "space-y-6 max-w-none" : "space-y-6 max-w-3xl"}>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
@@ -970,7 +973,9 @@ export default function CreateOrderPage() {
       </div>
 
       {mode === "single" ? (
-      <form onSubmit={handleSubmit} className="space-y-6" onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
+      <form onSubmit={handleSubmit} onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
+      <div className={pilotSingle ? "space-y-6 xl:space-y-0 xl:grid xl:grid-cols-2 xl:gap-6 xl:items-start" : "space-y-6"}>
+      <div className="space-y-6 min-w-0">
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -1068,13 +1073,15 @@ export default function CreateOrderPage() {
         {/* Die im Auftraggeberformular ausgewählten Dienstleistungen erscheinen
             sofort mit ihrem bestehenden Auftraggeberformular – noch ohne
             Speicherung. Erst „Auftrag erstellen“ legt sie dauerhaft an. */}
-        {(templateMeasurements.length > 0 || unresolvedSelection.length > 0) && (
+        {/* Pilot Plant: die Formulare erscheinen als Reiter im rechten Bereich;
+            hier nur noch der Hinweis auf nicht aufgelöste Auswahlen. */}
+        {((!pilotSingle && templateMeasurements.length > 0) || unresolvedSelection.length > 0) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Ausgewählte Dienstleistungen</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {templateMeasurements.map((m, idx) => (
+              {!pilotSingle && templateMeasurements.map((m, idx) => (
                 <MeasurementRow
                   key={m.uid}
                   m={m}
@@ -1083,7 +1090,7 @@ export default function CreateOrderPage() {
                   formValues={measurementFormValues[m.uid] || {}}
                   onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
                   onDuplicate={() => duplicateMeasurement(m.uid)}
-                  onRemove={() => removeMeasurement(m.uid)}
+                  onRemove={() => requestRemoveMeasurement(m.uid)}
                 />
               ))}
               {unresolvedSelection.length > 0 && (
