@@ -286,3 +286,36 @@ export function buildOrderRunSheet(
 export function orderDmcPayload(number: string): string | null {
   return number.trim() ? `ROX|A:${number}` : null;
 }
+
+/**
+ * Vorgeschlagener PDF-Dateiname des Laufzettels: „Laufzettel_<Versuchsnummer>"
+ * (die Anzeigenummer ist bereits die aufgelöste Versuchsnummer; ohne
+ * Versuchsnummer greift die Auftragsnummer als Rückfall). Ungültige
+ * Dateizeichen werden ersetzt; der Wert selbst (inkl. führender Nullen)
+ * bleibt unverändert – reine Darstellung, nichts wird gespeichert.
+ */
+export function runSheetFileName(number: string): string {
+  const safe = number
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[\\/:*?"<>|]/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
+  return `Laufzettel_${safe || "Auftrag"}`;
+}
+
+/**
+ * Knetungs-Rohstofftabelle: `container_id` wird nicht angezeigt. Entfernt den
+ * Schlüssel nur aus der Darstellung eines Zellwerts; gespeicherte Werte und
+ * andere Bereiche bleiben unberührt.
+ */
+export function stripContainerId(value: unknown): unknown {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const o = value as Record<string, unknown>;
+    if ("container_id" in o) {
+      const { container_id: _drop, ...rest } = o;
+      return rest;
+    }
+  }
+  return value;
+}
