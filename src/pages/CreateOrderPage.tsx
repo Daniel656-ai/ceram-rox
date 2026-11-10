@@ -1332,10 +1332,10 @@ export default function CreateOrderPage() {
       </div>
 
       <AlertDialog open={!!pendingDeselection} onOpenChange={(open) => { if (!open) setPendingDeselection(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
+        <AlertDialogContent className="overflow-x-hidden">
+          <AlertDialogHeader className="min-w-0 shrink-0">
             <AlertDialogTitle>{t("orders:serviceTabs.deselectTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="whitespace-normal break-words">
               {t("orders:serviceTabs.deselectWarning", { name: pendingDeselection?.names.join(", ") ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
