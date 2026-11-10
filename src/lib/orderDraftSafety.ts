@@ -7,6 +7,7 @@ export function normalizeRestoredDraft(p: OrderDraftPayload): OrderDraftPayload 
     dueDate: p.dueDate ?? "", notes: p.notes ?? "", measurements: p.measurements ?? [], selectedSampleIds: p.selectedSampleIds ?? [],
     processTemplateId: p.processTemplateId ?? "__none__", measurementParams: p.measurementParams ?? {}, measurementFormValues: p.measurementFormValues ?? {},
     dynamicValues: p.dynamicValues ?? {}, dynamicFormId: p.dynamicFormId ?? null,
+    activeMeasurementUid: p.activeMeasurementUid ?? null, serviceTabOrder: p.serviceTabOrder ?? [],
   };
 }
 
