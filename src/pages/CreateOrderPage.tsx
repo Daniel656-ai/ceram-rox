@@ -111,6 +111,11 @@ export default function CreateOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [measurementParams, setMeasurementParams] = useState<Record<string, Record<string, string>>>({});
   const [measurementFormValues, setMeasurementFormValues] = useState<Record<string, Record<string, any>>>({});
+  // Aktiver Dienstleistungsreiter (Pilot Plant): zuletzt ausgewählte bzw.
+  // bewusst angeklickte Position ist aktiv – niemals automatisch die erste.
+  const [serviceTab, setServiceTab] = useState<ActiveServiceTabState>(EMPTY_ACTIVE_TAB);
+  const pendingAddedUids = useRef<string[]>([]);
+  const [confirmRemoveUid, setConfirmRemoveUid] = useState<string | null>(null);
 
   // Dynamic template-driven values keyed by field_key (loaded per order kind
   // from order_kind_form_templates). No hardcoded field list.
@@ -141,9 +146,10 @@ export default function CreateOrderPage() {
     selectedProjectId, orderType, orderKind, priority, dueDate, notes,
     measurements, selectedSampleIds, processTemplateId,
     measurementParams, measurementFormValues, dynamicValues, dynamicFormId,
+    activeMeasurementUid: serviceTab.active, serviceTabOrder: serviceTab.order,
   }), [selectedProjectId, orderType, orderKind, priority, dueDate, notes, measurements,
        selectedSampleIds, processTemplateId, measurementParams,
-       measurementFormValues, dynamicValues, dynamicFormId]);
+       measurementFormValues, dynamicValues, dynamicFormId, serviceTab]);
 
   const draftTitle = useMemo(() => {
     const proj = (projects as any[]).find((p) => p.id === selectedProjectId);
@@ -218,6 +224,11 @@ export default function CreateOrderPage() {
         setMeasurementFormValues((p.measurementFormValues ?? {}) as any);
         setDynamicValues((p.dynamicValues ?? {}) as any);
         setDynamicFormId(p.dynamicFormId ?? null);
+        // Zuletzt aktiver Reiter wird mit dem Entwurf wiederhergestellt.
+        setServiceTab({
+          active: p.activeMeasurementUid ?? null,
+          order: (p.serviceTabOrder ?? []) as string[],
+        });
         setDraftId(d.id);
         setLoadedDraft({ ...d, payload: p });
       })
