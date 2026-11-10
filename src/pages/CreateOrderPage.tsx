@@ -465,6 +465,7 @@ export default function CreateOrderPage() {
         toast.info(`Alle Dienstleistungen aus "${pkg.name}" sind bereits enthalten.`);
         return prev;
       }
+      pendingAddedUids.current.push(...additions.map((a) => a.uid));
       toast.success(`${additions.length} Dienstleistung(en) aus "${pkg.name}" hinzugefügt`);
       return [...prev, ...additions];
     });
@@ -490,8 +491,18 @@ export default function CreateOrderPage() {
     setMeasurementFormValues((prev) => { const next = { ...prev }; delete next[uid]; return next; });
   };
 
+  /**
+   * Papierkorb: endgültige Entfernung. Sind bereits Eingaben vorhanden,
+   * nur nach ausdrücklicher Bestätigung des Datenverlusts.
+   */
+  const requestRemoveMeasurement = (uid: string) => {
+    if (draftPositionEdited(draftPayload, uid)) setConfirmRemoveUid(uid);
+    else removeMeasurement(uid);
+  };
+
   const duplicateMeasurement = (uid: string) => {
     const newUidValue = newUid();
+    pendingAddedUids.current.push(newUidValue);
     setMeasurements((prev) => {
       const idx = prev.findIndex((m) => m.uid === uid);
       if (idx === -1) return prev;
