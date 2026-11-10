@@ -25,7 +25,7 @@ export function EquipmentCheckForm({ equipment, correction, onDone }: { equipmen
   const [error, setError] = useState("");
   const [hydrated, setHydrated] = useState(Boolean(correction));
   const dirtyRef = useRef(false);
-  useEffect(() => { if (context && isFetchedAfterMount && !dirtyRef.current) { setValues(context.values); setSummary(String(context.values.__check_summary ?? "")); setNotes(String(context.values.__check_notes ?? "")); setStatus(context.values.__check_status === "nicht_bestanden" ? "nicht_bestanden" : "bestanden"); setHydrated(true); } }, [context, isFetchedAfterMount]);
+  useEffect(() => { if (!correction && context && isFetchedAfterMount && !dirtyRef.current) { setValues(context.values); setSummary(String(context.values.__check_summary ?? "")); setNotes(String(context.values.__check_notes ?? "")); setStatus(context.values.__check_status === "nicht_bestanden" ? "nicht_bestanden" : "bestanden"); setHydrated(true); } }, [context, isFetchedAfterMount, correction]);
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => { if (dirtyRef.current) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", handler); return () => window.removeEventListener("beforeunload", handler);
@@ -39,7 +39,7 @@ export function EquipmentCheckForm({ equipment, correction, onDone }: { equipmen
     return () => document.removeEventListener("click", handler, true);
   }, [t]);
   const markDirty = () => { dirtyRef.current = true; setDirty(true); };
-  const saveDraft = async () => { if (correction || !hydrated) return; await api.testEquipment.saveDraft(equipment.id, { ...values, __check_summary: summary, __check_notes: notes, __check_status: status }); dirtyRef.current = false; setDirty(false); };
+  const saveDraft = async () => { if (correction || !hydrated || !context) return; await api.testEquipment.saveDraft(equipment.id, context.measurement_id, { ...values, __check_summary: summary, __check_notes: notes, __check_status: status }); dirtyRef.current = false; setDirty(false); };
   useRefreshGuard(async () => { if (dirtyRef.current) { if (correction) throw new Error(t("dirty")); await saveDraft(); } });
   if (loadError) return <div role="alert">{String(loadError)}<Button onClick={() => refetch()}>{t("retry")}</Button></div>;
   if (!correction && (isLoading || !hydrated)) return <p>{t("loading")}</p>;
@@ -58,7 +58,7 @@ export function EquipmentCheckForm({ equipment, correction, onDone }: { equipmen
     {error && <p role="alert" className="text-destructive">{error}</p>}
     <div className="flex flex-wrap gap-2">
       {!correction && <Button variant="outline" disabled={busy} onClick={async () => { setBusy(true); try { await saveDraft(); } catch (err) { setError(err instanceof Error ? err.message : t("error")); } finally { setBusy(false); } }}>{t("save")}</Button>}
-      <Button disabled={busy || !summary.trim() || (Boolean(correction) && !reason.trim())} onClick={async () => { setBusy(true); setError(""); try { if (correction) await api.testEquipment.correct(correction.id, status, summary, notes, reason, values); else await api.testEquipment.record(equipment.id, status, summary, notes, values); dirtyRef.current = false; setDirty(false); await onDone(); } catch (err) { setError(err instanceof Error ? err.message : t("error")); } finally { setBusy(false); } }}>{t(correction ? "save" : "finish")}</Button>
+      <Button disabled={busy || !summary.trim() || (Boolean(correction) && !reason.trim())} onClick={async () => { setBusy(true); setError(""); try { if (correction) await api.testEquipment.correct(correction.id, status, summary, notes, reason, values); else if (context) await api.testEquipment.record(equipment.id, context.measurement_id, status, summary, notes, values); else throw new Error(t("error")); dirtyRef.current = false; setDirty(false); await onDone(); } catch (err) { setError(err instanceof Error ? err.message : t("error")); } finally { setBusy(false); } }}>{t(correction ? "save" : "finish")}</Button>
     </div>
   </div>;
 }
