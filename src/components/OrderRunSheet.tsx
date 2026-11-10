@@ -117,7 +117,11 @@ export function OrderRunSheetButton({ order }: { order: any }) {
           ${kn && kn.otherParams.length > 0 ? `<table><thead><tr><th>${esc(t("runsheet_param"))}</th><th>${esc(t("runsheet_target"))}</th></tr></thead><tbody>${
             kn.otherParams.map((p) => `<tr><td>${esc(specLabelOf(p.name))}</td><td>${specValueHtml(p.raw, p.unit, materials, undefined, { hideIndex: true })}</td></tr>`).join("")
           }</tbody></table>` : ""}
-          ${knetungSvc.flatMap((s) => s.msGroups).length > 0 ? knetungSvc.map(svcBlock).join("") : ""}
+          ${knetungSvc.map((s) => s.msGroups.map((grp) => `
+            <div class="mshead">${esc(grp.label)}</div>
+            <table class="inner"><thead><tr>${grp.cols.map((c) => `<th>${esc(specLabelOf(c))}</th>`).join("")}</tr></thead><tbody>${
+              grp.rows.map((r) => `<tr>${grp.cols.map((c) => `<td>${isEmptySpecValue(r[c]) ? "–" : esc(primSpecValue(r[c]))}</td>`).join("")}</tr>`).join("")
+            }</tbody></table>`).join("")).join("")}
         </section>`;
       const selectionsHtml = !g ? "" : `
         <section>
