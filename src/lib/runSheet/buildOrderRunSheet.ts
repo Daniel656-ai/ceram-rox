@@ -240,6 +240,8 @@ export function buildOrderRunSheet(
   const form: OrderRunSheet["form"] = [];
   const selections = new Map<PppSelection["id"], PppSelection>();
   const used = new Set<string>();
+  let v2o5: RunSheetLineValue | null = null;
+  let masseTyp: RunSheetLineValue | null = null;
   const addSelection = (key: string, display: string | null | undefined, raw: unknown) => {
     const selId = pppSelectionId(key, display);
     if (!selId || selections.has(selId)) return false;
@@ -247,11 +249,20 @@ export function buildOrderRunSheet(
     selections.set(selId, { id: selId, key, label: display?.trim() || def.fallbackLabel, values: selectionValues(raw) });
     return true;
   };
+  /** true = Feld wird gesondert dargestellt (Versuchsnummer ausgeblendet, V2O5/Massetyp als Zeile). */
+  const handleSpecial = (key: string, display: string | null | undefined, raw: unknown, unit: string | null): boolean => {
+    const kind = formEntryKind(key, display);
+    if (kind === "versuchsnummer") return true;
+    if (kind === "v2o5") { if (!v2o5) v2o5 = lineValue(display?.trim() || null, "V2O5-Gehalt", raw, unit); return true; }
+    if (kind === "massetyp") { if (!masseTyp) masseTyp = lineValue(display?.trim() || null, "Massetyp", raw, unit); return true; }
+    return false;
+  };
   for (const f of top) {
     const k = storageKey(f);
     if (!(k in values) || used.has(k)) continue;
     used.add(k);
     if (addSelection(k, f.display_name, values[k])) continue;
+    if (handleSpecial(k, f.display_name, values[k], f.unit?.trim() || null)) continue;
     const colLabels = new Map<string, string>();
     for (const c of fields) {
       if (c.parent_field_id === f.id && c.display_name) colLabels.set(c.field_key, c.display_name);
@@ -263,6 +274,7 @@ export function buildOrderRunSheet(
     if (used.has(k)) continue;
     used.add(k);
     if (addSelection(k, null, values[k])) continue;
+    if (handleSpecial(k, null, values[k], null)) continue;
     form.push({ key: k, label: null, unit: null, raw: values[k], colLabels: new Map() });
   }
   const pppSelections = PPP_SELECTION_DEFS.map((d) => selections.get(d.id)).filter((s): s is PppSelection => !!s);
