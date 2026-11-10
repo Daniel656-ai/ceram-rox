@@ -29,12 +29,38 @@ type Row = Record<string, unknown>;
 
 const norm = (s: unknown) => String(s ?? "").trim().toLowerCase();
 
+/**
+ * Normalisierte Mundstück-Kennung für Vergleiche: „293/1“ und „293_1“
+ * gelten als identisch. Nur für den Duplikatvergleich – die
+ * Originalschreibweise vorhandener Einträge wird nie verändert.
+ */
+export const normMs = (s: unknown) =>
+  String(s ?? "").trim().toLowerCase().replace(/_/g, "/").replace(/\s+/g, " ");
+
+/**
+ * MS-Nummer aus einem Leistungsnamen „Schwindung <ms>“ lesen.
+ * Schreibweise (Schrägstriche, führende Nullen, Groß/Klein) bleibt erhalten.
+ */
+export function schwindungMs(serviceName: string | null | undefined): string | null {
+  const m = /^schwindung\s+(.+)$/i.exec(String(serviceName ?? "").trim());
+  if (!m) return null;
+  const ms = m[1].trim().replace(/\s+/g, " ");
+  return ms || null;
+}
+
 /** Welche Fälle sind laut gebuchten Leistungen nötig (mehrfach zählt einmal)? */
 export function bookedCases(serviceNames: Array<string | null | undefined>) {
   const names = new Set(serviceNames.map(norm));
+  const schwMs: string[] = [];
+  const seen = new Set<string>();
+  for (const n of serviceNames) {
+    const ms = schwindungMs(n);
+    if (ms && !seen.has(normMs(ms))) { seen.add(normMs(ms)); schwMs.push(ms); }
+  }
   return {
     rw: names.has("raumgewicht") || names.has("wasseraufnahme"),
     schw: names.has("schwindung"),
+    schwMs,
   };
 }
 
@@ -63,6 +89,8 @@ export const isAutoEntry = (r: unknown) => !!r && typeof r === "object" && (r as
 export interface Mundstueck293Input {
   rw: boolean;
   schw: boolean;
+  /** MS-Nummern aller gebuchten „Schwindung <ms>“-Leistungen (Originalschreibweise). */
+  schwMs?: string[];
   brennCount: number;
   msAuswahl: unknown;
   mundstueckMs: unknown;
@@ -80,23 +108,40 @@ export function planMundstueck293(input: Mundstueck293Input): Mundstueck293Plan 
   const auswahlIn: Row[] = Array.isArray(input.msAuswahl) ? (input.msAuswahl as Row[]) : [];
   const msIn: Row[] = Array.isArray(input.mundstueckMs) ? (input.mundstueckMs as Row[]) : [];
 
-  const desired: Array<{ zweck: string; anzahl: number; laenge: number }> = [];
-  if (input.rw) desired.push({ zweck: ZWECK_RW, anzahl: rwAnzahl(input.brennCount), laenge: 200 });
-  if (input.schw) desired.push({ zweck: ZWECK_SCHW, anzahl: 3, laenge: 150 });
+  // Soll-Einträge: RW (293/1, brenntemperaturabhängig) unverändert; je gebuchter
+  // „Schwindung <ms>“-Leistung ein eigener Eintrag mit der Originalschreibweise.
+  type Desired = { ms: string; zweck: string; anzahl: number; laenge: number };
+  const desired: Desired[] = [];
+  const desiredSeen = new Set<string>();
+  const pushDesired = (d: Desired) => {
+    const k = `${d.zweck}|${normMs(d.ms)}`;
+    if (desiredSeen.has(k)) return; // „293/1“ und „293_1“ nur einmal je Zweck
+    desiredSeen.add(k);
+    desired.push(d);
+  };
+  if (input.rw) pushDesired({ ms: MS_293, zweck: ZWECK_RW, anzahl: rwAnzahl(input.brennCount), laenge: 200 });
+  if (input.schw) pushDesired({ ms: MS_293, zweck: ZWECK_SCHW, anzahl: 3, laenge: 150 });
+  for (const ms of input.schwMs ?? []) pushDesired({ ms, zweck: ZWECK_SCHW, anzahl: 3, laenge: 150 });
+
+  // Auftraggeber-Einträge haben Vorrang: kein Auto-Eintrag für bereits gewählte Mundstücke.
+  const userMs = new Set(
+    auswahlIn.filter((a) => !isAutoEntry(a)).map((a) => normMs((a as Row).ms))
+  );
 
   type Pair = { a: Row; m: Row | undefined };
   const userPairs: Pair[] = [];
-  const autoByZweck = new Map<string, Pair>();
+  const autoByKey = new Map<string, Pair>();
   const orphanPairs: Pair[] = [];
+  const keyOf = (zweck: unknown, ms: unknown) => `${zweck}|${normMs(ms)}`;
 
   auswahlIn.forEach((a, i) => {
     const m = msIn[i];
     if (!isAutoEntry(a)) { userPairs.push({ a, m }); return; }
-    const want = desired.find((d) => d.zweck === a.zweck);
-    if (want && !autoByZweck.has(want.zweck)) {
+    const want = desired.find((d) => keyOf(d.zweck, d.ms) === keyOf(a.zweck, a.ms));
+    if (want && !autoByKey.has(keyOf(want.zweck, want.ms))) {
       const { verwaist: _v, ...rest } = a;
-      autoByZweck.set(want.zweck, {
-        a: { ...rest, ms: MS_293, anzahl: want.anzahl, laenge: want.laenge, zweck: want.zweck, auto: true },
+      autoByKey.set(keyOf(want.zweck, want.ms), {
+        a: { ...rest, ms: want.ms, anzahl: want.anzahl, laenge: want.laenge, zweck: want.zweck, auto: true },
         m,
       });
       return;
@@ -105,12 +150,14 @@ export function planMundstueck293(input: Mundstueck293Input): Mundstueck293Plan 
     if (mundstueckRowHasValues(m)) orphanPairs.push({ a: { ...a, verwaist: true }, m });
   });
 
-  const autoPairs: Pair[] = desired.map((d) =>
-    autoByZweck.get(d.zweck) ?? {
-      a: { ms: MS_293, anzahl: d.anzahl, laenge: d.laenge, zweck: d.zweck, auto: true },
-      m: undefined,
-    }
-  );
+  const autoPairs: Pair[] = desired
+    .filter((d) => d.zweck !== ZWECK_SCHW || !userMs.has(normMs(d.ms)))
+    .map((d) =>
+      autoByKey.get(keyOf(d.zweck, d.ms)) ?? {
+        a: { ms: d.ms, anzahl: d.anzahl, laenge: d.laenge, zweck: d.zweck, auto: true },
+        m: undefined,
+      }
+    );
 
   const pairs = [...userPairs, ...autoPairs, ...orphanPairs];
   const msAuswahl = pairs.map((p) => p.a);
