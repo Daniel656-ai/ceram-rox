@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildOrderRunSheet, orderDmcPayload } from "./buildOrderRunSheet";
+import { buildOrderRunSheet, orderDmcPayload, runSheetFileName, stripContainerId } from "./buildOrderRunSheet";
 import { specValueHtml } from "./specHtml";
 import { specValueShape } from "@/lib/specValues";
 
@@ -147,5 +147,33 @@ describe("Auftrags-Laufzettel", () => {
     const html = specValueHtml('[{"a":1},{"a":2}]', null, noMat, undefined, { hideIndex: true });
     expect(html).not.toContain("<th>#</th>");
     expect(specValueHtml('[{"a":1}]', null, noMat)).toContain("<th>#</th>");
+  });
+});
+
+describe("runSheetFileName", () => {
+  it("Versuchsnummer im Dateinamen, führende Nullen bleiben erhalten", () => {
+    expect(runSheetFileName("TE0275")).toBe("Laufzettel_TE0275");
+    expect(runSheetFileName("TE0275/2")).toBe("Laufzettel_TE0275-2");
+  });
+  it("Auftragsnummer als Rückfall und ungültige Dateizeichen ersetzt", () => {
+    expect(runSheetFileName("DGA260001")).toBe("Laufzettel_DGA260001");
+    expect(runSheetFileName('TE 01:a/b\\c*d?e"f<g>h|i')).toBe("Laufzettel_TE_01-a-b-c-d-e-f-g-h-i");
+  });
+  it("leere Nummer ergibt sicheren Platzhalter", () => {
+    expect(runSheetFileName("   ")).toBe("Laufzettel_Auftrag");
+    expect(runSheetFileName("///")).toBe("Laufzettel_Auftrag");
+  });
+});
+
+describe("stripContainerId", () => {
+  it("entfernt container_id nur aus Objekt-Zellwerten der Darstellung", () => {
+    expect(stripContainerId({ raw_material_id: "r1", container_id: "c9", material_name: "Ton" }))
+      .toEqual({ raw_material_id: "r1", material_name: "Ton" });
+  });
+  it("lässt andere Werte und Objekte ohne container_id unverändert", () => {
+    expect(stripContainerId("500")).toBe("500");
+    expect(stripContainerId({ menge: "5" })).toEqual({ menge: "5" });
+    expect(stripContainerId(["c1"])).toEqual(["c1"]);
+    expect(stripContainerId(null)).toBeNull();
   });
 });
