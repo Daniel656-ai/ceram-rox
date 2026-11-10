@@ -295,5 +295,13 @@
   "runsheet_remark": "Remark",
   "runsheet_status_open": "Open",
   "runsheet_status_in_progress": "In progress",
-  "runsheet_status_completed": "Completed"
+  "runsheet_status_completed": "Completed",
+  "runsheet_created_at": "Created at",
+  "runsheet_prep_tasks": "Preparatory tasks",
+  "runsheet_knetdauer": "Kneading time",
+  "runsheet_rohstoff": "Raw material",
+  "runsheet_menge": "Amount",
+  "runsheet_lot": "Lot number",
+  "runsheet_bemerkung": "Remark",
+  "runsheet_svc_wanted": "Requested services"
 }
