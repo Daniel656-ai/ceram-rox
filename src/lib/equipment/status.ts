@@ -14,6 +14,7 @@ export interface EquipmentCheck {
   values: Record<string, unknown>;
   created_at: string;
   order_measurement_id: string;
+  service_id: string;
 }
 
 export const viennaDay = (date: Date) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Vienna", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);

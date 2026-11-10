@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import ServiceLinkedForms from "@/components/ServiceLinkedForms";
-import { useRefreshGuard } from "@/hooks/useRefreshGuard";
+import { useRefreshGuard } from "@/lib/refreshGuard";
 
 export function EquipmentCheckForm({ equipment, correction, onDone }: { equipment: Equipment; correction?: EquipmentCheck; onDone: () => Promise<void> }) {
   const { t } = useTranslation("equipment");
@@ -31,7 +31,7 @@ export function EquipmentCheckForm({ equipment, correction, onDone }: { equipmen
   }, []);
   const markDirty = () => { dirtyRef.current = true; setDirty(true); };
   const saveDraft = async () => { if (correction || !hydrated) return; await api.testEquipment.saveDraft(equipment.id, values); dirtyRef.current = false; setDirty(false); };
-  useRefreshGuard("equipment-check", async () => { if (dirtyRef.current) { if (correction || summary || notes) throw new Error(t("dirty")); await saveDraft(); } });
+  useRefreshGuard(async () => { if (dirtyRef.current) { if (correction || summary || notes) throw new Error(t("dirty")); await saveDraft(); } });
   if (loadError) return <div role="alert">{String(loadError)}<Button onClick={() => refetch()}>{t("retry")}</Button></div>;
   if (!correction && (isLoading || !hydrated)) return <p>{t("loading")}</p>;
   if (!correction && !context) return null;

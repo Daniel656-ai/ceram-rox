@@ -50,6 +50,7 @@ export const projects = {
       dbClient
         .from("measurement_orders")
         .select(PROJECT_DETAIL_ORDERS_SELECT)
+        .neq("order_type", "internal")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
     ),
@@ -78,6 +79,7 @@ export const projects = {
            measurement_orders!inner(id, order_number, project_id),
            samples(id, sample_number, sample_name)`
         )
+        .neq("measurement_orders.order_type", "internal")
         .eq("measurement_orders.project_id", projectId)
     ),
 
@@ -97,6 +99,7 @@ export const projects = {
            original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
            measurement_results!inner(id, result_name, display_label, value, unit, is_official, measured_at, remarks)`
         )
+        .neq("measurement_orders.order_type", "internal")
         .eq("measurement_orders.project_id", projectId)
         .eq("measurement_results.is_official", true)
         .order("updated_at", { ascending: false })
@@ -111,6 +114,7 @@ export const projects = {
         .select(
           "id, project_id, status, order_measurements(id, status, processing_time_hours, planned_hours, actual_duration_hours, measurement_services(hourly_rate), work_logs(hours))"
         )
+        .neq("order_type", "internal")
     ),
   listConsumableCostIndex: () =>
     unwrap(dbClient.from("project_consumables").select("project_id, total_cost")),

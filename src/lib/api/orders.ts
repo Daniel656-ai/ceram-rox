@@ -34,6 +34,7 @@ export const orders = {
       dbClient
         .from("measurement_orders")
         .select(ORDER_LIST_SELECT)
+        .neq("order_type", "internal")
         .order("ranking", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true })
     ),
@@ -43,6 +44,7 @@ export const orders = {
       dbClient
         .from("measurement_orders")
         .select(ORDER_DETAIL_SELECT)
+        .neq("order_type", "internal")
         .eq("id", id)
         .maybeSingle()
     ),
@@ -142,6 +144,7 @@ export const orders = {
         .select(
           "id, sample_id, priority, created_at, status, order_measurements(id, status, processing_time_hours, planned_hours)"
         )
+        .neq("order_type", "internal")
         .in("status", ["open", "in_progress"])
         .order("created_at", { ascending: true })
     ),
@@ -170,7 +173,7 @@ export const orders = {
    */
   async copy(orderId: string, createdBy: string): Promise<{ id: string }> {
     const src: any = await unwrap(
-      dbClient.from("measurement_orders").select("*").eq("id", orderId).single()
+      dbClient.from("measurement_orders").select("*").neq("order_type", "internal").eq("id", orderId).single()
     );
 
     const newOrder: any = await unwrap(
