@@ -343,7 +343,7 @@ export function runSheetFileName(number: string): string {
   const clean = number
     .trim()
     .replace(/\s+/g, "_")
-    .replace(/[\\/:*?"<>|%-]+/g, "-")
+    .replace(/[\\/:*?"<>|]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return `Laufzettel_${clean || "Auftrag"}`;
 }
