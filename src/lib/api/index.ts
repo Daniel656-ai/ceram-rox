@@ -186,6 +186,7 @@ import { orderPreparation } from "./orderPreparation";
 import { productionReleases, customers } from "./productionReleases";
 import { productionDocuments } from "./productionDocuments";
 import { usageEvents } from "./usageEvents";
+import { testEquipment } from "./testEquipment";
 
 
 
@@ -196,6 +197,7 @@ import { usageEvents } from "./usageEvents";
 
 
 export const api = {
+  testEquipment,
   // ---- domain modules (preferred) ----
   weighingOcr,
   projects,
