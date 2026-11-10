@@ -319,9 +319,11 @@ export default function CreateOrderPage() {
   const addService = (serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
     if (!svc) return;
+    const uid = newUid();
+    pendingAddedUids.current.push(uid);
     setMeasurements((prev) => [
       ...prev,
-      { uid: newUid(), service_id: serviceId, service_name: svc.service_name, origin: "manual" },
+      { uid, service_id: serviceId, service_name: svc.service_name, origin: "manual" },
     ]);
   };
 
@@ -351,15 +353,17 @@ export default function CreateOrderPage() {
     setUnresolvedSelection(plan.unresolved);
     if (plan.add.length === 0 && plan.remove.length === 0) return;
 
+    const additions: SelectedMeasurement[] = plan.add.map((a) => ({
+      uid: newUid(),
+      service_id: a.service.id,
+      service_name: a.service.service_name,
+      origin: "template",
+      selection_token: a.token,
+    }));
+    // Zuletzt über die Checkbox ausgewählte Dienstleistung wird aktiver Reiter.
+    pendingAddedUids.current.push(...additions.map((a) => a.uid));
     setMeasurements((prev) => {
       const kept = prev.filter((m) => !plan.remove.includes(m.uid));
-      const additions: SelectedMeasurement[] = plan.add.map((a) => ({
-        uid: newUid(),
-        service_id: a.service.id,
-        service_name: a.service.service_name,
-        origin: "template",
-        selection_token: a.token,
-      }));
       return [...kept, ...additions];
     });
     if (plan.remove.length > 0) {
@@ -377,6 +381,17 @@ export default function CreateOrderPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dynamicValues, templateFields, services, draftLoading, templateReady, servicesReady]);
+
+  // Aktiven Reiter nachführen: neu hinzugekommene Positionen aktivieren,
+  // abgewählte aus der Reihenfolge entfernen, Fallback bei Abwahl des Aktiven.
+  useEffect(() => {
+    const added = pendingAddedUids.current;
+    pendingAddedUids.current = [];
+    setServiceTab((prev) =>
+      nextActiveServiceTab({ prev, visibleUids: measurements.map((m) => m.uid), addedUids: added })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [measurements]);
 
 
   // ---------------------------------------------------------------------
