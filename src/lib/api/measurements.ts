@@ -4,6 +4,10 @@ import { unwrap, run } from "./_helpers";
 const MY_MEASUREMENT_SELECT = `*, measurement_services(service_name, category, hourly_rate, standard_duration_hours, sla_monitoring_enabled, sla_yellow_warning_days, workstation_id, workstations!measurement_services_workstation_id_fkey(id, name)), workstations!order_measurements_workstation_id_fkey(id, name), samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), measurement_orders!inner(*, projects(project_number, project_name))`;
 
 export const measurements = {
+  listForLabPlanning: () => unwrap(dbClient.from("order_measurements").select(`id, measurement_number, status, assigned_to, due_date, priority, ranking,
+    planned_start_date, planned_end_date, measurement_services(service_name, category, standard_duration_hours),
+    measurement_orders!inner(order_number, order_type, projects(project_number, project_name), samples(sample_number, sample_name))`)
+    .neq("measurement_orders.order_type", "internal").order("ranking", { ascending: true, nullsFirst: false }).order("priority", { ascending: false }).order("due_date")),
   /** Existing dashboard projection, unchanged; the order sample is not a task sample. */
   listForDashboardSearch: () => unwrap(dbClient.from("order_measurements").select(`
           id, measurement_number, status, assigned_to,
