@@ -195,7 +195,7 @@ describe("individual AV in placed K-value calculations", () => {
   it("does not override unplaced K calculations or block-level AV1", () => {
     const noK = field("t", "points", "repeater", { repeater: { layout: layout([ref("temp", "temperature"), avPlacement]) } });
     expect(evaluateScopedEntry(noK, all, defs, root, rows[0]).k_wert.value).toBe(5000);
-    const run = { ...owner, field_type: "measurement_block", metadata: { measurement_block: { layout: layout([ref("temp", "temperature"), avPlacement, kPlacement]) } } };
+    const run: FormField = { ...owner, field_type: "measurement_block", metadata: { measurement_block: { layout: layout([ref("temp", "temperature"), avPlacement, kPlacement]) } } };
     expect(evaluateScopedEntry(run, all, defs, root, rows[0]).k_wert.value).toBe(5000);
   });
   it("does not change AV2 or bind an unrelated missing field identity", () => {
@@ -207,6 +207,8 @@ describe("individual AV in placed K-value calculations", () => {
   it("does not reinterpret readonly, linked or ambiguous AV definitions", () => {
     const readonly = all.map((f) => f.id === "av" ? { ...f, readonly: true } : f);
     expect(evaluateScopedEntry(owner, readonly, defs, root, rows[0]).k_wert.value).toBe(5000);
+    const linked = all.map((f) => f.id === "av" ? { ...f, data_source: { mode: "display", source: { kind: "form_field", field_key: "av_1" } } } : f);
+    expect(evaluateScopedEntry(owner, linked, defs, root, rows[0]).k_wert.value).toBe(5000);
     const ambiguous = field("t", "points", "repeater", { repeater: { layout: layout([ref("temp", "temperature"), avPlacement, ref("av2", "AV"), kPlacement]) } });
     expect(evaluateScopedEntry(ambiguous, [...all, field("av2", "AV")], defs, root, rows[0]).k_wert.value).toBe(5000);
   });
