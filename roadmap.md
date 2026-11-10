@@ -83,3 +83,11 @@ Auftrag: ROX_-_Umsetzung_Nachträgliche_Korrektur_pasted.md (freigegeben, Basis 
 - Tauri-Desktop-Test mit Unternehmensdatenbank (kein Zugang aus Sandbox)
 - Web-Browser-Test mit echter abgeschlossener Dienstleistung (keine Testdaten im Produktivbestand erlaubt)
 - Firmendatenbank: Migration NICHT ausgeführt (ausdrücklich untersagt) – separates Freigabeverfahren
+
+## Freigabe: Neustrukturierung Ergebnisdatenbank (3 Ebenen)
+- [x] Ebene 1 Probenübersicht, Ebene 2 Proben-Detail (Formularlayout + verlustfreie Messwerttabelle, Offiziell/Vorläufig-Kennzeichnung, Vorgaben/Historie/Korrektur), Ebene 3 Detail-Inspektor (Messwerte, Kurven, Dateien, Historie, auftragsbezogener Bericht read-only).
+- [x] Ergebnismatrix und Statistik & Diagramme unverändert erhalten; globale Filter wirken in allen drei Ansichten.
+- [x] Nur Frontend: neue Lese-API `listSampleDatabase`/`getForOrder`, keine Migration/RPC/Schemaänderung.
+- [x] 1.320 Tests (8 neue), Typprüfung, Build bestanden; Web-Sichtprüfung aller drei Ebenen + Matrix/Statistik ohne JS-Fehler.
+- [ ] Web-Abnahme mit echten Korrekturen/Schreibvorgängen: blockiert – keine Schreibzugriffe im Produktivbestand erlaubt.
+- [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang zur Firmeninstallation.
