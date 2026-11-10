@@ -974,7 +974,7 @@ export default function CreateOrderPage() {
 
       {mode === "single" ? (
       <form onSubmit={handleSubmit} onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
-      <div className={pilotSingle ? "space-y-6 xl:space-y-0 xl:grid xl:grid-cols-2 xl:gap-6 xl:items-start" : "space-y-6"}>
+      <div className={pilotSingle ? "space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start" : "space-y-6"}>
       <div className="space-y-6 min-w-0">
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
