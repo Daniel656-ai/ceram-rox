@@ -14,7 +14,7 @@ import { useRefreshGuard } from "@/lib/refreshGuard";
 
 export function EquipmentCheckForm({ equipment, correction, onDone }: { equipment: Equipment; correction?: EquipmentCheck; onDone: () => Promise<void> }) {
   const { t } = useTranslation("equipment");
-  const { data: context, isLoading, error: loadError, refetch } = useQuery({ queryKey: ["equipment-context", equipment.id], queryFn: () => api.testEquipment.context(equipment.id), enabled: !correction, refetchOnMount: "always" });
+  const { data: context, isLoading, isFetchedAfterMount, error: loadError, refetch } = useQuery({ queryKey: ["equipment-context", equipment.id], queryFn: () => api.testEquipment.context(equipment.id), enabled: !correction, refetchOnMount: "always" });
   const [values, setValues] = useState<Record<string, unknown>>(correction?.values ?? {});
   const [summary, setSummary] = useState(correction?.result_summary ?? "");
   const [notes, setNotes] = useState(correction?.notes ?? "");
@@ -25,14 +25,22 @@ export function EquipmentCheckForm({ equipment, correction, onDone }: { equipmen
   const [error, setError] = useState("");
   const [hydrated, setHydrated] = useState(Boolean(correction));
   const dirtyRef = useRef(false);
-  useEffect(() => { if (context && !dirtyRef.current) { setValues(context.values); setHydrated(true); } }, [context]);
+  useEffect(() => { if (context && isFetchedAfterMount && !dirtyRef.current) { setValues(context.values); setSummary(String(context.values.__check_summary ?? "")); setNotes(String(context.values.__check_notes ?? "")); setStatus(context.values.__check_status === "nicht_bestanden" ? "nicht_bestanden" : "bestanden"); setHydrated(true); } }, [context, isFetchedAfterMount]);
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => { if (dirtyRef.current) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", handler); return () => window.removeEventListener("beforeunload", handler);
   }, []);
+  useEffect(() => {
+    const handler = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (link && dirtyRef.current && !window.confirm(t("unsaved"))) { event.preventDefault(); event.stopPropagation(); }
+    };
+    document.addEventListener("click", handler, true);
+    return () => document.removeEventListener("click", handler, true);
+  }, [t]);
   const markDirty = () => { dirtyRef.current = true; setDirty(true); };
-  const saveDraft = async () => { if (correction || !hydrated) return; await api.testEquipment.saveDraft(equipment.id, values); dirtyRef.current = false; setDirty(false); };
-  useRefreshGuard(async () => { if (dirtyRef.current) { if (correction || summary || notes) throw new Error(t("dirty")); await saveDraft(); } });
+  const saveDraft = async () => { if (correction || !hydrated) return; await api.testEquipment.saveDraft(equipment.id, { ...values, __check_summary: summary, __check_notes: notes, __check_status: status }); dirtyRef.current = false; setDirty(false); };
+  useRefreshGuard(async () => { if (dirtyRef.current) { if (correction) throw new Error(t("dirty")); await saveDraft(); } });
   if (loadError) return <div role="alert">{String(loadError)}<Button onClick={() => refetch()}>{t("retry")}</Button></div>;
   if (!correction && (isLoading || !hydrated)) return <p>{t("loading")}</p>;
   if (!correction && !context) return null;

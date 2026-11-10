@@ -35,4 +35,5 @@ export const testEquipment = {
   context: (id: string) => call<{ measurement_id: string; order_number: string; measurement_number: string; assigned_to: string; status: string; values: Record<string, unknown> } | null>("get_equipment_check_context", { _equipment_id: id }),
   saveDraft: (id: string, values: Record<string, unknown>) => call<void>("save_equipment_check_draft", { _equipment_id: id, _values: values }),
   qualifiedUsers: (id: string) => call<{ user_id: string; first_name: string; last_name: string }[]>("equipment_qualified_users", { _equipment_id: id }),
+  audit: (id: string) => call<{ id: string; event_type: string; created_at: string; metadata: Record<string, unknown> }[]>("get_equipment_audit", { _equipment_id: id }),
 };
