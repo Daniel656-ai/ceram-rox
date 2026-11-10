@@ -334,6 +334,19 @@ export function orderDmcPayload(number: string): string | null {
 }
 
 /**
+ * Kopfzeile des Laufzettels unter „Auftrag": Versuchsnummer und Auftragsnummer
+ * gemeinsam (`3121 – SW-260010`). Ohne Versuchsnummer nur die Auftragsnummer.
+ * Reine Anzeige: beide Nummern bleiben unverändert (führende Nullen, Zeichen);
+ * Dateiname und DMC-Inhalt nutzen weiterhin `number` allein.
+ */
+export function runSheetOrderLabel(sheet: Pick<OrderRunSheet, "number" | "orderNumber">): string | null {
+  const orderNo = sheet.orderNumber?.trim() || null;
+  const shown = sheet.number?.trim() || null;
+  if (shown && orderNo && shown !== orderNo) return `${shown} – ${orderNo}`;
+  return orderNo ?? shown;
+}
+
+/**
  * Dateiname des Laufzettel-PDFs (über den Dokumenttitel des Druck-Iframes):
  * `Laufzettel_<Versuchsnummer>`, sonst `Laufzettel_<Auftragsnummer>`.
  * Führende Nullen bleiben erhalten (reine Zeichenkette, kein Number-Cast);
