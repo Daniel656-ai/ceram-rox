@@ -31,6 +31,7 @@ import { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
 import MeasurementRow from "@/components/order/MeasurementRow";
 import ServiceTabsCard from "@/components/order/ServiceTabsCard";
 import { nextActiveServiceTab, EMPTY_ACTIVE_TAB, type ActiveServiceTabState } from "@/lib/orderCreation/activeServiceTab";
+import { useCustomerFormServices, planServiceTabs } from "@/lib/orderCreation/serviceFormMetadata";
 import { planPilotServiceDeselection, removeDraftServices } from "@/lib/orderCreation/serviceDeselection";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { buildFormValueResultPayload } from "@/lib/orderFormValueHandover";
@@ -411,14 +412,25 @@ export default function CreateOrderPage() {
 
   // Aktiven Reiter nachführen: neu hinzugekommene Positionen aktivieren,
   // abgewählte aus der Reihenfolge entfernen, Fallback bei Abwahl des Aktiven.
+  // Nur Dienstleistungen mit echtem Auftraggeberformular erhalten einen Reiter;
+  // `measurements` selbst bleibt unverändert (reine Darstellungsfilterung).
+  const customerFormStatus = useCustomerFormServices(
+    measurements.map((m) => m.service_id),
+    mode === "single" && orderKind === "pilot_plant",
+  );
+  const serviceTabPlan = planServiceTabs(measurements, customerFormStatus);
+  const visibleTabKey = serviceTabPlan.visibleUids.join("|");
+  const unresolvedTabKey = serviceTabPlan.unresolvedUids.join("|");
   useEffect(() => {
     const added = pendingAddedUids.current;
-    pendingAddedUids.current = [];
+    // Neu hinzugefügte Positionen mit noch unbekannten Metadaten vormerken,
+    // damit ihr Reiter nach dem Laden wie bisher aktiviert wird.
+    pendingAddedUids.current = added.filter((u) => serviceTabPlan.unresolvedUids.includes(u));
     setServiceTab((prev) =>
-      nextActiveServiceTab({ prev, visibleUids: measurements.map((m) => m.uid), addedUids: added })
+      nextActiveServiceTab({ prev, visibleUids: serviceTabPlan.visibleUids, addedUids: added })
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [measurements]);
+  }, [measurements, visibleTabKey, unresolvedTabKey]);
 
 
   // ---------------------------------------------------------------------
@@ -1319,9 +1331,10 @@ export default function CreateOrderPage() {
       {pilotSingle && (
         <div className="min-w-0">
           <ServiceTabsCard
-            measurements={measurements}
+            measurements={serviceTabPlan.tabs}
+            allMeasurements={measurements}
             activeUid={serviceTab.active}
-            onActivate={(uid) => setServiceTab((prev) => nextActiveServiceTab({ prev, visibleUids: measurements.map((m) => m.uid), clickedUid: uid }))}
+            onActivate={(uid) => setServiceTab((prev) => nextActiveServiceTab({ prev, visibleUids: serviceTabPlan.visibleUids, clickedUid: uid }))}
             formValues={measurementFormValues}
             onFormChange={updateFormValue}
             onDuplicate={duplicateMeasurement}

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MeasurementRow, { type MeasurementRowData } from "@/components/order/MeasurementRow";
+import { Badge } from "@/components/ui/badge";
 import ServiceFormStatusBadge from "@/components/order/ServiceFormStatusBadge";
 
 /**
@@ -12,6 +13,7 @@ import ServiceFormStatusBadge from "@/components/order/ServiceFormStatusBadge";
  */
 export default function ServiceTabsCard({
   measurements,
+  allMeasurements,
   activeUid,
   onActivate,
   formValues,
@@ -20,7 +22,10 @@ export default function ServiceTabsCard({
   onRemove,
   t,
 }: {
+  /** Nur Positionen mit Auftraggeberformular (sichtbare Reiter). */
   measurements: MeasurementRowData[];
+  /** Alle Positionen des Auftrags (unverändert, nur für den Hinweis). */
+  allMeasurements?: MeasurementRowData[];
   activeUid: string | null;
   onActivate: (uid: string) => void;
   formValues: Record<string, Record<string, any>>;
@@ -37,7 +42,20 @@ export default function ServiceTabsCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {measurements.length === 0 ? (
+        {measurements.length === 0 && (allMeasurements?.length ?? 0) > 0 ? (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {t("orders:serviceTabs.noCustomerForms", {
+                defaultValue: "Für die ausgewählten Dienstleistungen sind keine zusätzlichen Auftraggeberangaben erforderlich.",
+              })}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {allMeasurements!.map((m) => (
+                <Badge key={m.uid} variant="secondary" className="font-normal">{m.service_name}</Badge>
+              ))}
+            </div>
+          </div>
+        ) : measurements.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {t("orders:serviceTabs.empty", {
               defaultValue: "Wählen Sie links eine Dienstleistung aus – ihr Formular erscheint hier.",
