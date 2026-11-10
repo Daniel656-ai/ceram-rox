@@ -1,9 +1,9 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
 ## Freigabe: Sicherheitsabfrage Pilot-Plant-Dienstleistung (2026-11-10)
-- [ ] Checkbox-Abwahl vor Zustandsänderung bestätigen; Abbrechen erhält Auswahl, Werte und Reiter.
-- [ ] Bestätigte Entfernung bereinigt UID-Daten und Reiter; Entwurf und erneute Auswahl testen.
-- [ ] Gezielte Tests, Web-Prüfung und Abschlussbericht; keine Backendänderungen.
+- [x] Checkbox-Abwahl vor Zustandsänderung bestätigen; Abbrechen erhält Auswahl, Werte und Reiter.
+- [x] Bestätigte Entfernung bereinigt UID-Daten und Reiter; Entwurf und erneute Auswahl getestet.
+- [x] 11 neue Tests, 1.385 Gesamttests bestanden, angemeldete Web-Prüfung mit separaten anschließend gelöschten Testentwürfen; deutscher Dialog vollständig sichtbar; Abschlussbericht, keine Backendänderungen.
 
 ## Freigabe: Laufzettel-Umbau und Mundstücksverknüpfungen (2026-11-10)
 - [x] Kopfbereich: Firmenlogo, „Erstellt am" aus created_at; Kunde/Gedruckt am/Änderungsstände entfernt.
