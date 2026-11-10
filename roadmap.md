@@ -1,5 +1,13 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
+## Freigabe: Laufzettel-Umbau und Mundstücksverknüpfungen (2026-11-10)
+- [x] Kopfbereich: Firmenlogo, „Erstellt am" aus created_at; Kunde/Gedruckt am/Änderungsstände entfernt.
+- [x] PPP-Auswahllisten aus Formular herausgelöst, zweispaltig neben Knetung; Knetung mit vorbereitenden Tätigkeiten, Knetdauer, 5-Spalten-Rohstofftabelle.
+- [x] Mundstückgruppen nach tatsächlichem MS-Wert (führende Nullen erhalten, Fallback „Mundstück nicht angegeben"); Extrusion vor Schwindung; Signatur-/IST-/Einheitsspalten und Abschnitt „Nicht eindeutig zugeordnet" entfernt.
+- [x] 1.312 Tests bestanden, Typprüfung/Build OK; Web-Sichtprüfung an echtem Auftrag SW-260026 (lesend, keine Schreibzugriffe); Abschlussbericht erstellt.
+- [ ] Tauri-Abnahme mit Firmen-Datenbank: blockiert durch fehlenden Zugang zur Firmeninstallation (Feld „Vorbereitende Tätigkeiten" existiert nur dort; Auflösung erfolgt zur Laufzeit lesend).
+- [ ] Browser-Druckkopfzeile (Titel/Datum) kann nur über Browsereinstellung unterdrückt werden – dokumentierte Einschränkung.
+
 ## Freigabe: Individuelle AV-Werte (2026-11-10)
 - [x] Zeilenlokalen AV-Vorrang ausschließlich für platzierte K-Wert-Berechnungen ergänzt; Vorgabe/Formeln/Historie unverändert.
 - [x] Werte 40/50/60, Einzeländerung 55, JSON-Wiederöffnung und unveränderte Integritätsprüfung getestet; 1305 Tests bestanden, Abschlussbericht erstellt.
