@@ -1,12 +1,12 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
 ## Freigabe: Prüfmittelüberwachung Phase 1 (2026-11-10)
-- [ ] Additive Web-Migrationen, sichere Prüfungs-RPCs und unveränderliche Historie.
-- [ ] Prüfmittelverwaltung, interne Prüfungen, Korrekturen und Wartungsfreigabe; DE/EN.
-- [ ] Interne Aufträge aus Kundenansichten, Ergebnissen, Statistiken und Exporten ausschließen.
-- [ ] 23 initiale Prüfmittel aus Originalplan übernehmen (Originaldatei lokalisieren).
-- [ ] Automatisierte Sicherheits-/Statusprüfungen und praktische Webprüfung ohne Produktiv-Testdaten.
-- [ ] Separate Unternehmens-SQL und technischer Abschlussbericht.
+- [x] Additive Web-Migrationen 0029–0032, sichere Prüfungs-RPCs und unveränderliche Historie.
+- [x] Prüfmittelverwaltung, interne Prüfungen, Korrekturen und Wartungsfreigabe; DE/EN.
+- [x] Kundenlisten/Ergebnisse/Statistiken gefiltert, restriktive externe Isolation und interne Ergebnis-/Verrechnungssperre; Admin-Gesamtsicherung bleibt vollständig.
+- [ ] 23 initiale Prüfmittel übernehmen: Original-Prüfmittelplan.xlsx mit Intervallen und Verantwortlichen fehlt.
+- [x] 1283 Unit-Tests, isolierte SQL-Prüfungen, Webprüfung DE/EN ohne Produktiv-Testdaten; vollständige Web-Schreibabnahme/Parallelrennen benötigen isolierte echte ROX-Testumgebung.
+- [x] Separate Unternehmens-SQL und technischer Abschlussbericht.
 - [ ] Desktop-Abnahme: benötigt erreichbare Tauri-Unternehmensinstallation.
 
 ## Aktuelle Freigabe: Erweiterung intelligenter Rohstoff-Repeater (g, Lot, Layout)

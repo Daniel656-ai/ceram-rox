@@ -69,4 +69,24 @@ BEGIN
  IF EXISTS(SELECT 1 FROM public.measurement_results r JOIN public.order_measurements m ON m.id=r.order_measurement_id JOIN public.measurement_orders o ON o.id=m.order_id WHERE o.order_type='internal') THEN RAISE EXCEPTION 'Internal customer results'; END IF;
  RAISE NOTICE 'PASS no customer result records';
 END $$;
+-- Exercise actual app role: direct writes denied even when permissive policy exists.
+GRANT USAGE ON SCHEMA public,auth TO authenticated;
+GRANT SELECT ON public.profiles,public.user_roles,public.role_permissions,public.mdl_service_permissions TO authenticated;
+ALTER TABLE public.measurement_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_measurements ENABLE ROW LEVEL SECURITY;
+GRANT SELECT ON public.measurement_orders,public.order_measurements TO authenticated;
+CREATE POLICY fixture_read ON public.measurement_orders FOR SELECT TO authenticated USING(true);
+CREATE POLICY fixture_read ON public.order_measurements FOR SELECT TO authenticated USING(true);
+INSERT INTO public.role_permissions VALUES('10000000-0000-0000-0000-000000000003','external'),('10000000-0000-0000-0000-000000000003','equipment.view');
+SELECT set_config('test.uid','10000000-0000-0000-0000-000000000003',true);
+SET LOCAL ROLE authenticated;
+DO $$ DECLARE failed boolean:=false; BEGIN
+ IF EXISTS(SELECT 1 FROM public.measurement_orders WHERE order_type='internal') OR EXISTS(SELECT 1 FROM public.order_measurements) OR EXISTS(SELECT 1 FROM public.test_equipment) OR EXISTS(SELECT 1 FROM public.test_equipment_checks) THEN RAISE EXCEPTION 'External isolation bypassed'; END IF;
+ RAISE NOTICE 'PASS external isolation despite permissive reads';
+ BEGIN INSERT INTO public.test_equipment(name,interval_days) VALUES('Forbidden',30); EXCEPTION WHEN insufficient_privilege THEN failed:=true; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Direct equipment write accepted'; END IF;
+ IF has_function_privilege('authenticated','public.record_equipment_check(uuid,text,text,text,jsonb)','EXECUTE') THEN RAISE EXCEPTION 'Unsafe RPC executable'; END IF;
+ RAISE NOTICE 'PASS app write and unsafe RPC privileges denied';
+END $$;
+RESET ROLE;
 ROLLBACK;

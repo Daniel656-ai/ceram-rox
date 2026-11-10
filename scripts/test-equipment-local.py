@@ -27,6 +27,7 @@ try:
     psql(root / "scripts/equipment-test-schema.sql")
     psql(root / "drizzle/migrations/0030_equipment_monitoring_phase1.sql")
     psql(root / "drizzle/migrations/0031_equipment_identity_and_isolation.sql")
+    psql(root / "drizzle/migrations/0032_equipment_explicit_write_privileges.sql")
     psql(root / "scripts/test-equipment.sql")
 finally:
     run(prefix + [str(binary / "pg_ctl"), "-D", str(data), "stop", "-m", "fast"])
