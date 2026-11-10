@@ -1213,7 +1213,7 @@ export default function CreateOrderPage() {
 
             {measurements.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("orders:no_measurements_hint")}</p>
-            ) : (
+            ) : pilotSingle ? null : (
               <div className="space-y-3">
                 {extraMeasurements.map((m, idx) => (
                   <MeasurementRow
@@ -1224,7 +1224,7 @@ export default function CreateOrderPage() {
                     formValues={measurementFormValues[m.uid] || {}}
                     onFormChange={(key, value) => updateFormValue(m.uid, key, value)}
                     onDuplicate={() => duplicateMeasurement(m.uid)}
-                    onRemove={() => removeMeasurement(m.uid)}
+                    onRemove={() => requestRemoveMeasurement(m.uid)}
                   />
                 ))}
               </div>
@@ -1284,6 +1284,45 @@ export default function CreateOrderPage() {
           <Button type="button" variant="outline" onClick={() => navigate(-1)}>{t("common:cancel")}</Button>
           {draftsEnabled && saveIndicator}
         </div>
+      </div>
+
+      {pilotSingle && (
+        <div className="min-w-0 xl:sticky xl:top-6">
+          <ServiceTabsCard
+            measurements={measurements}
+            activeUid={serviceTab.active}
+            onActivate={(uid) => setServiceTab((prev) => nextActiveServiceTab({ prev, visibleUids: measurements.map((m) => m.uid), clickedUid: uid }))}
+            formValues={measurementFormValues}
+            onFormChange={updateFormValue}
+            onDuplicate={duplicateMeasurement}
+            onRemove={requestRemoveMeasurement}
+            t={t}
+          />
+        </div>
+      )}
+      </div>
+
+      {/* Sicherheitsabfrage: endgültiges Löschen einer bearbeiteten Position. */}
+      <AlertDialog open={!!confirmRemoveUid} onOpenChange={(open) => { if (!open) setConfirmRemoveUid(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("orders:serviceTabs.removeTitle", { defaultValue: "Dienstleistung endgültig entfernen?" })}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("orders:serviceTabs.removeWarning", {
+                defaultValue: "Zu dieser Dienstleistung wurden bereits Eingaben erfasst. Das Entfernen löscht alle ihre Eingaben endgültig und unwiderruflich.",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (confirmRemoveUid) removeMeasurement(confirmRemoveUid); setConfirmRemoveUid(null); }}
+            >
+              {t("orders:serviceTabs.removeConfirm", { defaultValue: "Endgültig löschen" })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       </form>
       ) : (
