@@ -102,6 +102,29 @@ const PPP_SELECTION_DEFS: { id: PppSelection["id"]; fallbackLabel: string; match
 const pppSelectionId = (key: string, display?: string | null) =>
   PPP_SELECTION_DEFS.find((def) => def.match(normKey(key), normKey(display)))?.id ?? null;
 
+/**
+ * Sonderbehandlung einzelner Formularfelder im Laufzettel (reine Anzeige):
+ * - Versuchsnummer: wird nicht separat gezeigt (Auftragsnummer deckt sie ab;
+ *   intern bleibt sie für Dateiname/Identität erhalten).
+ * - V2O5-Gehalt / Massetyp: werden als gemeinsame Zeile über der Tabelle gezeigt.
+ * Gespeicherte Werte bleiben in allen Fällen unverändert.
+ */
+type FormEntryKind = "versuchsnummer" | "v2o5" | "massetyp" | null;
+const formEntryKind = (key: string, display?: string | null): FormEntryKind => {
+  const k = normKey(key);
+  const d = normKey(display);
+  if (k === "versuchsnummer" || d === "versuchsnummer") return "versuchsnummer";
+  if (k.includes("v2o5") || d.includes("v2o5")) return "v2o5";
+  if (k.includes("massetyp") || d.includes("massetyp")) return "massetyp";
+  return null;
+};
+
+/** Gespeicherten Wert als kurzen Zeilentext formatieren (keine Ersatzwerte). */
+const lineValue = (label: string | null, fallback: string, raw: unknown, unit: string | null): RunSheetLineValue => ({
+  label: label ?? fallback,
+  text: `${primSpecValue(parseSpecValue(raw))}${unit ? ` ${unit}` : ""}`,
+});
+
 /** Auswahlwerte als lesbare Texte; gespeicherte Werte bleiben unverändert. */
 const selectionValues = (raw: unknown): string[] => {
   const v = parseSpecValue(raw);
