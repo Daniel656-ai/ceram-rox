@@ -9,6 +9,7 @@ import { OrderRunSheetButton } from "@/components/OrderRunSheet";
 import { BillingStatusControl } from "@/components/orders/BillingStatus";
 import { canEditBilled } from "@/lib/orders/billing";
 import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
+import { PRIORITY_LEVELS, normalizePriority, priorityLabelKey } from "@/lib/orders/priority";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -50,6 +51,7 @@ import { isExternalCustomer } from "@/lib/auth/externalCustomer";
 
 function OrderDetailPageInner() {
   const { t } = useTranslation("orders");
+  const { t: tc } = useTranslation("common");
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const measurementFilter = searchParams.get("measurement");
@@ -215,7 +217,7 @@ function OrderDetailPageInner() {
 
   const openEditDialog = () => {
     setEditOrderType((order as any).order_type);
-    setEditPriority((order as any).priority || "normal");
+    setEditPriority(normalizePriority((order as any).priority));
     setEditDueDate((order as any).due_date || "");
     setEditNotes((order as any).notes || "");
     setEditOpen(true);
@@ -441,6 +443,19 @@ function OrderDetailPageInner() {
             {/* Verrechnungsstatus: nur Kundenaufträge, speichert sofort über set_order_billed */}
             {editOrderType === "customer" && (order as any).order_type === "customer" && (
               <BillingStatusControl order={order as any} canEdit={canEditBilled(order as any, user?.id, role === "master")} />
+            )}
+            {canEditDelete && (
+              <div>
+                <Label>Priorität</Label>
+                <Select value={editPriority} onValueChange={setEditPriority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PRIORITY_LEVELS.map((p) => (
+                      <SelectItem key={p} value={p}>{tc(priorityLabelKey(p))}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             {canEditDelete && (
               <div>
