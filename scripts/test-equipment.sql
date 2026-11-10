@@ -38,10 +38,12 @@ BEGIN
  failed:=false; BEGIN DELETE FROM public.order_measurements WHERE id=mid; EXCEPTION WHEN OTHERS THEN failed:=true; END;
  IF NOT failed THEN RAISE EXCEPTION 'Completed deletion accepted'; END IF; RAISE NOTICE 'PASS completed deletion protected';
  mid:=public.create_equipment_check_order(e,auth.uid(),NULL);
- PERFORM public.cancel_equipment_check_order(e,'Assigned cancellation');
+ PERFORM public.cancel_equipment_check_order(e,'Assigned cancellation',mid);
  IF EXISTS(SELECT 1 FROM public.order_measurements WHERE id=mid) OR (SELECT next_due_date FROM public.test_equipment WHERE id=e)<>due THEN RAISE EXCEPTION 'Cancellation changed timer or left measurement'; END IF;
  IF NOT EXISTS(SELECT 1 FROM public.activity_log WHERE event_type='equipment_check_cancelled' AND metadata->>'measurement_id'=mid::text AND order_id IS NULL AND order_measurement_id IS NULL) THEN RAISE EXCEPTION 'Cancellation audit missing'; END IF;
  RAISE NOTICE 'PASS assigned cancellation preserves timer and audit';
+ failed:=false; BEGIN PERFORM public.save_equipment_check_draft(e,'{}',mid); EXCEPTION WHEN OTHERS THEN failed:=true; END;
+ IF NOT failed THEN RAISE EXCEPTION 'Stale check identity accepted'; END IF; RAISE NOTICE 'PASS stale check identity rejected';
  mid:=public.create_equipment_check_order(e,auth.uid(),NULL);
  DELETE FROM public.mdl_service_permissions WHERE user_id=auth.uid();
  failed:=false; BEGIN PERFORM public.record_equipment_check(e,'bestanden','Passed','','{}'); EXCEPTION WHEN insufficient_privilege THEN failed:=true; END;
