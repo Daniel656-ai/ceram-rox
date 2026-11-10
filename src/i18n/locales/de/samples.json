@@ -295,5 +295,13 @@
   "runsheet_remark": "Bemerkung",
   "runsheet_status_open": "Offen",
   "runsheet_status_in_progress": "In Bearbeitung",
-  "runsheet_status_completed": "Abgeschlossen"
+  "runsheet_status_completed": "Abgeschlossen",
+  "runsheet_created_at": "Erstellt am",
+  "runsheet_prep_tasks": "Vorbereitende Tätigkeiten",
+  "runsheet_knetdauer": "Knetdauer",
+  "runsheet_rohstoff": "Rohstoff",
+  "runsheet_menge": "Menge",
+  "runsheet_lot": "Lotnummer",
+  "runsheet_bemerkung": "Bemerkung",
+  "runsheet_svc_wanted": "Gewünschte Dienstleistungen"
 }
