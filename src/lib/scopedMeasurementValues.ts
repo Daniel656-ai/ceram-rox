@@ -12,7 +12,8 @@ function localKValueInputs(owner: FormField, fields: FormField[], calcs: FormCal
   if (owner.field_type !== "repeater") return {};
   const localAv = containerFields(owner, fields, calcs).filter((f) =>
     f.form_id === owner.form_id && f.field_key.toLowerCase() === "av" &&
-    ["number", "decimal"].includes(f.field_type) && !isLinkedField(f));
+    ["number", "decimal"].includes(f.field_type) && !f.readonly &&
+    !isLinkedField(f as FormField & { data_source?: unknown }));
   if (localAv.length !== 1) return {};
   const raw = own[localAv[0].field_key];
   // No verified Excel fallback: missing/invalid local AV is not calculable.

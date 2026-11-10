@@ -117,8 +117,9 @@ export function evaluateLocalCalculations(
   calcs: FormCalculation[],
   values: Record<string, unknown>,
   /** Feldschlüssel des Formulars – auch ohne Wert gültige Eingangsgrößen. */
-  knownFieldKeys: Iterable<string> = []
-  , calculationInputs: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {}
+  knownFieldKeys: Iterable<string> = [],
+  /** Per-calculation input overlays never leak into another calculation's scope. */
+  calculationInputs: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {},
 ): Record<string, LocalCalcResult> {
   const { ordered, cyclic } = orderCalculations(calcs);
   const out: Record<string, LocalCalcResult> = {};
