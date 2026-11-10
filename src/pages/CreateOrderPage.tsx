@@ -197,6 +197,7 @@ export default function CreateOrderPage() {
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [orderType, setOrderType] = useState<string>("");
   const [isBilled, setIsBilled] = useState(false);
+  const [priority, setPriority] = useState<string>("normal");
   const [orderKind, setOrderKind] = useState<"labor" | "pilot_plant">("labor");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
@@ -233,10 +234,10 @@ export default function CreateOrderPage() {
   const [rulesReady, setRulesReady] = useState(false);
 
   const draftPayload: OrderDraftPayload = useMemo(() => ({
-    selectedProjectId, orderType, orderKind, dueDate, notes,
+    selectedProjectId, orderType, orderKind, priority, dueDate, notes,
     measurements, selectedSampleIds, processTemplateId,
     measurementParams, measurementFormValues, dynamicValues, dynamicFormId,
-  }), [selectedProjectId, orderType, orderKind, dueDate, notes, measurements,
+  }), [selectedProjectId, orderType, orderKind, priority, dueDate, notes, measurements,
        selectedSampleIds, processTemplateId, measurementParams,
        measurementFormValues, dynamicValues, dynamicFormId]);
 
@@ -282,7 +283,7 @@ export default function CreateOrderPage() {
     if (!id) {
       setDraftLoading(false);
       if (loadedDraft) {
-        setSelectedProjectId(""); setOrderType(""); setIsBilled(false); setOrderKind("labor"); setDueDate(""); setNotes("");
+        setSelectedProjectId(""); setOrderType(""); setIsBilled(false); setOrderKind("labor"); setPriority("normal"); setDueDate(""); setNotes("");
         setMeasurements([]); setSelectedSampleIds([]); setProcessTemplateId("__none__");
         setMeasurementParams({}); setMeasurementFormValues({}); setDynamicValues({});
         reconcileAllowed.current = true;
@@ -303,6 +304,7 @@ export default function CreateOrderPage() {
         setSelectedProjectId(p.selectedProjectId ?? "");
         setOrderType(p.orderType ?? "");
         setOrderKind(p.orderKind === "pilot_plant" ? "pilot_plant" : "labor");
+        setPriority(p.priority ?? "normal");
         setDueDate(p.dueDate ?? "");
         setNotes(p.notes ?? "");
         setMeasurements((p.measurements ?? []) as SelectedMeasurement[]);
@@ -625,6 +627,7 @@ export default function CreateOrderPage() {
       const order = await createOrder.mutateAsync({
         project_id: projectId, order_type: orderType as any, created_by: user.id,
         is_billed: billedForCreate(orderType, isBilled),
+        priority: priority as any,
         due_date: dueDate || undefined, notes: notes || undefined,
         sample_id: selectedSampleIds[0] || undefined,
         order_kind: orderKind,
@@ -955,9 +958,10 @@ export default function CreateOrderPage() {
   };
 
   const priorityLabels: Record<string, string> = {
+    niedrig: t("common:priority_low"),
     normal: t("common:priority_normal"),
-    wichtig: t("common:priority_important"),
-    hoechste: t("common:priority_highest"),
+    hoch: t("common:priority_high"),
+    sehr_hoch: t("common:priority_very_high"),
   };
 
   const saveIndicator =
@@ -1093,6 +1097,15 @@ export default function CreateOrderPage() {
               {!projectRequired && (
                 <p className="text-xs text-muted-foreground mt-1">{t("orders:project_optional_hint")}</p>
               )}
+            </div>
+            <div>
+              <Label>{t("orders:priority")}</Label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(priorityLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
             <div><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
             <div><Label>{t("orders:notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders:notes_placeholder")} rows={3} /></div>

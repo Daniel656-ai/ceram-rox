@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { priorityBadgeVariant, priorityLabelKey } from "@/lib/orders/priority";
 import { StatusBadge } from "@/components/StatusBadge";
 import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
@@ -24,6 +26,7 @@ export default function OrderHeaderSummary({
   showSla?: boolean;
 }) {
   const { t } = useTranslation("orders");
+  const { t: tc } = useTranslation("common");
   const identity = orderIdentity(order);
   const measurements: any[] = order.order_measurements || [];
   const done = measurements.filter((m) => m.status === "completed").length;
@@ -56,6 +59,9 @@ export default function OrderHeaderSummary({
           {order.projects?.project_name || "–"}
         </Item>
         <Item label="Auftraggeber">{creatorName || "–"}</Item>
+        <Item label={t("priority")}>
+          <Badge variant={priorityBadgeVariant(order.priority)}>{tc(priorityLabelKey(order.priority))}</Badge>
+        </Item>
         <Item label="Gesamtstatus">
           <div className="flex flex-wrap gap-1">
             <StatusBadge status={order.status} />

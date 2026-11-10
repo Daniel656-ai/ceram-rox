@@ -197,7 +197,7 @@
   "instructions_2": "Jede Zeile entspricht einer Aufgabe. Mehrere Zeilen mit gleicher Projektnummer, Probenname und Auftragstyp werden zu einem Auftrag zusammengefasst.",
   "instructions_3": "Pflichtfelder: Projektnummer, Probenname, Probenbeschreibung, Auftragstyp, Dienstleistung",
   "instructions_4": "Auftragstypen: Kundenauftrag, Produktionsauftrag, F&E-Auftrag",
-  "instructions_5": "Prioritäten: Normal, Wichtig, Höchste",
+  "instructions_5": "Prioritäten: Niedrig, Normal, Hoch, Sehr hoch",
   "instructions_6": "Neu: Fehler können direkt in der Vorschau korrigiert werden!",
   "copy_order": "Auftrag kopieren",
   "copy_success": "Auftrag kopiert – neuer Entwurf erstellt",

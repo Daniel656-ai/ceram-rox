@@ -41,7 +41,11 @@ export const CATEGORY_LABELS: Record<ServiceCategory, string> = {
 };
 
 export const ORDER_PRIORITY_LABELS: Record<OrderPriority, string> = {
+  niedrig: "Niedrig",
   normal: "Normal",
-  wichtig: "Wichtig",
-  hoechste: "Höchste",
+  hoch: "Hoch",
+  sehr_hoch: "Sehr hoch",
+  // Historische Werte bleiben lesbar und werden auf die neuen Stufen abgebildet.
+  wichtig: "Hoch",
+  hoechste: "Sehr hoch",
 };

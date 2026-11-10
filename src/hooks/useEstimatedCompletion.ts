@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { addWorkingDays } from "@/lib/austrian-holidays";
+import { priorityRank } from "@/lib/orders/priority";
 
 /**
  * Fetches all open/in-progress measurement orders with their measurements,
@@ -30,11 +31,7 @@ interface OrderWithMeasurements {
 }
 
 function priorityToNumber(p: string): number {
-  switch (p) {
-    case "hoechste": return 2;
-    case "wichtig": return 1;
-    default: return 0;
-  }
+  return priorityRank(p);
 }
 
 export function useEstimatedCompletion() {

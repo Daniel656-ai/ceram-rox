@@ -11550,7 +11550,13 @@ export type Database = {
         | "completed"
         | "cancelled"
       order_kind: "pilot_plant" | "labor" | "combined" | "legacy"
-      order_priority: "normal" | "wichtig" | "hoechste"
+      order_priority:
+        | "normal"
+        | "wichtig"
+        | "hoechste"
+        | "niedrig"
+        | "hoch"
+        | "sehr_hoch"
       order_status: "open" | "in_progress" | "completed"
       order_type: "customer" | "production" | "rnd"
       order_workflow_status_new:
@@ -11903,7 +11909,14 @@ export const Constants = {
         "cancelled",
       ],
       order_kind: ["pilot_plant", "labor", "combined", "legacy"],
-      order_priority: ["normal", "wichtig", "hoechste"],
+      order_priority: [
+        "normal",
+        "wichtig",
+        "hoechste",
+        "niedrig",
+        "hoch",
+        "sehr_hoch",
+      ],
       order_status: ["open", "in_progress", "completed"],
       order_type: ["customer", "production", "rnd"],
       order_workflow_status_new: [

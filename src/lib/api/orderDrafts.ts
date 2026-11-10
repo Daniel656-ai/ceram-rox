@@ -14,6 +14,7 @@ export interface OrderDraftPayload {
   selectedProjectId?: string;
   orderType?: string;
   orderKind?: "labor" | "pilot_plant";
+  priority?: string;
   dueDate?: string;
   notes?: string;
   measurements?: Array<{
