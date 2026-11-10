@@ -23,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Trash2, AlertCircle, Zap, CheckCircle2, ClipboardList, Copy, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff } from "lucide-react";
+import { ArrowLeft, AlertCircle, Zap, CheckCircle2, ClipboardList, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
