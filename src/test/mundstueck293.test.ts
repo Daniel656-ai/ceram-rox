@@ -121,9 +121,10 @@ describe("Schwindungs-Mundstücke – generische Automatik", () => {
   });
 
   it("mehrere Schwindungsleistungen erzeugen jeweils eigene Einträge", () => {
-    const p = planMundstueck293({ rw: false, schw: false, schwMs: ["3001", "293/1"], brennCount: 0, msAuswahl: [user], mundstueckMs: [{ a: 1 }] });
+    const other = { ms: "9001", anzahl: 1 };
+    const p = planMundstueck293({ rw: false, schw: false, schwMs: ["3001", "293/1"], brennCount: 0, msAuswahl: [other], mundstueckMs: [{ a: 1 }] });
     expect(p.msAuswahl).toEqual([
-      user,
+      other,
       { ms: "3001", anzahl: 3, laenge: 150, zweck: ZWECK_SCHW, auto: true },
       { ms: "293/1", anzahl: 3, laenge: 150, zweck: ZWECK_SCHW, auto: true },
     ]);
@@ -168,9 +169,10 @@ describe("Schwindungs-Mundstücke – generische Automatik", () => {
   });
 
   it("RW-Automatik und Schwindungs-Mundstücke arbeiten zusammen, Paarung bleibt positionsgleich", () => {
-    const p = planMundstueck293({ rw: true, schw: false, schwMs: ["3001"], brennCount: 4, msAuswahl: [user], mundstueckMs: [{ a: 1 }] });
+    const other = { ms: "9001", anzahl: 1 };
+    const p = planMundstueck293({ rw: true, schw: false, schwMs: ["3001"], brennCount: 4, msAuswahl: [other], mundstueckMs: [{ a: 1 }] });
     expect(p.msAuswahl).toEqual([
-      user,
+      other,
       { ms: "293_1", anzahl: 3, laenge: 200, zweck: ZWECK_RW, auto: true },
       { ms: "3001", anzahl: 3, laenge: 150, zweck: ZWECK_SCHW, auto: true },
     ]);

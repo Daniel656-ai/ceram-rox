@@ -114,8 +114,8 @@ export function planMundstueck293(input: Mundstueck293Input): Mundstueck293Plan 
   const desired: Desired[] = [];
   const desiredSeen = new Set<string>();
   const pushDesired = (d: Desired) => {
-    const k = normMs(d.ms);
-    if (desiredSeen.has(k)) return; // „293/1“ und „293_1“ nur einmal
+    const k = `${d.zweck}|${normMs(d.ms)}`;
+    if (desiredSeen.has(k)) return; // „293/1“ und „293_1“ nur einmal je Zweck
     desiredSeen.add(k);
     desired.push(d);
   };
