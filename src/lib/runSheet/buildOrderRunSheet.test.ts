@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { buildOrderRunSheet, orderDmcPayload } from "./buildOrderRunSheet";
+import { buildOrderRunSheet, orderDmcPayload, runSheetFileName } from "./buildOrderRunSheet";
 import { specValueHtml } from "./specHtml";
-import { specValueShape } from "@/lib/specValues";
+import { specValueShape, specTableCols, isKnetungService } from "@/lib/specValues";
 
 const p = (id: string, name: string, v: string | null, unit: string | null = null) =>
   ({ id, parameter_name: name, parameter_value: v, unit });
@@ -147,5 +147,55 @@ describe("Auftrags-Laufzettel", () => {
     const html = specValueHtml('[{"a":1},{"a":2}]', null, noMat, undefined, { hideIndex: true });
     expect(html).not.toContain("<th>#</th>");
     expect(specValueHtml('[{"a":1}]', null, noMat)).toContain("<th>#</th>");
+  });
+  it("PDF-Dateiname: Versuchsnummer mit führenden Nullen, Sonderzeichen bereinigt, Fallback", () => {
+    expect(runSheetFileName("TE0042")).toBe("Laufzettel_TE0042");
+    expect(runSheetFileName("0293/1")).toBe("Laufzettel_0293-1");
+    expect(runSheetFileName("SW-260026")).toBe("Laufzettel_SW-260026");
+    expect(runSheetFileName("TE 0042")).toBe("Laufzettel_TE_0042");
+    expect(runSheetFileName("   ")).toBe("Laufzettel_Auftrag");
+  });
+  it("Versuchsnummer erscheint nicht als eigene Formularzeile; Auftragsnummer bleibt geführt", () => {
+    const s = buildOrderRunSheet(baseOrder({
+      order_kind: "pilot_plant", pp_experiment_number: "3121",
+      shared_form_data: { template: { values: { versuchsnummer: "3121", bemerkung: "bleibt" } } },
+    }), [
+      { id: "v", field_key: "versuchsnummer", display_name: "Versuchsnummer" },
+      { id: "b", field_key: "bemerkung", display_name: "Bemerkung" },
+    ], []);
+    expect(s.form.map((f) => f.key)).toEqual(["bemerkung"]);
+    expect(s.orderNumber).toBe("SW-260025");
+    expect(s.number).toBe("3121");
+    expect(runSheetFileName(s.number)).toBe("Laufzettel_3121");
+  });
+  it("V2O5-Gehalt und Massetyp werden aus dem Formular gelöst und gemeinsam geführt", () => {
+    const s = buildOrderRunSheet(baseOrder({
+      shared_form_data: { template: { values: { v2o5_gehalt: "0,6", massetyp: "DK", bemerkung: "bleibt" } } },
+    }), [
+      { id: "v", field_key: "v2o5_gehalt", display_name: "V2O5-Gehalt", unit: "%" },
+      { id: "m", field_key: "massetyp", display_name: "Massetyp" },
+      { id: "b", field_key: "bemerkung", display_name: "Bemerkung" },
+    ], []);
+    expect(s.v2o5).toEqual({ label: "V2O5-Gehalt", text: "0,6 %" });
+    expect(s.masseTyp).toEqual({ label: "Massetyp", text: "DK" });
+    expect(s.form.map((f) => f.key)).toEqual(["bemerkung"]);
+  });
+  it("V2O5/Massetyp: fehlende Werte bleiben null, keine Ersatzwerte", () => {
+    const s = buildOrderRunSheet(baseOrder({
+      shared_form_data: { template: { values: { massetyp: "GK" } } },
+    }), [{ id: "m", field_key: "massetyp", display_name: "Massetyp" }], []);
+    expect(s.v2o5).toBeNull();
+    expect(s.masseTyp).toEqual({ label: "Massetyp", text: "GK" });
+    expect(buildOrderRunSheet(baseOrder(), [], []).v2o5).toBeNull();
+    expect(buildOrderRunSheet(baseOrder(), [], []).masseTyp).toBeNull();
+  });
+  it("container_id-Spalte nur bei Knetung ausgeblendet, andere Dienstleistungen unverändert", () => {
+    const cols = ["rohstoff", "quantity", "unit", "note", "container_id", "lot_number"];
+    expect(isKnetungService("Knetung")).toBe(true);
+    expect(isKnetungService("knetung")).toBe(true);
+    expect(isKnetungService("Extrusion")).toBe(false);
+    expect(specTableCols(cols, "Knetung")).toEqual(["rohstoff", "quantity", "unit", "note", "lot_number"]);
+    expect(specTableCols(cols, "Extrusion")).toEqual(cols);
+    expect(specTableCols(cols, null)).toEqual(cols);
   });
 });
