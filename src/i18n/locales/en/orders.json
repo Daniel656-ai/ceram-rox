@@ -197,7 +197,7 @@
   "instructions_2": "Each row represents a task. Multiple rows with the same project number, sample name, and order type will be grouped into one order.",
   "instructions_3": "Required fields: Project number, Sample name, Sample description, Order type, Service",
   "instructions_4": "Order types: Customer Order, Production Order, R&D Order",
-  "instructions_5": "Priorities: Normal, Important, Highest",
+  "instructions_5": "Priorities: Low, Normal, High, Very high",
   "instructions_6": "New: Errors can be corrected directly in the preview!",
   "copy_order": "Copy order",
   "copy_success": "Order copied – new draft created",
