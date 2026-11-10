@@ -5,7 +5,7 @@ import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { dmcSvg } from "@/components/SampleRunSheet";
-import { buildOrderRunSheet, orderDmcPayload, type OrderRunSheetService } from "@/lib/runSheet/buildOrderRunSheet";
+import { buildOrderRunSheet, orderDmcPayload, runSheetFileName, type OrderRunSheetService } from "@/lib/runSheet/buildOrderRunSheet";
 import { escHtml as esc, specValueHtml, RUN_SHEET_CSS } from "@/lib/runSheet/specHtml";
 import { printHtml } from "@/lib/runSheet/printHtml";
 import { PPP_LIST_KEYS } from "@/lib/runSheet/pppGroups";
@@ -143,15 +143,20 @@ export function OrderRunSheetButton({ order }: { order: any }) {
           ].join("");
 
       const prio = sheet.priority ? (ORDER_PRIORITY_LABELS[sheet.priority as OrderPriority] ?? sheet.priority) : null;
+      // V2O5-Gehalt und Massetyp als eine gemeinsame Zeile über der Formulartabelle.
+      const v2o5MasseLine = [sheet.v2o5, sheet.masseTyp]
+        .filter((x): x is NonNullable<typeof x> => !!x && !!x.text)
+        .map((x) => `<b>${esc(x.label)}:</b> ${esc(x.text)}`)
+        .join(" | ");
       await printHtml(`<!DOCTYPE html><html><head><meta charset="utf-8">
-        <title>${esc(t("runsheet_order_title"))} – ${esc(sheet.number)}</title>
+        <title>${esc(runSheetFileName(sheet.number))}</title>
         <style>${RUN_SHEET_CSS}</style></head><body><div class="page">
         <header>
           <div>
             ${logo ? `<img class="logo" src="${logo}" alt="">` : ""}
             <h1>${esc(t("runsheet_order_title"))}</h1>
             <dl>
-              <dt>${esc(t("runsheet_order"))}</dt><dd>${dash(sheet.number || null)}${sheet.technicalNumber ? ` <span class="muted">(${esc(t("runsheet_technical"))} ${esc(sheet.technicalNumber)})</span>` : ""}</dd>
+              <dt>${esc(t("runsheet_order"))}</dt><dd>${dash(sheet.orderNumber ?? sheet.number ?? null)}</dd>
               <dt>${esc(t("runsheet_project"))}</dt><dd>${dash(sheet.project)}</dd>
               <dt>${esc(t("runsheet_due"))}</dt><dd>${dash(sheet.dueDate ? fmtDate(sheet.dueDate) : null)}</dd>
               <dt>${esc(t("runsheet_priority"))}</dt><dd>${dash(prio)}</dd>
@@ -162,6 +167,7 @@ export function OrderRunSheetButton({ order }: { order: any }) {
         </header>
         ${sheet.notes ? `<h2>${esc(t("runsheet_notes"))}</h2><p>${esc(sheet.notes)}</p>` : ""}
         <h2>${esc(t("runsheet_form_section"))}</h2>
+        ${v2o5MasseLine ? `<p class="kv">${v2o5MasseLine}</p>` : ""}
         ${formHtml}
         ${g ? svcHtml : `<h2>${esc(t("runsheet_services_section"))}</h2>${svcHtml}`}
         </div>

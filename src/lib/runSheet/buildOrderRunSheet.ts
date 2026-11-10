@@ -52,8 +52,13 @@ export interface KnetungBlock {
   otherParams: RunSheetParam[];
 }
 
+/** Eine kombinierte Kopfzeilen-Angabe (Bezeichnung + formatierter Ist-Text aus dem gespeicherten Wert). */
+export interface RunSheetLineValue { label: string; text: string }
+
 export interface OrderRunSheet {
   number: string;
+  /** Technische Auftragsnummer (order_number) – im Kopf die allein sichtbare Nummer. */
+  orderNumber: string | null;
   /** Nur gesetzt, wenn abweichend von der angezeigten Nummer. */
   technicalNumber: string | null;
   customerName: string | null;
@@ -68,6 +73,9 @@ export interface OrderRunSheet {
   form: { key: string; label: string | null; unit: string | null; raw: unknown; colLabels: Map<string, string> }[];
   /** Die drei PPP-Auswahllisten (aus dem Formular herausgelöst). */
   pppSelections: PppSelection[];
+  /** V2O5-Gehalt und Massetyp (aus dem Formular herausgelöst, eine gemeinsame Zeile). */
+  v2o5: RunSheetLineValue | null;
+  masseTyp: RunSheetLineValue | null;
   /** true = Pilot Plant: Dienstleistungen nach Stammdatenlisten gruppiert. */
   grouped: boolean;
   services: OrderRunSheetService[];
@@ -93,6 +101,29 @@ const PPP_SELECTION_DEFS: { id: PppSelection["id"]; fallbackLabel: string; match
 
 const pppSelectionId = (key: string, display?: string | null) =>
   PPP_SELECTION_DEFS.find((def) => def.match(normKey(key), normKey(display)))?.id ?? null;
+
+/**
+ * Sonderbehandlung einzelner Formularfelder im Laufzettel (reine Anzeige):
+ * - Versuchsnummer: wird nicht separat gezeigt (Auftragsnummer deckt sie ab;
+ *   intern bleibt sie für Dateiname/Identität erhalten).
+ * - V2O5-Gehalt / Massetyp: werden als gemeinsame Zeile über der Tabelle gezeigt.
+ * Gespeicherte Werte bleiben in allen Fällen unverändert.
+ */
+type FormEntryKind = "versuchsnummer" | "v2o5" | "massetyp" | null;
+const formEntryKind = (key: string, display?: string | null): FormEntryKind => {
+  const k = normKey(key);
+  const d = normKey(display);
+  if (k === "versuchsnummer" || d === "versuchsnummer") return "versuchsnummer";
+  if (k.includes("v2o5") || d.includes("v2o5")) return "v2o5";
+  if (k.includes("massetyp") || d.includes("massetyp")) return "massetyp";
+  return null;
+};
+
+/** Gespeicherten Wert als kurzen Zeilentext formatieren (keine Ersatzwerte). */
+const lineValue = (label: string | null, fallback: string, raw: unknown, unit: string | null): RunSheetLineValue => ({
+  label: label ?? fallback,
+  text: `${primSpecValue(parseSpecValue(raw))}${unit ? ` ${unit}` : ""}`,
+});
 
 /** Auswahlwerte als lesbare Texte; gespeicherte Werte bleiben unverändert. */
 const selectionValues = (raw: unknown): string[] => {
@@ -209,6 +240,8 @@ export function buildOrderRunSheet(
   const form: OrderRunSheet["form"] = [];
   const selections = new Map<PppSelection["id"], PppSelection>();
   const used = new Set<string>();
+  let v2o5: RunSheetLineValue | null = null;
+  let masseTyp: RunSheetLineValue | null = null;
   const addSelection = (key: string, display: string | null | undefined, raw: unknown) => {
     const selId = pppSelectionId(key, display);
     if (!selId || selections.has(selId)) return false;
@@ -216,11 +249,20 @@ export function buildOrderRunSheet(
     selections.set(selId, { id: selId, key, label: display?.trim() || def.fallbackLabel, values: selectionValues(raw) });
     return true;
   };
+  /** true = Feld wird gesondert dargestellt (Versuchsnummer ausgeblendet, V2O5/Massetyp als Zeile). */
+  const handleSpecial = (key: string, display: string | null | undefined, raw: unknown, unit: string | null): boolean => {
+    const kind = formEntryKind(key, display);
+    if (kind === "versuchsnummer") return true;
+    if (kind === "v2o5") { if (!v2o5) v2o5 = lineValue(display?.trim() || null, "V2O5-Gehalt", raw, unit); return true; }
+    if (kind === "massetyp") { if (!masseTyp) masseTyp = lineValue(display?.trim() || null, "Massetyp", raw, unit); return true; }
+    return false;
+  };
   for (const f of top) {
     const k = storageKey(f);
     if (!(k in values) || used.has(k)) continue;
     used.add(k);
     if (addSelection(k, f.display_name, values[k])) continue;
+    if (handleSpecial(k, f.display_name, values[k], f.unit?.trim() || null)) continue;
     const colLabels = new Map<string, string>();
     for (const c of fields) {
       if (c.parent_field_id === f.id && c.display_name) colLabels.set(c.field_key, c.display_name);
@@ -232,6 +274,7 @@ export function buildOrderRunSheet(
     if (used.has(k)) continue;
     used.add(k);
     if (addSelection(k, null, values[k])) continue;
+    if (handleSpecial(k, null, values[k], null)) continue;
     form.push({ key: k, label: null, unit: null, raw: values[k], colLabels: new Map() });
   }
   const pppSelections = PPP_SELECTION_DEFS.map((d) => selections.get(d.id)).filter((s): s is PppSelection => !!s);
@@ -267,6 +310,7 @@ export function buildOrderRunSheet(
 
   return {
     number: id.number,
+    orderNumber: order?.order_number ?? null,
     technicalNumber: id.technicalNumber && id.technicalNumber !== id.number ? id.technicalNumber : null,
     customerName: order?.customer_name?.trim() || null,
     project: order?.projects ? [order.projects.project_number, order.projects.project_name].filter(Boolean).join(" – ") || null : null,
@@ -277,6 +321,8 @@ export function buildOrderRunSheet(
     lastSpecChange: last,
     form,
     pppSelections,
+    v2o5,
+    masseTyp,
     grouped,
     services,
     knetung,
@@ -285,4 +331,19 @@ export function buildOrderRunSheet(
 
 export function orderDmcPayload(number: string): string | null {
   return number.trim() ? `ROX|A:${number}` : null;
+}
+
+/**
+ * Dateiname des Laufzettel-PDFs (über den Dokumenttitel des Druck-Iframes):
+ * `Laufzettel_<Versuchsnummer>`, sonst `Laufzettel_<Auftragsnummer>`.
+ * Führende Nullen bleiben erhalten (reine Zeichenkette, kein Number-Cast);
+ * dateiungültige Zeichen werden durch `-` ersetzt, Leerzeichen durch `_`.
+ */
+export function runSheetFileName(number: string): string {
+  const clean = number
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `Laufzettel_${clean || "Auftrag"}`;
 }
