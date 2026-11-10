@@ -39,6 +39,23 @@ const storageKey = (f: OrderRunSheetField) => {
   return typeof sk === "string" && sk.trim() ? sk : f.field_key;
 };
 
+/**
+ * Pilot-Plant-Erkennung NUR für den Auftrags-Laufzettel. Die allgemeine
+ * Auftragsart-Erkennung (resolveOrderKind) bleibt unverändert; ein
+ * Mischauftrag mit Pilot-Plant-Dienstleistungen und begleitenden
+ * Laborprüfungen gilt hier als Pilot-Plant-Auftrag, damit die fachliche
+ * Laufzettel-Reihenfolge auch bei älteren und gemischten Aufträgen greift.
+ */
+export function isPilotPlantRunSheetOrder(order: any): boolean {
+  if (!order) return false;
+  if (order.order_kind === "pilot_plant") return true;
+  if (typeof order.pp_experiment_number === "string" && order.pp_experiment_number.trim()) return true;
+  if (resolveOrderKind(order) === "pilot_plant") return true;
+  return ((order.order_measurements ?? []) as any[]).some(
+    (m) => m?.measurement_services?.category === "pilot_plant"
+  );
+}
+
 export function buildOrderRunSheet(
   order: any,
   fields: OrderRunSheetField[],
@@ -80,7 +97,7 @@ export function buildOrderRunSheet(
         id: p.id, name: p.parameter_name, raw: p.parameter_value ?? null, unit: p.unit?.trim() || null,
       })),
     }));
-  const grouped = !!order && resolveOrderKind(order) === "pilot_plant";
+  const grouped = isPilotPlantRunSheetOrder(order);
   const services: OrderRunSheet["services"] = grouped
     ? sortPppServices(base, pppLists)
     : base.map((s) => ({ ...s, pppGroup: null }));

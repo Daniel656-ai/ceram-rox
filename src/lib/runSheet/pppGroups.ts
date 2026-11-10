@@ -32,10 +32,57 @@ export interface PppServiceRef {
 
 export const PPP_LIST_KEYS = { masse: "ppp_masse", produkt: "ppp_produkt" } as const;
 
+/** Schreibweisen angleichen: Kleinbuchstaben, ohne Leerzeichen/Unterstriche/Bindestriche. */
+const normKey = (v: unknown) => String(v ?? "").trim().toLowerCase().replace(/[\s_\-]+/g, "");
+
+export type PppListResolutionReason = "ok" | "not_found" | "ambiguous";
+
+/**
+ * Stammdatenliste zuverlässig auflösen: zuerst der technische Schlüssel
+ * (`list_key`), als kontrollierter Rückfall der Anzeigename (`display_name`)
+ * – jeweils schreibweisen-normalisiert. Mehrere Treffer werden nie
+ * willkürlich gewählt; die Liste gilt dann als nicht auflösbar.
+ */
+export function resolvePppList<T extends { id: string; list_key?: string | null; display_name?: string | null }>(
+  lists: T[],
+  key: string,
+): { list: T | null; reason: PppListResolutionReason } {
+  const target = normKey(key);
+  const byKey = lists.filter((x) => normKey(x.list_key) === target);
+  if (byKey.length === 1) return { list: byKey[0], reason: "ok" };
+  if (byKey.length > 1) return { list: null, reason: "ambiguous" };
+  const byName = lists.filter((x) => normKey(x.display_name) === target);
+  if (byName.length === 1) return { list: byName[0], reason: "ok" };
+  if (byName.length > 1) return { list: null, reason: "ambiguous" };
+  return { list: null, reason: "not_found" };
+}
+
 const norm = (v: unknown) => String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 
 /** Knetung/Extrusion sind feste Prozessschritte – exakte Katalogbezeichnung. */
 const FIXED: Record<string, PppGroup> = { knetung: "knetung", extrusion: "extrusion" };
+
+/**
+ * Feste Zuordnung Knetung/Extrusion. Bevorzugt die eindeutige
+ * Dienstleistungskennung: ein Listeneintrag, dessen `metadata.service_id`
+ * auf die Dienstleistung verweist und dessen Bezeichnung exakt
+ * Knetung/Extrusion lautet. Danach erst die exakte Katalogbezeichnung.
+ * Keine Teilwort- oder Ähnlichkeitsheuristiken.
+ */
+function fixedGroup(s: PppServiceRef, lists: PppLists): PppGroup | null {
+  if (s.serviceId) {
+    for (const list of [lists.masse, lists.produkt]) {
+      for (const it of list ?? []) {
+        const ref = it.metadata?.service_id;
+        if (typeof ref === "string" && ref && ref === s.serviceId) {
+          const g = FIXED[norm(it.label)] ?? FIXED[norm(it.item_value)];
+          if (g) return g;
+        }
+      }
+    }
+  }
+  return FIXED[norm(s.serviceName)] ?? null;
+}
 
 function matchIndex(list: PppListItem[] | null, s: PppServiceRef): number | "ambiguous" | null {
   if (!list) return null;
@@ -62,7 +109,7 @@ export interface PppClassification {
 }
 
 export function classifyPppService(s: PppServiceRef, lists: PppLists): PppClassification {
-  const fixed = FIXED[norm(s.serviceName)];
+  const fixed = fixedGroup(s, lists);
   if (fixed) return { group: fixed, index: 0 };
   if (!lists.masse && !lists.produkt) return { group: "unassigned", index: 0, reason: "no_list" };
   const m = matchIndex(lists.masse, s);
