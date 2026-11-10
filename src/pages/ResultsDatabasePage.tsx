@@ -545,9 +545,10 @@ export default function ResultsDatabasePage() {
             {filteredRecords.length} von {records.length} Messungen mit offiziellem Ergebnis
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Die Ergebnisdatenbank zeigt ausschließlich Ergebnisse an, die ausdrücklich als
-            offizielles Ergebnis freigegeben wurden. Erledigte Tätigkeiten und nicht-offizielle
-            Messwerte bleiben in den Auftrags- und Arbeitsansichten sichtbar.
+            Die Probenübersicht zeigt alle gespeicherten Messwerte einer Probe – offizielle
+            Ergebnisse sind deutlich hervorgehoben, vorläufige Arbeitswerte gekennzeichnet.
+            Ergebnismatrix und Statistik &amp; Diagramme basieren unverändert ausschließlich
+            auf ausdrücklich freigegebenen offiziellen Ergebnissen.
           </p>
 
         </div>
