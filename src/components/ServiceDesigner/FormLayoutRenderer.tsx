@@ -63,7 +63,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculations, formatCalcResult } from "@/lib/localCalculations";
-import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry, evaluateScopedEntry } from "@/lib/scopedMeasurementValues";
+import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry, evaluateScopedEntry, storedMatchesLive, parseControlledNumber } from "@/lib/scopedMeasurementValues";
 import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
@@ -1483,10 +1483,11 @@ function RepeaterEntry({
     const raw = managed ? Object.fromEntries(allCalcs.map((c) => {
       const placement = tree.items.flatMap((i) => i.type === "group" ? i.children : [i]).find((i) => i.type === "calculation" && i.calc_key === c.calc_key);
       const k = placement?.type === "calculation" ? placement.value_key ?? c.calc_key : c.calc_key;
-      const stored = typeof entry[k] === "number" ? entry[k] : null;
+      const original = entry[k];
       const current = live[c.calc_key];
-      const error = current?.error ?? (stored !== current?.value ? "Gespeicherter Wert stimmt nicht mit den aktuellen Eingaben überein" : null);
-      return [c.calc_key, { value: error ? null : stored, error }];
+      // Toleranz nur für den Integritätsvergleich; der gespeicherte Originalwert bleibt unverändert.
+      const error = current?.error ?? (!storedMatchesLive(original, current?.value, c.decimals) ? "Gespeicherter Wert stimmt nicht mit den aktuellen Eingaben überein" : null);
+      return [c.calc_key, { value: error ? null : parseControlledNumber(original), error }];
     })) : evaluateEntryCalculations(allCalcs, root?.values, entry, keys);
     const out: Record<string, CalcDisplayResult> = {};
     for (const c of allCalcs) {
