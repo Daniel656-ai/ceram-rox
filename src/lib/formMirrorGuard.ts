@@ -37,12 +37,16 @@ export function linkedMirrorDecision(opts: {
   sourcesReady: boolean;
   srcRaw: unknown;
   ownRaw: unknown;
+  /** Editable local prefill (e.g. local AV): only fill an empty own value, never overwrite an entry. */
+  keepOwn?: boolean;
 }): MirrorDecision {
   // Rohwert unverändert durchreichen (bisheriges Verhalten: srcRaw ?? "").
   const next = opts.srcRaw ?? "";
   if (!opts.interactive) return { write: false, value: next };
   if (!opts.sameForm && !opts.sourcesReady) return { write: false, value: next };
   if ((opts.ownRaw ?? "") === next) return { write: false, value: next };
+  if (opts.keepOwn && opts.ownRaw != null && opts.ownRaw !== "") return { write: false, value: next };
+  if (opts.keepOwn && (next === "" || next == null)) return { write: false, value: next };
   return { write: true, value: next };
 }
 

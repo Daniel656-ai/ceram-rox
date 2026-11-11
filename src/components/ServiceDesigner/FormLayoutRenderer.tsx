@@ -63,7 +63,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculations, formatCalcResult } from "@/lib/localCalculations";
-import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry, evaluateScopedEntry, storedMatchesLive, parseControlledNumber } from "@/lib/scopedMeasurementValues";
+import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry, evaluateScopedEntry, storedMatchesLive, parseControlledNumber, isLocalAvPrefillField, legacyEntryKValueInputs, flatKValueInputs } from "@/lib/scopedMeasurementValues";
 import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
@@ -988,7 +988,9 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
         unit={field.unit || src?.unit || null}
         highlight={highlight}
         icon={<Link2 className="h-3 w-3 text-primary shrink-0 mt-[1px]" />}
-        control={<LinkedFieldControl field={field} valueSource={vs!} />}
+        control={!readonly && isLocalAvPrefillField(field as any)
+          ? <LinkedFieldControl field={field} valueSource={vs!} editable />
+          : <LinkedFieldControl field={field} valueSource={vs!} />}
         footer={
           <>
             <p className="text-[10px] text-muted-foreground">
@@ -1026,7 +1028,7 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
  * Feldschlüssel gespiegelt, damit Berechnungen, Ergebnisdefinitionen und die
  * Ergebnisdatenbank unverändert mit dem bestehenden Schlüssel arbeiten können.
  */
-function LinkedFieldControl({ field, valueSource }: { field: FormField; valueSource: ReturnType<typeof readValueSource> }) {
+function LinkedFieldControl({ field, valueSource, editable = false }: { field: FormField; valueSource: ReturnType<typeof readValueSource>; editable?: boolean }) {
   const { setValue, interactive } = useBinding(field.field_key);
   const read = useScopeReader();
   const stepData = useStepData();
@@ -1043,9 +1045,22 @@ function LinkedFieldControl({ field, valueSource }: { field: FormField; valueSou
   // geladen und eindeutig aufgelöst ist (sonst löscht der nächste
   // Speicherlauf die zugehörige Ergebniszeile).
   useEffect(() => {
-    const d = linkedMirrorDecision({ interactive, sameForm, sourcesReady, srcRaw, ownRaw });
+    const d = linkedMirrorDecision({ interactive, sameForm, sourcesReady, srcRaw, ownRaw, keepOwn: editable });
     if (d.write) setValue(d.value);
-  }, [srcRaw, ownRaw, interactive, sameForm, sourcesReady, setValue]);
+  }, [srcRaw, ownRaw, interactive, sameForm, sourcesReady, setValue, editable]);
+
+  // Local measurement AV: prefilled from the requester value, freely editable; the requester value stays untouched.
+  if (editable) {
+    return (
+      <Input
+        type="number"
+        disabled={!interactive}
+        value={ownRaw ?? ""}
+        placeholder={srcRaw == null ? "" : String(srcRaw)}
+        onChange={(e) => setValue(e.target.value === "" ? null : Number(e.target.value))}
+      />
+    );
+  }
 
   const shown = srcRaw == null || srcRaw === "" ? "" : String(srcRaw);
   return (
@@ -1480,15 +1495,19 @@ function RepeaterEntry({
 
   const entryResults = useMemo(() => {
     const live = managed && owner ? evaluateScopedEntry(owner, allFields, allCalcs, calculationInputs, entry, ancestor?.values) : {};
+    let requesterOnly: ReturnType<typeof evaluateScopedEntry> | undefined;
     const raw = managed ? Object.fromEntries(allCalcs.map((c) => {
       const placement = tree.items.flatMap((i) => i.type === "group" ? i.children : [i]).find((i) => i.type === "calculation" && i.calc_key === c.calc_key);
       const k = placement?.type === "calculation" ? placement.value_key ?? c.calc_key : c.calc_key;
       const original = entry[k];
       const current = live[c.calc_key];
       // Toleranz nur für den Integritätsvergleich; der gespeicherte Originalwert bleibt unverändert.
-      const error = current?.error ?? (!storedMatchesLive(original, current?.value, c.decimals) ? "Gespeicherter Wert stimmt nicht mit den aktuellen Eingaben überein" : null);
+      // Accept either the local-AV evaluation or (historical) the requester-AV evaluation; stored value is never rewritten.
+      const matches = storedMatchesLive(original, current?.value, c.decimals) ||
+        (owner ? storedMatchesLive(original, (requesterOnly ??= evaluateScopedEntry(owner, allFields, allCalcs, calculationInputs, entry, ancestor?.values, false))[c.calc_key]?.value, c.decimals) : false);
+      const error = current?.error ?? (!matches ? "Gespeicherter Wert stimmt nicht mit den aktuellen Eingaben überein" : null);
       return [c.calc_key, { value: error ? null : parseControlledNumber(original), error }];
-    })) : evaluateEntryCalculations(allCalcs, root?.values, entry, keys);
+    })) : evaluateEntryCalculations(allCalcs, root?.values, entry, keys, owner ? legacyEntryKValueInputs(owner, children, allCalcs, entry) : {});
     const out: Record<string, CalcDisplayResult> = {};
     for (const c of allCalcs) {
       const r = raw[c.calc_key];
@@ -1502,7 +1521,7 @@ function RepeaterEntry({
       };
     }
     return out;
-  }, [allCalcs, root?.values, entry, keys, managed, tree, owner, allFields, calculationInputs, ancestor?.values]);
+  }, [allCalcs, root?.values, entry, keys, managed, tree, owner, allFields, calculationInputs, ancestor?.values, children]);
 
   /** Ergebnisse je Messpunkt im Eintrag speichern (Reihenfolge bleibt erhalten). */
   const interactiveRoot = !!root?.interactive;
@@ -2349,7 +2368,7 @@ export default function FormLayoutRenderer({
     const local = evaluateLocalCalculations(localCalcs, vals, [
       ...fields.map((f) => f.field_key),
       ...Object.keys(aggregates),
-    ]);
+    ], flatKValueInputs(fields, localCalcs, vals));
     for (const c of localCalcs) {
       const r = local[c.calc_key];
       out[`local:${c.calc_key}`] = {

@@ -208,8 +208,9 @@ export function evaluateEntryCalculations(
   rootValues: Record<string, unknown> | undefined,
   entry: Record<string, unknown> | undefined,
   knownFieldKeys: Iterable<string> = [],
+  calculationInputs: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {},
 ): Record<string, LocalCalcResult> {
-  return evaluateLocalCalculations(calcs, mergeEntryScope(rootValues, entry), knownFieldKeys);
+  return evaluateLocalCalculations(calcs, mergeEntryScope(rootValues, entry), knownFieldKeys, calculationInputs);
 }
 
 /**

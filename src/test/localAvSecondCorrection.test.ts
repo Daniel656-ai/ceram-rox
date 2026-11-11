@@ -50,11 +50,12 @@ describe("AV identity", () => {
     const disp = all.map((f) => f.id === "loc" ? { ...f, data_source: { mode: "display", source: { kind: "form_field", field_key: "av_1" } } } : f);
     expect(evaluateScopedEntry(owner, disp, defs, root, rows[0]).k_wert_1.value).toBe(5000);
   });
-  it("display name 'AV' or prefix 'av*' alone never qualifies", () => {
-    const named = field("n", "av_ist", { display_name: "AV" } as Partial<FormField>);
-    const o = repeater([ref("temp", "temperatur"), ref("n", "av_ist"), cref("k1", "k_wert_1")]);
+  it("display name 'AV' or a mere 'av' prefix (e.g. 'avg') never qualifies", () => {
+    // Third correction: unlinked 'av_<suffix>' keys now qualify; other av-prefixed keys still do not.
+    const named = field("n", "avg", { display_name: "AV" } as Partial<FormField>);
+    const o = repeater([ref("temp", "temperatur"), ref("n", "avg"), cref("k1", "k_wert_1")]);
     expect(resolveLocalAvField(o, [requesterAv, o, temp, named], kCalcs).status).toBe("none");
-    expect(evaluateScopedEntry(o, [requesterAv, o, temp, named], kCalcs, root, { temperatur: 200, av_ist: 40 }).k_wert_1.value).toBe(5000);
+    expect(evaluateScopedEntry(o, [requesterAv, o, temp, named], kCalcs, root, { temperatur: 200, avg: 40 }).k_wert_1.value).toBe(5000);
   });
   it("ambiguous: two prefilled AV fields -> no override, diagnosable", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
