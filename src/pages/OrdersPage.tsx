@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useServices, useMyQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { loadTaskFilterState, saveTaskFilterState, effectiveServiceIds, buildTaskServicePredicate, isTaskFilterActive, DEFAULT_TASK_FILTER, type TaskFilterState, type CompetenceState } from "@/lib/tasks/taskServiceFilter";
 import { TaskOrderIdentity } from "@/components/orders/TaskOrderIdentity";
-import { useOrders, useDeleteOrder, useUpdateOrderRanking, useCopyOrder } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder, useCopyOrder } from "@/hooks/useOrders";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
 import { resolveOrderMasseType } from "@/lib/orders/orderMasseType";
 import { orderFilterColumns } from "@/lib/orders/orderFilterColumns";
@@ -64,7 +64,6 @@ function OrdersOverview() {
   const deleteOrder = useDeleteOrder();
   const copyOrder = useCopyOrder();
   const navigate = useNavigate();
-  const updateRanking = useUpdateOrderRanking();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { data: users = [] } = useUsers();
@@ -194,16 +193,6 @@ function OrdersOverview() {
       toast.success(t("orders:deleted"));
     } catch (err: any) {
       toast.error(t("orders:delete_error"), { description: err.message });
-    }
-  };
-
-  const handleRankingChange = async (orderId: string, value: string) => {
-    try {
-      const ranking = value === "none" ? null : parseInt(value);
-      await updateRanking.mutateAsync({ id: orderId, ranking });
-      toast.success("Priorisierung aktualisiert");
-    } catch (err: any) {
-      toast.error("Fehler", { description: err.message });
     }
   };
 

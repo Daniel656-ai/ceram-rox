@@ -104,6 +104,8 @@
   "project_number": "Project No.",
   "project_name": "Project Name",
   "order_type": "Order Type",
+  "priority_saved": "Priority saved",
+  "priority_save_error": "Priority could not be saved",
   "priority": "Priority",
   "due_date": "Due Date",
   "no_orders": "No orders found",
