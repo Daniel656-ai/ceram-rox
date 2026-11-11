@@ -443,7 +443,7 @@ export default function RawMaterialDetailPage() {
     const val = raw.trim() || null;
     if ((batch.manufacturer_batch ?? null) === val) return;
     try {
-      await updateBatch.mutateAsync({ id: batch.id, raw_material_id: id!, manufacturer_batch: val } as any);
+      await updateBatch.mutateAsync({ id: batch.id, raw_material_id: id!, manufacturer_batch: val });
       toast.success("BigBag-Nr. gespeichert");
     } catch (e: any) { toast.error(e.message); }
   };
