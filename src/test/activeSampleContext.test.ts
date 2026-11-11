@@ -27,6 +27,7 @@ import {
   clearActiveTaskContext,
   extractSampleNumbers,
   getActiveTaskContext,
+  parseSampleIdentifier,
   resolveOrderLevelSampleId,
   resolveTaskSample,
   setActiveTaskContext,
@@ -147,5 +148,34 @@ describe("Mehrprobenauftrag mit zwei Proben", () => {
     expect(
       resolveOrderLevelSampleId({ sample_id: "s1", sample_ids: ["s1", "s2"], samples: two[0] } as any),
     ).toBeNull();
+  });
+});
+
+describe("Tolerante Probenzuordnung (numerischer Versuchszusatz)", () => {
+  it("1: P260712-2897 wird Probe P260712 zugeordnet", () => {
+    expect(verifyFileSampleNumber([{ SAMPLE: "P260712-2897" }], "P260712").ok).toBe(true);
+  });
+  it("2: P260712-1234 wird Probe P260712 zugeordnet", () => {
+    expect(verifyFileSampleNumber(["P260712-1234"], "P260712").ok).toBe(true);
+  });
+  it("3: P260712 ohne Zusatz bleibt zulässig", () => {
+    expect(verifyFileSampleNumber(["P260712"], "P260712").ok).toBe(true);
+  });
+  it("4: abweichende Stammprobe schlägt fehl und nennt die Originalbezeichnung", () => {
+    const res = verifyFileSampleNumber(["P260712-2897"], "P260800");
+    expect(res.ok).toBe(false);
+    expect(res.message).toContain("P260712-2897");
+  });
+  it("5: mehrere Schreibweisen derselben Stammprobe sind kein Konflikt", () => {
+    expect(verifyFileSampleNumber([{ SAMPLE: "P260712", IDENTITY: "P260712-2897" }], "P260712").ok).toBe(true);
+  });
+  it("6: unterschiedliche Stammproben bleiben ein Konflikt", () => {
+    expect(verifyFileSampleNumber(["P260712-2897", "P260800-1111"], "P260712").ok).toBe(false);
+  });
+  it("7: nicht-numerische Zusätze werden nicht toleriert", () => {
+    expect(verifyFileSampleNumber(["P260712-B"], "P260712").ok).toBe(false);
+    expect(verifyFileSampleNumber(["P260712_X"], "P260712").ok).toBe(false);
+    expect(parseSampleIdentifier("P260712-B")).toBeNull();
+    expect(parseSampleIdentifier("p260712-2897")).toEqual({ base: "P260712", suffix: "-2897", raw: "P260712-2897" });
   });
 });
