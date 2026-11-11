@@ -232,6 +232,13 @@
       "when": 1794301143271,
       "tag": "0032_equipment_explicit_write_privileges",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794387417625,
+      "tag": "0033_fix_prevent_mandatory_wp_delete_cascade",
+      "breakpoints": true
     }
   ]
 }
