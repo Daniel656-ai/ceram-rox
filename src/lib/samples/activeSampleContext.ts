@@ -134,6 +134,28 @@ export function verifyImportContext(
 // ---------------------------------------------------------------------------
 
 const SAMPLE_NO = /(?<![A-Za-z0-9])P\d{6}(?:-\d+)?(?![A-Za-z0-9])/gi;
+/** Probennummer mit nicht-numerischem Zusatz (z. B. P260712-B, P260712_X). */
+const SAMPLE_NO_INVALID_SUFFIX = /(?<![A-Za-z0-9])P\d{6}(?:-\d*[A-Za-z_][A-Za-z0-9_]*|_[A-Za-z0-9_]+)(?![A-Za-z0-9])/gi;
+
+export interface SampleIdentifier {
+  /** ROX-Stammprobennummer PJJNNNN (Großschreibung). */
+  base: string;
+  /** Numerischer Versuchszusatz inkl. Bindestrich, z. B. "-2897". */
+  suffix: string | null;
+  /** Originale Gerätebezeichnung (getrimmt, Großschreibung). */
+  raw: string;
+}
+
+/**
+ * Zerlegt eine Probenbezeichnung in Stammprobennummer und optionalen
+ * numerischen Zusatz. Nur "-<Ziffern>" wird toleriert; alles andere → null.
+ */
+export function parseSampleIdentifier(raw: string | null | undefined): SampleIdentifier | null {
+  const trimmed = String(raw ?? "").trim().toUpperCase();
+  const m = trimmed.match(/^(P\d{6})(?:-(\d+))?$/);
+  if (!m) return null;
+  return { base: m[1], suffix: m[2] ? `-${m[2]}` : null, raw: trimmed };
+}
 
 function collectStrings(value: unknown, out: string[], depth = 0): void {
   if (value == null || depth > 6) return;
@@ -166,14 +188,32 @@ export function verifyFileSampleNumber(
   sources: unknown[],
   expectedSampleNumber: string | null | undefined,
 ): ContextCheck {
+  const texts: string[] = [];
+  sources.forEach((s) => collectStrings(s, texts));
+  const invalid = new Set<string>();
+  for (const t of texts) for (const m of t.matchAll(SAMPLE_NO_INVALID_SUFFIX)) invalid.add(m[0].toUpperCase());
+  if (invalid.size > 0) {
+    return {
+      ok: false,
+      message: `Import abgebrochen: Unzulässiger Zusatz an der Probennummer (${[...invalid].join(", ")}).`,
+    };
+  }
   const found = extractSampleNumbers(sources);
   if (found.length === 0) return OK;
-  if (found.length > 1) {
+  // Mehrere Schreibweisen derselben Stammprobe (P260712, P260712-2897) sind kein Konflikt.
+  const bases = new Map<string, string[]>();
+  for (const f of found) {
+    const id = parseSampleIdentifier(f);
+    if (!id) continue;
+    bases.set(id.base, [...(bases.get(id.base) ?? []), id.raw]);
+  }
+  if (bases.size > 1) {
     return {
       ok: false,
       message: `Import abgebrochen: Die Datei enthält mehrere Probennummern (${found.join(", ")}).`,
     };
   }
+  const [base, raws] = [...bases.entries()][0];
   const expected = (expectedSampleNumber ?? "").trim().toUpperCase();
   if (!expected) {
     return {
@@ -181,10 +221,11 @@ export function verifyFileSampleNumber(
       message: "Import abgebrochen: Die Probennummer der Dienstleistung ist unbekannt.",
     };
   }
-  if (found[0] !== expected) {
+  const expectedBase = parseSampleIdentifier(expected)?.base ?? expected;
+  if (base !== expectedBase) {
     return {
       ok: false,
-      message: `Import abgebrochen: Die Datei gehört zu Probe ${found[0]}, ausgewählt ist ${expected}.`,
+      message: `Import abgebrochen: Die Datei gehört zu Probe ${raws.join(", ")}, ausgewählt ist ${expected}.`,
     };
   }
   return OK;
