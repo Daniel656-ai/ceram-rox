@@ -39,15 +39,22 @@ export type LocalAvResolution =
  * prefill ("copy") link to the requester operand av_1/av1. Legacy identity: the
  * exact, unlinked field key "av". Display names or "av*" prefixes never qualify.
  */
-export function resolveLocalAvField(owner: FormField, fields: FormField[], calcs: FormCalculation[]): LocalAvResolution {
-  if (owner.field_type !== "repeater") return { status: "none" };
-  const editable = containerFields(owner, fields, calcs).filter((f) =>
-    ["number", "decimal"].includes(f.field_type) && !f.readonly);
-  const linked = editable.filter((f) => {
-    const src = readValueSource(f as FormField & { data_source?: unknown });
-    return !!src && src.mode === "copy" && AV_SOURCE_KEYS.includes(src.source.field_key.toLowerCase());
-  });
-  const legacy = editable.filter((f) => f.field_key.toLowerCase() === "av" &&
+/** Requester-instance keys (av_1, av2 …) are never a local AV themselves. */
+const REQUESTER_AV_KEY = /^av_?\d+$/i;
+const LOCAL_AV_KEY = /^av(?:_[a-z0-9]+)?$/i;
+const NUMERIC_TYPES = ["number", "decimal", "percent"];
+
+/** Editable numeric field prefilled ("copy") from the requester AV1 – a local measurement input. */
+export function isLocalAvPrefillField(f: FormField & { data_source?: unknown }): boolean {
+  if (!NUMERIC_TYPES.includes(f.field_type) || f.readonly) return false;
+  const src = readValueSource(f);
+  return !!src && src.mode === "copy" && AV_SOURCE_KEYS.includes(src.source.field_key.toLowerCase());
+}
+
+function pickLocalAv(candidates: FormField[]): LocalAvResolution {
+  const editable = candidates.filter((f) => NUMERIC_TYPES.includes(f.field_type) && !f.readonly);
+  const linked = editable.filter((f) => isLocalAvPrefillField(f as FormField & { data_source?: unknown }));
+  const legacy = editable.filter((f) => LOCAL_AV_KEY.test(f.field_key) && !REQUESTER_AV_KEY.test(f.field_key) &&
     !isLinkedField(f as FormField & { data_source?: unknown }));
   const pool = linked.length ? linked : legacy;
   if (pool.length === 1) return { status: "ok", field: pool[0], via: linked.length ? "data_source" : "legacy_key" };
@@ -55,8 +62,26 @@ export function resolveLocalAvField(owner: FormField, fields: FormField[], calcs
   return { status: "none" };
 }
 
-const K_CALC = (c: FormCalculation) => /^k_wert(?:_\d+)?$/i.test(c.calc_key) || /^k-wert(?:\s*\d+)?$/i.test(c.display_name?.trim() ?? "");
+/**
+ * Identifies the editable local AV of a repeater. Strongest identity: an editable
+ * prefill ("copy") link to av_1/av1. Otherwise an unlinked key "av" or "av_<suffix>"
+ * (never a requester instance av_<n>). Exactly one candidate, else no override.
+ */
+export function resolveLocalAvField(owner: FormField, fields: FormField[], calcs: FormCalculation[]): LocalAvResolution {
+  if (owner.field_type !== "repeater") return { status: "none" };
+  return pickLocalAv(containerFields(owner, fields, calcs));
+}
+
+/** K-value calculation identity: calc_key k_wert / k-wert (+ optional suffix) or display name starting with "K-Wert". */
+export const isKValueCalc = (c: Pick<FormCalculation, "calc_key" | "display_name">) =>
+  /^k[-_]?wert(?:_[a-z0-9]+)?$/i.test(c.calc_key) || /^k-wert(?![a-z])/i.test(c.display_name?.trim() ?? "");
+const K_CALC = isKValueCalc;
 const warned = new Set<string>();
+
+function avOverlay(calc: FormCalculation, value: number | null): Record<string, unknown> | null {
+  const refs = extractReferences(calc.formula || "").filter((k) => AV_SOURCE_KEYS.includes(k.toLowerCase()));
+  return refs.length ? Object.fromEntries(refs.map((k) => [k, value])) : null;
+}
 
 /** Overrides only av_1/av1 inside K-value calculations placed in this repeater; nothing else. */
 function localKValueInputs(owner: FormField, fields: FormField[], calcs: FormCalculation[], own: Record<string, unknown>) {
@@ -76,8 +101,45 @@ function localKValueInputs(owner: FormField, fields: FormField[], calcs: FormCal
   const overrides: Record<string, Record<string, unknown>> = {};
   for (const c of calcs) {
     if (c.form_id !== owner.form_id || !placed.has(c.calc_key) || !K_CALC(c)) continue;
-    const references = extractReferences(c.formula || "").filter((key) => AV_SOURCE_KEYS.includes(key.toLowerCase()));
-    if (references.length) overrides[c.calc_key] = Object.fromEntries(references.map((key) => [key, value]));
+    const o = avOverlay(c, value);
+    if (o) overrides[c.calc_key] = o;
+  }
+  return overrides;
+}
+
+/**
+ * Legacy repeater (no stored IDs): local AV among the repeater's own sub-fields;
+ * overlay only for K-value calculations of the same form. Entry values keyed by field_key.
+ */
+export function legacyEntryKValueInputs(owner: FormField, children: FormField[], calcs: FormCalculation[], entry: Record<string, unknown> | undefined) {
+  const resolved = pickLocalAv(children);
+  if (resolved.status !== "ok") return {};
+  const value = parseControlledNumber(entry?.[resolved.field.field_key]);
+  const overrides: Record<string, Record<string, unknown>> = {};
+  for (const c of calcs) {
+    if ((owner.form_id && c.form_id && c.form_id !== owner.form_id) || !K_CALC(c)) continue;
+    const o = avOverlay(c, value);
+    if (o) overrides[c.calc_key] = o;
+  }
+  return overrides;
+}
+
+/**
+ * Flat numbered forms (temperatur_n / av_n / k_wert_n as top-level fields):
+ * K-value calculation k_wert_<n> (n ≥ 2) uses its own av_<n> as operand av_1, if
+ * that field exists in the form. k_wert_1 and all other calculations stay unchanged.
+ */
+export function flatKValueInputs(fields: FormField[], calcs: FormCalculation[], values: Record<string, unknown>) {
+  const overrides: Record<string, Record<string, unknown>> = {};
+  const topKeys = new Set(fields.filter((f) => !f.parent_field_id).map((f) => f.field_key.toLowerCase()));
+  for (const c of calcs) {
+    const m = /^k[-_]?wert_(\d+)$/i.exec(c.calc_key);
+    if (!m || m[1] === "1") continue;
+    const avKey = [`av_${m[1]}`, `av${m[1]}`].find((k) => topKeys.has(k));
+    if (!avKey) continue;
+    const field = fields.find((f) => f.field_key.toLowerCase() === avKey)!;
+    const o = avOverlay(c, parseControlledNumber(values[field.field_key]));
+    if (o) overrides[c.calc_key] = o;
   }
   return overrides;
 }
@@ -133,6 +195,8 @@ export function entryDefinitionScope(owner: FormField, fields: FormField[], calc
 export function evaluateScopedEntry(
   owner: FormField, fields: FormField[], calcs: FormCalculation[], root: Record<string, unknown>,
   entry: Record<string, unknown>, parent: Record<string, unknown> = {},
+  /** false = evaluate with the requester AV only (integrity check of historical values). */
+  useLocalAv = true,
 ): Record<string, LocalCalcResult> {
   const definitions = calcs.map((c) => {
     if (!c.expression?.length) return c;
@@ -149,7 +213,7 @@ export function evaluateScopedEntry(
   for (const c of definitions) values[c.calc_key] = null;
   return evaluateLocalCalculations(definitions, values, [
     ...fields.map((f) => f.field_key), ...Object.keys(parent), ...Object.keys(own),
-  ], localKValueInputs(owner, fields, definitions, own));
+  ], useLocalAv ? localKValueInputs(owner, fields, definitions, own) : {});
 }
 
 function calculatedEntry(owner: FormField, fields: FormField[], calcs: FormCalculation[], root: Record<string, unknown>, entry: Record<string, unknown>, parent: Record<string, unknown>) {
