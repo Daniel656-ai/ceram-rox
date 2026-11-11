@@ -5,29 +5,78 @@ import { readMeasurementBlockMeta, newInstanceId, INSTANCE_ID_KEY } from "@/lib/
 import { normalizeRepeaterLayout, type RepeaterLayout } from "@/lib/repeaterLayout";
 import { evaluateLocalCalculations, buildFormulaFromTokens, type LocalCalcResult } from "@/lib/localCalculations";
 import { extractReferences } from "@/lib/formulaEngine";
-import { isLinkedField } from "@/lib/fieldLinks";
+import { isLinkedField, readValueSource } from "@/lib/fieldLinks";
 
-/** Deliberately exact identities, not a general AV alias/renaming rule. */
-function localKValueInputs(owner: FormField, fields: FormField[], calcs: FormCalculation[], own: Record<string, unknown>) {
-  if (owner.field_type !== "repeater") return {};
-  const localAv = containerFields(owner, fields, calcs).filter((f) =>
-    f.form_id === owner.form_id && f.field_key.toLowerCase() === "av" &&
-    ["number", "decimal"].includes(f.field_type) && !f.readonly &&
+const AV_SOURCE_KEYS = ["av_1", "av1"];
+const NUMERIC_TEXT = /^[-+]?(?:\d+(?:[.,]\d+)?|[.,]\d+)$/;
+/** Default result precision when a calculation has no `decimals` (same as the renderer display default). */
+export const DEFAULT_RESULT_DECIMALS = 2;
+
+/** Controlled number parsing: finite numbers or a single plain decimal with dot OR comma; never "" -> 0. */
+export function parseControlledNumber(raw: unknown): number | null {
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+  if (typeof raw !== "string" || !NUMERIC_TEXT.test(raw.trim())) return null;
+  const n = Number(raw.trim().replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Integrity comparison only: tolerance is half of the last displayed decimal. Stored values are never changed. */
+export function storedMatchesLive(stored: unknown, live: number | null | undefined, decimals?: number | null): boolean {
+  const s = stored === null || stored === undefined ? null : parseControlledNumber(stored);
+  const l = live ?? null;
+  if (s === null || l === null) return s === null && l === null && (stored === null || stored === undefined);
+  const d = Number.isInteger(decimals) && (decimals as number) >= 0 ? (decimals as number) : DEFAULT_RESULT_DECIMALS;
+  return Math.abs(s - l) <= 0.5 * Math.pow(10, -d) + 1e-12;
+}
+
+export type LocalAvResolution =
+  | { status: "ok"; field: FormField; via: "data_source" | "legacy_key" }
+  | { status: "none" }
+  | { status: "ambiguous"; candidates: string[] };
+
+/**
+ * Identifies the editable local AV of a repeater. Strongest identity: an editable
+ * prefill ("copy") link to the requester operand av_1/av1. Legacy identity: the
+ * exact, unlinked field key "av". Display names or "av*" prefixes never qualify.
+ */
+export function resolveLocalAvField(owner: FormField, fields: FormField[], calcs: FormCalculation[]): LocalAvResolution {
+  if (owner.field_type !== "repeater") return { status: "none" };
+  const editable = containerFields(owner, fields, calcs).filter((f) =>
+    ["number", "decimal"].includes(f.field_type) && !f.readonly);
+  const linked = editable.filter((f) => {
+    const src = readValueSource(f as FormField & { data_source?: unknown });
+    return !!src && src.mode === "copy" && AV_SOURCE_KEYS.includes(src.source.field_key.toLowerCase());
+  });
+  const legacy = editable.filter((f) => f.field_key.toLowerCase() === "av" &&
     !isLinkedField(f as FormField & { data_source?: unknown }));
-  if (localAv.length !== 1) return {};
-  const raw = own[localAv[0].field_key];
+  const pool = linked.length ? linked : legacy;
+  if (pool.length === 1) return { status: "ok", field: pool[0], via: linked.length ? "data_source" : "legacy_key" };
+  if (pool.length > 1) return { status: "ambiguous", candidates: pool.map((f) => f.id) };
+  return { status: "none" };
+}
+
+const K_CALC = (c: FormCalculation) => /^k_wert(?:_\d+)?$/i.test(c.calc_key) || /^k-wert(?:\s*\d+)?$/i.test(c.display_name?.trim() ?? "");
+const warned = new Set<string>();
+
+/** Overrides only av_1/av1 inside K-value calculations placed in this repeater; nothing else. */
+function localKValueInputs(owner: FormField, fields: FormField[], calcs: FormCalculation[], own: Record<string, unknown>) {
+  const resolved = resolveLocalAvField(owner, fields, calcs);
+  if (resolved.status === "ambiguous") {
+    if (!warned.has(owner.id)) {
+      warned.add(owner.id);
+      console.warn("[ROX] Lokales AV mehrdeutig – kein Override", { repeater: owner.id, candidates: resolved.candidates });
+    }
+    return {};
+  }
+  if (resolved.status !== "ok") return {};
   // No verified Excel fallback: missing/invalid local AV is not calculable.
-  const value = typeof raw === "number" && Number.isFinite(raw) ? raw :
-    typeof raw === "string" && /^[-+]?(?:\d+(?:[.,]\d+)?|[.,]\d+)$/.test(raw.trim())
-      ? Number(raw.trim().replace(",", ".")) : null;
+  const value = parseControlledNumber(own[resolved.field.field_key]);
   const placed = new Set(containerLayout(owner, fields, calcs).items.flatMap((i) => i.type === "group" ? i.children : [i])
     .flatMap((i) => i.type === "calculation" ? [i.calc_key] : []));
   const overrides: Record<string, Record<string, unknown>> = {};
   for (const c of calcs) {
-    if (c.form_id !== owner.form_id || !placed.has(c.calc_key) ||
-      !(c.calc_key.toLowerCase() === "k_wert" || c.display_name?.trim().toLowerCase() === "k-wert")) continue;
-    const references = extractReferences(c.formula || "").filter((key) =>
-      ["av_1", "av1"].includes(key.toLowerCase()) && fields.some((f) => f.form_id === owner.form_id && f.field_key === key));
+    if (c.form_id !== owner.form_id || !placed.has(c.calc_key) || !K_CALC(c)) continue;
+    const references = extractReferences(c.formula || "").filter((key) => AV_SOURCE_KEYS.includes(key.toLowerCase()));
     if (references.length) overrides[c.calc_key] = Object.fromEntries(references.map((key) => [key, value]));
   }
   return overrides;
