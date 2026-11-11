@@ -104,6 +104,8 @@
   "project_number": "Projekt-Nr.",
   "project_name": "Projektname",
   "order_type": "Auftragstyp",
+  "priority_saved": "Priorität gespeichert",
+  "priority_save_error": "Priorität konnte nicht gespeichert werden",
   "priority": "Priorität",
   "due_date": "Fälligkeit",
   "no_orders": "Keine Aufträge gefunden",

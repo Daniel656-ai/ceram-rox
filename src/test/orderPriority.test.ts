@@ -55,3 +55,11 @@ describe("order priority – vier Stufen", () => {
     expect(priorityBadgeVariant("hoechste")).toBe("destructive");
   });
 });
+
+describe("Auftragsliste: Sortierung nach Auftragspriorität", () => {
+  it("sortiert sehr_hoch vor hoch vor normal vor niedrig, Altwerte und leer korrekt", () => {
+    const vals = ["niedrig", null, "hoechste", "wichtig", "sehr_hoch", "hoch", "normal"];
+    const sorted = [...vals].sort((a, b) => (3 - priorityRank(a)) - (3 - priorityRank(b)));
+    expect(sorted.map((v) => normalizePriority(v))).toEqual(["sehr_hoch", "sehr_hoch", "hoch", "hoch", "normal", "normal", "niedrig"]);
+  });
+});
