@@ -63,7 +63,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Pencil } from "lucide-react";
 import { Calculator } from "lucide-react";
 import { evaluateLocalCalculations, evaluateEntryCalculations, seriesCalculations, formatCalcResult } from "@/lib/localCalculations";
-import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry, evaluateScopedEntry } from "@/lib/scopedMeasurementValues";
+import { containerFields, containerLayout, hasScopedReferences, entryDefinitionScope, updateScopedContainer, newTemperatureEntry, duplicateScopedEntry, evaluateScopedEntry, storedMatchesLive, parseControlledNumber } from "@/lib/scopedMeasurementValues";
 import { repeaterAggregateScope } from "@/lib/repeaterAggregation";
 import type { FormCalculation } from "@/lib/api/formCalculations";
 import { runCalculation } from "@/lib/calculationBindings";
