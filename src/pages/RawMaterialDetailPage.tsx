@@ -438,6 +438,16 @@ export default function RawMaterialDetailPage() {
     }
   };
 
+  /** BigBag-Nr. (manufacturer_batch) nachträglich ändern; leer = keine Nummer. Nur dieses Feld wird geschrieben. */
+  const handleBatchBigBagEdit = async (batch: any, raw: string) => {
+    const val = raw.trim() || null;
+    if ((batch.manufacturer_batch ?? null) === val) return;
+    try {
+      await updateBatch.mutateAsync({ id: batch.id, raw_material_id: id!, manufacturer_batch: val });
+      toast.success("BigBag-Nr. gespeichert");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   const handleBatchQualityEdit = async (batch: any, field: "moisture_percent" | "ph_value", raw: string) => {
     const trimmed = raw.trim();
     let val: number | null = null;
@@ -812,7 +822,17 @@ export default function RawMaterialDetailPage() {
                              />
                            ) : (b.mrs_number || "–")}
                          </TableCell>
-                         <TableCell className="font-mono text-xs">{b.manufacturer_batch || "–"}</TableCell>
+                         <TableCell className="font-mono text-xs">
+                           {canManageBatches ? (
+                             <Input
+                               defaultValue={b.manufacturer_batch ?? ""}
+                               className="h-7 w-28 text-xs font-mono"
+                               placeholder="–"
+                               aria-label="BigBag-Nr. bearbeiten"
+                               onBlur={(e) => handleBatchBigBagEdit(b, e.target.value)}
+                             />
+                           ) : (b.manufacturer_batch || "–")}
+                         </TableCell>
                         <TableCell className="text-xs">{b.goods_receipt_date ? new Date(b.goods_receipt_date).toLocaleDateString("de-DE") : (b.delivery_date ? new Date(b.delivery_date).toLocaleDateString("de-DE") : "–")}</TableCell>
                         <TableCell>{b.delivery_quantity != null ? `${formatQuantity(b.delivery_quantity)} ${mat.unit}` : "–"}</TableCell>
                         <TableCell>{b.supplier || mat.supplier || "–"}</TableCell>
