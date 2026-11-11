@@ -104,7 +104,8 @@ describe("integrity comparison", () => {
   });
   it("8. rounding differences within half the last decimal pass, larger deviations fail", () => {
     expect(storedMatchesLive(0.1 + 0.2, 0.3, 2)).toBe(true);
-    expect(storedMatchesLive(12.344, 12.3449, 3)).toBe(true);
+    expect(storedMatchesLive(12.344, 12.3444, 3)).toBe(true);
+    expect(storedMatchesLive(12.344, 12.3449, 3)).toBe(false);
     expect(storedMatchesLive(12.34, 12.36, 2)).toBe(false);
     expect(storedMatchesLive(5000, 8000, 2)).toBe(false); // K based on AV1 vs local AV stays flagged
   });
