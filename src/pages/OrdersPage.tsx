@@ -25,6 +25,8 @@ import {
 } from "@/hooks/useMeasurements";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriorityBadge } from "@/components/PriorityBadge";
+import { OrderPriorityCell } from "@/components/orders/OrderPriorityCell";
+import { priorityRank } from "@/lib/orders/priority";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -96,7 +98,7 @@ function OrdersOverview() {
       case "project_number": return o.projects?.project_number ?? "";
       case "project_name": return o.projects?.project_name ?? "";
       case "order_type": return o.order_type ?? "";
-      case "ranking": return o.ranking ?? 999;
+      case "ranking": return 3 - priorityRank(o.priority);
       case "status": return o.status ?? "";
       case "due_date": return o.due_date ? new Date(o.due_date).getTime() : Number.POSITIVE_INFINITY;
       case "created_at": return o.created_at ? new Date(o.created_at).getTime() : 0;
@@ -307,24 +309,7 @@ function OrdersOverview() {
                     <TableCell className="whitespace-normal">{resolveOrderMasseType(o).join(", ") || "–"}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}<BillingStatusText order={o as any} /></TableCell>
                     <TableCell>
-                      {role === "master" ? (
-                        <Select
-                          value={o.ranking ? String(o.ranking) : "none"}
-                          onValueChange={(val) => handleRankingChange(o.id, val)}
-                        >
-                          <SelectTrigger className="w-[100px] h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">–</SelectItem>
-                            <SelectItem value="1">Prio 1</SelectItem>
-                            <SelectItem value="2">Prio 2</SelectItem>
-                            <SelectItem value="3">Prio 3</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <PriorityBadge ranking={o.ranking} />
-                      )}
+                      <OrderPriorityCell orderId={o.id} priority={o.priority} editable={role === "master"} />
                     </TableCell>
                     <TableCell><StatusBadge status={o.status} /></TableCell>
                     <TableCell>{o.due_date ? new Date(o.due_date).toLocaleDateString(i18n.language === "en" ? "en-GB" : "de-DE") : "–"}</TableCell>
