@@ -250,7 +250,14 @@ export function AppSidebar() {
             {!collapsed && <span className="ml-2">{t("common:sign_out")}</span>}
           </Button>
         </div>
-
+        <div className="px-3 pb-2">
+          <p
+            className="text-[11px] leading-tight text-sidebar-foreground/50 select-none"
+            title={`ROX v${__APP_VERSION__}`}
+          >
+            {collapsed ? `v${__APP_VERSION__}` : `ROX v${__APP_VERSION__}`}
+          </p>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
