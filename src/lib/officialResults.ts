@@ -23,6 +23,11 @@ import {
   INSTANCE_ID_KEY,
 } from "@/lib/measurementBlocks";
 import { globalConstantScope, type GlobalConstantLike } from "@/lib/globalConstants";
+import {
+  containerFields,
+  containerLayout,
+  evaluateScopedEntry,
+} from "@/lib/scopedMeasurementValues";
 
 export interface OfficialResultCandidate {
   key: string;
@@ -78,6 +83,12 @@ export function buildLinkedFormResultCandidates(
       .filter((f) => f.parent_field_id && repeaters.some((r) => r.id === f.parent_field_id))
       .map((f) => f.id)
   );
+  // Ergänzend zur relationalen Elternbindung (parent_field_id) zählen auch
+  // Felder, die ausschließlich über das Repeater-Layout zugeordnet sind, als
+  // Unterfelder – sie dürfen nicht zusätzlich als flache Ergebnisse erscheinen.
+  for (const repeater of repeaters) {
+    for (const f of containerFields(repeater, fields, calculations)) repeaterChildIds.add(f.id);
+  }
 
   const constantValues = globalConstantScope(globalConstants);
   // Berechnungen über Repeater-Zeilen erhalten ihre Eingabewerte über dieselbe
@@ -258,16 +269,38 @@ export function buildLinkedFormResultCandidates(
   // `__instance_id` der Zeile; Altdaten ohne Kennung fallen auf die
   // positionsbasierte Kennung `idx_<n>` zurück (Konvention aus readInstances).
   // Der Repeater-Container selbst wird niemals ein offizielles Ergebnis.
+  // In einem Repeater platzierte Berechnungen (z. B. K-Wert, η-NOx) werden
+  // je Zeile mit deren eigenen Werten ausgewertet und niemals zusätzlich auf
+  // Top-Level-Ebene ohne Zeilenkontext ausgeführt.
+  const repeaterCalcKeys = new Set<string>();
   for (const repeater of repeaters) {
     const repMeta = readRepeaterMeta(repeater);
     const storageKey = repMeta.storage_key || repeater.field_key;
-    const children = repeaterChildren(fields, repeater.id).filter(
-      (c) =>
-        c.field_type !== "repeater" &&
-        c.field_type !== "measurement_block" &&
-        c.field_type !== "measurement_import"
-    );
-    if (children.length === 0) continue;
+    const layout = containerLayout(repeater, fields, calculations);
+    const leaves = layout.items.flatMap((i) => (i.type === "group" ? i.children : [i]));
+    // Speicherschlüssel der Platzierungen (value_key) und platzierte Berechnungen.
+    const valueKeyByFieldId = new Map<string, string>();
+    const placedCalcs: FormCalculation[] = [];
+    for (const item of leaves) {
+      if (item.type === "field") {
+        const target = fields.find((f) => (item.field_id ? f.id === item.field_id : f.field_key === item.key));
+        if (target) valueKeyByFieldId.set(target.id, item.value_key ?? item.key);
+      } else if (item.type === "calculation") {
+        const target = calculations.find((c) => (item.calc_id ? c.id === item.calc_id : c.calc_key === item.calc_key));
+        if (target && !placedCalcs.some((c) => c.id === target.id)) placedCalcs.push(target);
+      }
+    }
+    for (const c of placedCalcs) repeaterCalcKeys.add(c.calc_key);
+    // Unterfelder: relationale Elternbindung UND Layout-Zuordnung, ohne Dubletten.
+    const children = [...repeaterChildren(fields, repeater.id), ...containerFields(repeater, fields, calculations)]
+      .filter((c, i, arr) => arr.findIndex((x) => x.id === c.id) === i)
+      .filter(
+        (c) =>
+          c.field_type !== "repeater" &&
+          c.field_type !== "measurement_block" &&
+          c.field_type !== "measurement_import"
+      );
+    if (children.length === 0 && placedCalcs.length === 0) continue;
     const instances = readInstances(localValues[storageKey], {
       min_entries: 0,
       item_label: repMeta.item_label ?? "Eintrag",
@@ -276,17 +309,46 @@ export function buildLinkedFormResultCandidates(
     }, toBlockChildDefs(children));
     for (const instance of instances) {
       for (const child of children) {
+        const valueKey = valueKeyByFieldId.get(child.id) ?? child.field_key;
         instanceCandidates.push({
           kind: "field" as const,
           key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
           label: child.result_label || child.display_name || child.field_key,
           unit: child.unit ?? null,
-          value: instance.values[child.field_key],
+          value: instance.values[valueKey] ?? instance.values[child.field_key],
           official: child.is_result === true,
           instanceKey: instance.instanceId,
           instanceLabel: instance.label,
           instanceContext: null,
         });
+      }
+      // Zeilenbezogene Berechnungen: dieselbe Auswertung wie die Formularanzeige
+      // (evaluateScopedEntry inkl. lokaler AV-Auflösung) – keine zweite Logik.
+      // Das Ergebnis erhält die Instanzkennung der Zeile und die
+      // Ergebniskennzeichnung der Berechnung selbst (FormCalculation.is_result).
+      if (placedCalcs.length > 0) {
+        const scoped = evaluateScopedEntry(
+          repeater,
+          fields,
+          calculations,
+          { ...localValues, ...constantValues },
+          instance.values
+        );
+        for (const calc of placedCalcs) {
+          const live = scoped[calc.calc_key];
+          instanceCandidates.push({
+            kind: "calculation" as const,
+            key: instanceResultKey(prefix, storageKey, instance.instanceId, calc.calc_key),
+            label: calc.result_label || calc.display_name || calc.calc_key,
+            unit: calc.unit ?? null,
+            value: live?.value ?? null,
+            official: calc.is_result === true,
+            error: live?.error ?? null,
+            instanceKey: instance.instanceId,
+            instanceLabel: instance.label,
+            instanceContext: null,
+          });
+        }
       }
     }
   }
@@ -319,7 +381,12 @@ export function buildLinkedFormResultCandidates(
         };
       }),
     ...instanceCandidates,
-    ...calculations.map((calculation) => {
+    ...calculations
+      // In einem Repeater platzierte Berechnungen laufen ausschließlich
+      // zeilenbezogen (s. o.) – ohne gültigen Zeilenkontext gibt es kein
+      // Top-Level-Ergebnis.
+      .filter((calculation) => !repeaterCalcKeys.has(calculation.calc_key))
+      .map((calculation) => {
       // Ergebnisbedingungen von Berechnungen nutzen dieselbe Mechanik wie
       // Felder (`metadata.result_conditions`): Bedingungen erscheinen in der
       // Bezeichnung UND bleiben strukturiert am Ergebnis erhalten. Sie sind
