@@ -41,13 +41,20 @@ export const measurementServices = {
    * Namensähnlichkeit und ohne Ersatzdienstleistung. Es wird nichts angelegt.
    */
   async resolveSamplingCodes(codes: string[]) {
-    const rows = (await unwrap(
-      dbClient
-        .from("measurement_services")
-        .select("id, service_name")
-        .eq("active", true)
-        .is("archived_at", null)
-    )) as { id: string; service_name: string }[];
+    type Row = { id: string; service_name: string; sampling_code?: string | null };
+    const base = () =>
+      dbClient.from("measurement_services");
+    // Bevorzugt mit sampling_code; fehlt die Spalte (z. B. noch nicht migrierte
+    // Firmen-DB), weiter nur mit der statischen Namenszuordnung.
+    const withCode = await base()
+      .select("id, service_name, sampling_code")
+      .eq("active", true)
+      .is("archived_at", null);
+    const rows = withCode.error
+      ? ((await unwrap(
+          base().select("id, service_name").eq("active", true).is("archived_at", null)
+        )) as Row[])
+      : ((withCode.data ?? []) as Row[]);
     return matchSamplingCodes(codes, rows);
   },
 
@@ -60,6 +67,9 @@ export const measurementServices = {
     color?: string | null;
     department?: string | null;
     price?: number | null;
+    standard_duration_hours?: number;
+    /** Beprobungskürzel (m³-Liste); getrimmt, leer = null. */
+    sampling_code?: string | null;
   }) =>
     unwrap(
       dbClient.from("measurement_services").insert(service as any).select().single()
@@ -82,6 +92,8 @@ export const measurementServices = {
       archived_at?: string | null;
       /** Prozessvorlage, die beim Buchen dieser Dienstleistung ausgeführt wird. */
       process_template_id?: string | null;
+      /** Beprobungskürzel (m³-Liste); getrimmt, leer = null. */
+      sampling_code?: string | null;
       /** SLA-Terminüberwachung (Phase 1): Aktivierung, Vorwarnzeit, Erinnerungsintervall, Empfängerrollen. */
       sla_monitoring_enabled?: boolean;
       sla_yellow_warning_days?: number;

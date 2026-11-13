@@ -41,10 +41,50 @@ export const LEGACY_BENCH_CODE = "Bench";
 export const NO_MEASUREMENT_CODE = "Keine Messung notwendig";
 const BENCH_CODES = ["bench", "bench nox", "bench sox"];
 
-/** Auswahlbare Kürzel für neue Eingaben (Alt-„Bench“ nur, wenn bereits gewählt). */
-export function selectableSamplingCodes(selected: string[]): string[] {
+/**
+ * Auswahlbare Kürzel für neue Eingaben (Alt-„Bench“ nur, wenn bereits gewählt).
+ * `dynamicCodes` = in den Dienstleistungseinstellungen gepflegte Kürzel
+ * (measurement_services.sampling_code); sie werden ohne Duplikate angehängt.
+ */
+export function selectableSamplingCodes(selected: string[], dynamicCodes: (string | null | undefined)[] = []): string[] {
   const hasLegacy = selected.some((c) => normalizeSamplingKey(c) === "bench");
-  return SAMPLING_CODE_MAP.map((m) => m.code).filter((c) => c !== LEGACY_BENCH_CODE || hasLegacy);
+  const out = SAMPLING_CODE_MAP.map((m) => m.code).filter((c) => c !== LEGACY_BENCH_CODE || hasLegacy);
+  const seen = new Set(out.map(normalizeSamplingKey));
+  for (const raw of dynamicCodes) {
+    const code = (raw ?? "").trim();
+    const key = normalizeSamplingKey(code);
+    if (!code || seen.has(key)) continue;
+    seen.add(key);
+    out.push(code);
+  }
+  return out;
+}
+
+/** Speicherform des Dienstleistungskürzels: getrimmt, leer → null. */
+export function normalizeServiceSamplingCode(value: string | null | undefined): string | null {
+  const v = (value ?? "").trim();
+  return v ? v : null;
+}
+
+/**
+ * Prüft die Eindeutigkeit (wie Index measurement_services_sampling_code_active_idx):
+ * nur aktive, nicht archivierte Dienstleistungen, ohne Groß-/Kleinschreibung und
+ * Randleerzeichen, die bearbeitete Dienstleistung ausgenommen. Liefert den Konflikt.
+ */
+export function findSamplingCodeConflict<
+  T extends { id: string; service_name: string; sampling_code?: string | null; active?: boolean | null; archived_at?: string | null }
+>(code: string | null | undefined, services: T[], excludeId?: string | null): T | null {
+  const key = normalizeSamplingKey(code);
+  if (!key) return null;
+  return (
+    services.find(
+      (s) =>
+        s.id !== excludeId &&
+        s.active !== false &&
+        !s.archived_at &&
+        normalizeSamplingKey(s.sampling_code) === key
+    ) ?? null
+  );
 }
 
 /**
@@ -98,22 +138,33 @@ export function samplingCodeForServiceName(serviceName: string | null | undefine
  * Namensähnlichkeit. Ein Kürzel kann mehrere Dienstleistungen bedeuten
  * („Bench“ → BENCH NOx + BENCH SOx); dann werden alle vorhandenen übernommen.
  */
-export function matchSamplingCodes<T extends { id: string; service_name: string }>(
+export function matchSamplingCodes<T extends { id: string; service_name: string; sampling_code?: string | null }>(
   codes: string[],
   services: T[]
 ): { matched: { code: string; id: string; service_name: string }[]; missing: string[] } {
   const byName = new Map(services.map((s) => [normalizeSamplingKey(s.service_name), s]));
   const matched: { code: string; id: string; service_name: string }[] = [];
   const missing: string[] = [];
+  const used = new Set<string>();
   for (const raw of codes) {
     const code = (raw ?? "").trim();
     if (!code) continue;
-    if (normalizeSamplingKey(code) === normalizeSamplingKey(NO_MEASUREMENT_CODE)) continue;
-    const hits = serviceNamesForCode(code)
-      .map((n) => byName.get(normalizeSamplingKey(n)))
-      .filter(Boolean) as T[];
+    const key = normalizeSamplingKey(code);
+    if (key === normalizeSamplingKey(NO_MEASUREMENT_CODE)) continue;
+    // 1. Direkt in den Dienstleistungseinstellungen gepflegtes Kürzel.
+    let hits = services.filter((s) => normalizeSamplingKey(s.sampling_code) === key);
+    // 2. Fallback: bisherige statische Zuordnung über den Dienstleistungsnamen.
+    if (!hits.length) {
+      hits = serviceNamesForCode(code)
+        .map((n) => byName.get(normalizeSamplingKey(n)))
+        .filter(Boolean) as T[];
+    }
     if (hits.length) {
-      for (const hit of hits) matched.push({ code, id: hit.id, service_name: hit.service_name });
+      for (const hit of hits) {
+        if (used.has(hit.id)) continue; // keine doppelten Dienstleistungen
+        used.add(hit.id);
+        matched.push({ code, id: hit.id, service_name: hit.service_name });
+      }
     } else missing.push(code);
   }
   return { matched, missing };

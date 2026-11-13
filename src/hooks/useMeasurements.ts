@@ -200,7 +200,7 @@ export function useAssignMeasurement() {
 export function useCreateService() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (service: { service_name: string; category: string; hourly_rate: number }) =>
+    mutationFn: (service: { service_name: string; category: string; hourly_rate: number; standard_duration_hours?: number; sampling_code?: string | null }) =>
       api.measurementServices.create(service),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["services"] });

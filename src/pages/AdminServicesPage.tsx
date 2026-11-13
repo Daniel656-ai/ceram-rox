@@ -1,4 +1,4 @@
-import { samplingCodeForServiceName } from "@/lib/samplingCodeMap";
+import { samplingCodeForServiceName, normalizeServiceSamplingCode, findSamplingCodeConflict } from "@/lib/samplingCodeMap";
 import { useTranslation } from "react-i18next";
 import {
   useAllServices,
@@ -153,12 +153,19 @@ export default function AdminServicesPage() {
 
   const handleCreate = async () => {
     if (!newName) { toast.error(t("admin:name_required")); return; }
+    const samplingCode = normalizeServiceSamplingCode(newSamplingCode);
+    const conflict = findSamplingCodeConflict(samplingCode, services as any[]);
+    if (conflict) {
+      toast.error(`Das Beprobungskürzel „${samplingCode}“ ist bereits der Dienstleistung „${conflict.service_name}“ zugeordnet.`);
+      return;
+    }
     try {
       await createService.mutateAsync({
         service_name: newName,
         category: newCategory,
         hourly_rate: parseFloat(newRate),
         standard_duration_hours: parseFloat(newDuration),
+        ...(samplingCode ? { sampling_code: samplingCode } : {}),
       } as any);
       toast.success(t("admin:service_created"));
       setNewOpen(false);
@@ -364,10 +371,13 @@ export default function AdminServicesPage() {
                 </div>
                 <div><Label>{t("admin:service_duration")}</Label><Input type="number" min={0.25} step={0.25} value={newDuration} onChange={e => setNewDuration(e.target.value)} /></div>
                 {canViewRates && canEditRates && <div><Label>{t("admin:service_rate")}</Label><Input type="number" value={newRate} onChange={e => setNewRate(e.target.value)} /></div>}
-                <p className="text-xs text-muted-foreground">
-                  Das Beprobungskürzel der m³-Liste ergibt sich zentral aus dem
-                  Dienstleistungsnamen und wird hier nicht gepflegt.
-                </p>
+                <div>
+                  <Label>Beprobungskürzel (m³-Liste)</Label>
+                  <Input value={newSamplingCode} onChange={e => setNewSamplingCode(e.target.value)} placeholder="z. B. RW (optional)" />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Dieses Kürzel wird für die Beprobung bzw. m³-Liste verwendet.
+                  </p>
+                </div>
                 <Button onClick={handleCreate}>{t("common:create")}</Button>
               </div>
             </DialogContent>
@@ -425,6 +435,7 @@ export default function AdminServicesPage() {
         service={editService}
         onClose={() => setEditService(null)}
         canEditRates={canViewRates && canEditRates}
+        allServicesForCodes={services as any[]}
         onSave={async (id, updates) => {
           try {
             await updateService.mutateAsync({ id, ...updates } as any);
@@ -466,12 +477,13 @@ export default function AdminServicesPage() {
 // Edit dialog
 // ============================================================
 function EditServiceDialog({
-  service, onClose, onSave, canEditRates,
+  service, onClose, onSave, canEditRates, allServicesForCodes = [],
 }: {
   service: any | null;
   onClose: () => void;
   onSave: (id: string, updates: Record<string, any>) => Promise<void>;
   canEditRates: boolean;
+  allServicesForCodes?: any[];
 }) {
   const { t } = useTranslation(["admin", "common"]);
   const [form, setForm] = useState<any>({});
@@ -510,7 +522,7 @@ function EditServiceDialog({
         standard_duration_hours: service.standard_duration_hours ?? 1,
         hourly_rate: service.hourly_rate ?? 0,
         work_instructions: service.work_instructions ?? "",
-        
+        sampling_code: service.sampling_code ?? "",
         process_template_id: service.process_template_id ?? "__none__",
         active: !!service.active,
         sla_monitoring_enabled: service.sla_monitoring_enabled === true,
@@ -578,11 +590,15 @@ function EditServiceDialog({
           </div>
           <div>
             <Label>Beprobungskürzel (m³-Liste)</Label>
-            <Input value={samplingCodeForServiceName(form.service_name) ?? "—"} readOnly disabled />
+            <Input
+              value={form.sampling_code ?? ""}
+              onChange={e => setForm((f: any) => ({ ...f, sampling_code: e.target.value }))}
+              placeholder={samplingCodeForServiceName(form.service_name) ?? "z. B. RW"}
+            />
             <p className="text-xs text-muted-foreground mt-1">
-              Das Kürzel ergibt sich zentral aus dem Dienstleistungsnamen und wird nicht
-              in den Stammdaten gespeichert. Steht hier „—“, ist für diese Dienstleistung
-              noch kein Kürzel hinterlegt.
+              Dieses Kürzel wird für die Beprobung bzw. m³-Liste verwendet. Leer gelassen
+              gilt weiterhin die bisherige Standardzuordnung
+              {samplingCodeForServiceName(form.service_name) ? ` („${samplingCodeForServiceName(form.service_name)}“)` : ""}.
             </p>
           </div>
           <div>
@@ -709,6 +725,15 @@ function EditServiceDialog({
               toast.error(t("admin:sla_invalid_reminder_interval"));
               return;
             }
+            const samplingCode = normalizeServiceSamplingCode(form.sampling_code);
+            const codeChanged = samplingCode !== normalizeServiceSamplingCode(service.sampling_code);
+            if (codeChanged) {
+              const conflict = findSamplingCodeConflict(samplingCode, allServicesForCodes, service.id);
+              if (conflict) {
+                toast.error(`Das Beprobungskürzel „${samplingCode}“ ist bereits der Dienstleistung „${conflict.service_name}“ zugeordnet.`);
+                return;
+              }
+            }
             const roles = Array.isArray(form.sla_notification_roles) && form.sla_notification_roles.length > 0
               ? form.sla_notification_roles
               : ["durchfuehrer"];
@@ -726,6 +751,8 @@ function EditServiceDialog({
             sla_yellow_warning_days: warnDays,
             sla_reminder_interval_days: reminderDays,
             sla_notification_roles: roles,
+            // Nur bei Änderung senden – unveränderte Speicherungen bleiben wie bisher.
+            ...(codeChanged ? { sampling_code: samplingCode } : {}),
             });
           }}>Speichern</Button>
 

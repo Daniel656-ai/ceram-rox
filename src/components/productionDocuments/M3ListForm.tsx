@@ -118,6 +118,13 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     [derived.values.lab_tests]
   );
 
+  // In den Dienstleistungseinstellungen gepflegte Kürzel (aktive Dienstleistungen).
+  const { data: activeServices = [] } = useQuery({
+    queryKey: ["services", "active"],
+    queryFn: () => api.measurementServices.listActive(),
+  });
+  const dynamicCodes = (activeServices as { sampling_code?: string | null }[]).map((s) => s.sampling_code ?? null);
+
   const toggleCode = (code: string, checked: boolean) => {
     setStored((prev) => ({ ...(prev ?? {}), [M3_LAB_SELECTION_KEY]: toggleSamplingCode(selectedCodes, code, checked) }));
   };
@@ -330,7 +337,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           hier frei geändert werden – maßgeblich für den Beprobungsauftrag ist diese Auswahl.
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
-          {selectableSamplingCodes(selectedCodes).map((code) => (
+          {selectableSamplingCodes(selectedCodes, dynamicCodes).map((code) => (
             <label key={code} className="flex items-center gap-2 text-sm">
               <Checkbox
                 checked={selectedCodes.some((c) => normalizeSamplingKey(c) === normalizeSamplingKey(code))}
