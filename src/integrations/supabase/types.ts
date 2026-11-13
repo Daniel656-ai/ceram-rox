@@ -10802,6 +10802,7 @@ export type Database = {
             }
             Returns: undefined
           }
+      cancel_or_delete_order: { Args: { _order_id: string }; Returns: string }
       check_user_absence_conflict: {
         Args: { _end: string; _start: string; _user_id: string }
         Returns: {

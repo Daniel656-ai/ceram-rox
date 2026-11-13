@@ -56,12 +56,11 @@ export function useDeleteOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.orders.delete(id),
-    onSuccess: (_d, id) => {
+    onSuccess: async (_d, id) => {
       qc.removeQueries({ queryKey: ["order", id] });
-      qc.invalidateQueries({ queryKey: ["orders"] });
-      qc.invalidateQueries({ queryKey: ["my-measurements"] });
-      qc.invalidateQueries({ queryKey: ["lab-planning-measurements"] });
-      qc.invalidateQueries({ queryKey: ["unassigned-qualified-measurements"] });
+      // All active order/task/sample views refetch; inactive caches become stale.
+      // Includes the actual keys "unassigned-qualified" and "open-measurements-overview".
+      await qc.invalidateQueries();
     },
   });
 }

@@ -126,14 +126,9 @@ export const orders = {
     ),
 
   delete: async (id: string) => {
-    const rows: any = await unwrap(
-      dbClient.from("measurement_orders").delete().eq("id", id).select("id")
-    );
-    if (!rows || rows.length === 0) {
-      throw new Error(
-        "Auftrag konnte nicht gelöscht werden (keine Berechtigung oder Auftrag ist gesperrt)."
-      );
-    }
+    const { data, error } = await dbClient.rpc("cancel_or_delete_order", { _order_id: id });
+    if (error) throw error;
+    if (data !== id) throw new Error("Auftrag konnte nicht vollständig gelöscht werden.");
   },
 
   /** Reduced list used by the ETA calculator. */

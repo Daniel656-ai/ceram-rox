@@ -16,6 +16,7 @@ vi.mock("@/hooks/useOrders", () => ({
   useDeleteOrder: () => ({ mutateAsync: vi.fn() }),
   useCopyOrder: () => ({ mutateAsync: vi.fn() }),
   useUpdateOrderRanking: () => ({ mutateAsync: vi.fn() }),
+  useUpdateOrder: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock("@/hooks/useMeasurements", () => ({
   useMyMeasurements: () => ({ data: [] }),

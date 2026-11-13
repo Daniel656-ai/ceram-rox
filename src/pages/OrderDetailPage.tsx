@@ -240,6 +240,7 @@ function OrderDetailPageInner() {
   };
 
   const handleDelete = async () => {
+    if (deleteOrder.isPending) return;
     try {
       await deleteOrder.mutateAsync(order.id);
       toast.success("Messauftrag gelöscht");
@@ -308,7 +309,7 @@ function OrderDetailPageInner() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  <AlertDialogAction disabled={deleteOrder.isPending} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                     Löschen
                   </AlertDialogAction>
                 </AlertDialogFooter>

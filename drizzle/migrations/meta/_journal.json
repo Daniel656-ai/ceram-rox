@@ -239,6 +239,20 @@
       "when": 1794387417625,
       "tag": "0033_fix_prevent_mandatory_wp_delete_cascade",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794560326841,
+      "tag": "0034_safe_delete_whole_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794560567153,
+      "tag": "0035_preserve_legacy_order_dependents",
+      "breakpoints": true
     }
   ]
 }

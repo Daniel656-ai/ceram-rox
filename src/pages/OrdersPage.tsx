@@ -183,11 +183,12 @@ function OrdersOverview() {
 
   const canDelete = (o: any) => {
     if (role === "master") return true;
-    if (o.created_by === user?.id && o.status === "open") return true;
+    if (role === "auftraggeber" && o.created_by === user?.id && o.status === "open") return true;
     return false;
   };
 
   const handleDelete = async (id: string) => {
+    if (deleteOrder.isPending) return;
     try {
       await deleteOrder.mutateAsync(id);
       toast.success(t("orders:deleted"));
@@ -331,7 +332,7 @@ function OrdersOverview() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                <AlertDialogAction disabled={deleteOrder.isPending} onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                                   {t("common:delete")}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
