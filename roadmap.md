@@ -1,10 +1,12 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
 ## Freigabe: Sichere vollständige Auftragslöschung (2026-11-13)
-- [ ] Web-RPC mit serverseitigen Berechtigungen, Datensperren, Historienerhalt und kaskadensicheren Triggern.
-- [ ] Domain-API und relevante Listen-/Aufgaben-Caches anbinden; bestehende Fehlermeldungen prüfen.
-- [ ] Isolierte PostgreSQL-Tests A–G und zusätzliche Schutzfälle; Web lesend prüfen, keine Produktiv-Testdaten.
-- [ ] Separate Firmen-SQL und Abschlussbericht; native Tauri-Abnahme benötigt Unternehmensinstallation.
+- [x] Web-RPC mit serverseitigen Berechtigungen, Datensperren, Historienerhalt und kaskadensicheren Triggern; Migrationen 0034/0035 angewendet und nachgeprüft. Separate verknüpfte Prozessaufträge konservativ geschützt.
+- [x] Domain-API und relevante Listen-/Aufgaben-Caches angebunden; laufende Löschung verhindert Doppelklick, Fehlerweitergabe geprüft.
+- [x] 35 isolierte PostgreSQL-Prüfungen A–G und weitere Schutzfälle sowie 1.420 Tests bestanden; Web angemeldet lesend geprüft, keine Produktiv-Testdaten.
+- [x] Separate Firmen-SQL und Abschlussbericht in Files bereitgestellt; keine Unternehmensmigration ausgeführt.
+- [ ] Produktive Web-/Provider-Schreibabnahme: benötigt separate echte ROX-Testumgebung, keine Produktiv-Testaufträge.
+- [ ] Native Tauri-Abnahme und Firmen-Schemaabgleich: benötigt erreichbare Unternehmensinstallation und manuelle Admin-Ausführung des separaten SQL.
 
 ## Freigabe: Auftragsdetails oberhalb Pilot-Plant-Spalten (2026-11-10)
 - [x] Nur Layout in CreateOrderPage geändert: Auftragsdetails volle Breite, darunter gemeinsame Spalten ab 1.024 px; rechte Sticky-Regel entfernt.
