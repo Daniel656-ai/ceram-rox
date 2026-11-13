@@ -310,7 +310,7 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
               </div>
             </div>
             <div className="space-y-2">
-              <Label>{t("description")}</Label>
+              <Label>{t("description_col")}</Label>
               <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder={t("description_placeholder")} rows={2} />
             </div>
             <SampleParametersFields value={params} onChange={setParams} idPrefix="selector-params" />

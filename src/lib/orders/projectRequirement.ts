@@ -13,7 +13,7 @@ export function isSampleFormComplete(
   form: { sample_name: string; description: string; post_measurement_action: string; project_id: string },
   projectRequired: boolean,
 ): boolean {
-  if (!form.sample_name.trim() || !form.description.trim() || !form.post_measurement_action) return false;
+  if (!form.sample_name.trim() || !form.post_measurement_action) return false;
   if (projectRequired && !form.project_id) return false;
   return true;
 }

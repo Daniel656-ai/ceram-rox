@@ -275,7 +275,7 @@ export default function SamplesPage() {
   };
 
   const handleCreate = async () => {
-    if (!form.sample_name.trim() || !form.project_id || !form.description.trim() || !form.post_measurement_action) {
+    if (!form.sample_name.trim() || !form.project_id || !form.post_measurement_action) {
       toast.error(t("all_required")); return;
     }
     // Automatische Schlagwörter aus der Beschreibung ergänzen (editierbar durch Nutzer)
@@ -605,7 +605,7 @@ export default function SamplesPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("description")}</Label>
+                  <Label>{t("description_col")}</Label>
                   <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder={t("description_placeholder")} rows={2} />
                 </div>
                 <SampleParametersFields value={params} onChange={setParams} idPrefix="sample-params" />

@@ -20,8 +20,14 @@ describe("isSampleFormComplete", () => {
     expect(isSampleFormComplete(base, true)).toBe(false);
     expect(isSampleFormComplete({ ...base, project_id: "x" }, true)).toBe(true);
   });
-  it("keeps other mandatory fields", () => {
-    expect(isSampleFormComplete({ ...base, description: " " }, false)).toBe(false);
+  it("allows an empty description", () => {
+    expect(isSampleFormComplete({ ...base, description: "" }, false)).toBe(true);
+    expect(isSampleFormComplete({ ...base, project_id: "x", description: " " }, true)).toBe(true);
+  });
+  it("still requires the sample name", () => {
+    expect(isSampleFormComplete({ ...base, sample_name: " " }, false)).toBe(false);
+  });
+  it("still requires the post-measurement action", () => {
     expect(isSampleFormComplete({ ...base, post_measurement_action: "" }, false)).toBe(false);
   });
 });
