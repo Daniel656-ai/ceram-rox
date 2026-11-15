@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProjects, useCreateProject } from "@/hooks/useProjects";
+import { useProjects } from "@/hooks/useProjects";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useServices, useAddOrderMeasurement } from "@/hooks/useMeasurements";
 import { useTemplates, useApplyTemplate } from "@/hooks/useTemplates";

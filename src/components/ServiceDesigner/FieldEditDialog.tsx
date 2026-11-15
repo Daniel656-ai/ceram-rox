@@ -6,8 +6,7 @@ import type { FormField, FormFieldType } from "@/lib/api/formFields";
 import { readRepeaterMeta, writeRepeaterMeta, repeaterChildren } from "@/lib/api/formFields";
 import {
   readMeasurementBlockMeta, writeMeasurementBlockMeta,
-  readBlockChildRole, writeBlockChildRole,
-  readMeasurementCaseConfig,
+  readBlockChildRole, readMeasurementCaseConfig,
   type MeasurementContextFieldDef, type BlockChildRole,
 } from "@/lib/measurementBlocks";
 import { FIELD_TYPE_GROUPS, SUBFIELD_TYPE_GROUPS, fieldTypeLabel, slugify } from "@/lib/formFieldTypes";

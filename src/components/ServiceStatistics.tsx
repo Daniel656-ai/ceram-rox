@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
-import { CalendarIcon, BarChart3, TrendingUp, Clock, Briefcase, ChevronUp, ChevronDown } from "lucide-react";
+import { CalendarIcon, BarChart3, TrendingUp, Briefcase, ChevronUp, ChevronDown } from "lucide-react";
 import { format, subDays, subMonths, startOfYear, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";

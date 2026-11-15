@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UploadCloud, FileText, Image as ImageIcon, X, RefreshCw, Eye } from "lucide-react";
+import { UploadCloud, FileText, Image as ImageIcon, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { ServiceFieldTemplate } from "@/lib/api/serviceFieldTemplates";

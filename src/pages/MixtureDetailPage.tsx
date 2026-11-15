@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Plus, Trash2, Play, FlaskConical, GitBranch, Settings2, ExternalLink, Copy as CopyIcon, ArrowRightLeft, History, ScanLine, Camera, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Play, FlaskConical, GitBranch, Settings2, Copy as CopyIcon, ArrowRightLeft, History, ScanLine, Camera, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { CreateSampleFromBatchDialog } from "@/components/CreateSampleFromBatchDialog";
 import { EditBatchDialog } from "@/components/EditBatchDialog";

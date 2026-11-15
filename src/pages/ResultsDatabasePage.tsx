@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import RichText from "@/components/forms/RichText";
 import { toUnicode } from "@/lib/richText";
-import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { useResultsDatabase, getUniqueParameterNames, expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { useSampleResultsDatabase } from "@/hooks/useSampleResultsDatabase";
 import SampleOverviewTable from "@/components/results/SampleOverviewTable";
 import SampleResultsView from "@/components/results/SampleResultsView";

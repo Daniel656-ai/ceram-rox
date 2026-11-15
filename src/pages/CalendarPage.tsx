@@ -19,7 +19,7 @@ import {
   parseISO,
 } from "date-fns";
 import { de, enGB } from "date-fns/locale";
-import { isWorkingDay, getHolidaysInRange, getHolidaySet } from "@/lib/austrian-holidays";
+import { getHolidaysInRange, getHolidaySet } from "@/lib/austrian-holidays";
 import {
   useEffectiveSchedules,
   countVacationDaysUsed,
@@ -27,7 +27,7 @@ import {
   workingDaysPerWeek,
 } from "@/hooks/useWorkSchedules";
 import { usePermissions } from "@/hooks/usePermissions";
-import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
