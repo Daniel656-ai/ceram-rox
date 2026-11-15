@@ -8,4 +8,4 @@
 - Findings beheben, bis der Reviewer `APPROVED` meldet.
 - Nur der Reviewer merged nach `main`.
 - Keine Secrets committen (Keys, Tokens, `.env`, Zugangsdaten).
-- Tests vor jedem Commit ausführen.
+- Tests vor jedem Commit ausführen; es dürfen keine neuen Testfehler gegenüber `main` entstehen.
