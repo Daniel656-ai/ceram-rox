@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import type { OrderType, OrderPriority } from "@/lib/types";
 
 export function useOrders() {
   const { user } = useAuth();

@@ -6,7 +6,6 @@ import {
   useDeleteParameterDef,
   type ServiceParameterDefinition,
 } from "@/hooks/useServiceParameters";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Beaker, FlaskConical, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Beaker, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {

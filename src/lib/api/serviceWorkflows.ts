@@ -1,5 +1,5 @@
 import { dbClient } from "./client";
-import { unwrap, run } from "./_helpers";
+import { run } from "./_helpers";
 
 export interface ServiceWorkflowRow {
   id: string;

@@ -10,7 +10,6 @@ import {
   useServiceReferences,
 } from "@/hooks/useMeasurements";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";

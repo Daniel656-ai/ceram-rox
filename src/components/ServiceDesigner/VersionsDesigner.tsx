@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  History, Plus, Save, Undo2, CheckCircle2, Archive, Trash2, FileText, FormInput, Layers,
+  History, Plus, Save, Undo2, CheckCircle2, Trash2, FileText, FormInput, Layers,
 } from "lucide-react";
 
 const ROLE_VIEWS: { value: FormRoleView; label: string }[] = [

@@ -6,7 +6,7 @@ import {
   parseMeasurementText, mapReadings, allSourceNames, outputValue, rowStatus, openTargets, mappingReport,
   withDynamicTargets, type MappedRow, type TargetCandidate, type DecimalSeparator,
 } from "@/lib/measurementImport";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { AlertTriangle, ClipboardPaste, Settings2, Plus, FileUp } from "lucide-r
 import ImportProfileEditorDialog from "./ImportProfileEditorDialog";
 import MeasurementFileImportPanel, { type CurvePersistContext } from "./MeasurementFileImportPanel";
 import { toast } from "sonner";
-import { elementKey, fieldElementKey, formatElementKey } from "@/lib/elementKeys";
+import { elementKey, fieldElementKey } from "@/lib/elementKeys";
 import {
   canonicalParameter,
   classifyReading,

@@ -7,7 +7,6 @@ import {
   Beaker,
   BarChart3,
   CalendarClock,
-  Building2,
   FlaskConical,
   ShieldCheck,
   Database,
@@ -17,7 +16,6 @@ import {
   
   Layers,
   
-  CopyPlus,
   Kanban,
   AlertTriangle,
   FlaskRound,
@@ -25,7 +23,6 @@ import {
   Tag,
   Sparkles,
   Briefcase,
-  FormInput,
   BookMarked,
   FileCheck2,
 
