@@ -33,6 +33,7 @@ import { normalizeSamplingKey, selectableSamplingCodes, toggleSamplingCode, benc
 import { canUseTestMarking, resolveTestMarkingRows, toggleTestMarkingRow, buildTestNotice } from "@/lib/m3List/testMarking";
 import { Input } from "@/components/ui/input";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
+import { planM3Samples } from "@/lib/m3List/sampleNumber";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
@@ -204,6 +205,15 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     setCreatingOrder(true);
     try {
       const rel = (release ?? {}) as Record<string, unknown>;
+      // Probenplan und Duplikatprüfung VOR jeder Schreiboperation, damit bei
+      // Konflikten weder Auftrag noch Proben teilweise entstehen.
+      const samplePlan = planM3Samples(rel.article_number ?? derived.values.article_number, derivedRows, testMarking);
+      const existing = await api.samples.findExistingNumbers(samplePlan.map((p) => p.sampleNumber));
+      if (existing.length) {
+        throw new Error(
+          `Probennummer bereits vergeben: ${existing.join(", ")}. Es wurde kein Auftrag und keine Probe angelegt.`
+        );
+      }
       const created = (await api.orders.create({
         project_id: (rel.project_id as string | null) ?? null,
         order_type: "customer",
@@ -221,10 +231,37 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       // nicht erneut die Automatik. „Bench“ ergibt dabei BENCH NOx + BENCH SOx.
       const { matched, missing } = await api.measurementServices.resolveSamplingCodes(selectedCodes);
       const noxHandover = buildNoxHandover(derived.values);
-      for (const m of matched) {
+      const articleNo = String(rel.article_number ?? derived.values.article_number ?? "").trim();
+      const sampleIds: string[] = [];
+      for (const p of samplePlan) {
+        const s = (await api.samples.create(
+          {
+            sample_name: `${articleNo} · Element ${p.elementNumber}`,
+            description: `m³-Liste Zeile ${p.rowIndex + 1}`,
+            created_by: user.id,
+            project_id: (rel.project_id as string | null) ?? null,
+            order_id: created.id,
+            status: "neu",
+            is_hazardous: false,
+            hazard_categories: [],
+            tags: ["m3_beprobung"],
+          },
+          { explicitNumber: p.sampleNumber }
+        )) as { id: string; sample_number: string };
+        if (s.sample_number !== p.sampleNumber) {
+          throw new Error(
+            `Die Datenbank hat die Probennummer ${p.sampleNumber} durch ${s.sample_number} ersetzt – Datenbankanpassung fehlt.`
+          );
+        }
+        sampleIds.push(s.id);
+      }
+      await api.orderSamples.add(created.id, sampleIds, user.id);
+      // Wie in der regulären Auftragserstellung: je Probe und Dienstleistung eine Aufgabe.
+      for (const sampleId of sampleIds) for (const m of matched) {
         const createdMeasurement = (await api.measurements.add({
           order_id: created.id,
           service_id: m.id,
+          sample_id: sampleId,
         })) as { id: string };
         // NOx-Vorgaben stammen aus der Fertigungsfreigabe/Revision dieser
         // m³-Liste und werden in bereits vorhandene Felder der Dienstleistung
@@ -248,7 +285,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       await qc.invalidateQueries({ queryKey: ["orders"] });
       toast.success(`Beprobungsauftrag ${created.order_number ?? ""} erstellt und zugeordnet.`, {
         description:
-          `Übernommene Dienstleistungen: ${matched.length}` +
+          `Proben: ${samplePlan.map((p) => p.sampleNumber).join(", ")} · Dienstleistungen je Probe: ${matched.length}` +
           (missing.length ? ` · Nicht zugeordnet: ${missing.join(", ")}` : ""),
       });
       if (missing.length) {
