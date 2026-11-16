@@ -131,6 +131,19 @@ export const orders = {
     if (data !== id) throw new Error("Auftrag konnte nicht vollständig gelöscht werden.");
   },
 
+  /** Serverseitige Freigabe: darf der aktuelle Nutzer den Auftrag noch bearbeiten/löschen? */
+  requesterEditState: async (id: string) => {
+    const { data, error } = await dbClient.rpc("order_requester_edit_state" as any, { _order_id: id });
+    if (error) throw error;
+    return data as { can_edit: boolean; reason: string | null };
+  },
+
+  /** Auftraggeber entfernt eine noch völlig unbearbeitete Dienstleistung seines Auftrags (protokolliert). */
+  requesterRemoveMeasurement: async (measurementId: string, reason: string) => {
+    const { error } = await dbClient.rpc("requester_remove_order_measurement" as any, { _measurement_id: measurementId, _reason: reason });
+    if (error) throw error;
+  },
+
   /** Reduced list used by the ETA calculator. */
   listOpenForETA: () =>
     unwrap(

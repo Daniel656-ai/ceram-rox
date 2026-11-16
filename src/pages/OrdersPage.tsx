@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useServices, useMyQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { loadTaskFilterState, saveTaskFilterState, effectiveServiceIds, buildTaskServicePredicate, isTaskFilterActive, DEFAULT_TASK_FILTER, type TaskFilterState, type CompetenceState } from "@/lib/tasks/taskServiceFilter";
 import { TaskOrderIdentity } from "@/components/orders/TaskOrderIdentity";
+import { RequesterOrderRowActions } from "@/components/orders/RequesterOrderRowActions";
 import { useOrders, useDeleteOrder, useCopyOrder } from "@/hooks/useOrders";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
 import { resolveOrderMasseType } from "@/lib/orders/orderMasseType";
@@ -181,11 +182,7 @@ function OrdersOverview() {
     }
   };
 
-  const canDelete = (o: any) => {
-    if (role === "master") return true;
-    if (role === "auftraggeber" && o.created_by === user?.id && o.status === "open") return true;
-    return false;
-  };
+
 
   const handleDelete = async (id: string) => {
     if (deleteOrder.isPending) return;
@@ -316,7 +313,7 @@ function OrdersOverview() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                         {/* Kopiervorschau temporär deaktiviert – siehe useCopyOrder/Hooks & API bleiben erhalten */}
-                        {canDelete(o) && (
+                        {role === "master" && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
@@ -327,7 +324,7 @@ function OrdersOverview() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>{t("orders:delete_title")}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  {t("orders:delete_description")}
+                                  {t("orders:requesterEdit.deleteConfirm")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -338,6 +335,31 @@ function OrdersOverview() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                        )}
+                        {role === "auftraggeber" && o.created_by === user?.id && o.status === "open" && (
+                          <RequesterOrderRowActions orderId={o.id} renderDelete={() => (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("orders:delete_title")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("orders:requesterEdit.deleteConfirm")}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
+                                <AlertDialogAction disabled={deleteOrder.isPending} onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  {t("common:delete")}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          )} />
                         )}
                         </div>
                       </TableCell>

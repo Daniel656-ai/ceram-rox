@@ -107,3 +107,13 @@ export function useSetOrderBilled() {
     },
   });
 }
+
+/** Serverseitige Bearbeitungs-/Löschfreigabe für eigene, noch nicht begonnene Aufträge. */
+export function useOrderRequesterEditState(orderId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["order-requester-edit-state", orderId],
+    queryFn: () => api.orders.requesterEditState(orderId!),
+    enabled: !!orderId && enabled,
+    staleTime: 15_000,
+  });
+}

@@ -255,5 +255,19 @@
     "removeWarning": "Zu dieser Dienstleistung wurden bereits Eingaben erfasst. Das Entfernen löscht alle ihre Eingaben endgültig und unwiderruflich.",
     "removeConfirm": "Endgültig löschen",
     "noCustomerForms": "Für die ausgewählten Dienstleistungen sind keine zusätzlichen Auftraggeberangaben erforderlich."
+  },
+  "requesterEdit": {
+    "edit": "Bearbeiten",
+    "quickEdit": "Kurzbearbeitung",
+    "deleteConfirm": "Möchten Sie diesen Auftrag wirklich löschen? Der Auftrag wird aus den aktiven Auftragsübersichten entfernt und steht den Messdienstleistern nicht mehr zur Verfügung.",
+    "lockedHint": "Dieser Auftrag kann nicht mehr bearbeitet oder gelöscht werden, da die Bearbeitung durch einen Messdienstleister bereits begonnen hat. Bitte wenden Sie sich an den Administrator.",
+    "title": "Auftrag {{number}} bearbeiten",
+    "banner": "Sie bearbeiten einen bestehenden Auftrag. Auftragsnummer, Ersteller, Erstellungsdatum und Probenzuordnung bleiben erhalten.",
+    "save": "Änderungen speichern",
+    "saved": "Auftrag aktualisiert",
+    "saveError": "Auftrag konnte nicht aktualisiert werden",
+    "loadError": "Auftrag konnte nicht zum Bearbeiten geladen werden",
+    "notAllowed": "Dieser Auftrag kann nicht bearbeitet werden.",
+    "reason": "Bearbeitung durch Auftraggeber"
   }
 }

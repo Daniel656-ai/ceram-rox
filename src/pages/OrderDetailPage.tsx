@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProcessContextProvider } from "@/context/ProcessContextProvider";
 import { resolveOrderLevelSampleId } from "@/lib/samples/activeSampleContext";
-import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderAuditLog, useCopyOrder } from "@/hooks/useOrders";
+import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderRequesterEditState, useOrderAuditLog, useCopyOrder } from "@/hooks/useOrders";
 import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -72,6 +72,7 @@ function OrderDetailPageInner() {
   const updateMeasurementStatus = useUpdateMeasurementStatus();
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
+  const { data: requesterEditState } = useOrderRequesterEditState(id);
   const copyOrder = useCopyOrder();
   const isCopy = searchParams.get("copied") === "1";
   const handleCopyOrder = async () => {
@@ -135,7 +136,12 @@ function OrderDetailPageInner() {
     </div>
   );
 
-  const canEditDelete = role === "master" || (isRequester && (order as any).created_by === user?.id && order.status === "open");
+  const isOwnRequesterOrder = isRequester && (order as any).created_by === user?.id;
+  // Freigabe serverseitig anhand der tatsächlichen Aufgaben-/Bearbeitungsstände.
+  const canEditDelete = role === "master" || (isOwnRequesterOrder && requesterEditState?.can_edit === true);
+  const canOpenEditForm = canEditDelete && (order as any).order_type !== "internal" && requesterEditState?.can_edit === true;
+  const showStartedLock = role !== "master" && isOwnRequesterOrder && requesterEditState && !requesterEditState.can_edit
+    && (requesterEditState.reason === "started" || requesterEditState.reason === "locked");
   const canEditPriority = role === "master" || (order as any).created_by === user?.id;
   const myMembership = (projectMembers as any[]).find((m) => m.user_id === user?.id);
   const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
@@ -291,9 +297,15 @@ function OrderDetailPageInner() {
         <OrderRunSheetButton order={order} />
         {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
+            {canOpenEditForm && (
+              <Button variant="outline" size="sm" onClick={() => navigate(`/auftraege/neu?edit=${order.id}`)}>
+                <Pencil className="h-4 w-4 mr-1" /> {t("requesterEdit.edit")}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={openEditDialog}>
-              <Pencil className="h-4 w-4 mr-1" /> Bearbeiten
+              <Pencil className="h-4 w-4 mr-1" /> {canOpenEditForm ? t("requesterEdit.quickEdit") : "Bearbeiten"}
             </Button>
+            {canEditDelete && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm">
@@ -304,7 +316,7 @@ function OrderDetailPageInner() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Auftrag löschen?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Dieser Auftrag und alle zugehörigen Aufgaben werden unwiderruflich gelöscht.
+                    {t("requesterEdit.deleteConfirm")}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -315,9 +327,15 @@ function OrderDetailPageInner() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            )}
           </div>
         )}
       </div>
+      {showStartedLock && (
+        <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+          {t("requesterEdit.lockedHint")}
+        </div>
+      )}
 
       {false && isCopy && (
         <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">

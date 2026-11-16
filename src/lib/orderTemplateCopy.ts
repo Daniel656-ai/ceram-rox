@@ -170,8 +170,9 @@ export function resolveParameterField<S extends ResolvableField, L extends Resol
 export async function buildPayloadFromOrder(
   orderId: string,
   opts: CopyOptions
-): Promise<{ payload: OrderDraftPayload; label: string; warnings: TemplateCopyWarning[] }> {
+): Promise<{ payload: OrderDraftPayload; label: string; warnings: TemplateCopyWarning[]; measurementIds: Record<string, string[]> }> {
   const order = await api.orders.get(orderId);
+  const measurementIds: Record<string, string[]> = {};
   if (!order) throw new Error("Auftrag nicht gefunden");
   const warnings: TemplateCopyWarning[] = [];
 
@@ -204,6 +205,7 @@ export async function buildPayloadFromOrder(
     // Zuerst pro Ausführungszeile die fachlichen Werte aufbereiten, danach
     // eindeutige probenweise Fächerungen zu je einer Vorlagenkarte bündeln.
     interface RowBuild {
+      measurement_id: string;
       service_id: string;
       service_name: string;
       source_package_id: string | null;
@@ -215,6 +217,7 @@ export async function buildPayloadFromOrder(
     const rows: RowBuild[] = [];
     for (const m of order.order_measurements ?? []) {
       const row: RowBuild = {
+        measurement_id: m.id,
         service_id: m.service_id,
         service_name: m.measurement_services?.service_name ?? "Dienstleistung",
         source_package_id: opts.packages ? m.source_package_id ?? null : null,
@@ -295,6 +298,7 @@ export async function buildPayloadFromOrder(
     for (const group of groups) {
       const row = rows[group[0]];
       const uid = newUid();
+      measurementIds[uid] = group.map((i) => rows[i].measurement_id);
       payload.measurements?.push({
         uid,
         service_id: row.service_id,
@@ -318,7 +322,7 @@ export async function buildPayloadFromOrder(
   }
 
   const label = order.order_number ? `Auftrag ${order.order_number}` : "Auftrag";
-  return { payload: deepCopy(payload), label, warnings };
+  return { payload: deepCopy(payload), label, warnings, measurementIds };
 }
 
 /** Baut aus einem bestehenden Entwurf einen unabhängigen Entwurfs-Payload. */

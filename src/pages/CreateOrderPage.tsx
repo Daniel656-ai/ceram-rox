@@ -28,6 +28,8 @@ import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
 import { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
+import { buildPayloadFromOrder } from "@/lib/orderTemplateCopy";
+import { buildRequesterParameterRows, diffRequesterParameters, planServiceChanges } from "@/lib/orders/requesterEdit";
 import MeasurementRow from "@/components/order/MeasurementRow";
 import ServiceTabsCard from "@/components/order/ServiceTabsCard";
 import { nextActiveServiceTab, EMPTY_ACTIVE_TAB, type ActiveServiceTabState } from "@/lib/orderCreation/activeServiceTab";
@@ -139,7 +141,10 @@ export default function CreateOrderPage() {
   const draftsEnabled = hasPermission("orders.drafts.manage");
   const [draftId, setDraftId] = useState<string | null>(searchParams.get("draft"));
   const [loadedDraft, setLoadedDraft] = useState<OrderDraft | null>(null);
-  const [draftLoading, setDraftLoading] = useState(!!searchParams.get("draft"));
+  const [draftLoading, setDraftLoading] = useState(!!searchParams.get("draft") || !!searchParams.get("edit"));
+  // Bearbeitungsmodus (?edit=<Auftrags-ID>): eigener, noch nicht begonnener Auftrag.
+  const editOrderId = searchParams.get("edit");
+  const editBaseline = useRef<{ measurementIds: Record<string, string[]>; payload: OrderDraftPayload; order: any } | null>(null);
   const [draftLoadFailed, setDraftLoadFailed] = useState(false);
   const [closingDraft, setClosingDraft] = useState(false);
   const localCreatedId = useRef<string | null>(null);
@@ -167,7 +172,7 @@ export default function CreateOrderPage() {
   const urlDraftId = searchParams.get("draft");
   useEffect(() => { setPendingDeselection(null); }, [urlDraftId, orderKind, mode]);
   const draftHydrated = !urlDraftId || urlDraftId === localCreatedId.current || loadedDraft?.id === urlDraftId;
-  const autosaveEnabled = draftsEnabled && mode === "single" && !draftLoading && draftHydrated && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
+  const autosaveEnabled = !editOrderId && draftsEnabled && mode === "single" && !draftLoading && draftHydrated && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
   const autosave = useOrderDraftAutosave({
     enabled: autosaveEnabled,
     userId: user?.id,
@@ -195,6 +200,7 @@ export default function CreateOrderPage() {
   useEffect(() => {
     const id = searchParams.get("draft");
     if (!id) {
+      if (searchParams.get("edit")) return;
       setDraftLoading(false);
       if (loadedDraft) {
         setSelectedProjectId(""); setOrderType(""); setIsBilled(false); setOrderKind("labor"); setPriority("normal"); setDueDate(""); setNotes("");
@@ -241,6 +247,49 @@ export default function CreateOrderPage() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get("draft")]);
+
+  // Bestehenden Auftrag in dasselbe Erstellungsformular laden (nur lesend).
+  useEffect(() => {
+    if (!editOrderId) return;
+    let cancelled = false;
+    setDraftLoading(true);
+    setDraftLoadFailed(false);
+    reconcileAllowed.current = false;
+    (async () => {
+      const state = await api.orders.requesterEditState(editOrderId);
+      if (!state.can_edit) {
+        toast.error(t("orders:requesterEdit.notAllowed"), { description: state.reason === "started" || state.reason === "locked" ? t("orders:requesterEdit.lockedHint") : undefined });
+        navigate(`/auftraege/${editOrderId}`, { replace: true });
+        return;
+      }
+      const [{ payload, measurementIds }, order] = await Promise.all([
+        buildPayloadFromOrder(editOrderId, { services: true, packages: true, conditions: true, orderForm: true, samples: true, attachments: false }),
+        api.orders.get(editOrderId),
+      ]);
+      if (cancelled) return;
+      const p = normalizeRestoredDraft(payload);
+      editBaseline.current = { measurementIds, payload: JSON.parse(JSON.stringify(p)), order };
+      setSelectedProjectId(p.selectedProjectId ?? "");
+      setOrderType(p.orderType ?? "");
+      setIsBilled(!!(order as any)?.is_billed);
+      setOrderKind(p.orderKind === "pilot_plant" ? "pilot_plant" : "labor");
+      setPriority(((order as any)?.priority as any) ?? "normal");
+      setDueDate((order as any)?.due_date ? String((order as any).due_date).slice(0, 10) : "");
+      setNotes(p.notes ?? "");
+      setMeasurements((p.measurements ?? []) as SelectedMeasurement[]);
+      setSelectedSampleIds(p.selectedSampleIds ?? []);
+      setMeasurementParams((p.measurementParams ?? {}) as any);
+      setMeasurementFormValues((p.measurementFormValues ?? {}) as any);
+      setDynamicValues((p.dynamicValues ?? {}) as any);
+      setDynamicFormId(p.dynamicFormId ?? null);
+      setServiceTab({ active: null, order: [] });
+      setLoadedDraft({ id: `edit:${editOrderId}`, payload: p } as any);
+    })()
+      .catch((e: any) => { if (!cancelled) { setDraftLoadFailed(true); toast.error(t("orders:requesterEdit.loadError"), { description: e.message }); } })
+      .finally(() => { if (!cancelled) setDraftLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editOrderId]);
 
   const handleSaveAndClose = async () => {
     if (closingDraft) return;
@@ -581,108 +630,7 @@ export default function CreateOrderPage() {
   // Produktionsaufträge nicht. Keine Sonderlogik an anderer Stelle.
   const projectRequired = isProjectRequired(orderType);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || (measurements.length > 0 && !ruleQueryReady)) {
-      toast.error("Formular wird noch geladen oder konnte nicht vollständig geladen werden"); return;
-    }
-    if (missingDraftFiles(draftPayload).length > 0 && JSON.stringify(draftPayload).includes("__draft_file_missing")) {
-      toast.error("Bitte fehlende Dateianhänge erneut auswählen"); return;
-    }
-    const isPurePP = orderKind === "pilot_plant";
-    // Labor requires sample + measurements. Pilot Plant / Combined may start without a sample; measurements optional for pure PP.
-    if (!user || !orderType) {
-      toast.error(t("orders:fill_required"));
-      return;
-    }
-    if (!isPurePP && (measurements.length === 0 || selectedSampleIds.length === 0)) {
-      toast.error(t("orders:fill_required"));
-      return;
-    }
-    setSubmitting(true);
-    try {
-      // Projektzuordnung ist nur für projektbezogene Aufträge (F&E) verpflichtend.
-      // Kunden- und Produktionsaufträge dürfen ohne Projekt gespeichert werden.
-      const projectId = selectedProjectId || null;
-      if (!projectId && projectRequired) { toast.error(t("orders:select_project_error")); setSubmitting(false); return; }
-
-      const order = await createOrder.mutateAsync({
-        project_id: projectId, order_type: orderType as any, created_by: user.id,
-        is_billed: billedForCreate(orderType, isBilled),
-        priority: priority as any,
-        due_date: dueDate || undefined, notes: notes || undefined,
-        sample_id: selectedSampleIds[0] || undefined,
-        order_kind: orderKind,
-        pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
-        ...experimentNumberPatch(dynamicFormId ? templateFields : [], dynamicValues),
-      });
-
-      // Pilot Plant: seed process blocks. Alle fachlichen Angaben kommen aus
-      // dem konfigurierten Auftraggeberformular (siehe unten), nicht aus Code.
-      if (orderKind === "pilot_plant") {
-        try {
-          await api.pilotPlantBlocks.seed(order.id);
-        } catch (err: any) {
-          toast.error(`Pilot-Plant-Bausteine: ${err.message}`);
-        }
-      }
-
-
-      // Persist template-driven dynamic form values (no hardcoded fields).
-      if (dynamicFormId && Object.keys(dynamicValues).length > 0) {
-        try {
-          await api.orderSharedFormData.merge(order.id, {
-            template: {
-              form_definition_id: dynamicFormId,
-              order_kind: orderKind,
-              values: dynamicValues,
-              saved_at: new Date().toISOString(),
-              saved_by: user.id,
-            },
-          });
-        } catch (err: any) {
-          toast.error(`Formularvorlage: ${err.message}`);
-        }
-      }
-
-      // Phase 5: If a process template was selected, spin up an order_instance
-      // linked to this measurement_order and seed its workflow steps.
-      if (processTemplateId && processTemplateId !== "__none__") {
-        try {
-          const tpl = (processTemplates as any[]).find(t => t.id === processTemplateId);
-          let snapshot: Record<string, unknown> | null = null;
-          try { snapshot = await api.processTemplates.snapshot(processTemplateId); } catch { /* optional */ }
-          const instance = await api.orderInstances.create({
-            template_id: processTemplateId,
-            template_snapshot: snapshot,
-            project_id: projectId,
-            legacy_order_id: order.id,
-            order_number: order.order_number,
-            title: tpl?.name ?? null,
-            status: "planned",
-            sample_ids: selectedSampleIds.length > 0 ? selectedSampleIds : null,
-            shared_data: {},
-            created_by: user.id,
-          });
-          await api.workflowEngine.seedFromTemplate(instance.id, processTemplateId);
-        } catch (err: any) {
-          toast.error(`Prozessvorlage: ${err.message}`);
-        }
-      }
-
-
-
-
-
-      // Alle ausgewählten Proben dem Auftrag zuordnen (n:m)
-      if (selectedSampleIds.length > 0) {
-        try {
-          await api.orderSamples.add(order.id, selectedSampleIds, user.id);
-        } catch (err: any) {
-          toast.error(`Probenzuordnung: ${err.message}`);
-        }
-      }
-
+  const computeEffectiveMeasurements = (): SelectedMeasurement[] => {
       // Sicherheitsnetz: Auswahl im Auftraggeberformular auch beim Speichern
       // abgleichen, falls der laufende Abgleich (z.B. direkt nach dem Laden
       // eines Entwurfs) noch nicht gegriffen hat. Gleiche Logik, keine zweite.
@@ -704,20 +652,23 @@ export default function CreateOrderPage() {
         });
       }
 
+      return effectiveMeasurements;
+  };
+
+  const persistNewMeasurements = async (orderId: string, list: SelectedMeasurement[], sampleTargets: Array<string | null>) => {
+    if (!user) return;
       // Je Probe und Dienstleistung entsteht eine eigene Aufgabe, damit
       // Ergebnisse eindeutig der jeweiligen Probe zugeordnet bleiben.
-      const sampleTargets: Array<string | null> =
-        selectedSampleIds.length > 0 ? selectedSampleIds : [null];
 
       const createdByUidSample = new Map<string, string>();
-      for (let idx = 0; idx < effectiveMeasurements.length * sampleTargets.length; idx++) {
-        const m = effectiveMeasurements[Math.floor(idx / sampleTargets.length)];
+      for (let idx = 0; idx < list.length * sampleTargets.length; idx++) {
+        const m = list[Math.floor(idx / sampleTargets.length)];
         const sampleTarget = sampleTargets[idx % sampleTargets.length];
         const isRule = m.origin === "rule";
         // Duplikatschutz: bereits (z.B. über feste Abhängigkeit) vorhanden → nicht erneut anlegen.
-        if (isRule && (await api.ruleTriggers.exists(order.id, m.service_id, sampleTarget))) continue;
+        if (isRule && (await api.ruleTriggers.exists(orderId, m.service_id, sampleTarget))) continue;
         const createdMeasurement = await addMeasurement.mutateAsync({
-          order_id: order.id, service_id: m.service_id,
+          order_id: orderId, service_id: m.service_id,
           sample_id: sampleTarget,
           due_date: dueDate || undefined,
           source_package_id: m.source_package_id ?? null,
@@ -900,6 +851,199 @@ export default function CreateOrderPage() {
           }
         }
       }
+  };
+
+  /** Vorgaben-Zeilen einer Position (gleiche Regeln wie Neuanlage). */
+  const buildRowsFor = async (serviceId: string, formVals: Record<string, any> | undefined, params: Record<string, string> | undefined) => {
+    const [fields, legacyDefs] = await Promise.all([
+      api.serviceDataFields.listForService(serviceId),
+      api.serviceParameters.listForService(serviceId),
+    ]);
+    const formIds = [...new Set(Object.keys(formVals ?? {}).map((k) => parseLinkedFormValueKey(k)?.formId).filter(Boolean) as string[])];
+    const linkedFields: Record<string, any[]> = {};
+    for (const fid of formIds) linkedFields[fid] = await api.formFields.listForForm(fid);
+    return {
+      fields,
+      rows: buildRequesterParameterRows({ formValues: formVals, params, fields: fields as any, legacyDefs: legacyDefs as any, linkedFields, parseLinkedKey: parseLinkedFormValueKey }),
+    };
+  };
+
+  /** Speichern im Bearbeitungsmodus: bestehender Auftrag wird aktualisiert, keine neue Nummer. */
+  const handleEditSubmit = async () => {
+    const base = editBaseline.current;
+    if (!user || !editOrderId || !base) return;
+    const projectId = selectedProjectId || null;
+    if (!projectId && projectRequired) { toast.error(t("orders:select_project_error")); return; }
+    setSubmitting(true);
+    const reason = t("orders:requesterEdit.reason");
+    try {
+      // Serverseitige Freigabe unmittelbar vor dem Schreiben erneut prüfen.
+      const state = await api.orders.requesterEditState(editOrderId);
+      if (!state.can_edit) throw new Error(t("orders:requesterEdit.lockedHint"));
+
+      await api.orders.update(editOrderId, {
+        project_id: projectId, order_type: orderType as any, priority: priority as any,
+        due_date: dueDate || null, notes: notes || null,
+        ...experimentNumberPatch(dynamicFormId ? templateFields : [], dynamicValues),
+      } as any);
+      if (dynamicFormId) {
+        await api.orderSharedFormData.merge(editOrderId, {
+          template: { form_definition_id: dynamicFormId, order_kind: orderKind, values: dynamicValues, saved_at: new Date().toISOString(), saved_by: user.id },
+        });
+      }
+
+      const effective = computeEffectiveMeasurements();
+      const plan = planServiceChanges(base.measurementIds, effective.map((m) => m.uid));
+      for (const omId of plan.removedMeasurementIds) await api.orders.requesterRemoveMeasurement(omId, reason);
+
+      const existingById = new Map<string, any>(((base.order?.order_measurements ?? []) as any[]).map((m) => [m.id, m]));
+      for (const uid of plan.kept) {
+        const m = effective.find((x) => x.uid === uid)!;
+        const baseline = await buildRowsFor(m.service_id, base.payload.measurementFormValues?.[uid] as any, base.payload.measurementParams?.[uid] as any);
+        const next = await buildRowsFor(m.service_id, measurementFormValues[uid], measurementParams[uid]);
+        for (const omId of base.measurementIds[uid]) {
+          const existing = (existingById.get(omId)?.measurement_parameters ?? []) as any[];
+          const diff = diffRequesterParameters(existing, baseline.rows, next.rows);
+          for (const a of diff.amend) await api.measurementParameters.amend(a.id, a.value, reason, a.name);
+          if (diff.insert.length > 0) {
+            await api.measurementParameters.bulkInsert(diff.insert.map((r) => ({ order_measurement_id: omId, parameter_name: r.name, parameter_value: r.value, unit: r.unit })));
+          }
+          // Neu gewählte Dateien (bestehende Anhänge bleiben unverändert).
+          for (const [key, v] of Object.entries(measurementFormValues[uid] ?? {})) {
+            if (!Array.isArray(v)) continue;
+            for (const entry of v as any[]) {
+              if (entry?.pendingFile instanceof File) {
+                await api.orderUploads.uploadFile({ measurementId: omId, fieldKey: key, entryIndex: null, file: entry.pendingFile, uploadedBy: user.id });
+              }
+            }
+          }
+        }
+      }
+
+      const added = effective.filter((m) => plan.addedUids.includes(m.uid));
+      if (added.length > 0) {
+        const sampleTargets: Array<string | null> = selectedSampleIds.length > 0 ? selectedSampleIds : [null];
+        await persistNewMeasurements(editOrderId, added, sampleTargets);
+      }
+      try { await api.ruleTriggers.syncOrder(editOrderId); } catch (err) { console.warn("Regel-Auslöser konnten nicht abgeglichen werden", err); }
+      try { await api.mundstueck293.syncOrder(editOrderId); } catch (err) { console.warn("Mundstück 293/1 konnte nicht abgeglichen werden", err); }
+
+      await queryClient.invalidateQueries();
+      toast.success(t("orders:requesterEdit.saved"));
+      navigate(`/auftraege/${editOrderId}`);
+    } catch (err: any) {
+      toast.error(t("orders:requesterEdit.saveError"), { description: err.message });
+    } finally { setSubmitting(false); }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || (measurements.length > 0 && !ruleQueryReady)) {
+      toast.error("Formular wird noch geladen oder konnte nicht vollständig geladen werden"); return;
+    }
+    if (missingDraftFiles(draftPayload).length > 0 && JSON.stringify(draftPayload).includes("__draft_file_missing")) {
+      toast.error("Bitte fehlende Dateianhänge erneut auswählen"); return;
+    }
+    const isPurePP = orderKind === "pilot_plant";
+    // Labor requires sample + measurements. Pilot Plant / Combined may start without a sample; measurements optional for pure PP.
+    if (!user || !orderType) {
+      toast.error(t("orders:fill_required"));
+      return;
+    }
+    if (!isPurePP && (measurements.length === 0 || selectedSampleIds.length === 0)) {
+      toast.error(t("orders:fill_required"));
+      return;
+    }
+    if (editOrderId) { await handleEditSubmit(); return; }
+    setSubmitting(true);
+    try {
+      // Projektzuordnung ist nur für projektbezogene Aufträge (F&E) verpflichtend.
+      // Kunden- und Produktionsaufträge dürfen ohne Projekt gespeichert werden.
+      const projectId = selectedProjectId || null;
+      if (!projectId && projectRequired) { toast.error(t("orders:select_project_error")); setSubmitting(false); return; }
+
+      const order = await createOrder.mutateAsync({
+        project_id: projectId, order_type: orderType as any, created_by: user.id,
+        is_billed: billedForCreate(orderType, isBilled),
+        priority: priority as any,
+        due_date: dueDate || undefined, notes: notes || undefined,
+        sample_id: selectedSampleIds[0] || undefined,
+        order_kind: orderKind,
+        pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
+        ...experimentNumberPatch(dynamicFormId ? templateFields : [], dynamicValues),
+      });
+
+      // Pilot Plant: seed process blocks. Alle fachlichen Angaben kommen aus
+      // dem konfigurierten Auftraggeberformular (siehe unten), nicht aus Code.
+      if (orderKind === "pilot_plant") {
+        try {
+          await api.pilotPlantBlocks.seed(order.id);
+        } catch (err: any) {
+          toast.error(`Pilot-Plant-Bausteine: ${err.message}`);
+        }
+      }
+
+
+      // Persist template-driven dynamic form values (no hardcoded fields).
+      if (dynamicFormId && Object.keys(dynamicValues).length > 0) {
+        try {
+          await api.orderSharedFormData.merge(order.id, {
+            template: {
+              form_definition_id: dynamicFormId,
+              order_kind: orderKind,
+              values: dynamicValues,
+              saved_at: new Date().toISOString(),
+              saved_by: user.id,
+            },
+          });
+        } catch (err: any) {
+          toast.error(`Formularvorlage: ${err.message}`);
+        }
+      }
+
+      // Phase 5: If a process template was selected, spin up an order_instance
+      // linked to this measurement_order and seed its workflow steps.
+      if (processTemplateId && processTemplateId !== "__none__") {
+        try {
+          const tpl = (processTemplates as any[]).find(t => t.id === processTemplateId);
+          let snapshot: Record<string, unknown> | null = null;
+          try { snapshot = await api.processTemplates.snapshot(processTemplateId); } catch { /* optional */ }
+          const instance = await api.orderInstances.create({
+            template_id: processTemplateId,
+            template_snapshot: snapshot,
+            project_id: projectId,
+            legacy_order_id: order.id,
+            order_number: order.order_number,
+            title: tpl?.name ?? null,
+            status: "planned",
+            sample_ids: selectedSampleIds.length > 0 ? selectedSampleIds : null,
+            shared_data: {},
+            created_by: user.id,
+          });
+          await api.workflowEngine.seedFromTemplate(instance.id, processTemplateId);
+        } catch (err: any) {
+          toast.error(`Prozessvorlage: ${err.message}`);
+        }
+      }
+
+
+
+
+
+      // Alle ausgewählten Proben dem Auftrag zuordnen (n:m)
+      if (selectedSampleIds.length > 0) {
+        try {
+          await api.orderSamples.add(order.id, selectedSampleIds, user.id);
+        } catch (err: any) {
+          toast.error(`Probenzuordnung: ${err.message}`);
+        }
+      }
+
+      const effectiveMeasurements = computeEffectiveMeasurements();
+      const sampleTargets: Array<string | null> =
+        selectedSampleIds.length > 0 ? selectedSampleIds : [null];
+      await persistNewMeasurements(order.id, effectiveMeasurements, sampleTargets);
+
       // Sicherheitsnetz: ausgelöste Dienstleistungen gegen den gespeicherten
       // Stand abgleichen (idempotent, erzeugt keine Duplikate).
       try { await api.ruleTriggers.syncOrder(order.id); }
@@ -969,13 +1113,13 @@ export default function CreateOrderPage() {
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{t("orders:create_title")}</h1>
-          <p className="text-muted-foreground">{t("orders:create_subtitle")}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{editOrderId ? t("orders:requesterEdit.title", { number: editBaseline.current?.order?.order_number ?? "" }) : t("orders:create_title")}</h1>
+          <p className="text-muted-foreground">{editOrderId ? t("orders:requesterEdit.banner") : t("orders:create_subtitle")}</p>
         </div>
-        {mode === "single" && draftsEnabled && saveIndicator}
+        {mode === "single" && draftsEnabled && !editOrderId && saveIndicator}
       </div>
 
-      {mode === "single" && <OrderDraftsPanel activeDraftId={draftId} beforeSwitch={beforeDraftSwitch} onNew={startNewDraft} />}
+      {mode === "single" && !editOrderId && <OrderDraftsPanel activeDraftId={draftId} beforeSwitch={beforeDraftSwitch} onNew={startNewDraft} />}
       {mode === "single" && missingDraftFiles(draftPayload).length > 0 && (
         <p role="status" className="text-sm text-destructive">{t("orders:draftSafety.files", { names: missingDraftFiles(draftPayload).join(", ") })}</p>
       )}
@@ -992,7 +1136,7 @@ export default function CreateOrderPage() {
 
 
       {/* Mode toggle */}
-      <div className="flex gap-2">
+      {!editOrderId && <div className="flex gap-2">
         <Button
           variant={mode === "single" ? "default" : "outline"}
           size="sm"
@@ -1011,7 +1155,7 @@ export default function CreateOrderPage() {
           <Zap className="h-4 w-4" />
           Batch-Planung
         </Button>
-      </div>
+      </div>}
 
       {mode === "single" ? (
       <form onSubmit={handleSubmit} onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
@@ -1044,6 +1188,7 @@ export default function CreateOrderPage() {
               <Label>{t("orders:kind_label")} *</Label>
               <Select
                 value={orderKind}
+                disabled={!!editOrderId}
                 onValueChange={(v) => {
                   const next = v as "labor" | "pilot_plant";
                   setOrderKind(next);
@@ -1064,7 +1209,7 @@ export default function CreateOrderPage() {
             {orderKind !== "pilot_plant" && (
               <div>
                 <Label>{t("orders:sample")} *</Label>
-                <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} />
+                <SampleSelector values={selectedSampleIds} onValuesChange={editOrderId ? () => {} : setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} />
               </div>
             )}
             <div>
@@ -1317,8 +1462,8 @@ export default function CreateOrderPage() {
         )}
 
         <div className="flex gap-3 flex-wrap items-center">
-          <Button type="submit" disabled={submitting}>{submitting ? t("orders:submitting") : t("orders:submit_order")}</Button>
-          {draftsEnabled && (
+          <Button type="submit" disabled={submitting}>{submitting ? t("orders:submitting") : editOrderId ? t("orders:requesterEdit.save") : t("orders:submit_order")}</Button>
+          {draftsEnabled && !editOrderId && (
             <Button type="button" variant="secondary" onClick={handleSaveAndClose} disabled={!autosaveEnabled || closingDraft || submitting}>
               <Save className="h-4 w-4 mr-2" /> Entwurf speichern &amp; schließen
             </Button>

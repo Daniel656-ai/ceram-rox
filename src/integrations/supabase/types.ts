@@ -11395,6 +11395,11 @@ export type Database = {
         Args: { _order_id: string }
         Returns: boolean
       }
+      order_requester_block_reason: {
+        Args: { _order_id: string }
+        Returns: string
+      }
+      order_requester_edit_state: { Args: { _order_id: string }; Returns: Json }
       portfolio_time_allocation: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
         Returns: {
@@ -11559,6 +11564,10 @@ export type Database = {
           p_results: Json
         }
         Returns: Json
+      }
+      requester_remove_order_measurement: {
+        Args: { _measurement_id: string; _reason: string }
+        Returns: string
       }
       resolve_workflow_template: {
         Args: { p_order_id: string }
