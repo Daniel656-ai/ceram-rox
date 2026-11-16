@@ -15,3 +15,5 @@
 - Nach jedem Merge auf `main` baut `.github/workflows/dev-web.yml` automatisch eine Web-Version gegen die Dev-Supabase (`:55321`).
 - Läuft auf dem Firmenserver unter `http://172.30.100.162:8090`; Einrichtung: `scripts/dev-web/README.md`.
 - Der Branch `dev-web` wird automatisch erzeugt (verwaist, wird bei jedem Lauf überschrieben) und **nie** von Hand bearbeitet oder gemerged.
+
+- `release.yml` hat auf Job-Ebene `if: github.repository != 'danielgass95-sketch/ceram-rox-dev'`: Dieses Dev-Repo darf nie Desktop-Releases bauen, das Produktions-Repo schon. Die Bedingung darf **nicht entfernt** werden.
