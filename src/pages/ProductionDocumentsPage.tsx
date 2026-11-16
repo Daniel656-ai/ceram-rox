@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import ProductionReleasesPage from "@/pages/ProductionReleasesPage";
 import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/productionDocuments/ReleaseRevisionPicker";
 import ReleaseSourceValues from "@/components/productionDocuments/ReleaseSourceValues";
+import M3SampleRetrofitPanel from "@/components/productionDocuments/M3SampleRetrofitPanel";
 import M3ListForm from "@/components/productionDocuments/M3ListForm";
 import CustomerDocumentationTable from "@/components/productionDocuments/CustomerDocumentationTable";
 import { SortableHead } from "@/components/list/SortableHead";
@@ -423,6 +424,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
 export default function ProductionDocumentsPage() {
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "freigaben";
+  const { role } = useAuth();
   const permissions = useProductionReleasePermissions();
 
   if (!permissions.canView) {
@@ -462,6 +464,7 @@ export default function ProductionDocumentsPage() {
 
         <TabsContent value="m3" className="mt-4">
           <FollowUpTable kind="m3_list" />
+          {role === "master" && <M3SampleRetrofitPanel />}
         </TabsContent>
 
         <TabsContent value="dokumentation" className="mt-4">

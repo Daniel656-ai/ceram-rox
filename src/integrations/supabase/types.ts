@@ -11360,6 +11360,10 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      m3_retrofit_order_samples: {
+        Args: { _order_id: string; _plan: Json }
+        Returns: Json
+      }
       measurement_has_official_result: {
         Args: { _measurement_id: string }
         Returns: boolean

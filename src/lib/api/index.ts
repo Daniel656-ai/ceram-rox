@@ -37,6 +37,7 @@ import {
 } from "./projectMaterials";
 import { orders } from "./orders";
 import { orderSamples } from "./orderSamples";
+import { m3Retrofit } from "./m3Retrofit";
 import { orderDrafts } from "./orderDrafts";
 import { measurements, workLogs } from "./measurements";
 import {
@@ -216,6 +217,7 @@ export const api = {
   projectKnetungMaterials,
   orders,
   orderSamples,
+  m3Retrofit,
   orderDrafts,
   measurements,
   workLogs,
