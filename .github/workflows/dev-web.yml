@@ -48,15 +48,39 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.DEV_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.DEV_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_PROJECT_ID: ceram-rox-dev
+          # PDF-Analysedienst (parse-production-release) laeuft sonst auf dem Cloud-Fallback
+          VITE_IMPORT_SERVICE_URL: ${{ vars.DEV_SUPABASE_URL }}
+          VITE_IMPORT_SERVICE_ANON_KEY: ${{ vars.DEV_SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build:dev
 
       - name: Safety check (no production or cloud Supabase URL in build)
+        env:
+          DEV_SUPABASE_URL: ${{ vars.DEV_SUPABASE_URL }}
         run: |
-          if grep -rEl 'vrzqlfovvdxofxqyslev|172\.30\.100\.162:54321' dist; then
-            echo "::error::Build enthaelt Produktions-/Cloud-Supabase-URL (vrzqlfovvdxofxqyslev oder 172.30.100.162:54321). Abbruch."
+          CLOUD_REF='vrzqlfovvdxofxqyslev'
+          # Der ungenutzte Rueckfallwert FALLBACK_URL (src/lib/api/backendConfig.ts)
+          # bleibt im Bundle und ist erlaubt; jede andere Cloud-Referenz ist es nicht.
+          FALLBACK_URL_LITERAL="\"https://${CLOUD_REF}.supabase.co\""
+
+          if grep -rEl '172\.30\.100\.162:54321' dist; then
+            echo "::error::Build enthaelt die Produktions-URL (172.30.100.162:54321). Abbruch."
             exit 1
           fi
-          echo "OK: keine Produktions-/Cloud-URL im Build."
+
+          total=$(grep -rFo "$CLOUD_REF" dist | wc -l)
+          allowed=$(grep -rFo "$FALLBACK_URL_LITERAL" dist | wc -l)
+          echo "Cloud-Ref im Build: $total Treffer, davon $allowed als erlaubter FALLBACK_URL."
+          if [ "$total" -ne "$allowed" ]; then
+            echo "::error::Cloud-Ref ${CLOUD_REF} kommt ausserhalb von FALLBACK_URL im Build vor. Abbruch."
+            grep -rFl "$CLOUD_REF" dist
+            exit 1
+          fi
+
+          if ! grep -rFq "$DEV_SUPABASE_URL" dist; then
+            echo "::error::Dev-URL ${DEV_SUPABASE_URL} steht nicht im Build. Abbruch."
+            exit 1
+          fi
+          echo "OK: keine Produktions-/Cloud-URL ausser FALLBACK_URL, Dev-URL vorhanden."
 
       - name: Write build-info.json
         env:
