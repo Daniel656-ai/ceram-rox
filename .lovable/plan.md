@@ -1,35 +1,26 @@
-# Automatisches Mundstück 293/1 (Raumgewicht / Wasseraufnahme / Schwindung)
+# Eigene Aufträge bearbeiten und löschen (Auftraggeber)
 
-## Vorab-Befund (nur gelesen)
-- Im Web-Datenbestand gibt es das Formular „Extrusion“ (538327c6-…) und die Felder `ms_auswahl_1`, `mundstueck_ms_1`, `brennen_1` **nicht** – sie existieren nur in der Firmendatenbank.
-- Die Leistungen „Raumgewicht“, „Wasseraufnahme“, „Schwindung“ existieren im Web.
-- Im Programm gibt es bereits eine Regel-Logik, die beim Speichern des Auftrags läuft (Regel-Aktion „Dienstleistung auslösen“, idempotent, unterscheidet automatisch/manuell, entfernt nur unbearbeitete automatische Positionen). Die neue Regel folgt genau diesem Muster.
+## Ausgangslage (geprüft, nur lesend)
+- **Löschen existiert bereits** serverseitig: `cancel_or_delete_order` erlaubt Master oder Ersteller (Rolle Auftraggeber) und lehnt ab bei Ergebnissen, Rohdaten, Arbeitszeiten, Work-Logs, abgeschlossenen/begonnenen Aufgaben. Übersicht und Detailseite bieten „Löschen“ an, die Anzeige hängt aber nur am Feld `status = open`.
+- **Bearbeiten gibt es nicht**: Das Erstellungsformular kennt nur Neuanlage und Entwürfe (`?draft=`), keinen Bearbeitungsmodus für bestehende Aufträge.
+- **Serverseitige Lücken** (Web-Datenbank):
+  1. Ersteller dürfen `measurement_orders` jederzeit ändern – auch nach Arbeitsbeginn. Die verlangte Sperre ist serverseitig nicht abgesichert.
+  2. Vorgaben (`measurement_parameters`) dürfen Ersteller ebenfalls ohne Statusprüfung ändern.
+  3. Eine abgewählte Dienstleistung zu entfernen geht nur über `delete_order_measurement` – das ist **nur für Master** erlaubt. Auftraggeber könnten beim Bearbeiten also keine Dienstleistung entfernen.
 
-## Empfehlung: Umsetzung im Programm beim Speichern (kein Datenbank-Trigger)
-Gründe:
-- Keine Migration, keine Änderung an Tabellen, Funktionen oder Policies – Firmendatenbank braucht keinen DBA-Eingriff.
-- Web und Desktop nutzen denselben Programmcode → wirkt in beiden nach Neubau.
-- Ein Trigger müsste das Formular-JSON serverseitig umschreiben; das ist riskanter für bestehende Werte und schwer nachvollziehbar.
-- Bestehende Aufträge bleiben unberührt; die Regel läuft nur, wenn ein Auftrag neu angelegt oder dessen Formular gespeichert wird.
+Deshalb ist eine Datenbankänderung nötig. Laut Vorgabe halte ich vor der Umsetzung an und lege sie zur Freigabe vor.
 
-## Ablauf
-1. Neue reine Rechenfunktion `planMundstueck293(...)`:
-   - Eingabe: gebuchte Leistungen, aktuelle Zeilen `ms_auswahl_1`, Zeilen `brennen_1`.
-   - Raumgewicht/Wasseraufnahme gebucht (einmal gezählt): 1 Eintrag `ms="293_1"`, `laenge=200`, `anzahl = floor(Brenntemperaturen/2)+1` (keine → 1), `zweck="Raumgewicht / Wasseraufnahme"`.
-   - Schwindung gebucht: 1 Eintrag `ms="293_1"`, `anzahl=3`, `laenge=150`, `zweck="Schwindung"`.
-   - Automatische Einträge werden über `zweck` + Kennzeichen `auto=true` erkannt; vom Auftraggeber gewählte 293/1-Zeilen (ohne Kennzeichen) werden nie verändert/gelöscht.
-   - Idempotent: vorhandener Auto-Eintrag gleichen Zwecks wird aktualisiert statt dupliziert; entfällt die Leistung, wird er entfernt.
-2. `mundstueck_ms_1`: Zeilen werden über die **stabile Zeilenkennung** des Mundstücks zugeordnet, nicht über die Position – bereits eingetragene Parameter anderer Mundstücke verschieben sich nicht. Wird ein Auto-Eintrag entfernt, dessen Mundstück-Zeile bereits Werte enthält, bleibt diese Zeile erhalten und wird als „verwaist – bitte prüfen“ markiert (kein stiller Datenverlust).
-3. Aufruf an den bestehenden Speicherstellen (Auftrag anlegen, Auftraggeber-Formular speichern), direkt neben der vorhandenen Regel-Auswertung.
-4. Anzeige: Auto-Zeilen in der MS-Auswahl erhalten den Hinweis „automatisch – wegen gebuchter Leistung“ (Zweck sichtbar).
-5. Leistungen werden über ihren Namen erkannt (keine festen IDs, da Web- und Firmen-IDs abweichen).
+## Vorgeschlagene Datenbankänderung (Web-Migration, Firmen-SQL getrennt und nicht ausgeführt)
+1. `order_requester_edit_state(order_id)` (SECURITY DEFINER, nur lesend): liefert „bearbeitbar ja/nein + Grund“ mit **denselben Kriterien wie die vorhandene Löschfunktion** (Aufgabenstatus, Ergebnisse, Rohdaten, Zeiten, Work-Logs, Sperre). Eine einzige Regel für Bearbeiten, Löschen und Anzeige.
+2. Trigger auf `measurement_orders` (UPDATE) und `measurement_parameters` (INSERT/UPDATE/DELETE): Nicht-Master-Ersteller werden abgelehnt, sobald Punkt 1 „begonnen“ meldet. Automatische Status-Synchronisation durch Messdienstleister bleibt unberührt (betrifft nur den Ersteller).
+3. `requester_remove_order_measurement(om_id, reason)` (SECURITY DEFINER): Ersteller dürfen eine **noch völlig unbearbeitete** Dienstleistung ihres Auftrags entfernen; gleiche Schutzprüfungen und Audit-Eintrag wie `delete_order_measurement`. Die Master-Funktion bleibt unverändert.
+4. Keine Änderung an Auth, Rollen, bestehenden Policies, Daten oder anderen Funktionen.
 
-## Offene Punkte zur Bestätigung
-- Darf der Auftraggeber automatische Einträge bearbeiten? Vorschlag: Anzahl/Länge gesperrt, sonst wie normale Zeile.
-- Ist die Zeilenzuordnung MS-Auswahl → Mundstück MS in der Firmendatenbank über eine Zeilenkennung oder nur über die Reihenfolge gelöst? Falls nur Reihenfolge: Auto-Einträge werden immer **am Ende** angehängt, damit nichts verrutscht.
-- Prüfung am echten Formular nur in der Desktop-/Firmenumgebung möglich (Web hat das Formular nicht).
+## Frontend
+- `CreateOrderPage` erhält Modus `?edit=<auftrags-id>`: lädt Auftrag, Pilot-Plant-Blöcke (Knetung, Extrusion, PPP_Masse, PPP_Produkt), `shared_form_data`/Versuchsnummer, Dienstleistungen, Vorgaben und Formularwerte über die bestehende Entwurfs-Wiederherstellung in **dasselbe Formular** inkl. Dienstleistungsreitern und Validierung.
+- Speichern aktualisiert den bestehenden Auftrag (Nummer, Ersteller, Datum, Proben bleiben); neue Dienstleistungen werden ergänzt, abgewählte über RPC 3 entfernt, unveränderte Aufgaben und Messdaten nicht angefasst.
+- „Bearbeiten“/„Löschen“ in Übersicht und Detail nur bei Punkt-1-Freigabe; sonst der vorgegebene Sperrhinweis. Sicherheitsabfrage mit dem vorgegebenen Text.
+- DE/EN-Texte, Tests für die Freigaberegel und den Änderungsabgleich, Abschlussbericht.
 
-## Technische Details
-- Neu: `src/lib/rules/mundstueck293.ts` + Tests `src/lib/rules/__tests__/mundstueck293.test.ts` (Fälle: 0–4 Brenntemperaturen, beide Leistungen, Mehrfachbuchung, Entfernen, manuelle 293/1-Zeile unberührt, zweiter Lauf ohne Änderung, Werte in Mundstück MS bleiben).
-- Anpassung: `src/pages/CreateOrderPage.tsx` und Speicherpfad der Auftraggeber-Vorgaben (`OrderRequesterSpecs.tsx`), Hinweis in der Repeater-Darstellung.
-- Keine Migration, keine Backend-/Auth-/Storage-/Edge-Function-Änderung.
+## Offen / Grenzen
+- Native Tauri-Abnahme kann ich nicht durchführen; Firmen-SQL muss der Administrator ausführen, bis dahin ist die Bearbeitung in der Desktop-App serverseitig ungesichert bzw. das Entfernen von Dienstleistungen nicht möglich.
