@@ -1,0 +1,1 @@
+- m³ sample retrofit: only master RPC m3_retrofit_order_samples (atomic, audited), planned by pure analyzeM3Retrofit (lib/m3List/retrofit.ts) reusing planM3Samples; ambiguity → no change.
