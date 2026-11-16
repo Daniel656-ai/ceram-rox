@@ -1,0 +1,87 @@
+name: Build Dev Web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: dev-web
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm install --no-package-lock
+
+      - name: Check repository variables
+        env:
+          DEV_SUPABASE_URL: ${{ vars.DEV_SUPABASE_URL }}
+          DEV_SUPABASE_PUBLISHABLE_KEY: ${{ vars.DEV_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          missing=0
+          if [ -z "$DEV_SUPABASE_URL" ]; then
+            echo "::error::Repository-Variable DEV_SUPABASE_URL fehlt (Settings > Secrets and variables > Actions > Variables)."
+            missing=1
+          fi
+          if [ -z "$DEV_SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "::error::Repository-Variable DEV_SUPABASE_PUBLISHABLE_KEY fehlt (Settings > Secrets and variables > Actions > Variables)."
+            missing=1
+          fi
+          exit $missing
+
+      - name: Build (development mode)
+        env:
+          VITE_SUPABASE_URL: ${{ vars.DEV_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.DEV_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ceram-rox-dev
+        run: npm run build:dev
+
+      - name: Safety check (no production or cloud Supabase URL in build)
+        run: |
+          if grep -rEl 'vrzqlfovvdxofxqyslev|172\.30\.100\.162:54321' dist; then
+            echo "::error::Build enthaelt Produktions-/Cloud-Supabase-URL (vrzqlfovvdxofxqyslev oder 172.30.100.162:54321). Abbruch."
+            exit 1
+          fi
+          echo "OK: keine Produktions-/Cloud-URL im Build."
+
+      - name: Write build-info.json
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            fs.writeFileSync("dist/build-info.json", JSON.stringify({
+              sha: process.env.COMMIT_SHA,
+              message: process.env.COMMIT_MESSAGE || "(manueller Lauf)",
+              builtAt: new Date().toISOString(),
+            }, null, 2));
+          '
+
+      - name: Publish to dev-web branch
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          cd dist
+          git init -q
+          git checkout -q --orphan dev-web
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Dev web build from ${COMMIT_SHA}"
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git push --force origin dev-web
