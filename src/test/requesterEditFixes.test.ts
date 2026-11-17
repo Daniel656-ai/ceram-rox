@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { adoptLoadedSelection, applyPilotPlantColumnFallback } from "@/lib/orders/requesterEdit";
+import { adoptLoadedSelection, applyPilotPlantColumnFallback, type LoadedPosition } from "@/lib/orders/requesterEdit";
 import { copyTemplateInputs, templateInputAllowed } from "@/lib/orderTemplateInputs";
 
 const services = [{ id: "s-knet", service_name: "Knetung" }, { id: "s-ext", service_name: "Extrusion" }];
 
 describe("Bearbeiten: geladene Positionen wiedererkennen", () => {
   it("markiert vorhandene Positionen als Formularpositionen mit stabiler uid", () => {
-    const out = adoptLoadedSelection(
+    const out = adoptLoadedSelection<LoadedPosition>(
       [{ uid: "u1", service_id: "s-knet", service_name: "Knetung", origin: "manual" }, { uid: "u2", service_id: "s-ext", service_name: "Extrusion", origin: "manual" }],
       [{ token: "knetung" }, { token: "x", service_id: "s-ext" }], services);
     expect(out.map((m) => [m.uid, m.origin, m.selection_token])).toEqual([["u1", "template", "knetung"], ["u2", "template", "x"]]);

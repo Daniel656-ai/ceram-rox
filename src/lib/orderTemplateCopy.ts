@@ -36,7 +36,7 @@ export const DEFAULT_COPY_OPTIONS: CopyOptions = {
   attachments: false,
 };
 
-export const COPY_OPTION_LABELS: Record<keyof CopyOptions, string> = {
+export const COPY_OPTION_LABELS: Record<Exclude<keyof CopyOptions, "edit">, string> = {
   services: "Dienstleistungen",
   packages: "Servicepakete (Herkunft)",
   conditions: "Messbedingungen, Vorgaben & Auswertungsvorgaben",
