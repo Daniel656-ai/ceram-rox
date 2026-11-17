@@ -8,10 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, RotateCcw, Search, Trash2 } from "lucide-react";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import ProductionReleasesPage from "@/pages/ProductionReleasesPage";
 import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/productionDocuments/ReleaseRevisionPicker";
@@ -22,7 +18,9 @@ import { SortableHead } from "@/components/list/SortableHead";
 import { useListSort } from "@/lib/list/listSorting";
 import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProductionDocumentRequests, useRequestProductionDocument, useRemoveProductionDocument } from "@/hooks/useProductionDocuments";
+import { M3DeleteDialog } from "@/components/productionDocuments/M3DeleteDialog";
+import { canDeleteM3 } from "@/lib/productionDocuments/m3Delete";
+import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
 import { useProjects } from "@/hooks/useProjects";
 import { m3OrderLabel, m3OrderSortText } from "@/lib/m3List/orderLabel";
@@ -146,27 +144,11 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
   /** m³: Anzeige „erste 9 Zeichen article_number + Projektname“ – nur Darstellung. */
   const m3Label = (r: any) =>
     m3OrderLabel(r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null, projectNameById);
-  const removeRequest = useRemoveProductionDocument();
+  const { user: authUser, role } = useAuth();
   const [deleteRow, setDeleteRow] = useState<any>(null);
 
-  /** Anzahl m³-Listen je Fertigungsfreigabe-Revision – Grundlage der Duplikat-Erkennung. */
-  const countByRelease = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const r of requests as any[]) {
-      if (!r.based_on_release_id) continue;
-      map.set(r.based_on_release_id, (map.get(r.based_on_release_id) ?? 0) + 1);
-    }
-    return map;
-  }, [requests]);
-
-  /** Nur eine doppelte, inhaltlich leere und keinem Auftrag zugeordnete m³-Liste darf entfernt werden. */
-  const isRemovableDuplicate = (r: any) =>
-    isM3 &&
-    !!r.based_on_release_id &&
-    (countByRelease.get(r.based_on_release_id) ?? 0) > 1 &&
-    !r.order_id &&
-    !r.completed_at &&
-    Object.keys((r.form_values as Record<string, unknown>) ?? {}).length === 0;
+  /** Löschen: nur Ersteller der m³-Liste und Master (verbindlich in der Datenbank geprüft). */
+  const canDeleteRow = (r: any) => isM3 && canDeleteM3(r, authUser, role);
   const sort = useListSort<"order" | "source" | "status" | "requested">({
     initialKey: "requested",
     initialDir: "desc",
@@ -340,12 +322,12 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
                         Auftrag öffnen
                       </Button>
                     )}
-                    {isRemovableDuplicate(r) && (
+                    {canDeleteRow(r) && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-destructive"
-                        title="Doppelte, leere m³-Liste entfernen"
+                        title="m³-Liste löschen"
                         onClick={() => setDeleteRow(r)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -361,35 +343,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
 
       {isM3 && <NewM3Dialog open={newOpen} onOpenChange={setNewOpen} />}
 
-      <AlertDialog open={!!deleteRow} onOpenChange={(v) => !v && setDeleteRow(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Doppelte m³-Liste entfernen?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Es wird ausschließlich dieser doppelte, leere Eintrag entfernt. Die gültige m³-Liste
-              derselben Produktionsfreigabe/Revision bleibt unverändert erhalten.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                const row = deleteRow;
-                setDeleteRow(null);
-                if (!row) return;
-                try {
-                  await removeRequest.mutateAsync(row.id);
-                  toast.success("Doppelte m³-Liste entfernt");
-                } catch (e: any) {
-                  toast.error(`Entfernen fehlgeschlagen: ${e?.message ?? e}`);
-                }
-              }}
-            >
-              Entfernen
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <M3DeleteDialog row={deleteRow} onClose={() => setDeleteRow(null)} />
 
       <Dialog open={!!sourceId} onOpenChange={(v) => !v && setSourceId(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">

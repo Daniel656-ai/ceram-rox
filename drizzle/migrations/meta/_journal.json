@@ -267,6 +267,13 @@
       "when": 1794561000000,
       "tag": "0037_order_delete_with_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794561200000,
+      "tag": "0038_m3_list_delete",
+      "breakpoints": true
     }
   ]
 }

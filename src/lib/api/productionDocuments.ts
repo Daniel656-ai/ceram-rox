@@ -1,5 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap } from "./_helpers";
+import { collectOrderStorageFiles, removeStorageFiles } from "./orders";
+import type { M3DeletePlan, M3DeleteResult } from "@/lib/productionDocuments/m3Delete";
 import type { DocKind, DocStatus } from "@/lib/productionDocuments/requirements";
 import {
   planCustomerDocumentationSync,
@@ -120,6 +122,23 @@ export const productionDocuments = {
     }>
   ): Promise<void> {
     await unwrap(db.from("production_document_requests").update(fields).eq("id", id));
+  },
+
+  /** Vorschau für den Löschdialog: was wird mitgelöscht, was bleibt, was blockiert? (Ersteller/Master) */
+  async deletePlan(id: string): Promise<M3DeletePlan> {
+    return (await unwrap(db.rpc("m3_list_delete_plan", { _request_id: id }))) as M3DeletePlan;
+  },
+
+  /**
+   * Löscht die m³-Liste. Mit Auftrag: Auftrag, Anhänge und nur dafür erzeugte, sonst nirgends
+   * verwendete Proben werden in derselben Datenbank-Transaktion mitgelöscht; die Fertigungsfreigabe bleibt.
+   * Danach werden die Dateien des Auftrags im Speicher entfernt (Anzahl nicht entfernter in `orphaned`).
+   */
+  async deleteM3(id: string, orderId: string | null): Promise<M3DeleteResult & { orphaned: number }> {
+    const files = orderId ? await collectOrderStorageFiles(orderId) : [];
+    const result = (await unwrap(db.rpc("delete_m3_list", { _request_id: id }))) as M3DeleteResult;
+    const orphaned = result?.order_deleted ? await removeStorageFiles(files) : 0;
+    return { ...result, orphaned };
   },
 
   async remove(id: string): Promise<void> {
