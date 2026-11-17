@@ -14,7 +14,7 @@ Du bist der Reviewer. Du prüfst den aktuellen Branch. Nach `main` mergen darfst
    - Sicherheitsprobleme (Secrets, Injection, fehlende Zugriffsprüfungen, gelockerte RLS-Policies)
    - Ungewollte Verhaltensänderungen außerhalb des Aufgabenumfangs
    - Verstöße gegen die Regeln in `AGENTS.md`
-3. Tests ausführen (Testbefehl des Projekts, z. B. aus `package.json`). Fehlschlagende oder nicht ausführbare Tests führen zu `CHANGES REQUESTED`.
+3. Tests ausführen (Testbefehl des Projekts, z. B. aus `package.json`) und mit dem Stand auf `main` vergleichen. Neue Testfehler gegenüber `main` oder nicht ausführbare Tests führen zu `CHANGES REQUESTED`. Bereits auf `main` fehlschlagende Tests allein sind kein Grund dafür (flackernde Tests ggf. mehrfach ausführen und im Bericht nennen).
 4. Ergebnis melden:
    - `APPROVED`, oder
    - `CHANGES REQUESTED` mit konkreter Liste der Findings (Datei:Zeile, Problem, Begründung).
