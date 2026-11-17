@@ -42,6 +42,7 @@ import OrderResultsOverview from "@/components/OrderResultsOverview";
 import OrderHeaderSummary from "@/components/order/OrderHeaderSummary";
 import OrderProductionDocuments from "@/components/order/OrderProductionDocuments";
 import AdminDeleteMeasurementsCard from "@/components/order/AdminDeleteMeasurementsCard";
+import { OrderDeleteInfo } from "@/components/orders/OrderDeleteInfo";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
@@ -306,6 +307,7 @@ function OrderDetailPageInner() {
                     Dieser Auftrag und alle zugehörigen Aufgaben werden unwiderruflich gelöscht.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <OrderDeleteInfo orderId={order.id} />
                 <AlertDialogFooter>
                   <AlertDialogCancel>Abbrechen</AlertDialogCancel>
                   <AlertDialogAction disabled={deleteOrder.isPending} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">

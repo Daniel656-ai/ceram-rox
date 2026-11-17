@@ -131,6 +131,10 @@ export const orders = {
     if (data !== id) throw new Error("Auftrag konnte nicht vollständig gelöscht werden.");
   },
 
+  /** Was hängt am Auftrag (Dateien, Berichte, Fertigungsunterlagen, Proben)? Nur für Ersteller/Master. */
+  deleteSummary: (id: string) =>
+    unwrap((dbClient as any).rpc("order_delete_summary", { _order_id: id })),
+
   /** Reduced list used by the ETA calculator. */
   listOpenForETA: () =>
     unwrap(

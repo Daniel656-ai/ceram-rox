@@ -17,6 +17,7 @@ import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
 import { samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
 import { SampleLinks } from "@/components/orders/SampleLinks";
+import { OrderDeleteInfo } from "@/components/orders/OrderDeleteInfo";
 import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
@@ -335,6 +336,7 @@ function OrdersOverview() {
                                   {t("orders:delete_confirm", { number: o.order_number ?? o.id })} {t("orders:delete_description")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
+                              <OrderDeleteInfo orderId={o.id} />
                               <AlertDialogFooter>
                                 <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
                                 <AlertDialogAction disabled={deleteOrder.isPending} onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
