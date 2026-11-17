@@ -32,9 +32,10 @@ Actions → "Build Dev Web" manuell starten und Gitea-Mirror abwarten.)
    oder überschrieben; lokale Anpassungen bleiben erhalten).
 2. **Webserver neu starten**, falls sich `serve-dev-web.py` geändert hat (Aufgabe „Dev-Web Server“
    wird gestoppt und wieder gestartet).
-3. **Web-Vorschau** `ceram-rox-dev-web`: `git fetch` + `git reset --hard origin/dev-web`
+3. **Dev-Datenbank synchronisieren**: `scripts\dev-db\sync-db-dev.ps1` spielt neue Migrationen nur in die
+   Dev-DB ein (Einrichtung und Ablauf: `scripts/dev-db/README.md`). Ein Fehler dort stoppt Schritt 4 nicht.
+4. **Web-Vorschau** `ceram-rox-dev-web`: `git fetch` + `git reset --hard origin/dev-web`
    (`reset --hard` nur in diesem Ordner).
-4. Platzhalter für „Dev-Datenbank synchronisieren“ (noch ohne Funktion).
 
 Ein Fehler in einem Schritt verhindert die anderen nicht. Vor jedem Git-Befehl prüft das Skript, dass
 der Ordner wirklich `ceram-rox-dev` bzw. `ceram-rox-dev-web` ist und `origin` auf

@@ -1,8 +1,8 @@
 # Haelt die Dev-Umgebung auf dem Server aktuell (Aufgabenplanung "Dev-Web Update", alle 10 Min.):
 #   1. Projektordner ceram-rox-dev aktualisieren (git pull --ff-only, nie zuruecksetzen)
 #   2. Aufgabe "Dev-Web Server" neu starten, wenn sich serve-dev-web.py geaendert hat
-#   3. Web-Vorschau ceram-rox-dev-web auf origin/dev-web setzen
-#   4. (Platzhalter) Dev-Datenbank synchronisieren
+#   3. Dev-Datenbank synchronisieren (scripts\dev-db\sync-db-dev.ps1, nur Dev-DB)
+#   4. Web-Vorschau ceram-rox-dev-web auf origin/dev-web setzen
 # Ein Fehler in einem Schritt verhindert die anderen nicht. Die Produktion (ceram-rox) wird nie angefasst.
 
 $BaseDir     = "C:\Users\Daniel.Gass\Ceram_Rox"
@@ -124,7 +124,29 @@ try {
 }
 
 # ---------------------------------------------------------------------------
-# Schritt 3: Web-Vorschau aktualisieren (reset --hard nur hier, im Web-Ordner)
+# Schritt 3: Dev-Datenbank synchronisieren (neue Migrationen nur in die DEV-DB)
+# Eigener Prozess: ein Fehler oder Abbruch dort stoppt die Web-Vorschau nicht.
+# Details und Log: scripts\dev-db\README.md, C:\Users\Daniel.Gass\Ceram_Rox\dev-state\sync-db-dev.log
+# ---------------------------------------------------------------------------
+try {
+    $SyncScript = Join-Path $ProjectDir "scripts\dev-db\sync-db-dev.ps1"
+    if (-not (Test-Path -LiteralPath $SyncScript)) {
+        Write-StepError "DB-Sync uebersprungen: $SyncScript nicht gefunden"
+    } else {
+        $syncOut = & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File $SyncScript 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-StepError "DB-Sync fehlgeschlagen (Exit $LASTEXITCODE), Web-Vorschau wird trotzdem aktualisiert. Siehe sync-db-dev.log. $($syncOut.Trim())"
+        } else {
+            $lastLine = ($syncOut.Trim() -split "\r?\n" | Select-Object -Last 1)
+            Write-Log "OK DB-Sync: $lastLine"
+        }
+    }
+} catch {
+    Write-StepError "DB-Sync: $($_.Exception.Message)"
+}
+
+# ---------------------------------------------------------------------------
+# Schritt 4: Web-Vorschau aktualisieren (reset --hard nur hier, im Web-Ordner)
 # ---------------------------------------------------------------------------
 try {
     $problem = Test-GitTarget $WebDir "ceram-rox-dev-web"
@@ -146,12 +168,6 @@ try {
 } catch {
     Write-StepError "Web-Vorschau: $($_.Exception.Message)"
 }
-
-# ---------------------------------------------------------------------------
-# Schritt 4: Platzhalter - Dev-Datenbank synchronisieren (folgt in einer spaeteren Aufgabe)
-# ---------------------------------------------------------------------------
-# Hier wird spaeter scripts\dev-db\sync-db-dev.ps1 aufgerufen (in eigenem try/catch).
-# Reihenfolge dann: Projektordner -> DB-Sync -> Web-Vorschau. Aktuell passiert nichts.
 
 if ($script:HadError) { exit 1 }
 exit 0
