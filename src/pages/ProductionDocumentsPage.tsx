@@ -346,7 +346,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
 
       {isM3 && <NewM3Dialog open={newOpen} onOpenChange={setNewOpen} />}
 
-      <M3DeleteDialog row={deleteRow} label={deleteRow ? m3Label(deleteRow) : ""} onClose={() => setDeleteRow(null)} />
+      <M3DeleteDialog row={deleteRow} label={deleteRow ? (m3Label(deleteRow).label ?? "–") : ""} onClose={() => setDeleteRow(null)} />
 
       <Dialog open={!!sourceId} onOpenChange={(v) => !v && setSourceId(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
