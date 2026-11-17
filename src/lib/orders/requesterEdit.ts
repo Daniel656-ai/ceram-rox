@@ -193,3 +193,18 @@ export function applyPilotPlantColumnFallback(
   }
   return { values: next, filled };
 }
+
+/** Zeigt die Aktionen für eigene Aufträge an (Master oder Auftraggeber, nur Ersteller, nur offen). Freigabe bleibt serverseitig. */
+export function showOwnOrderActions(input: {
+  hasRole: (r: string) => boolean; userId: string | null | undefined; createdBy: string | null | undefined; status: string | null | undefined;
+}): boolean {
+  if (!input.userId || input.createdBy !== input.userId || input.status !== "open") return false;
+  return input.hasRole("master") || input.hasRole("auftraggeber");
+}
+
+/** Server-Ergebnis → Aktionen. Fehler/Laden/Verweigerung bieten nie Löschen an. */
+export function ownOrderActionMode(data: RequesterEditState | undefined, isError: boolean): "edit_delete" | "locked" | "none" {
+  if (isError || !data) return "none";
+  if (data.can_edit === true) return "edit_delete";
+  return data.reason === "started" || data.reason === "locked" ? "locked" : "none";
+}

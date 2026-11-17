@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useOrderRequesterEditState } from "@/hooks/useOrders";
+import { ownOrderActionMode } from "@/lib/orders/requesterEdit";
+import { useEffect } from "react";
 
 /**
  * Bearbeiten/Löschen eigener Aufträge in der Übersicht. Die Freigabe kommt
@@ -12,10 +14,14 @@ import { useOrderRequesterEditState } from "@/hooks/useOrders";
 export function RequesterOrderRowActions({ orderId, renderDelete }: { orderId: string; renderDelete: () => React.ReactNode }) {
   const { t } = useTranslation("orders");
   const navigate = useNavigate();
-  const { data } = useOrderRequesterEditState(orderId);
-  if (!data) return null;
-  if (!data.can_edit) {
-    if (data.reason !== "started" && data.reason !== "locked") return null;
+  const { data, isError, error } = useOrderRequesterEditState(orderId);
+  useEffect(() => {
+    if (isError) console.warn("[RequesterOrderRowActions] order_requester_edit_state fehlgeschlagen", orderId, error);
+    else if (data && !data.can_edit && data.reason !== "started" && data.reason !== "locked") console.info("[RequesterOrderRowActions] Bearbeiten/Löschen verweigert", orderId, data.reason);
+  }, [isError, error, data, orderId]);
+  const mode = ownOrderActionMode(data, isError);
+  if (mode === "none") return null;
+  if (mode === "locked") {
     return (
       <Tooltip>
         <TooltipTrigger asChild>

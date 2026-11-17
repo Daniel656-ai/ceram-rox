@@ -1,3 +1,4 @@
+import { showOwnOrderActions } from "@/lib/orders/requesterEdit";
 import { TaskServiceFilterPopover } from "@/components/orders/TaskServiceFilterPopover";
 import { SlaBadge } from "@/components/sla/SlaBadge";
 import { aggregateSla, computeServiceSla, slaInputFromMeasurement } from "@/lib/sla/slaCalculator";
@@ -336,8 +337,8 @@ function OrdersOverview() {
                             </AlertDialogContent>
                           </AlertDialog>
                         )}
-                        {role !== "master" && isRequester && o.created_by === user?.id && o.status === "open" && (
-                          <RequesterOrderRowActions orderId={o.id} renderDelete={() => (
+                        {showOwnOrderActions({ hasRole, userId: user?.id, createdBy: o.created_by, status: o.status }) && (
+                          <RequesterOrderRowActions orderId={o.id} renderDelete={role === "master" ? () => null : () => (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
