@@ -42,6 +42,7 @@ import OrderResultsOverview from "@/components/OrderResultsOverview";
 import OrderHeaderSummary from "@/components/order/OrderHeaderSummary";
 import OrderProductionDocuments from "@/components/order/OrderProductionDocuments";
 import AdminDeleteMeasurementsCard from "@/components/order/AdminDeleteMeasurementsCard";
+import { OrderDeleteInfo } from "@/components/orders/OrderDeleteInfo";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
@@ -241,8 +242,9 @@ function OrderDetailPageInner() {
   const handleDelete = async () => {
     if (deleteOrder.isPending) return;
     try {
-      await deleteOrder.mutateAsync(order.id);
+      const orphaned = await deleteOrder.mutateAsync(order.id);
       toast.success("Messauftrag gelöscht");
+      if (orphaned > 0) toast.warning(`${orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
       navigate("/auftraege");
     } catch (err: any) {
       toast.error("Fehler beim Löschen", { description: err.message });
@@ -306,6 +308,7 @@ function OrderDetailPageInner() {
                     Dieser Auftrag und alle zugehörigen Aufgaben werden unwiderruflich gelöscht.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <OrderDeleteInfo orderId={order.id} />
                 <AlertDialogFooter>
                   <AlertDialogCancel>Abbrechen</AlertDialogCancel>
                   <AlertDialogAction disabled={deleteOrder.isPending} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">

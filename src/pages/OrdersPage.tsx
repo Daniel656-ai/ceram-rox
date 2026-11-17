@@ -17,6 +17,7 @@ import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
 import { samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
 import { SampleLinks } from "@/components/orders/SampleLinks";
+import { OrderDeleteInfo } from "@/components/orders/OrderDeleteInfo";
 import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
@@ -193,8 +194,9 @@ function OrdersOverview() {
   const handleDelete = async (id: string) => {
     if (deleteOrder.isPending) return;
     try {
-      await deleteOrder.mutateAsync(id);
+      const orphaned = await deleteOrder.mutateAsync(id);
       toast.success(t("orders:deleted"));
+      if (orphaned > 0) toast.warning(`${orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
     } catch (err: any) {
       toast.error(t("orders:delete_error"), { description: err.message });
     }
@@ -335,6 +337,7 @@ function OrdersOverview() {
                                   {t("orders:delete_confirm", { number: o.order_number ?? o.id })} {t("orders:delete_description")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
+                              <OrderDeleteInfo orderId={o.id} />
                               <AlertDialogFooter>
                                 <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
                                 <AlertDialogAction disabled={deleteOrder.isPending} onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
