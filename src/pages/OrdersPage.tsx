@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useServices, useMyQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { loadTaskFilterState, saveTaskFilterState, effectiveServiceIds, buildTaskServicePredicate, isTaskFilterActive, DEFAULT_TASK_FILTER, type TaskFilterState, type CompetenceState } from "@/lib/tasks/taskServiceFilter";
 import { TaskOrderIdentity } from "@/components/orders/TaskOrderIdentity";
-import { useOrders, useDeleteOrder, useCopyOrder } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder, useCopyOrder, useOrderReleaseLabels } from "@/hooks/useOrders";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
 import { resolveOrderMasseType } from "@/lib/orders/orderMasseType";
 import { orderFilterColumns } from "@/lib/orders/orderFilterColumns";
@@ -60,6 +60,7 @@ function OrdersOverview() {
   const showSla = !isExternalCustomer(customRoleIds);
   const { t, i18n } = useTranslation(["orders", "common", "measurements", "samples"]);
   const { data: orders = [], isLoading } = useOrders();
+  const { data: releaseLabels } = useOrderReleaseLabels();
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
   const { data: isAnyProjectLead = false } = useIsAnyProjectLead();
   const deleteOrder = useDeleteOrder();
@@ -96,7 +97,7 @@ function OrdersOverview() {
       case "order_kind": return kindLabel(o);
       case "mass_type": return resolveOrderMasseType(o).join(", ");
       case "project_number": return o.projects?.project_number ?? "";
-      case "project_name": return o.projects?.project_name ?? "";
+      case "project_name": return o.projects?.project_name ?? releaseLabels?.get(o.id) ?? "";
       case "order_type": return o.order_type ?? "";
       case "ranking": return 3 - priorityRank(o.priority);
       case "status": return o.status ?? "";
@@ -299,7 +300,7 @@ function OrdersOverview() {
                         </Link>
                       ) : "–"}
                     </TableCell>
-                    <TableCell>{o.projects?.project_name || "–"}</TableCell>
+                    <TableCell>{o.projects?.project_name || releaseLabels?.get(o.id) || "–"}</TableCell>
                     <TableCell>{kindLabel(o)}</TableCell>
                     <TableCell className="whitespace-normal">{resolveOrderMasseType(o).join(", ") || "–"}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}<BillingStatusText order={o as any} /></TableCell>

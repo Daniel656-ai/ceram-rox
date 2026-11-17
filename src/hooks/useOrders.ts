@@ -1,6 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { buildOrderReleaseLabels } from "@/lib/orders/orderReleaseLabel";
+
+/** Anzeigetext der Fertigungsfreigabe je Auftrag (für Aufträge ohne Projekt), z. B. "0020-5438 · Rev0". */
+export function useOrderReleaseLabels() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["orders", "release-labels"],
+    queryFn: async () => {
+      const { releases, requests } = await api.productionReleases.listOrderLinks();
+      return buildOrderReleaseLabels(releases, requests);
+    },
+    enabled: !!user,
+  });
+}
 
 export function useOrders() {
   const { user } = useAuth();

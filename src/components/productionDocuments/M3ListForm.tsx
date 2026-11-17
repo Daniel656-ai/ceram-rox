@@ -35,7 +35,6 @@ import { Input } from "@/components/ui/input";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { buildM3SampleNames } from "@/lib/m3List/sampleNames";
-import { resolveReleaseProject } from "@/lib/m3List/projectResolution";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
   const qc = useQueryClient();
@@ -206,12 +205,6 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
    * Artikelnummer + "-" + Elementnummer) und ordnet sie dem Auftrag zu. Bereits
    * am Auftrag vorhandene Probennamen werden nicht doppelt angelegt.
    */
-  const resolveProject = async () => {
-    const rel = (release ?? {}) as { project_id?: string | null; project_name?: string | null };
-    const projects = rel.project_id ? [] : ((await api.projects.list()) as { id: string; project_name?: string | null }[]);
-    return resolveReleaseProject(rel, projects);
-  };
-
   const ensureSamples = async (orderId: string): Promise<{ created: number; existing: number } | null> => {
     const rel = (release ?? {}) as Record<string, unknown>;
     const plan = buildM3SampleNames(
@@ -226,12 +219,9 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       toast.warning("Keine Proben erzeugt: In der m³-Liste gibt es keine Zeile mit Elementnummer.");
       return null;
     }
-    const resolved = await resolveProject();
-    if (!resolved.ok) {
-      toast.warning(`Keine Proben erzeugt: ${resolved.reason}`);
-      return null;
-    }
-    const projectId = resolved.projectId as string;
+    // Ein Projekt (public.projects) ist nicht nötig: Proben gehören über die Zuordnung zum
+    // Auftrag (order_samples) zur Fertigungsfreigabe/m³-Liste. Eine vorhandene project_id wird übernommen.
+    const projectId = (rel.project_id as string | null) ?? null;
     const linked = (await api.orderSamples.list(orderId)) as { samples?: { sample_name?: string | null } | null }[];
     const have = new Set(linked.map((l) => l.samples?.sample_name).filter(Boolean) as string[]);
     const todo = plan.names.filter((n) => !have.has(n));
@@ -270,14 +260,13 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     if (!user?.id || !request.based_on_release_id) return;
     setCreatingOrder(true);
     try {
-      const rel = (release ?? {}) as Record<string, unknown>;
-      const resolved = await resolveProject();
-      if (!resolved.ok) {
-        toast.error(`Beprobungsauftrag nicht erstellt: ${resolved.reason}`);
+      if (!release) {
+        toast.error("Beprobungsauftrag nicht erstellt: Die Fertigungsfreigabe ist noch nicht geladen. Bitte kurz warten und erneut versuchen.");
         return;
       }
+      const rel = release as Record<string, unknown>;
       const created = (await api.orders.create({
-        project_id: resolved.projectId,
+        project_id: (rel.project_id as string | null) ?? null,
         order_type: "customer",
         order_kind: "labor",
         created_by: user.id,
