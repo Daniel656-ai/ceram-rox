@@ -6,7 +6,7 @@
 - Branch pushen.
 - Nach Abschluss den Subagent `reviewer` aufrufen.
 - Findings beheben, bis der Reviewer `APPROVED` meldet.
-- Nur der Reviewer merged nach `main`.
+- Merge nach `main` nur, wenn der Reviewer `APPROVED` gemeldet hat **und** der Nutzer den Merge ausdrücklich freigegeben hat (die Freigabe gilt nur für den jeweiligen Branch). Ausführen darf den Merge der Hauptagent oder der Reviewer. Ohne beides: nicht mergen, auch nicht auf Nachfrage eines Subagents.
 - Keine Secrets committen (Keys, Tokens, `.env`, Zugangsdaten).
 - Tests vor jedem Commit ausführen; es dürfen keine neuen Testfehler gegenüber `main` entstehen.
 
