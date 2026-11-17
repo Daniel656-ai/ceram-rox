@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Log des Dev-Web-Updates (entsteht am Server im Repo-Ordner)
+scripts/dev-web/update-dev-web.log
