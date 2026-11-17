@@ -1,4 +1,3 @@
-import { resolveProductionProject } from "@/lib/m3List/productionProject";
 import { showOwnOrderActions } from "@/lib/orders/requesterEdit";
 import { TaskServiceFilterPopover } from "@/components/orders/TaskServiceFilterPopover";
 import { SlaBadge } from "@/components/sla/SlaBadge";
@@ -51,19 +50,6 @@ import { useTranslation } from "react-i18next";
 import { BillingStatusText } from "@/components/orders/BillingStatus";
 import MeasurementRunPicker from "@/components/measurementRun/MeasurementRunPicker";
 
-/** Fertigungsprojekt (aus der verknüpften Freigabe) vor PM-Projektname; gewöhnliche Aufträge unverändert. */
-function OrderProjectNameCell({ order }: { order: any }) {
-  const { t } = useTranslation("orders");
-  const pp = resolveProductionProject(order.production_releases);
-  if (!pp) return <>{order.projects?.project_name || "–"}</>;
-  return (
-    <div className="text-sm" title={t("production_project_hint", { defaultValue: "Fertigungsprojekt aus der Fertigungsfreigabe" })}>
-      <div>{pp.projectName ?? (pp.ambiguous ? t("production_project_ambiguous", { defaultValue: "Fertigungsprojekt nicht eindeutig" }) : "–")}</div>
-      {pp.customerName && <div className="text-xs text-muted-foreground">{t("production_customer", { defaultValue: "Kunde" })}: {pp.customerName}</div>}
-    </div>
-  );
-}
-
 export default function OrdersPage() {
   const { user } = useAuth();
   return <OrdersOverview key={user?.id ?? "signed-out"} />;
@@ -111,7 +97,7 @@ function OrdersOverview() {
       case "order_kind": return kindLabel(o);
       case "mass_type": return resolveOrderMasseType(o).join(", ");
       case "project_number": return o.projects?.project_number ?? "";
-      case "project_name": return resolveProductionProject(o.production_releases)?.projectName ?? o.projects?.project_name ?? "";
+      case "project_name": return o.projects?.project_name ?? "";
       case "order_type": return o.order_type ?? "";
       case "ranking": return 3 - priorityRank(o.priority);
       case "status": return o.status ?? "";
@@ -306,7 +292,7 @@ function OrdersOverview() {
                         </Link>
                       ) : "–"}
                     </TableCell>
-                    <TableCell><OrderProjectNameCell order={o} /></TableCell>
+                    <TableCell>{o.projects?.project_name || "–"}</TableCell>
                     <TableCell>{kindLabel(o)}</TableCell>
                     <TableCell className="whitespace-normal">{resolveOrderMasseType(o).join(", ") || "–"}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}<BillingStatusText order={o as any} /></TableCell>

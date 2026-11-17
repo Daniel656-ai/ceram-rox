@@ -7,7 +7,7 @@ const ORDER_REF_SELECT =
   "id, order_number, order_kind, order_type, customer_name, pp_experiment_number, project_id, projects(project_number, project_name)";
 
 const SAMPLE_SELECT =
-  "*, projects(project_number, project_name), storage_locations:location_id(id, hall, room, shelf, position), m3_order:measurement_orders!samples_order_id_fkey(id, production_releases!production_releases_order_id_fkey(project_name, customer_name))";
+  "*, projects(project_number, project_name), storage_locations:location_id(id, hall, room, shelf, position)";
 
 export const samples = {
   listMeasurementTypes: () => unwrap(dbClient.from("measurement_orders").select("sample_id, order_measurements(service_id, measurement_services:service_id(service_name))").neq("order_type", "internal").not("sample_id", "is", null)),

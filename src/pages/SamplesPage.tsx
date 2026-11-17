@@ -1,4 +1,3 @@
-import { resolveSampleProductionProject } from "@/lib/m3List/productionProject";
 import { useSamples, useCreateSample, useDeleteSample, useSampleOrderLinks } from "@/hooks/useSamples";
 import { SampleProjectLink, SampleOrderLinks } from "@/components/samples/SampleRefLinks";
 import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
@@ -344,17 +343,8 @@ export default function SamplesPage() {
       {
         key: "project",
         header: t("project"),
-        accessor: (s) => resolveSampleProductionProject(s as any)?.projectName || s.projects?.project_number || t("no_project_assigned"),
-        cell: (s) => {
-          // m³-Beprobungsproben: Fertigungsprojekt über Auftrag → Fertigungsfreigabe.
-          const pp = resolveSampleProductionProject(s as any);
-          if (pp) return (
-            <span className="text-sm" title={t("production_project_hint", { defaultValue: "Fertigungsprojekt aus der Fertigungsfreigabe" })}>
-              {pp.projectName ?? "–"}{pp.customerName ? <span className="block text-xs text-muted-foreground">{pp.customerName}</span> : null}
-            </span>
-          );
-          return <SampleProjectLink projectId={s.project_id} project={s.projects} />;
-        },
+        accessor: (s) => s.projects?.project_number || t("no_project_assigned"),
+        cell: (s) => <SampleProjectLink projectId={s.project_id} project={s.projects} />,
       },
       {
         key: "orders",

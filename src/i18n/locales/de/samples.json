@@ -303,8 +303,5 @@
   "runsheet_menge": "Menge",
   "runsheet_lot": "Lotnummer",
   "runsheet_bemerkung": "Bemerkung",
-  "runsheet_svc_wanted": "Gewünschte Dienstleistungen",
-  "production_project_hint": "Fertigungsprojekt aus der Fertigungsfreigabe",
-  "production_project_ambiguous": "Fertigungsprojekt nicht eindeutig",
-  "production_customer": "Kunde"
+  "runsheet_svc_wanted": "Gewünschte Dienstleistungen"
 }

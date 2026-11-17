@@ -9,7 +9,6 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { missingSamplingReleaseData } from "@/lib/m3List/productionProject";
 import { toast } from "sonner";
 import { AlertCircle, AlertTriangle, FileDown, Printer, Save } from "lucide-react";
 import { downloadM3Pdf, printM3List } from "@/lib/m3List/m3PrintActions";
@@ -206,12 +205,6 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     setCreatingOrder(true);
     try {
       const rel = (release ?? {}) as Record<string, unknown>;
-      // Fertigungsprojekt = ausschließlich die Fertigungsfreigabe. Pflichtdaten
-      // VOR jeder Schreiboperation prüfen, damit kein halber Auftrag entsteht.
-      const missingRelease = missingSamplingReleaseData(release ?? null, derived.values.article_number);
-      if (missingRelease.length) {
-        throw new Error(`Fertigungsfreigabe unvollständig: ${missingRelease.join(", ")} fehlt. Es wurde kein Auftrag angelegt.`);
-      }
       // Probenplan und Duplikatprüfung VOR jeder Schreiboperation, damit bei
       // Konflikten weder Auftrag noch Proben teilweise entstehen.
       const samplePlan = planM3Samples(rel.article_number ?? derived.values.article_number, derivedRows, testMarking);
@@ -221,17 +214,8 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           `Probennummer bereits vergeben: ${existing.join(", ")}. Es wurde kein Auftrag und keine Probe angelegt.`
         );
       }
-      // Dienstleistungen ebenfalls vorab auflösen – ohne Dienstleistung kein Auftrag.
-      const { matched, missing } = await api.measurementServices.resolveSamplingCodes(selectedCodes);
-      if (matched.length === 0) {
-        throw new Error("Für die gewählte Beprobung ist keine Dienstleistung hinterlegt. Es wurde kein Auftrag angelegt.");
-      }
-      const customerName = String(rel.customer_name ?? "").trim() || null;
       const created = (await api.orders.create({
-        // production_releases.project_id verweist auf ein Projektmanagement-Projekt
-        // und ist KEIN Fertigungsprojekt → bewusst leer.
-        project_id: null,
-        customer_name: customerName,
+        project_id: (rel.project_id as string | null) ?? null,
         order_type: "customer",
         order_kind: "labor",
         created_by: user.id,
@@ -245,6 +229,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       // Maßgeblich ist ausschließlich die in der m³-Liste gesetzte
       // Beprobungsauswahl (Benutzerauswahl, sonst der automatische Vorschlag) –
       // nicht erneut die Automatik. „Bench“ ergibt dabei BENCH NOx + BENCH SOx.
+      const { matched, missing } = await api.measurementServices.resolveSamplingCodes(selectedCodes);
       const noxHandover = buildNoxHandover(derived.values);
       const articleNo = String(rel.article_number ?? derived.values.article_number ?? "").trim();
       const sampleIds: string[] = [];
@@ -254,7 +239,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
             sample_name: `${articleNo} · Element ${p.elementNumber}`,
             description: `m³-Liste Zeile ${p.rowIndex + 1}`,
             created_by: user.id,
-            project_id: null,
+            project_id: (rel.project_id as string | null) ?? null,
             order_id: created.id,
             status: "neu",
             is_hazardous: false,
