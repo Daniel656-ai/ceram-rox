@@ -9,7 +9,7 @@ const ORDER_LIST_SELECT =
 const ORDER_DETAIL_SELECT = `*, projects(project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name, description, is_hazardous, location_id, storage_locations(hall, room, shelf, position)), order_samples(id, sample_id, created_at, samples(id, sample_number, sample_name, description, is_hazardous)), order_measurements(*, samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name), measurement_services(service_name, category, hourly_rate, standard_duration_hours, sla_monitoring_enabled, sla_yellow_warning_days), measurement_parameters(*), measurement_results(*), work_logs(*), documents(*))`;
 
 /** Dateien (Messdokumente, Uploads, Berichts-PDFs) eines Auftrags; bei Lesefehlern bleibt die Liste unvollständig. */
-async function collectOrderStorageFiles(orderId: string): Promise<StorageFileRef[]> {
+export async function collectOrderStorageFiles(orderId: string): Promise<StorageFileRef[]> {
   const files: StorageFileRef[] = [];
   try {
     const ms: any[] = (await unwrap(dbClient.from("order_measurements").select("id").eq("order_id", orderId))) || [];
@@ -30,6 +30,20 @@ async function collectOrderStorageFiles(orderId: string): Promise<StorageFileRef
     // Nur Aufräumhilfe: Das Löschen des Auftrags selbst hängt nicht davon ab.
   }
   return files;
+}
+
+/** Entfernt Dateien aus dem Speicher; gibt die Anzahl zurück, die nicht entfernt werden konnten. */
+export async function removeStorageFiles(files: StorageFileRef[]): Promise<number> {
+  let failed = 0;
+  for (const [bucket, paths] of groupStoragePaths(files)) {
+    try {
+      const { error: rmErr } = await dbClient.storage.from(bucket).remove(paths);
+      if (rmErr) failed += paths.length;
+    } catch {
+      failed += paths.length;
+    }
+  }
+  return failed;
 }
 
 export const orders = {
@@ -161,16 +175,7 @@ export const orders = {
     const { data, error } = await dbClient.rpc("cancel_or_delete_order", { _order_id: id });
     if (error) throw error;
     if (data !== id) throw new Error("Auftrag konnte nicht vollständig gelöscht werden.");
-    let failed = 0;
-    for (const [bucket, paths] of groupStoragePaths(files)) {
-      try {
-        const { error: rmErr } = await dbClient.storage.from(bucket).remove(paths);
-        if (rmErr) failed += paths.length;
-      } catch {
-        failed += paths.length;
-      }
-    }
-    return failed;
+    return removeStorageFiles(files);
   },
 
   /** Was hängt am Auftrag (Dateien, Berichte, Fertigungsunterlagen, Proben)? Nur für Ersteller/Master. */
