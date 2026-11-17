@@ -58,6 +58,12 @@ DO $$ DECLARE o uuid:=fixture_order('10000000-0000-0000-0000-000000000002'); ref
  BEGIN PERFORM cancel_or_delete_order(o); EXCEPTION WHEN insufficient_privilege THEN refused:=true; END;
  IF NOT refused OR NOT EXISTS(SELECT 1 FROM order_measurements WHERE order_id=o) THEN RAISE EXCEPTION 'F unauthorized: data removed'; END IF;
  RAISE NOTICE 'PASS F: foreign requester rejected server-side'; END $$;
+-- H: the creator may delete own order even without the auftraggeber role (task 004).
+DO $$ DECLARE o uuid:=fixture_order('10000000-0000-0000-0000-000000000002'); BEGIN
+ PERFORM set_config('test.uid','10000000-0000-0000-0000-000000000002',true);
+ IF cancel_or_delete_order(o)<>o OR EXISTS(SELECT 1 FROM measurement_orders WHERE id=o) THEN RAISE EXCEPTION 'H: creator could not delete own order'; END IF;
+ RAISE NOTICE 'PASS H: creator deletes own order without results';
+END $$;
 DO $$ DECLARE o uuid:=fixture_order(); i uuid:=gen_random_uuid(); t uuid:=gen_random_uuid(); s uuid:=gen_random_uuid(); p uuid:=gen_random_uuid(); ps uuid:=gen_random_uuid(); d uuid:=gen_random_uuid(); BEGIN
  INSERT INTO order_workflow_instances(id,order_id) VALUES(i,o);
  INSERT INTO order_workflow_tasks(id,instance_id,order_id) VALUES(t,i,o);
