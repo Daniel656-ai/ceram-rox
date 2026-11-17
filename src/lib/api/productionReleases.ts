@@ -283,6 +283,28 @@ async function callImportService(
 
 
 export const productionReleases = {
+  /** Für die Auftragsübersicht: Freigaben mit Auftragsbezug und die m³-Anfragen (welche Revision). Nur lesen. */
+  async listOrderLinks(): Promise<{
+    releases: { id: string; order_id: string | null; release_number: string | null; revision_number: number | null; article_number: string | null; is_current: boolean | null }[];
+    requests: { order_id: string | null; based_on_release_id: string | null }[];
+  }> {
+    const releases = (await unwrap(
+      db
+        .from("production_releases")
+        .select("id,order_id,release_number,revision_number,article_number,is_current")
+        .not("order_id", "is", null)
+    )) as any[] | null;
+    const requests = (await unwrap(
+      db
+        .from("production_document_requests")
+        .select("order_id,based_on_release_id")
+        .eq("doc_kind", "m3_list")
+        .not("order_id", "is", null)
+    )) as any[] | null;
+    return { releases: releases ?? [], requests: requests ?? [] };
+  },
+
+
   async list(opts: { onlyCurrent?: boolean } = {}): Promise<ProductionReleaseRow[]> {
     let q = db
       .from("production_releases")
