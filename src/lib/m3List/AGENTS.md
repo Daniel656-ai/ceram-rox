@@ -1,1 +1,2 @@
 - m³ sample retrofit: only master RPC m3_retrofit_order_samples (atomic, audited), planned by pure analyzeM3Retrofit (lib/m3List/retrofit.ts) reusing planM3Samples; ambiguity → no change.
+- Production project (Fertigungsprojekt) of m³ sampling orders/samples resolves only via production_releases.order_id through pure resolveProductionProject (lib/m3List/productionProject.ts); production_releases.project_id is a PM project and is never written to orders/samples — PM and production projects must not mix.
