@@ -110,6 +110,8 @@
   "due_date": "Fälligkeit",
   "no_orders": "Keine Aufträge gefunden",
   "delete_title": "Auftrag löschen?",
+  "delete_confirm": "Auftrag {{number}} wirklich löschen?",
+  "delete_has_results": "Auftrag hat bereits Ergebnisse",
   "delete_description": "Dieser Auftrag und alle zugehörigen Aufgaben werden unwiderruflich gelöscht.",
   "deleted": "Auftrag gelöscht",
   "delete_error": "Fehler beim Löschen",
