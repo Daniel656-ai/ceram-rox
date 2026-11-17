@@ -203,7 +203,7 @@ export function showOwnOrderActions(input: {
 }
 
 /** Server-Ergebnis → Aktionen. Fehler/Laden/Verweigerung bieten nie Löschen an. */
-export function ownOrderActionMode(data: RequesterEditState | undefined, isError: boolean): "edit_delete" | "locked" | "none" {
+export function ownOrderActionMode(data: { can_edit: boolean; reason: string | null } | undefined, isError: boolean): "edit_delete" | "locked" | "none" {
   if (isError || !data) return "none";
   if (data.can_edit === true) return "edit_delete";
   return data.reason === "started" || data.reason === "locked" ? "locked" : "none";
