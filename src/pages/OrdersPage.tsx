@@ -169,7 +169,8 @@ function OrdersOverview() {
   }
 
   const canCreateOrder = role === "master" || isRequester || isAnyProjectLead;
-  const canShowActions = role === "master" || isRequester || isAnyProjectLead;
+  const canShowActions = role === "master" || isRequester || isAnyProjectLead
+    || orders.some((o: any) => o.created_by === user?.id);
 
   const handleCopy = async (id: string) => {
     try {
@@ -182,10 +183,12 @@ function OrdersOverview() {
   };
 
   const canDelete = (o: any) => {
-    if (role === "master") return true;
-    if (role === "auftraggeber" && o.created_by === user?.id && o.status === "open") return true;
-    return false;
+    // Master: alle Aufträge; sonst nur der Ersteller. Verbindlich prüft die Datenbank (cancel_or_delete_order).
+    return role === "master" || o.created_by === user?.id;
   };
+
+  const hasResults = (o: any) =>
+    (o.order_measurements ?? []).some((m: any) => (m.measurement_results ?? []).length > 0);
 
   const handleDelete = async (id: string) => {
     if (deleteOrder.isPending) return;
@@ -319,15 +322,17 @@ function OrdersOverview() {
                         {canDelete(o) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <span title={hasResults(o) ? t("orders:delete_has_results") : undefined}>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" disabled={hasResults(o)} aria-label={hasResults(o) ? t("orders:delete_has_results") : t("common:delete")}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </span>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>{t("orders:delete_title")}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  {t("orders:delete_description")}
+                                  {t("orders:delete_confirm", { number: o.order_number ?? o.id })} {t("orders:delete_description")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
