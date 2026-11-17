@@ -26,6 +26,20 @@ Actions → "Build Dev Web" manuell starten und Gitea-Mirror abwarten.)
 
 ## 2. Aufgabe: Update alle 10 Minuten
 
+`update-dev-web.ps1` hält die komplette Dev-Umgebung aktuell. Reihenfolge pro Lauf:
+
+1. **Projektordner** `ceram-rox-dev`: `git fetch` + `git pull --ff-only` (es wird nie etwas zurückgesetzt
+   oder überschrieben; lokale Anpassungen bleiben erhalten).
+2. **Webserver neu starten**, falls sich `serve-dev-web.py` geändert hat (Aufgabe „Dev-Web Server“
+   wird gestoppt und wieder gestartet).
+3. **Web-Vorschau** `ceram-rox-dev-web`: `git fetch` + `git reset --hard origin/dev-web`
+   (`reset --hard` nur in diesem Ordner).
+4. Platzhalter für „Dev-Datenbank synchronisieren“ (noch ohne Funktion).
+
+Ein Fehler in einem Schritt verhindert die anderen nicht. Vor jedem Git-Befehl prüft das Skript, dass
+der Ordner wirklich `ceram-rox-dev` bzw. `ceram-rox-dev-web` ist und `origin` auf
+`daniel.gass/ceram-rox-dev` zeigt. Die Produktion (`ceram-rox`) wird nie angefasst.
+
 ```powershell
 $action  = New-ScheduledTaskAction -Execute "powershell.exe" `
   -Argument '-NoProfile -ExecutionPolicy Bypass -File "C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox-dev\scripts\dev-web\update-dev-web.ps1"'
@@ -33,7 +47,7 @@ $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (Ne
 Register-ScheduledTask -TaskName "Dev-Web Update" -Action $action -Trigger $trigger
 ```
 
-Log: `scripts\dev-web\update-dev-web.log` (letzte ca. 500 Zeilen).
+Log: `scripts\dev-web\update-dev-web.log` (letzte ca. 500 Zeilen, wird von Git ignoriert).
 
 ## 3. Aufgabe: Webserver bei Anmeldung (wie Extruder-/Staucher-App)
 
@@ -53,3 +67,35 @@ Start-ScheduledTask -TaskName "Dev-Web Server"
 
 Ports **8090** (Web-Vorschau) und **55321** (Dev-Supabase-API) müssen im Firmennetz erreichbar
 sein (Windows-Firewall-Regeln eingehend). Port 54321 (Produktion) wird nie verwendet.
+
+## 5. Wenn sich `supabase/config.toml` im Repo ändert
+
+Im Projektordner ist `supabase/config.toml` lokal mit den Dev-Ports (553xx) angepasst und mit
+`--skip-worktree` markiert. Ändert sich die Datei im Repo, schlägt `git pull --ff-only` fehl; im Log steht
+dann „config.toml hat sich im Repo geändert – Dev-Ports bitte manuell übertragen“. Das Update der
+Web-Vorschau läuft trotzdem weiter. So übernimmst du die Änderung:
+
+```powershell
+cd "C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox-dev"
+
+# 1. Lokale Anpassung sichern
+Copy-Item supabase\config.toml "$env:TEMP\config.toml.dev"
+
+# 2. Markierung aufheben und lokale Änderung verwerfen (nur diese eine Datei)
+git update-index --no-skip-worktree supabase/config.toml
+git checkout -- supabase/config.toml
+
+# 3. Neuen Stand holen
+git pull --ff-only
+
+# 4. Dev-Ports wieder eintragen: Datei öffnen und mit der gesicherten Version
+#    ($env:TEMP\config.toml.dev) abgleichen (553xx statt 543xx), dann Markierung wieder setzen
+notepad supabase\config.toml
+git update-index --skip-worktree supabase/config.toml
+
+# 5. Prüfen: config.toml darf nicht als geändert erscheinen
+git status
+```
+
+Die Befehle `git checkout --` und `--no-skip-worktree` führst du bewusst von Hand aus; das Update-Skript
+tut das nie. Danach Supabase nur neu starten, wenn sich Ports oder Dienste geändert haben.
