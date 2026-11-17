@@ -1,11 +1,36 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { groupStoragePaths, type StorageFileRef } from "@/lib/orders/orderStoragePaths";
 import type { OrderType, OrderPriority } from "@/lib/types";
 
 const ORDER_LIST_SELECT =
   "*, projects(project_number, project_name), current_sample:samples!measurement_orders_sample_id_fkey(id, sample_name, sample_number, category), order_samples(sample_id, samples(id, sample_name, sample_number, category)), order_measurements(assigned_to, sample_id, status, measurement_results(id), current_sample:samples!order_measurements_sample_id_fkey(id, sample_name, sample_number, category), measurement_services(category, sla_monitoring_enabled, sla_yellow_warning_days)), linked_samples:samples!samples_order_id_fkey(id, sample_name, sample_number, category, order_id), produced_samples:samples!samples_pilot_plant_order_id_fkey(id, sample_name, sample_number, category, pilot_plant_order_id)";
 
 const ORDER_DETAIL_SELECT = `*, projects(project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name, description, is_hazardous, location_id, storage_locations(hall, room, shelf, position)), order_samples(id, sample_id, created_at, samples(id, sample_number, sample_name, description, is_hazardous)), order_measurements(*, samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name), measurement_services(service_name, category, hourly_rate, standard_duration_hours, sla_monitoring_enabled, sla_yellow_warning_days), measurement_parameters(*), measurement_results(*), work_logs(*), documents(*))`;
+
+/** Dateien (Messdokumente, Uploads, Berichts-PDFs) eines Auftrags; bei Lesefehlern bleibt die Liste unvollständig. */
+async function collectOrderStorageFiles(orderId: string): Promise<StorageFileRef[]> {
+  const files: StorageFileRef[] = [];
+  try {
+    const ms: any[] = (await unwrap(dbClient.from("order_measurements").select("id").eq("order_id", orderId))) || [];
+    const ids = ms.map((m) => m.id);
+    if (ids.length) {
+      const docs: any[] = (await unwrap(dbClient.from("documents").select("storage_path").in("order_measurement_id", ids))) || [];
+      for (const d of docs) files.push({ bucket: "measurement-documents", path: d.storage_path });
+      const ups: any[] = (await unwrap(dbClient.from("order_upload_files" as any).select("storage_path").in("measurement_id", ids))) || [];
+      for (const u of ups) files.push({ bucket: "order-uploads", path: u.storage_path });
+    }
+    const reps: any[] = (await unwrap(dbClient.from("order_reports" as any).select("id").eq("order_id", orderId))) || [];
+    if (reps.length) {
+      const vers: any[] =
+        (await unwrap(dbClient.from("order_report_versions" as any).select("pdf_storage_path").in("report_id", reps.map((r) => r.id)))) || [];
+      for (const v of vers) files.push({ bucket: "order-reports", path: v.pdf_storage_path });
+    }
+  } catch {
+    // Nur Aufräumhilfe: Das Löschen des Auftrags selbst hängt nicht davon ab.
+  }
+  return files;
+}
 
 export const orders = {
   /** Master only (server-checked): preview renumbering of a user's orders in one year. */
@@ -125,10 +150,27 @@ export const orders = {
         .eq("id", id)
     ),
 
-  delete: async (id: string) => {
+  /**
+   * Löscht den Auftrag (Datenbank-Funktion prüft Rechte und Sperren) und danach die
+   * zugehörigen Dateien im Speicher. Gibt die Anzahl Dateien zurück, die im Speicher
+   * nicht entfernt werden konnten (der Auftrag ist dann trotzdem gelöscht).
+   */
+  delete: async (id: string): Promise<number> => {
+    // Pfade VOR dem Löschen einsammeln; danach sind die Datenbankzeilen weg.
+    const files = await collectOrderStorageFiles(id);
     const { data, error } = await dbClient.rpc("cancel_or_delete_order", { _order_id: id });
     if (error) throw error;
     if (data !== id) throw new Error("Auftrag konnte nicht vollständig gelöscht werden.");
+    let failed = 0;
+    for (const [bucket, paths] of groupStoragePaths(files)) {
+      try {
+        const { error: rmErr } = await dbClient.storage.from(bucket).remove(paths);
+        if (rmErr) failed += paths.length;
+      } catch {
+        failed += paths.length;
+      }
+    }
+    return failed;
   },
 
   /** Was hängt am Auftrag (Dateien, Berichte, Fertigungsunterlagen, Proben)? Nur für Ersteller/Master. */

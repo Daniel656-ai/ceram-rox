@@ -194,8 +194,9 @@ function OrdersOverview() {
   const handleDelete = async (id: string) => {
     if (deleteOrder.isPending) return;
     try {
-      await deleteOrder.mutateAsync(id);
+      const orphaned = await deleteOrder.mutateAsync(id);
       toast.success(t("orders:deleted"));
+      if (orphaned > 0) toast.warning(`${orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
     } catch (err: any) {
       toast.error(t("orders:delete_error"), { description: err.message });
     }

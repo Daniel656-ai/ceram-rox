@@ -242,8 +242,9 @@ function OrderDetailPageInner() {
   const handleDelete = async () => {
     if (deleteOrder.isPending) return;
     try {
-      await deleteOrder.mutateAsync(order.id);
+      const orphaned = await deleteOrder.mutateAsync(order.id);
       toast.success("Messauftrag gelöscht");
+      if (orphaned > 0) toast.warning(`${orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
       navigate("/auftraege");
     } catch (err: any) {
       toast.error("Fehler beim Löschen", { description: err.message });
