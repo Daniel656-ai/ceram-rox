@@ -72,7 +72,7 @@ function OrderDetailPageInner() {
   const updateMeasurementStatus = useUpdateMeasurementStatus();
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
-  const { data: requesterEditState } = useOrderRequesterEditState(id);
+  const { data: requesterEditState, isLoading: requesterEditLoading, isError: requesterEditError, refetch: refetchRequesterEdit, isFetching: requesterEditFetching } = useOrderRequesterEditState(id);
   const copyOrder = useCopyOrder();
   const isCopy = searchParams.get("copied") === "1";
   const handleCopyOrder = async () => {
@@ -295,6 +295,16 @@ function OrderDetailPageInner() {
         <BillingStatusControl order={order as any} canEdit={canEditBilled(order as any, user?.id, role === "master")} />
         {/* Kopierfunktion temporär deaktiviert – Handler/Hook bleiben erhalten */}
         <OrderRunSheetButton order={order} />
+        {role !== "master" && isOwnRequesterOrder && order.status === "open" && (requesterEditLoading || requesterEditError) && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+            {requesterEditLoading ? t("requesterEdit.checking") : t("requesterEdit.checkError")}
+            {requesterEditError && (
+              <Button variant="outline" size="sm" disabled={requesterEditFetching} onClick={() => refetchRequesterEdit()}>
+                {t("requesterEdit.retry")}
+              </Button>
+            )}
+          </div>
+        )}
         {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
             {canOpenEditForm && (
@@ -302,9 +312,11 @@ function OrderDetailPageInner() {
                 <Pencil className="h-4 w-4 mr-1" /> {t("requesterEdit.edit")}
               </Button>
             )}
+            {(role === "master" || canOpenEditForm || (!isOwnRequesterOrder && canEditPriority)) && (
             <Button variant="outline" size="sm" onClick={openEditDialog}>
               <Pencil className="h-4 w-4 mr-1" /> {canOpenEditForm ? t("requesterEdit.quickEdit") : "Bearbeiten"}
             </Button>
+            )}
             {canEditDelete && (
             <AlertDialog>
               <AlertDialogTrigger asChild>

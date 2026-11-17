@@ -111,3 +111,85 @@ export function planServiceChanges(original: Record<string, string[]>, currentUi
 
 export type RequesterEditReason = "forbidden" | "started" | "locked" | "internal" | "not_found" | "not_authenticated" | null;
 export interface RequesterEditState { can_edit: boolean; reason: RequesterEditReason }
+
+// ---------------------------------------------------------------------------
+// Bearbeitungsmodus: geladene Positionen wiedererkennen, PP-Stammdaten ergänzen
+// ---------------------------------------------------------------------------
+
+const norm = (v: unknown) => String(v ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+export interface LoadedPosition { uid: string; service_id: string; service_name: string; origin?: string; selection_token?: string | null }
+export interface SelectionRef { token: string; aliases?: string[]; service_id?: string | null }
+
+/**
+ * Ordnet jede Formularauswahl genau einer geladenen Position derselben
+ * Dienstleistung zu (uid bleibt stabil) und markiert sie als Formularposition,
+ * damit der Auswahlabgleich keine leeren Duplikate erzeugt. Nicht zuordenbare
+ * Positionen bleiben unverändert (zusätzliche Dienstleistungen).
+ */
+export function adoptLoadedSelection<T extends LoadedPosition>(
+  positions: T[],
+  selection: SelectionRef[],
+  services: Array<{ id: string; service_name: string }>,
+): T[] {
+  const out = positions.map((p) => ({ ...p }));
+  const used = new Set<string>();
+  for (const entry of selection) {
+    const names = new Set([entry.token, ...(entry.aliases ?? [])].map(norm).filter(Boolean));
+    const serviceId = entry.service_id
+      ?? services.find((s) => names.has(norm(s.service_name)))?.id
+      ?? null;
+    const hit = out.find((p) => !used.has(p.uid) && p.origin !== "rule" && p.origin !== "template"
+      && (serviceId ? p.service_id === serviceId : names.has(norm(p.service_name))));
+    if (!hit) continue;
+    used.add(hit.uid);
+    hit.origin = "template";
+    hit.selection_token = entry.token;
+  }
+  return out;
+}
+
+/** Spalte → zulässige Feldschlüssel (exakt, keine Namensheuristik). */
+export const PP_COLUMN_FIELDS: Record<string, { binding: string; keys: string[] }> = {
+  pp_experiment_number: { binding: "order.versuchsnummer", keys: ["versuchsnummer", "pp_experiment_number"] },
+  pp_experiment_date: { binding: "order.pp_experiment_date", keys: ["versuchsdatum", "pp_experiment_date"] },
+  pp_masse_type: { binding: "order.pp_masse_type", keys: ["massetyp", "pp_masse_type"] },
+  pp_v2o5_percent: { binding: "order.pp_v2o5_percent", keys: ["v2o5", "v2o5_percent", "pp_v2o5_percent"] },
+  pp_previous_experiments: { binding: "order.pp_previous_experiments", keys: ["fruehere_versuche", "pp_previous_experiments"] },
+  pp_remarks: { binding: "order.pp_remarks", keys: ["bemerkungen", "pp_remarks"] },
+};
+
+const isEmpty = (v: unknown) => v == null || (typeof v === "string" && v.trim() === "") || (Array.isArray(v) && v.length === 0);
+
+/**
+ * Ergänzt fehlende Formularwerte aus den Pilot-Plant-Spalten des Auftrags.
+ * Vorhandene Werte werden nie überschrieben; mehrdeutige Felder bleiben leer.
+ */
+export function applyPilotPlantColumnFallback(
+  values: Record<string, unknown>,
+  fields: Array<{ field_key: string; binding_path?: string | null; field_type?: string | null }>,
+  order: Record<string, unknown> | null | undefined,
+): { values: Record<string, unknown>; filled: string[] } {
+  const next = { ...values };
+  const filled: string[] = [];
+  if (!order) return { values: next, filled };
+  for (const [column, spec] of Object.entries(PP_COLUMN_FIELDS)) {
+    const raw = order[column];
+    if (isEmpty(raw)) continue;
+    const bound = fields.filter((f) => f.binding_path === spec.binding);
+    const targets = bound.length ? bound : fields.filter((f) => spec.keys.includes(f.field_key));
+    if (targets.length !== 1) continue;
+    const field = targets[0];
+    if (!isEmpty(next[field.field_key])) continue;
+    let value: unknown = raw;
+    if (field.field_type === "date") value = String(raw).slice(0, 10);
+    else if (["number", "decimal", "percent"].includes(field.field_type ?? "")) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) continue;
+      value = n;
+    } else if (typeof raw !== "string") value = String(raw);
+    next[field.field_key] = value;
+    filled.push(field.field_key);
+  }
+  return { values: next, filled };
+}

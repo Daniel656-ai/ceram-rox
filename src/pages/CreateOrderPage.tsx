@@ -29,6 +29,7 @@ import TemplateManager from "@/components/TemplateManager";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
 import { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
 import { buildPayloadFromOrder } from "@/lib/orderTemplateCopy";
+import { adoptLoadedSelection, applyPilotPlantColumnFallback } from "@/lib/orders/requesterEdit";
 import { buildRequesterParameterRows, diffRequesterParameters, planServiceChanges } from "@/lib/orders/requesterEdit";
 import MeasurementRow from "@/components/order/MeasurementRow";
 import ServiceTabsCard from "@/components/order/ServiceTabsCard";
@@ -144,6 +145,7 @@ export default function CreateOrderPage() {
   const [draftLoading, setDraftLoading] = useState(!!searchParams.get("draft") || !!searchParams.get("edit"));
   // Bearbeitungsmodus (?edit=<Auftrags-ID>): eigener, noch nicht begonnener Auftrag.
   const editOrderId = searchParams.get("edit");
+  const editAdopted = useRef(false);
   const editBaseline = useRef<{ measurementIds: Record<string, string[]>; payload: OrderDraftPayload; order: any } | null>(null);
   const [draftLoadFailed, setDraftLoadFailed] = useState(false);
   const [closingDraft, setClosingDraft] = useState(false);
@@ -263,7 +265,7 @@ export default function CreateOrderPage() {
         return;
       }
       const [{ payload, measurementIds }, order] = await Promise.all([
-        buildPayloadFromOrder(editOrderId, { services: true, packages: true, conditions: true, orderForm: true, samples: true, attachments: false }),
+        buildPayloadFromOrder(editOrderId, { services: true, packages: true, conditions: true, orderForm: true, samples: true, attachments: false, edit: true }),
         api.orders.get(editOrderId),
       ]);
       if (cancelled) return;
@@ -283,6 +285,7 @@ export default function CreateOrderPage() {
       setDynamicValues((p.dynamicValues ?? {}) as any);
       setDynamicFormId(p.dynamicFormId ?? null);
       setServiceTab({ active: null, order: [] });
+      editAdopted.current = false;
       setLoadedDraft({ id: `edit:${editOrderId}`, payload: p } as any);
     })()
       .catch((e: any) => { if (!cancelled) { setDraftLoadFailed(true); toast.error(t("orders:requesterEdit.loadError"), { description: e.message }); } })
@@ -412,6 +415,26 @@ export default function CreateOrderPage() {
     pendingAddedUids.current = pendingAddedUids.current.filter(uid => !pendingDeselection.uids.includes(uid));
     setPendingDeselection(null);
   };
+
+  // Bearbeitungsmodus: sobald Formular und Katalog bereit sind, einmalig
+  // fehlende PP-Stammdaten aus den Auftragsspalten ergänzen und die geladenen
+  // Positionen ihrer Formularauswahl zuordnen (keine Duplikate, stabile uids).
+  useEffect(() => {
+    if (!editOrderId || editAdopted.current || draftLoading || draftLoadFailed || !templateReady || !servicesReady) return;
+    const base = editBaseline.current;
+    if (!base) return;
+    editAdopted.current = true;
+    const { values: filledValues, filled } = applyPilotPlantColumnFallback(dynamicValues, templateFields as any, base.order as any);
+    const selection = readServiceSelectionEntries(filledValues, templateFields as any, services as any);
+    const adopted = adoptLoadedSelection(measurementsRef.current as any, selection, services as any) as SelectedMeasurement[];
+    if (filled.length > 0) {
+      setDynamicValues(filledValues as any);
+      base.payload.dynamicValues = { ...(base.payload.dynamicValues ?? {}), ...Object.fromEntries(filled.map((k) => [k, filledValues[k]])) };
+    }
+    if (!dynamicFormId && templateFields.length > 0 && filled.length > 0) setDynamicFormId((templateFields[0] as any).form_definition_id ?? null);
+    setMeasurements(adopted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editOrderId, draftLoading, draftLoadFailed, templateReady, servicesReady, templateFields, services]);
 
   /** Aktueller Abgleich Auswahl -> echte Positionen (eine einzige Quelle). */
   const buildServicePlan = (current: SelectedMeasurement[]) =>

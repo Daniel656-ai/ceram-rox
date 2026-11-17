@@ -336,7 +336,7 @@ function OrdersOverview() {
                             </AlertDialogContent>
                           </AlertDialog>
                         )}
-                        {role === "auftraggeber" && o.created_by === user?.id && o.status === "open" && (
+                        {role !== "master" && isRequester && o.created_by === user?.id && o.status === "open" && (
                           <RequesterOrderRowActions orderId={o.id} renderDelete={() => (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>

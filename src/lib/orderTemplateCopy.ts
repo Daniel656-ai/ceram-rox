@@ -23,6 +23,8 @@ export interface CopyOptions {
   orderForm: boolean;
   samples: boolean;
   attachments: boolean;
+  /** Bearbeitung des bestehenden Auftrags: Identitäten/Chargen nicht verwerfen. */
+  edit?: boolean;
 }
 
 export const DEFAULT_COPY_OPTIONS: CopyOptions = {
@@ -175,6 +177,7 @@ export async function buildPayloadFromOrder(
   const measurementIds: Record<string, string[]> = {};
   if (!order) throw new Error("Auftrag nicht gefunden");
   const warnings: TemplateCopyWarning[] = [];
+  const inputOpts = { preserveIdentity: opts.edit === true };
 
   const payload: OrderDraftPayload = {
     selectedProjectId: order.project_id ?? "",
@@ -196,7 +199,7 @@ export async function buildPayloadFromOrder(
     const tpl = (order.shared_form_data as { template?: { values?: Record<string, unknown>; form_definition_id?: string } } | null)?.template;
     if (tpl?.values && tpl.form_definition_id) {
       const fields = await api.formFields.listForForm(tpl.form_definition_id);
-      payload.dynamicValues = copyTemplateInputs(tpl.values, fields);
+      payload.dynamicValues = copyTemplateInputs(tpl.values, fields, fields, inputOpts);
       payload.dynamicFormId = tpl.form_definition_id;
     }
   }
@@ -266,11 +269,11 @@ export async function buildPayloadFromOrder(
           continue;
         }
         if (candidate) {
-          if (!templateInputAllowed(candidate.def)) continue;
+          if (!templateInputAllowed(candidate.def, inputOpts)) continue;
           const parsed = parseTemplateInput(p.parameter_value, candidate.def);
           const ownerFields: Parameters<typeof copyTemplateInputs>[1] = candidate.key.startsWith("form:")
             ? linkedDefinitions.find(link => candidate.key.startsWith(`form:${link.formId}:`))?.fields ?? [] : fields;
-          const copied = copyTemplateInputs({ [candidate.def.field_key]: parsed }, ownerFields);
+          const copied = copyTemplateInputs({ [candidate.def.field_key]: parsed }, ownerFields, ownerFields, inputOpts);
           if (candidate.def.field_key in copied) values[candidate.key] = copied[candidate.def.field_key];
           continue;
         }
@@ -280,7 +283,7 @@ export async function buildPayloadFromOrder(
           try { parsedRows = JSON.parse(p.parameter_value); } catch { throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`); }
           if (!Array.isArray(parsedRows)) throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`);
           const childFields = fields.filter(f => section.fields.some(ref => ref.field_id === f.id));
-          values[name] = parsedRows.map(r => ({ ...copyTemplateInputs(r, childFields), __id: newUid() }));
+          values[name] = parsedRows.map(r => ({ ...copyTemplateInputs(r, childFields, childFields, inputOpts), __id: opts.edit && typeof r?.__id === "string" ? r.__id : newUid() }));
           continue;
         }
         const definitions = legacyDefinitions.filter(d => d.parameter_name === name);
