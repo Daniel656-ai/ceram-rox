@@ -303,5 +303,8 @@
   "runsheet_menge": "Amount",
   "runsheet_lot": "Lot number",
   "runsheet_bemerkung": "Remark",
-  "runsheet_svc_wanted": "Requested services"
+  "runsheet_svc_wanted": "Requested services",
+  "production_project_hint": "Production project from the production release",
+  "production_project_ambiguous": "Production project ambiguous",
+  "production_customer": "Customer"
 }

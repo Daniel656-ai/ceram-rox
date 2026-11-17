@@ -272,5 +272,8 @@
     "checking": "Bearbeitungsfreigabe wird geprüft …",
     "checkError": "Die Bearbeitungsfreigabe konnte nicht geprüft werden.",
     "retry": "Erneut prüfen"
-  }
+  },
+  "production_project_hint": "Fertigungsprojekt aus der Fertigungsfreigabe",
+  "production_project_ambiguous": "Fertigungsprojekt nicht eindeutig",
+  "production_customer": "Kunde"
 }
