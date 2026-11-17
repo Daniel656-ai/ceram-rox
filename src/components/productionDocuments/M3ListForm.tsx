@@ -34,6 +34,7 @@ import { canUseTestMarking, resolveTestMarkingRows, toggleTestMarkingRow, buildT
 import { Input } from "@/components/ui/input";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { buildM3SampleNames } from "@/lib/m3List/sampleNames";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
   const qc = useQueryClient();
@@ -199,6 +200,64 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
    * Fertigungsfreigabe (allen Revisionen) zugeordnet. Eine freie Auswahl eines
    * fachfremden Auftrags ist damit ausgeschlossen.
    */
+  /**
+   * Legt je m³-Zeile mit Elementnummer eine Probe an (Name: erste 9 Stellen der
+   * Artikelnummer + "-" + Elementnummer) und ordnet sie dem Auftrag zu. Bereits
+   * am Auftrag vorhandene Probennamen werden nicht doppelt angelegt.
+   */
+  const ensureSamples = async (orderId: string): Promise<{ created: number; existing: number } | null> => {
+    const rel = (release ?? {}) as Record<string, unknown>;
+    const plan = buildM3SampleNames(
+      (rel.article_number as string | null) ?? (derived.values.article_number as string | null),
+      derivedRows
+    );
+    if (plan.missingArticle) {
+      toast.warning("Keine Proben erzeugt: In der Fertigungsfreigabe fehlt die Artikelnummer.");
+      return null;
+    }
+    if (!plan.names.length) {
+      toast.warning("Keine Proben erzeugt: In der m³-Liste gibt es keine Zeile mit Elementnummer.");
+      return null;
+    }
+    const projectId = (rel.project_id as string | null) ?? null;
+    if (!projectId) {
+      toast.warning("Keine Proben erzeugt: Der Fertigungsfreigabe ist kein Projekt zugeordnet.");
+      return null;
+    }
+    const linked = (await api.orderSamples.list(orderId)) as { samples?: { sample_name?: string | null } | null }[];
+    const have = new Set(linked.map((l) => l.samples?.sample_name).filter(Boolean) as string[]);
+    const todo = plan.names.filter((n) => !have.has(n));
+    const ids: string[] = [];
+    for (const name of todo) {
+      const s = (await api.samples.create({
+        sample_name: name,
+        description: `Aus m³-Liste ${String(rel.release_number ?? "")}`.trim(),
+        project_id: projectId,
+        created_by: user!.id,
+        status: "neu",
+      })) as { id: string };
+      ids.push(s.id);
+    }
+    if (ids.length) await api.orderSamples.add(orderId, ids, user!.id);
+    await qc.invalidateQueries({ queryKey: ["samples"] });
+    await qc.invalidateQueries({ queryKey: ["orders"] });
+    if (plan.skippedRows) toast.warning(`${plan.skippedRows} Zeile(n) ohne Elementnummer: keine Probe angelegt.`);
+    return { created: ids.length, existing: plan.names.length - ids.length };
+  };
+
+  const addSamplesToExistingOrder = async () => {
+    if (!user?.id || !request.order_id) return;
+    setCreatingOrder(true);
+    try {
+      const r = await ensureSamples(request.order_id);
+      if (r) toast.success(`Proben ergänzt: ${r.created} neu, ${r.existing} bereits vorhanden.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Proben konnten nicht angelegt werden.");
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
   const createSamplingOrder = async () => {
     if (!user?.id || !request.based_on_release_id) return;
     setCreatingOrder(true);
@@ -215,6 +274,13 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       })) as { id: string; order_number?: string | null };
       await api.productionDocuments.update(requestId, { order_id: created.id });
       await api.productionDocuments.linkReleaseToOrder(request.based_on_release_id, created.id);
+      try {
+        await ensureSamples(created.id);
+      } catch (e) {
+        toast.warning(
+          `Auftrag erstellt, aber Proben konnten nicht angelegt werden: ${e instanceof Error ? e.message : "Fehler"}. Bitte „Proben aus m³-Liste ergänzen“ verwenden.`
+        );
+      }
 
       // Maßgeblich ist ausschließlich die in der m³-Liste gesetzte
       // Beprobungsauswahl (Benutzerauswahl, sonst der automatische Vorschlag) –
@@ -285,9 +351,13 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
               : "Noch keiner. Der Laborauftrag zur Beprobung wird aus dieser m³-Liste erzeugt und der Produktionsfreigabe zugeordnet."}
           </div>
         </div>
-        {!request.order_id && (
+        {!request.order_id ? (
           <Button variant="outline" onClick={createSamplingOrder} disabled={creatingOrder}>
             Beprobungsauftrag erstellen
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={addSamplesToExistingOrder} disabled={creatingOrder}>
+            Proben aus m³-Liste ergänzen
           </Button>
         )}
       </div>
