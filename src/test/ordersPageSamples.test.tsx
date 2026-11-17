@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
 vi.mock("@/hooks/useOrders", () => ({
   useOrders: () => ({ data: state.rows, isLoading: false }),
   useDeleteOrder: () => ({ mutateAsync: vi.fn() }),
+  useOrderDeletePreview: () => ({ data: undefined, isLoading: false, isError: false, refetch: vi.fn() }),
   useCopyOrder: () => ({ mutateAsync: vi.fn() }),
   useUpdateOrderRanking: () => ({ mutateAsync: vi.fn() }),
   useUpdateOrder: () => ({ mutateAsync: vi.fn(), isPending: false }),

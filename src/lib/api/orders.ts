@@ -125,10 +125,19 @@ export const orders = {
         .eq("id", id)
     ),
 
-  delete: async (id: string) => {
-    const { data, error } = await dbClient.rpc("cancel_or_delete_order", { _order_id: id });
+  delete: async (id: string, expectedHash?: string) => {
+    const { data, error } = expectedHash
+      ? await dbClient.rpc("force_delete_order" as any, { _order_id: id, _expected_hash: expectedHash })
+      : await dbClient.rpc("cancel_or_delete_order", { _order_id: id });
     if (error) throw error;
     if (data !== id) throw new Error("Auftrag konnte nicht vollständig gelöscht werden.");
+  },
+
+  /** Tatsächliche Verknüpfungen vor dem Löschen (serverseitig gezählt) + Prüfschlüssel. */
+  deletePreview: async (id: string) => {
+    const { data, error } = await dbClient.rpc("preview_force_delete_order" as any, { _order_id: id });
+    if (error) throw error;
+    return data as unknown as OrderDeletePreview;
   },
 
   /** Serverseitige Freigabe: darf der aktuelle Nutzer den Auftrag noch bearbeiten/löschen? */
@@ -334,3 +343,11 @@ export const orders = {
   },
 };
 
+
+export interface OrderDeletePreview {
+  links: Record<string, number>;
+  hash: string;
+  order_number: string | null;
+  mode: "force" | "requester";
+  blocked_reason: string | null;
+}

@@ -122,6 +122,19 @@ export const productionDocuments = {
     await unwrap(db.from("production_document_requests").update(fields).eq("id", id));
   },
 
+  /** Verknüpfungen einer m³-Liste vor dem Löschen (nur Master). */
+  async m3DeletePreview(id: string): Promise<M3DeletePreview> {
+    const { data, error } = await (db as any).rpc("preview_delete_m3_list", { _id: id });
+    if (error) throw error;
+    return data as M3DeletePreview;
+  },
+
+  /** Löscht nur die m³-Liste serverseitig (Master, Prüfschlüssel, Audit). */
+  async deleteM3List(id: string, expectedHash: string): Promise<void> {
+    const { error } = await (db as any).rpc("delete_m3_list", { _id: id, _expected_hash: expectedHash });
+    if (error) throw error;
+  },
+
   async remove(id: string): Promise<void> {
     await unwrap(db.from("production_document_requests").delete().eq("id", id));
   },
@@ -201,3 +214,11 @@ export const productionDocuments = {
     );
   },
 };
+
+export interface M3DeletePreview {
+  release: { id: string; release_number: string | null; revision_number: number | null; project_name: string | null; customer_name: string | null; article_number: string | null } | null;
+  order: { id: string; order_number: string | null } | null;
+  samples: number;
+  form_value_keys: number;
+  hash: string;
+}

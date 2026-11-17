@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useServices, useMyQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { loadTaskFilterState, saveTaskFilterState, effectiveServiceIds, buildTaskServicePredicate, isTaskFilterActive, DEFAULT_TASK_FILTER, type TaskFilterState, type CompetenceState } from "@/lib/tasks/taskServiceFilter";
 import { TaskOrderIdentity } from "@/components/orders/TaskOrderIdentity";
+import { OrderDeleteDialog } from "@/components/orders/OrderDeleteDialog";
 import { RequesterOrderRowActions } from "@/components/orders/RequesterOrderRowActions";
 import { useOrders, useDeleteOrder, useCopyOrder } from "@/hooks/useOrders";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
@@ -315,51 +316,15 @@ function OrdersOverview() {
                         <div className="flex items-center gap-1">
                         {/* Kopiervorschau temporär deaktiviert – siehe useCopyOrder/Hooks & API bleiben erhalten */}
                         {role === "master" && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                          <OrderDeleteDialog orderId={o.id} trigger={<Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
                                 <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>{t("orders:delete_title")}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {t("orders:requesterEdit.deleteConfirm")}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
-                                <AlertDialogAction disabled={deleteOrder.isPending} onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                  {t("common:delete")}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                              </Button>} />
                         )}
                         {showOwnOrderActions({ hasRole, userId: user?.id, createdBy: o.created_by, status: o.status }) && (
                           <RequesterOrderRowActions orderId={o.id} renderDelete={role === "master" ? () => null : () => (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                          <OrderDeleteDialog orderId={o.id} trigger={<Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
                                 <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>{t("orders:delete_title")}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {t("orders:requesterEdit.deleteConfirm")}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
-                                <AlertDialogAction disabled={deleteOrder.isPending} onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                  {t("common:delete")}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                              </Button>} />
                           )} />
                         )}
                         </div>

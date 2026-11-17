@@ -109,3 +109,21 @@ export function useRemoveProductionDocument() {
     onSuccess: invalidate,
   });
 }
+
+export function useM3DeletePreview(id: string | null) {
+  return useQuery({
+    queryKey: ["m3-delete-preview", id],
+    queryFn: () => api.productionDocuments.m3DeletePreview(id!),
+    enabled: !!id,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+export function useDeleteM3List() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (a: { id: string; hash: string }) => api.productionDocuments.deleteM3List(a.id, a.hash),
+    onSuccess: invalidate,
+  });
+}

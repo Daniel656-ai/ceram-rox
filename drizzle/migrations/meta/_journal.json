@@ -281,6 +281,13 @@
       "when": 1794841959513,
       "tag": "0039_m3_retrofit_fix_history_column",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794930826582,
+      "tag": "0040_force_delete_order_and_m3_list",
+      "breakpoints": true
     }
   ]
 }

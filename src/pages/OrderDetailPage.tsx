@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { OrderDeleteDialog } from "@/components/orders/OrderDeleteDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -318,27 +319,9 @@ function OrderDetailPageInner() {
             </Button>
             )}
             {canEditDelete && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
+            <OrderDeleteDialog orderId={order.id} trigger={<Button variant="destructive" size="sm">
                   <Trash2 className="h-4 w-4 mr-1" /> Löschen
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Auftrag löschen?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t("requesterEdit.deleteConfirm")}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                  <AlertDialogAction disabled={deleteOrder.isPending} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Löschen
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                </Button>} onDeleted={() => navigate("/auftraege")} />
             )}
           </div>
         )}

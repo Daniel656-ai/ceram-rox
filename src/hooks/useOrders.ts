@@ -55,9 +55,10 @@ export function useUpdateOrder() {
 export function useDeleteOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.orders.delete(id),
-    onSuccess: async (_d, id) => {
-      qc.removeQueries({ queryKey: ["order", id] });
+    mutationFn: (arg: string | { id: string; hash?: string }) =>
+      typeof arg === "string" ? api.orders.delete(arg) : api.orders.delete(arg.id, arg.hash),
+    onSuccess: async (_d, arg) => {
+      qc.removeQueries({ queryKey: ["order", typeof arg === "string" ? arg : arg.id] });
       // All active order/task/sample views refetch; inactive caches become stale.
       // Includes the actual keys "unassigned-qualified" and "open-measurements-overview".
       await qc.invalidateQueries();
@@ -115,5 +116,15 @@ export function useOrderRequesterEditState(orderId: string | undefined, enabled 
     queryFn: () => api.orders.requesterEditState(orderId!),
     enabled: !!orderId && enabled,
     staleTime: 15_000,
+  });
+}
+
+export function useOrderDeletePreview(orderId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["order-delete-preview", orderId],
+    queryFn: () => api.orders.deletePreview(orderId),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
   });
 }
