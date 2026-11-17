@@ -89,13 +89,22 @@ DO $$ DECLARE o uuid; t text; BEGIN
   o:=fixture_order(); EXECUTE format('INSERT INTO %I(order_measurement_id) VALUES($1)',t) USING o; PERFORM assert_blocked(o,'Arbeitszeiten');
   RAISE NOTICE 'PASS protected %',t;
  END LOOP;
+ -- Dateien/Berichte/Fertigungsunterlagen blockieren das Löschen nicht mehr (0037): sie werden entfernt bzw. gelöst.
  FOREACH t IN ARRAY ARRAY['documents','order_upload_files'] LOOP
-  o:=fixture_order(); EXECUTE format('INSERT INTO %I(%I) VALUES($1)',t,CASE WHEN t='documents' THEN 'order_measurement_id' ELSE 'measurement_id' END) USING o; PERFORM assert_blocked(o,'Dokumente');
-  RAISE NOTICE 'PASS protected %',t;
+  o:=fixture_order(); EXECUTE format('INSERT INTO %I(%I) VALUES($1)',t,CASE WHEN t='documents' THEN 'order_measurement_id' ELSE 'measurement_id' END) USING o;
+  IF (order_delete_summary(o)->>'has_results')::boolean THEN RAISE EXCEPTION 'summary wrong'; END IF;
+  PERFORM cancel_or_delete_order(o);
+  IF EXISTS(SELECT 1 FROM measurement_orders WHERE id=o) THEN RAISE EXCEPTION 'Order with % not deleted',t; END IF;
+  IF NOT EXISTS(SELECT 1 FROM activity_log WHERE event_type='order_deleted' AND metadata->>'deleted_order_id'=o::text AND metadata ? 'removed_attachments') THEN RAISE EXCEPTION 'Missing attachment audit'; END IF;
+  RAISE NOTICE 'PASS deletable with %',t;
  END LOOP;
  FOREACH t IN ARRAY ARRAY['order_reports','production_releases','production_document_requests'] LOOP
-  o:=fixture_order(); EXECUTE format('INSERT INTO %I(order_id) VALUES($1)',t) USING o; PERFORM assert_blocked(o,'Dokumente');
-  RAISE NOTICE 'PASS protected %',t;
+  o:=fixture_order(); EXECUTE format('INSERT INTO %I(order_id) VALUES($1)',t) USING o;
+  PERFORM cancel_or_delete_order(o);
+  IF EXISTS(SELECT 1 FROM measurement_orders WHERE id=o) THEN RAISE EXCEPTION 'Order with % not deleted',t; END IF;
+  IF t='production_releases' AND (NOT EXISTS(SELECT 1 FROM production_releases WHERE order_id IS NULL) OR EXISTS(SELECT 1 FROM production_releases WHERE order_id=o)) THEN RAISE EXCEPTION 'Release not detached'; END IF;
+  IF t<>'production_releases' AND EXISTS(SELECT 1 FROM public.production_document_requests WHERE order_id=o) THEN RAISE EXCEPTION 'Request not removed'; END IF;
+  RAISE NOTICE 'PASS deletable with %',t;
  END LOOP;
  o:=fixture_order(); INSERT INTO project_time_entries(order_id) VALUES(o); PERFORM assert_blocked(o,'Arbeitszeiten'); RAISE NOTICE 'PASS protected project time';
  o:=fixture_order(); INSERT INTO pilot_plant_produced_samples(order_id) VALUES(o); PERFORM assert_blocked(o,'erzeugte Proben'); RAISE NOTICE 'PASS protected produced sample';
