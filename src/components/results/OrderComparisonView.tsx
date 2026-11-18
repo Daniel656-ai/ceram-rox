@@ -1,16 +1,29 @@
-import { useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { X, Columns3 } from "lucide-react";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
-import { buildOrderComparison, type OrderGroup } from "@/lib/results/orderGroups";
+import {
+  buildOrderComparison,
+  summarizeRuns,
+  type ComparisonColumn,
+  type ComparisonRow,
+  type ComparisonSection,
+  type OrderGroup,
+} from "@/lib/results/orderGroups";
 import type { SampleGroup } from "@/lib/results/sampleResultsAggregation";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { InfoHint } from "@/components/results/InfoHint";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
+const nfMean = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 4 });
+const fmt = (v: number | string) => (typeof v === "number" ? nf.format(v) : v);
 
-/** Proben eines Auftrags nebeneinander: je Analyseart eine Tabelle (nur offizielle Werte). */
+const contextText = (c: Record<string, string> | null): string | undefined =>
+  c && Object.keys(c).length ? Object.entries(c).map(([k, v]) => `${k}: ${v}`).join(" · ") : undefined;
+
+/** Proben eines Auftrags nebeneinander: je Analyseart eine Tabelle (nur offizielle Werte), je Durchlauf eine Unterzeile. */
 export default function OrderComparisonView({
   order,
   onClose,
@@ -21,26 +34,47 @@ export default function OrderComparisonView({
   onSelectSample: (sample: SampleGroup) => void;
 }) {
   const sections = useMemo(() => buildOrderComparison(order), [order]);
+  const [showMean, setShowMean] = useState(false);
+  const anyMultiple = sections.some((s) => s.hasMultipleRuns);
+  const meanAvailable = sections.filter((s) => s.hasMultipleRuns).every((s) => s.meanAvailable);
+  const meanOn = showMean && meanAvailable;
+
   return (
     <div className="space-y-3">
-      {/* Kopf in einer Zeile: Auftrag · Projekt · Schließen */}
+      {/* Kopf in einer Zeile: Auftrag · Projekt (nur wenn vorhanden) · Schließen */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <Columns3 className="h-4 w-4 shrink-0" />
           <span className="truncate text-base font-semibold">
             Auftrag <span className="font-mono">{order.displayNumber}</span>
-            <span className="font-normal text-muted-foreground">
-              {" "}· Projekt {order.projectNames.join(", ") || "–"}
-            </span>
+            {order.projectNames.length > 0 && (
+              <span className="font-normal text-muted-foreground"> · Projekt {order.projectNames.join(", ")}</span>
+            )}
           </span>
           <InfoHint label="Hinweise zur Ergebnisübersicht">
             Je Analyseart eine Tabelle mit den Proben des Auftrags. Es werden nur offizielle Werte gezeigt.
-            Klick auf eine Probe öffnet ihre Messungen.
+            Hat eine Probe mehrere Durchläufe, steht jeder in einer eigenen Unterzeile. Klick auf eine Probe
+            öffnet ihre Messungen.
           </InfoHint>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Seitenleiste schließen" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {anyMultiple && (
+            <label
+              className={`flex items-center gap-1.5 text-xs ${meanAvailable ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}
+              title={
+                meanAvailable
+                  ? "Je Probe eine Zeile mit dem Mittelwert über die Durchläufe (Einzelwerte im Tooltip). Nur sinnvoll bei Wiederholungen."
+                  : "Die Durchläufe unterscheiden sich im Kontext (z. B. Messstelle) – kein Mittelwert möglich."
+              }
+            >
+              <Checkbox checked={meanOn} disabled={!meanAvailable} onCheckedChange={(v) => setShowMean(v === true)} />
+              Mittelwert anzeigen
+            </label>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Seitenleiste schließen" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       {sections.length === 0 && (
         <p className="py-6 text-center text-sm text-muted-foreground">Keine Messungen in diesem Auftrag.</p>
@@ -56,55 +90,120 @@ export default function OrderComparisonView({
             {sec.interimCount > 0 ? ` (${sec.interimCount} vorläufig)` : ""}
           </p>
         ) : (
-          <Card key={sec.serviceName}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">{sec.serviceName}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <HorizontalScrollArea className="rounded-md border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="p-2 text-left font-medium">Probe</th>
-                      {sec.columns.map((c) => (
-                        <th key={c.key} className="whitespace-nowrap p-2 text-right font-medium">
-                          {formatResultLabel(c.label, c.unit)}
-                        </th>
-                      ))}
+          <SectionTable key={sec.serviceName} sec={sec} meanOn={meanOn} onSelectSample={onSelectSample} />
+        ),
+      )}
+    </div>
+  );
+}
+
+function SampleCell({ row, label, first }: { row: ComparisonRow; label: string | null; first: boolean }) {
+  return (
+    <td className="whitespace-nowrap p-2">
+      {first ? (
+        <>
+          <span className="font-mono">{row.sample.sampleNumber || "–"}</span>
+          {row.sample.sampleName && <span className="ml-1 text-xs text-muted-foreground">{row.sample.sampleName}</span>}
+          {label && <span className="ml-2 text-xs text-muted-foreground">· {label}</span>}
+        </>
+      ) : (
+        <span className="pl-4 text-xs text-muted-foreground">{label}</span>
+      )}
+    </td>
+  );
+}
+
+function SectionTable({
+  sec,
+  meanOn,
+  onSelectSample,
+}: {
+  sec: ComparisonSection;
+  meanOn: boolean;
+  onSelectSample: (sample: SampleGroup) => void;
+}) {
+  const cols: ComparisonColumn[] = sec.columns;
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">{sec.serviceName}</CardTitle>
+      </CardHeader>
+      <CardContent className="p-4 pt-0">
+        <HorizontalScrollArea className="rounded-md border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="p-2 text-left font-medium">Probe</th>
+                {cols.map((c) => (
+                  <th key={c.key} className="whitespace-nowrap p-2 text-right font-medium">
+                    {formatResultLabel(c.label, c.unit)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sec.rows.map((row, i) => {
+                const rowKey = `${row.sample.sampleKey}-${i}`;
+                // Mittelwert-Ansicht: je Probe mit mehreren Durchläufen genau eine Zeile.
+                if (meanOn && row.runs.length > 1) {
+                  return (
+                    <tr
+                      key={rowKey}
+                      className="cursor-pointer border-t hover:bg-muted/40"
+                      onClick={() => onSelectSample(row.sample)}
+                    >
+                      <td className="whitespace-nowrap p-2">
+                        <span className="font-mono">{row.sample.sampleNumber || "–"}</span>
+                        {row.sample.sampleName && (
+                          <span className="ml-1 text-xs text-muted-foreground">{row.sample.sampleName}</span>
+                        )}
+                        <span className="ml-2 text-xs text-muted-foreground">· Ø n={row.runs.length}</span>
+                      </td>
+                      {cols.map((c) => {
+                        const s = summarizeRuns(row, c.key);
+                        const tip = s.values.length ? `n=${s.n} · Einzelwerte: ${s.values.map(fmt).join(" / ")}` : undefined;
+                        return (
+                          <td key={c.key} className="whitespace-nowrap p-2 text-right font-mono" title={tip}>
+                            {s.mean !== null ? (
+                              nfMean.format(s.mean)
+                            ) : s.values.length ? (
+                              s.values.map(fmt).join(" / ")
+                            ) : (
+                              "–"
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sec.rows.map((row, i) => (
+                  );
+                }
+                return (
+                  <Fragment key={rowKey}>
+                    {row.runs.map((run, ri) => (
                       <tr
-                        key={`${row.sample.sampleKey}-${i}`}
-                        className="cursor-pointer border-t hover:bg-muted/40"
+                        key={run.key}
+                        className={`cursor-pointer hover:bg-muted/40 ${ri === 0 ? "border-t" : ""}`}
                         onClick={() => onSelectSample(row.sample)}
+                        title={contextText(run.context)}
                       >
-                        <td className="whitespace-nowrap p-2">
-                          <span className="font-mono">{row.sample.sampleNumber || "–"}</span>
-                          {row.sample.sampleName && (
-                            <span className="ml-1 text-xs text-muted-foreground">{row.sample.sampleName}</span>
-                          )}
-                        </td>
-                        {sec.columns.map((c) => {
-                          const vals = row.cells[c.key];
+                        <SampleCell row={row} label={run.label} first={ri === 0} />
+                        {cols.map((c) => {
+                          const vals = run.cells[c.key];
                           return (
-                            <td key={c.key} className="p-2 text-right font-mono">
-                              {vals && vals.length
-                                ? vals.map((v) => (typeof v === "number" ? nf.format(v) : v)).join(" / ")
-                                : "–"}
+                            <td key={c.key} className="whitespace-nowrap p-2 text-right font-mono">
+                              {vals && vals.length ? vals.map(fmt).join(" / ") : "–"}
                             </td>
                           );
                         })}
                       </tr>
                     ))}
-                  </tbody>
-                </table>
-              </HorizontalScrollArea>
-            </CardContent>
-          </Card>
-        ),
-      )}
-    </div>
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </HorizontalScrollArea>
+      </CardContent>
+    </Card>
   );
 }

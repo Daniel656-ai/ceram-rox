@@ -47,7 +47,7 @@ describe("Gruppierung nach Auftrag", () => {
     expect(sec.columns).toHaveLength(1);
     expect(sec.rows).toHaveLength(3);
     const key = sec.columns[0].key;
-    const byNum = Object.fromEntries(sec.rows.map((r) => [r.sample.sampleNumber, r.cells[key]]));
+    const byNum = Object.fromEntries(sec.rows.map((r) => [r.sample.sampleNumber, r.runs[0].cells[key]]));
     expect(byNum.P260039).toEqual([5]);
     expect(byNum.P260042).toEqual([6]);
   });
