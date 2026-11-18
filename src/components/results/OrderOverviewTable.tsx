@@ -1,11 +1,12 @@
 import { Fragment, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, ClipboardList, Columns3 } from "lucide-react";
+import { ChevronDown, ChevronRight, ClipboardList } from "lucide-react";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { formatSampleDate, type SampleGroup } from "@/lib/results/sampleResultsAggregation";
 import type { OrderGroup } from "@/lib/results/orderGroups";
+import { InfoHint } from "@/components/results/InfoHint";
+import { ResultCountBadges } from "@/components/results/ResultCountBadges";
 
 export type OverviewMode = "order" | "sample";
 
@@ -32,40 +33,138 @@ export function OverviewModeToggle({ mode, onChange }: { mode: OverviewMode; onC
 }
 
 /**
- * Übersicht nach Auftrag: Auftragszeile aufklappbar, darunter die Proben.
- * Klick auf eine Probe öffnet ihre Messungen, „Ergebnisübersicht“ die Ergebnistabelle des Auftrags.
+ * Übersicht nach Auftrag. Pfeil links klappt die Proben auf, Klick auf die
+ * Auftragszeile öffnet die Ergebnisübersicht des Auftrags (Seitenleiste),
+ * Klick auf eine Probe öffnet ihre Messungen.
+ * `compact` (Seitenleiste offen): nur Auftrag/Probe und Messwerte, einzeilig.
  */
 export default function OrderOverviewTable({
   orders,
   expanded,
   onToggle,
   onSelectSample,
-  onCompare,
+  onOpenOverview,
   headerExtra,
   selected,
   compareOrderKey,
+  compact = false,
 }: {
   orders: OrderGroup[];
   expanded: Set<string>;
   onToggle: (orderKey: string) => void;
   onSelectSample: (order: OrderGroup, sample: SampleGroup) => void;
-  onCompare: (order: OrderGroup) => void;
+  onOpenOverview: (order: OrderGroup) => void;
   headerExtra?: ReactNode;
   /** Aktuell in der Seitenleiste geöffnete Probe bzw. Ergebnisübersicht (Markierung). */
   selected?: { orderKey: string | null; sampleKey: string } | null;
   compareOrderKey?: string | null;
+  compact?: boolean;
 }) {
   const isSel = (o: OrderGroup, s: SampleGroup) =>
     !!selected && selected.orderKey === o.orderKey && selected.sampleKey === s.sampleKey;
+
+  const table = (
+    <table className={`w-full text-sm ${compact ? "table-fixed" : ""}`}>
+      <thead className="bg-muted/50">
+        <tr>
+          <th className="w-8 p-2" />
+          <th className="p-2 text-left font-medium">Auftrag / Probe</th>
+          {!compact && <th className="p-2 text-left font-medium">Projekt / Bezeichnung</th>}
+          {!compact && <th className="p-2 text-right font-medium">Proben</th>}
+          {!compact && <th className="p-2 text-right font-medium">Analysen</th>}
+          <th className={`p-2 text-left font-medium ${compact ? "w-[200px]" : ""}`}>Messwerte</th>
+          {!compact && <th className="p-2 text-left font-medium">Letzte Aktivität</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {orders.map((o) => {
+          const open = expanded.has(o.orderKey);
+          const orderSel = compareOrderKey === o.orderKey;
+          return (
+            <Fragment key={o.orderKey}>
+              <tr
+                className={`cursor-pointer border-t font-medium transition-colors hover:bg-muted/40 ${orderSel ? "bg-primary/10" : "bg-muted/20"}`}
+                data-selected-row={orderSel ? "true" : undefined}
+                onClick={() => onOpenOverview(o)}
+                title="Ergebnisübersicht des Auftrags öffnen"
+              >
+                <td className="p-1 text-muted-foreground">
+                  <button
+                    type="button"
+                    className="rounded p-1 hover:bg-accent"
+                    aria-label={open ? "Proben einklappen" : "Proben aufklappen"}
+                    aria-expanded={open}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggle(o.orderKey);
+                    }}
+                  >
+                    {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </button>
+                </td>
+                <td className="truncate whitespace-nowrap p-2 font-mono">
+                  {o.displayNumber || "–"}
+                  <span className="ml-2 font-sans text-xs font-normal text-muted-foreground">
+                    {o.samples.length} {o.samples.length === 1 ? "Probe" : "Proben"}
+                  </span>
+                </td>
+                {!compact && <td className="p-2 font-normal">{o.projectNames.join(", ") || "–"}</td>}
+                {!compact && <td className="p-2 text-right">{o.samples.length}</td>}
+                {!compact && <td className="p-2 text-right">{o.measurementCount}</td>}
+                <td className="whitespace-nowrap p-2 font-normal">
+                  <ResultCountBadges official={o.officialCount} interim={o.interimCount} />
+                </td>
+                {!compact && (
+                  <td className="p-2 text-xs font-normal text-muted-foreground">{formatSampleDate(o.lastActivityAt)}</td>
+                )}
+              </tr>
+              {open &&
+                o.samples.map((s) => (
+                  <tr
+                    key={`${o.orderKey}:${s.sampleKey}`}
+                    className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${isSel(o, s) ? "bg-primary/10" : ""}`}
+                    data-selected-row={isSel(o, s) ? "true" : undefined}
+                    aria-selected={isSel(o, s)}
+                    onClick={() => onSelectSample(o, s)}
+                  >
+                    <td className="p-2" />
+                    <td className="truncate whitespace-nowrap p-2 pl-4" title={s.sampleName || undefined}>
+                      <span className="font-mono">{s.sampleNumber || "–"}</span>
+                      {s.originalSampleNumber && (
+                        <span className="ml-1 text-[10px] text-muted-foreground">(Ersatz für {s.originalSampleNumber})</span>
+                      )}
+                      {compact && s.sampleName && (
+                        <span className="ml-2 text-xs text-muted-foreground">{s.sampleName}</span>
+                      )}
+                    </td>
+                    {!compact && <td className="p-2">{s.sampleName || "–"}</td>}
+                    {!compact && <td className="p-2" />}
+                    {!compact && <td className="p-2 text-right">{s.measurements.length}</td>}
+                    <td className="whitespace-nowrap p-2">
+                      <ResultCountBadges official={s.officialCount} interim={s.interimCount} />
+                    </td>
+                    {!compact && (
+                      <td className="p-2 text-xs text-muted-foreground">{formatSampleDate(s.lastActivityAt)}</td>
+                    )}
+                  </tr>
+                ))}
+            </Fragment>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
             <ClipboardList className="h-4 w-4" /> Aufträge
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
-              Auftrag aufklappen für die Proben · Klick auf eine Probe öffnet ihre Messungen
-            </span>
+            <InfoHint label="Hinweise zur Auftragsliste">
+              Pfeil links klappt die Proben eines Auftrags auf. Klick auf die Auftragszeile öffnet die
+              Ergebnisübersicht des Auftrags, Klick auf eine Probe öffnet ihre Messungen.
+            </InfoHint>
           </CardTitle>
           {headerExtra}
         </div>
@@ -75,95 +174,10 @@ export default function OrderOverviewTable({
           <p className="py-8 text-center text-sm text-muted-foreground">
             Keine Aufträge mit Ergebnissen für die aktuellen Filter.
           </p>
+        ) : compact ? (
+          <div className="overflow-hidden rounded-md border">{table}</div>
         ) : (
-          <HorizontalScrollArea className="rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="p-2 w-8" />
-                  <th className="p-2 text-left font-medium">Auftrag / Probe</th>
-                  <th className="p-2 text-left font-medium">Projekt / Bezeichnung</th>
-                  <th className="p-2 text-right font-medium">Proben</th>
-                  <th className="p-2 text-right font-medium">Analysen</th>
-                  <th className="p-2 text-right font-medium">Messwerte</th>
-                  <th className="p-2 text-left font-medium">Letzte Aktivität</th>
-                  <th className="p-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => {
-                  const open = expanded.has(o.orderKey);
-                  return (
-                    <Fragment key={o.orderKey}>
-                      <tr
-                        className={`cursor-pointer border-t font-medium transition-colors hover:bg-muted/40 ${compareOrderKey === o.orderKey ? "bg-primary/10" : "bg-muted/20"}`}
-                        data-selected-row={compareOrderKey === o.orderKey ? "true" : undefined}
-                        onClick={() => onToggle(o.orderKey)}
-                        aria-expanded={open}
-                      >
-                        <td className="p-2 text-muted-foreground">
-                          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </td>
-                        <td className="p-2 font-mono">{o.displayNumber || "–"}</td>
-                        <td className="p-2 font-normal">{o.projectNames.join(", ") || "–"}</td>
-                        <td className="p-2 text-right">{o.samples.length}</td>
-                        <td className="p-2 text-right">{o.measurementCount}</td>
-                        <td className="p-2 text-right font-normal">
-                          <Badge variant="default" className="mr-1 text-[10px]">{o.officialCount} offiziell</Badge>
-                          {o.interimCount > 0 && (
-                            <Badge variant="secondary" className="text-[10px]">{o.interimCount} vorläufig</Badge>
-                          )}
-                        </td>
-                        <td className="p-2 text-xs font-normal text-muted-foreground">{formatSampleDate(o.lastActivityAt)}</td>
-                        <td className="p-2 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onCompare(o);
-                            }}
-                          >
-                            <Columns3 className="mr-1 h-3.5 w-3.5" /> Ergebnisübersicht
-                          </Button>
-                        </td>
-                      </tr>
-                      {open &&
-                        o.samples.map((s) => (
-                          <tr
-                            key={`${o.orderKey}:${s.sampleKey}`}
-                            className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${isSel(o, s) ? "bg-primary/10" : ""}`}
-                            data-selected-row={isSel(o, s) ? "true" : undefined}
-                            aria-selected={isSel(o, s)}
-                            onClick={() => onSelectSample(o, s)}
-                          >
-                            <td className="p-2" />
-                            <td className="p-2 pl-6 font-mono">
-                              {s.sampleNumber || "–"}
-                              {s.originalSampleNumber && (
-                                <span className="ml-1 text-[10px] text-muted-foreground">(Ersatz für {s.originalSampleNumber})</span>
-                              )}
-                            </td>
-                            <td className="p-2">{s.sampleName || "–"}</td>
-                            <td className="p-2" />
-                            <td className="p-2 text-right">{s.measurements.length}</td>
-                            <td className="p-2 text-right">
-                              <Badge variant="default" className="mr-1 text-[10px]">{s.officialCount} offiziell</Badge>
-                              {s.interimCount > 0 && (
-                                <Badge variant="secondary" className="text-[10px]">{s.interimCount} vorläufig</Badge>
-                              )}
-                            </td>
-                            <td className="p-2 text-xs text-muted-foreground">{formatSampleDate(s.lastActivityAt)}</td>
-                            <td className="p-2 text-muted-foreground"><ChevronRight className="h-4 w-4" /></td>
-                          </tr>
-                        ))}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </HorizontalScrollArea>
+          <HorizontalScrollArea className="rounded-md border">{table}</HorizontalScrollArea>
         )}
       </CardContent>
     </Card>

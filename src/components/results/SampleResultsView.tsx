@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, X, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { ResultCountBadges } from "@/components/results/ResultCountBadges";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { prepareDisplayResults, splitInternalResults, type ImportProtocol } from "@/lib/results/internalResults";
@@ -275,33 +276,33 @@ export default function SampleResultsView({
 
   return (
     <div className="space-y-4">
-      {(onBack || onClose) && (
-        <div className="flex items-center justify-between gap-3">
-          {onBack ? (
-            <Button variant="outline" size="sm" onClick={onBack}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> {backLabel}
-            </Button>
-          ) : <span />}
-          {onClose && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Seitenleiste schließen" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      )}
-
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex flex-wrap items-center gap-2">
-            <FlaskConical className="h-4 w-4" />
-            Probe <span className="font-mono">{group.sampleNumber || "–"}</span>
-            {group.sampleName && <span className="font-normal text-muted-foreground">· {group.sampleName}</span>}
-            {group.originalSampleNumber && (
-              <Badge variant="outline" className="text-[10px]">
-                Ersatzprobe für {group.originalSampleNumber}
-              </Badge>
+          {/* Kopf in einer Zeile: [Zurück] Probe · Bezeichnung … [X] */}
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 text-base">
+              {onBack && (
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onBack}>
+                  <ArrowLeft className="mr-1 h-3.5 w-3.5" /> {backLabel}
+                </Button>
+              )}
+              <FlaskConical className="h-4 w-4 shrink-0" />
+              <span>
+                Probe <span className="font-mono">{group.sampleNumber || "–"}</span>
+              </span>
+              {group.sampleName && <span className="font-normal text-muted-foreground">· {group.sampleName}</span>}
+              {group.originalSampleNumber && (
+                <Badge variant="outline" className="text-[10px]">
+                  Ersatzprobe für {group.originalSampleNumber}
+                </Badge>
+              )}
+            </CardTitle>
+            {onClose && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Seitenleiste schließen" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
             )}
-          </CardTitle>
+          </div>
           <p className="text-xs text-muted-foreground">
             Projekt: {group.projectNames.join(", ") || "–"} · Auftrag:{" "}
             <span className="font-mono">{group.orderDisplayNumbers.join(", ") || "–"}</span> ·{" "}
@@ -317,6 +318,26 @@ export default function SampleResultsView({
         const officialCount = real.filter(isOfficialResult).length;
         const interimCount = real.length - officialCount;
         const isOpen = expanded.has(m.measurementId);
+        // Analyse ohne offizielle Werte: nur eine kurze Zeile statt einer großen Karte
+        // (Klick klappt die volle Karte auf).
+        if (officialCount === 0 && !isOpen) {
+          return (
+            <button
+              key={m.measurementId}
+              type="button"
+              className="flex w-full items-center gap-2 rounded-md border border-dashed px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted/40"
+              onClick={() => toggleExpanded(m.measurementId)}
+              aria-expanded={false}
+            >
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                <span className="font-medium text-foreground">{m.serviceName || "Messung"}</span>
+                {" "}– noch keine offiziellen Werte
+                {interimCount > 0 ? ` (${interimCount} vorläufig)` : ""}
+              </span>
+            </button>
+          );
+        }
         return (
           <Card key={m.measurementId}>
             <CardHeader className="py-3">
@@ -331,10 +352,7 @@ export default function SampleResultsView({
                   <CardTitle className="text-base">{m.serviceName || "Messung"}</CardTitle>
                   <Badge variant="outline" className="font-mono text-[10px]">{m.measurementNumber}</Badge>
                   <Badge variant="secondary" className="text-[10px]">{m.status}</Badge>
-                  <Badge variant="default" className="text-[10px]">{officialCount} offiziell</Badge>
-                  {interimCount > 0 && (
-                    <Badge variant="secondary" className="text-[10px]">{interimCount} vorläufig</Badge>
-                  )}
+                  <ResultCountBadges official={officialCount} interim={interimCount} />
                   <span className="text-xs text-muted-foreground">
                     Auftrag <span className="font-mono">{m.orderDisplayNumber || m.orderNumber}</span>
                     {m.assignedToName ? ` · ${m.assignedToName}` : ""}

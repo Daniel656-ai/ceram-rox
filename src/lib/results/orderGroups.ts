@@ -84,6 +84,9 @@ export interface ComparisonSection {
   serviceName: string;
   columns: ComparisonColumn[];
   rows: ComparisonRow[];
+  /** Werte dieser Analyseart (ohne interne Einträge) – für die Kurzzeile ohne offizielle Werte. */
+  officialCount: number;
+  interimCount: number;
 }
 
 const labelOf = (r: { display_label: string | null; result_name: string }): string => {
@@ -96,14 +99,17 @@ const labelOf = (r: { display_label: string | null; result_name: string }): stri
 
 /** Je Analyseart (Dienstleistung) eine Tabelle: Proben als Zeilen, offizielle Parameter als Spalten. */
 export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
-  const sections = new Map<string, { columns: Map<string, ComparisonColumn>; rows: ComparisonRow[] }>();
+  const sections = new Map<
+    string,
+    { columns: Map<string, ComparisonColumn>; rows: ComparisonRow[]; officialCount: number; interimCount: number }
+  >();
   for (const sample of order.samples) {
     const perService = new Map<string, ComparisonRow>();
     for (const m of sample.measurements) {
       const name = m.serviceName || "Messung";
       let sec = sections.get(name);
       if (!sec) {
-        sec = { columns: new Map(), rows: [] };
+        sec = { columns: new Map(), rows: [], officialCount: 0, interimCount: 0 };
         sections.set(name, sec);
       }
       let row = perService.get(name);
@@ -113,7 +119,12 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
         sec.rows.push(row);
       }
       for (const r of m.results) {
-        if (!isOfficialResult(r) || isInternalResult(r)) continue;
+        if (isInternalResult(r)) continue;
+        if (!isOfficialResult(r)) {
+          sec.interimCount += 1;
+          continue;
+        }
+        sec.officialCount += 1;
         const label = labelOf(r);
         const key = `${label}::${r.unit ?? ""}`;
         if (!sec.columns.has(key)) sec.columns.set(key, { key, label, unit: r.unit ?? null });
@@ -124,6 +135,12 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
     }
   }
   return [...sections.entries()]
-    .map(([serviceName, s]) => ({ serviceName, columns: [...s.columns.values()], rows: s.rows }))
+    .map(([serviceName, s]) => ({
+      serviceName,
+      columns: [...s.columns.values()],
+      rows: s.rows,
+      officialCount: s.officialCount,
+      interimCount: s.interimCount,
+    }))
     .sort((a, b) => a.serviceName.localeCompare(b.serviceName, "de"));
 }
