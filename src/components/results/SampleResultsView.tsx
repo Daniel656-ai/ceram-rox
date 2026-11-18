@@ -2,7 +2,10 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine } from "lucide-react";
+import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { splitInternalResults, type ImportProtocol } from "@/lib/results/internalResults";
 import CompletedResultForm from "@/components/CompletedResultForm";
 import RequesterConditionsPanel from "@/components/results/RequesterConditionsPanel";
 import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
@@ -66,7 +69,9 @@ export function SampleMeasurementResultsTable({
   onCorrect?: (ctx: CorrectionContext) => void;
 }) {
   const canCorrect = useCanCorrectResults();
-  const instances = useMemo(() => groupResultsByInstance(measurement.results), [measurement.results]);
+  // Interne Einträge (Importprotokoll) sind keine Messwerte: nicht in der Tabelle.
+  const { visible, protocols } = useMemo(() => splitInternalResults(measurement.results), [measurement.results]);
+  const instances = useMemo(() => groupResultsByInstance(visible), [visible]);
 
   return (
     <div className="space-y-3">
@@ -148,6 +153,52 @@ export function SampleMeasurementResultsTable({
           </HorizontalScrollArea>
         </div>
       ))}
+      {protocols.map((p, i) => (
+        <ImportProtocolInfo key={i} protocol={p} />
+      ))}
+    </div>
+  );
+}
+
+/** Kompakte Importinfo mit aufklappbaren Details (statt technischem Rohtext). */
+export function ImportProtocolInfo({ protocol: p }: { protocol: ImportProtocol }) {
+  const [open, setOpen] = useState(false);
+  const date = p.importedAt ? formatSampleDate(p.importedAt) : null;
+  const rows: Array<[string, string]> = [];
+  if (p.profile) rows.push(["Profil", p.profile]);
+  if (p.sample) rows.push(["Probe in der Datei", p.sample]);
+  if (p.source) rows.push(["Quelle", p.source]);
+  if (p.count !== null) rows.push(["Übernommene Werte", String(p.count)]);
+  if (p.unassignedCount > 0) rows.push(["Nicht zugeordnete Werte", String(p.unassignedCount)]);
+  if (p.hasCurves) rows.push(["Kurven", "vorhanden (siehe Rohdaten & Kurven)"]);
+  if (p.rawDatasetId) rows.push(["Rohdaten-ID", p.rawDatasetId]);
+  for (const m of p.metadata) rows.push([m.label, m.value]);
+  return (
+    <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs">
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 text-left text-muted-foreground"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <Info className="h-3.5 w-3.5" />
+        <span>
+          Importiert{date ? ` am ${date}` : ""}
+          {p.source ? ` aus ${p.source}` : ""}
+          {p.profile ? ` (${p.profile})` : ""}
+        </span>
+      </button>
+      {open && rows.length > 0 && (
+        <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5">
+          {rows.map(([k, v], i) => (
+            <div key={i} className="contents">
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd className="break-all">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }
@@ -170,6 +221,17 @@ export default function SampleResultsView({
   const [conditionsRecord, setConditionsRecord] = useState<ResultRecord | null>(null);
   const [historyFor, setHistoryFor] = useState<SampleMeasurementRecord | null>(null);
   const [correction, setCorrection] = useState<CorrectionContext | null>(null);
+  // Analysen starten eingeklappt (nur Kopfzeile); bei genau einer Analyse gleich offen.
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(group.measurements.length === 1 ? [group.measurements[0].measurementId] : []),
+  );
+  const toggleExpanded = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const toConditionsRecord = (m: SampleMeasurementRecord): ResultRecord =>
     ({
@@ -235,57 +297,80 @@ export default function SampleResultsView({
       </Card>
 
       {group.measurements.map((m) => {
-        const officialCount = m.results.filter(isOfficialResult).length;
-        const interimCount = m.results.length - officialCount;
+        // Interne Einträge (Importprotokoll) zählen nicht als Messwerte.
+        const real = splitInternalResults(m.results).visible;
+        const officialCount = real.filter(isOfficialResult).length;
+        const interimCount = real.length - officialCount;
+        const isOpen = expanded.has(m.measurementId);
         return (
           <Card key={m.measurementId}>
-            <CardHeader className="pb-3">
+            <CardHeader className="py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-base flex flex-wrap items-center gap-2">
-                  {m.serviceName || "Messung"}
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-left"
+                  onClick={() => toggleExpanded(m.measurementId)}
+                  aria-expanded={isOpen}
+                >
+                  {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                  <CardTitle className="text-base">{m.serviceName || "Messung"}</CardTitle>
                   <Badge variant="outline" className="font-mono text-[10px]">{m.measurementNumber}</Badge>
                   <Badge variant="secondary" className="text-[10px]">{m.status}</Badge>
                   <Badge variant="default" className="text-[10px]">{officialCount} offiziell</Badge>
                   {interimCount > 0 && (
                     <Badge variant="secondary" className="text-[10px]">{interimCount} vorläufig</Badge>
                   )}
-                </CardTitle>
-                <div className="flex flex-wrap gap-1">
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setConditionsRecord(toConditionsRecord(m))}>
-                    <ClipboardList className="mr-1 h-3.5 w-3.5" /> Auftraggeber-Vorgaben
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setHistoryFor(m)}>
-                    <History className="mr-1 h-3.5 w-3.5" /> Änderungshistorie
-                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Auftrag <span className="font-mono">{m.orderDisplayNumber || m.orderNumber}</span>
+                    {m.assignedToName ? ` · ${m.assignedToName}` : ""}
+                    {m.completedAt ? ` · ${formatSampleDate(m.completedAt)}` : ""}
+                  </span>
+                </button>
+                <div className="flex gap-1">
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onOpenInspector(m)}>
                     <PanelRightOpen className="mr-1 h-3.5 w-3.5" /> Details
                   </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-7 w-7" aria-label="Weitere Aktionen">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setConditionsRecord(toConditionsRecord(m))}>
+                        <ClipboardList className="mr-2 h-4 w-4" /> Auftraggeber-Vorgaben
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setHistoryFor(m)}>
+                        <History className="mr-2 h-4 w-4" /> Änderungshistorie
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Auftrag <span className="font-mono">{m.orderDisplayNumber || m.orderNumber}</span>
-                {m.projectName ? ` · Projekt ${m.projectName}` : ""}
-                {m.assignedToName ? ` · Messdienstleister ${m.assignedToName}` : ""}
-                {m.completedAt ? ` · abgeschlossen am ${formatSampleDate(m.completedAt)}` : ""}
-              </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Fachlicher Zusammenhang: Formularlayout aus dem Formulardesigner (schreibgeschützt). */}
-              <CompletedResultForm
-                measurementId={m.measurementId}
-                serviceId={m.serviceId}
-                measurementNumber={m.measurementNumber}
-                serviceName={m.serviceName}
-              />
-              {/* Verlustfreie Gesamtsicht aller Werte (Fallback bei historischen
-                  Messungen ohne Formularlayout und offizielle Kennzeichnung). */}
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Alle Messwerte dieser Analyse (jeder gespeicherte Wert genau einmal)
-                </p>
-                <SampleMeasurementResultsTable measurement={m} onCorrect={setCorrection} />
-              </div>
-            </CardContent>
+            {isOpen && (
+              <CardContent>
+                {/* Standard: kompakte, vollständige Wertetabelle. Das Original-Formular
+                    (Formulardesigner, schreibgeschützt) wird nur auf Klick geladen. */}
+                <Tabs defaultValue="values">
+                  <TabsList>
+                    <TabsTrigger value="values">Werte</TabsTrigger>
+                    <TabsTrigger value="form">Formular</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="values" className="mt-3">
+                    <SampleMeasurementResultsTable measurement={m} onCorrect={setCorrection} />
+                  </TabsContent>
+                  <TabsContent value="form" className="mt-3">
+                    <CompletedResultForm
+                      measurementId={m.measurementId}
+                      serviceId={m.serviceId}
+                      measurementNumber={m.measurementNumber}
+                      serviceName={m.serviceName}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            )}
           </Card>
         );
       })}
