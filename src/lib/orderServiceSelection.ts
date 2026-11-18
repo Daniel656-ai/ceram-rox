@@ -150,6 +150,30 @@ export function readServiceSelection(
   return readServiceSelectionEntries(values, fields).map((e) => e.token);
 }
 
+/**
+ * Löst einen Auswahlwert zu einer Dienstleistung des Katalogs auf (eine einzige Stelle für Erstellen UND Bearbeiten).
+ * Stabile Zuordnung (`service_id`) hat Vorrang; ist sie ungültig, gibt es KEINEN Namens-Rückfall (invalidRef).
+ */
+export function resolveEntryService(
+  entry: SelectionEntry,
+  services: SelectableService[],
+  byName?: Map<string, SelectableService>,
+): { service?: SelectableService; invalidRef: boolean } {
+  if (entry.service_id) {
+    const service = services.find((s) => s.id === entry.service_id);
+    return service ? { service, invalidRef: false } : { invalidRef: true };
+  }
+  const names = byName ?? new Map(services.map((s) => [normalizeToken(s.service_name), s] as const).reverse());
+  let service = names.get(normalizeToken(entry.token));
+  if (!service) {
+    for (const alias of entry.aliases ?? []) {
+      service = names.get(normalizeToken(alias));
+      if (service) break;
+    }
+  }
+  return { service, invalidRef: false };
+}
+
 export interface SyncPlan {
   /** Neu anzulegende Positionen (Dienstleistung aus dem Katalog aufgelöst). */
   add: Array<{ service: SelectableService; token: string }>;
@@ -198,20 +222,10 @@ export function planServiceSync(params: {
   selection.forEach((entry) => {
     const token = normalizeToken(entry.token);
     if (!token || presentTokens.has(token)) return;
-    let service: SelectableService | undefined;
-    if (entry.service_id) {
-      // Stabile Zuordnung hat Vorrang. Ungültig/archiviert → kein Namens-Fallback.
-      service = services.find((s) => s.id === entry.service_id);
-      if (!service) { unresolved.push(entry.token.trim() + INVALID_SERVICE_REF_SUFFIX); return; }
-    } else {
-      service = byName.get(token);
-      if (!service) {
-        for (const alias of entry.aliases) {
-          service = byName.get(normalizeToken(alias));
-          if (service) break;
-        }
-      }
-    }
+    // Stabile Zuordnung hat Vorrang. Ungültig/archiviert → kein Namens-Fallback.
+    const resolved = resolveEntryService(entry, services, byName);
+    if (resolved.invalidRef) { unresolved.push(entry.token.trim() + INVALID_SERVICE_REF_SUFFIX); return; }
+    const service = resolved.service;
     if (!service) { unresolved.push(entry.token.trim()); return; }
     if (add.some((a) => normalizeToken(a.token) === token || a.service.id === service!.id)) return;
     add.push({ service, token: entry.token.trim() });
