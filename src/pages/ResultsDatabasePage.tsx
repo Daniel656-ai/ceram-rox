@@ -12,25 +12,9 @@ import OrderOverviewTable, { OverviewModeToggle, type OverviewMode } from "@/com
 import OrderComparisonView from "@/components/results/OrderComparisonView";
 import { InfoHint } from "@/components/results/InfoHint";
 import {
-  ALL_SERVICES, buildServiceOptions, columnsForService, nonEmptyColumns, recordsForService, resolveMatrixService,
+  ALL_SERVICES, buildServiceOptions, columnsForService, nonEmptyColumns, readMatrixPref, recordsForService,
+  resolveMatrixService, writeMatrixPref,
 } from "@/lib/resultsMatrix";
-
-/** Gemerkte Matrix-Einstellungen (nur Komfort; ohne Speicher funktioniert alles weiter). */
-const MATRIX_PREF_PREFIX = "ceram.resultsMatrix.";
-const readMatrixPref = (key: string): string | null => {
-  try {
-    return window.localStorage.getItem(MATRIX_PREF_PREFIX + key);
-  } catch {
-    return null;
-  }
-};
-const writeMatrixPref = (key: string, value: string) => {
-  try {
-    window.localStorage.setItem(MATRIX_PREF_PREFIX + key, value);
-  } catch {
-    /* Speicher nicht verfügbar – Einstellung gilt nur für diese Sitzung */
-  }
-};
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { buildNavItems, compareKeyAfterStep, stepSelection } from "@/lib/results/sampleNavigation";
@@ -178,7 +162,7 @@ export default function ResultsDatabasePage() {
   }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, conditionKey, conditionValue, sampleFilter, dateFrom, dateTo, searchText]);
 
   // ---- Ergebnismatrix: Messart, leere Spalten (nur Anzeige, Export bleibt unverändert) ----
-  const serviceOptions = useMemo(() => buildServiceOptions(serviceSchemas, records), [serviceSchemas, records]);
+  const serviceOptions = useMemo(() => buildServiceOptions(serviceSchemas, records, filteredRecords), [serviceSchemas, records, filteredRecords]);
   const [storedService, setStoredService] = useState<string | null>(() => readMatrixPref("service"));
   const matrixService = resolveMatrixService(storedService, serviceOptions);
   const changeMatrixService = (key: string) => {
@@ -846,6 +830,8 @@ export default function ResultsDatabasePage() {
                     variant={matrixService === o.key ? "default" : "outline"}
                     className="h-7 text-xs"
                     aria-pressed={matrixService === o.key}
+                    disabled={o.resultCount === 0 && matrixService !== o.key}
+                    title={o.resultCount === 0 ? "Keine Ergebnisse unter den aktuellen Filtern" : undefined}
                     onClick={() => changeMatrixService(o.key)}
                   >
                     {o.name}

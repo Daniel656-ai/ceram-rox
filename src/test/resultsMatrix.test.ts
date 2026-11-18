@@ -70,3 +70,37 @@ describe("Ergebnismatrix: Messart und leere Spalten", () => {
     expect(exportCell(records[2], all.find((c) => c.label === "Porenvolumen")!.key)).toBe(0);
   });
 });
+
+describe("Messart-Auswahl folgt den Filtern", () => {
+  const only = (key: string) => recordsForService(records, key);
+
+  it("Zahlen berücksichtigen die Filter, die Reihenfolge bleibt stabil", () => {
+    const all = buildServiceOptions(schemas, records, records);
+    const filtered = buildServiceOptions(schemas, records, only("s-bet"));
+    expect(filtered.map((o) => o.key)).toEqual(all.map((o) => o.key));
+    const bet = filtered.find((o) => o.key === "s-bet")!;
+    const rfa = filtered.find((o) => o.key === "s-rfa")!;
+    expect(bet.resultCount).toBe(3);
+    expect(rfa.resultCount).toBe(0);
+    expect(rfa.totalCount).toBe(4);
+  });
+
+  it("gemerkte Messart ohne Ergebnisse unter den Filtern: Auswahl springt auf eine mit Ergebnissen (keine leere Tabelle)", () => {
+    const opts = buildServiceOptions(schemas, records, only("s-bet"));
+    expect(resolveMatrixService("s-rfa", opts)).toBe("s-bet");
+    // Filter weg: die gemerkte Messart gilt wieder
+    const back = buildServiceOptions(schemas, records, records);
+    expect(resolveMatrixService("s-rfa", back)).toBe("s-rfa");
+  });
+
+  it("ohne Standardwahl: Messart mit den meisten Ergebnissen unter den Filtern", () => {
+    const opts = buildServiceOptions(schemas, records, only("s-akt"));
+    expect(resolveMatrixService(null, opts)).toBe("s-akt");
+  });
+
+  it("sind alle Messarten leer, bleibt die gemerkte stehen; „Alle“ bleibt immer gültig", () => {
+    const none = buildServiceOptions(schemas, records, []);
+    expect(resolveMatrixService("s-bet", none)).toBe("s-bet");
+    expect(resolveMatrixService(ALL_SERVICES, none)).toBe(ALL_SERVICES);
+  });
+});

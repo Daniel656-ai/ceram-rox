@@ -26,31 +26,73 @@ export const recordServiceKey = (r: Pick<ResultRecord, "serviceName"> & { servic
 export interface MatrixServiceOption {
   key: string;
   name: string;
-  /** Anzahl offizieller Ergebnisse dieser Messart (ungefilterte Datenbasis). */
+  /** Offizielle Ergebnisse dieser Messart unter den AKTUELLEN Filtern. */
   resultCount: number;
+  /** Offizielle Ergebnisse dieser Messart insgesamt (ungefilterte Datenbasis). */
+  totalCount: number;
 }
 
-/** Messarten für die Auswahl: meiste Ergebnisse zuerst, bei Gleichstand alphabetisch. */
-export function buildServiceOptions(schemas: ServiceResultSchema[], records: ResultRecord[]): MatrixServiceOption[] {
+const countResults = (records: ResultRecord[]): Map<string, number> => {
   const counts = new Map<string, number>();
   for (const r of records) {
     const key = recordServiceKey(r);
     counts.set(key, (counts.get(key) ?? 0) + r.outputResults.length);
   }
+  return counts;
+};
+
+/**
+ * Messarten für die Auswahl. Die Reihenfolge bleibt stabil (meiste Ergebnisse
+ * insgesamt zuerst, dann alphabetisch) und springt nicht bei Filteränderungen;
+ * die angezeigte Zahl berücksichtigt die aktuellen Filter.
+ */
+export function buildServiceOptions(
+  schemas: ServiceResultSchema[],
+  allRecords: ResultRecord[],
+  filteredRecords: ResultRecord[] = allRecords,
+): MatrixServiceOption[] {
+  const total = countResults(allRecords);
+  const filtered = countResults(filteredRecords);
   return schemas
-    .map((s) => ({ key: schemaServiceKey(s), name: s.serviceName, resultCount: counts.get(schemaServiceKey(s)) ?? 0 }))
-    .sort((a, b) => b.resultCount - a.resultCount || a.name.localeCompare(b.name, "de"));
+    .map((s) => ({
+      key: schemaServiceKey(s),
+      name: s.serviceName,
+      resultCount: filtered.get(schemaServiceKey(s)) ?? 0,
+      totalCount: total.get(schemaServiceKey(s)) ?? 0,
+    }))
+    .sort((a, b) => b.totalCount - a.totalCount || a.name.localeCompare(b.name, "de"));
 }
 
 /**
- * Gültige Auswahl bestimmen: gemerkte Messart, falls sie noch existiert,
- * sonst die Messart mit den meisten Ergebnissen; „Alle“ nur, wenn gemerkt.
+ * Gültige Auswahl bestimmen. Die gemerkte Messart gilt nur, solange sie unter den
+ * aktuellen Filtern Ergebnisse hat – sonst folgt die Auswahl dem Filter (erste
+ * Messart mit Ergebnissen). Die gemerkte Wahl selbst bleibt unverändert und
+ * kommt zurück, sobald der Filter aufgehoben wird. „Alle“ nur, wenn gewählt.
  */
 export function resolveMatrixService(stored: string | null | undefined, options: MatrixServiceOption[]): string {
   if (stored === ALL_SERVICES) return ALL_SERVICES;
-  if (stored && options.some((o) => o.key === stored)) return stored;
-  return options[0]?.key ?? ALL_SERVICES;
+  const withResults = options.filter((o) => o.resultCount > 0);
+  const storedOption = options.find((o) => o.key === stored);
+  if (storedOption && (storedOption.resultCount > 0 || withResults.length === 0)) return storedOption.key;
+  return withResults[0]?.key ?? options[0]?.key ?? ALL_SERVICES;
 }
+
+/* ---- gemerkte Einstellungen (nur Komfort; ohne Speicher gilt die Auswahl nur für die Sitzung) ---- */
+const MATRIX_PREF_PREFIX = "ceram.resultsMatrix.";
+export const readMatrixPref = (key: string): string | null => {
+  try {
+    return window.localStorage.getItem(MATRIX_PREF_PREFIX + key);
+  } catch {
+    return null;
+  }
+};
+export const writeMatrixPref = (key: string, value: string): void => {
+  try {
+    window.localStorage.setItem(MATRIX_PREF_PREFIX + key, value);
+  } catch {
+    /* Speicher nicht verfügbar */
+  }
+};
 
 /** Spalten der gewählten Messart (Reihenfolge laut Ergebnisstruktur) bzw. aller Messarten. */
 export function columnsForService(schemas: ServiceResultSchema[], service: string): ResultParamColumn[] {
