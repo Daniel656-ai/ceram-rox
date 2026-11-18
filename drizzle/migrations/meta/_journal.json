@@ -302,6 +302,13 @@
       "when": 1794906800000,
       "tag": "0042_order_edit_remove_services",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794950000000,
+      "tag": "0043_fix_delete_facts_array_cast",
+      "breakpoints": true
     }
   ]
 }
