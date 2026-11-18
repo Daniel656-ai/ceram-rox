@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, X, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { prepareDisplayResults, splitInternalResults, type ImportProtocol } from "@/lib/results/internalResults";
@@ -212,10 +212,16 @@ export function ImportProtocolInfo({ protocol: p }: { protocol: ImportProtocol }
 export default function SampleResultsView({
   group,
   onBack,
+  backLabel = "Zurück",
+  onClose,
   onOpenInspector,
 }: {
   group: SampleGroup;
-  onBack: () => void;
+  /** Optional: Rücksprung (z. B. zur Ergebnisübersicht des Auftrags). */
+  onBack?: () => void;
+  backLabel?: string;
+  /** Schließt die Seitenleiste. */
+  onClose?: () => void;
   onOpenInspector: (measurement: SampleMeasurementRecord) => void;
 }) {
   const [conditionsRecord, setConditionsRecord] = useState<ResultRecord | null>(null);
@@ -269,11 +275,20 @@ export default function SampleResultsView({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={onBack}>
-          <ArrowLeft className="mr-1 h-4 w-4" /> Zurück zur Probenübersicht
-        </Button>
-      </div>
+      {(onBack || onClose) && (
+        <div className="flex items-center justify-between gap-3">
+          {onBack ? (
+            <Button variant="outline" size="sm" onClick={onBack}>
+              <ArrowLeft className="mr-1 h-4 w-4" /> {backLabel}
+            </Button>
+          ) : <span />}
+          {onClose && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Seitenleiste schließen" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      )}
 
       <Card>
         <CardHeader className="pb-3">

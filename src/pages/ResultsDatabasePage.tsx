@@ -10,6 +10,9 @@ import { groupRecordsBySample, matchesSampleFilters, type SampleGroup, type Samp
 import { groupRecordsByOrder } from "@/lib/results/orderGroups";
 import OrderOverviewTable, { OverviewModeToggle, type OverviewMode } from "@/components/results/OrderOverviewTable";
 import OrderComparisonView from "@/components/results/OrderComparisonView";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { buildNavItems, stepSelection } from "@/lib/results/sampleNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,6 +186,65 @@ export default function ResultsDatabasePage() {
     () => (compareOrderKey ? orderGroups.find((o) => o.orderKey === compareOrderKey) ?? null : null),
     [compareOrderKey, orderGroups]
   );
+
+  // ---- Seitenleiste: Probe bzw. Ergebnisübersicht rechts neben der Liste ----
+  const isWide = useMediaQuery("(min-width: 1280px)");
+  const panelOpen = !!activeSample || !!compareOrder;
+  const closePanel = () => {
+    setSelectedSample(null);
+    setCompareOrderKey(null);
+  };
+  const changeOverviewMode = (m: OverviewMode) => {
+    // Auswahlschlüssel unterscheiden sich je Ansicht – daher zurücksetzen.
+    closePanel();
+    setOverviewMode(m);
+  };
+  const panel = activeSample ? (
+    <SampleResultsView
+      key={`${selectedSample?.orderKey ?? ""}:${activeSample.sampleKey}`}
+      group={activeSample}
+      onBack={compareOrder ? () => setSelectedSample(null) : undefined}
+      backLabel="Zurück zur Ergebnisübersicht"
+      onClose={closePanel}
+      onOpenInspector={setInspectedMeasurement}
+    />
+  ) : compareOrder ? (
+    <OrderComparisonView
+      order={compareOrder}
+      onClose={closePanel}
+      onSelectSample={(s) => setSelectedSample({ orderKey: compareOrder.orderKey, sampleKey: s.sampleKey })}
+    />
+  ) : null;
+
+  // Wechsel per Pfeiltasten (nur geteilte Ansicht, nicht beim Tippen oder bei offenen Dialogen).
+  const navItems = useMemo(
+    () => buildNavItems(overviewMode, orderGroups, expandedOrders, sampleGroups),
+    [overviewMode, orderGroups, expandedOrders, sampleGroups]
+  );
+  useEffect(() => {
+    if (!isWide || !selectedSample) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key !== "ArrowDown" && e.key !== "ArrowUp") || e.defaultPrevented) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.("input, textarea, select, [contenteditable='true'], [role='combobox'], [role='listbox'], [role='menu']")) return;
+      if (document.querySelector("[role='dialog']")) return;
+      const next = stepSelection(navItems, selectedSample, e.key === "ArrowDown" ? 1 : -1);
+      if (!next) return;
+      e.preventDefault();
+      setSelectedSample(next);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isWide, selectedSample, navItems]);
+  // Gewählte Zeile sichtbar halten.
+  useEffect(() => {
+    if (!selectedSample && !compareOrderKey) return;
+    const id = requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>("[data-selected-row='true']")?.scrollIntoView?.({ block: "nearest" })
+    );
+    return () => cancelAnimationFrame(id);
+  }, [selectedSample, compareOrderKey]);
 
   // ==========================================================
   // Export – die Spaltenstruktur ist immer identisch (stabile
@@ -607,41 +669,65 @@ export default function ResultsDatabasePage() {
 
         {/* Sample View (3 Ebenen) */}
         <TabsContent value="samples">
-          {activeSample ? (
-            <SampleResultsView
-              key={`${selectedSample?.orderKey ?? ""}:${activeSample.sampleKey}`}
-              group={activeSample}
-              onBack={() => setSelectedSample(null)}
-              onOpenInspector={setInspectedMeasurement}
-            />
-          ) : compareOrder ? (
-            <OrderComparisonView
-              order={compareOrder}
-              onBack={() => setCompareOrderKey(null)}
-              onSelectSample={(s) => setSelectedSample({ orderKey: compareOrder.orderKey, sampleKey: s.sampleKey })}
-            />
-          ) : overviewMode === "order" ? (
-            <OrderOverviewTable
-              orders={orderGroups}
-              expanded={expandedOrders}
-              onToggle={(key) =>
-                setExpandedOrders((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(key)) next.delete(key);
-                  else next.add(key);
-                  return next;
-                })
-              }
-              onSelectSample={(o, s) => setSelectedSample({ orderKey: o.orderKey, sampleKey: s.sampleKey })}
-              onCompare={(o) => setCompareOrderKey(o.orderKey)}
-              headerExtra={<OverviewModeToggle mode={overviewMode} onChange={setOverviewMode} />}
-            />
-          ) : (
-            <SampleOverviewTable
-              groups={sampleGroups}
-              onSelect={(g) => setSelectedSample({ orderKey: null, sampleKey: g.sampleKey })}
-              headerExtra={<OverviewModeToggle mode={overviewMode} onChange={setOverviewMode} />}
-            />
+          {/* Liste bleibt sichtbar; Probe/Ergebnisübersicht erscheint rechts daneben (breit)
+              bzw. überlagernd (schmal). */}
+          <div className={panelOpen && isWide ? "grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-4" : ""}>
+            <div className="min-w-0">
+              {overviewMode === "order" ? (
+                <OrderOverviewTable
+                  orders={orderGroups}
+                  expanded={expandedOrders}
+                  onToggle={(key) =>
+                    setExpandedOrders((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(key)) next.delete(key);
+                      else next.add(key);
+                      return next;
+                    })
+                  }
+                  onSelectSample={(o, s) => {
+                    setCompareOrderKey(null);
+                    setSelectedSample({ orderKey: o.orderKey, sampleKey: s.sampleKey });
+                  }}
+                  onCompare={(o) => {
+                    setSelectedSample(null);
+                    setCompareOrderKey(o.orderKey);
+                  }}
+                  selected={selectedSample}
+                  compareOrderKey={selectedSample ? null : compareOrderKey}
+                  headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
+                />
+              ) : (
+                <SampleOverviewTable
+                  groups={sampleGroups}
+                  onSelect={(g) => {
+                    setCompareOrderKey(null);
+                    setSelectedSample({ orderKey: null, sampleKey: g.sampleKey });
+                  }}
+                  selectedSampleKey={selectedSample?.orderKey == null ? selectedSample?.sampleKey ?? null : null}
+                  headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
+                />
+              )}
+            </div>
+            {panelOpen && isWide && (
+              <aside
+                className="sticky top-2 max-h-[calc(100vh-1rem)] overflow-y-auto rounded-md border bg-background p-3"
+                aria-label="Details"
+              >
+                {panel}
+              </aside>
+            )}
+          </div>
+          {panelOpen && !isWide && (
+            <Sheet open onOpenChange={(o) => !o && closePanel()}>
+              <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-3xl">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>Details</SheetTitle>
+                  <SheetDescription>Probe bzw. Ergebnisübersicht des Auftrags</SheetDescription>
+                </SheetHeader>
+                {panel}
+              </SheetContent>
+            </Sheet>
           )}
           <ResultDetailInspector
             measurement={inspectedMeasurement}

@@ -42,6 +42,8 @@ export default function OrderOverviewTable({
   onSelectSample,
   onCompare,
   headerExtra,
+  selected,
+  compareOrderKey,
 }: {
   orders: OrderGroup[];
   expanded: Set<string>;
@@ -49,7 +51,12 @@ export default function OrderOverviewTable({
   onSelectSample: (order: OrderGroup, sample: SampleGroup) => void;
   onCompare: (order: OrderGroup) => void;
   headerExtra?: ReactNode;
+  /** Aktuell in der Seitenleiste geöffnete Probe bzw. Ergebnisübersicht (Markierung). */
+  selected?: { orderKey: string | null; sampleKey: string } | null;
+  compareOrderKey?: string | null;
 }) {
+  const isSel = (o: OrderGroup, s: SampleGroup) =>
+    !!selected && selected.orderKey === o.orderKey && selected.sampleKey === s.sampleKey;
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -89,7 +96,8 @@ export default function OrderOverviewTable({
                   return (
                     <Fragment key={o.orderKey}>
                       <tr
-                        className="cursor-pointer border-t bg-muted/20 font-medium transition-colors hover:bg-muted/40"
+                        className={`cursor-pointer border-t font-medium transition-colors hover:bg-muted/40 ${compareOrderKey === o.orderKey ? "bg-primary/10" : "bg-muted/20"}`}
+                        data-selected-row={compareOrderKey === o.orderKey ? "true" : undefined}
                         onClick={() => onToggle(o.orderKey)}
                         aria-expanded={open}
                       >
@@ -125,7 +133,9 @@ export default function OrderOverviewTable({
                         o.samples.map((s) => (
                           <tr
                             key={`${o.orderKey}:${s.sampleKey}`}
-                            className="cursor-pointer border-t transition-colors hover:bg-muted/40"
+                            className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${isSel(o, s) ? "bg-primary/10" : ""}`}
+                            data-selected-row={isSel(o, s) ? "true" : undefined}
+                            aria-selected={isSel(o, s)}
                             onClick={() => onSelectSample(o, s)}
                           >
                             <td className="p-2" />

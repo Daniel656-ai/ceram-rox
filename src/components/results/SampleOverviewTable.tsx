@@ -13,10 +13,12 @@ export default function SampleOverviewTable({
   groups,
   headerExtra,
   onSelect,
+  selectedSampleKey,
 }: {
   groups: SampleGroup[];
   onSelect: (group: SampleGroup) => void;
   headerExtra?: ReactNode;
+  selectedSampleKey?: string | null;
 }) {
   return (
     <Card>
@@ -55,7 +57,9 @@ export default function SampleOverviewTable({
                 {groups.map((g) => (
                   <tr
                     key={g.sampleKey}
-                    className="cursor-pointer border-t transition-colors hover:bg-muted/40"
+                    className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${g.sampleKey === selectedSampleKey ? "bg-primary/10" : ""}`}
+                    data-selected-row={g.sampleKey === selectedSampleKey ? "true" : undefined}
+                    aria-selected={g.sampleKey === selectedSampleKey}
                     onClick={() => onSelect(g)}
                   >
                     <td className="p-2 font-mono">
