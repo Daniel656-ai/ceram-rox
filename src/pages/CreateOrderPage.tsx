@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { billedForCreate } from "@/lib/orders/billing";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/hooks/useProjects";
@@ -37,6 +37,11 @@ import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
 import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
 import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
 import { useRefreshGuard } from "@/lib/refreshGuard";
+import { useOrderEditData } from "@/hooks/useOrderEditData";
+import ExistingServicesReadOnly from "@/components/order/ExistingServicesReadOnly";
+import { deriveLocks, diffOrderEdit, formStateFromOrder, snapshotFromOrder, type EditSnapshot } from "@/lib/orders/orderEdit";
+import { isServiceField } from "@/lib/orderServiceSelection";
+import { experimentNumberPatch as experimentNumberPatchForEdit } from "@/lib/orders/experimentNumber";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
 import type { FormField } from "@/lib/api/formFields";
 import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
@@ -61,6 +66,9 @@ const newUid = () =>
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
+  // Bearbeiten-Modus: dieselbe Maske, geöffnet unter /auftraege/<id>/bearbeiten (Aufgabe 012).
+  const { id: editOrderId } = useParams();
+  const isEdit = !!editOrderId;
   const queryClient = useQueryClient();
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
@@ -155,7 +163,7 @@ export default function CreateOrderPage() {
   const urlDraftId = searchParams.get("draft");
   useEffect(() => { setPendingDeselection(null); }, [urlDraftId, orderKind, mode]);
   const draftHydrated = !urlDraftId || urlDraftId === localCreatedId.current || loadedDraft?.id === urlDraftId;
-  const autosaveEnabled = draftsEnabled && mode === "single" && !draftLoading && draftHydrated && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
+  const autosaveEnabled = draftsEnabled && !isEdit && mode === "single" && !draftLoading && draftHydrated && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
   const autosave = useOrderDraftAutosave({
     enabled: autosaveEnabled,
     userId: user?.id,
@@ -173,11 +181,39 @@ export default function CreateOrderPage() {
   });
   // „Ansicht aktualisieren": Entwurf vorher sichern; ohne Bestätigung abbrechen.
   useRefreshGuard(async () => {
+    if (isEdit) return; // Bearbeiten: kein Entwurf, nur Speichern/Verwerfen
     if (!hasDraftContent) return;
     if (!autosaveEnabled) throw new Error("draft not ready");
     const id = await autosave.saveNow();
     if (!id) throw new Error("draft not saved");
   });
+
+  // ---------------------------------------------------------------------
+  // Bearbeiten-Modus: Maskenstand aus dem bestehenden Auftrag laden (derselbe Stand wie ein Entwurf)
+  // ---------------------------------------------------------------------
+  const editData = useOrderEditData(editOrderId);
+  const locks = useMemo(() => deriveLocks(editData.facts), [editData.facts]);
+  const editBaseline = useRef<EditSnapshot | null>(null);
+  const [editHydrated, setEditHydrated] = useState(false);
+  const [editReason, setEditReason] = useState("");
+  useEffect(() => {
+    if (!isEdit || editHydrated || !editData.order || !editData.facts) return;
+    const st = formStateFromOrder(editData.order);
+    setSelectedProjectId(st.selectedProjectId);
+    setOrderType(st.orderType);
+    setOrderKind(st.orderKind);
+    setPriority(st.priority);
+    setDueDate(st.dueDate);
+    setNotes(st.notes);
+    setSelectedSampleIds(st.selectedSampleIds);
+    setDynamicValues(st.dynamicValues);
+    setDynamicFormId(st.dynamicFormId);
+    setIsBilled(st.isBilled);
+    editBaseline.current = snapshotFromOrder(editData.order);
+    reconcileAllowed.current = false; // Dienstleistungen werden im Bearbeiten-Modus nicht automatisch abgeglichen
+    setEditHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, editHydrated, editData.order, editData.facts]);
 
   // Entwurf laden (?draft=<id>) – exakt an seinem bisherigen Stand.
   useEffect(() => {
@@ -327,6 +363,7 @@ export default function CreateOrderPage() {
   const [unresolvedSelection, setUnresolvedSelection] = useState<string[]>([]);
 
   const handleDynamicChange = (patch: Record<string, unknown>) => {
+    if (isEdit) { setDynamicValues(prev => ({ ...prev, ...patch })); return; }
     if ((loadedDraft && !reconcileAllowed.current) || pendingDeselection) return;
     if (orderKind === "pilot_plant" && mode === "single") {
       const removal = planPilotServiceDeselection({ values: dynamicValues, patch, fields: templateFields, services, measurements });
@@ -362,7 +399,7 @@ export default function CreateOrderPage() {
     });
 
   useEffect(() => {
-    if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || !reconcileAllowed.current) return;
+    if (isEdit || draftLoading || draftLoadFailed || !templateReady || !servicesReady || !reconcileAllowed.current) return;
     const plan = buildServicePlan(measurementsRef.current);
     setUnresolvedSelection(plan.unresolved);
     if (plan.add.length === 0 && plan.remove.length === 0) return;
@@ -459,7 +496,7 @@ export default function CreateOrderPage() {
     });
 
   useEffect(() => {
-    if (draftLoading || !templateReady || !servicesReady || !ruleQueryReady || !reconcileAllowed.current) return;
+    if (isEdit || draftLoading || !templateReady || !servicesReady || !ruleQueryReady || !reconcileAllowed.current) return;
     const plan = buildRulePlan(measurementsRef.current, formValuesRef.current);
     const additions = ruleAdditions(plan);
     if (additions.length === 0 && plan.remove.length === 0) return;
@@ -567,8 +604,40 @@ export default function CreateOrderPage() {
   // Produktionsaufträge nicht. Keine Sonderlogik an anderer Stelle.
   const projectRequired = isProjectRequired(orderType);
 
+  // Bearbeiten: Änderungen gegen den Ausgangsstand berechnen und atomar anwenden (Sperren prüft die Datenbank erneut).
+  const { data: allSamplesForLabels = [] } = useSamples();
+  const handleEditSubmit = async () => {
+    if (!editOrderId || !editBaseline.current || !editData.facts) return;
+    if (!orderType) { toast.error(t("orders:fill_required")); return; }
+    if (projectRequired && !selectedProjectId) { toast.error(t("orders:select_project_error")); return; }
+    if (orderKind !== "pilot_plant" && selectedSampleIds.length === 0) { toast.error(t("orders:fill_required")); return; }
+    const diff = currentEditDiff();
+    if (!diff || (!diff.changes && diff.billedChange === null)) { toast.info("Es gibt keine Änderungen zu speichern."); return; }
+    if (diff.reasonRequired && !editReason.trim()) {
+      toast.error("Bitte eine Begründung für die Änderung angeben.", { description: diff.reasonWhy.join(", ") });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (diff.changes) await api.orders.applyChanges(editOrderId, diff.changes, editReason);
+      if (diff.billedChange !== null) await api.orders.setBilled(editOrderId, diff.billedChange);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["order", editOrderId] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-audit-log"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }),
+        queryClient.invalidateQueries({ queryKey: ["sample-results-database"] }),
+      ]);
+      toast.success("Auftrag aktualisiert");
+      navigate(`/auftraege/${editOrderId}`);
+    } catch (err: any) {
+      toast.error("Änderungen konnten nicht gespeichert werden", { description: err.message });
+    } finally { setSubmitting(false); }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isEdit) { await handleEditSubmit(); return; }
     if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || (measurements.length > 0 && !ruleQueryReady)) {
       toast.error("Formular wird noch geladen oder konnte nicht vollständig geladen werden"); return;
     }
@@ -693,21 +762,81 @@ export default function CreateOrderPage() {
     ) : autosave.state === "dirty" ? <span className="text-xs text-muted-foreground">{t("orders:draftSafety.unsaved")}</span> : null;
 
   // Zweispaltiger Dienstleistungsbereich nur für die Pilot-Plant-Einzelauftragserstellung.
-  const pilotSingle = mode === "single" && orderKind === "pilot_plant";
+  const pilotSingle = mode === "single" && orderKind === "pilot_plant" && !isEdit;
+
+  // Felder des Auftragsformulars, die Dienstleistungen auslösen: im Bearbeiten-Modus gesperrt (Dienstleistungen
+  // sind in dieser Stufe schreibgeschützt).
+  const lockedTemplateKeys = isEdit
+    ? templateFields.filter((f) => isServiceField(f as any, services as any)).map((f) => f.field_key)
+    : undefined;
+
+  // Änderungen gegenüber dem Ausgangsstand (nur Bearbeiten-Modus).
+  function currentEditDiff() {
+    const base = editBaseline.current;
+    if (!isEdit || !base || !editHydrated) return null;
+    const exp = experimentNumberPatchForEdit(dynamicFormId ? templateFields : [], dynamicValues).pp_experiment_number;
+    const cur: EditSnapshot = {
+      orderType, projectId: selectedProjectId, priority, dueDate, notes,
+      sampleIds: selectedSampleIds, templateFormId: base.templateFormId ?? dynamicFormId,
+      templateValues: dynamicValues, isBilled,
+    };
+    return diffOrderEdit(base, cur, {
+      started: locks.started,
+      experimentNumber: exp,
+      expectedUpdatedAt: editData.facts?.updated_at,
+      labels: {
+        orderType: (v) => ({ customer: "Kunde", production: "Produktion", rnd: "F&E" } as Record<string, string>)[v] ?? v,
+        project: (id) => {
+          const p = (projects as any[]).find((x) => x.id === id);
+          return p ? `${p.project_number}${p.project_name ? " – " + p.project_name : ""}` : "kein Projekt";
+        },
+        sample: (id) => (allSamplesForLabels as any[]).find((x) => x.id === id)?.sample_number ?? id,
+        priority: (v) => ({ niedrig: "niedrig", normal: "normal", hoch: "hoch", sehr_hoch: "sehr hoch" } as Record<string, string>)[v] ?? v,
+      },
+    });
+  }
+  const editDiff = currentEditDiff();
+
+  // Bearbeiten-Modus: Laden / keine Berechtigung (alle Hooks stehen oberhalb).
+  if (isEdit && (editData.isLoading || (editData.order && editData.facts && !editHydrated))) {
+    return <div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+  }
+  if (isEdit && (editData.error || !editData.order || !editData.facts)) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center space-y-3">
+        <p className="text-lg font-medium">Auftrag nicht gefunden.</p>
+        <p className="text-sm text-muted-foreground">{editData.error?.message || "Der Auftrag existiert nicht oder Sie haben keine Berechtigung."}</p>
+        <Button variant="outline" onClick={() => navigate("/auftraege")}>Zur Auftragsübersicht</Button>
+      </div>
+    );
+  }
+  if (isEdit && !locks.canEdit) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center space-y-3">
+        <p className="text-lg font-medium">Dieser Auftrag kann nicht bearbeitet werden.</p>
+        <p className="text-sm text-muted-foreground">{locks.blockedReason}</p>
+        <Button variant="outline" onClick={() => navigate(`/auftraege/${editOrderId}`)}>Zurück zum Auftrag</Button>
+      </div>
+    );
+  }
 
   return (
     <div className={pilotSingle ? "space-y-6 max-w-none" : "space-y-6 max-w-3xl"}>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{t("orders:create_title")}</h1>
-          <p className="text-muted-foreground">{t("orders:create_subtitle")}</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {isEdit ? `Auftrag ${editData.facts?.order_number ?? ""} bearbeiten` : t("orders:create_title")}
+          </h1>
+          <p className="text-muted-foreground">
+            {isEdit ? "Gleiche Maske wie beim Erstellen. 🔒 = gesperrt, weil bereits in Bearbeitung. Änderungen werden protokolliert." : t("orders:create_subtitle")}
+          </p>
         </div>
-        {mode === "single" && draftsEnabled && saveIndicator}
+        {!isEdit && mode === "single" && draftsEnabled && saveIndicator}
       </div>
 
-      {mode === "single" && <OrderDraftsPanel activeDraftId={draftId} beforeSwitch={beforeDraftSwitch} onNew={startNewDraft} />}
-      {mode === "single" && missingDraftFiles(draftPayload).length > 0 && (
+      {!isEdit && mode === "single" && <OrderDraftsPanel activeDraftId={draftId} beforeSwitch={beforeDraftSwitch} onNew={startNewDraft} />}
+      {!isEdit && mode === "single" && missingDraftFiles(draftPayload).length > 0 && (
         <p role="status" className="text-sm text-destructive">{t("orders:draftSafety.files", { names: missingDraftFiles(draftPayload).join(", ") })}</p>
       )}
 
@@ -722,8 +851,8 @@ export default function CreateOrderPage() {
       )}
 
 
-      {/* Mode toggle */}
-      <div className="flex gap-2">
+      {/* Mode toggle (nicht im Bearbeiten-Modus) */}
+      {!isEdit && <div className="flex gap-2">
         <Button
           variant={mode === "single" ? "default" : "outline"}
           size="sm"
@@ -742,7 +871,7 @@ export default function CreateOrderPage() {
           <Zap className="h-4 w-4" />
           Batch-Planung
         </Button>
-      </div>
+      </div>}
 
       {mode === "single" ? (
       <form onSubmit={handleSubmit} onChangeCapture={() => { reconcileAllowed.current = true; }} onPointerDownCapture={() => { if (!draftLoading && templateReady) reconcileAllowed.current = true; }}>
@@ -752,12 +881,20 @@ export default function CreateOrderPage() {
           <CardContent className="space-y-4">
             <div>
               <Label>{t("orders:order_type")} *</Label>
-              <Select value={orderType} onValueChange={setOrderType}>
+              <Select value={orderType} onValueChange={setOrderType} disabled={isEdit && locks.typeLocked}>
                 <SelectTrigger><SelectValue placeholder={t("orders:choose_type")} /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
                 </SelectContent>
               </Select>
+              {isEdit && locks.typeLocked && (
+                <p className="mt-1 text-xs text-muted-foreground">🔒 Gesperrt: Am Auftrag wurde bereits gearbeitet.</p>
+              )}
+              {isEdit && !locks.typeLocked && orderType !== editBaseline.current?.orderType && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Folgen: F&amp;E braucht ein Projekt; das Verrechnet-Kennzeichen gilt nur für Kundenaufträge. Begründung erforderlich.
+                </p>
+              )}
             </div>
             {orderType === "customer" && (
               <div>
@@ -775,6 +912,7 @@ export default function CreateOrderPage() {
               <Label>{t("orders:kind_label")} *</Label>
               <Select
                 value={orderKind}
+                disabled={isEdit}
                 onValueChange={(v) => {
                   const next = v as "labor" | "pilot_plant";
                   setOrderKind(next);
@@ -791,18 +929,20 @@ export default function CreateOrderPage() {
                   <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
                 </SelectContent>
               </Select>
+              {isEdit && <p className="mt-1 text-xs text-muted-foreground">🔒 Die Auftragsart kann nicht geändert werden.</p>}
             </div>
             {orderKind !== "pilot_plant" && (
               <div>
                 <Label>{t("orders:sample")} *</Label>
-                <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} />
+                <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} lockedValues={isEdit ? [...locks.lockedSampleIds] : undefined} />
+                {isEdit && <p className="mt-1 text-xs text-muted-foreground">Proben mit Aufgaben (🔒) bleiben zugeordnet. Für neu hinzugefügte Proben werden in dieser Version noch keine Aufgaben angelegt.</p>}
               </div>
             )}
             <div>
               <Label>
                 {t("common:project")} {projectRequired ? "*" : <span className="text-muted-foreground font-normal">({t("orders:project_optional")})</span>}
               </Label>
-              <Select value={selectedProjectId || "__none__"} onValueChange={(v) => setSelectedProjectId(v === "__none__" ? "" : v)}>
+              <Select value={selectedProjectId || "__none__"} disabled={isEdit && locks.projectLocked} onValueChange={(v) => setSelectedProjectId(v === "__none__" ? "" : v)}>
                 <SelectTrigger aria-label={t("orders:select_project")}><SelectValue placeholder={t("orders:choose_project")} /></SelectTrigger>
                 <SelectContent>
                   {!projectRequired && <SelectItem value="__none__">{t("orders:no_project")}</SelectItem>}
@@ -813,6 +953,9 @@ export default function CreateOrderPage() {
               </Select>
               {!projectRequired && (
                 <p className="text-xs text-muted-foreground mt-1">{t("orders:project_optional_hint")}</p>
+              )}
+              {isEdit && locks.projectLocked && (
+                <p className="mt-1 text-xs text-muted-foreground">🔒 Gesperrt: Am Auftrag wurde bereits gearbeitet.</p>
               )}
             </div>
             <div>
@@ -841,6 +984,7 @@ export default function CreateOrderPage() {
           onTemplateResolved={setDynamicFormId}
           onFieldsResolved={setTemplateFields}
           onReady={onTemplateReady}
+          lockedFieldKeys={lockedTemplateKeys}
         />
 
         {/* Die im Auftraggeberformular ausgewählten Dienstleistungen erscheinen
@@ -882,6 +1026,9 @@ export default function CreateOrderPage() {
 
 
 
+        {isEdit ? (
+          <ExistingServicesReadOnly measurements={editData.order?.order_measurements ?? []} facts={editData.facts} />
+        ) : (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1004,6 +1151,7 @@ export default function CreateOrderPage() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {role !== "auftraggeber" && measurements.length > 0 && (
         <Card>
@@ -1047,15 +1195,49 @@ export default function CreateOrderPage() {
           />
         )}
 
+        {isEdit && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Was wird geändert?</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {editDiff && editDiff.lines.length > 0 ? (
+                <ul className="list-disc space-y-0.5 pl-5 text-sm">
+                  {editDiff.lines.map((l, i) => (<li key={i}>{l}</li>))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Noch keine Änderungen.</p>
+              )}
+              <div>
+                <Label>
+                  Grund der Änderung {editDiff?.reasonRequired ? "*" : <span className="font-normal text-muted-foreground">(optional)</span>}
+                </Label>
+                <Textarea
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  rows={2}
+                  placeholder="z. B. falsch angelegt, Projekt gewechselt …"
+                  aria-required={!!editDiff?.reasonRequired}
+                />
+                {editDiff?.reasonRequired && (
+                  <p className="mt-1 text-xs text-amber-700">Begründung erforderlich: {editDiff.reasonWhy.join(", ")}.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex gap-3 flex-wrap items-center">
-          <Button type="submit" disabled={submitting}>{submitting ? t("orders:submitting") : t("orders:submit_order")}</Button>
-          {draftsEnabled && (
+          <Button type="submit" disabled={submitting || (isEdit && (!editDiff || editDiff.lines.length === 0))}>
+            {isEdit ? (submitting ? "Speichere …" : "Änderungen speichern") : submitting ? t("orders:submitting") : t("orders:submit_order")}
+          </Button>
+          {!isEdit && draftsEnabled && (
             <Button type="button" variant="secondary" onClick={handleSaveAndClose} disabled={!autosaveEnabled || closingDraft || submitting}>
               <Save className="h-4 w-4 mr-2" /> Entwurf speichern &amp; schließen
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={() => navigate(-1)}>{t("common:cancel")}</Button>
-          {draftsEnabled && saveIndicator}
+          <Button type="button" variant="outline" onClick={() => (isEdit ? navigate(`/auftraege/${editOrderId}`) : navigate(-1))}>
+            {isEdit ? "Änderungen verwerfen" : t("common:cancel")}
+          </Button>
+          {!isEdit && draftsEnabled && saveIndicator}
         </div>
       </div>
 

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ChevronsUpDown, Check, Plus, X, Tag } from "lucide-react";
+import { ChevronsUpDown, Check, Plus, X, Tag, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -43,9 +43,13 @@ interface SampleSelectorProps {
   projectId?: string;
   /** Projekt bei Neuanlage verpflichtend (Standard: ja). Projektfreie Aufträge übergeben false. */
   projectRequired?: boolean;
+  /** Bearbeiten-Modus: Proben, die nicht abgewählt werden dürfen (z. B. weil Aufgaben daran hängen). */
+  lockedValues?: string[];
+  /** Bearbeiten-Modus: Auswahl komplett gesperrt (z. B. Auftrag abgeschlossen). */
+  disabled?: boolean;
 }
 
-export default function SampleSelector({ value, onSelect, values, onValuesChange, projectId, projectRequired = true }: SampleSelectorProps) {
+export default function SampleSelector({ value, onSelect, values, onValuesChange, projectId, projectRequired = true, lockedValues = [], disabled = false }: SampleSelectorProps) {
   const multiple = Array.isArray(values);
   const selectedIds = multiple ? values! : value ? [value] : [];
 
@@ -83,8 +87,12 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
     [selectedIds, samples]
   );
 
+  const isLocked = (id: string) => disabled || lockedValues.includes(id);
+
   const pick = (sampleId: string) => {
     if (multiple) {
+      if (selectedIds.includes(sampleId) && isLocked(sampleId)) return;
+      if (disabled) return;
       const next = selectedIds.includes(sampleId)
         ? selectedIds.filter((s) => s !== sampleId)
         : [...selectedIds, sampleId];
@@ -96,6 +104,7 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
   };
 
   const removeSelected = (sampleId: string) => {
+    if (isLocked(sampleId)) return;
     if (multiple) onValuesChange?.(selectedIds.filter((s) => s !== sampleId));
     else onSelect?.("");
   };
@@ -179,7 +188,7 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
       <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal h-auto min-h-9 text-left">
+          <Button variant="outline" role="combobox" disabled={disabled} aria-expanded={open} className="w-full justify-between font-normal h-auto min-h-9 text-left">
             <span className="truncate">
               {multiple
                 ? selectedIds.length > 0
@@ -255,8 +264,9 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
             </span>
             <button
               type="button"
-              onClick={() => onValuesChange?.([])}
-              className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+              onClick={() => onValuesChange?.(selectedIds.filter(isLocked))}
+              disabled={disabled}
+              className="text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
             >
               Alle entfernen
             </button>
@@ -266,14 +276,24 @@ export default function SampleSelector({ value, onSelect, values, onValuesChange
               <Badge key={s.id} variant="secondary" className="gap-1 py-1 pl-2 pr-1 max-w-full">
                 <span className="font-mono text-xs shrink-0">{s.sample_number}</span>
                 <span className="text-xs truncate max-w-40">– {s.sample_name}</span>
-                <button
-                  type="button"
-                  aria-label={`${s.sample_number} entfernen`}
-                  onClick={() => removeSelected(s.id)}
-                  className="ml-1 rounded-sm p-0.5 hover:bg-muted shrink-0"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                {isLocked(s.id) ? (
+                  <span
+                    className="ml-1 p-0.5 shrink-0 text-muted-foreground"
+                    title={disabled ? "Auswahl gesperrt" : "Nicht entfernbar: an dieser Probe hängen bereits Aufgaben"}
+                    aria-label={`${s.sample_number} gesperrt`}
+                  >
+                    <Lock className="h-3 w-3" />
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label={`${s.sample_number} entfernen`}
+                    onClick={() => removeSelected(s.id)}
+                    className="ml-1 rounded-sm p-0.5 hover:bg-muted shrink-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
               </Badge>
             ))}
           </div>

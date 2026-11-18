@@ -274,6 +274,13 @@
       "when": 1794561200000,
       "tag": "0038_m3_list_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794647600000,
+      "tag": "0039_order_edit_apply_changes",
+      "breakpoints": true
     }
   ]
 }

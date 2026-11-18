@@ -65,7 +65,7 @@ const SERVICE_FIELD_NAMES = new Set([
   "service",
 ]);
 
-const isServiceField = (f: SelectionField, services?: SelectableService[]): boolean => {
+export const isServiceField = (f: SelectionField, services?: SelectableService[]): boolean => {
   const type = (f.field_type ?? "").toLowerCase();
   if (type && type !== "multiselect" && type !== "select") return false;
   const byName = normalizeToken(f.display_name);
