@@ -29,7 +29,7 @@ export default function OrderComparisonView({
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex flex-wrap items-center gap-2">
             <Columns3 className="h-4 w-4" /> Auftrag <span className="font-mono">{order.displayNumber}</span>
-            <span className="font-normal text-muted-foreground">· Probenvergleich</span>
+            <span className="font-normal text-muted-foreground">· Ergebnisübersicht</span>
             <Badge variant="outline" className="text-[10px]">{order.samples.length} Proben</Badge>
           </CardTitle>
           <p className="text-xs text-muted-foreground">

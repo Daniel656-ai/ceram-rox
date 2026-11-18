@@ -33,7 +33,7 @@ export function OverviewModeToggle({ mode, onChange }: { mode: OverviewMode; onC
 
 /**
  * Übersicht nach Auftrag: Auftragszeile aufklappbar, darunter die Proben.
- * Klick auf eine Probe öffnet ihre Messungen, „Proben vergleichen“ die Vergleichstabelle.
+ * Klick auf eine Probe öffnet ihre Messungen, „Ergebnisübersicht“ die Ergebnistabelle des Auftrags.
  */
 export default function OrderOverviewTable({
   orders,
@@ -112,14 +112,12 @@ export default function OrderOverviewTable({
                             variant="outline"
                             size="sm"
                             className="h-7 text-xs"
-                            disabled={o.samples.length < 2}
-                            title={o.samples.length < 2 ? "Vergleich braucht mindestens 2 Proben" : undefined}
                             onClick={(e) => {
                               e.stopPropagation();
                               onCompare(o);
                             }}
                           >
-                            <Columns3 className="mr-1 h-3.5 w-3.5" /> Proben vergleichen
+                            <Columns3 className="mr-1 h-3.5 w-3.5" /> Ergebnisübersicht
                           </Button>
                         </td>
                       </tr>
