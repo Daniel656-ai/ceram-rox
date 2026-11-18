@@ -31,3 +31,12 @@ export function stepSelection(items: NavItem[], current: NavItem | null, delta: 
   if (next < 0 || next >= items.length) return items[idx];
   return items[next];
 }
+
+/**
+ * Kam die Probe aus der Ergebnisübersicht eines Auftrags (compareKey gesetzt), soll
+ * „Zurück“ nach einem Wechsel per Pfeiltaste zur Übersicht des neuen Auftrags führen.
+ * Ohne Ergebnisübersicht bleibt es leer.
+ */
+export function compareKeyAfterStep(compareKey: string | null, next: NavItem): string | null {
+  return compareKey ? next.orderKey ?? compareKey : null;
+}

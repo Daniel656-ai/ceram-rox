@@ -14,11 +14,9 @@ export default function OrderComparisonView({
   order,
   onClose,
   onSelectSample,
-  selectedSampleKey,
 }: {
   order: OrderGroup;
   onClose: () => void;
-  selectedSampleKey?: string | null;
   onSelectSample: (sample: SampleGroup) => void;
 }) {
   const sections = useMemo(() => buildOrderComparison(order), [order]);
@@ -70,7 +68,7 @@ export default function OrderComparisonView({
                     {sec.rows.map((row, i) => (
                       <tr
                         key={`${row.sample.sampleKey}-${i}`}
-                        className={`cursor-pointer border-t hover:bg-muted/40 ${row.sample.sampleKey === selectedSampleKey ? "bg-primary/10" : ""}`}
+                        className="cursor-pointer border-t hover:bg-muted/40"
                         onClick={() => onSelectSample(row.sample)}
                       >
                         <td className="p-2 whitespace-nowrap">
