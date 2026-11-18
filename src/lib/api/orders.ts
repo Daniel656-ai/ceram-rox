@@ -1,3 +1,4 @@
+import type { OrderEditFacts, OrderChanges } from "@/lib/orders/orderEdit";
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 import { groupStoragePaths, type StorageFileRef } from "@/lib/orders/orderStoragePaths";
@@ -117,6 +118,24 @@ export const orders = {
     } as any);
     if (error) throw new Error(error.message);
     return data as unknown as boolean;
+  },
+
+  /** Aufgabe 012: Sperr-Angaben für die Bearbeiten-Maske (nur lesend, serverseitig geprüft). */
+  editFacts: async (orderId: string): Promise<OrderEditFacts> => {
+    const { data, error } = await dbClient.rpc("order_edit_facts" as any, { _order_id: orderId } as any);
+    if (error) throw new Error(error.message);
+    return data as unknown as OrderEditFacts;
+  },
+
+  /** Aufgabe 012: Änderungen atomar anwenden (Sperren werden serverseitig erneut geprüft und protokolliert). */
+  applyChanges: async (orderId: string, changes: OrderChanges, reason?: string | null): Promise<{ changed: boolean; fields: string[] }> => {
+    const { data, error } = await dbClient.rpc("apply_order_changes" as any, {
+      _order_id: orderId,
+      _changes: changes,
+      _reason: reason?.trim() ? reason.trim() : null,
+    } as any);
+    if (error) throw new Error(error.message);
+    return data as unknown as { changed: boolean; fields: string[] };
   },
 
   update: (

@@ -97,6 +97,7 @@ const App = () => (
               <Route path="/auftraege/neu" element={<CreateOrderPage />} />
               <Route path="/auftraege/import" element={<ImportOrderPage />} />
               <Route path="/auftraege/:id" element={<OrderDetailPage />} />
+              <Route path="/auftraege/:id/bearbeiten" element={<CreateOrderPage />} />
               <Route path="/orders/:id" element={<OrderDetailPage />} />
               <Route path="/aufgaben/:measurementId" element={<TaskExecutionPage />} />
               <Route path="/projekte" element={<ProjectsPage />} />
