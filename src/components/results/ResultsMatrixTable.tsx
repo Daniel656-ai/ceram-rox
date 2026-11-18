@@ -17,11 +17,11 @@ import { useTranslation } from "react-i18next";
  * tatsächlichen Inhalt (Nummern, Kurztexte) – keine überbreiten Spalten.
  */
 const ALL_IDENT_COLUMNS = [
-  { key: "sample", label: "Probe", width: 116 },
-  { key: "order", label: "Auftrag", width: 92 },
-  { key: "service", label: "Dienstleistung", width: 132 },
-  { key: "analysis", label: "Analyse", width: 96 },
-  { key: "date", label: "Datum", width: 84 },
+  { key: "sample", label: "Probe", width: 104 },
+  { key: "order", label: "Auftrag", width: 88 },
+  { key: "service", label: "Dienstleistung", width: 112 },
+  { key: "analysis", label: "Analyse", width: 92 },
+  { key: "date", label: "Datum", width: 64 },
 ] as const;
 
 type IdentKey = (typeof ALL_IDENT_COLUMNS)[number]["key"];
@@ -80,13 +80,13 @@ export default function ResultsMatrixTable({
   return (
     <div className="relative w-full border rounded-md">
       <HorizontalScrollArea scrollContainerRef={scrollContainerRef} viewportClassName="max-h-[70vh]">
-        <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 130 }}>
+        <table className="text-sm border-collapse" style={{ minWidth: identWidth + columns.length * 118 }}>
         <thead>
           <tr>
             {IDENT_COLUMNS.map((c, i) => (
               <th
                 key={c.key}
-                className="sticky top-0 bg-muted text-left font-medium px-2 py-2 border-b border-r whitespace-nowrap z-40"
+                className="sticky top-0 bg-muted text-left font-medium px-2 py-1.5 text-xs border-b border-r whitespace-nowrap z-40"
                 style={{ left: OFFSETS[i], width: c.width, minWidth: c.width, maxWidth: c.width }}
               >
                 {c.label}
@@ -95,8 +95,8 @@ export default function ResultsMatrixTable({
             {columns.map((col) => (
               <th
                 key={col.key}
-                className="sticky top-0 bg-muted text-right font-medium px-3 py-2 border-b align-bottom whitespace-normal break-words leading-tight z-30"
-                style={{ minWidth: 120, maxWidth: 220 }}
+                className="sticky top-0 bg-muted text-right text-xs font-medium px-2 py-1.5 border-b align-bottom whitespace-normal break-words leading-tight z-30"
+                style={{ minWidth: 110, maxWidth: 200 }}
                 title={toUnicode(columnHeader(col))}
               >
                 <RichText value={columnHeader(col)} />
@@ -110,34 +110,41 @@ export default function ResultsMatrixTable({
             // darunter durchscrollenden Ergebniszellen durchscheinen lassen.
             const rowBg = rowIdx % 2 === 0 ? "bg-background" : "bg-muted/40";
             const stickyBg = rowIdx % 2 === 0 ? "bg-background" : "bg-secondary";
-            const stickyCell = `sticky ${stickyBg} px-2 py-1.5 border-b border-r align-top z-20`;
+            const stickyCell = `sticky ${stickyBg} px-2 py-0.5 text-xs border-b border-r align-middle z-20`;
             return (
               <tr key={`${r.measurementId}:${r.instanceKey ?? ""}`} className={rowBg}>
                 <td
                   className={stickyCell}
                   style={identStyle("sample")}
                 >
-                  <span className="font-mono text-xs">{r.sampleNumber || "–"}</span>
-                  {r.sampleName ? (
-                    <div className="text-[11px] text-muted-foreground truncate" title={r.sampleName}>{r.sampleName}</div>
-                  ) : null}
-                  {r.originalSampleNumber ? (
-                    <div className="text-[11px] text-muted-foreground truncate">
-                      Ersatzprobe für {r.originalSampleNumber}
-                    </div>
-                  ) : null}
+                  <div
+                    title={[
+                      r.sampleName,
+                      r.originalSampleNumber ? `Ersatzprobe für ${r.originalSampleNumber}` : "",
+                    ].filter(Boolean).join(" · ") || undefined}
+                  >
+                    <span className="font-mono text-xs leading-tight">{r.sampleNumber || "–"}</span>
+                    {r.sampleName ? (
+                      <div className="text-[10px] leading-tight text-muted-foreground truncate">{r.sampleName}</div>
+                    ) : null}
+                  </div>
                 </td>
                 <td
                   className={`${stickyCell} font-mono text-xs`}
                   style={identStyle("order")}
                 >
-                  <span className="break-words">{r.orderIdentity?.number || r.orderNumber}</span>
-                  {r.orderIdentity?.hasExperimentNumber && (
-                    <div className="font-sans text-[11px] text-muted-foreground break-words">{t("technical_number", { number: r.orderNumber })}</div>
-                  )}
-                  {r.orderIdentity?.missingExperimentNumber && (
-                    <div className="font-sans text-[11px] text-muted-foreground break-words">{t("without_experiment_number")}</div>
-                  )}
+                  <div
+                    className="truncate"
+                    title={
+                      r.orderIdentity?.hasExperimentNumber
+                        ? t("technical_number", { number: r.orderNumber })
+                        : r.orderIdentity?.missingExperimentNumber
+                          ? t("without_experiment_number")
+                          : undefined
+                    }
+                  >
+                    {r.orderIdentity?.number || r.orderNumber}
+                  </div>
                 </td>
                 {showServiceColumn && (
                   <td
@@ -180,7 +187,7 @@ export default function ResultsMatrixTable({
                   const result = resultForColumn(r, col.key);
                   const precision = result ? resolveResultPrecision(result, r.serviceId, precisionDefinitions) : undefined;
                   return (
-                    <td key={col.key} className="px-3 py-1.5 border-b text-right tabular-nums font-mono">
+                    <td key={col.key} className="px-2 py-0.5 text-xs border-b text-right tabular-nums font-mono align-middle">
                       {formatResultDisplayValue(cell.value, cell.text, cell.present, precision)}
                     </td>
                   );
