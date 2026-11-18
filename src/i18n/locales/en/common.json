@@ -55,6 +55,7 @@
   "role_auftraggeber": "Client",
   "role_durchfuehrer": "Technician",
   "sign_out": "Sign Out",
+  "change_password": "Change password",
   "user": "User",
   "project": "Project",
   "supplier": "Supplier",
