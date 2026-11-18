@@ -111,3 +111,27 @@ export function nonEmptyColumns(columns: ResultParamColumn[], records: ResultRec
   const rows = expandByMeasurementInstance(records);
   return columns.filter((c) => rows.some((r) => resultCell(r, c.key).present));
 }
+
+/* ---- Zeile -> Auswahl für die Seitenleiste (Schlüssel wie in groupRecordsByOrder/-BySample) ---- */
+export interface MatrixSelection {
+  orderKey: string;
+  sampleKey: string;
+}
+
+export const matrixRowSelection = (
+  r: Pick<ResultRecord, "orderId" | "orderNumber" | "sampleId">,
+): MatrixSelection => ({
+  orderKey: r.orderId || `number:${r.orderNumber}`,
+  sampleKey: r.sampleId ?? `order:${r.orderId}`,
+});
+
+/** Proben in der Reihenfolge der Matrixzeilen (aufeinanderfolgende Zeilen derselben Probe nur einmal). */
+export function matrixNavItems(records: ResultRecord[]): MatrixSelection[] {
+  const out: MatrixSelection[] = [];
+  for (const r of expandByMeasurementInstance(records)) {
+    const sel = matrixRowSelection(r);
+    const last = out[out.length - 1];
+    if (!last || last.orderKey !== sel.orderKey || last.sampleKey !== sel.sampleKey) out.push(sel);
+  }
+  return out;
+}
