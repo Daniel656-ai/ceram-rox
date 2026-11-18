@@ -23,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, AlertCircle, Zap, CheckCircle2, ClipboardList, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff } from "lucide-react";
+import { ArrowLeft, AlertCircle, Zap, CheckCircle2, ClipboardList, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff, Lock } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
@@ -39,12 +39,13 @@ import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
 import { useRefreshGuard } from "@/lib/refreshGuard";
 import { useOrderEditData } from "@/hooks/useOrderEditData";
 import ExistingServicesReadOnly from "@/components/order/ExistingServicesReadOnly";
+import { lockedTickGroups, planTickChange, syncTicksToPending, syncTicksToRemoval } from "@/lib/orders/editServiceTicks";
 import { deriveLocks, diffOrderEdit, formStateFromOrder, serviceRemovalInfo, snapshotFromOrder, toggleServiceRemoval, validateServiceRemoval, type EditSnapshot } from "@/lib/orders/orderEdit";
 import { isServiceField } from "@/lib/orderServiceSelection";
 import { experimentNumberPatch as experimentNumberPatchForEdit } from "@/lib/orders/experimentNumber";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
 import type { FormField } from "@/lib/api/formFields";
-import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
+import { normalizeToken, planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
 import { isProjectRequired } from "@/lib/orders/projectRequirement";
 import { planRuleTriggers } from "@/lib/ruleEvaluation";
 import { experimentNumberPatch } from "@/lib/orders/experimentNumber";
@@ -202,6 +203,15 @@ export default function CreateOrderPage() {
     () => serviceRemovalInfo(editData.facts, editData.order?.order_measurements ?? []),
     [editData.facts, editData.order],
   );
+  // Stufe 3c: Häkchen im Auftragsformular <-> Dienstleistungen (gleiche Auflösung wie beim Erstellen).
+  const existingServiceIds = useMemo(() => new Set(serviceInfos.map((i) => i.serviceId)), [serviceInfos]);
+  const tickEnv = useMemo(() => ({ fields: templateFields as any[], services: services as any[] }), [templateFields, services]);
+  const setRemovalAndTicks = (nextRemoved: string[]) => {
+    const base = editBaseline.current?.templateValues ?? {};
+    const prevRemoved = removedServiceIds;
+    setRemovedServiceIds(nextRemoved);
+    setDynamicValues((prev) => ({ ...prev, ...syncTicksToRemoval({ values: prev, baseline: base, env: tickEnv, prevRemoved, nextRemoved }) }));
+  };
   useEffect(() => {
     if (!isEdit || editHydrated || !editData.order || !editData.facts) return;
     const st = formStateFromOrder(editData.order);
@@ -369,7 +379,35 @@ export default function CreateOrderPage() {
   const [unresolvedSelection, setUnresolvedSelection] = useState<string[]>([]);
 
   const handleDynamicChange = (patch: Record<string, unknown>) => {
-    if (isEdit) { setDynamicValues(prev => ({ ...prev, ...patch })); return; }
+    if (isEdit) {
+      const next = { ...dynamicValues, ...patch };
+      const plan = planTickChange({
+        prev: dynamicValues, next, env: tickEnv, existingServiceIds, removedServiceIds,
+        pending: measurements.map((m) => ({ uid: m.uid, service_id: m.service_id, origin: m.origin, selection_token: m.selection_token })),
+      });
+      let removed = removedServiceIds;
+      for (const id of plan.unremoveServiceIds) if (removed.includes(id)) removed = toggleServiceRemoval(removed, id, serviceInfos);
+      for (const id of plan.removeServiceIds) if (!removed.includes(id)) removed = toggleServiceRemoval(removed, id, serviceInfos);
+      const tickPatch = syncTicksToRemoval({ values: next, baseline: editBaseline.current?.templateValues ?? {}, env: tickEnv, prevRemoved: removedServiceIds, nextRemoved: removed });
+      setDynamicValues({ ...next, ...tickPatch });
+      if (removed !== removedServiceIds) setRemovedServiceIds(removed);
+      if (plan.add.length > 0 || plan.removePendingTokens.length > 0) {
+        const drop = new Set(plan.removePendingTokens.map((tk) => normalizeToken(tk)));
+        const additions: SelectedMeasurement[] = plan.add.map((a) => ({
+          uid: newUid(), service_id: a.service.id, service_name: a.service.service_name, origin: "template", selection_token: a.token,
+        }));
+        const droppedUids = measurements
+          .filter((m) => m.origin === "template" && drop.has(normalizeToken(m.selection_token ?? m.service_name)))
+          .map((m) => m.uid);
+        pendingAddedUids.current.push(...additions.map((a) => a.uid));
+        setMeasurements((prev) => [...prev.filter((m) => !droppedUids.includes(m.uid)), ...additions]);
+        if (droppedUids.length > 0) {
+          setMeasurementFormValues((prev) => { const n = { ...prev }; droppedUids.forEach((u) => delete n[u]); return n; });
+          setMeasurementParams((prev) => { const n = { ...prev }; droppedUids.forEach((u) => delete n[u]); return n; });
+        }
+      }
+      return;
+    }
     if ((loadedDraft && !reconcileAllowed.current) || pendingDeselection) return;
     if (orderKind === "pilot_plant" && mode === "single") {
       const removal = planPilotServiceDeselection({ values: dynamicValues, patch, fields: templateFields, services, measurements });
@@ -438,6 +476,17 @@ export default function CreateOrderPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dynamicValues, templateFields, services, draftLoading, templateReady, servicesReady]);
+
+  // Stufe 3c, Gleichlauf Karte -> Häkchen (nur Bearbeiten-Modus): hinzugefügte/entfernte neue Positionen passen die Häkchen an.
+  useEffect(() => {
+    if (!isEdit || !editHydrated || !servicesReady || !editBaseline.current) return;
+    const patch = syncTicksToPending({
+      values: dynamicValues, baseline: editBaseline.current.templateValues, env: tickEnv, existingServiceIds,
+      pending: measurements.map((m) => ({ uid: m.uid, service_id: m.service_id, origin: m.origin, selection_token: m.selection_token })),
+    });
+    if (Object.keys(patch).length > 0) setDynamicValues((prev) => ({ ...prev, ...patch }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [measurements, editHydrated, servicesReady, tickEnv]);
 
   // Aktiven Reiter nachführen: neu hinzugekommene Positionen aktivieren,
   // abgewählte aus der Reihenfolge entfernen, Fallback bei Abwahl des Aktiven.
@@ -804,15 +853,22 @@ export default function CreateOrderPage() {
         <CloudOff className="h-3.5 w-3.5" /> Änderungen konnten nicht gespeichert werden
       </span>
     ) : autosave.state === "dirty" ? <span className="text-xs text-muted-foreground">{t("orders:draftSafety.unsaved")}</span> : null;
-
-  // Zweispaltiger Dienstleistungsbereich nur für die Pilot-Plant-Einzelauftragserstellung.
-  const pilotSingle = mode === "single" && orderKind === "pilot_plant" && !isEdit;
+  // Zweispaltiger Dienstleistungsbereich für Pilot-Plant-Einzelaufträge – im Bearbeiten-Modus genau wie beim Erstellen.
+  const pilotSingle = mode === "single" && orderKind === "pilot_plant";
 
   // Felder des Auftragsformulars, die Dienstleistungen auslösen: im Bearbeiten-Modus gesperrt (Dienstleistungen
   // sind in dieser Stufe schreibgeschützt).
+  // Stufe 3c: Sperre pro Gruppe (Auswahlfeld) – nur gesperrt, wenn eine Dienstleistung eines gesetzten Häkchens begonnen ist.
   const lockedTemplateKeys = isEdit
-    ? templateFields.filter((f) => isServiceField(f as any, services as any)).map((f) => f.field_key)
+    ? servicesReady
+      ? lockedTickGroups(
+          editBaseline.current?.templateValues ?? {}, tickEnv,
+          new Set(serviceInfos.filter((i) => !i.removable).map((i) => i.serviceId)),
+        )
+      : templateFields.filter((f) => isServiceField(f as any, services as any)).map((f) => f.field_key)
     : undefined;
+  const lockedTickLabels = (lockedTemplateKeys ?? [])
+    .map((k) => templateFields.find((f) => f.field_key === k)?.display_name ?? k);
 
   // Vorschau (Bearbeiten-Modus): durch Regeln zusätzlich ausgelöste Dienstleistungen (nur Namen).
   const rulePreviewNames: string[] = isEdit && measurements.length > 0 && ruleQueryReady
@@ -1040,6 +1096,14 @@ export default function CreateOrderPage() {
           onReady={onTemplateReady}
           lockedFieldKeys={lockedTemplateKeys}
         />
+        {isEdit && servicesReady && lockedTickLabels.length > 0 && (
+          <p role="note" className="-mt-3 flex items-start gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+            <span>
+              Gesperrt: {lockedTickLabels.join(", ")} – bereits in Bearbeitung. Neue Dienstleistungen bitte über „Dienstleistungen hinzufügen“.
+            </span>
+          </p>
+        )}
 
         {/* Die im Auftraggeberformular ausgewählten Dienstleistungen erscheinen
             sofort mit ihrem bestehenden Auftraggeberformular – noch ohne
@@ -1086,7 +1150,7 @@ export default function CreateOrderPage() {
             facts={editData.facts}
             canAmend={locks.canEdit}
             removedServiceIds={removedServiceIds}
-            onToggleRemove={(id) => setRemovedServiceIds((cur) => toggleServiceRemoval(cur, id, serviceInfos))}
+            onToggleRemove={(id) => setRemovalAndTicks(toggleServiceRemoval(removedServiceIds, id, serviceInfos))}
             onAmended={() => { void editData.refetchOrder?.(); queryClient.invalidateQueries({ queryKey: ["order"] }); queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }); }}
           />
         )}

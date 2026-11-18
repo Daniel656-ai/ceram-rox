@@ -31,7 +31,7 @@ const hoisted = vi.hoisted(() => {
     createSample: { mutateAsync: () => undefined, isPending: false },
     createOrder: { mutateAsync: undefined as any },
   };
-  const state = { order: null as any, facts: null as any };
+  const state = { order: null as any, facts: null as any, tickFields: null as any };
   const calls = { applyChanges: vi.fn(), setBilled: vi.fn(), create: vi.fn(), navigate: vi.fn(), logAdded: vi.fn() };
   stable.createOrder.mutateAsync = calls.create;
   const addTask = vi.fn();
@@ -84,7 +84,7 @@ vi.mock("@/components/OrderKindDynamicForm", () => ({
   default: (p: any) => {
     useEffect(() => {
       p.onTemplateResolved?.("f1");
-      p.onFieldsResolved?.([
+      p.onFieldsResolved?.(hoisted.state.tickFields ?? [
         { id: "fd", field_key: "dienstleistungen", display_name: "Dienstleistungen", field_type: "multiselect", select_options: [] },
         { id: "fv", field_key: "versuchsnummer", display_name: "Versuchsnummer", field_type: "text" },
       ]);
@@ -94,6 +94,11 @@ vi.mock("@/components/OrderKindDynamicForm", () => ({
       <div>
         <div data-testid="locked-keys">{(p.lockedFieldKeys ?? []).join(",")}</div>
         <button type="button" onClick={() => p.onChange({ versuchsnummer: "V-77" })}>Versuchsnummer ändern</button>
+        <div data-testid="tick-values">{JSON.stringify(p.values?.dienstleistungen ?? [])}</div>
+        <div data-testid="tick-values2">{JSON.stringify(p.values?.standardpruefungen ?? [])}</div>
+        <button type="button" onClick={() => p.onChange({ dienstleistungen: (p.values?.dienstleistungen ?? []).filter((x: string) => x !== "bet") })}>Häkchen BET entfernen</button>
+        <button type="button" onClick={() => p.onChange({ dienstleistungen: [...(p.values?.dienstleistungen ?? []), "bet"] })}>Häkchen BET setzen</button>
+        <button type="button" onClick={() => p.onChange({ standardpruefungen: [...(p.values?.standardpruefungen ?? []), "dsc"] })}>Häkchen DSC setzen</button>
       </div>
     );
   },
@@ -153,6 +158,7 @@ beforeEach(() => {
   hoisted.calls.setBilled.mockResolvedValue(true);
   (hoisted.calls as any).addTask.mockResolvedValue({ id: "neu-1" });
   hoisted.stable.services.data = [];
+  hoisted.state.tickFields = null;
 });
 
 describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
@@ -168,14 +174,14 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
     expect(screen.getByText("Änderungen verwerfen")).toBeTruthy();
   });
 
-  it("Dienstleistungen sind nur lesbar (mit Hinweis); Auswahlfelder des Auftragsformulars sind gesperrt", async () => {
+  it("Dienstleistungen sind nur lesbar (mit Hinweis); ohne begonnene Dienstleistung sind die Auswahlfelder frei", async () => {
     mount();
     await screen.findByText("Auftrag MWI260003 bearbeiten");
     expect(screen.getByText("nur lesbar")).toBeTruthy();
     expect(screen.getByText("RFA")).toBeTruthy();
     expect(screen.getByText("unberührt")).toBeTruthy();
     expect(screen.queryByText("Prozessvorlage (optional)")).toBeNull();
-    expect(screen.getByTestId("locked-keys").textContent).toBe("dienstleistungen");
+    expect(screen.getByTestId("locked-keys").textContent).toBe("");
   });
 
   it("nichts geändert: Speichern ist gesperrt, es wird nichts gesendet", async () => {
@@ -320,4 +326,132 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
     expect(hoisted.calls.logAdded).toHaveBeenCalledWith("o1", ["BET-Messung"], 2);
   });
 
+
+  // ---- Stufe 3c: Häkchen im Auftragsformular <-> Dienstleistungen ----
+  const tickSetup = (over: { touchedBet?: boolean; ticks?: string[] } = {}) => {
+    hoisted.stable.services.data = [
+      { id: "svc1", service_name: "RFA", category: "labor" },
+      { id: "svc2", service_name: "BET", category: "labor" },
+      { id: "svc3", service_name: "DSC", category: "labor" },
+    ];
+    hoisted.state.tickFields = [
+      {
+        id: "fd", field_key: "dienstleistungen", display_name: "Dienstleistungen", field_type: "multiselect",
+        select_options: [{ value: "rfa", label: "RFA", service_id: "svc1" }, { value: "bet", label: "BET", service_id: "svc2" }],
+      },
+      {
+        id: "fs", field_key: "standardpruefungen", display_name: "Standardprüfungen", field_type: "multiselect",
+        select_options: [{ value: "dsc", label: "DSC", service_id: "svc3" }],
+      },
+    ];
+    hoisted.state.order = baseOrder({
+      order_measurements: [
+        { id: "m1", service_id: "svc1", sample_id: "s1", status: "open", measurement_number: "M1", measurement_services: { service_name: "RFA" }, samples: { sample_number: "P1" }, measurement_parameters: [] },
+        { id: "m2", service_id: "svc2", sample_id: "s1", status: over.touchedBet ? "in_progress" : "open", measurement_number: "M2", measurement_services: { service_name: "BET" }, samples: { sample_number: "P1" }, measurement_parameters: [] },
+      ],
+      shared_form_data: { template: { form_definition_id: "f1", values: { dienstleistungen: over.ticks ?? ["rfa", "bet"], standardpruefungen: [] } } },
+    });
+    hoisted.state.facts = baseFacts({
+      measurements: [
+        { measurement_id: "m1", untouched: true, blockers: [], status: "open", counts: {} },
+        over.touchedBet
+          ? { measurement_id: "m2", untouched: false, blockers: ["work_logs"], status: "in_progress", counts: {} }
+          : { measurement_id: "m2", untouched: true, blockers: [], status: "open", counts: {} },
+      ],
+    });
+  };
+
+  it("3c: Häkchen entfernen -> Dienstleistung zum Entfernen vorgemerkt (mit Begründung), Formularwert und Entfernen gehen gemeinsam", async () => {
+    tickSetup();
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    expect(screen.getByTestId("locked-keys").textContent).toBe("");
+    fireEvent.click(screen.getByText("Häkchen BET entfernen"));
+    expect(await screen.findByText("Dienstleistung(en) entfernt: BET (1 Aufgabe)")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toMatch(/alle 1 Aufgabe/);
+
+    fireEvent.change(screen.getByLabelText(/Grund der Änderung/), { target: { value: "Nicht mehr benötigt" } });
+    fireEvent.click(screen.getByText("Änderungen speichern"));
+    await waitFor(() => expect(hoisted.calls.applyChanges).toHaveBeenCalledTimes(1));
+    const changes = hoisted.calls.applyChanges.mock.calls[0][1];
+    expect(changes.services).toEqual({ remove: ["svc2"] });
+    expect(changes.template.values.dienstleistungen).toEqual(["rfa"]);
+  });
+
+  it("3c: Entfernen über die Liste nimmt das Häkchen heraus, Rückgängig bringt es zurück", async () => {
+    tickSetup();
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    fireEvent.click(screen.getByLabelText("Dienstleistung BET entfernen"));
+    await waitFor(() => expect(screen.getByTestId("tick-values").textContent).toBe('["rfa"]'));
+    fireEvent.click(screen.getByLabelText("Entfernen von BET rückgängig"));
+    await waitFor(() => expect(screen.getByTestId("tick-values").textContent).toBe('["rfa","bet"]'));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("3c: Häkchen wieder setzen nimmt das vorgemerkte Entfernen zurück", async () => {
+    tickSetup();
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    fireEvent.click(screen.getByText("Häkchen BET entfernen"));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByText("Häkchen BET setzen"));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    expect(screen.getByText("Noch keine Änderungen.")).toBeTruthy();
+  });
+
+  it("3c: Häkchen setzen -> neue Dienstleistung (wie 3b), Gleichlauf in der Karte; Speichern legt je Probe eine Aufgabe an", async () => {
+    tickSetup();
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    fireEvent.click(screen.getByText("Häkchen DSC setzen"));
+    expect(await screen.findByText("Dienstleistung(en) hinzugefügt: DSC (je Probe eine Aufgabe, 2 Proben)")).toBeTruthy();
+    fireEvent.click(screen.getByText("Änderungen speichern"));
+    await waitFor(() => expect(hoisted.calls.navigate).toHaveBeenCalledWith("/auftraege/o1"));
+    const addTask = (hoisted.calls as any).addTask;
+    expect(addTask).toHaveBeenCalledTimes(2);
+    expect(addTask.mock.calls.every((c: any[]) => c[0].service_id === "svc3")).toBe(true);
+    expect(hoisted.calls.applyChanges.mock.calls[0][1].template.values.standardpruefungen).toEqual(["dsc"]);
+  });
+
+  it("3c: Dienstleistung über die Karte hinzufügen setzt das passende Häkchen", async () => {
+    tickSetup();
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    fireEvent.click(screen.getAllByRole("combobox").find((el) => /select_service/.test(el.textContent ?? ""))!);
+    fireEvent.click(await screen.findByText("DSC"));
+    await waitFor(() => expect(screen.getByTestId("tick-values2").textContent).toBe('["dsc"]'));
+  });
+
+  it("3c: begonnene Dienstleistung sperrt ihre ganze Gruppe mit Hinweis; andere Gruppen bleiben frei", async () => {
+    tickSetup({ touchedBet: true });
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    expect(screen.getByTestId("locked-keys").textContent).toBe("dienstleistungen");
+    expect(screen.getByRole("note").textContent).toMatch(/Gesperrt: Dienstleistungen – bereits in Bearbeitung/);
+    expect(screen.getByRole("note").textContent).toMatch(/Dienstleistungen hinzufügen/);
+    expect(screen.queryByLabelText("Dienstleistung BET entfernen")).toBeNull(); // begonnen: nur „nicht entfernbar“
+  });
+
+  it("Layout: Pilot-Plant-Auftrag im Bearbeiten-Modus ist zweispaltig wie beim Erstellen (Reiterkarte rechts neben dem Formular)", async () => {
+    hoisted.state.order = baseOrder({ order_kind: "pilot_plant" });
+    hoisted.state.facts = baseFacts({ order_kind: "pilot_plant" });
+    const { container } = mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    expect(screen.getByTestId("service-tabs")).toBeTruthy();
+    expect(container.querySelector('[class*="lg:grid-cols-2"]')).not.toBeNull();
+    expect(container.querySelector('[class*="max-w-none"]')).not.toBeNull();
+    // Reihenfolge links: Formular, bestehende Dienstleistungen, „Dienstleistungen hinzufügen“
+    const text = container.textContent ?? "";
+    expect(text.indexOf("nur lesbar")).toBeGreaterThan(-1);
+    expect(text.indexOf("Dienstleistungen hinzufügen")).toBeGreaterThan(text.indexOf("nur lesbar"));
+  });
+
+  it("Layout: Laborauftrag im Bearbeiten-Modus bleibt einspaltig wie beim Erstellen (keine Reiterkarte)", async () => {
+    const { container } = mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    expect(screen.queryByTestId("service-tabs")).toBeNull();
+    expect(container.querySelector('[class*="lg:grid-cols-2"]')).toBeNull();
+    expect(container.querySelector('[class*="max-w-3xl"]')).not.toBeNull();
+  });
 });
