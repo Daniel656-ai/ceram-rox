@@ -853,9 +853,9 @@ export default function CreateOrderPage() {
         <CloudOff className="h-3.5 w-3.5" /> Änderungen konnten nicht gespeichert werden
       </span>
     ) : autosave.state === "dirty" ? <span className="text-xs text-muted-foreground">{t("orders:draftSafety.unsaved")}</span> : null;
-
+  // Zweispaltiger Dienstleistungsbereich für Pilot-Plant-Einzelaufträge – im Bearbeiten-Modus genau wie beim Erstellen.
   // Zweispaltiger Dienstleistungsbereich nur für die Pilot-Plant-Einzelauftragserstellung.
-  const pilotSingle = mode === "single" && orderKind === "pilot_plant" && !isEdit;
+  const pilotSingle = mode === "single" && orderKind === "pilot_plant";
 
   // Felder des Auftragsformulars, die Dienstleistungen auslösen: im Bearbeiten-Modus gesperrt (Dienstleistungen
   // sind in dieser Stufe schreibgeschützt).

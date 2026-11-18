@@ -432,4 +432,26 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
     expect(screen.getByRole("note").textContent).toMatch(/Dienstleistungen hinzufügen/);
     expect(screen.queryByLabelText("Dienstleistung BET entfernen")).toBeNull(); // begonnen: nur „nicht entfernbar“
   });
+
+  it("Layout: Pilot-Plant-Auftrag im Bearbeiten-Modus ist zweispaltig wie beim Erstellen (Reiterkarte rechts neben dem Formular)", async () => {
+    hoisted.state.order = baseOrder({ order_kind: "pilot_plant" });
+    hoisted.state.facts = baseFacts({ order_kind: "pilot_plant" });
+    const { container } = mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    expect(screen.getByTestId("service-tabs")).toBeTruthy();
+    expect(container.querySelector('[class*="lg:grid-cols-2"]')).not.toBeNull();
+    expect(container.querySelector('[class*="max-w-none"]')).not.toBeNull();
+    // Reihenfolge links: Formular, bestehende Dienstleistungen, „Dienstleistungen hinzufügen“
+    const text = container.textContent ?? "";
+    expect(text.indexOf("nur lesbar")).toBeGreaterThan(-1);
+    expect(text.indexOf("Dienstleistungen hinzufügen")).toBeGreaterThan(text.indexOf("nur lesbar"));
+  });
+
+  it("Layout: Laborauftrag im Bearbeiten-Modus bleibt einspaltig wie beim Erstellen (keine Reiterkarte)", async () => {
+    const { container } = mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    expect(screen.queryByTestId("service-tabs")).toBeNull();
+    expect(container.querySelector('[class*="lg:grid-cols-2"]')).toBeNull();
+    expect(container.querySelector('[class*="max-w-3xl"]')).not.toBeNull();
+  });
 });
