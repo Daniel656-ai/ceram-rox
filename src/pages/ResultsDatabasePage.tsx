@@ -83,8 +83,12 @@ export default function ResultsDatabasePage() {
   const updateFilters = (patch: Partial<ResultsFilters>) => setFilters((prev) => ({ ...prev, ...patch }));
   const {
     serviceFilter, projectFilter, creatorFilter, technicianFilter,
-    sampleFilter, dateFrom, dateTo, searchText, conditionKey, conditionValue,
+    dateFrom, dateTo, conditionKey, conditionValue,
   } = filters;
+  // Textfilter getrimmt anwenden – deckungsgleich mit der Chip-Anzeige
+  // (reine Leerzeichen gelten nicht als aktiver Filter).
+  const searchText = filters.searchText.trim();
+  const sampleFilter = filters.sampleFilter.trim();
 
   // Chart state
   const [chartType, setChartType] = useState<"scatter" | "bar" | "line">("scatter");
