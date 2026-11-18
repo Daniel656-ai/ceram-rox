@@ -24,7 +24,7 @@ export function summarizeServices(measurements: SampleMeasurementRecord[]): Serv
       byName.set(name, s);
     }
     s.analyses += 1;
-    for (const r of m.results) {
+    for (const r of m.results ?? []) {
       if (isInternalResult(r)) continue;
       if (isOfficialResult(r)) s.official += 1;
       else s.interim += 1;
