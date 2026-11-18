@@ -16,7 +16,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Database, BarChart3, Filter, X, Search, Image, FileCode2, Lightbulb, Save, Trash2 } from "lucide-react";
+import { Download, Database, BarChart3, Image, FileCode2, Lightbulb, Save, Trash2, Info, ChevronDown } from "lucide-react";
+import { Tooltip as UiTooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ResultsFilterBar from "@/components/results/ResultsFilterBar";
+import { EMPTY_RESULTS_FILTERS, type ResultsFilters } from "@/lib/results/resultsFilters";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { de } from "date-fns/locale";
 import * as XLSX from "xlsx";
@@ -70,19 +77,14 @@ export default function ResultsDatabasePage() {
   const toggleParam = (key: string) =>
     setHiddenParams((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
-  // Filters
-  const [serviceFilter, setServiceFilter] = useState<string>("all");
-  const [projectFilter, setProjectFilter] = useState<string>("all");
-  const [creatorFilter, setCreatorFilter] = useState<string>("all");
-  const [technicianFilter, setTechnicianFilter] = useState<string>("all");
-  const [sampleFilter, setSampleFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [searchText, setSearchText] = useState("");
-  // Ergebnismerkmale (z. B. Vorgabetemperatur) – Merkmale und Werte entstehen
-  // ausschließlich aus den tatsächlich gespeicherten Ergebnissen.
-  const [conditionKey, setConditionKey] = useState<string>("all");
-  const [conditionValue, setConditionValue] = useState<string>("all");
+  // Filters – Ergebnismerkmale (z. B. Vorgabetemperatur): Merkmale und Werte
+  // entstehen ausschließlich aus den tatsächlich gespeicherten Ergebnissen.
+  const [filters, setFilters] = useState<ResultsFilters>(EMPTY_RESULTS_FILTERS);
+  const updateFilters = (patch: Partial<ResultsFilters>) => setFilters((prev) => ({ ...prev, ...patch }));
+  const {
+    serviceFilter, projectFilter, creatorFilter, technicianFilter,
+    sampleFilter, dateFrom, dateTo, searchText, conditionKey, conditionValue,
+  } = filters;
 
   // Chart state
   const [chartType, setChartType] = useState<"scatter" | "bar" | "line">("scatter");
@@ -122,10 +124,6 @@ export default function ResultsDatabasePage() {
   const uniqueCreators = useMemo(() => [...new Set(records.map(r => r.createdByName).filter(Boolean))].sort(), [records]);
   const uniqueTechnicians = useMemo(() => [...new Set(records.map(r => r.assignedToName).filter(Boolean))].sort(), [records]);
   const conditionDimensions = useMemo(() => collectConditionDimensions(records), [records]);
-  const conditionValues = useMemo(
-    () => conditionDimensions.find((d) => d.key === conditionKey)?.values ?? [],
-    [conditionDimensions, conditionKey]
-  );
 
   // Apply filters
   const filteredRecords = useMemo(() => {
@@ -166,21 +164,6 @@ export default function ResultsDatabasePage() {
     () => (selectedSample ? sampleGroups.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null : null),
     [selectedSample, sampleGroups]
   );
-
-  const clearFilters = () => {
-    setServiceFilter("all");
-    setProjectFilter("all");
-    setCreatorFilter("all");
-    setTechnicianFilter("all");
-    setSampleFilter("");
-    setDateFrom("");
-    setDateTo("");
-    setSearchText("");
-    setConditionKey("all");
-    setConditionValue("all");
-  };
-
-  const hasActiveFilters = serviceFilter !== "all" || projectFilter !== "all" || creatorFilter !== "all" || technicianFilter !== "all" || conditionKey !== "all" || sampleFilter || dateFrom || dateTo || searchText;
 
   // ==========================================================
   // Export – die Spaltenstruktur ist immer identisch (stabile
@@ -534,116 +517,67 @@ export default function ResultsDatabasePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Database className="h-6 w-6 text-primary" />
             Ergebnisdatenbank
+            <UiTooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-full text-muted-foreground hover:text-foreground"
+                  aria-label="Hinweise zur Ergebnisdatenbank"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-sm text-xs font-normal leading-relaxed">
+                Die Probenübersicht zeigt alle gespeicherten Messwerte einer Probe – offizielle
+                Ergebnisse sind deutlich hervorgehoben, vorläufige Arbeitswerte gekennzeichnet.
+                Ergebnismatrix und Statistik &amp; Diagramme basieren ausschließlich auf
+                ausdrücklich freigegebenen offiziellen Ergebnissen.
+              </TooltipContent>
+            </UiTooltip>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {filteredRecords.length} von {records.length} Messungen mit offiziellem Ergebnis
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Die Probenübersicht zeigt alle gespeicherten Messwerte einer Probe – offizielle
-            Ergebnisse sind deutlich hervorgehoben, vorläufige Arbeitswerte gekennzeichnet.
-            Ergebnismatrix und Statistik &amp; Diagramme basieren unverändert ausschließlich
-            auf ausdrücklich freigegebenen offiziellen Ergebnissen.
-          </p>
-
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportToCSV} disabled={filteredRecords.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToExcel} disabled={filteredRecords.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportAllToExcel} disabled={records.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> Alle Ergebnisse
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" disabled={records.length === 0}>
+              <Download className="h-4 w-4 mr-1" /> Export <ChevronDown className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              Gefilterte Ergebnisse ({filteredRecords.length})
+            </DropdownMenuLabel>
+            <DropdownMenuItem onSelect={exportToExcel} disabled={filteredRecords.length === 0}>
+              Als Excel (.xlsx)
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={exportToCSV} disabled={filteredRecords.length === 0}>
+              Als CSV
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={exportAllToExcel} disabled={records.length === 0}>
+              Alle Ergebnisse als Excel ({records.length})
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Filter className="h-4 w-4" /> Filter
-            </CardTitle>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-1" /> Zurücksetzen
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Volltextsuche..." value={searchText} onChange={e => setSearchText(e.target.value)} className="pl-9" />
-            </div>
-            <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger><SelectValue placeholder="Messart" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Messarten</SelectItem>
-                {uniqueServices.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger><SelectValue placeholder="Projekt" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Projekte</SelectItem>
-                {uniqueProjects.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-              <SelectTrigger><SelectValue placeholder="Auftraggeber" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Auftraggeber</SelectItem>
-                {uniqueCreators.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={technicianFilter} onValueChange={setTechnicianFilter}>
-              <SelectTrigger><SelectValue placeholder="Messdienstleister" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Messdienstleister</SelectItem>
-                {uniqueTechnicians.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input placeholder="Proben-ID..." value={sampleFilter} onChange={e => setSampleFilter(e.target.value)} />
-            {conditionDimensions.length > 0 && (
-              <>
-                <Select
-                  value={conditionKey}
-                  onValueChange={(v) => { setConditionKey(v); setConditionValue("all"); }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Ergebnismerkmal" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle Ergebnismerkmale</SelectItem>
-                    {conditionDimensions.map(d => <SelectItem key={d.key} value={d.key}>{d.key}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={conditionValue}
-                  onValueChange={setConditionValue}
-                  disabled={conditionKey === "all"}
-                >
-                  <SelectTrigger><SelectValue placeholder="Wert" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle Werte</SelectItem>
-                    {conditionValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
-            <Input type="date" placeholder="Von" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-            <Input type="date" placeholder="Bis" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-          </div>
-        </CardContent>
-      </Card>
+      <ResultsFilterBar
+        filters={filters}
+        onChange={updateFilters}
+        services={uniqueServices}
+        projects={uniqueProjects}
+        creators={uniqueCreators}
+        technicians={uniqueTechnicians}
+        conditionDimensions={conditionDimensions}
+      />
 
       <Tabs defaultValue="samples">
         <TabsList>
