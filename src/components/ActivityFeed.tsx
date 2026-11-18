@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, CheckCircle2, Play, ArrowUpDown, AlertTriangle, ExternalLink } from "lucide-react";
+import { Activity, CheckCircle2, Play, ArrowUpDown, AlertTriangle, ExternalLink, Pencil } from "lucide-react";
+import { describeOrderUpdate } from "@/lib/orders/orderEdit";
+import { specLabel } from "@/components/order/SpecAmendment";
 import { useRecentActivity, useMarkNotificationRead, useMarkAllNotificationsRead, useUnreadNotificationsCount, type ActivityEntry } from "@/hooks/useActivityLog";
 
 function formatRelative(dateStr: string, t: any): string {
@@ -32,6 +34,9 @@ function eventIcon(type: string) {
     case "hazard_material_created":
     case "hazard_material_updated":
       return <AlertTriangle className="h-4 w-4 text-warning" />;
+    case "order_updated":
+    case "order_spec_updated":
+      return <Pencil className="h-4 w-4 text-warning" />;
     default:
       return <Activity className="h-4 w-4 text-muted-foreground" />;
   }
@@ -106,6 +111,13 @@ export function ActivityFeed() {
                     violated: first,
                   });
                   return rest > 0 ? `${base} ${t("activity:priority_violation_more", { count: rest })}` : base;
+                }
+                if (e.event_type === "order_updated") {
+                  return `${orderNumber || "—"}: ${describeOrderUpdate(e.metadata)}`;
+                }
+                if (e.event_type === "order_spec_updated") {
+                  const label = specLabel(String(e.metadata?.parameter_label ?? e.metadata?.parameter_name ?? "Vorgabe"));
+                  return [orderNumber, measurementNumber, serviceName, label].filter(Boolean).join(" · ");
                 }
                 if (e.event_type === "hazard_material_created" || e.event_type === "hazard_material_updated") {
                   const num = e.metadata?.material_number ?? "";

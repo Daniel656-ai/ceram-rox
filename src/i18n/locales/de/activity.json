@@ -20,5 +20,7 @@
   "time_just_now": "gerade eben",
   "time_minutes_ago": "vor {{count}} Min.",
   "time_hours_ago": "vor {{count}} Std.",
-  "time_days_ago": "vor {{count}} Tagen"
+  "time_days_ago": "vor {{count}} Tagen",
+  "event_order_updated": "Auftrag geändert",
+  "event_order_spec_updated": "Vorgabe geändert"
 }

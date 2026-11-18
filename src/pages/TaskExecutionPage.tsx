@@ -4,6 +4,7 @@ import { ExternalAppButton } from "@/components/ExternalAppButton";
 import { useQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SpecChangeHistory, groupSpecChanges } from "@/components/order/SpecAmendment";
+import OrderChangeNotice from "@/components/order/OrderChangeNotice";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMeasurementAutosave, type AutosaveState } from "@/hooks/useMeasurementAutosave";
 import { useRefreshGuard } from "@/lib/refreshGuard";
@@ -1113,6 +1114,7 @@ function TaskExecutionPageInner() {
 
       {/* Arbeitsauftrag des Auftraggebers – schreibgeschützte Anzeige aller vom
           Auftraggeber im Bestellformular eingegebenen Werte und hochgeladenen Dateien. */}
+      <OrderChangeNotice orderId={m.order_id} />
       <CustomerOrderBriefingCard measurement={m} />
 
 
