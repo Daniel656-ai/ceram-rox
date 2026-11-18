@@ -6,6 +6,7 @@ import { X, Columns3 } from "lucide-react";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import {
   buildOrderComparison,
+  contextText,
   summarizeRuns,
   type ComparisonColumn,
   type ComparisonRow,
@@ -15,13 +16,11 @@ import {
 import type { SampleGroup } from "@/lib/results/sampleResultsAggregation";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { InfoHint } from "@/components/results/InfoHint";
+import OrderExcelExportButton from "@/components/order/OrderExcelExportButton";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
 const nfMean = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 4 });
 const fmt = (v: number | string) => (typeof v === "number" ? nf.format(v) : v);
-
-const contextText = (c: Record<string, string> | null): string | undefined =>
-  c && Object.keys(c).length ? Object.entries(c).map(([k, v]) => `${k}: ${v}`).join(" · ") : undefined;
 
 /** Proben eines Auftrags nebeneinander: je Analyseart eine Tabelle (nur offizielle Werte), je Durchlauf eine Unterzeile. */
 export default function OrderComparisonView({
@@ -58,6 +57,7 @@ export default function OrderComparisonView({
           </InfoHint>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <OrderExcelExportButton orderId={order.orderId} label="Excel" />
           {anyMultiple && (
             <label
               className={`flex items-center gap-1.5 text-xs ${meanAvailable ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}
