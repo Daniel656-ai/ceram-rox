@@ -5,6 +5,7 @@ import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { formatSampleDate, type SampleGroup } from "@/lib/results/sampleResultsAggregation";
 import { InfoHint } from "@/components/results/InfoHint";
 import { ResultCountBadges } from "@/components/results/ResultCountBadges";
+import ServiceChips from "@/components/results/ServiceChips";
 
 /**
  * Ebene 1: Probenübersicht. Dient ausschließlich der Navigation – die
@@ -32,6 +33,7 @@ export default function SampleOverviewTable({
           {!compact && <th className="p-2 text-left font-medium">Probenbezeichnung</th>}
           {!compact && <th className="p-2 text-left font-medium">Projekt</th>}
           {!compact && <th className="p-2 text-left font-medium">Auftrag</th>}
+          <th className={`p-2 text-left font-medium ${compact ? "w-[140px]" : ""}`}>Messarten</th>
           {!compact && <th className="p-2 text-right font-medium">Analysen</th>}
           <th className={`p-2 text-left font-medium ${compact ? "w-[200px]" : ""}`}>Messwerte</th>
           {!compact && <th className="p-2 text-left font-medium">Letzte Aktivität</th>}
@@ -57,6 +59,7 @@ export default function SampleOverviewTable({
             {!compact && <td className="p-2">{g.sampleName || "–"}</td>}
             {!compact && <td className="p-2">{g.projectNames.join(", ") || "–"}</td>}
             {!compact && <td className="p-2 font-mono text-xs">{g.orderDisplayNumbers.join(", ") || "–"}</td>}
+            <td className="p-2"><ServiceChips measurements={g.measurements} compact={compact} /></td>
             {!compact && <td className="p-2 text-right">{g.measurements.length}</td>}
             <td className="whitespace-nowrap p-2">
               <ResultCountBadges official={g.officialCount} interim={g.interimCount} />
@@ -80,7 +83,7 @@ export default function SampleOverviewTable({
           <CardTitle className="flex items-center gap-2 text-base">
             <FlaskConical className="h-4 w-4" /> Probenübersicht
             <InfoHint label="Hinweise zur Probenübersicht">
-              Eine Probe = eine Zeile. Klick öffnet alle Messungen der Probe.
+              Eine Probe = eine Zeile. Klick öffnet alle Messungen der Probe. Die Chips zeigen die Messarten; ein Klick darauf zeigt Anzahl offizieller und vorläufiger Werte je Messart.
             </InfoHint>
           </CardTitle>
           {headerExtra}

@@ -7,6 +7,7 @@ import { formatSampleDate, type SampleGroup } from "@/lib/results/sampleResultsA
 import type { OrderGroup } from "@/lib/results/orderGroups";
 import { InfoHint } from "@/components/results/InfoHint";
 import { ResultCountBadges } from "@/components/results/ResultCountBadges";
+import ServiceChips from "@/components/results/ServiceChips";
 
 export type OverviewMode = "order" | "sample";
 
@@ -70,6 +71,7 @@ export default function OrderOverviewTable({
           <th className="w-8 p-2" />
           <th className="p-2 text-left font-medium">Auftrag / Probe</th>
           {!compact && <th className="p-2 text-left font-medium">Projekt / Bezeichnung</th>}
+          <th className={`p-2 text-left font-medium ${compact ? "w-[140px]" : ""}`}>Messarten</th>
           {!compact && <th className="p-2 text-right font-medium">Proben</th>}
           {!compact && <th className="p-2 text-right font-medium">Analysen</th>}
           <th className={`p-2 text-left font-medium ${compact ? "w-[200px]" : ""}`}>Messwerte</th>
@@ -109,6 +111,7 @@ export default function OrderOverviewTable({
                   </span>
                 </td>
                 {!compact && <td className="p-2 font-normal">{o.projectNames.join(", ") || "–"}</td>}
+                <td className="p-2 font-normal"><ServiceChips measurements={o.samples.flatMap((s) => s.measurements)} compact={compact} /></td>
                 {!compact && <td className="p-2 text-right">{o.samples.length}</td>}
                 {!compact && <td className="p-2 text-right">{o.measurementCount}</td>}
                 <td className="whitespace-nowrap p-2 font-normal">
@@ -138,6 +141,7 @@ export default function OrderOverviewTable({
                       )}
                     </td>
                     {!compact && <td className="p-2">{s.sampleName || "–"}</td>}
+                    <td className="p-2"><ServiceChips measurements={s.measurements} compact={compact} /></td>
                     {!compact && <td className="p-2" />}
                     {!compact && <td className="p-2 text-right">{s.measurements.length}</td>}
                     <td className="whitespace-nowrap p-2">
@@ -163,7 +167,8 @@ export default function OrderOverviewTable({
             <ClipboardList className="h-4 w-4" /> Aufträge
             <InfoHint label="Hinweise zur Auftragsliste">
               Pfeil links klappt die Proben eines Auftrags auf. Klick auf die Auftragszeile öffnet die
-              Ergebnisübersicht des Auftrags, Klick auf eine Probe öffnet ihre Messungen.
+              Ergebnisübersicht des Auftrags, Klick auf eine Probe öffnet ihre Messungen. Die Chips zeigen die
+              Messarten; ein Klick darauf zeigt Anzahl offizieller und vorläufiger Werte je Messart.
             </InfoHint>
           </CardTitle>
           {headerExtra}
