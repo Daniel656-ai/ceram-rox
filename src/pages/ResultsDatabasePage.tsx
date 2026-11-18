@@ -690,12 +690,13 @@ export default function ResultsDatabasePage() {
                     setCompareOrderKey(null);
                     setSelectedSample({ orderKey: o.orderKey, sampleKey: s.sampleKey });
                   }}
-                  onCompare={(o) => {
+                  onOpenOverview={(o) => {
                     setSelectedSample(null);
                     setCompareOrderKey(o.orderKey);
                   }}
                   selected={selectedSample}
                   compareOrderKey={selectedSample ? null : compareOrderKey}
+                  compact={panelOpen && isWide}
                   headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
                 />
               ) : (
@@ -706,6 +707,7 @@ export default function ResultsDatabasePage() {
                     setSelectedSample({ orderKey: null, sampleKey: g.sampleKey });
                   }}
                   selectedSampleKey={selectedSample?.orderKey == null ? selectedSample?.sampleKey ?? null : null}
+                  compact={panelOpen && isWide}
                   headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
                 />
               )}
