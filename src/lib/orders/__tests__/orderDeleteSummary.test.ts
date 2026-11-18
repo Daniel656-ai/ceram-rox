@@ -21,3 +21,43 @@ describe("describeOrderAttachments", () => {
     expect(l[3]).toContain("bleiben bestehen");
   });
 });
+
+import { describeOrderDeletion } from "../orderDeleteSummary";
+
+describe("describeOrderDeletion (Löschdialog eines ganzen Auftrags)", () => {
+  it("leer ohne Daten; alte Antwort ohne neue Felder erzeugt keine Sperrgründe", () => {
+    expect(describeOrderDeletion(null)).toEqual({ blockers: [], removed: [], released: [], kept: [] });
+    expect(describeOrderDeletion({ documents: [], reports: 0 }).blockers).toEqual([]);
+  });
+
+  it("trennt: mitgelöscht, gelöst, bleibt bestehen", () => {
+    const d = describeOrderDeletion({
+      documents: ["a.pdf"], upload_files: ["b.png"], prefilled_values: 3, reports: 1, m3_requests: 1, audit_entries: 4,
+      production_releases: ["FR-1"], process_links: 1, samples: 2,
+      sample_plan: [
+        { name: "P-NEU", deletable: true, reason: null },
+        { name: "P-ALT", deletable: false, reason: "an einem weiteren Auftrag" },
+      ],
+      blockers: [],
+    });
+    expect(d.removed).toEqual([
+      "2 Datei(en): a.pdf, b.png",
+      "3 vorläufige Formularwert(e) vom Anlegen",
+      "1 automatisch angelegte(r) Bericht(e) ohne Inhalt",
+      "1 m³-Listen-Anfrage(n)",
+      "4 Eintrag/Einträge im Änderungsprotokoll des Auftrags (bleiben im Löschprotokoll gesichert)",
+      "1 Probe(n), die nur für diesen Auftrag angelegt wurden: P-NEU",
+    ]);
+    expect(d.released).toEqual([
+      "Fertigungsfreigabe FR-1 (bleibt bestehen, wird vom Auftrag gelöst)",
+      "1 Prozess-Verknüpfung(en) (der Prozessauftrag bleibt bestehen)",
+      "2 Probenzuordnung(en) werden gelöst",
+    ]);
+    expect(d.kept).toEqual(["Probe P-ALT bleibt bestehen (an einem weiteren Auftrag)"]);
+  });
+
+  it("Sperrgründe werden unverändert durchgereicht", () => {
+    const d = describeOrderDeletion({ blockers: ["Auftrag enthält Messergebnisse, Rohdaten oder Korrekturen und darf nicht gelöscht werden."] });
+    expect(d.blockers).toHaveLength(1);
+  });
+});
