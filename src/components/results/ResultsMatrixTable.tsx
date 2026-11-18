@@ -16,7 +16,7 @@ import { useTranslation } from "react-i18next";
  * Kompakter, fixierter Identifikationsbereich. Breiten orientieren sich am
  * tatsächlichen Inhalt (Nummern, Kurztexte) – keine überbreiten Spalten.
  */
-const IDENT_COLUMNS = [
+const ALL_IDENT_COLUMNS = [
   { key: "sample", label: "Probe", width: 116 },
   { key: "order", label: "Auftrag", width: 92 },
   { key: "service", label: "Dienstleistung", width: 132 },
@@ -24,10 +24,7 @@ const IDENT_COLUMNS = [
   { key: "date", label: "Datum", width: 84 },
 ] as const;
 
-const OFFSETS = IDENT_COLUMNS.reduce<number[]>((acc, c, i) => {
-  acc.push(i === 0 ? 0 : acc[i - 1] + IDENT_COLUMNS[i - 1].width);
-  return acc;
-}, []);
+type IdentKey = (typeof ALL_IDENT_COLUMNS)[number]["key"];
 
 /**
  * Ergebnismatrix: eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte.
@@ -38,18 +35,33 @@ const OFFSETS = IDENT_COLUMNS.reduce<number[]>((acc, c, i) => {
 export default function ResultsMatrixTable({
   records,
   columns,
+  showServiceColumn = true,
 }: {
   records: ResultRecord[];
   columns: ResultParamColumn[];
+  /** Bei einer einzelnen Messart überflüssig (überall gleich). */
+  showServiceColumn?: boolean;
 }) {
   const { t } = useTranslation("orders");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const precisionDefinitions = useResultDisplayPrecision(records);
-  const identWidth = useMemo(
-    () => IDENT_COLUMNS.reduce((s, c) => s + c.width, 0),
-    []
+  const IDENT_COLUMNS = useMemo(
+    () => ALL_IDENT_COLUMNS.filter((c) => showServiceColumn || c.key !== "service"),
+    [showServiceColumn],
   );
+  const OFFSETS = useMemo(
+    () => IDENT_COLUMNS.reduce<number[]>((acc, _c, i) => {
+      acc.push(i === 0 ? 0 : acc[i - 1] + IDENT_COLUMNS[i - 1].width);
+      return acc;
+    }, []),
+    [IDENT_COLUMNS],
+  );
+  const identWidth = IDENT_COLUMNS.reduce((s, c) => s + c.width, 0);
+  const identStyle = (key: IdentKey) => {
+    const i = IDENT_COLUMNS.findIndex((c) => c.key === key);
+    return { left: OFFSETS[i], width: IDENT_COLUMNS[i].width, maxWidth: IDENT_COLUMNS[i].width };
+  };
 
   // Mehrere eigenständige Messungen derselben Tätigkeit (Messdatenblock)
   // erscheinen als eigene, direkt vergleichbare Zeilen.
@@ -103,7 +115,7 @@ export default function ResultsMatrixTable({
               <tr key={`${r.measurementId}:${r.instanceKey ?? ""}`} className={rowBg}>
                 <td
                   className={stickyCell}
-                  style={{ left: OFFSETS[0], width: IDENT_COLUMNS[0].width, maxWidth: IDENT_COLUMNS[0].width }}
+                  style={identStyle("sample")}
                 >
                   <span className="font-mono text-xs">{r.sampleNumber || "–"}</span>
                   {r.sampleName ? (
@@ -117,7 +129,7 @@ export default function ResultsMatrixTable({
                 </td>
                 <td
                   className={`${stickyCell} font-mono text-xs`}
-                  style={{ left: OFFSETS[1], width: IDENT_COLUMNS[1].width, maxWidth: IDENT_COLUMNS[1].width }}
+                  style={identStyle("order")}
                 >
                   <span className="break-words">{r.orderIdentity?.number || r.orderNumber}</span>
                   {r.orderIdentity?.hasExperimentNumber && (
@@ -127,15 +139,17 @@ export default function ResultsMatrixTable({
                     <div className="font-sans text-[11px] text-muted-foreground break-words">{t("without_experiment_number")}</div>
                   )}
                 </td>
-                <td
-                  className={stickyCell}
-                  style={{ left: OFFSETS[2], width: IDENT_COLUMNS[2].width, maxWidth: IDENT_COLUMNS[2].width }}
-                >
-                  <div className="truncate" title={r.serviceName}>{r.serviceName}</div>
-                </td>
+                {showServiceColumn && (
+                  <td
+                    className={stickyCell}
+                    style={identStyle("service")}
+                  >
+                    <div className="truncate" title={r.serviceName}>{r.serviceName}</div>
+                  </td>
+                )}
                 <td
                   className={`${stickyCell} font-mono text-xs`}
-                  style={{ left: OFFSETS[3], width: IDENT_COLUMNS[3].width, maxWidth: IDENT_COLUMNS[3].width }}
+                  style={identStyle("analysis")}
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span>{r.measurementNumber}</span>
@@ -157,7 +171,7 @@ export default function ResultsMatrixTable({
                 </td>
                 <td
                   className={`${stickyCell} whitespace-nowrap`}
-                  style={{ left: OFFSETS[4], width: IDENT_COLUMNS[4].width, maxWidth: IDENT_COLUMNS[4].width }}
+                  style={identStyle("date")}
                 >
                   {r.completedAt ? format(parseISO(r.completedAt), "dd.MM.yy", { locale: de }) : "–"}
                 </td>
