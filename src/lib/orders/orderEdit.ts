@@ -159,6 +159,8 @@ export interface EditDiff {
   lines: string[];
   /** Mindestlänge der Begründung (5 beim Entfernen von Dienstleistungen, sonst 1). */
   reasonMinLength: number;
+  /** Namen der neu hinzugefügten Dienstleistungen (Stufe 3b). */
+  addedServiceNames: string[];
 }
 
 export interface DiffContext {
@@ -166,6 +168,10 @@ export interface DiffContext {
   /** Versuchsnummer aus dem Auftragsformular (nur gesetzt, wenn eindeutig bestimmbar). */
   experimentNumber?: string | null;
   expectedUpdatedAt?: string;
+  /** Neu hinzugefügte Dienstleistungen (Stufe 3b) – werden nach dem Speichern mit dem Erstellen-Ablauf angelegt. */
+  addServices?: Array<{ name: string }>;
+  /** Anzahl Proben, für die je Dienstleistung eine Aufgabe entsteht. */
+  addSampleCount?: number;
   /** Zum Entfernen vorgemerkte Dienstleistungen (Stufe 3a). */
   removeServices?: Array<{ id: string; name: string; tasks?: number }>;
   labels?: {
@@ -227,6 +233,13 @@ export function diffOrderEdit(base: EditSnapshot, cur: EditSnapshot, ctx: DiffCo
     if (ctx.started) why.push("Auftragsformular eines begonnenen Auftrags geändert");
   }
 
+  const addServices = ctx.addServices ?? [];
+  if (addServices.length) {
+    const n = ctx.addSampleCount ?? 0;
+    lines.push(
+      `Dienstleistung(en) hinzugefügt: ${addServices.map((s) => s.name).join(", ")}${n > 0 ? ` (je Probe eine Aufgabe, ${n} ${n === 1 ? "Probe" : "Proben"})` : ""}`,
+    );
+  }
   const removeServices = ctx.removeServices ?? [];
   if (removeServices.length) {
     lines.push(
@@ -265,6 +278,8 @@ export function diffOrderEdit(base: EditSnapshot, cur: EditSnapshot, ctx: DiffCo
     changes, billedChange, reasonRequired: why.length > 0, reasonWhy: why, lines,
     /** Beim Entfernen von Dienstleistungen verlangt die Datenbank mindestens 5 Zeichen. */
     reasonMinLength: removeServices.length ? 5 : 1,
+    /** Hinzugefügte Dienstleistungen laufen NICHT über apply_order_changes, zählen aber als Änderung. */
+    addedServiceNames: addServices.map((s) => s.name),
   };
 }
 
@@ -325,6 +340,7 @@ const FIELD_LABELS: Record<string, string> = {
   samples_added: "Proben hinzugefügt",
   samples_removed: "Proben entfernt",
   services_removed: "Dienstleistungen entfernt",
+  services_added: "Dienstleistungen hinzugefügt",
   template: "Auftragsformular",
 };
 const TYPE_LABELS: Record<string, string> = { customer: "Kunde", production: "Produktion", rnd: "F&E", internal: "Intern" };
@@ -346,7 +362,7 @@ export function describeOrderUpdate(meta: Record<string, any> | null | undefined
   const added: string[] = Array.isArray(m.samples_added) ? m.samples_added : [];
   const removed: string[] = Array.isArray(m.samples_removed) ? m.samples_removed : [];
   const parts = fields
-    .filter((f) => f !== "samples_added" && f !== "samples_removed" && f !== "services_removed")
+    .filter((f) => f !== "samples_added" && f !== "samples_removed" && f !== "services_removed" && f !== "services_added")
     .map((f) => auditFieldLabel(f));
   if (added.length || removed.length) {
     parts.push(
@@ -355,6 +371,8 @@ export function describeOrderUpdate(meta: Record<string, any> | null | undefined
   }
   const svc: string[] = Array.isArray(m.services_removed) ? m.services_removed : [];
   if (svc.length) parts.push(`Dienstleistung(en) entfernt (${svc.join(", ")})`);
+  const svcAdded: string[] = Array.isArray(m.services_added) ? m.services_added : [];
+  if (svcAdded.length) parts.push(`Dienstleistung(en) hinzugefügt (${svcAdded.join(", ")})`);
   const reason = typeof m.reason === "string" && m.reason.trim() ? ` · „${m.reason.trim()}“` : "";
   return `${parts.join(", ") || "Auftrag"}${reason}`;
 }
