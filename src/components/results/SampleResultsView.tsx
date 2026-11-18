@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { splitInternalResults, type ImportProtocol } from "@/lib/results/internalResults";
+import { prepareDisplayResults, splitInternalResults, type ImportProtocol } from "@/lib/results/internalResults";
 import CompletedResultForm from "@/components/CompletedResultForm";
 import RequesterConditionsPanel from "@/components/results/RequesterConditionsPanel";
 import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
@@ -70,7 +70,7 @@ export function SampleMeasurementResultsTable({
 }) {
   const canCorrect = useCanCorrectResults();
   // Interne Einträge (Importprotokoll) sind keine Messwerte: nicht in der Tabelle.
-  const { visible, protocols } = useMemo(() => splitInternalResults(measurement.results), [measurement.results]);
+  const { visible, protocols } = useMemo(() => prepareDisplayResults(measurement.results), [measurement.results]);
   const instances = useMemo(() => groupResultsByInstance(visible), [visible]);
 
   return (
@@ -117,7 +117,7 @@ export function SampleMeasurementResultsTable({
                       <td className="p-2 text-xs text-muted-foreground">{formatSampleDate(r.measured_at)}</td>
                       {onCorrect && (
                         <td className="p-2 text-right">
-                          {canCorrect && (
+                          {canCorrect && !(r as { derived?: boolean }).derived && (
                             <Button
                               variant="ghost"
                               size="icon"

@@ -102,3 +102,96 @@ export function splitInternalResults<T extends SampleResultValue>(
   }
   return { visible, protocols, hiddenOther };
 }
+
+/* ------------------------------------------------------------------ */
+/* Messdatenblock mit eingebettetem Importprotokoll                    */
+/* ------------------------------------------------------------------ */
+
+/** Anzeigewert; `derived` = aus einem Blockeintrag abgeleitet (kein eigener Datensatz). */
+export type DisplayResultValue = SampleResultValue & { derived?: boolean };
+
+const asProtocol = (v: unknown): ImportProtocol | null => {
+  if (typeof v === "string") return parseImportProtocol(v);
+  if (isPlainObject(v) && typeof v.imported_at === "string") return parseImportProtocol(JSON.stringify(v));
+  return null;
+};
+
+const toDisplayNumber = (v: unknown): number | null => {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && /^-?\d+(\.\d+)?$/.test(v.trim())) return Number(v.trim());
+  return null;
+};
+
+/**
+ * Ein Messdatenblock-Datensatz (JSON-Array von Einträgen), dessen Einträge ein
+ * Importprotokoll enthalten, wird nur für die Anzeige zerlegt:
+ *  - echte Werte -> normale Zeilen (Einheit aus dem Protokoll)
+ *  - Importprotokoll -> kurze Importinfo
+ * Werte, die bereits als eigener Datensatz derselben Messung vorliegen
+ * (gleicher Durchlauf, gleicher Feldschlüssel), werden nicht doppelt gezeigt.
+ */
+export function expandImportBlock(
+  r: SampleResultValue,
+  siblings: SampleResultValue[],
+): { rows: DisplayResultValue[]; protocols: ImportProtocol[] } | null {
+  if (r.value !== null && r.value !== undefined) return null;
+  const parsed = parseJson(r.remarks);
+  if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(isPlainObject)) return null;
+  const entries = parsed as Array<Record<string, unknown>>;
+  const protocols = entries.flatMap((e) => Object.values(e).map(asProtocol).filter((p): p is ImportProtocol => !!p));
+  if (protocols.length === 0) return null;
+
+  const rows: DisplayResultValue[] = [];
+  entries.forEach((e, i) => {
+    const units: Record<string, string | null> = {};
+    for (const v of Object.values(e)) {
+      const p = typeof v === "string" ? parseJson(v) : v;
+      if (isPlainObject(p) && isPlainObject(p.units)) Object.assign(units, p.units);
+    }
+    const instId = typeof e.__instance_id === "string" ? e.__instance_id : entries.length > 1 ? `__entry${i + 1}` : null;
+    const instLabel = typeof e.__label === "string" && e.__label ? e.__label : entries.length > 1 ? `Eintrag ${i + 1}` : null;
+    for (const [key, v] of Object.entries(e)) {
+      if (key.startsWith("__") || asProtocol(v)) continue;
+      if (v === null || v === undefined || v === "") continue;
+      const exists = siblings.some(
+        (s) =>
+          s.id !== r.id &&
+          (s.instance_key ?? null) === instId &&
+          (s.result_name.endsWith(`.${key}`) || s.result_name.endsWith(`:${key}`)),
+      );
+      if (exists) continue;
+      const num = toDisplayNumber(v);
+      rows.push({
+        ...r,
+        id: `${r.id}::${instId ?? "0"}::${key}`,
+        result_name: key,
+        display_label: key.replace(/_/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase()),
+        value: num,
+        unit: units[key] ?? null,
+        remarks: num === null ? (typeof v === "object" ? JSON.stringify(v) : String(v)) : null,
+        instance_key: instId,
+        instance_label: instLabel,
+        derived: true,
+      });
+    }
+  });
+  return { rows, protocols };
+}
+
+/** Anzeigeaufbereitung der Wertetabelle: interne Einträge raus, Importblöcke zerlegt. */
+export function prepareDisplayResults(results: SampleResultValue[]): {
+  visible: DisplayResultValue[];
+  protocols: ImportProtocol[];
+} {
+  const base = splitInternalResults(results);
+  const visible: DisplayResultValue[] = [];
+  const protocols = [...base.protocols];
+  for (const r of base.visible) {
+    const expanded = expandImportBlock(r, results);
+    if (expanded) {
+      visible.push(...expanded.rows);
+      protocols.push(...expanded.protocols);
+    } else visible.push(r);
+  }
+  return { visible, protocols };
+}

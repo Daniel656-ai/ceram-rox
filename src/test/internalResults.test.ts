@@ -88,3 +88,45 @@ describe("interne Ergebniseinträge", () => {
     expect(g.interimCount).toBe(1);
   });
 });
+
+import { prepareDisplayResults } from "@/lib/results/internalResults";
+
+describe("Messdatenblock mit eingebettetem Importprotokoll", () => {
+  const proto = JSON.stringify({
+    imported_at: "2026-10-29T08:00:00.000Z", profile: "RFA", source: "rfa.xls", count: 2,
+    units: { sio_2: "%", al_2_o_3: "%" },
+  });
+  const block = (over: Partial<SampleResultValue> = {}) =>
+    val({
+      id: "blk",
+      result_name: "form:f1:messdatenimport_block",
+      remarks: JSON.stringify([{ __instance_id: "i1", __label: "RFA 1", sio_2: 5.16, al_2_o_3: "1.1", bemerkung: "ok", leer: "", messdatenimport_2: proto }]),
+      ...over,
+    });
+
+  it("zeigt echte Werte als Zeilen mit Einheit und das Protokoll als Importinfo", () => {
+    const { visible, protocols } = prepareDisplayResults([block()]);
+    const byName = Object.fromEntries(visible.map((r) => [r.result_name, r]));
+    expect(byName.sio_2.value).toBe(5.16);
+    expect(byName.sio_2.unit).toBe("%");
+    expect(byName.al_2_o_3.value).toBe(1.1);
+    expect(byName.bemerkung.remarks).toBe("ok");
+    expect(byName.leer).toBeUndefined();
+    expect(byName.messdatenimport_2).toBeUndefined();
+    expect(visible.every((r) => r.instance_key === "i1" && r.instance_label === "RFA 1")).toBe(true);
+    expect(protocols).toHaveLength(1);
+    expect(protocols[0].profile).toBe("RFA");
+  });
+
+  it("zeigt Werte nicht doppelt, wenn es sie schon als eigenen Datensatz gibt", () => {
+    const own = val({ id: "own", result_name: "form:f1:blk[i1].sio_2", value: 5.16, instance_key: "i1" });
+    const { visible } = prepareDisplayResults([block(), own]);
+    expect(visible.filter((r) => r.result_name.endsWith("sio_2"))).toHaveLength(1);
+    expect(visible.some((r) => r.id === "own")).toBe(true);
+  });
+
+  it("lässt Blöcke ohne Importprotokoll unverändert", () => {
+    const plain = val({ id: "p", remarks: JSON.stringify([{ a: 1 }]) });
+    expect(prepareDisplayResults([plain]).visible).toEqual([plain]);
+  });
+});
