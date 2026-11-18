@@ -8,7 +8,7 @@ const apiMock = vi.hoisted(() => ({
   formFields: { listForForm: vi.fn() },
   formFieldPermissions: { getEffectiveMap: vi.fn() },
 }));
-vi.mock("@/lib/api", () => ({ api: apiMock }));
+vi.mock("@/lib/api", () => ({ api: { ...apiMock, measurementParameters: { amend: vi.fn() }, users: { list: vi.fn() } } }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "u1" }, role: "master" }) }));
 vi.mock("@/hooks/useSamples", () => ({
   useSamples: () => ({
@@ -156,5 +156,35 @@ describe("Dienstleistungen im Bearbeiten-Modus (nur lesbar)", () => {
   it("ohne Dienstleistungen ein Hinweis", () => {
     render(<ExistingServicesReadOnly measurements={[]} facts={null} />);
     expect(screen.getByText("Keine Dienstleistungen im Auftrag.")).toBeTruthy();
+  });
+});
+
+describe("Stufe 2: Vorgaben je Aufgabe ändern", () => {
+  const measurements = [
+    {
+      id: "m1", service_id: "s-rfa", measurement_number: "M1", status: "open", measurement_services: { service_name: "RFA" },
+      samples: { sample_number: "P1" },
+      measurement_parameters: [{ id: "p1", parameter_name: "Temperatur", parameter_value: "300", unit: "°C" }],
+    },
+    {
+      id: "m2", service_id: "s-rfa", measurement_number: "M2", status: "completed", measurement_services: { service_name: "RFA" },
+      samples: { sample_number: "P2" },
+      measurement_parameters: [{ id: "p2", parameter_name: "Temperatur", parameter_value: "400", unit: "°C" }],
+    },
+  ];
+
+  it("ohne Berechtigung kein Änderungs-Knopf", () => {
+    render(<ExistingServicesReadOnly measurements={measurements} facts={null} />);
+    expect(screen.queryByLabelText("Vorgabe Temperatur ändern")).toBeNull();
+  });
+
+  it("mit Berechtigung: Knopf nur bei nicht abgeschlossenen Aufgaben, öffnet den Dialog mit Begründungspflicht", () => {
+    render(<ExistingServicesReadOnly measurements={measurements} facts={null} canAmend />);
+    const buttons = screen.getAllByLabelText("Vorgabe Temperatur ändern");
+    expect(buttons).toHaveLength(1);
+    fireEvent.click(buttons[0]);
+    expect(screen.getByText(/Vorgabe ändern: Temperatur/)).toBeTruthy();
+    expect(screen.getByText("Begründung *")).toBeTruthy();
+    expect((screen.getByText("Speichern") as HTMLButtonElement).disabled).toBe(true);
   });
 });

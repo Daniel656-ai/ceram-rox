@@ -1,5 +1,7 @@
-import { useMemo } from "react";
-import { Lock, CheckCircle2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Lock, CheckCircle2, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SpecAmendDialog, specLabel, type AmendableParam } from "@/components/order/SpecAmendment";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BLOCKER_TEXT, type OrderEditFacts } from "@/lib/orders/orderEdit";
@@ -34,10 +36,16 @@ function paramText(p: { parameter_value?: string | null; unit?: string | null })
 export default function ExistingServicesReadOnly({
   measurements,
   facts,
+  canAmend = false,
+  onAmended,
 }: {
   measurements: any[];
   facts: OrderEditFacts | null | undefined;
+  /** Stufe 2: Vorgaben je Aufgabe nachträglich ändern (mit Begründung, über die geprüfte Funktion amend_order_spec). */
+  canAmend?: boolean;
+  onAmended?: () => void;
 }) {
+  const [editing, setEditing] = useState<AmendableParam[] | null>(null);
   const factById = useMemo(
     () => new Map((facts?.measurements ?? []).map((m) => [m.measurement_id, m])),
     [facts],
@@ -62,8 +70,7 @@ export default function ExistingServicesReadOnly({
           </Badge>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Dienstleistungen und ihre Vorgaben sind in dieser Version im Bearbeiten-Modus noch nicht änderbar. Vorgaben
-          können im Auftrag unter „Auftraggeber-Vorgaben“ nachträglich geändert werden (mit Begründung).
+          Dienstleistungen selbst sind in dieser Version noch nicht änderbar.{canAmend ? " Vorgaben können je Aufgabe über „Vorgabe ändern“ angepasst werden – mit Begründung, die Änderung steht im Verlauf." : ""}
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -108,7 +115,22 @@ export default function ExistingServicesReadOnly({
                         {params.map((p) => (
                           <div key={p.id ?? p.parameter_name} className="contents">
                             <dt>{String(p.parameter_name).replace(/^repeat:/, "")}</dt>
-                            <dd className="break-words text-foreground">{paramText(p)}</dd>
+                            <dd className="flex items-start gap-2 break-words text-foreground">
+                              <span className="flex-1">{paramText(p)}</span>
+                              {canAmend && m.status !== "completed" && p.id && (
+                                <Button
+                                  type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs"
+                                  aria-label={`Vorgabe ${specLabel(p.parameter_name)} ändern`}
+                                  onClick={() => setEditing([{
+                                    id: p.id, parameter_name: p.parameter_name, parameter_value: p.parameter_value ?? null,
+                                    unit: p.unit ?? null, sampleNumber: m.samples?.sample_number ?? null,
+                                  }])}
+                                >
+                                  <Pencil className="mr-1 h-3 w-3" />
+                                  {String(p.parameter_name).startsWith("repeat:") ? "Einträge bearbeiten" : "Vorgabe ändern"}
+                                </Button>
+                              )}
+                            </dd>
                           </div>
                         ))}
                       </dl>
@@ -120,6 +142,14 @@ export default function ExistingServicesReadOnly({
           </div>
         ))}
       </CardContent>
+      {editing && (
+        <SpecAmendDialog
+          open={!!editing}
+          onOpenChange={(v) => { if (!v) setEditing(null); }}
+          params={editing}
+          onSaved={() => onAmended?.()}
+        />
+      )}
     </Card>
   );
 }

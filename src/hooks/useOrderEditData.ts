@@ -30,5 +30,7 @@ export function useOrderEditData(orderId: string | undefined) {
     facts: facts.data ?? null,
     isLoading: order.isLoading || facts.isLoading,
     error: (order.error ?? facts.error) as Error | null,
+    /** Nur den Auftrag neu laden (z. B. nach geänderter Vorgabe); Ausgangsstand und Zeitstempel bleiben unberührt. */
+    refetchOrder: () => order.refetch(),
   };
 }
