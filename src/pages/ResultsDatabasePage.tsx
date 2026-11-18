@@ -7,6 +7,9 @@ import SampleOverviewTable from "@/components/results/SampleOverviewTable";
 import SampleResultsView from "@/components/results/SampleResultsView";
 import ResultDetailInspector from "@/components/results/ResultDetailInspector";
 import { groupRecordsBySample, matchesSampleFilters, type SampleGroup, type SampleMeasurementRecord } from "@/lib/results/sampleResultsAggregation";
+import { groupRecordsByOrder } from "@/lib/results/orderGroups";
+import OrderOverviewTable, { OverviewModeToggle, type OverviewMode } from "@/components/results/OrderOverviewTable";
+import OrderComparisonView from "@/components/results/OrderComparisonView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +58,11 @@ export default function ResultsDatabasePage() {
 
   // Probenbezogene 3-Ebenen-Sicht (alle Werte: offiziell + vorläufig).
   const { data: sampleRecords = [] } = useSampleResultsDatabase();
-  const [selectedSample, setSelectedSample] = useState<SampleGroup | null>(null);
+  // Auswahl: Probe (optional im Kontext eines Auftrags). Reihenfolge der Ansichten: Probendetail > Auftragsvergleich > Übersicht.
+  const [selectedSample, setSelectedSample] = useState<{ orderKey: string | null; sampleKey: string } | null>(null);
+  const [overviewMode, setOverviewMode] = useState<OverviewMode>("order");
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [compareOrderKey, setCompareOrderKey] = useState<string | null>(null);
   const [inspectedMeasurement, setInspectedMeasurement] = useState<SampleMeasurementRecord | null>(null);
 
   /**
@@ -162,11 +169,19 @@ export default function ResultsDatabasePage() {
     [sampleRecords, serviceFilter, projectFilter, creatorFilter, technicianFilter, sampleFilter, dateFrom, dateTo, searchText]
   );
   const sampleGroups = useMemo(() => groupRecordsBySample(filteredSampleRecords), [filteredSampleRecords]);
-  // Ausgewählte Probe immer aus den aktuell gefilterten Gruppen auflösen,
-  // damit Filteränderungen sofort wirken.
-  const activeSample = useMemo(
-    () => (selectedSample ? sampleGroups.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null : null),
-    [selectedSample, sampleGroups]
+  const orderGroups = useMemo(() => groupRecordsByOrder(filteredSampleRecords), [filteredSampleRecords]);
+  // Auswahl immer aus den aktuell gefilterten Gruppen auflösen, damit Filteränderungen sofort wirken.
+  const activeSample = useMemo(() => {
+    if (!selectedSample) return null;
+    if (selectedSample.orderKey) {
+      const order = orderGroups.find((o) => o.orderKey === selectedSample.orderKey);
+      return order?.samples.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null;
+    }
+    return sampleGroups.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null;
+  }, [selectedSample, sampleGroups, orderGroups]);
+  const compareOrder = useMemo(
+    () => (compareOrderKey ? orderGroups.find((o) => o.orderKey === compareOrderKey) ?? null : null),
+    [compareOrderKey, orderGroups]
   );
 
   // ==========================================================
@@ -594,12 +609,39 @@ export default function ResultsDatabasePage() {
         <TabsContent value="samples">
           {activeSample ? (
             <SampleResultsView
+              key={`${selectedSample?.orderKey ?? ""}:${activeSample.sampleKey}`}
               group={activeSample}
               onBack={() => setSelectedSample(null)}
               onOpenInspector={setInspectedMeasurement}
             />
+          ) : compareOrder ? (
+            <OrderComparisonView
+              order={compareOrder}
+              onBack={() => setCompareOrderKey(null)}
+              onSelectSample={(s) => setSelectedSample({ orderKey: compareOrder.orderKey, sampleKey: s.sampleKey })}
+            />
+          ) : overviewMode === "order" ? (
+            <OrderOverviewTable
+              orders={orderGroups}
+              expanded={expandedOrders}
+              onToggle={(key) =>
+                setExpandedOrders((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(key)) next.delete(key);
+                  else next.add(key);
+                  return next;
+                })
+              }
+              onSelectSample={(o, s) => setSelectedSample({ orderKey: o.orderKey, sampleKey: s.sampleKey })}
+              onCompare={(o) => setCompareOrderKey(o.orderKey)}
+              headerExtra={<OverviewModeToggle mode={overviewMode} onChange={setOverviewMode} />}
+            />
           ) : (
-            <SampleOverviewTable groups={sampleGroups} onSelect={setSelectedSample} />
+            <SampleOverviewTable
+              groups={sampleGroups}
+              onSelect={(g) => setSelectedSample({ orderKey: null, sampleKey: g.sampleKey })}
+              headerExtra={<OverviewModeToggle mode={overviewMode} onChange={setOverviewMode} />}
+            />
           )}
           <ResultDetailInspector
             measurement={inspectedMeasurement}

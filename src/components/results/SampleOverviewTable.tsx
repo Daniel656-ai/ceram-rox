@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FlaskConical, ChevronRight } from "lucide-react";
@@ -10,20 +11,25 @@ import { formatSampleDate, type SampleGroup } from "@/lib/results/sampleResultsA
  */
 export default function SampleOverviewTable({
   groups,
+  headerExtra,
   onSelect,
 }: {
   groups: SampleGroup[];
   onSelect: (group: SampleGroup) => void;
+  headerExtra?: ReactNode;
 }) {
   return (
     <Card>
       <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
         <CardTitle className="text-base flex items-center gap-2">
           <FlaskConical className="h-4 w-4" /> Probenübersicht
           <span className="ml-2 text-xs font-normal text-muted-foreground">
             Eine Probe = eine Zeile · Klick öffnet alle Messungen der Probe
           </span>
         </CardTitle>
+        {headerExtra}
+        </div>
       </CardHeader>
       <CardContent className="p-4 pt-0">
         {groups.length === 0 ? (
