@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Columns3 } from "lucide-react";
+import { X, Columns3 } from "lucide-react";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import { buildOrderComparison, type OrderGroup } from "@/lib/results/orderGroups";
 import type { SampleGroup } from "@/lib/results/sampleResultsAggregation";
@@ -12,19 +12,23 @@ const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
 /** Proben eines Auftrags nebeneinander: je Analyseart eine Tabelle (nur offizielle Werte). */
 export default function OrderComparisonView({
   order,
-  onBack,
+  onClose,
   onSelectSample,
+  selectedSampleKey,
 }: {
   order: OrderGroup;
-  onBack: () => void;
+  onClose: () => void;
+  selectedSampleKey?: string | null;
   onSelectSample: (sample: SampleGroup) => void;
 }) {
   const sections = useMemo(() => buildOrderComparison(order), [order]);
   return (
     <div className="space-y-4">
-      <Button variant="outline" size="sm" onClick={onBack}>
-        <ArrowLeft className="mr-1 h-4 w-4" /> Zurück zur Übersicht
-      </Button>
+      <div className="flex justify-end">
+        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Seitenleiste schließen" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex flex-wrap items-center gap-2">
@@ -66,7 +70,7 @@ export default function OrderComparisonView({
                     {sec.rows.map((row, i) => (
                       <tr
                         key={`${row.sample.sampleKey}-${i}`}
-                        className="cursor-pointer border-t hover:bg-muted/40"
+                        className={`cursor-pointer border-t hover:bg-muted/40 ${row.sample.sampleKey === selectedSampleKey ? "bg-primary/10" : ""}`}
                         onClick={() => onSelectSample(row.sample)}
                       >
                         <td className="p-2 whitespace-nowrap">
