@@ -75,10 +75,20 @@ export interface ComparisonColumn {
   label: string;
   unit: string | null;
 }
+/** Ein Durchlauf (eigenständige Messung bzw. Messung einer Analyse) einer Probe. */
+export interface ComparisonRun {
+  key: string;
+  /** Bezeichnung des Durchlaufs ("Lauf 2" o. ä.); null bei nur einem Durchlauf. */
+  label: string | null;
+  /** Kontext des Durchlaufs (z. B. Messstelle) – nur zur Erkennung echter Wiederholungen/Tooltip. */
+  context: Record<string, string> | null;
+  /** Offizielle Werte je Spalte (normalerweise genau einer). */
+  cells: Record<string, Array<number | string>>;
+}
 export interface ComparisonRow {
   sample: SampleGroup;
-  /** Offizielle Werte je Spalte (mehrere bei Durchläufen/Wiederholungen). */
-  cells: Record<string, Array<number | string>>;
+  /** Eine Unterzeile je Durchlauf (mindestens eine). */
+  runs: ComparisonRun[];
 }
 export interface ComparisonSection {
   serviceName: string;
@@ -87,6 +97,10 @@ export interface ComparisonSection {
   /** Werte dieser Analyseart (ohne interne Einträge) – für die Kurzzeile ohne offizielle Werte. */
   officialCount: number;
   interimCount: number;
+  /** Mindestens eine Probe hat mehrere Durchläufe. */
+  hasMultipleRuns: boolean;
+  /** Mittelwert sinnvoll: Durchläufe jeder Probe haben denselben Kontext (Wiederholungen). */
+  meanAvailable: boolean;
 }
 
 const labelOf = (r: { display_label: string | null; result_name: string }): string => {
@@ -97,7 +111,10 @@ const labelOf = (r: { display_label: string | null; result_name: string }): stri
   return raw.replace(/_/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
 };
 
-/** Je Analyseart (Dienstleistung) eine Tabelle: Proben als Zeilen, offizielle Parameter als Spalten. */
+const stableContext = (c: Record<string, string> | null): string =>
+  JSON.stringify(Object.entries(c ?? {}).sort(([a], [b]) => a.localeCompare(b)));
+
+/** Je Analyseart (Dienstleistung) eine Tabelle: Proben mit Durchläufen als Zeilen, offizielle Parameter als Spalten. */
 export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
   const sections = new Map<
     string,
@@ -114,10 +131,11 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
       }
       let row = perService.get(name);
       if (!row) {
-        row = { sample, cells: {} };
+        row = { sample, runs: [] };
         perService.set(name, row);
         sec.rows.push(row);
       }
+      const runsOfMeasurement = new Map<string, ComparisonRun>();
       for (const r of m.results) {
         if (isInternalResult(r)) continue;
         if (!isOfficialResult(r)) {
@@ -130,17 +148,54 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
         if (!sec.columns.has(key)) sec.columns.set(key, { key, label, unit: r.unit ?? null });
         const v: number | string | null = r.value ?? (r.remarks && !r.remarks.trim().startsWith("{") && !r.remarks.trim().startsWith("[") ? r.remarks : null);
         if (v === null) continue;
-        (row.cells[key] ??= []).push(v);
+        const runKey = `${m.measurementId}:${r.instance_key ?? ""}`;
+        let run = runsOfMeasurement.get(runKey);
+        if (!run) {
+          run = {
+            key: runKey,
+            label: r.instance_label?.trim() || null,
+            context: r.instance_context && Object.keys(r.instance_context).length ? r.instance_context : null,
+            cells: {},
+          };
+          runsOfMeasurement.set(runKey, run);
+          row.runs.push(run);
+        }
+        (run.cells[key] ??= []).push(v);
       }
     }
   }
-  return [...sections.entries()]
-    .map(([serviceName, s]) => ({
+  const out = [...sections.entries()].map(([serviceName, s]) => {
+    // Bezeichnung nur bei mehreren Durchläufen; fehlende Namen -> "Lauf n".
+    for (const row of s.rows) {
+      if (row.runs.length > 1) row.runs.forEach((run, i) => { run.label = run.label || `Lauf ${i + 1}`; });
+      else if (row.runs[0]) row.runs[0].label = null;
+      // Probe ohne offizielle Werte in dieser Analyseart: trotzdem eine (leere) Zeile.
+      if (row.runs.length === 0) row.runs.push({ key: `${row.sample.sampleKey}:empty`, label: null, context: null, cells: {} });
+    }
+    const multi = s.rows.filter((r) => r.runs.length > 1);
+    return {
       serviceName,
       columns: [...s.columns.values()],
       rows: s.rows,
       officialCount: s.officialCount,
       interimCount: s.interimCount,
-    }))
-    .sort((a, b) => a.serviceName.localeCompare(b.serviceName, "de"));
+      hasMultipleRuns: multi.length > 0,
+      meanAvailable: multi.every((r) => new Set(r.runs.map((x) => stableContext(x.context))).size === 1),
+    };
+  });
+  return out.sort((a, b) => a.serviceName.localeCompare(b.serviceName, "de"));
+}
+
+/** Mittelwert einer Spalte über alle Durchläufe einer Probe (nur Zahlen), n = Anzahl Zahlenwerte. */
+export interface RunSummary {
+  mean: number | null;
+  n: number;
+  /** Alle Einzelwerte (Zahlen und Texte) in Durchlauf-Reihenfolge. */
+  values: Array<number | string>;
+}
+
+export function summarizeRuns(row: ComparisonRow, columnKey: string): RunSummary {
+  const values = row.runs.flatMap((run) => run.cells[columnKey] ?? []);
+  const nums = values.filter((v): v is number => typeof v === "number");
+  return { mean: nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null, n: nums.length, values };
 }
