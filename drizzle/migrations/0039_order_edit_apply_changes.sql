@@ -7,6 +7,11 @@
 -- Rein additiv und mehrfach ausführbar (CREATE OR REPLACE, REVOKE/GRANT sind wiederholbar):
 --   * Neue Funktion  public.order_edit_facts(uuid)               SECURITY DEFINER, nur lesend
 --   * Neue Funktion  public.apply_order_changes(uuid,jsonb,text) SECURITY INVOKER (Rechte des Aufrufers)
+--   * Neue Funktion  public.order_edit_log_activity(...)         SECURITY DEFINER, schreibt NUR das Ereignis
+--                    "order_updated" in activity_log. Nötig, weil activity_log für angemeldete Benutzer kein
+--                    direktes INSERT erlaubt (Policy "Only triggers insert activity", WITH CHECK (false));
+--                    die Policy bleibt unverändert. Die Funktion prüft selbst: nur Ersteller/Master des
+--                    Auftrags, Metadaten werden in der Funktion aufgebaut (nichts frei Wählbares).
 --   * EXECUTE nur für angemeldete Benutzer (authenticated); nicht für PUBLIC/anon.
 -- Keine Tabellen-, Spalten-, Index-, Policy- oder Trigger-Änderung. Bestehende Schutzregeln
 -- (guard_order_delete_dependents, cancel_or_delete_order, delete_order_measurement, is_order_locked
@@ -129,6 +134,41 @@ GRANT EXECUTE ON FUNCTION public.order_edit_facts(uuid) TO authenticated;
 
 COMMENT ON FUNCTION public.order_edit_facts(uuid) IS
   'Aufgabe 012: Sperr-Angaben für die Bearbeiten-Maske (nur lesend). Eine Wahrheit für Anzeige und Speichern.';
+
+CREATE OR REPLACE FUNCTION public.order_edit_log_activity(
+  _order_id uuid, _fields text[], _samples_added text[], _samples_removed text[],
+  _template_changed boolean, _type_old text, _type_new text, _reason text)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  _uid uuid := auth.uid();
+  _order public.measurement_orders%ROWTYPE;
+  _id uuid;
+BEGIN
+  IF _uid IS NULL THEN RAISE EXCEPTION 'Bitte erneut anmelden.' USING ERRCODE = '42501'; END IF;
+  SELECT * INTO _order FROM public.measurement_orders WHERE id = _order_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Auftrag nicht gefunden.' USING ERRCODE = 'P0002'; END IF;
+  IF NOT (public.has_role(_uid, 'master'::public.app_role) OR _order.created_by = _uid) THEN
+    RAISE EXCEPTION 'Keine Berechtigung zum Bearbeiten dieses Auftrags.' USING ERRCODE = '42501';
+  END IF;
+  IF COALESCE(cardinality(_fields), 0) = 0 THEN RAISE EXCEPTION 'Keine Änderungen zu protokollieren.'; END IF;
+  INSERT INTO public.activity_log (event_type, actor_user_id, order_id, project_id, metadata)
+  VALUES ('order_updated', _uid, _order_id, _order.project_id,
+    jsonb_build_object(
+      'fields', to_jsonb(_fields),
+      'samples_added', to_jsonb(COALESCE(_samples_added, ARRAY[]::text[])),
+      'samples_removed', to_jsonb(COALESCE(_samples_removed, ARRAY[]::text[])),
+      'template_changed', COALESCE(_template_changed, false),
+      'order_type_old', _type_old,
+      'order_type_new', _type_new,
+      'reason', NULLIF(btrim(COALESCE(_reason, '')), '')))
+  RETURNING id INTO _id;
+  RETURN _id;
+END $$;
+REVOKE ALL ON FUNCTION public.order_edit_log_activity(uuid, text[], text[], text[], boolean, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.order_edit_log_activity(uuid, text[], text[], text[], boolean, text, text, text) TO authenticated;
+
+COMMENT ON FUNCTION public.order_edit_log_activity(uuid, text[], text[], text[], boolean, text, text, text) IS
+  'Aufgabe 012: schreibt das Ereignis order_updated (activity_log erlaubt kein direktes INSERT für authenticated). Nur Ersteller/Master.';
 
 CREATE OR REPLACE FUNCTION public.apply_order_changes(_order_id uuid, _changes jsonb, _reason text DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path = public AS $$
@@ -319,6 +359,10 @@ BEGIN
     INSERT INTO public.order_audit_log (order_id, changed_by, field_name, old_value, new_value)
     VALUES (_order_id, _uid, 'order_type', _order.order_type::text, _new_type::text);
   END IF;
+  IF _type_changed AND _order.is_billed AND _new_type::text <> 'customer' THEN
+    INSERT INTO public.order_audit_log (order_id, changed_by, field_name, old_value, new_value)
+    VALUES (_order_id, _uid, 'is_billed', 'true', 'false');
+  END IF;
   IF _project_changed THEN
     INSERT INTO public.order_audit_log (order_id, changed_by, field_name, old_value, new_value)
     VALUES (_order_id, _uid, 'project_id', _old_project_label, _new_project_label);
@@ -332,16 +376,12 @@ BEGIN
     VALUES (_order_id, _uid, 'notes', _order.notes, NULLIF(_h->>'notes', ''));
   END IF;
 
-  INSERT INTO public.activity_log (event_type, actor_user_id, order_id, project_id, metadata)
-  VALUES ('order_updated', _uid, _order_id, COALESCE(_eff_project, _order.project_id),
-    jsonb_build_object(
-      'fields', to_jsonb(_fields),
-      'samples_added', to_jsonb(_added_nums),
-      'samples_removed', to_jsonb(_removed_nums),
-      'template_changed', _tmpl_changed,
-      'order_type_old', CASE WHEN _type_changed THEN _order.order_type::text END,
-      'order_type_new', CASE WHEN _type_changed THEN _new_type::text END,
-      'reason', _reason_txt));
+  -- activity_log erlaubt authenticated kein direktes INSERT -> über die geprüfte Hilfsfunktion.
+  PERFORM public.order_edit_log_activity(
+    _order_id, _fields, _added_nums, _removed_nums, _tmpl_changed,
+    CASE WHEN _type_changed THEN _order.order_type::text END,
+    CASE WHEN _type_changed THEN _new_type::text END,
+    _reason_txt);
 
   RETURN jsonb_build_object('changed', true, 'fields', to_jsonb(_fields));
 END $$;
