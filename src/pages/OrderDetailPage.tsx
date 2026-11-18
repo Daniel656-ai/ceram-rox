@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,7 +40,7 @@ import OrderResultsOverview from "@/components/OrderResultsOverview";
 import OrderHeaderSummary from "@/components/order/OrderHeaderSummary";
 import OrderProductionDocuments from "@/components/order/OrderProductionDocuments";
 import AdminDeleteMeasurementsCard from "@/components/order/AdminDeleteMeasurementsCard";
-import { OrderDeleteInfo } from "@/components/orders/OrderDeleteInfo";
+import { OrderDeleteBody } from "@/components/orders/OrderDeleteInfo";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
@@ -276,13 +276,7 @@ function OrderDetailPageInner() {
                     Dieser Auftrag und alle zugehörigen Aufgaben werden unwiderruflich gelöscht.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <OrderDeleteInfo orderId={order.id} />
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                  <AlertDialogAction disabled={deleteOrder.isPending} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Löschen
-                  </AlertDialogAction>
-                </AlertDialogFooter>
+                <OrderDeleteBody orderId={order.id} pending={deleteOrder.isPending} onConfirm={handleDelete} />
               </AlertDialogContent>
             </AlertDialog>
           </div>

@@ -323,6 +323,13 @@
       "when": 1795122800000,
       "tag": "0045_order_edit_log_services_added",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1795209200000,
+      "tag": "0046_order_delete_extended",
+      "breakpoints": true
     }
   ]
 }

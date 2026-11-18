@@ -17,7 +17,7 @@ import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
 import { samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
 import { SampleLinks } from "@/components/orders/SampleLinks";
-import { OrderDeleteInfo } from "@/components/orders/OrderDeleteInfo";
+import { OrderDeleteBody } from "@/components/orders/OrderDeleteInfo";
 import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
@@ -35,7 +35,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Search, Trash2, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox, RotateCcw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useMemo, useEffect } from "react";
@@ -189,9 +189,6 @@ function OrdersOverview() {
     return role === "master" || o.created_by === user?.id;
   };
 
-  const hasResults = (o: any) =>
-    (o.order_measurements ?? []).some((m: any) => (m.measurement_results ?? []).length > 0);
-
   const handleDelete = async (id: string) => {
     if (deleteOrder.isPending) return;
     try {
@@ -325,11 +322,9 @@ function OrdersOverview() {
                         {canDelete(o) && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <span title={hasResults(o) ? t("orders:delete_has_results") : undefined}>
-                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" disabled={hasResults(o)} aria-label={hasResults(o) ? t("orders:delete_has_results") : t("common:delete")}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </span>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={t("common:delete")}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
@@ -338,13 +333,7 @@ function OrdersOverview() {
                                   {t("orders:delete_confirm", { number: o.order_number ?? o.id })} {t("orders:delete_description")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
-                              <OrderDeleteInfo orderId={o.id} />
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
-                                <AlertDialogAction disabled={deleteOrder.isPending} onClick={() => handleDelete(o.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                  {t("common:delete")}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
+                              <OrderDeleteBody orderId={o.id} pending={deleteOrder.isPending} onConfirm={() => handleDelete(o.id)} />
                             </AlertDialogContent>
                           </AlertDialog>
                         )}
