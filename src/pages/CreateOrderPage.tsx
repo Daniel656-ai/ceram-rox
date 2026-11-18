@@ -1027,7 +1027,12 @@ export default function CreateOrderPage() {
 
 
         {isEdit ? (
-          <ExistingServicesReadOnly measurements={editData.order?.order_measurements ?? []} facts={editData.facts} />
+          <ExistingServicesReadOnly
+            measurements={editData.order?.order_measurements ?? []}
+            facts={editData.facts}
+            canAmend={locks.canEdit}
+            onAmended={() => { void editData.refetchOrder?.(); queryClient.invalidateQueries({ queryKey: ["order"] }); queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }); }}
+          />
         ) : (
         <Card>
           <CardHeader>
