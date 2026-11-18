@@ -36,11 +36,17 @@ export default function ResultsMatrixTable({
   records,
   columns,
   showServiceColumn = true,
+  onRowClick,
+  isRowSelected,
 }: {
   records: ResultRecord[];
   columns: ResultParamColumn[];
   /** Bei einer einzelnen Messart überflüssig (überall gleich). */
   showServiceColumn?: boolean;
+  /** Klick auf eine Zeile (öffnet die Seitenleiste). */
+  onRowClick?: (record: ResultRecord) => void;
+  /** Markierung der Zeilen, deren Probe in der Seitenleiste geöffnet ist. */
+  isRowSelected?: (record: ResultRecord) => boolean;
 }) {
   const { t } = useTranslation("orders");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -108,11 +114,19 @@ export default function ResultsMatrixTable({
           {rows.map((r, rowIdx) => {
             // Deckender Hintergrund: der fixierte Bereich darf niemals die
             // darunter durchscrollenden Ergebniszellen durchscheinen lassen.
-            const rowBg = rowIdx % 2 === 0 ? "bg-background" : "bg-muted/40";
-            const stickyBg = rowIdx % 2 === 0 ? "bg-background" : "bg-secondary";
+            const rowSelected = !!isRowSelected?.(r);
+            // Markierte Zeile: deckender Hintergrund auch im fixierten Bereich.
+            const rowBg = rowSelected ? "bg-accent" : rowIdx % 2 === 0 ? "bg-background" : "bg-muted/40";
+            const stickyBg = rowSelected ? "bg-accent" : rowIdx % 2 === 0 ? "bg-background" : "bg-secondary";
             const stickyCell = `sticky ${stickyBg} px-2 py-0.5 text-xs border-b border-r align-middle z-20`;
             return (
-              <tr key={`${r.measurementId}:${r.instanceKey ?? ""}`} className={rowBg}>
+              <tr
+                key={`${r.measurementId}:${r.instanceKey ?? ""}`}
+                className={`${rowBg}${onRowClick ? " cursor-pointer" : ""}`}
+                data-selected-row={rowSelected ? "true" : undefined}
+                aria-selected={onRowClick ? rowSelected : undefined}
+                onClick={onRowClick ? () => onRowClick(r) : undefined}
+              >
                 <td
                   className={stickyCell}
                   style={identStyle("sample")}
@@ -165,7 +179,10 @@ export default function ResultsMatrixTable({
                       className={`rounded p-0.5 hover:bg-accent ${selectedKey === rowKey(r) ? "text-primary" : "text-muted-foreground"}`}
                       aria-label="Auftraggeber-Vorgaben anzeigen"
                       title="Auftraggeber-Vorgaben anzeigen"
-                      onClick={() => setSelectedKey(selectedKey === rowKey(r) ? null : rowKey(r))}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedKey(selectedKey === rowKey(r) ? null : rowKey(r));
+                      }}
                     >
                       <ClipboardList className="h-3.5 w-3.5" />
                     </button>

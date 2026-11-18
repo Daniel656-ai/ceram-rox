@@ -12,10 +12,11 @@ import OrderOverviewTable, { OverviewModeToggle, type OverviewMode } from "@/com
 import OrderComparisonView from "@/components/results/OrderComparisonView";
 import { InfoHint } from "@/components/results/InfoHint";
 import {
-  ALL_SERVICES, buildServiceOptions, columnsForService, nonEmptyColumns, readMatrixPref, recordsForService,
+  ALL_SERVICES, buildServiceOptions, columnsForService, matrixNavItems, matrixRowSelection, nonEmptyColumns,
+  readMatrixPref, recordsForService,
   resolveMatrixService, writeMatrixPref,
 } from "@/lib/resultsMatrix";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import SidePanelLayout from "@/components/results/SidePanelLayout";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { buildNavItems, compareKeyAfterStep, stepSelection } from "@/lib/results/sampleNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +69,7 @@ export default function ResultsDatabasePage() {
   const { data: sampleRecords = [] } = useSampleResultsDatabase();
   // Auswahl: Probe (optional im Kontext eines Auftrags). Reihenfolge der Ansichten: Probendetail > Auftragsvergleich > Übersicht.
   const [selectedSample, setSelectedSample] = useState<{ orderKey: string | null; sampleKey: string } | null>(null);
+  const [tab, setTab] = useState("samples");
   const [overviewMode, setOverviewMode] = useState<OverviewMode>("order");
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [compareOrderKey, setCompareOrderKey] = useState<string | null>(null);
@@ -243,10 +245,12 @@ export default function ResultsDatabasePage() {
   ) : null;
 
   // Wechsel per Pfeiltasten (nur geteilte Ansicht, nicht beim Tippen oder bei offenen Dialogen).
-  const navItems = useMemo(
+  const listNavItems = useMemo(
     () => buildNavItems(overviewMode, orderGroups, expandedOrders, sampleGroups),
     [overviewMode, orderGroups, expandedOrders, sampleGroups]
   );
+  const matrixNav = useMemo(() => matrixNavItems(matrixRecords), [matrixRecords]);
+  const navItems = tab === "table" ? matrixNav : listNavItems;
   useEffect(() => {
     if (!isWide || !selectedSample) return;
     const onKey = (e: KeyboardEvent) => {
@@ -687,7 +691,7 @@ export default function ResultsDatabasePage() {
         conditionDimensions={conditionDimensions}
       />
 
-      <Tabs defaultValue="samples">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
           <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
@@ -698,8 +702,7 @@ export default function ResultsDatabasePage() {
         <TabsContent value="samples">
           {/* Liste bleibt sichtbar; Probe/Ergebnisübersicht erscheint rechts daneben (breit)
               bzw. überlagernd (schmal). */}
-          <div className={panelOpen && isWide ? "grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-4" : ""}>
-            <div className="min-w-0">
+          <SidePanelLayout open={panelOpen} isWide={isWide} panel={panel} onClose={closePanel}>
               {overviewMode === "order" ? (
                 <OrderOverviewTable
                   orders={orderGroups}
@@ -737,35 +740,12 @@ export default function ResultsDatabasePage() {
                   headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
                 />
               )}
-            </div>
-            {panelOpen && isWide && (
-              <aside
-                className="sticky top-2 max-h-[calc(100vh-1rem)] overflow-y-auto rounded-md border bg-background p-3"
-                aria-label="Details"
-              >
-                {panel}
-              </aside>
-            )}
-          </div>
-          {panelOpen && !isWide && (
-            <Sheet open onOpenChange={(o) => !o && closePanel()}>
-              <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-3xl">
-                <SheetHeader className="sr-only">
-                  <SheetTitle>Details</SheetTitle>
-                  <SheetDescription>Probe bzw. Ergebnisübersicht des Auftrags</SheetDescription>
-                </SheetHeader>
-                {panel}
-              </SheetContent>
-            </Sheet>
-          )}
-          <ResultDetailInspector
-            measurement={inspectedMeasurement}
-            onClose={() => setInspectedMeasurement(null)}
-          />
+          </SidePanelLayout>
         </TabsContent>
 
         {/* Table View */}
         <TabsContent value="table">
+          <SidePanelLayout open={panelOpen} isWide={isWide} panel={panel} onClose={closePanel}>
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -855,9 +835,18 @@ export default function ResultsDatabasePage() {
                 records={matrixRecords}
                 columns={shownMatrixColumns}
                 showServiceColumn={matrixService === ALL_SERVICES}
+                onRowClick={(r) => {
+                  setCompareOrderKey(null);
+                  setSelectedSample(matrixRowSelection(r));
+                }}
+                isRowSelected={(r) => {
+                  const s = matrixRowSelection(r);
+                  return !!selectedSample && selectedSample.orderKey === s.orderKey && selectedSample.sampleKey === s.sampleKey;
+                }}
               />
             </CardContent>
           </Card>
+          </SidePanelLayout>
         </TabsContent>
 
 
@@ -1258,6 +1247,10 @@ export default function ResultsDatabasePage() {
           </div>
         </TabsContent>
       </Tabs>
+      <ResultDetailInspector
+        measurement={inspectedMeasurement}
+        onClose={() => setInspectedMeasurement(null)}
+      />
     </div>
   );
 }
