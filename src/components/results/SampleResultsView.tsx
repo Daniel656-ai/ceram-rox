@@ -6,7 +6,8 @@ import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, Pencil
 import { ResultCountBadges } from "@/components/results/ResultCountBadges";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { prepareDisplayResults, splitInternalResults, type ImportProtocol } from "@/lib/results/internalResults";
+import { prepareDisplayResults, splitInternalResults, type DetailItem, type ImportProtocol } from "@/lib/results/internalResults";
+import { parseStructuredText } from "@/lib/results/structuredValues";
 import CompletedResultForm from "@/components/CompletedResultForm";
 import RequesterConditionsPanel from "@/components/results/RequesterConditionsPanel";
 import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
@@ -25,35 +26,13 @@ import {
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
 
-/** Lesbare, verlustfreie Darstellung komplexer JSON-Werte (z. B. Repeater-Einträge). */
-function fmtJsonValue(parsed: unknown): string {
-  const entry = (obj: Record<string, unknown>) =>
-    Object.entries(obj)
-      .filter(([k]) => !k.startsWith("__"))
-      .map(([k, v]) => `${k}: ${typeof v === "object" && v !== null ? fmtJsonValue(v) : String(v)}`)
-      .join(", ");
-  if (Array.isArray(parsed))
-    return parsed
-      .map((item, i) => {
-        const inner = typeof item === "object" && item !== null && !Array.isArray(item)
-          ? entry(item as Record<string, unknown>)
-          : String(item);
-        return parsed.length > 1 ? `Eintrag ${i + 1} – ${inner}` : inner;
-      })
-      .join(" | ");
-  if (typeof parsed === "object" && parsed !== null) return entry(parsed as Record<string, unknown>);
-  return String(parsed);
-}
-
+/**
+ * Anzeigewert einer einzelnen Zeile. Strukturierte Werte (JSON-Objekt/-Liste) werden vorher in
+ * einzelne Zeilen zerlegt (prepareDisplayResults) und erscheinen hier nie als Rohtext.
+ */
 function fmtValue(r: SampleResultValue): string {
   if (r.value !== null && r.value !== undefined) return nf.format(r.value);
-  if (r.remarks) {
-    try {
-      return fmtJsonValue(JSON.parse(r.remarks));
-    } catch {
-      return r.remarks;
-    }
-  }
+  if (r.remarks) return parseStructuredText(r.remarks) !== undefined ? "–" : r.remarks;
   return "–";
 }
 
@@ -71,7 +50,10 @@ export function SampleMeasurementResultsTable({
 }) {
   const canCorrect = useCanCorrectResults();
   // Interne Einträge (Importprotokoll) sind keine Messwerte: nicht in der Tabelle.
-  const { visible, protocols } = useMemo(() => prepareDisplayResults(measurement.results), [measurement.results]);
+  const { visible, protocols, details } = useMemo(
+    () => prepareDisplayResults(measurement.results),
+    [measurement.results],
+  );
   const instances = useMemo(() => groupResultsByInstance(visible), [visible]);
 
   return (
@@ -157,6 +139,44 @@ export function SampleMeasurementResultsTable({
       {protocols.map((p, i) => (
         <ImportProtocolInfo key={i} protocol={p} />
       ))}
+      {details.length > 0 && <DetailsInfo items={details} />}
+      {visible.length === 0 && protocols.length === 0 && (
+        <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{measurement.serviceName || "Messung"}</span> – keine Werte erfasst
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Einstellungen/Schalter (keine Messwerte) – aufklappbar unter „Details“. */
+export function DetailsInfo({ items }: { items: DetailItem[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs">
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 text-left text-muted-foreground"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <Info className="h-3.5 w-3.5" />
+        <span>Einstellungen ({items.length})</span>
+      </button>
+      {open && (
+        <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5">
+          {items.map((it, i) => (
+            <div key={i} className="contents">
+              <dt className="text-muted-foreground">
+                {it.group ? `${it.group} · ` : ""}
+                {it.label}
+              </dt>
+              <dd className="break-all">{it.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { columnHeader, resultCell, resultForColumn, type ResultParamColumn } fro
 import { useResultDisplayPrecision } from "@/hooks/useResultDisplayPrecision";
 import { formatResultDisplayValue, resolveResultPrecision } from "@/lib/resultDisplayPrecision";
 import { useTranslation } from "react-i18next";
+import { parseStructuredText } from "@/lib/results/structuredValues";
 
 /**
  * Kompakter, fixierter Identifikationsbereich. Breiten orientieren sich am
@@ -203,9 +204,11 @@ export default function ResultsMatrixTable({
                   const cell = resultCell(r, col.key);
                   const result = resultForColumn(r, col.key);
                   const precision = result ? resolveResultPrecision(result, r.serviceId, precisionDefinitions) : undefined;
+                  // Strukturierter Wert (JSON/Block) nie als Rohtext – Details stehen in der Seitenleiste.
+                  const structured = cell.value === null && !!cell.text && parseStructuredText(cell.text) !== undefined;
                   return (
-                    <td key={col.key} className="px-2 py-0.5 text-xs border-b text-right tabular-nums font-mono align-middle">
-                      {formatResultDisplayValue(cell.value, cell.text, cell.present, precision)}
+                    <td key={col.key} className="px-2 py-0.5 text-xs border-b text-right tabular-nums font-mono align-middle" title={structured ? "Strukturierter Wert – Details in der Seitenleiste" : undefined}>
+                      {structured ? "–" : formatResultDisplayValue(cell.value, cell.text, cell.present, precision)}
                     </td>
                   );
                 })}

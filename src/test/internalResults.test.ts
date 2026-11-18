@@ -125,8 +125,12 @@ describe("Messdatenblock mit eingebettetem Importprotokoll", () => {
     expect(visible.some((r) => r.id === "own")).toBe(true);
   });
 
-  it("lässt Blöcke ohne Importprotokoll unverändert", () => {
+  it("zerlegt auch Blöcke ohne Importprotokoll in Zeilen (nie roher Text)", () => {
     const plain = val({ id: "p", remarks: JSON.stringify([{ a: 1 }]) });
-    expect(prepareDisplayResults([plain]).visible).toEqual([plain]);
+    const { visible } = prepareDisplayResults([plain]);
+    expect(visible).toHaveLength(1);
+    expect(visible[0].result_name).toBe("a");
+    expect(visible[0].value).toBe(1);
+    expect(visible[0].remarks).toBeNull();
   });
 });

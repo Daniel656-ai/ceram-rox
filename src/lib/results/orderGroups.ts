@@ -4,7 +4,7 @@ import {
   type SampleGroup,
   type SampleMeasurementRecord,
 } from "@/lib/results/sampleResultsAggregation";
-import { isInternalResult } from "@/lib/results/internalResults";
+import { expandStructuredResult, isInternalResult } from "@/lib/results/internalResults";
 
 /**
  * Auftragsbezogene Gruppierung der Probenübersicht. Reine Navigation/Anzeige:
@@ -139,8 +139,11 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
       // Mehrere Werte derselben Spalte im selben Durchlauf (ohne eigene Durchlauf-Kennung)
       // sind weitere Durchläufe: jeder bekommt eine eigene Unterzeile statt "a / b / c" in einer Zelle.
       const occurrences = new Map<string, number>();
-      for (const r of m.results) {
-        if (isInternalResult(r)) continue;
+      // Strukturierte Werte (Blöcke/JSON) werden in einzelne Werte zerlegt – nie roher Text.
+      const flat = m.results.flatMap((r) =>
+        isInternalResult(r) ? [] : (expandStructuredResult(r, m.results)?.rows ?? [r]),
+      );
+      for (const r of flat) {
         if (!isOfficialResult(r)) {
           sec.interimCount += 1;
           continue;
