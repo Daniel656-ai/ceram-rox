@@ -1,4 +1,5 @@
 import { format, parseISO, isAfter, isBefore } from "date-fns";
+import { isInternalResult } from "@/lib/results/internalResults";
 import { de } from "date-fns/locale";
 
 /**
@@ -122,6 +123,8 @@ export function groupRecordsBySample(records: SampleMeasurementRecord[]): Sample
     if (rec.orderId && !g.orderIds.includes(rec.orderId)) g.orderIds.push(rec.orderId);
     if (rec.originalSampleNumber && !g.originalSampleNumber) g.originalSampleNumber = rec.originalSampleNumber;
     for (const r of rec.results) {
+      // Interne Einträge (Importprotokoll) sind keine Messwerte und zählen nicht mit.
+      if (isInternalResult(r)) continue;
       if (isOfficialResult(r)) g.officialCount += 1;
       else g.interimCount += 1;
     }
