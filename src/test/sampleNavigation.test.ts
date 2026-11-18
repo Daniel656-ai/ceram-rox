@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildNavItems, stepSelection } from "@/lib/results/sampleNavigation";
+import { buildNavItems, compareKeyAfterStep, stepSelection } from "@/lib/results/sampleNavigation";
 import type { OrderGroup } from "@/lib/results/orderGroups";
 import type { SampleGroup } from "@/lib/results/sampleResultsAggregation";
 
@@ -32,5 +32,17 @@ describe("Seitenleiste: Navigation per Pfeiltasten", () => {
     expect(stepSelection(items, null, 1)).toEqual({ orderKey: "A", sampleKey: "a1" });
     expect(stepSelection(items, { orderKey: "B", sampleKey: "b1" }, -1)).toEqual({ orderKey: "A", sampleKey: "a2" });
     expect(stepSelection([], null, 1)).toBeNull();
+  });
+});
+
+describe("Rücksprung zur Ergebnisübersicht nach Pfeiltasten-Wechsel", () => {
+  it("führt zum Auftrag der neuen Probe, wenn man aus der Ergebnisübersicht kam", () => {
+    expect(compareKeyAfterStep("A", { orderKey: "C", sampleKey: "c1" })).toBe("C");
+  });
+  it("bleibt leer, wenn keine Ergebnisübersicht offen war", () => {
+    expect(compareKeyAfterStep(null, { orderKey: "C", sampleKey: "c1" })).toBeNull();
+  });
+  it("behält den bisherigen Auftrag, wenn die neue Probe keinen Auftragsbezug hat", () => {
+    expect(compareKeyAfterStep("A", { orderKey: null, sampleKey: "x" })).toBe("A");
   });
 });

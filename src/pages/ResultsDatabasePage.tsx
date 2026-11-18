@@ -12,7 +12,7 @@ import OrderOverviewTable, { OverviewModeToggle, type OverviewMode } from "@/com
 import OrderComparisonView from "@/components/results/OrderComparisonView";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { buildNavItems, stepSelection } from "@/lib/results/sampleNavigation";
+import { buildNavItems, compareKeyAfterStep, stepSelection } from "@/lib/results/sampleNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,6 +233,7 @@ export default function ResultsDatabasePage() {
       if (!next) return;
       e.preventDefault();
       setSelectedSample(next);
+      setCompareOrderKey((c) => compareKeyAfterStep(c, next));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
