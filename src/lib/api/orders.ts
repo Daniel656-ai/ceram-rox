@@ -127,6 +127,16 @@ export const orders = {
     return data as unknown as OrderEditFacts;
   },
 
+  /** Aufgabe 012, Stufe 3b: Verlaufseintrag (und Benachrichtigung) für im Bearbeiten-Modus hinzugefügte Dienstleistungen. */
+  logServicesAdded: async (orderId: string, serviceNames: string[], taskCount?: number): Promise<void> => {
+    const { error } = await dbClient.rpc("order_edit_log_services_added" as any, {
+      _order_id: orderId,
+      _service_names: serviceNames,
+      _task_count: taskCount ?? null,
+    } as any);
+    if (error) throw new Error(error.message);
+  },
+
   /** Aufgabe 012: Änderungen atomar anwenden (Sperren werden serverseitig erneut geprüft und protokolliert). */
   applyChanges: async (orderId: string, changes: OrderChanges, reason?: string | null): Promise<{ changed: boolean; fields: string[] }> => {
     const { data, error } = await dbClient.rpc("apply_order_changes" as any, {

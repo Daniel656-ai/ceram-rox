@@ -618,7 +618,10 @@ export default function CreateOrderPage() {
     if (projectRequired && !selectedProjectId) { toast.error(t("orders:select_project_error")); return; }
     if (orderKind !== "pilot_plant" && selectedSampleIds.length === 0) { toast.error(t("orders:fill_required")); return; }
     const diff = currentEditDiff();
-    if (!diff || (!diff.changes && diff.billedChange === null)) { toast.info("Es gibt keine Änderungen zu speichern."); return; }
+    if (!diff || (!diff.changes && diff.billedChange === null && diff.addedServiceNames.length === 0)) { toast.info("Es gibt keine Änderungen zu speichern."); return; }
+    if (measurements.length > 0 && (!servicesReady || !ruleQueryReady)) {
+      toast.error("Dienstleistungen und Regeln werden noch geladen. Bitte einen Moment warten."); return;
+    }
     const removalError = validateServiceRemoval(removedServiceIds, serviceInfos);
     if (removalError) { toast.error(removalError); return; }
     if (diff.reasonRequired && !editReason.trim()) {
@@ -633,6 +636,28 @@ export default function CreateOrderPage() {
     try {
       if (diff.changes) await api.orders.applyChanges(editOrderId, diff.changes, editReason);
       if (diff.billedChange !== null) await api.orders.setBilled(editOrderId, diff.billedChange);
+
+      // Stufe 3b: neue Dienstleistungen mit dem vorhandenen Erstellen-Ablauf anlegen (je Probe eine Aufgabe, Vorgaben,
+      // Formularwerte, Dateien, Regeln). Nicht „ganz oder gar nicht“: bei einem Fehler wird klar gemeldet.
+      let addError: string | null = null;
+      if (measurements.length > 0 && user) {
+        try {
+          const effective: SelectedMeasurement[] = [...measurements];
+          effective.push(...ruleAdditions(buildRulePlan(effective, measurementFormValues)));
+          await createMeasurementTasks({
+            order: { id: editOrderId }, user, effectiveMeasurements: effective, selectedSampleIds, dueDate,
+            measurementParams, measurementFormValues, addMeasurement,
+          });
+          await runPostCreateSyncs(editOrderId);
+          try {
+            await api.orders.logServicesAdded(
+              editOrderId, [...new Set(effective.map((m) => m.service_name))], effective.length * Math.max(1, selectedSampleIds.length),
+            );
+          } catch (logErr) { console.warn("Verlaufseintrag für hinzugefügte Dienstleistungen fehlgeschlagen", logErr); }
+        } catch (err: any) {
+          addError = err?.message ?? String(err);
+        }
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["order", editOrderId] }),
         queryClient.invalidateQueries({ queryKey: ["orders"] }),
@@ -640,7 +665,14 @@ export default function CreateOrderPage() {
         queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }),
         queryClient.invalidateQueries({ queryKey: ["sample-results-database"] }),
       ]);
-      toast.success("Auftrag aktualisiert");
+      if (addError) {
+        toast.error("Dienstleistungen nur teilweise angelegt", {
+          description: `Die übrigen Änderungen wurden gespeichert, aber das Anlegen der neuen Dienstleistungen ist fehlgeschlagen (${addError}). Bitte die Aufgaben im Auftrag prüfen und Fehlendes erneut hinzufügen.`,
+          duration: 20000,
+        });
+      } else {
+        toast.success("Auftrag aktualisiert");
+      }
       navigate(`/auftraege/${editOrderId}`);
     } catch (err: any) {
       toast.error("Änderungen konnten nicht gespeichert werden", { description: err.message });
@@ -782,6 +814,11 @@ export default function CreateOrderPage() {
     ? templateFields.filter((f) => isServiceField(f as any, services as any)).map((f) => f.field_key)
     : undefined;
 
+  // Vorschau (Bearbeiten-Modus): durch Regeln zusätzlich ausgelöste Dienstleistungen (nur Namen).
+  const rulePreviewNames: string[] = isEdit && measurements.length > 0 && ruleQueryReady
+    ? [...new Set(ruleAdditions(buildRulePlan(measurements, measurementFormValues)).map((a) => a.service_name))]
+    : [];
+
   // Änderungen gegenüber dem Ausgangsstand (nur Bearbeiten-Modus).
   function currentEditDiff() {
     const base = editBaseline.current;
@@ -794,6 +831,8 @@ export default function CreateOrderPage() {
     };
     return diffOrderEdit(base, cur, {
       started: locks.started,
+      addServices: [...measurements.map((m) => ({ name: m.service_name })), ...rulePreviewNames.map((name) => ({ name }))],
+      addSampleCount: selectedSampleIds.length,
       removeServices: serviceInfos
         .filter((i) => removedServiceIds.includes(i.serviceId))
         .map((i) => ({ id: i.serviceId, name: i.name, tasks: i.tasks.length })),
@@ -1041,7 +1080,7 @@ export default function CreateOrderPage() {
 
 
 
-        {isEdit ? (
+        {isEdit && (
           <ExistingServicesReadOnly
             measurements={editData.order?.order_measurements ?? []}
             facts={editData.facts}
@@ -1050,11 +1089,12 @@ export default function CreateOrderPage() {
             onToggleRemove={(id) => setRemovedServiceIds((cur) => toggleServiceRemoval(cur, id, serviceInfos))}
             onAmended={() => { void editData.refetchOrder?.(); queryClient.invalidateQueries({ queryKey: ["order"] }); queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }); }}
           />
-        ) : (
+        )}
+        {(!isEdit || locks.canEdit) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">{t("orders:measurements_section")}</CardTitle>
+              <CardTitle className="text-base">{isEdit ? "Dienstleistungen hinzufügen" : t("orders:measurements_section")}</CardTitle>
               <TemplateManager
                 selectedServiceIds={measurements.map((m) => m.service_id)}
                 onApplyTemplate={handleApplyTemplate}
@@ -1153,8 +1193,15 @@ export default function CreateOrderPage() {
               </p>
             </div>
 
+            {isEdit && measurements.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Neue Dienstleistungen werden beim Speichern für alle {selectedSampleIds.length || 1} Proben des Auftrags angelegt
+                (je Probe eine Aufgabe), wie beim Erstellen.
+                {rulePreviewNames.length > 0 && ` Durch Regeln zusätzlich ausgelöst (sofern noch nicht vorhanden): ${rulePreviewNames.join(", ")}.`}
+              </p>
+            )}
             {measurements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("orders:no_measurements_hint")}</p>
+              <p className="text-sm text-muted-foreground">{isEdit ? "Keine neue Dienstleistung ausgewählt." : t("orders:no_measurements_hint")}</p>
             ) : pilotSingle ? null : (
               <div className="space-y-3">
                 {extraMeasurements.map((m, idx) => (
@@ -1175,7 +1222,7 @@ export default function CreateOrderPage() {
         </Card>
         )}
 
-        {role !== "auftraggeber" && measurements.length > 0 && (
+        {!isEdit && role !== "auftraggeber" && measurements.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Prozessvorlage (optional)</CardTitle>

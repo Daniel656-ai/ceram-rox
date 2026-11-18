@@ -27,13 +27,16 @@ const hoisted = vi.hoisted(() => {
     auth: { user: { id: "u1" }, role: "master" },
     perms: { hasPermission: () => false },
     autosave: { state: "idle", dirty: false, saveNow: () => undefined, discard: () => undefined },
-    mut: { mutateAsync: () => undefined },
+    mut: { mutateAsync: undefined as any },
     createSample: { mutateAsync: () => undefined, isPending: false },
     createOrder: { mutateAsync: undefined as any },
   };
   const state = { order: null as any, facts: null as any };
-  const calls = { applyChanges: vi.fn(), setBilled: vi.fn(), create: vi.fn(), navigate: vi.fn() };
+  const calls = { applyChanges: vi.fn(), setBilled: vi.fn(), create: vi.fn(), navigate: vi.fn(), logAdded: vi.fn() };
   stable.createOrder.mutateAsync = calls.create;
+  const addTask = vi.fn();
+  stable.mut.mutateAsync = addTask;
+  (calls as any).addTask = addTask;
   return { state, calls, stable };
 });
 
@@ -52,6 +55,7 @@ vi.mock("@/lib/api", () => {
           editFacts: () => Promise.resolve(hoisted.state.facts),
           applyChanges: hoisted.calls.applyChanges,
           setBilled: hoisted.calls.setBilled,
+          logServicesAdded: hoisted.calls.logAdded,
         };
       }
       return base[prop];
@@ -147,6 +151,8 @@ beforeEach(() => {
   hoisted.state.facts = baseFacts();
   hoisted.calls.applyChanges.mockResolvedValue({ changed: true, fields: [] });
   hoisted.calls.setBilled.mockResolvedValue(true);
+  (hoisted.calls as any).addTask.mockResolvedValue({ id: "neu-1" });
+  hoisted.stable.services.data = [];
 });
 
 describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
@@ -293,4 +299,25 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
     await Promise.resolve();
     expect(hoisted.calls.applyChanges).not.toHaveBeenCalled();
   });
+
+  it("Dienstleistung hinzufügen: Vorschau, Speichern legt je Probe eine Aufgabe an (Erstellen-Ablauf), ohne Begründung", async () => {
+    hoisted.stable.services.data = [{ id: "svcN", service_name: "BET-Messung", category: "labor" }];
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    fireEvent.click(screen.getAllByRole("combobox").find((el) => /select_service/.test(el.textContent ?? ""))!);
+    fireEvent.click(await screen.findByText("BET-Messung"));
+    expect(await screen.findByText("Dienstleistung(en) hinzugefügt: BET-Messung (je Probe eine Aufgabe, 2 Proben)")).toBeTruthy();
+    expect(screen.getByText(/für alle 2 Proben des Auftrags angelegt/)).toBeTruthy();
+
+    fireEvent.click(screen.getByText("Änderungen speichern"));
+    await waitFor(() => expect(hoisted.calls.navigate).toHaveBeenCalledWith("/auftraege/o1"));
+    expect(hoisted.calls.applyChanges).not.toHaveBeenCalled(); // nur Dienstleistung: keine Kopfdaten-Änderung
+    const addTask = (hoisted.calls as any).addTask;
+    expect(addTask).toHaveBeenCalledTimes(2); // 2 Proben -> 2 Aufgaben
+    expect(addTask.mock.calls.map((c: any[]) => c[0].sample_id).sort()).toEqual(["s1", "s2"]);
+    expect(addTask.mock.calls.every((c: any[]) => c[0].order_id === "o1" && c[0].service_id === "svcN")).toBe(true);
+    expect(hoisted.calls.create).not.toHaveBeenCalled();
+    expect(hoisted.calls.logAdded).toHaveBeenCalledWith("o1", ["BET-Messung"], 2);
+  });
+
 });

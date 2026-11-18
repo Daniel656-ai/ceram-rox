@@ -276,3 +276,20 @@ describe("Dienstleistungen entfernen (Stufe 3a)", () => {
     expect(auditFieldLabel("services_removed")).toBe("Dienstleistungen entfernt");
   });
 });
+
+describe("Dienstleistungen hinzufügen (Stufe 3b)", () => {
+  it("Diff: nur Hinzufügen -> keine Serveränderung über apply_order_changes, aber als Änderung gemeldet, keine Begründung", () => {
+    const base = snapshotFromOrder({ order_type: "customer", order_samples: [{ sample_id: "s1" }, { sample_id: "s2" }], sample_id: "s1" });
+    const d = diffOrderEdit(base, base, { started: false, addServices: [{ name: "BET" }, { name: "RFA" }], addSampleCount: 2 });
+    expect(d.changes).toBeNull();
+    expect(d.addedServiceNames).toEqual(["BET", "RFA"]);
+    expect(d.reasonRequired).toBe(false);
+    expect(d.lines).toContain("Dienstleistung(en) hinzugefügt: BET, RFA (je Probe eine Aufgabe, 2 Proben)");
+    expect(diffOrderEdit(base, base, { started: false }).addedServiceNames).toEqual([]);
+  });
+
+  it("Verlauf: hinzugefügte Dienstleistungen mit Namen", () => {
+    expect(describeOrderUpdate({ fields: ["services_added"], services_added: ["BET"] })).toBe("Dienstleistung(en) hinzugefügt (BET)");
+    expect(auditFieldLabel("services_added")).toBe("Dienstleistungen hinzugefügt");
+  });
+});
