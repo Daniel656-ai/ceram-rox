@@ -74,6 +74,8 @@ export interface ComparisonColumn {
   key: string;
   label: string;
   unit: string | null;
+  /** Erster Wert dieser Spalte – nur zur Ermittlung der Anzeige-Nachkommastellen. */
+  precisionRef?: { result_name: string; instance_key: string | null };
 }
 /** Ein Durchlauf (eigenständige Messung bzw. Messung einer Analyse) einer Probe. */
 export interface ComparisonRun {
@@ -92,6 +94,7 @@ export interface ComparisonRow {
 }
 export interface ComparisonSection {
   serviceName: string;
+  serviceId: string | null;
   columns: ComparisonColumn[];
   rows: ComparisonRow[];
   /** Werte dieser Analyseart (ohne interne Einträge) – für die Kurzzeile ohne offizielle Werte. */
@@ -111,14 +114,14 @@ const labelOf = (r: { display_label: string | null; result_name: string }): stri
   return raw.replace(/_/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
 };
 
-const stableContext = (c: Record<string, string> | null): string =>
+export const stableContext = (c: Record<string, string> | null): string =>
   JSON.stringify(Object.entries(c ?? {}).sort(([a], [b]) => a.localeCompare(b)));
 
 /** Je Analyseart (Dienstleistung) eine Tabelle: Proben mit Durchläufen als Zeilen, offizielle Parameter als Spalten. */
 export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
   const sections = new Map<
     string,
-    { columns: Map<string, ComparisonColumn>; rows: ComparisonRow[]; officialCount: number; interimCount: number }
+    { serviceId: string | null; columns: Map<string, ComparisonColumn>; rows: ComparisonRow[]; officialCount: number; interimCount: number }
   >();
   for (const sample of order.samples) {
     const perService = new Map<string, ComparisonRow>();
@@ -126,7 +129,7 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
       const name = m.serviceName || "Messung";
       let sec = sections.get(name);
       if (!sec) {
-        sec = { columns: new Map(), rows: [], officialCount: 0, interimCount: 0 };
+        sec = { serviceId: m.serviceId ?? null, columns: new Map(), rows: [], officialCount: 0, interimCount: 0 };
         sections.set(name, sec);
       }
       let row = perService.get(name);
@@ -151,7 +154,12 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
         sec.officialCount += 1;
         const label = labelOf(r);
         const key = `${label}::${r.unit ?? ""}`;
-        if (!sec.columns.has(key)) sec.columns.set(key, { key, label, unit: r.unit ?? null });
+        if (!sec.columns.has(key)) {
+          sec.columns.set(key, {
+            key, label, unit: r.unit ?? null,
+            precisionRef: { result_name: r.result_name, instance_key: r.instance_key ?? null },
+          });
+        }
         const v: number | string | null = r.value ?? (r.remarks && !r.remarks.trim().startsWith("{") && !r.remarks.trim().startsWith("[") ? r.remarks : null);
         if (v === null) continue;
         const baseKey = `${m.measurementId}:${r.instance_key ?? ""}`;
@@ -184,6 +192,7 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
     const multi = s.rows.filter((r) => r.runs.length > 1);
     return {
       serviceName,
+      serviceId: s.serviceId,
       columns: [...s.columns.values()],
       rows: s.rows,
       officialCount: s.officialCount,
@@ -208,3 +217,11 @@ export function summarizeRuns(row: ComparisonRow, columnKey: string): RunSummary
   const nums = values.filter((v): v is number => typeof v === "number");
   return { mean: nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null, n: nums.length, values };
 }
+
+/** Kontext eines Durchlaufs als Text („Temperatur: 300 °C“); leer = undefined. */
+export const contextText = (c: Record<string, string> | null): string | undefined =>
+  c && Object.keys(c).length ? Object.entries(c).map(([k, v]) => `${k}: ${v}`).join(" · ") : undefined;
+
+/** Sind alle Durchläufe einer Probe echte Wiederholungen (gleicher Kontext)? Nur dann ist ein Mittelwert sinnvoll. */
+export const runsAreRepeats = (row: ComparisonRow): boolean =>
+  new Set(row.runs.map((r) => stableContext(r.context))).size <= 1;

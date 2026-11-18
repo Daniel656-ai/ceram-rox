@@ -60,6 +60,10 @@ export interface SampleMeasurementRecord {
   results: SampleResultValue[];
   /** Read-only: shared_form_data des Auftrags (durchlaufgebundene Vorgaben). */
   orderSharedFormData?: unknown;
+  /** Auftragsstatus, Workflow-Status und Anlagedatum (nur für den Excel-Export; optional). */
+  orderStatus?: string | null;
+  orderWorkflowStatus?: string | null;
+  orderCreatedAt?: string | null;
 }
 
 /** Ebene 1: eine Probe mit allen zugehörigen Messungen. */

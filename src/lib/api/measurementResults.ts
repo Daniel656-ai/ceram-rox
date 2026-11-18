@@ -3,6 +3,22 @@ import { unwrap, run } from "./_helpers";
 import { buildLinkedFormValues } from "@/lib/linkedFormValues";
 import type { PrecisionDefinitions } from "@/lib/resultDisplayPrecision";
 
+/** Abfrage der probenbezogenen Ergebnissicht (Messung + Auftrag + Probe + Messart + ALLE Ergebniswerte). */
+const SAMPLE_DB_SELECT = `
+      id, measurement_number, status, assigned_to, actual_duration_hours, service_id,
+      created_at, updated_at, sample_id, original_sample_id,
+      samples!order_measurements_sample_id_fkey(id, sample_number, sample_name),
+      original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
+      measurement_services(service_name, category, standard_duration_hours),
+      measurement_orders!inner(
+        id, order_number, order_type, order_kind, pp_experiment_number, shared_form_data, created_by, notes,
+        status, workflow_status, created_at,
+        projects(project_number, project_name),
+        samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
+      ),
+      measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
+    `;
+
 export const measurementResults = {
   /** Official result database, with read-only order identity metadata. */
   listOfficialDatabase: () => unwrap(
@@ -30,19 +46,17 @@ export const measurementResults = {
    * unverändert.
    */
   listSampleDatabase: () => unwrap(
-    dbClient.from("order_measurements").select(`
-      id, measurement_number, status, assigned_to, actual_duration_hours, service_id,
-      created_at, updated_at, sample_id, original_sample_id,
-      samples!order_measurements_sample_id_fkey(id, sample_number, sample_name),
-      original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name),
-      measurement_services(service_name, category, standard_duration_hours),
-      measurement_orders!inner(
-        id, order_number, order_type, order_kind, pp_experiment_number, shared_form_data, created_by, notes,
-        projects(project_number, project_name),
-        samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
-      ),
-      measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
-    `).neq("measurement_orders.order_type", "internal").order("updated_at", { ascending: false })
+    dbClient.from("order_measurements").select(SAMPLE_DB_SELECT).neq("measurement_orders.order_type", "internal").order("updated_at", { ascending: false })
+  ),
+  /**
+   * Wie `listSampleDatabase`, aber nur für EINEN Auftrag (Excel-Export; unabhängig von den Seitenfiltern).
+   * Rein lesend.
+   */
+  listSampleDatabaseForOrder: (orderId: string) => unwrap(
+    dbClient.from("order_measurements").select(SAMPLE_DB_SELECT)
+      .eq("measurement_orders.id", orderId)
+      .neq("measurement_orders.order_type", "internal")
+      .order("updated_at", { ascending: false })
   ),
   /** Read-only display metadata. Missing access/schema retains the old formatting. */
   listDisplayPrecisionDefinitions: async (serviceIds: string[], formIds: string[]): Promise<PrecisionDefinitions> => {
