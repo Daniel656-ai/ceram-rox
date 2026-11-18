@@ -161,7 +161,7 @@ function SectionTable({
                       </td>
                       {cols.map((c) => {
                         const s = summarizeRuns(row, c.key);
-                        const tip = s.values.length ? `Einzelwerte: ${s.values.map(fmt).join(" / ")}` : undefined;
+                        const tip = s.values.length ? `n=${s.n} · Einzelwerte: ${s.values.map(fmt).join(" / ")}` : undefined;
                         return (
                           <td key={c.key} className="whitespace-nowrap p-2 text-right font-mono" title={tip}>
                             {s.mean !== null ? (

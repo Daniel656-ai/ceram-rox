@@ -110,3 +110,50 @@ describe("Ergebnisübersicht: Darstellung", () => {
     expect(screen.getByText(/Projekt Alpha/)).toBeTruthy();
   });
 });
+
+describe("Mehrere Werte derselben Spalte ohne eigene Durchlauf-Kennung", () => {
+  // z. B. RFA: drei Werte "SiO2" in EINER Messung, alle ohne instance_key
+  const noKeys = () =>
+    orderOf([
+      sampleOf("P260746", [
+        meas("m1", [
+          res("SiO2", 7.18, null), res("SiO2", 7.3, null), res("SiO2", 6.34, null),
+          res("Al2O3", 1, null), res("Al2O3", 2, null), res("Al2O3", 3, null),
+        ]),
+      ]),
+    ]);
+
+  it("jeder weitere Wert wird eine eigene Unterzeile (Lauf 1/2/3), Werte stehen zusammen je Zeile", () => {
+    const [sec] = buildOrderComparison(noKeys());
+    const runs = sec.rows[0].runs;
+    expect(runs.map((r) => r.label)).toEqual(["Lauf 1", "Lauf 2", "Lauf 3"]);
+    const si = sec.columns.find((c) => c.label === "SiO2")!.key;
+    const al = sec.columns.find((c) => c.label === "Al2O3")!.key;
+    expect(runs.map((r) => r.cells[si])).toEqual([[7.18], [7.3], [6.34]]);
+    expect(runs.map((r) => r.cells[al])).toEqual([[1], [2], [3]]);
+    // jede Zelle enthält genau einen Wert
+    expect(runs.every((r) => Object.values(r.cells).every((v) => v.length === 1))).toBe(true);
+  });
+
+  it("Darstellung: kein '/' in den Zellen, Probe nur in der ersten Zeile, Mittelwert mit n=3", () => {
+    render(
+      <TooltipProvider>
+        <OrderComparisonView order={noKeys()} onClose={() => {}} onSelectSample={() => {}} />
+      </TooltipProvider>,
+    );
+    expect(screen.getAllByText("P260746")).toHaveLength(1);
+    expect(screen.getByText("7,18")).toBeTruthy();
+    expect(screen.getByText("7,3")).toBeTruthy();
+    expect(screen.getByText("6,34")).toBeTruthy();
+    expect(screen.queryByText(/ \/ /)).toBeNull();
+    fireEvent.click(screen.getByLabelText("Mittelwert anzeigen"));
+    expect(screen.getByText(/Ø n=3/)).toBeTruthy();
+    expect(screen.getByText("6,94")).toBeTruthy();
+  });
+
+  it("zwei Messungen derselben Analyseart je Probe bleiben getrennte Durchläufe", () => {
+    const o = orderOf([sampleOf("P1", [meas("a", [res("SiO2", 1, null)]), meas("b", [res("SiO2", 2, null)])])]);
+    const [sec] = buildOrderComparison(o);
+    expect(sec.rows[0].runs).toHaveLength(2);
+  });
+});

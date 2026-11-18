@@ -136,6 +136,9 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
         sec.rows.push(row);
       }
       const runsOfMeasurement = new Map<string, ComparisonRun>();
+      // Mehrere Werte derselben Spalte im selben Durchlauf (ohne eigene Durchlauf-Kennung)
+      // sind weitere Durchläufe: jeder bekommt eine eigene Unterzeile statt "a / b / c" in einer Zelle.
+      const occurrences = new Map<string, number>();
       for (const r of m.results) {
         if (isInternalResult(r)) continue;
         if (!isOfficialResult(r)) {
@@ -148,12 +151,15 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
         if (!sec.columns.has(key)) sec.columns.set(key, { key, label, unit: r.unit ?? null });
         const v: number | string | null = r.value ?? (r.remarks && !r.remarks.trim().startsWith("{") && !r.remarks.trim().startsWith("[") ? r.remarks : null);
         if (v === null) continue;
-        const runKey = `${m.measurementId}:${r.instance_key ?? ""}`;
+        const baseKey = `${m.measurementId}:${r.instance_key ?? ""}`;
+        const occ = occurrences.get(`${baseKey}|${key}`) ?? 0;
+        occurrences.set(`${baseKey}|${key}`, occ + 1);
+        const runKey = occ === 0 ? baseKey : `${baseKey}#${occ}`;
         let run = runsOfMeasurement.get(runKey);
         if (!run) {
           run = {
             key: runKey,
-            label: r.instance_label?.trim() || null,
+            label: occ === 0 ? r.instance_label?.trim() || null : null,
             context: r.instance_context && Object.keys(r.instance_context).length ? r.instance_context : null,
             cells: {},
           };
