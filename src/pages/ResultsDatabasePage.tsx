@@ -10,6 +10,27 @@ import { groupRecordsBySample, matchesSampleFilters, type SampleGroup, type Samp
 import { groupRecordsByOrder } from "@/lib/results/orderGroups";
 import OrderOverviewTable, { OverviewModeToggle, type OverviewMode } from "@/components/results/OrderOverviewTable";
 import OrderComparisonView from "@/components/results/OrderComparisonView";
+import { InfoHint } from "@/components/results/InfoHint";
+import {
+  ALL_SERVICES, buildServiceOptions, columnsForService, nonEmptyColumns, recordsForService, resolveMatrixService,
+} from "@/lib/resultsMatrix";
+
+/** Gemerkte Matrix-Einstellungen (nur Komfort; ohne Speicher funktioniert alles weiter). */
+const MATRIX_PREF_PREFIX = "ceram.resultsMatrix.";
+const readMatrixPref = (key: string): string | null => {
+  try {
+    return window.localStorage.getItem(MATRIX_PREF_PREFIX + key);
+  } catch {
+    return null;
+  }
+};
+const writeMatrixPref = (key: string, value: string) => {
+  try {
+    window.localStorage.setItem(MATRIX_PREF_PREFIX + key, value);
+  } catch {
+    /* Speicher nicht verfügbar – Einstellung gilt nur für diese Sitzung */
+  }
+};
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { buildNavItems, compareKeyAfterStep, stepSelection } from "@/lib/results/sampleNavigation";
@@ -80,10 +101,6 @@ export default function ResultsDatabasePage() {
   );
   const allParamColumns = useMemo(() => flattenSchemas(serviceSchemas), [serviceSchemas]);
   const [hiddenParams, setHiddenParams] = useState<string[]>([]);
-  const visibleParamColumns = useMemo(
-    () => allParamColumns.filter((c) => !hiddenParams.includes(c.key)),
-    [allParamColumns, hiddenParams]
-  );
   const toggleParam = (key: string) =>
     setHiddenParams((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
@@ -159,6 +176,31 @@ export default function ResultsDatabasePage() {
       return true;
     });
   }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, conditionKey, conditionValue, sampleFilter, dateFrom, dateTo, searchText]);
+
+  // ---- Ergebnismatrix: Messart, leere Spalten (nur Anzeige, Export bleibt unverändert) ----
+  const serviceOptions = useMemo(() => buildServiceOptions(serviceSchemas, records), [serviceSchemas, records]);
+  const [storedService, setStoredService] = useState<string | null>(() => readMatrixPref("service"));
+  const matrixService = resolveMatrixService(storedService, serviceOptions);
+  const changeMatrixService = (key: string) => {
+    setStoredService(key);
+    writeMatrixPref("service", key);
+  };
+  const [hideEmptyColumns, setHideEmptyColumns] = useState<boolean>(() => readMatrixPref("hideEmpty") !== "0");
+  const changeHideEmpty = (v: boolean) => {
+    setHideEmptyColumns(v);
+    writeMatrixPref("hideEmpty", v ? "1" : "0");
+  };
+  const matrixRecords = useMemo(() => recordsForService(filteredRecords, matrixService), [filteredRecords, matrixService]);
+  const matrixColumns = useMemo(() => columnsForService(serviceSchemas, matrixService), [serviceSchemas, matrixService]);
+  const candidateMatrixColumns = useMemo(
+    () => matrixColumns.filter((c) => !hiddenParams.includes(c.key)),
+    [matrixColumns, hiddenParams]
+  );
+  const shownMatrixColumns = useMemo(
+    () => (hideEmptyColumns ? nonEmptyColumns(candidateMatrixColumns, matrixRecords) : candidateMatrixColumns),
+    [hideEmptyColumns, candidateMatrixColumns, matrixRecords]
+  );
+  const hiddenEmptyCount = candidateMatrixColumns.length - shownMatrixColumns.length;
 
   // Probengruppen aus denselben globalen Filtern (wirken in allen drei Ansichten gleich).
   const filteredSampleRecords = useMemo(
@@ -743,49 +785,91 @@ export default function ResultsDatabasePage() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-base">
+                <CardTitle className="flex items-center gap-2 text-base">
                   Ergebnismatrix
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte
-                  </span>
+                  <InfoHint label="Hinweise zur Ergebnismatrix">
+                    Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte. Es werden nur offizielle
+                    Ergebnisse gezeigt; ein fehlender Wert bleibt leer, ein gemessener Wert 0 wird als 0
+                    angezeigt. Die Auswahl der Messart und das Ausblenden leerer Spalten betreffen nur diese
+                    Ansicht – der Export enthält unverändert immer alle Spalten.
+                  </InfoHint>
                 </CardTitle>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      Angezeigte Parameter ({visibleParamColumns.length}/{allParamColumns.length})
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-72 max-h-80 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium">Parameter anzeigen</span>
-                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setHiddenParams([])}>
-                        Alle
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-xs">
+                    <Checkbox
+                      checked={hideEmptyColumns}
+                      onCheckedChange={(v) => changeHideEmpty(v === true)}
+                    />
+                    Leere Spalten ausblenden
+                    {hideEmptyColumns && hiddenEmptyCount > 0 ? (
+                      <span className="text-muted-foreground">({hiddenEmptyCount} ausgeblendet)</span>
+                    ) : null}
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Angezeigte Parameter ({shownMatrixColumns.length}/{matrixColumns.length})
                       </Button>
-                    </div>
-                    <div className="space-y-1.5">
-                      {allParamColumns.map((col) => (
-                        <label key={col.key} className="flex items-center gap-2 text-xs">
-                          <Checkbox
-                            checked={!hiddenParams.includes(col.key)}
-                            onCheckedChange={() => toggleParam(col.key)}
-                          />
-                          <RichText value={columnHeader(col)} />
-                        </label>
-                      ))}
-                      {allParamColumns.length === 0 && (
-                        <p className="text-xs text-muted-foreground">Keine Ergebnisparameter vorhanden.</p>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-72 max-h-80 overflow-y-auto">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium">Parameter anzeigen</span>
+                        <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setHiddenParams([])}>
+                          Alle
+                        </Button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {matrixColumns.map((col) => (
+                          <label key={col.key} className="flex items-center gap-2 text-xs">
+                            <Checkbox
+                              checked={!hiddenParams.includes(col.key)}
+                              onCheckedChange={() => toggleParam(col.key)}
+                            />
+                            <RichText value={columnHeader(col)} />
+                          </label>
+                        ))}
+                        {matrixColumns.length === 0 && (
+                          <p className="text-xs text-muted-foreground">Keine Ergebnisparameter vorhanden.</p>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Die Spaltenstruktur bleibt unabhängig von Filtern stabil. Fehlende Ergebnisse bleiben
-                leer – ein tatsächlich gemessener Wert 0 wird als 0 angezeigt.
-              </p>
+              {/* Messart-Auswahl: meiste Ergebnisse zuerst, „Alle“ zuletzt. */}
+              <div className="flex flex-wrap items-center gap-1 pt-2" role="group" aria-label="Messart">
+                {serviceOptions.map((o) => (
+                  <Button
+                    key={o.key}
+                    type="button"
+                    size="sm"
+                    variant={matrixService === o.key ? "default" : "outline"}
+                    className="h-7 text-xs"
+                    aria-pressed={matrixService === o.key}
+                    onClick={() => changeMatrixService(o.key)}
+                  >
+                    {o.name}
+                    <span className="ml-1 opacity-70">({o.resultCount})</span>
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={matrixService === ALL_SERVICES ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  aria-pressed={matrixService === ALL_SERVICES}
+                  onClick={() => changeMatrixService(ALL_SERVICES)}
+                >
+                  Alle
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <ResultsMatrixTable records={filteredRecords} columns={visibleParamColumns} />
+              <ResultsMatrixTable
+                records={matrixRecords}
+                columns={shownMatrixColumns}
+                showServiceColumn={matrixService === ALL_SERVICES}
+              />
             </CardContent>
           </Card>
         </TabsContent>
