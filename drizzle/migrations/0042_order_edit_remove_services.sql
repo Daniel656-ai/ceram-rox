@@ -103,6 +103,9 @@ BEGIN
             jsonb_build_object('order_number', _order.order_number, 'measurement_id', _m.id,
                                'measurement_number', _m.measurement_number, 'status', _m.status,
                                'assigned_to', to_jsonb(_m.assigned_to), 'reason', _reason_txt,
+                               'service_name', (SELECT service_name FROM public.measurement_services WHERE id = _m.service_id),
+                               'deleted_parameters', (SELECT COALESCE(jsonb_agg(jsonb_build_object('name', parameter_name, 'value', parameter_value)), '[]'::jsonb)
+                                                        FROM public.measurement_parameters WHERE order_measurement_id = _m.id),
                                'deleted_at', now(), 'via', 'order_edit'));
     DELETE FROM public.order_measurements WHERE id = _m.id;
     _count := _count + 1;
