@@ -61,6 +61,8 @@ export interface OrderChanges {
     notes?: string | null;
   };
   samples?: { add?: string[]; remove?: string[] };
+  /** Stufe 3a: Dienstleistungen (alle Aufgaben) entfernen – serverseitig streng geprüft. */
+  services?: { remove?: string[] };
   template?: {
     form_definition_id: string | null;
     values: Record<string, unknown>;
@@ -155,6 +157,8 @@ export interface EditDiff {
   reasonWhy: string[];
   /** Verständliche Zeilen für „Was wird geändert?“ */
   lines: string[];
+  /** Mindestlänge der Begründung (5 beim Entfernen von Dienstleistungen, sonst 1). */
+  reasonMinLength: number;
 }
 
 export interface DiffContext {
@@ -162,6 +166,8 @@ export interface DiffContext {
   /** Versuchsnummer aus dem Auftragsformular (nur gesetzt, wenn eindeutig bestimmbar). */
   experimentNumber?: string | null;
   expectedUpdatedAt?: string;
+  /** Zum Entfernen vorgemerkte Dienstleistungen (Stufe 3a). */
+  removeServices?: Array<{ id: string; name: string; tasks?: number }>;
   labels?: {
     orderType?: (v: string) => string;
     project?: (id: string) => string;
@@ -221,6 +227,16 @@ export function diffOrderEdit(base: EditSnapshot, cur: EditSnapshot, ctx: DiffCo
     if (ctx.started) why.push("Auftragsformular eines begonnenen Auftrags geändert");
   }
 
+  const removeServices = ctx.removeServices ?? [];
+  if (removeServices.length) {
+    lines.push(
+      `Dienstleistung(en) entfernt: ${removeServices
+        .map((s) => (s.tasks ? `${s.name} (${s.tasks} ${s.tasks === 1 ? "Aufgabe" : "Aufgaben"})` : s.name))
+        .join(", ")}`,
+    );
+    why.push("Dienstleistung entfernt");
+  }
+
   // Verrechnet gilt nur für Kunden; der Wechsel weg von „Kunde“ setzt es serverseitig zurück.
   let billedChange: boolean | null = null;
   if (cur.orderType === "customer") {
@@ -233,17 +249,23 @@ export function diffOrderEdit(base: EditSnapshot, cur: EditSnapshot, ctx: DiffCo
     lines.push("Verrechnet-Kennzeichen wird entfernt (kein Kundenauftrag mehr)");
   }
 
-  const hasServerChanges = Object.keys(header).length > 0 || add.length > 0 || remove.length > 0 || !!template;
+  const hasServerChanges =
+    Object.keys(header).length > 0 || add.length > 0 || remove.length > 0 || !!template || removeServices.length > 0;
   const changes: OrderChanges | null = hasServerChanges
     ? {
         ...(ctx.expectedUpdatedAt ? { expected_updated_at: ctx.expectedUpdatedAt } : {}),
         ...(Object.keys(header).length ? { header } : {}),
         ...(add.length || remove.length ? { samples: { ...(add.length ? { add } : {}), ...(remove.length ? { remove } : {}) } } : {}),
         ...(template ? { template } : {}),
+        ...(removeServices.length ? { services: { remove: removeServices.map((s) => s.id) } } : {}),
       }
     : null;
 
-  return { changes, billedChange, reasonRequired: why.length > 0, reasonWhy: why, lines };
+  return {
+    changes, billedChange, reasonRequired: why.length > 0, reasonWhy: why, lines,
+    /** Beim Entfernen von Dienstleistungen verlangt die Datenbank mindestens 5 Zeichen. */
+    reasonMinLength: removeServices.length ? 5 : 1,
+  };
 }
 
 /** Sperr-Angaben für die Maske, abgeleitet aus order_edit_facts. */
@@ -302,6 +324,7 @@ const FIELD_LABELS: Record<string, string> = {
   status: "Status",
   samples_added: "Proben hinzugefügt",
   samples_removed: "Proben entfernt",
+  services_removed: "Dienstleistungen entfernt",
   template: "Auftragsformular",
 };
 const TYPE_LABELS: Record<string, string> = { customer: "Kunde", production: "Produktion", rnd: "F&E", internal: "Intern" };
@@ -323,13 +346,115 @@ export function describeOrderUpdate(meta: Record<string, any> | null | undefined
   const added: string[] = Array.isArray(m.samples_added) ? m.samples_added : [];
   const removed: string[] = Array.isArray(m.samples_removed) ? m.samples_removed : [];
   const parts = fields
-    .filter((f) => f !== "samples_added" && f !== "samples_removed")
+    .filter((f) => f !== "samples_added" && f !== "samples_removed" && f !== "services_removed")
     .map((f) => auditFieldLabel(f));
   if (added.length || removed.length) {
     parts.push(
       `Proben (${[added.length ? `+${added.join(", +")}` : "", removed.length ? `−${removed.join(", −")}` : ""].filter(Boolean).join(" ")})`,
     );
   }
+  const svc: string[] = Array.isArray(m.services_removed) ? m.services_removed : [];
+  if (svc.length) parts.push(`Dienstleistung(en) entfernt (${svc.join(", ")})`);
   const reason = typeof m.reason === "string" && m.reason.trim() ? ` · „${m.reason.trim()}“` : "";
   return `${parts.join(", ") || "Auftrag"}${reason}`;
+}
+
+/* ---- Dienstleistungen entfernen (Stufe 3a) ---- */
+
+export interface ServiceRemovalInfo {
+  serviceId: string;
+  name: string;
+  /** Aufgaben dieser Dienstleistung (je Probe eine). */
+  tasks: Array<{ id: string; number: string | null; sample: string | null; untouched: boolean; blockers: string[] }>;
+  /** Alle Aufgaben unberührt und Auftrag bearbeitbar. */
+  removable: boolean;
+  /** Warum nicht entfernbar (nur bei removable = false). */
+  blockedReason: string | null;
+  /** Dienstleistungen, die mit entfernt werden müssen (Folgeaufgaben aus Regeln). */
+  requires: string[];
+}
+
+/**
+ * Pro Dienstleistung: Aufgaben, Sperrstatus (aus order_edit_facts) und Folgeaufgaben (Regeln,
+ * order_measurements.source_measurement_id). Die Datenbank prüft alles erneut.
+ */
+export function serviceRemovalInfo(
+  facts: OrderEditFacts | null | undefined,
+  measurements: Array<{ id: string; service_id?: string | null; source_measurement_id?: string | null; measurement_services?: { service_name?: string | null } | null; samples?: { sample_number?: string | null } | null; measurement_number?: string | null }>,
+): ServiceRemovalInfo[] {
+  const factById = new Map((facts?.measurements ?? []).map((m) => [m.measurement_id, m]));
+  const byService = new Map<string, ServiceRemovalInfo>();
+  const serviceOfTask = new Map<string, string>();
+  for (const m of measurements ?? []) {
+    const sid = m.service_id ?? m.id;
+    serviceOfTask.set(m.id, sid);
+    if (!byService.has(sid)) {
+      byService.set(sid, {
+        serviceId: sid, name: m.measurement_services?.service_name || factById.get(m.id)?.service_name || "Dienstleistung",
+        tasks: [], removable: true, blockedReason: null, requires: [],
+      });
+    }
+    const f = factById.get(m.id);
+    byService.get(sid)!.tasks.push({
+      id: m.id, number: m.measurement_number ?? null, sample: m.samples?.sample_number ?? null,
+      untouched: f ? f.untouched : false, blockers: f?.blockers ?? [],
+    });
+  }
+  for (const m of measurements ?? []) {
+    const src = m.source_measurement_id ? serviceOfTask.get(m.source_measurement_id) : undefined;
+    const own = serviceOfTask.get(m.id)!;
+    if (src && src !== own) {
+      const base = byService.get(src)!;
+      if (!base.requires.includes(own)) base.requires.push(own);
+    }
+  }
+  for (const info of byService.values()) {
+    if (!facts?.can_edit) { info.removable = false; info.blockedReason = "Der Auftrag kann nicht bearbeitet werden."; continue; }
+    const touched = info.tasks.filter((t) => !t.untouched);
+    if (touched.length) {
+      info.removable = false;
+      info.blockedReason = "Bereits in Bearbeitung: " + [...new Set(touched.flatMap((t) => t.blockers.map((b) => BLOCKER_TEXT[b] ?? b)))].join(", ");
+    }
+  }
+  return [...byService.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
+
+/** Menge der zu entfernenden Dienstleistungen nach dem (De-)Markieren einer Dienstleistung; hält die Folgeaufgaben-Regel ein. */
+export function toggleServiceRemoval(current: string[], serviceId: string, infos: ServiceRemovalInfo[]): string[] {
+  const byId = new Map(infos.map((i) => [i.serviceId, i]));
+  const set = new Set(current);
+  if (set.has(serviceId)) {
+    set.delete(serviceId);
+    // Wer ohne diese Dienstleistung nicht mehr allein entfernt werden darf, geht ebenfalls zurück.
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const id of [...set]) {
+        if ((byId.get(id)?.requires ?? []).some((r) => !set.has(r))) { set.delete(id); changed = true; }
+      }
+    }
+  } else {
+    const stack = [serviceId];
+    while (stack.length) {
+      const id = stack.pop()!;
+      if (set.has(id)) continue;
+      set.add(id);
+      for (const r of byId.get(id)?.requires ?? []) stack.push(r);
+    }
+  }
+  return [...set];
+}
+
+/** Prüft die Auswahl vor dem Speichern: alles entfernbar, Folgeaufgaben dabei, mindestens eine Dienstleistung bleibt. */
+export function validateServiceRemoval(selected: string[], infos: ServiceRemovalInfo[]): string | null {
+  if (selected.length === 0) return null;
+  const byId = new Map(infos.map((i) => [i.serviceId, i]));
+  for (const id of selected) {
+    const i = byId.get(id);
+    if (!i) return "Eine Dienstleistung gehört nicht mehr zum Auftrag. Bitte die Seite neu laden.";
+    if (!i.removable) return `„${i.name}“ kann nicht entfernt werden: ${i.blockedReason ?? "gesperrt"}`;
+    if (i.requires.some((r) => !selected.includes(r))) return `„${i.name}“ hat Folgeaufgaben, die mit entfernt werden müssen.`;
+  }
+  if (infos.every((i) => selected.includes(i.serviceId))) return "Es muss mindestens eine Dienstleistung im Auftrag bleiben.";
+  return null;
 }

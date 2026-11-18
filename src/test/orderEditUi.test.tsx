@@ -188,3 +188,42 @@ describe("Stufe 2: Vorgaben je Aufgabe ändern", () => {
     expect((screen.getByText("Speichern") as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+describe("Stufe 3a: Dienstleistung entfernen (Oberfläche)", () => {
+  const mk = (id: string, service: string, sid: string, sample: string, status = "open") => ({
+    id, service_id: sid, measurement_number: `M-${id}`, status, measurement_services: { service_name: service },
+    samples: { sample_number: sample }, measurement_parameters: [],
+  });
+  const measurements = [mk("a1", "RFA", "rfa", "P1"), mk("a2", "RFA", "rfa", "P2"), mk("b1", "BET", "bet", "P1", "in_progress")];
+  const facts = {
+    can_edit: true,
+    measurements: [
+      { measurement_id: "a1", untouched: true, blockers: [] },
+      { measurement_id: "a2", untouched: true, blockers: [] },
+      { measurement_id: "b1", untouched: false, blockers: ["work_logs"] },
+    ],
+  } as unknown as OrderEditFacts;
+
+  it("unberührt: „Entfernen“, begonnen: „nicht entfernbar“; Markierung zeigt Folgen und lässt sich zurücknehmen", () => {
+    const onToggle = vi.fn();
+    const { rerender } = render(
+      <ExistingServicesReadOnly measurements={measurements} facts={facts} canAmend onToggleRemove={onToggle} removedServiceIds={[]} />,
+    );
+    expect(screen.getByLabelText("Dienstleistung RFA entfernen")).toBeTruthy();
+    expect(screen.queryByLabelText("Dienstleistung BET entfernen")).toBeNull();
+    expect(screen.getByText("nicht entfernbar").getAttribute("title")).toMatch(/Arbeitszeit gebucht/);
+    fireEvent.click(screen.getByLabelText("Dienstleistung RFA entfernen"));
+    expect(onToggle).toHaveBeenCalledWith("rfa");
+
+    rerender(<ExistingServicesReadOnly measurements={measurements} facts={facts} canAmend onToggleRemove={onToggle} removedServiceIds={["rfa"]} />);
+    expect(screen.getByRole("alert").textContent).toMatch(/alle 2 Aufgaben/);
+    expect(screen.getByRole("alert").textContent).toMatch(/nicht rückgängig/);
+    fireEvent.click(screen.getByLabelText("Entfernen von RFA rückgängig"));
+    expect(onToggle).toHaveBeenLastCalledWith("rfa");
+  });
+
+  it("ohne Berechtigung oder ohne Umschalter keine Entfernen-Knöpfe", () => {
+    render(<ExistingServicesReadOnly measurements={measurements} facts={facts} />);
+    expect(screen.queryByLabelText("Dienstleistung RFA entfernen")).toBeNull();
+  });
+});

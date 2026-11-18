@@ -247,4 +247,50 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
     expect(screen.queryByText("nur lesbar")).toBeNull();
     expect(screen.getByText("Batch-Planung")).toBeTruthy();
   });
+
+  it("Dienstleistung entfernen: nur mit zweiter Dienstleistung, Begründung (mind. 5 Zeichen) Pflicht, Auftrag gesendet", async () => {
+    hoisted.state.order = baseOrder({
+      order_measurements: [
+        { id: "m1", service_id: "svc1", sample_id: "s1", status: "open", measurement_number: "M1", measurement_services: { service_name: "RFA" }, samples: { sample_number: "P1" }, measurement_parameters: [] },
+        { id: "m2", service_id: "svc2", sample_id: "s1", status: "open", measurement_number: "M2", measurement_services: { service_name: "BET" }, samples: { sample_number: "P1" }, measurement_parameters: [] },
+      ],
+    });
+    hoisted.state.facts = baseFacts({
+      measurements: [
+        { measurement_id: "m1", untouched: true, blockers: [], status: "open", counts: {} },
+        { measurement_id: "m2", untouched: true, blockers: [], status: "open", counts: {} },
+      ],
+    });
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    fireEvent.click(screen.getByLabelText("Dienstleistung BET entfernen"));
+    expect(await screen.findByText("Dienstleistung(en) entfernt: BET (1 Aufgabe)")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toMatch(/nicht rückgängig/);
+
+    fireEvent.click(screen.getByText("Änderungen speichern"));
+    expect(hoisted.calls.applyChanges).not.toHaveBeenCalled(); // ohne Begründung
+
+    const reason = screen.getByLabelText(/Grund der Änderung/);
+    fireEvent.change(reason, { target: { value: "kurz" } });
+    fireEvent.click(screen.getByText("Änderungen speichern"));
+    expect(hoisted.calls.applyChanges).not.toHaveBeenCalled(); // zu kurz
+
+    fireEvent.change(reason, { target: { value: "Nicht mehr benötigt" } });
+    fireEvent.click(screen.getByText("Änderungen speichern"));
+    await waitFor(() => expect(hoisted.calls.applyChanges).toHaveBeenCalledTimes(1));
+    const [id, changes, why] = hoisted.calls.applyChanges.mock.calls[0];
+    expect(id).toBe("o1");
+    expect(changes).toEqual({ expected_updated_at: "2026-11-18T10:00:00Z", services: { remove: ["svc2"] } });
+    expect(why).toBe("Nicht mehr benötigt");
+  });
+
+  it("Letzte Dienstleistung entfernen wird vor dem Senden abgewiesen", async () => {
+    mount();
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    fireEvent.click(screen.getByLabelText("Dienstleistung RFA entfernen"));
+    fireEvent.change(screen.getByLabelText(/Grund der Änderung/), { target: { value: "Nicht mehr benötigt" } });
+    fireEvent.click(screen.getByText("Änderungen speichern"));
+    await Promise.resolve();
+    expect(hoisted.calls.applyChanges).not.toHaveBeenCalled();
+  });
 });

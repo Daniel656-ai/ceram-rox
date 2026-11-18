@@ -39,7 +39,7 @@ import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
 import { useRefreshGuard } from "@/lib/refreshGuard";
 import { useOrderEditData } from "@/hooks/useOrderEditData";
 import ExistingServicesReadOnly from "@/components/order/ExistingServicesReadOnly";
-import { deriveLocks, diffOrderEdit, formStateFromOrder, snapshotFromOrder, type EditSnapshot } from "@/lib/orders/orderEdit";
+import { deriveLocks, diffOrderEdit, formStateFromOrder, serviceRemovalInfo, snapshotFromOrder, toggleServiceRemoval, validateServiceRemoval, type EditSnapshot } from "@/lib/orders/orderEdit";
 import { isServiceField } from "@/lib/orderServiceSelection";
 import { experimentNumberPatch as experimentNumberPatchForEdit } from "@/lib/orders/experimentNumber";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
@@ -196,6 +196,12 @@ export default function CreateOrderPage() {
   const editBaseline = useRef<EditSnapshot | null>(null);
   const [editHydrated, setEditHydrated] = useState(false);
   const [editReason, setEditReason] = useState("");
+  // Stufe 3a: zum Entfernen vorgemerkte Dienstleistungen (service_id) – wirksam erst beim Speichern.
+  const [removedServiceIds, setRemovedServiceIds] = useState<string[]>([]);
+  const serviceInfos = useMemo(
+    () => serviceRemovalInfo(editData.facts, editData.order?.order_measurements ?? []),
+    [editData.facts, editData.order],
+  );
   useEffect(() => {
     if (!isEdit || editHydrated || !editData.order || !editData.facts) return;
     const st = formStateFromOrder(editData.order);
@@ -613,8 +619,14 @@ export default function CreateOrderPage() {
     if (orderKind !== "pilot_plant" && selectedSampleIds.length === 0) { toast.error(t("orders:fill_required")); return; }
     const diff = currentEditDiff();
     if (!diff || (!diff.changes && diff.billedChange === null)) { toast.info("Es gibt keine Änderungen zu speichern."); return; }
+    const removalError = validateServiceRemoval(removedServiceIds, serviceInfos);
+    if (removalError) { toast.error(removalError); return; }
     if (diff.reasonRequired && !editReason.trim()) {
       toast.error("Bitte eine Begründung für die Änderung angeben.", { description: diff.reasonWhy.join(", ") });
+      return;
+    }
+    if (diff.reasonRequired && editReason.trim().length < diff.reasonMinLength) {
+      toast.error(`Die Begründung muss mindestens ${diff.reasonMinLength} Zeichen lang sein.`, { description: diff.reasonWhy.join(", ") });
       return;
     }
     setSubmitting(true);
@@ -782,6 +794,9 @@ export default function CreateOrderPage() {
     };
     return diffOrderEdit(base, cur, {
       started: locks.started,
+      removeServices: serviceInfos
+        .filter((i) => removedServiceIds.includes(i.serviceId))
+        .map((i) => ({ id: i.serviceId, name: i.name, tasks: i.tasks.length })),
       experimentNumber: exp,
       expectedUpdatedAt: editData.facts?.updated_at,
       labels: {
@@ -1031,6 +1046,8 @@ export default function CreateOrderPage() {
             measurements={editData.order?.order_measurements ?? []}
             facts={editData.facts}
             canAmend={locks.canEdit}
+            removedServiceIds={removedServiceIds}
+            onToggleRemove={(id) => setRemovedServiceIds((cur) => toggleServiceRemoval(cur, id, serviceInfos))}
             onAmended={() => { void editData.refetchOrder?.(); queryClient.invalidateQueries({ queryKey: ["order"] }); queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }); }}
           />
         ) : (
@@ -1212,10 +1229,11 @@ export default function CreateOrderPage() {
                 <p className="text-sm text-muted-foreground">Noch keine Änderungen.</p>
               )}
               <div>
-                <Label>
+                <Label htmlFor="edit-reason">
                   Grund der Änderung {editDiff?.reasonRequired ? "*" : <span className="font-normal text-muted-foreground">(optional)</span>}
                 </Label>
                 <Textarea
+                  id="edit-reason"
                   value={editReason}
                   onChange={(e) => setEditReason(e.target.value)}
                   rows={2}
