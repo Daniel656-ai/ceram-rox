@@ -202,3 +202,77 @@ describe("Anzeige im Verlauf", () => {
     expect(describeOrderUpdate(null)).toBe("Auftrag");
   });
 });
+
+import { serviceRemovalInfo, toggleServiceRemoval, validateServiceRemoval } from "@/lib/orders/orderEdit";
+
+describe("Dienstleistungen entfernen (Stufe 3a)", () => {
+  const facts = (over: Partial<OrderEditFacts> = {}, touched: string[] = []): OrderEditFacts => ({
+    order_id: "o1", order_number: "A1", order_type: "customer", order_kind: "labor", status: "open", workflow_status: "entwurf",
+    project_id: null, created_by: "u", updated_at: "2026-11-18T10:00:00Z", is_billed: false, is_master: false, can_edit: true,
+    internal: false, locked: false, started: false, type_locked: false, project_locked: false, samples: [],
+    measurements: ["m1", "m2", "m3", "m4"].map((id) => ({
+      measurement_id: id, measurement_number: id.toUpperCase(), service_id: null, service_name: null, sample_id: null, status: "open",
+      untouched: !touched.includes(id), blockers: touched.includes(id) ? ["work_logs"] : [], counts: {},
+    })),
+    ...over,
+  });
+  const ms = [
+    { id: "m1", service_id: "rfa", measurement_services: { service_name: "RFA" }, samples: { sample_number: "P1" } },
+    { id: "m2", service_id: "rfa", measurement_services: { service_name: "RFA" }, samples: { sample_number: "P2" } },
+    { id: "m3", service_id: "bet", measurement_services: { service_name: "BET" }, samples: { sample_number: "P1" } },
+    { id: "m4", service_id: "folge", source_measurement_id: "m3", measurement_services: { service_name: "Folge" }, samples: { sample_number: "P1" } },
+  ];
+
+  it("Diff: Entfernen verlangt Begründung (mind. 5 Zeichen), schickt die Dienstleistung und beschreibt die Folgen", () => {
+    const base = snapshotFromOrder({ order_type: "customer", order_samples: [{ sample_id: "s1" }], sample_id: "s1" });
+    const d = diffOrderEdit(base, base, { started: false, removeServices: [{ id: "rfa", name: "RFA", tasks: 2 }] });
+    expect(d.changes?.services).toEqual({ remove: ["rfa"] });
+    expect(d.reasonRequired).toBe(true);
+    expect(d.reasonMinLength).toBe(5);
+    expect(d.reasonWhy).toContain("Dienstleistung entfernt");
+    expect(d.lines).toContain("Dienstleistung(en) entfernt: RFA (2 Aufgaben)");
+    expect(diffOrderEdit(base, base, { started: false }).reasonMinLength).toBe(1);
+    expect(diffOrderEdit(base, base, { started: false }).changes).toBeNull();
+  });
+
+  it("Info: unberührte Dienstleistungen sind entfernbar, begonnene nicht (mit Grund); Folgeaufgaben werden erkannt", () => {
+    const info = serviceRemovalInfo(facts({}, ["m2"]), ms);
+    const by = Object.fromEntries(info.map((i) => [i.serviceId, i]));
+    expect(by.rfa.removable).toBe(false);
+    expect(by.rfa.blockedReason).toMatch(/Arbeitszeit gebucht/);
+    expect(by.rfa.tasks).toHaveLength(2);
+    expect(by.bet.removable).toBe(true);
+    expect(by.bet.requires).toEqual(["folge"]);
+    expect(by.folge.requires).toEqual([]);
+  });
+
+  it("Info: nicht bearbeitbarer Auftrag oder fehlende Angaben -> nichts entfernbar", () => {
+    expect(serviceRemovalInfo(facts({ can_edit: false }), ms).every((i) => !i.removable)).toBe(true);
+    expect(serviceRemovalInfo(null, ms).every((i) => !i.removable)).toBe(true);
+  });
+
+  it("Markieren zieht Folgeaufgaben mit, Zurücknehmen nimmt davon abhängige wieder heraus", () => {
+    const info = serviceRemovalInfo(facts(), ms);
+    const on = toggleServiceRemoval([], "bet", info);
+    expect(new Set(on)).toEqual(new Set(["bet", "folge"]));
+    expect(new Set(toggleServiceRemoval(on, "folge", info))).toEqual(new Set());
+    expect(toggleServiceRemoval([], "rfa", info)).toEqual(["rfa"]);
+  });
+
+  it("Prüfung: gesperrte, unvollständige und „alle entfernt“-Auswahl werden abgewiesen", () => {
+    const info = serviceRemovalInfo(facts({}, ["m2"]), ms);
+    expect(validateServiceRemoval([], info)).toBeNull();
+    expect(validateServiceRemoval(["rfa"], info)).toMatch(/kann nicht entfernt werden/);
+    expect(validateServiceRemoval(["bet"], info)).toMatch(/Folgeaufgaben/);
+    expect(validateServiceRemoval(["bet", "folge"], info)).toBeNull();
+    const all = serviceRemovalInfo(facts(), ms);
+    expect(validateServiceRemoval(["rfa", "bet", "folge"], all)).toMatch(/mindestens eine Dienstleistung/);
+    expect(validateServiceRemoval(["unbekannt"], all)).toMatch(/nicht mehr zum Auftrag/);
+  });
+
+  it("Verlauf: entfernte Dienstleistungen mit Namen", () => {
+    expect(describeOrderUpdate({ fields: ["services_removed"], services_removed: ["RFA", "BET"], reason: "Doppelt" }))
+      .toBe("Dienstleistung(en) entfernt (RFA, BET) · „Doppelt“");
+    expect(auditFieldLabel("services_removed")).toBe("Dienstleistungen entfernt");
+  });
+});

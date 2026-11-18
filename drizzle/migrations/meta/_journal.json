@@ -295,6 +295,13 @@
       "when": 1794820400000,
       "tag": "0041_order_edit_notify_assignees",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794906800000,
+      "tag": "0042_order_edit_remove_services",
+      "breakpoints": true
     }
   ]
 }
