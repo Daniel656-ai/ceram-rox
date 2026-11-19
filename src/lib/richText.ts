@@ -220,3 +220,20 @@ export function normalizeUnicodeToMarkup(input: string | null | undefined): stri
   });
   return serialize(mapped);
 }
+
+/**
+ * Ersetzt Hoch-/Tiefstellungs-Auszeichnungen, deren Inhalt sich nicht als Unicode hoch-/tiefstellen lässt
+ * (z. B. „Zellenzahl_{ (AV2)}“), durch gewöhnlichen Text („Zellenzahl (AV2)“). Auszeichnungen, die sich
+ * vollständig darstellen lassen (z. B. „V_{2}O_{5}“, „Nm^{3}/h“), bleiben unverändert.
+ */
+export function cleanUnmappableMarkup(input: string | null | undefined): string {
+  if (!input) return "";
+  return parseRichText(input)
+    .map((seg) => {
+      if (seg.variant === "normal") return seg.text;
+      const map = seg.variant === "sub" ? SUB_MAP : SUP_MAP;
+      const mappable = [...seg.text].every((c) => c === " " || c in map);
+      return mappable ? `${seg.variant === "sub" ? "_" : "^"}{${seg.text}}` : seg.text;
+    })
+    .join("");
+}

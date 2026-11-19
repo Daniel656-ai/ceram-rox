@@ -17,6 +17,8 @@ import type { SampleGroup } from "@/lib/results/sampleResultsAggregation";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { InfoHint } from "@/components/results/InfoHint";
 import SampleLabel from "@/components/results/SampleLabel";
+import ActivityMeasurementView from "@/components/results/ActivityMeasurementView";
+import { extractActivity } from "@/lib/results/activityMeasurement";
 import OrderExcelExportButton from "@/components/order/OrderExcelExportButton";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
@@ -54,6 +56,18 @@ export default function OrderComparisonView({
   onSelectSample: (sample: SampleGroup) => void;
 }) {
   const sections = useMemo(() => buildOrderComparison(order), [order]);
+  // Aktivitätsmessungen: eigene Darstellung je Probe/Messung (Messbedingungen + Temperaturtabelle je Katalysator).
+  const activities = useMemo(
+    () =>
+      order.samples.flatMap((sample) =>
+        sample.measurements.flatMap((m) => {
+          const { view } = extractActivity(m.results);
+          return view ? [{ sample, serviceName: m.serviceName || "Aktivitätsmessung", measurementId: m.measurementId, view }] : [];
+        }),
+      ),
+    [order],
+  );
+  const activityServices = useMemo(() => new Set(activities.map((a) => a.serviceName)), [activities]);
   const [showMean, setShowMean] = useState(false);
   const anyMultiple = sections.some((s) => s.hasMultipleRuns);
   const meanAvailable = sections.filter((s) => s.hasMultipleRuns).every((s) => s.meanAvailable);
@@ -97,11 +111,11 @@ export default function OrderComparisonView({
           )}
         </div>
       </div>
-      {sections.length === 0 && (
+      {sections.length === 0 && activities.length === 0 && (
         <p className="py-6 text-center text-sm text-muted-foreground">Keine Messungen in diesem Auftrag.</p>
       )}
       {sections.map((sec) =>
-        sec.columns.length === 0 ? (
+        sec.columns.length === 0 && activityServices.has(sec.serviceName) ? null : sec.columns.length === 0 ? (
           // Analyse ohne jeden Wert: nur eine kurze Zeile statt einer großen Karte.
           <p
             key={sec.serviceName}
@@ -113,6 +127,22 @@ export default function OrderComparisonView({
           <SectionTable key={sec.serviceName} sec={sec} meanOn={meanOn} onSelectSample={onSelectSample} />
         ),
       )}
+      {activities.map((a) => (
+        <Card key={a.measurementId}>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
+              {a.serviceName}
+              <span className="font-normal text-muted-foreground">·</span>
+              <button type="button" className="text-left hover:underline" onClick={() => onSelectSample(a.sample)}>
+                <SampleLabel number={a.sample.sampleNumber} name={a.sample.sampleName} />
+              </button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <ActivityMeasurementView view={a.view} />
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

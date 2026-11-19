@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 import SampleLabel from "@/components/results/SampleLabel";
+import ActivityMeasurementView from "@/components/results/ActivityMeasurementView";
+import { extractActivity } from "@/lib/results/activityMeasurement";
+import { toUnicode } from "@/lib/richText";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,14 +54,14 @@ export function SampleMeasurementResultsTable({
 }) {
   const canCorrect = useCanCorrectResults();
   // Interne Einträge (Importprotokoll) sind keine Messwerte: nicht in der Tabelle.
-  const { visible, protocols, details } = useMemo(
-    () => prepareDisplayResults(measurement.results),
-    [measurement.results],
-  );
+  // Aktivitätsmessblock: eigene Darstellung (Messbedingungen + Temperaturtabelle je Katalysator).
+  const { view: activity, rest } = useMemo(() => extractActivity(measurement.results), [measurement.results]);
+  const { visible, protocols, details } = useMemo(() => prepareDisplayResults(rest), [rest]);
   const instances = useMemo(() => groupResultsByInstance(visible), [visible]);
 
   return (
     <div className="space-y-3">
+      {activity && <ActivityMeasurementView view={activity} />}
       {instances.map((inst) => (
         <div key={inst.instanceKey || "__base"} className="space-y-1">
           {inst.instanceKey && (
@@ -90,7 +93,7 @@ export function SampleMeasurementResultsTable({
                       <td className={`p-2 text-right font-mono ${official ? "font-semibold" : ""}`}>
                         {fmtValue(r)}
                       </td>
-                      <td className="p-2 text-xs text-muted-foreground">{r.unit || "–"}</td>
+                      <td className="p-2 text-xs text-muted-foreground">{r.unit ? toUnicode(r.unit) : "–"}</td>
                       <td className="p-2">
                         {official ? (
                           <Badge variant="default" className="text-[10px]">Offiziell</Badge>
@@ -141,7 +144,7 @@ export function SampleMeasurementResultsTable({
         <ImportProtocolInfo key={i} protocol={p} />
       ))}
       {details.length > 0 && <DetailsInfo items={details} />}
-      {visible.length === 0 && protocols.length === 0 && (
+      {visible.length === 0 && protocols.length === 0 && !activity && (
         <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">{measurement.serviceName || "Messung"}</span> – keine Werte erfasst
         </p>

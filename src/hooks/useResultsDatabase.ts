@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { cleanUnmappableMarkup } from "@/lib/richText";
 import { formatGasInOut } from "@/lib/elementKeys";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -179,7 +180,7 @@ export function resultLabel(r: { display_label?: string | null; result_name: str
   // Gasbezeichnungen mit Richtung („no2_in“, „NO2 in“) einheitlich als „NO₂ in“.
   const gas = formatGasInOut(r.display_label || raw);
   if (gas) return gas;
-  if (r.display_label) return r.display_label;
+  if (r.display_label) return cleanUnmappableMarkup(r.display_label);
   return raw
     .replace(/_/g, " ")
     .replace(/\s+/g, " ")
