@@ -50,7 +50,7 @@ export interface ActivityField {
 export interface ActivityCatalyst {
   /** Nummer des Katalysators (1, 2, …) – aus `kat_nr` (/n), Feldnamen oder Position. */
   index: number;
-  /** `kat_nr`, sonst Bezeichnung des Eintrags, sonst null. */
+  /** Echte Katalysatornummer (`kat_nr`, z. B. FG26_0330/1); sonst null. */
   title: string | null;
   /** Probendaten: Test-Nr, Kanalgröße, Wandstärke, Länge, Kanäle, Zellenzahl – was vorhanden ist. */
   sampleData: ActivityField[];
@@ -80,6 +80,9 @@ const asValue = (v: unknown): ActivityValue => {
   }
   return null;
 };
+
+/** Messart „Aktivitätsmessung“: wird IMMER in dieser Ansicht dargestellt, auch wenn die Struktur nicht passt. */
+export const isActivityService = (name: string | null | undefined): boolean => /aktivit(ä|ae)t/i.test(name ?? "");
 
 /** Anzeigetext einer Beschriftung: Auszeichnungen lesbar, Gasnamen korrekt (NO₂ in), nie Rohmarkup. */
 export function activityLabel(raw: string): string {
@@ -185,8 +188,7 @@ function buildCatalyst(entry: Obj, position: number): { cat: ActivityCatalyst; e
   // kat_nr unverändert als Text (führende Nullen, Kommas bleiben erhalten).
   const katKey = findKey(c, /^kat_?nr$/i);
   const katNr = katKey && String(c[katKey] ?? "").trim() !== "" ? String(c[katKey]).trim() : null;
-  const label = typeof entry.__label === "string" && entry.__label.trim() ? entry.__label.trim() : null;
-  const title = katNr ?? label;
+  const title = katNr;
   const slash = title ? title.match(/\/(\d+)\s*$/) : null;
   const cat: ActivityCatalyst = {
     index: slash ? Number(slash[1]) : position,
@@ -293,7 +295,7 @@ function temperatureFromLabel(label: string | null): number | null {
 }
 
 /** Variante B/C: Temperaturstufen aus Einzelfeldern. */
-function buildFlatCatalyst(results: SampleResultValue[]): { cat: ActivityCatalyst; used: Set<SampleResultValue>; official: boolean } | null {
+function buildFlatCatalyst(results: SampleResultValue[], relaxed = false): { cat: ActivityCatalyst; used: Set<SampleResultValue>; official: boolean } | null {
   type Step = { temp: ActivityValue; eta: ActivityValue; k: ActivityValue; gases: ActivityRow["gases"]; labelTemp: number | null };
   const steps = new Map<number, Step>();
   const used = new Set<SampleResultValue>();
@@ -339,7 +341,7 @@ function buildFlatCatalyst(results: SampleResultValue[]): { cat: ActivityCatalys
   // Temperaturen zusammen mit Bedingungsfeldern (alte flache Bauart). Einzelne Felder allein genügen nicht.
   const stepWithResult = rows.some((r) => r.temperature !== null && hasResult(r));
   const temps = rows.filter((r) => r.temperature !== null).length;
-  if (!(stepWithResult || (temps >= 2 && conditionHints > 0))) return null;
+  if (!relaxed && !(stepWithResult || (temps >= 2 && conditionHints > 0))) return null;
   const cat: ActivityCatalyst = {
     index: 1, title: null, sampleData: [], conditions: emptyConditions(), rows: sortRows(rows), gasColumns: gasColumnsOf(rows),
   };
@@ -359,7 +361,11 @@ function toField(r: SampleResultValue, label?: string): ActivityField | null {
  * einheitliche Ansicht. `rest` enthält nur noch, was KEIN anzuzeigender Wert ist (Importprotokolle, leere oder
  * andere strukturierte Einträge) – alle Werte stehen entweder in einer Tabelle oder unter „Weitere Angaben“.
  */
-export function extractActivity<T extends SampleResultValue>(results: T[]): { view: ActivityView | null; rest: T[] } {
+export function extractActivity<T extends SampleResultValue>(
+  results: T[],
+  opts: { serviceName?: string | null } = {},
+): { view: ActivityView | null; rest: T[] } {
+  const byService = isActivityService(opts.serviceName);
   const catalysts: ActivityCatalyst[] = [];
   const other: ActivityField[] = [];
   const plain: T[] = [];
@@ -378,7 +384,9 @@ export function extractActivity<T extends SampleResultValue>(results: T[]): { vi
   // Variante B/C: keine Blöcke, aber Temperaturstufen als Einzelfelder.
   let used = new Set<SampleResultValue>();
   if (!sawBlock) {
-    const flat = buildFlatCatalyst(plain);
+    // Passt nur die Messart (nicht die Struktur), gilt trotzdem unsere Ansicht – sofern überhaupt Werte vorliegen.
+    const hasAnyValue = plain.some((r) => flatValue(r) !== null && !(r.value === null && parseStructuredText(r.remarks) !== undefined));
+    const flat = buildFlatCatalyst(plain, byService && hasAnyValue);
     if (flat) {
       catalysts.push(flat.cat);
       used = flat.used;
@@ -428,4 +436,25 @@ export function extractActivity<T extends SampleResultValue>(results: T[]): { vi
   }
   catalysts.sort((a, b) => a.index - b.index);
   return { view: { official, catalysts, other }, rest };
+}
+
+/** Sind überhaupt Messbedingungen vorhanden? (sonst: Hinweis „keine Messbedingungen erfasst“) */
+export const hasConditions = (c: ActivityConditions): boolean => Object.values(c).some((v) => v !== null);
+
+/**
+ * Überschrift „Katalysator …“: nur bei echter Katalysatornummer (kat_nr, z. B. FG26_0330/1), die nicht der
+ * Probenbezeichnung/-nummer entspricht. Mehrere Katalysatoren ohne kat_nr werden nur durchnummeriert.
+ */
+export function catalystHeading(
+  cat: ActivityCatalyst,
+  total: number,
+  sample?: { number?: string | null; name?: string | null },
+): string | null {
+  const norm = (v: string | null | undefined) => (v ?? "").trim().toLowerCase();
+  if (cat.title) {
+    const t = norm(cat.title);
+    if (t === norm(sample?.name) || t === norm(sample?.number)) return null;
+    return cat.title;
+  }
+  return total > 1 ? String(cat.index) : null;
 }

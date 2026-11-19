@@ -78,7 +78,7 @@ describe("Gasnamen in allen Ergebnisansichten", () => {
   it("Ergebnisübersicht (Spalten je Auftrag)", () => {
     const res = (name: string, label: string | null): SampleResultValue =>
       ({ id: name, result_name: name, value: 1, unit: "ppm", display_label: label, is_official: true, remarks: null }) as unknown as SampleResultValue;
-    const meas = { measurementId: "m1", serviceName: "Aktivität", results: [res("form:f:no2_in", null), res("form:f:n2o_out", "N2O out"), res("form:f:co2_out", "CO2 out")] } as unknown as SampleMeasurementRecord;
+    const meas = { measurementId: "m1", serviceName: "Gasanalyse", results: [res("form:f:no2_in", null), res("form:f:n2o_out", "N2O out"), res("form:f:co2_out", "CO2 out")] } as unknown as SampleMeasurementRecord;
     const sample = { sampleKey: "P1", sampleNumber: "P1", sampleName: "", measurements: [meas] } as unknown as SampleGroup;
     const order = { orderKey: "o", orderId: "o", displayNumber: "A", projectNames: [], samples: [sample], measurementCount: 1, officialCount: 3, interimCount: 0, lastActivityAt: null } as OrderGroup;
     // Ohne Temperaturstufe ist es keine Aktivitätsmessung: die Gasfelder stehen als Spalten mit richtigen Namen.

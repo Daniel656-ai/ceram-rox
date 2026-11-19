@@ -1,8 +1,11 @@
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
+import SampleLabel from "@/components/results/SampleLabel";
 import { formatElementKey } from "@/lib/elementKeys";
 import { toUnicode } from "@/lib/richText";
 import {
   ACTIVITY_GAS_UNIT,
+  catalystHeading,
+  hasConditions,
   type ActivityCatalyst,
   type ActivityField,
   type ActivityGas,
@@ -15,6 +18,11 @@ const fmt = (v: ActivityValue | undefined): string => (v === null || v === undef
 
 const gasName = (g: ActivityGas) => formatElementKey(g);
 
+export interface ActivitySampleRef {
+  number: string | null | undefined;
+  name: string | null | undefined;
+}
+
 function Head({ label, unit }: { label: string; unit?: string }) {
   return (
     <th className="whitespace-nowrap p-2 text-right font-medium">
@@ -24,16 +32,22 @@ function Head({ label, unit }: { label: string; unit?: string }) {
   );
 }
 
-/** Ein Katalysator: Kopf mit Probendaten, Messbedingungen, Ergebnisse je Temperatur. Vorläufig grau, offiziell normal. */
-function CatalystBlock({ cat, official, showTitle }: { cat: ActivityCatalyst; official: boolean; showTitle: boolean }) {
+const Hint = ({ title, text }: { title: string; text: string }) => (
+  <div>
+    <p className="mb-1 text-xs font-medium text-muted-foreground">{title}</p>
+    <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">{text}</p>
+  </div>
+);
+
+/** Ein Katalysator: [Katalysator …], Probendaten, Messbedingungen, Ergebnisse je Temperatur. Vorläufig grau, offiziell normal. */
+function CatalystBlock({ cat, official, heading }: { cat: ActivityCatalyst; official: boolean; heading: string | null }) {
   const tone = official ? "" : "text-muted-foreground";
   const c = cat.conditions;
-  const title = cat.title ?? (showTitle ? String(cat.index) : null);
   return (
     <div className="space-y-3">
-      {title && (
+      {heading && (
         <p className="text-sm font-medium">
-          Katalysator <span className="font-mono">{title}</span>
+          Katalysator <span className="font-mono">{heading}</span>
         </p>
       )}
       {cat.sampleData.length > 0 && (
@@ -52,69 +66,77 @@ function CatalystBlock({ cat, official, showTitle }: { cat: ActivityCatalyst; of
           </dl>
         </div>
       )}
-      <div>
-        <p className="mb-1 text-xs font-medium text-muted-foreground">Messbedingungen</p>
-        <HorizontalScrollArea className="rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <Head label="AV" unit="m/h" />
-                <Head label="FR" unit="Nm^{3}/h" />
-                <Head label="NO in" unit="ppm" />
-                <Head label={`${gasName("NH3")} in`} unit="ppm" />
-                <Head label={`${formatElementKey("H2O")} in`} unit="%" />
-                <Head label={`${formatElementKey("O2")} in`} unit="%" />
-                <Head label={`${formatElementKey("N2")} in`} />
-              </tr>
-            </thead>
-            <tbody>
-              <tr className={`border-t font-mono ${tone}`}>
-                {[c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].map((v, i) => (
-                  <td key={i} className="whitespace-nowrap p-2 text-right">{fmt(v)}</td>
-                ))}
-                <td className="whitespace-nowrap p-2 text-right font-sans">Rest</td>
-              </tr>
-            </tbody>
-          </table>
-        </HorizontalScrollArea>
-      </div>
-      <div>
-        <p className="mb-1 text-xs font-medium text-muted-foreground">Ergebnisse je Temperatur</p>
-        <HorizontalScrollArea className="rounded-md border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <Head label="Temperatur" unit="°C" />
-                <Head label="η NOx" unit="%" />
-                <Head label="K-Wert" unit="Nm/h" />
-                {cat.gasColumns.map((g) => (
-                  <th key={g} className="whitespace-nowrap p-2 text-right font-medium">
-                    <div>{gasName(g)}</div>
-                    <div className="text-[11px] font-normal text-muted-foreground">in / out [{ACTIVITY_GAS_UNIT[g]}]</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {cat.rows.map((r, i) => (
-                <tr key={i} className={`border-t font-mono ${tone}`}>
-                  <td className="whitespace-nowrap p-2 text-right">{fmt(r.temperature)}</td>
-                  <td className="whitespace-nowrap p-2 text-right">{fmt(r.eta)}</td>
-                  <td className="whitespace-nowrap p-2 text-right">{fmt(r.k)}</td>
-                  {cat.gasColumns.map((g) => {
-                    const cell = r.gases[g];
-                    return (
-                      <td key={g} className="whitespace-nowrap p-2 text-right">
-                        {cell && (cell.in !== null || cell.out !== null) ? `${fmt(cell.in)} / ${fmt(cell.out)}` : "–"}
-                      </td>
-                    );
-                  })}
+      {hasConditions(c) ? (
+        <div>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Messbedingungen</p>
+          <HorizontalScrollArea className="rounded-md border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <Head label="AV" unit="m/h" />
+                  <Head label="FR" unit="Nm^{3}/h" />
+                  <Head label="NO in" unit="ppm" />
+                  <Head label={`${gasName("NH3")} in`} unit="ppm" />
+                  <Head label={`${formatElementKey("H2O")} in`} unit="%" />
+                  <Head label={`${formatElementKey("O2")} in`} unit="%" />
+                  <Head label={`${formatElementKey("N2")} in`} />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </HorizontalScrollArea>
-      </div>
+              </thead>
+              <tbody>
+                <tr className={`border-t font-mono ${tone}`}>
+                  {[c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].map((v, i) => (
+                    <td key={i} className="whitespace-nowrap p-2 text-right">{fmt(v)}</td>
+                  ))}
+                  <td className="whitespace-nowrap p-2 text-right font-sans">Rest</td>
+                </tr>
+              </tbody>
+            </table>
+          </HorizontalScrollArea>
+        </div>
+      ) : (
+        <Hint title="Messbedingungen" text="keine Messbedingungen erfasst" />
+      )}
+      {cat.rows.length > 0 ? (
+        <div>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">Ergebnisse je Temperatur</p>
+          <HorizontalScrollArea className="rounded-md border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <Head label="Temperatur" unit="°C" />
+                  <Head label="η NOx" unit="%" />
+                  <Head label="K-Wert" unit="Nm/h" />
+                  {cat.gasColumns.map((g) => (
+                    <th key={g} className="whitespace-nowrap p-2 text-right font-medium">
+                      <div>{gasName(g)}</div>
+                      <div className="text-[11px] font-normal text-muted-foreground">in / out [{ACTIVITY_GAS_UNIT[g]}]</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {cat.rows.map((r, i) => (
+                  <tr key={i} className={`border-t font-mono ${tone}`}>
+                    <td className="whitespace-nowrap p-2 text-right">{fmt(r.temperature)}</td>
+                    <td className="whitespace-nowrap p-2 text-right">{fmt(r.eta)}</td>
+                    <td className="whitespace-nowrap p-2 text-right">{fmt(r.k)}</td>
+                    {cat.gasColumns.map((g) => {
+                      const cell = r.gases[g];
+                      return (
+                        <td key={g} className="whitespace-nowrap p-2 text-right">
+                          {cell && (cell.in !== null || cell.out !== null) ? `${fmt(cell.in)} / ${fmt(cell.out)}` : "–"}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </HorizontalScrollArea>
+        </div>
+      ) : (
+        <Hint title="Ergebnisse je Temperatur" text="keine Ergebnisse je Temperatur erfasst" />
+      )}
     </div>
   );
 }
@@ -140,12 +162,40 @@ function OtherFields({ fields }: { fields: ActivityField[] }) {
   );
 }
 
-/** Einheitliche Darstellung der Aktivitätsmessung (siehe tasks/014). Mehrere Katalysatoren stehen untereinander. */
-export default function ActivityMeasurementView({ view }: { view: ActivityView }) {
+/**
+ * Einheitliche Darstellung der Aktivitätsmessung (Regel: tasks/gestaltungsregeln.md, Abschnitt „Aktivitätsmessung“).
+ * Kopf: Probe (Bezeichnung groß, Nummer klein); „Katalysator …“ nur bei echter Katalysatornummer, die nicht der
+ * Probenbezeichnung entspricht.
+ */
+export default function ActivityMeasurementView({
+  view,
+  sample,
+  onSampleClick,
+}: {
+  view: ActivityView;
+  sample?: ActivitySampleRef;
+  onSampleClick?: () => void;
+}) {
   return (
     <div className="space-y-5" data-testid="activity-measurement">
+      {sample && (
+        <div className="text-sm">
+          {onSampleClick ? (
+            <button type="button" className="text-left hover:underline" onClick={onSampleClick}>
+              <SampleLabel number={sample.number} name={sample.name} />
+            </button>
+          ) : (
+            <SampleLabel number={sample.number} name={sample.name} />
+          )}
+        </div>
+      )}
       {view.catalysts.map((cat) => (
-        <CatalystBlock key={`${cat.index}-${cat.title ?? ""}`} cat={cat} official={view.official} showTitle={view.catalysts.length > 1} />
+        <CatalystBlock
+          key={`${cat.index}-${cat.title ?? ""}`}
+          cat={cat}
+          official={view.official}
+          heading={catalystHeading(cat, view.catalysts.length, sample)}
+        />
       ))}
       <OtherFields fields={view.other} />
     </div>

@@ -98,11 +98,11 @@ describe("Ergebnisübersicht: offizielle und vorläufige Werte", () => {
       sampleKey: "P1", sampleNumber: "P1", sampleName: "",
       measurements: [
         meas("BET", [res({}), res({ is_official: false })]),
-        meas("Aktivitätsmessung", Array.from({ length: 12 }, () => res({ is_official: false }))),
+        meas("Dilatometrie", Array.from({ length: 12 }, () => res({ is_official: false }))),
       ],
     } as unknown as SampleGroup;
     const sections = buildOrderComparison({ ...order(), samples: [s] });
-    const act = sections.find((x) => x.serviceName === "Aktivitätsmessung")!;
+    const act = sections.find((x) => x.serviceName === "Dilatometrie")!;
     expect(act.columns).toHaveLength(1); // vorläufige Werte werden als Spalte gezeigt
     expect(act.officialCount).toBe(0);
     expect(act.interimCount).toBe(12);

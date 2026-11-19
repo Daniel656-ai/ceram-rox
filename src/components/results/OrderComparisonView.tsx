@@ -61,7 +61,7 @@ export default function OrderComparisonView({
   const activities = useMemo(() => {
     const withView = order.samples.flatMap((sample) =>
       sample.measurements.flatMap((m) => {
-        const { view } = extractActivity(m.results);
+        const { view } = extractActivity(m.results, { serviceName: m.serviceName });
         return view ? [{ sample, serviceName: m.serviceName || "Aktivitätsmessung", measurementId: m.measurementId, view }] : [];
       }),
     );
@@ -70,7 +70,7 @@ export default function OrderComparisonView({
     const empty = order.samples.flatMap((sample) =>
       sample.measurements.flatMap((m) => {
         if (!services.has(m.serviceName || "Aktivitätsmessung")) return [];
-        const { view, rest } = extractActivity(m.results);
+        const { view, rest } = extractActivity(m.results, { serviceName: m.serviceName });
         const hasValue = rest.some((r) => !isInternalResult(r) && (r.value !== null || (r.remarks ?? "").trim() !== ""));
         return view || hasValue ? [] : [{ sample, serviceName: m.serviceName || "Aktivitätsmessung", measurementId: m.measurementId }];
       }),
@@ -140,16 +140,14 @@ export default function OrderComparisonView({
       {activities.withView.map((a) => (
         <Card key={a.measurementId}>
           <CardHeader className="pb-2">
-            <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
-              {a.serviceName}
-              <span className="font-normal text-muted-foreground">·</span>
-              <button type="button" className="text-left hover:underline" onClick={() => onSelectSample(a.sample)}>
-                <SampleLabel number={a.sample.sampleNumber} name={a.sample.sampleName} />
-              </button>
-            </CardTitle>
+            <CardTitle className="text-sm">{a.serviceName}</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <ActivityMeasurementView view={a.view} />
+            <ActivityMeasurementView
+              view={a.view}
+              sample={{ number: a.sample.sampleNumber, name: a.sample.sampleName }}
+              onSampleClick={() => onSelectSample(a.sample)}
+            />
           </CardContent>
         </Card>
       ))}

@@ -181,3 +181,74 @@ describe("Absicherungen nach Review", () => {
     expect(extractActivity([fl("gaszusammensetzung_co2", "Gaszusammensetzung CO_{2}", 8, "%"), fl("beta", "β", 0.45)]).view).toBeNull();
   });
 });
+
+describe("Vorgabe: Messart Aktivitätsmessung wird IMMER in unserer Ansicht dargestellt", () => {
+  const wrap = (ui: React.ReactElement) => render(<TooltipProvider>{ui}</TooltipProvider>);
+
+  it("passt nur die Messart (keine Temperaturstufen): trotzdem unsere Ansicht mit Hinweisen", () => {
+    const results = [fl("av_1", "AV 1", 41.38, "m/h"), fl("ap", "AP", 1502.2, "m^{2}/m^{3}"), fl("test_nr", "Test-Nr", "Ur 1")];
+    expect(extractActivity(results).view).toBeNull(); // Struktur allein reicht nicht
+    const { view } = extractActivity(results, { serviceName: "Aktivitätsmessung" });
+    expect(view).not.toBeNull();
+    expect(view!.catalysts[0].rows).toEqual([]);
+    expect(view!.catalysts[0].conditions.av).toBe(41.38);
+    expect(view!.other.map((f) => f.label)).toEqual(["AP"]);
+    wrap(<ActivityMeasurementView view={view!} sample={{ number: "P1", name: "FG1" }} />);
+    expect(screen.getByText("keine Ergebnisse je Temperatur erfasst")).toBeTruthy();
+    expect(screen.getByText("Weitere Angaben")).toBeTruthy();
+  });
+
+  it("Messart ohne jeden Wert: keine Ansicht (kurze Zeile „keine Messwerte erfasst“ wie bisher)", () => {
+    expect(extractActivity([fl("av_1", "AV 1", null)], { serviceName: "Aktivitätsmessung" }).view).toBeNull();
+  });
+
+  it("andere Messarten sind nicht betroffen", () => {
+    expect(extractActivity([fl("av_1", "AV 1", 41.38, "m/h")], { serviceName: "Dilatometrie" }).view).toBeNull();
+  });
+
+  it("Fehlende Messbedingungen: Hinweis statt Tabelle voller Striche", () => {
+    const { view } = extractActivity(
+      [fl("temperatur_1", "Temperatur 1", 300, "°C"), fl("eta_nox", "η NOx", 50, "%")],
+      { serviceName: "Aktivitätsmessung" },
+    );
+    wrap(<ActivityMeasurementView view={view!} />);
+    expect(screen.getByText("keine Messbedingungen erfasst")).toBeTruthy();
+  });
+});
+
+describe("Vorgabe: Kopf – Probe, Katalysator nur bei echter Katalysatornummer", () => {
+  const wrap = (ui: React.ReactElement) => render(<TooltipProvider>{ui}</TooltipProvider>);
+  const view = () => extractActivity([block()]).view!;
+
+  it("Probe mit Bezeichnung groß und Nummer klein; Katalysator FG26_0330/1 und /2", () => {
+    wrap(<ActivityMeasurementView view={view()} sample={{ number: "P260305", name: "FG26_0330" }} />);
+    expect(screen.getByText("FG26_0330")).toBeTruthy();
+    expect(screen.getByText("P260305")).toBeTruthy();
+    expect(screen.getByText("FG26_0330/1")).toBeTruthy();
+    expect(screen.getByText("FG26_0330/2")).toBeTruthy();
+  });
+
+  it("Katalysatorbezeichnung gleich Probenbezeichnung: Zeile entfällt", () => {
+    const { view: v } = extractActivity([res({ result_name: "form:f:aktivitatsmessblock", remarks: JSON.stringify([{
+      gas_einstellungen: [{ no_anlage: 200, kat_nr: "FG26_0330" }],
+      temperatur_11: [{ temperatur_1: 300, eta_nox: 50, no_anzeige_in_1: 200, no_anzeige_out_1: 100 }],
+    }]) })]);
+    wrap(<ActivityMeasurementView view={v!} sample={{ number: "P1", name: "FG26_0330" }} />);
+    expect(screen.queryByText(/Katalysator/)).toBeNull();
+  });
+
+  it("flache Variante ohne kat_nr: keine Katalysator-Zeile", () => {
+    const { view: v } = extractActivity([fl("temperatur_1", "Temperatur 1", 300), fl("eta_nox", "η NOx", 50, "%")]);
+    wrap(<ActivityMeasurementView view={v!} sample={{ number: "P1", name: "X" }} />);
+    expect(screen.queryByText(/Katalysator/)).toBeNull();
+  });
+
+  it("Excel: Titel nur mit echter Katalysatornummer; Hinweise bei fehlenden Bereichen", () => {
+    const rows = activityExportRows(view(), { number: "P260305", name: "FG26_0330" }).map((r) => r.map((c) => c.v));
+    expect(rows[0][0]).toBe("Aktivitätsmessung · Katalysator FG26_0330/1");
+    const empty = extractActivity([fl("av_1", "AV 1", 41.38, "m/h")], { serviceName: "Aktivitätsmessung" }).view!;
+    const r2 = activityExportRows(empty).map((r) => r.map((c) => c.v)).flat();
+    expect(r2).toContain("keine Ergebnisse je Temperatur erfasst");
+    expect(r2).toContain("Aktivitätsmessung");
+  });
+});
