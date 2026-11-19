@@ -330,6 +330,13 @@
       "when": 1795209200000,
       "tag": "0046_order_delete_extended",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1795295600000,
+      "tag": "0047_order_delete_always_master_creator",
+      "breakpoints": true
     }
   ]
 }
