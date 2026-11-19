@@ -29,7 +29,7 @@ describe("kompakte Auftragsliste", () => {
   it("kompakt: nur Auftrag/Probe und Messwerte, keine Zusatzspalten, kein Knopf je Zeile", () => {
     wrap(
       <OrderOverviewTable
-        orders={[order()]} expanded={new Set(["o1"])} onToggle={() => {}} onSelectSample={() => {}}
+        orders={[order()]}
         onOpenOverview={() => {}} compact
       />,
     );
@@ -39,32 +39,27 @@ describe("kompakte Auftragsliste", () => {
     expect(screen.getByText("Messwerte")).toBeTruthy();
     expect(screen.queryByText(/Ergebnisübersicht$/)).toBeNull();
     expect(screen.getAllByText("4 offiziell").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("12 vorläufig").length).toBeGreaterThan(0);
+    expect(screen.getByText("15 vorläufig")).toBeTruthy();
   });
 
   it("normal: zusätzliche Spalten sichtbar", () => {
     wrap(
       <OrderOverviewTable
-        orders={[order()]} expanded={new Set()} onToggle={() => {}} onSelectSample={() => {}} onOpenOverview={() => {}}
+        orders={[order()]} onOpenOverview={() => {}}
       />,
     );
     expect(screen.getByText("Projekt / Bezeichnung")).toBeTruthy();
     expect(screen.getByText("Letzte Aktivität")).toBeTruthy();
   });
 
-  it("Klick auf die Auftragszeile öffnet die Ergebnisübersicht, der Pfeil nur das Auf-/Zuklappen", () => {
+  it("nur Aufträge, kein Pfeil, keine Probenzeilen; Klick auf die Auftragszeile öffnet die Ergebnisübersicht", () => {
     const onOpen = vi.fn();
-    const onToggle = vi.fn();
-    wrap(
-      <OrderOverviewTable
-        orders={[order()]} expanded={new Set()} onToggle={onToggle} onSelectSample={() => {}} onOpenOverview={onOpen}
-      />,
-    );
-    fireEvent.click(screen.getByLabelText("Proben aufklappen"));
-    expect(onToggle).toHaveBeenCalledWith("o1");
-    expect(onOpen).not.toHaveBeenCalled();
+    wrap(<OrderOverviewTable orders={[order()]} onOpenOverview={onOpen} />);
+    expect(screen.queryByLabelText("Proben aufklappen")).toBeNull();
+    expect(screen.queryByText("Name P1")).toBeNull();
+    expect(screen.getByText("2 Proben")).toBeTruthy();
     fireEvent.click(screen.getByText("FG-260014"));
-    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ orderKey: "o1" }));
   });
 
   it("Probenliste kompakt ohne Zusatzspalten", () => {
