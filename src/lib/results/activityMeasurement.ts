@@ -311,26 +311,35 @@ function buildFlatCatalyst(results: SampleResultValue[]): { cat: ActivityCatalys
     if (f.kind !== "step" && f.kind !== "gas") continue;
     const v = flatValue(r);
     if (v === null) continue;
-    used.add(r);
-    if (r.is_official !== true) official = false;
-    const s = step(f.kind === "gas" ? f.step : f.step);
+    const s = step(f.step);
+    // Nur als „verbraucht“ markieren, wenn der Wert wirklich in die Zelle geschrieben wurde; kollidierende
+    // Felder (z. B. no_in_1 und no_anzeige_in_1) bleiben sonst als Weitere Angaben erhalten.
+    let written = false;
     if (f.kind === "gas") {
       const cell = (s.gases[f.gas] ??= { in: null, out: null });
-      cell[f.dir] ??= v;
-    } else if (f.field === "temp") s.temp ??= v;
-    else {
-      s[f.field] ??= v;
+      if (cell[f.dir] === null) { cell[f.dir] = v; written = true; }
+    } else if (f.field === "temp") {
+      if (s.temp === null) { s.temp = v; written = true; }
+    } else if (s[f.field] === null) {
+      s[f.field] = v;
       s.labelTemp ??= temperatureFromLabel(r.display_label);
+      written = true;
+    }
+    if (written) {
+      used.add(r);
+      if (r.is_official !== true) official = false;
     }
   }
   const rows: ActivityRow[] = [...steps.entries()].sort((a, b) => a[0] - b[0]).map(([, s]) => ({
     temperature: s.temp ?? s.labelTemp,
     eta: s.eta, k: s.k, gases: s.gases,
   }));
-  const withResult = rows.some((r) => r.eta !== null || r.k !== null || Object.keys(r.gases).length > 0);
+  const hasResult = (r: ActivityRow) => r.eta !== null || r.k !== null || Object.keys(r.gases).length > 0;
+  // Strenge Erkennung: mindestens eine Temperaturstufe MIT Ergebnis (η NOx, K-Wert oder Gas), oder mehrere
+  // Temperaturen zusammen mit Bedingungsfeldern (alte flache Bauart). Einzelne Felder allein genügen nicht.
+  const stepWithResult = rows.some((r) => r.temperature !== null && hasResult(r));
   const temps = rows.filter((r) => r.temperature !== null).length;
-  // Aktivitätsmessung erkennen: Ergebnisse je Stufe, oder mehrere Temperaturen zusammen mit Bedingungsfeldern.
-  if (!(withResult || (temps >= 2 && conditionHints > 0))) return null;
+  if (!(stepWithResult || (temps >= 2 && conditionHints > 0))) return null;
   const cat: ActivityCatalyst = {
     index: 1, title: null, sampleData: [], conditions: emptyConditions(), rows: sortRows(rows), gasColumns: gasColumnsOf(rows),
   };

@@ -81,10 +81,9 @@ describe("Gasnamen in allen Ergebnisansichten", () => {
     const meas = { measurementId: "m1", serviceName: "Aktivität", results: [res("form:f:no2_in", null), res("form:f:n2o_out", "N2O out"), res("form:f:co2_out", "CO2 out")] } as unknown as SampleMeasurementRecord;
     const sample = { sampleKey: "P1", sampleNumber: "P1", sampleName: "", measurements: [meas] } as unknown as SampleGroup;
     const order = { orderKey: "o", orderId: "o", displayNumber: "A", projectNames: [], samples: [sample], measurementCount: 1, officialCount: 3, interimCount: 0, lastActivityAt: null } as OrderGroup;
-    // Gasfelder mit Richtung gehören zur Aktivitätsmessung und stehen in deren eigener Darstellung
-    // (Spaltennamen dort: NO₂, N₂O, CO₂ je „in / out“).
-    expect(buildOrderComparison(order).flatMap((s2) => s2.columns)).toEqual([]);
-    expect(extractActivity(meas.results).view?.catalysts[0].gasColumns).toEqual(["NO2", "N2O", "CO2"]);
+    // Ohne Temperaturstufe ist es keine Aktivitätsmessung: die Gasfelder stehen als Spalten mit richtigen Namen.
+    const labels = buildOrderComparison(order)[0].columns.map((c) => c.label);
+    expect(labels).toEqual(["NO₂ in", "N₂O out", "CO₂ out"]);
   });
 });
 

@@ -225,8 +225,11 @@ export function formatElementLabel(label: string): string {
   if (!raw) return "";
   const gas = formatGasInOut(raw);
   if (gas) return gas;
-  // „NH_{3} 1“, „NO (2)“: Name mit angehängter Nummer ist keine Formel (sonst „NH₃₁“, „NO(₂)“) – nur lesbar machen.
-  if (/\s(?:\d+|\(\d+\))$/.test(raw)) return toUnicode(cleanUnmappableMarkup(raw));
+  // „NH_{3} 1“ (Auszeichnung + angehängte Nummer): keine Formel (sonst „NH₃₁“) – nur lesbar machen.
+  if (/[_^]\{[^}]*\}.*\s\d+$/.test(raw)) return toUnicode(cleanUnmappableMarkup(raw));
+  // „NO (2)“, „SiO2 (2)“: Nummer in Klammern ist eine Nummerierung, kein Tiefgestelltes (sonst „NO(₂)“).
+  const numbered = raw.match(/^(.*\S)\s+\((\d+)\)$/);
+  if (numbered) return `${formatElementLabel(numbered[1])} (${numbered[2]})`;
   const formula = canonicalFormula(raw) ?? canonicalFormula(recase(raw));
   return formula ? formatElementKey(formula) : raw;
 }

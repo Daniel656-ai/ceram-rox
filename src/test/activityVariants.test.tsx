@@ -150,3 +150,34 @@ describe("Beschriftungsfehler", () => {
     expect(formatResultLabel("SiO2", "%")).toBe("SiO₂ [%]");
   });
 });
+
+describe("Absicherungen nach Review", () => {
+  it("formatElementLabel: Formeln mit Leerzeichen und Zahl behalten ihr bisheriges Verhalten", async () => {
+    const { formatElementLabel } = await import("@/lib/elementKeys");
+    expect(formatElementLabel("SiO 2")).toBe("SiO₂");
+    expect(formatElementLabel("NO 2")).toBe("NO₂");
+    expect(formatElementLabel("CO 2")).toBe("CO₂");
+    expect(formatElementLabel("TiO 2")).toBe("TiO₂");
+    expect(formatElementLabel("Fe 2")).toBe("Fe₂");
+    expect(formatElementLabel("SiO2 (2)")).toBe("SiO₂ (2)");
+    expect(formatElementLabel("Fe2O3 (1)")).toBe("Fe₂O₃ (1)");
+    expect(formatElementLabel("NO (2)")).toBe("NO (2)");
+    expect(formatElementLabel("NH_{3} 1")).toBe("NH₃ 1");
+  });
+
+  it("kollidierende Felder (no_in_1 und no_anzeige_in_1) gehen nicht verloren", () => {
+    const { view } = extractActivity([
+      fl("temperatur_1", "Temperatur 1", 300, "°C"),
+      fl("no_in_1", "NO In 1", 100, "ppm"), fl("no_anzeige_in_1", "NO-Anzeige (In) 1", 120, "ppm"),
+      fl("no_anzeige_out_1", "NO-Anzeige (Out) 1", 50, "ppm"),
+    ]);
+    expect(view!.catalysts[0].rows[0].gases.NO).toEqual({ in: 100, out: 50 });
+    expect(view!.other).toEqual([{ label: "NO-Anzeige (In) 1", value: 120, unit: "ppm" }]);
+  });
+
+  it("einzelne Felder allein (ohne Temperaturstufe mit Ergebnis) sind keine Aktivitätsmessung", () => {
+    expect(extractActivity([fl("k_wert", "K-Wert", 5, "Nm/h")]).view).toBeNull();
+    expect(extractActivity([fl("eta_nox", "η NOx", 50, "%"), fl("no_in_1", "NO In 1", 1)]).view).toBeNull();
+    expect(extractActivity([fl("gaszusammensetzung_co2", "Gaszusammensetzung CO_{2}", 8, "%"), fl("beta", "β", 0.45)]).view).toBeNull();
+  });
+});
