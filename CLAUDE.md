@@ -24,3 +24,7 @@
 - Neue Migrationen (`supabase/migrations`, `drizzle/migrations`) landen nach dem Merge auf `main` automatisch in der **Dev**-DB auf dem Server (`scripts/dev-db/sync-db-dev.ps1`, aufgerufen vom Update-Skript alle 10 Minuten). Details: `scripts/dev-db/README.md`.
 - Die **Produktion** wird weiterhin nur über das Ceram-Repo und `sync-db.ps1` versorgt. Dieses Repo darf nie die Produktions-DB (Container `supabase_db_vrzqlfovvdxofxqyslev`, Port 54322) ansprechen.
 - Bestehende Migrationsdateien nie nachträglich ändern; Korrekturen immer als neue Migration.
+
+# Gestaltung
+
+- Bei jeder Änderung an der Oberfläche gelten die Regeln in `docs/gestaltungsregeln.md`.
