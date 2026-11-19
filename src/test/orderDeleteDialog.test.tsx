@@ -80,3 +80,40 @@ describe("Löschdialog: Auftrag löschen", () => {
     await waitFor(() => expect(del().disabled).toBe(false));
   });
 });
+
+describe("Löschdialog: Auftrag mit Messdaten (Master/Ersteller dürfen immer löschen)", () => {
+  const withData = {
+    blockers: [], has_results: true, documents: [], upload_files: [], reports: 1, official_reports: 1,
+    real_results: 5, raw_datasets: 2, corrections: 1, work_logs: 3, started: true, measurements: 1,
+    needs_confirmation: true, confirm_numbers: ["6666", "DT0260001"], production_releases: ["FR-1"],
+  };
+
+  it("listet die Messdaten auf; Löschen erst nach Eingabe der Auftragsnummer", async () => {
+    apiMock.orders.deleteSummary.mockResolvedValue(withData);
+    const onConfirm = mount();
+    expect(await screen.findByText(/enthält Messdaten/)).toBeTruthy();
+    expect(screen.getByText("5 Messergebnis(se)")).toBeTruthy();
+    expect(screen.getByText("2 Rohdatensatz/-sätze")).toBeTruthy();
+    expect(screen.getByText("1 Korrektur(en)/Korrekturhistorie")).toBeTruthy();
+    expect(screen.getByText("3 Arbeitszeit-Eintrag/-Einträge")).toBeTruthy();
+    expect(screen.getByText("1 offizielle(r) Bericht(e)")).toBeTruthy();
+    expect(screen.getByText("begonnene oder abgeschlossene Aufgaben/Prozesse")).toBeTruthy();
+    expect(del().disabled).toBe(true);
+    const input = screen.getByLabelText(/Auftragsnummer eingeben/) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "falsch" } });
+    expect(del().disabled).toBe(true);
+    fireEvent.change(input, { target: { value: "  dt0260001 " } });
+    expect(del().disabled).toBe(false);
+    fireEvent.click(del());
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith("dt0260001");
+  });
+
+  it("ohne Messdaten: keine Nummer nötig, onConfirm ohne Nummer", async () => {
+    apiMock.orders.deleteSummary.mockResolvedValue({ ...withData, real_results: 0, raw_datasets: 0, corrections: 0, work_logs: 0, started: false, official_reports: 0, needs_confirmation: false });
+    const onConfirm = mount();
+    await waitFor(() => expect(del().disabled).toBe(false));
+    expect(screen.queryByLabelText(/Auftragsnummer eingeben/)).toBeNull();
+    fireEvent.click(del());
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith(undefined);
+  });
+});

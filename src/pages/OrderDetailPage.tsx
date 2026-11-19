@@ -207,10 +207,10 @@ function OrderDetailPageInner() {
   // File upload moved to MeasurementDocuments component
 
 
-  const handleDelete = async () => {
+  const handleDelete = async (confirmNumber?: string) => {
     if (deleteOrder.isPending) return;
     try {
-      const orphaned = await deleteOrder.mutateAsync(order.id);
+      const orphaned = await deleteOrder.mutateAsync({ id: order.id, confirmNumber });
       toast.success("Messauftrag gelöscht");
       if (orphaned > 0) toast.warning(`${orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
       navigate("/auftraege");

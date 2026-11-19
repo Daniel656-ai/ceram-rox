@@ -189,10 +189,10 @@ function OrdersOverview() {
     return role === "master" || o.created_by === user?.id;
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, confirmNumber?: string) => {
     if (deleteOrder.isPending) return;
     try {
-      const orphaned = await deleteOrder.mutateAsync(id);
+      const orphaned = await deleteOrder.mutateAsync({ id, confirmNumber });
       toast.success(t("orders:deleted"));
       if (orphaned > 0) toast.warning(`${orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
     } catch (err: any) {
@@ -333,7 +333,7 @@ function OrdersOverview() {
                                   {t("orders:delete_confirm", { number: o.order_number ?? o.id })} {t("orders:delete_description")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
-                              <OrderDeleteBody orderId={o.id} pending={deleteOrder.isPending} onConfirm={() => handleDelete(o.id)} />
+                              <OrderDeleteBody orderId={o.id} pending={deleteOrder.isPending} onConfirm={(n) => handleDelete(o.id, n)} />
                             </AlertDialogContent>
                           </AlertDialog>
                         )}

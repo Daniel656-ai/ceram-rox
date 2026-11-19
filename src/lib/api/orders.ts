@@ -198,12 +198,18 @@ export const orders = {
    * zugehörigen Dateien im Speicher. Gibt die Anzahl Dateien zurück, die im Speicher
    * nicht entfernt werden konnten (der Auftrag ist dann trotzdem gelöscht).
    */
-  delete: async (id: string): Promise<number> => {
+  delete: async (id: string, confirmNumber?: string): Promise<number> => {
     // Pfade VOR dem Löschen einsammeln; danach sind die Datenbankzeilen weg.
     const files = await collectOrderStorageFiles(id);
-    const { data, error } = await dbClient.rpc("cancel_or_delete_order", { _order_id: id });
+    const { data, error } = await dbClient.rpc(
+      "cancel_or_delete_order",
+      confirmNumber ? { _order_id: id, _confirm_number: confirmNumber } : { _order_id: id },
+    );
     if (error) throw error;
     if (data !== id) throw new Error("Auftrag konnte nicht vollständig gelöscht werden.");
+    // Mit Bestätigungsnummer = der Auftrag hatte Messdaten: Dateien im Speicher bleiben für eine Wiederherstellung
+    // erhalten (das Löschprotokoll sichert nur die Datenbankzeilen).
+    if (confirmNumber) return 0;
     return removeStorageFiles(files);
   },
 
