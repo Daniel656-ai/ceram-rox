@@ -136,9 +136,11 @@ function buildCatalyst(entry: Obj): ActivityCatalyst | null {
     o2: firstValue(c, /^o2_anlage$/i),
   };
   const gasColumns = ACTIVITY_GAS_ORDER.filter((g) => built.some((r) => r.gases[g] && (r.gases[g]!.in !== null || r.gases[g]!.out !== null)));
-  const katNr = firstValue(c, /^kat_?nr$/i);
+  // kat_nr unverändert als Text (führende Nullen, Kommas bleiben erhalten).
+  const katKey = findKey(c, /^kat_?nr$/i);
+  const katNr = katKey && String(c[katKey] ?? "").trim() !== "" ? String(c[katKey]).trim() : null;
   const label = typeof entry.__label === "string" && entry.__label.trim() ? entry.__label.trim() : null;
-  return { title: katNr !== null ? String(katNr) : label, conditions, rows: built, gasColumns };
+  return { title: katNr ?? label, conditions, rows: built, gasColumns };
 }
 
 /** Katalysatoren eines einzelnen Blockergebnisses; null, wenn der Wert kein Aktivitätsmessblock ist. */
