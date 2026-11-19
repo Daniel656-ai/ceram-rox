@@ -84,7 +84,7 @@ describe("Messwert-Zähler", () => {
   });
 });
 
-describe("Ergebnisübersicht: Analysen ohne offizielle Werte", () => {
+describe("Ergebnisübersicht: offizielle und vorläufige Werte", () => {
   const res = (o: Partial<SampleResultValue>): SampleResultValue => ({
     id: crypto.randomUUID(), result_name: "form:f:x", value: 1, unit: "m²/g", temperature_range_from: null,
     temperature_range_to: null, temperature_unit: null, remarks: null, measured_at: null, display_label: "BET [m²/g]",
@@ -103,11 +103,22 @@ describe("Ergebnisübersicht: Analysen ohne offizielle Werte", () => {
     } as unknown as SampleGroup;
     const sections = buildOrderComparison({ ...order(), samples: [s] });
     const act = sections.find((x) => x.serviceName === "Aktivitätsmessung")!;
-    expect(act.columns).toHaveLength(0);
+    expect(act.columns).toHaveLength(1); // vorläufige Werte werden als Spalte gezeigt
     expect(act.officialCount).toBe(0);
     expect(act.interimCount).toBe(12);
     const bet = sections.find((x) => x.serviceName === "BET")!;
     expect(bet.officialCount).toBe(1);
     expect(bet.interimCount).toBe(1);
+  });
+});
+
+describe("Vorläufige Werte in der Ergebnisübersicht", () => {
+  it("runStatus kennzeichnet Durchläufe als offiziell, vorläufig oder teilweise vorläufig", async () => {
+    const { runStatus } = await import("@/lib/results/orderGroups");
+    const run = (interim: Record<string, boolean[]>) => ({ key: "k", label: null, context: null, cells: {}, interim });
+    expect(runStatus(run({ a: [false, false] }))).toBe("offiziell");
+    expect(runStatus(run({ a: [true], b: [true] }))).toBe("vorläufig");
+    expect(runStatus(run({ a: [false], b: [true] }))).toBe("teilweise vorläufig");
+    expect(runStatus(run({}))).toBeNull();
   });
 });

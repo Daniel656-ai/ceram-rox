@@ -96,21 +96,22 @@ export function buildChartSources(records: ResultRecord[]): ChartPointSource[] {
     if (r.serviceName && !entry.serviceNames.includes(r.serviceName)) entry.serviceNames.push(r.serviceName);
     if (r.completedAt && (!entry.completedAt || r.completedAt > entry.completedAt)) entry.completedAt = r.completedAt;
     for (const o of r.outputResults) {
-      if (o.is_official !== true) continue;
       const num = parseNumericValue(o.value ?? o.remarks);
       if (num == null) continue;
-      entry.values[resultLabel(o)] = num;
+      const label = resultLabel(o);
+      // Offizielle Werte haben Vorrang vor vorläufigen mit gleicher Bezeichnung.
+      if (o.is_official !== true && label in entry.values) continue;
+      entry.values[label] = num;
     }
   }
   return Array.from(map.values());
 }
 
-/** Alle numerisch darstellbaren offiziellen Ergebnisparameter – dynamisch erkannt. */
+/** Alle numerisch darstellbaren Ergebnisparameter (offiziell und vorläufig) – dynamisch erkannt. */
 export function collectNumericParameters(records: ResultRecord[]): NumericParameterOption[] {
   const map = new Map<string, NumericParameterOption>();
   for (const r of records) {
     for (const o of r.outputResults) {
-      if (o.is_official !== true) continue;
       const num = parseNumericValue(o.value ?? o.remarks);
       if (num == null) continue;
       const key = resultLabel(o);

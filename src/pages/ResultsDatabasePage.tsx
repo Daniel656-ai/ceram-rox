@@ -282,6 +282,10 @@ export default function ResultsDatabasePage() {
   // Ergebnisdefinition), unabhängig von Filtern, Datensatzanzahl oder
   // gerade sichtbaren Spalten. Fehlende Werte bleiben leer, 0 bleibt 0.
   // ==========================================================
+  const rowStatus = (r: ResultRecord) => {
+    const n = r.outputResults.filter((o) => o.is_official !== true).length;
+    return n === 0 ? "offiziell" : n === r.outputResults.length ? "vorläufig" : "teilweise vorläufig";
+  };
   const buildExportRows = (source: ResultRecord[]) =>
     // Mehrere eigenständige Messungen einer Tätigkeit werden als eigene
     // Zeilen exportiert – die Spaltenstruktur bleibt identisch.
@@ -299,6 +303,7 @@ export default function ResultsDatabasePage() {
         "Projekt": r.projectName || r.projectNumber,
         "Auftraggeber": r.createdByName,
         "Messdienstleister": r.assignedToName,
+        "Status": rowStatus(r),
       };
       allParamColumns.forEach((col) => {
         row[toUnicode(columnHeader(col))] = exportCell(r, col.key);
@@ -331,7 +336,7 @@ export default function ResultsDatabasePage() {
   const exportToExcel = () => downloadWorkbook(filteredRecords, "xlsx", "gefiltert");
   const exportAllToExcel = () => downloadWorkbook(records, "xlsx", "alle");
 
-  // Chart data – identische Datenbasis wie die Ergebnisdatenbank (nur offizielle Ergebnisse)
+  // Chart data – identische Datenbasis wie die Ergebnisdatenbank (offizielle und vorläufige Ergebnisse)
   const chartSources = useMemo(() => buildChartSources(filteredRecords), [filteredRecords]);
   const numericParams = useMemo(() => collectNumericParameters(filteredRecords), [filteredRecords]);
   const numericKeys = useMemo(() => new Set(numericParams.map(p => p.key)), [numericParams]);
@@ -648,13 +653,13 @@ export default function ResultsDatabasePage() {
               <TooltipContent side="bottom" className="max-w-sm text-xs font-normal leading-relaxed">
                 Die Probenübersicht zeigt alle gespeicherten Messwerte einer Probe – offizielle
                 Ergebnisse sind deutlich hervorgehoben, vorläufige Arbeitswerte gekennzeichnet.
-                Ergebnismatrix und Statistik &amp; Diagramme basieren ausschließlich auf
-                ausdrücklich freigegebenen offiziellen Ergebnissen.
+                Auch Ergebnismatrix sowie Statistik &amp; Diagramme zeigen offizielle und vorläufige
+                Werte; vorläufige sind in der Matrix grau mit „vorl.“ markiert.
               </TooltipContent>
             </UiTooltip>
           </h1>
           <p className="text-sm text-muted-foreground">
-            {filteredRecords.length} von {records.length} Messungen mit offiziellem Ergebnis
+            {filteredRecords.length} von {records.length} Messungen mit Ergebnis ({records.filter((r) => r.outputResults.some((o) => o.is_official === true)).length} mit offiziellem Wert)
           </p>
         </div>
         <DropdownMenu>
@@ -738,8 +743,8 @@ export default function ResultsDatabasePage() {
                 <CardTitle className="flex items-center gap-2 text-base">
                   Ergebnismatrix
                   <InfoHint label="Hinweise zur Ergebnismatrix">
-                    Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte. Es werden nur offizielle
-                    Ergebnisse gezeigt; ein fehlender Wert bleibt leer, ein gemessener Wert 0 wird als 0
+                    Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte. Es werden offizielle und
+                    vorläufige Ergebnisse gezeigt (vorläufige grau mit „vorl.“); ein fehlender Wert bleibt leer, ein gemessener Wert 0 wird als 0
                     angezeigt. Die Auswahl der Messart und das Ausblenden leerer Spalten betreffen nur diese
                     Ansicht – der Export enthält unverändert immer alle Spalten.
                   </InfoHint>

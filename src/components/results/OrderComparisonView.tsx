@@ -22,7 +22,28 @@ const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
 const nfMean = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 4 });
 const fmt = (v: number | string) => (typeof v === "number" ? nf.format(v) : v);
 
-/** Proben eines Auftrags nebeneinander: je Analyseart eine Tabelle (nur offizielle Werte), je Durchlauf eine Unterzeile. */
+/** Werte einer Zelle; vorläufige Werte dezent grau mit kleinem „vorl.“. */
+function CellValues({ vals, interim }: { vals: Array<number | string>; interim?: boolean[] }) {
+  return (
+    <>
+      {vals.map((v, i) => (
+        <Fragment key={i}>
+          {i > 0 && " / "}
+          {interim?.[i] ? (
+            <span className="text-muted-foreground" title="vorläufiger Wert">
+              {fmt(v)}
+              <sup className="ml-0.5 font-sans text-[9px]">vorl.</sup>
+            </span>
+          ) : (
+            fmt(v)
+          )}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+/** Proben eines Auftrags nebeneinander: je Analyseart eine Tabelle (offizielle und vorläufige Werte), je Durchlauf eine Unterzeile. */
 export default function OrderComparisonView({
   order,
   onClose,
@@ -51,7 +72,7 @@ export default function OrderComparisonView({
             )}
           </span>
           <InfoHint label="Hinweise zur Ergebnisübersicht">
-            Je Analyseart eine Tabelle mit den Proben des Auftrags. Es werden nur offizielle Werte gezeigt.
+            Je Analyseart eine Tabelle mit den Proben des Auftrags. Offizielle und vorläufige Werte werden gezeigt; vorläufige sind grau und mit „vorl.“ gekennzeichnet.
             Hat eine Probe mehrere Durchläufe, steht jeder in einer eigenen Unterzeile. Klick auf eine Probe
             öffnet ihre Messungen.
           </InfoHint>
@@ -81,13 +102,12 @@ export default function OrderComparisonView({
       )}
       {sections.map((sec) =>
         sec.columns.length === 0 ? (
-          // Analyse ohne offizielle Werte: nur eine kurze Zeile statt einer großen Karte.
+          // Analyse ohne jeden Wert: nur eine kurze Zeile statt einer großen Karte.
           <p
             key={sec.serviceName}
             className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground"
           >
-            <span className="font-medium text-foreground">{sec.serviceName}</span> – noch keine offiziellen Werte
-            {sec.interimCount > 0 ? ` (${sec.interimCount} vorläufig)` : ""}
+            <span className="font-medium text-foreground">{sec.serviceName}</span> – noch keine Werte
           </p>
         ) : (
           <SectionTable key={sec.serviceName} sec={sec} meanOn={meanOn} onSelectSample={onSelectSample} />
@@ -191,7 +211,7 @@ function SectionTable({
                           const vals = run.cells[c.key];
                           return (
                             <td key={c.key} className="whitespace-nowrap p-2 text-right font-mono">
-                              {vals && vals.length ? vals.map(fmt).join(" / ") : "–"}
+                              {vals && vals.length ? <CellValues vals={vals} interim={run.interim[c.key]} /> : "–"}
                             </td>
                           );
                         })}

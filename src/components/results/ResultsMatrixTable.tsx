@@ -205,10 +205,16 @@ export default function ResultsMatrixTable({
                   const result = resultForColumn(r, col.key);
                   const precision = result ? resolveResultPrecision(result, r.serviceId, precisionDefinitions) : undefined;
                   // Strukturierter Wert (JSON/Block) nie als Rohtext – Details stehen in der Seitenleiste.
+                  const interim = !!result && result.is_official !== true;
                   const structured = cell.value === null && !!cell.text && parseStructuredText(cell.text) !== undefined;
                   return (
-                    <td key={col.key} className="px-2 py-0.5 text-xs border-b text-right tabular-nums font-mono align-middle" title={structured ? "Strukturierter Wert – Details in der Seitenleiste" : undefined}>
+                    <td
+                      key={col.key}
+                      className={`px-2 py-0.5 text-xs border-b text-right tabular-nums font-mono align-middle${interim ? " text-muted-foreground" : ""}`}
+                      title={structured ? "Strukturierter Wert – Details in der Seitenleiste" : interim ? "vorläufiger Wert" : undefined}
+                    >
                       {structured ? "–" : formatResultDisplayValue(cell.value, cell.text, cell.present, precision)}
+                      {interim && !structured && cell.present && <sup className="ml-0.5 font-sans text-[9px]">vorl.</sup>}
                     </td>
                   );
                 })}
