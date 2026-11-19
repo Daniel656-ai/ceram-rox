@@ -12,6 +12,7 @@
  * Das Modul ist generisch: es kennt keine Messfälle und keine Formulare.
  */
 
+import { cleanUnmappableMarkup, toUnicode } from "@/lib/richText";
 const SUB = "₀₁₂₃₄₅₆₇₈₉";
 
 /** Formel-Schreibweise vereinheitlichen: tiefgestellte Ziffern, Leerzeichen. */
@@ -224,6 +225,8 @@ export function formatElementLabel(label: string): string {
   if (!raw) return "";
   const gas = formatGasInOut(raw);
   if (gas) return gas;
+  // „NH_{3} 1“, „NO (2)“: Name mit angehängter Nummer ist keine Formel (sonst „NH₃₁“, „NO(₂)“) – nur lesbar machen.
+  if (/\s(?:\d+|\(\d+\))$/.test(raw)) return toUnicode(cleanUnmappableMarkup(raw));
   const formula = canonicalFormula(raw) ?? canonicalFormula(recase(raw));
   return formula ? formatElementKey(formula) : raw;
 }

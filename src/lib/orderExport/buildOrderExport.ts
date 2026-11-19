@@ -103,20 +103,27 @@ function runCell(values: Array<number | string> | undefined, z: string | undefin
 const activityCell = (v: ActivityValue): ExportCell =>
   v === null ? blank : typeof v === "number" ? num(v) : text(v);
 
-/** Aktivitätsmessung: je Katalysator „Messbedingungen“ und „Ergebnisse je Temperatur“ (Gase in/out als eigene Zahlenspalten). */
+/** Aktivitätsmessung: je Katalysator Probendaten, „Messbedingungen“ und „Ergebnisse je Temperatur“ (Gase in/out als eigene Zahlenspalten); am Ende „Weitere Angaben“. */
 export function activityExportRows(view: ActivityView): ExportCell[][] {
   const rows: ExportCell[][] = [];
   const status = view.official ? "offiziell" : "vorläufig";
+  const fieldHead = (f: { label: string; unit: string | null }) => text(f.unit ? `${f.label} [${f.unit}]` : f.label);
   for (const cat of view.catalysts) {
-    rows.push([text(cat.title ? `Aktivitätsmessung · Katalysator ${cat.title}` : "Aktivitätsmessung"), text(status)]);
+    const title = cat.title ?? (view.catalysts.length > 1 ? String(cat.index) : null);
+    rows.push([text(title ? `Aktivitätsmessung · Katalysator ${title}` : "Aktivitätsmessung"), text(status)]);
+    if (cat.sampleData.length) {
+      rows.push([text("Probendaten")]);
+      rows.push(cat.sampleData.map(fieldHead));
+      rows.push(cat.sampleData.map((f) => activityCell(f.value)));
+      rows.push([]);
+    }
     rows.push([text("Messbedingungen")]);
     const c = cat.conditions;
-    const extra = c.channels !== null || c.cells !== null;
     rows.push([
-      text("AV [m/h]"), text("FR [Nm³/h]"), ...(extra ? [text("Anzahl Kanäle"), text("Zellenzahl")] : []), text("NO in [ppm]"), text(`${formatElementKey("NH3")} in [ppm]`),
+      text("AV [m/h]"), text("FR [Nm³/h]"), text("NO in [ppm]"), text(`${formatElementKey("NH3")} in [ppm]`),
       text(`${formatElementKey("H2O")} in [%]`), text(`${formatElementKey("O2")} in [%]`), text(`${formatElementKey("N2")} in`),
     ]);
-    rows.push((extra ? [c.av, c.fr, c.channels, c.cells, c.no, c.nh3, c.h2o, c.o2] : [c.av, c.fr, c.no, c.nh3, c.h2o, c.o2]).map(activityCell).concat([text("Rest")]));
+    rows.push([c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].map(activityCell).concat([text("Rest")]));
     rows.push([]);
     rows.push([text("Ergebnisse je Temperatur")]);
     rows.push([
@@ -134,6 +141,11 @@ export function activityExportRows(view: ActivityView): ExportCell[][] {
         text(status),
       ]);
     }
+    rows.push([]);
+  }
+  if (view.other.length) {
+    rows.push([text("Weitere Angaben")]);
+    for (const f of view.other) rows.push([text(f.label), activityCell(f.value), text(f.unit)]);
     rows.push([]);
   }
   return rows;

@@ -1,16 +1,20 @@
-import { parseGasInOut } from "@/lib/elementKeys";
-import { parseStructuredText } from "@/lib/results/structuredValues";
+import { formatGasInOut, parseGasInOut } from "@/lib/elementKeys";
+import { cleanUnmappableMarkup, toUnicode } from "@/lib/richText";
+import { humanizeKey, parseStructuredText } from "@/lib/results/structuredValues";
 import type { SampleResultValue } from "@/lib/results/sampleResultsAggregation";
 
 /**
- * Aktivitätsmessung (NOx): Darstellung aus dem gespeicherten Aktivitätsmessblock.
+ * Aktivitätsmessung (NOx): EINE Darstellung für alle Formularbefüllungen (siehe tasks/014).
  *
- * Reine Anzeige – an den Daten ändert sich nichts. Erkennung ausschließlich über die STRUKTUR des Blocks
- * (kein Messartname, keine festen Feldnamen mit Nummern wie `temperatur_11`):
- *  - jeder Eintrag des Blocks = ein Katalysator (Titel `kat_nr`),
- *  - Messbedingungen = Objekt/Liste mit `*_anlage`-Werten und `frfeucht` (üblicherweise `gas_einstellungen`),
- *  - Ergebnisse = Liste mit einer Zeile je Temperatur (Schlüssel `temperatur…`, `eta…`, `k_wert…`, `<gas>_in/out`).
- * Erkennt die Struktur nichts, bleibt es bei der allgemeinen Darstellung (Rückgabe null).
+ * Reine Anzeige – an den Daten ändert sich nichts. Es gibt drei Bauarten desselben Formulars:
+ *  A) Block:   `aktivitatsmessblock` mit `gas_einstellungen` (Messbedingungen) und einer Liste je Temperatur.
+ *              Jeder Eintrag = ein Katalysator (Titel `kat_nr`).
+ *  B) flach:   Einzelfelder je Temperaturstufe n: `temperatur_n`, `eta_nox`/`eta_nox_kopie`/`eta_nox_kopie_kopie`
+ *              (Stufe 1/2/3), K-Wert-Kette, `<gas>_in_n` / `<gas>_out_n`.
+ *  C) alt:     wie B, dazu Bedingungen als Einzelfelder (`no`, `no_2`, `nh3_1`, `nh3_2`, `h2o`, `o2`, `co`, …).
+ * Die Erkennung läuft über die STRUKTUR (Feldschlüssel nach Mustern), nie über den Messartnamen.
+ * Einzelfelder werden dem Katalysator mit derselben Nummer zugeordnet (…_av1 / av_1 / _kopie = 2 → Katalysator /2).
+ * Was sich nirgends zuordnen lässt, steht klein unter „Weitere Angaben“ (nichts geht verloren).
  */
 
 export type ActivityGas = "NO" | "NH3" | "NO2" | "N2O" | "CO" | "CO2";
@@ -26,9 +30,6 @@ export type ActivityValue = number | string | null;
 export interface ActivityConditions {
   av: ActivityValue;
   fr: ActivityValue;
-  /** Anzahl der Kanäle / Zellenzahl – aus den Einzelfeldern mit derselben Nummer (AV1 -> Katalysator /1). */
-  channels: ActivityValue;
-  cells: ActivityValue;
   no: ActivityValue;
   nh3: ActivityValue;
   h2o: ActivityValue;
@@ -40,18 +41,30 @@ export interface ActivityRow {
   k: ActivityValue;
   gases: Partial<Record<ActivityGas, { in: ActivityValue; out: ActivityValue }>>;
 }
+/** Ein beschrifteter Wert (Probendaten bzw. Weitere Angaben). */
+export interface ActivityField {
+  label: string;
+  value: ActivityValue;
+  unit: string | null;
+}
 export interface ActivityCatalyst {
+  /** Nummer des Katalysators (1, 2, …) – aus `kat_nr` (/n), Feldnamen oder Position. */
+  index: number;
   /** `kat_nr`, sonst Bezeichnung des Eintrags, sonst null. */
   title: string | null;
+  /** Probendaten: Test-Nr, Kanalgröße, Wandstärke, Länge, Kanäle, Zellenzahl – was vorhanden ist. */
+  sampleData: ActivityField[];
   conditions: ActivityConditions;
   rows: ActivityRow[];
   /** Nur Gase, die in mindestens einer Zeile einen Wert haben (CO/CO₂ entfallen sonst). */
   gasColumns: ActivityGas[];
 }
 export interface ActivityView {
-  /** true nur, wenn alle beteiligten Blöcke offiziell sind. */
+  /** true nur, wenn alle beteiligten Werte offiziell sind. */
   official: boolean;
   catalysts: ActivityCatalyst[];
+  /** Weitere Angaben: alles, was keinem Katalysator/keiner Tabelle zugeordnet werden konnte. */
+  other: ActivityField[];
 }
 
 type Obj = Record<string, unknown>;
@@ -68,6 +81,12 @@ const asValue = (v: unknown): ActivityValue => {
   return null;
 };
 
+/** Anzeigetext einer Beschriftung: Auszeichnungen lesbar, Gasnamen korrekt (NO₂ in), nie Rohmarkup. */
+export function activityLabel(raw: string): string {
+  const t = raw.trim();
+  return toUnicode(cleanUnmappableMarkup(formatGasInOut(t) ?? t));
+}
+
 const keysOf = (o: Obj) => Object.keys(o).filter((k) => !k.startsWith("__"));
 const findKey = (o: Obj, re: RegExp): string | undefined => keysOf(o).find((k) => re.test(k));
 const firstValue = (o: Obj, ...res: RegExp[]): ActivityValue => {
@@ -80,6 +99,20 @@ const firstValue = (o: Obj, ...res: RegExp[]): ActivityValue => {
   return null;
 };
 
+function gasOf(key: string): { gas: ActivityGas; dir: "in" | "out"; index: number } | null {
+  const g = parseGasInOut(key);
+  if (!g) return null;
+  return (ACTIVITY_GAS_ORDER as string[]).includes(g.gas)
+    ? { gas: g.gas as ActivityGas, dir: g.dir, index: g.index ? Number(g.index) : 1 }
+    : null;
+}
+
+const emptyConditions = (): ActivityConditions => ({ av: null, fr: null, no: null, nh3: null, h2o: null, o2: null });
+
+/* ------------------------------------------------------------------ */
+/* Variante A: Aktivitätsmessblock                                     */
+/* ------------------------------------------------------------------ */
+
 const CONDITION_KEY = /(_anlage$|^fr_?feucht$)/i;
 const TEMP_KEY = /^temperatur/i;
 const isRowsList = (arr: unknown[]): arr is Obj[] =>
@@ -87,11 +120,11 @@ const isRowsList = (arr: unknown[]): arr is Obj[] =>
   (arr as Obj[]).some((o) => keysOf(o).some((k) => TEMP_KEY.test(k)) &&
     keysOf(o).some((k) => /^eta/i.test(k) || parseGasInOut(k) !== null));
 
-function gasOf(key: string): { gas: ActivityGas; dir: "in" | "out" } | null {
-  const g = parseGasInOut(key);
-  if (!g) return null;
-  return (ACTIVITY_GAS_ORDER as string[]).includes(g.gas) ? { gas: g.gas as ActivityGas, dir: g.dir } : null;
-}
+/** Felder einer Block-Zeile, die in der Temperaturtabelle stehen (alles andere = Weitere Angaben). */
+const isRowConsumed = (k: string) =>
+  TEMP_KEY.test(k) || /^eta/i.test(k) || /^k_?wert/i.test(k) || /^av/i.test(k) || gasOf(k) !== null;
+/** Reine Umrechnungsfaktoren der Dosierung – keine Messwerte. */
+const isConversionKey = (k: string) => /umrechnung/i.test(k) || /^(fr_?trocken)$/i.test(k);
 
 function buildRow(o: Obj): ActivityRow | null {
   const tKey = findKey(o, TEMP_KEY);
@@ -114,105 +147,276 @@ function buildRow(o: Obj): ActivityRow | null {
   return row.temperature !== null || row.eta !== null || row.k !== null || hasGas ? row : null;
 }
 
-function buildCatalyst(entry: Obj): ActivityCatalyst | null {
+const sortRows = (rows: ActivityRow[]) =>
+  rows.sort((a, b) => (typeof a.temperature === "number" && typeof b.temperature === "number" ? a.temperature - b.temperature : 0));
+
+const gasColumnsOf = (rows: ActivityRow[]): ActivityGas[] =>
+  ACTIVITY_GAS_ORDER.filter((g) => rows.some((r) => r.gases[g] && (r.gases[g]!.in !== null || r.gases[g]!.out !== null)));
+
+function buildCatalyst(entry: Obj, position: number): { cat: ActivityCatalyst; extras: ActivityField[] } | null {
   let conditionsObj: Obj | null = null;
   let rows: Obj[] = [];
+  const entryExtras: ActivityField[] = [];
   for (const k of keysOf(entry)) {
     const v = entry[k];
-    const candidates: unknown[] = Array.isArray(v) ? v : [v];
     if (Array.isArray(v) && isRowsList(v)) { rows = rows.concat(v); continue; }
+    const candidates: unknown[] = Array.isArray(v) ? v : [v];
+    let isConditions = false;
     for (const c of candidates) {
-      if (isObj(c) && !conditionsObj && keysOf(c).some((kk) => CONDITION_KEY.test(kk))) conditionsObj = c;
+      if (isObj(c) && !conditionsObj && keysOf(c).some((kk) => CONDITION_KEY.test(kk))) { conditionsObj = c; isConditions = true; }
+    }
+    if (!isConditions && !Array.isArray(v) && !isObj(v)) {
+      const val = asValue(v);
+      if (val !== null) entryExtras.push({ label: activityLabel(humanizeKey(k)), value: val, unit: null });
     }
   }
-  const built = rows.map(buildRow).filter((r): r is ActivityRow => r !== null);
-  built.sort((a, b) => (typeof a.temperature === "number" && typeof b.temperature === "number" ? a.temperature - b.temperature : 0));
-  if (built.length === 0 && !conditionsObj) return null;
+  const built = sortRows(rows.map(buildRow).filter((r): r is ActivityRow => r !== null));
+  if (built.length === 0) return null;
   const c = conditionsObj ?? {};
   const av = rows.map((r) => firstValue(r, /^av/i)).find((v) => v !== null) ?? firstValue(c, /^av/i);
   const conditions: ActivityConditions = {
     av: av ?? null,
     fr: firstValue(c, /^fr_?feucht$/i),
-    channels: null,
-    cells: null,
     no: firstValue(c, /^no_anlage$/i),
     nh3: firstValue(c, /^nh3_anlage$/i),
     h2o: firstValue(c, /^h2o_anlage$/i),
     o2: firstValue(c, /^o2_anlage$/i),
   };
-  const gasColumns = ACTIVITY_GAS_ORDER.filter((g) => built.some((r) => r.gases[g] && (r.gases[g]!.in !== null || r.gases[g]!.out !== null)));
   // kat_nr unverändert als Text (führende Nullen, Kommas bleiben erhalten).
   const katKey = findKey(c, /^kat_?nr$/i);
   const katNr = katKey && String(c[katKey] ?? "").trim() !== "" ? String(c[katKey]).trim() : null;
   const label = typeof entry.__label === "string" && entry.__label.trim() ? entry.__label.trim() : null;
-  return { title: katNr ?? label, conditions, rows: built, gasColumns };
+  const title = katNr ?? label;
+  const slash = title ? title.match(/\/(\d+)\s*$/) : null;
+  const cat: ActivityCatalyst = {
+    index: slash ? Number(slash[1]) : position,
+    title, sampleData: [], conditions, rows: built, gasColumns: gasColumnsOf(built),
+  };
+
+  // Nicht zugeordnete Felder des Katalysators (nur Werte; Umrechnungsfaktoren der Dosierung sind keine Messwerte).
+  const extras: ActivityField[] = [...entryExtras];
+  for (const k of keysOf(c)) {
+    if (CONDITION_KEY.test(k) && !/^kat/i.test(k) || /^kat_?nr$/i.test(k) || isConversionKey(k)) continue;
+    const val = asValue(c[k]);
+    if (val !== null) extras.push({ label: activityLabel(humanizeKey(k)), value: val, unit: null });
+  }
+  for (const r of rows) {
+    const t = firstValue(r, TEMP_KEY);
+    for (const k of keysOf(r)) {
+      if (isRowConsumed(k)) continue;
+      const val = asValue(r[k]);
+      if (val !== null) extras.push({ label: activityLabel(humanizeKey(k)) + (t !== null ? ` (${t} °C)` : ""), value: val, unit: null });
+    }
+  }
+  const prefix = cat.title ? `${cat.title} · ` : "";
+  return { cat, extras: extras.map((e) => ({ ...e, label: prefix + e.label })) };
 }
 
 /** Katalysatoren eines einzelnen Blockergebnisses; null, wenn der Wert kein Aktivitätsmessblock ist. */
-export function parseActivityBlock(r: Pick<SampleResultValue, "value" | "remarks">): ActivityCatalyst[] | null {
+function parseBlock(r: Pick<SampleResultValue, "value" | "remarks">): { cats: ActivityCatalyst[]; extras: ActivityField[] } | null {
   if (r.value !== null && r.value !== undefined) return null;
   const parsed = parseStructuredText(r.remarks);
   if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(isObj)) return null;
-  const catalysts = (parsed as Obj[]).map(buildCatalyst).filter((c): c is ActivityCatalyst => c !== null && c.rows.length > 0);
-  return catalysts.length > 0 ? catalysts : null;
+  const built = (parsed as Obj[]).map((e, i) => buildCatalyst(e, i + 1)).filter((x): x is NonNullable<typeof x> => x !== null);
+  return built.length ? { cats: built.map((b) => b.cat), extras: built.flatMap((b) => b.extras) } : null;
+}
+
+export function parseActivityBlock(r: Pick<SampleResultValue, "value" | "remarks">): ActivityCatalyst[] | null {
+  return parseBlock(r)?.cats ?? null;
 }
 
 export const isActivityBlockResult = (r: Pick<SampleResultValue, "value" | "remarks">): boolean =>
-  parseActivityBlock(r) !== null;
+  parseBlock(r) !== null;
 
-/** Einzelfelder, die zu einem Katalysator gehören: av_1, fr_1, anzahl_der_kanale_av1, zellenzahl_av1 (Nummer = Katalysator). */
-const FLAT_FIELDS: Array<{ re: RegExp; field: "av" | "fr" | "channels" | "cells" }> = [
-  { re: /^av_?(\d+)$/i, field: "av" },
-  { re: /^fr_?(\d+)$/i, field: "fr" },
-  { re: /^anzahl.*kan.*?(\d+)$/i, field: "channels" },
-  { re: /^zellenzahl.*?(\d+)$/i, field: "cells" },
-];
+/* ------------------------------------------------------------------ */
+/* Einzelfelder (Varianten B/C und Ergänzung zu A)                     */
+/* ------------------------------------------------------------------ */
 
 const resultKey = (r: Pick<SampleResultValue, "result_name">): string =>
   r.result_name.startsWith("form:") ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1) : r.result_name;
 
-/** Katalysator zu Nummer n: Endung „/n“ der kat_nr, sonst die n-te Position. */
-function catalystIndexFor(catalysts: ActivityCatalyst[], n: number): number {
-  const byTitle = catalysts.findIndex((c) => new RegExp(`/${n}\\s*$`).test(c.title ?? ""));
-  if (byTitle >= 0) return byTitle;
-  return catalysts.every((c) => !/\/\d+\s*$/.test(c.title ?? "")) && n >= 1 && n <= catalysts.length ? n - 1 : -1;
+type SampleKind = "test" | "d" | "ti" | "l" | "channels" | "cells";
+type CondKind = "av" | "fr" | "no" | "nh3" | "h2o" | "o2";
+type Flat =
+  | { kind: "sample"; field: SampleKind; idx: number | null }
+  | { kind: "cond"; field: CondKind; idx: number | null }
+  | { kind: "step"; field: "temp" | "eta" | "k"; step: number }
+  | { kind: "gas"; gas: ActivityGas; dir: "in" | "out"; step: number };
+
+const SAMPLE_LABEL: Record<SampleKind, string> = {
+  test: "Test-Nr", d: "Kanalgröße d", ti: "Wandstärke ti", l: "Länge l", channels: "Anzahl Kanäle", cells: "Zellenzahl",
+};
+const SAMPLE_ORDER: SampleKind[] = ["test", "d", "ti", "l", "channels", "cells"];
+
+/** Ordnet ein Einzelfeld nach seinem Schlüssel (und ggf. seiner Einheit) ein; null = nicht zuordenbar. */
+function classifyFlat(r: SampleResultValue): Flat | null {
+  const key = resultKey(r).toLowerCase();
+  const unit = (r.unit ?? "").trim().toLowerCase();
+  let m: RegExpMatchArray | null;
+
+  const gas = gasOf(key);
+  if (gas) return { kind: "gas", gas: gas.gas, dir: gas.dir, step: gas.index };
+  if ((m = key.match(/^temperatur_?(\d+)$/))) return { kind: "step", field: "temp", step: Number(m[1]) };
+  if ((m = key.match(/^eta_nox((?:_kopie)*)$/))) return { kind: "step", field: "eta", step: 1 + m[1].length / 6 };
+  if ((m = key.match(/^k_wert((?:_kopie)*)$/))) return { kind: "step", field: "k", step: 1 + m[1].length / 6 };
+
+  if (key === "test_nr") return { kind: "sample", field: "test", idx: null };
+  if (/^d_kanalgroesse/.test(key)) return { kind: "sample", field: "d", idx: null };
+  if (/^ti_/.test(key)) return { kind: "sample", field: "ti", idx: null };
+  if ((m = key.match(/^l((?:_kopie)*)$/))) return { kind: "sample", field: "l", idx: 1 + m[1].length / 6 };
+  if ((m = key.match(/^anzahl.*kan.*?(\d+)$/))) return { kind: "sample", field: "channels", idx: Number(m[1]) };
+  if ((m = key.match(/^zellenzahl(?:.*?(\d+))?$/))) return { kind: "sample", field: "cells", idx: m[1] ? Number(m[1]) : null };
+
+  if ((m = key.match(/^av_?(\d+)$/))) return { kind: "cond", field: "av", idx: Number(m[1]) };
+  if ((m = key.match(/^fr_?(\d+)$/))) return { kind: "cond", field: "fr", idx: Number(m[1]) };
+  if (/^fr_?feucht$/.test(key)) return { kind: "cond", field: "fr", idx: null };
+  // Sollwerte der Anlage nur mit passender Einheit; in Nml/g/Nl sind es Dosiermengen (keine Bedingungen).
+  if ((m = key.match(/^(no|nh3)_anlage$/)) && unit === "ppm") return { kind: "cond", field: m[1] as CondKind, idx: null };
+  if ((m = key.match(/^(h2o|o2)_anlage$/)) && unit === "%") return { kind: "cond", field: m[1] as CondKind, idx: null };
+  // ältere flache Bauart: no, no_2, nh3_1, nh3_2, h2o, o2
+  if ((m = key.match(/^(no|nh3)(?:_(\d+))?$/))) return { kind: "cond", field: m[1] as CondKind, idx: m[2] ? Number(m[2]) : 1 };
+  if ((m = key.match(/^(h2o|o2)$/))) return { kind: "cond", field: m[1] as CondKind, idx: null };
+  return null;
+}
+
+/** Wert eines Einzelfelds (Zahl oder einfacher Text; strukturierter Text zählt nicht). */
+function flatValue(r: SampleResultValue): ActivityValue {
+  if (r.value !== null && r.value !== undefined) return asValue(r.value);
+  const t = (r.remarks ?? "").trim();
+  return t !== "" && parseStructuredText(t) === undefined ? asValue(t) : null;
+}
+
+/** Temperatur aus Beschriftungen wie „η-NOx 1_{(200 °C)}“. */
+function temperatureFromLabel(label: string | null): number | null {
+  const m = (label ?? "").match(/(\d+(?:[.,]\d+)?)\s*°\s*C/i);
+  return m ? Number(m[1].replace(",", ".")) : null;
+}
+
+/** Variante B/C: Temperaturstufen aus Einzelfeldern. */
+function buildFlatCatalyst(results: SampleResultValue[]): { cat: ActivityCatalyst; used: Set<SampleResultValue>; official: boolean } | null {
+  type Step = { temp: ActivityValue; eta: ActivityValue; k: ActivityValue; gases: ActivityRow["gases"]; labelTemp: number | null };
+  const steps = new Map<number, Step>();
+  const used = new Set<SampleResultValue>();
+  let official = true;
+  let conditionHints = 0;
+  const step = (n: number): Step => {
+    let s = steps.get(n);
+    if (!s) steps.set(n, (s = { temp: null, eta: null, k: null, gases: {}, labelTemp: null }));
+    return s;
+  };
+  for (const r of results) {
+    const f = classifyFlat(r);
+    if (!f) continue;
+    if (f.kind === "cond" && ["no", "nh3", "h2o", "o2", "av"].includes(f.field) && flatValue(r) !== null) conditionHints += 1;
+    if (f.kind !== "step" && f.kind !== "gas") continue;
+    const v = flatValue(r);
+    if (v === null) continue;
+    used.add(r);
+    if (r.is_official !== true) official = false;
+    const s = step(f.kind === "gas" ? f.step : f.step);
+    if (f.kind === "gas") {
+      const cell = (s.gases[f.gas] ??= { in: null, out: null });
+      cell[f.dir] ??= v;
+    } else if (f.field === "temp") s.temp ??= v;
+    else {
+      s[f.field] ??= v;
+      s.labelTemp ??= temperatureFromLabel(r.display_label);
+    }
+  }
+  const rows: ActivityRow[] = [...steps.entries()].sort((a, b) => a[0] - b[0]).map(([, s]) => ({
+    temperature: s.temp ?? s.labelTemp,
+    eta: s.eta, k: s.k, gases: s.gases,
+  }));
+  const withResult = rows.some((r) => r.eta !== null || r.k !== null || Object.keys(r.gases).length > 0);
+  const temps = rows.filter((r) => r.temperature !== null).length;
+  // Aktivitätsmessung erkennen: Ergebnisse je Stufe, oder mehrere Temperaturen zusammen mit Bedingungsfeldern.
+  if (!(withResult || (temps >= 2 && conditionHints > 0))) return null;
+  const cat: ActivityCatalyst = {
+    index: 1, title: null, sampleData: [], conditions: emptyConditions(), rows: sortRows(rows), gasColumns: gasColumnsOf(rows),
+  };
+  return { cat, used, official };
+}
+
+/** Einzelfeld als beschrifteter Wert (für Probendaten und Weitere Angaben). */
+function toField(r: SampleResultValue, label?: string): ActivityField | null {
+  const value = flatValue(r);
+  if (value === null) return null;
+  const raw = (label ?? r.display_label?.trim()) || humanizeKey(resultKey(r));
+  return { label: label ?? activityLabel(raw), value, unit: r.unit ? toUnicode(r.unit) : null };
 }
 
 /**
- * Trennt die Aktivitätsmessblöcke von den übrigen Ergebnissen und übernimmt die Einzelfelder
- * (AV n, FR n, Anzahl Kanäle AVn, Zellenzahl AVn) in die Messbedingungen des Katalysators n.
- * Übernommene Einzelfelder erscheinen nicht mehr zusätzlich in `rest`; alles andere bleibt erhalten.
- * AV und FR kommen weiterhin aus dem Katalysator-Eintrag – die Einzelfelder nur als Ersatz.
+ * Trennt die Aktivitätsmessung (Block und/oder Einzelfelder) von den übrigen Ergebnissen und baut daraus die
+ * einheitliche Ansicht. `rest` enthält nur noch, was KEIN anzuzeigender Wert ist (Importprotokolle, leere oder
+ * andere strukturierte Einträge) – alle Werte stehen entweder in einer Tabelle oder unter „Weitere Angaben“.
  */
 export function extractActivity<T extends SampleResultValue>(results: T[]): { view: ActivityView | null; rest: T[] } {
   const catalysts: ActivityCatalyst[] = [];
-  let rest: T[] = [];
+  const other: ActivityField[] = [];
+  const plain: T[] = [];
   let official = true;
+  let sawBlock = false;
   for (const r of results) {
-    const c = parseActivityBlock(r);
-    if (c) {
-      catalysts.push(...c);
+    const b = parseBlock(r);
+    if (b) {
+      sawBlock = true;
+      catalysts.push(...b.cats);
+      other.push(...b.extras);
       if (r.is_official !== true) official = false;
-    } else rest.push(r);
+    } else plain.push(r);
   }
-  if (catalysts.length === 0) return { view: null, rest };
 
-  const remaining: T[] = [];
-  for (const r of rest) {
-    const key = resultKey(r);
-    const hit = FLAT_FIELDS.map((f) => ({ f, m: key.match(f.re) })).find((x) => x.m);
-    const idx = hit ? catalystIndexFor(catalysts, Number(hit.m![1])) : -1;
-    if (!hit || idx < 0) {
-      remaining.push(r);
-      continue;
-    }
-    const cond = catalysts[idx].conditions;
-    const v = asValue(r.value ?? r.remarks);
-    if (v !== null) {
-      if (hit.f.field === "av" || hit.f.field === "fr") cond[hit.f.field] ??= v;
-      else cond[hit.f.field] = v;
+  // Variante B/C: keine Blöcke, aber Temperaturstufen als Einzelfelder.
+  let used = new Set<SampleResultValue>();
+  if (!sawBlock) {
+    const flat = buildFlatCatalyst(plain);
+    if (flat) {
+      catalysts.push(flat.cat);
+      used = flat.used;
+      if (!flat.official) official = false;
     }
   }
-  rest = remaining;
-  return { view: { official, catalysts }, rest };
+  if (catalysts.length === 0) return { view: null, rest: results };
+
+  const byIndex = (n: number) => catalysts.find((c) => c.index === n);
+  const rest: T[] = [];
+  const sampleFields = new Map<ActivityCatalyst, Map<SampleKind, ActivityField>>();
+  const putSample = (c: ActivityCatalyst, kind: SampleKind, f: ActivityField) => {
+    const m = sampleFields.get(c) ?? new Map<SampleKind, ActivityField>();
+    if (!m.has(kind)) m.set(kind, f);
+    sampleFields.set(c, m);
+  };
+
+  for (const r of plain) {
+    if (used.has(r)) continue; // bereits in der Temperaturtabelle
+    const v = flatValue(r);
+    const structured = r.value === null && (r.remarks ?? "").trim() !== "" && parseStructuredText(r.remarks) !== undefined;
+    if (v === null) { rest.push(r); continue; } // leer, strukturiert oder intern: allgemeine Behandlung
+    if (structured) { rest.push(r); continue; }
+    const f = classifyFlat(r);
+    if (f?.kind === "sample") {
+      const targets = f.idx === null ? catalysts : [byIndex(f.idx)].filter((c): c is ActivityCatalyst => !!c);
+      if (targets.length) {
+        const field = toField(r, SAMPLE_LABEL[f.field])!;
+        field.unit = r.unit ? toUnicode(r.unit) : null;
+        targets.forEach((c) => putSample(c, f.field, field));
+        continue;
+      }
+    } else if (f?.kind === "cond") {
+      const targets = f.idx === null ? catalysts : [byIndex(f.idx)].filter((c): c is ActivityCatalyst => !!c);
+      if (targets.length) {
+        // AV und FR kommen weiterhin aus dem Katalysator-Eintrag – die Einzelfelder nur als Ersatz.
+        targets.forEach((c) => { c.conditions[f.field] ??= v; });
+        continue;
+      }
+    }
+    const field = toField(r);
+    if (field) other.push(field);
+  }
+
+  for (const [c, m] of sampleFields) {
+    c.sampleData = SAMPLE_ORDER.filter((k) => m.has(k)).map((k) => m.get(k)!);
+  }
+  catalysts.sort((a, b) => a.index - b.index);
+  return { view: { official, catalysts, other }, rest };
 }

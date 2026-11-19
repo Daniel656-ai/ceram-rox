@@ -91,7 +91,7 @@ export function SampleMeasurementResultsTable({
                       key={r.id}
                       className={official ? "border-t bg-primary/5" : "border-t"}
                     >
-                      <td className={`p-2 ${official ? "font-semibold" : ""}`}>{resultLabel(r)}</td>
+                      <td className={`p-2 ${official ? "font-semibold" : ""}`}>{toUnicode(resultLabel(r))}</td>
                       <td className={`p-2 text-right font-mono ${official ? "font-semibold" : ""}`}>
                         {fmtValue(r)}
                       </td>
