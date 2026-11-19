@@ -72,10 +72,10 @@ describe("Löschen mit Messdaten", () => {
     });
     expect(d.removed).toEqual([
       "2 Messergebnis(se)", "1 Rohdatensatz/-sätze", "3 Korrektur(en)/Korrekturhistorie", "1 Import-Vorgang/-Vorgänge",
-      "4 Arbeitszeit-Eintrag/-Einträge", "2 Materialbuchung(en)", "1 offizielle(r) Bericht(e)",
+      "4 Arbeitszeit-Eintrag/-Einträge", "1 offizielle(r) Bericht(e)",
       "begonnene oder abgeschlossene Aufgaben/Prozesse", "1 automatisch angelegte(r) Bericht(e) ohne Inhalt",
     ]);
-    expect(d.released).toEqual(["2 Zeitbuchung(en) (bleiben bestehen, werden vom Auftrag gelöst)"]);
+    expect(d.released).toEqual(["2 Materialbuchung(en) (bleiben bestehen, werden vom Auftrag gelöst)", "2 Zeitbuchung(en) (bleiben bestehen, werden vom Auftrag gelöst)"]);
     expect(d.blockers).toEqual([]);
   });
 

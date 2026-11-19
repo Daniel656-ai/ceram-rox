@@ -312,6 +312,8 @@ BEGIN
   DELETE FROM public.documents WHERE order_measurement_id=ANY(_ids);
   DELETE FROM public.order_upload_files WHERE measurement_id=ANY(_ids);
   DELETE FROM public.order_reports WHERE order_id=_order_id;
+  -- Korrekturen haben keinen Fremdschlüssel zum Auftrag: ausdrücklich mitlöschen (Sicherung liegt im Löschprotokoll).
+  DELETE FROM public.measurement_result_corrections WHERE order_measurement_id=ANY(_ids) OR order_id=_order_id;
   UPDATE public.production_releases SET order_id=NULL WHERE order_id=_order_id;
   DELETE FROM public.production_document_requests WHERE order_id=_order_id;
   DELETE FROM public.order_samples WHERE order_id=_order_id;

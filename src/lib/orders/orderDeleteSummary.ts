@@ -82,10 +82,10 @@ export function describeOrderDeletion(s: Partial<OrderDeleteSummary> | null | un
   if (s.corrections) data.push(`${s.corrections} Korrektur(en)/Korrekturhistorie`);
   if (s.import_operations) data.push(`${s.import_operations} Import-Vorgang/-Vorgänge`);
   if (s.work_logs) data.push(`${s.work_logs} Arbeitszeit-Eintrag/-Einträge`);
-  if (s.material_bookings) data.push(`${s.material_bookings} Materialbuchung(en)`);
   if (s.official_reports) data.push(`${s.official_reports} offizielle(r) Bericht(e)`);
   if (s.started) data.push("begonnene oder abgeschlossene Aufgaben/Prozesse");
   out.removed.push(...data);
+  if (s.material_bookings) out.released.push(`${s.material_bookings} Materialbuchung(en) (bleiben bestehen, werden vom Auftrag gelöst)`);
   if (s.time_entries) out.released.push(`${s.time_entries} Zeitbuchung(en) (bleiben bestehen, werden vom Auftrag gelöst)`);
   if (s.prefilled_values) out.removed.push(`${s.prefilled_values} vorläufige Formularwert(e) vom Anlegen`);
   const autoReports = (s.reports ?? 0) - (s.official_reports ?? 0);
