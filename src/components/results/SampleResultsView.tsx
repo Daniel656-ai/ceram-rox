@@ -55,7 +55,7 @@ export function SampleMeasurementResultsTable({
   const canCorrect = useCanCorrectResults();
   // Interne Einträge (Importprotokoll) sind keine Messwerte: nicht in der Tabelle.
   // Aktivitätsmessblock: eigene Darstellung (Messbedingungen + Temperaturtabelle je Katalysator).
-  const { view: activity, rest } = useMemo(() => extractActivity(measurement.results), [measurement.results]);
+  const { view: activity, rest } = useMemo(() => extractActivity(measurement.results, { serviceName: measurement.serviceName }), [measurement.results, measurement.serviceName]);
   const { visible, protocols, details } = useMemo(() => prepareDisplayResults(rest), [rest]);
   const instances = useMemo(() => groupResultsByInstance(visible), [visible]);
   // Nur leere Felder gespeichert (kein Wert, kein Text): statt einer Tabelle voller „–“ eine kurze Zeile.
@@ -63,7 +63,7 @@ export function SampleMeasurementResultsTable({
 
   return (
     <div className="space-y-3">
-      {activity && <ActivityMeasurementView view={activity} />}
+      {activity && <ActivityMeasurementView view={activity} sample={{ number: measurement.sampleNumber, name: measurement.sampleName }} />}
       {!onlyEmpty && instances.map((inst) => (
         <div key={inst.instanceKey || "__base"} className="space-y-1">
           {inst.instanceKey && (
@@ -91,7 +91,7 @@ export function SampleMeasurementResultsTable({
                       key={r.id}
                       className={official ? "border-t bg-primary/5" : "border-t"}
                     >
-                      <td className={`p-2 ${official ? "font-semibold" : ""}`}>{resultLabel(r)}</td>
+                      <td className={`p-2 ${official ? "font-semibold" : ""}`}>{toUnicode(resultLabel(r))}</td>
                       <td className={`p-2 text-right font-mono ${official ? "font-semibold" : ""}`}>
                         {fmtValue(r)}
                       </td>

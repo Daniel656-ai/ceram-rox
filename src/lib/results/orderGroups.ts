@@ -155,7 +155,7 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
       // Strukturierte Werte (Blöcke/JSON) werden in einzelne Werte zerlegt – nie roher Text.
       // Aktivitätsmessung: Block und übernommene Einzelfelder (AV n, FR n, Kanäle, Zellenzahl) werden in der
       // eigenen Aktivitätsdarstellung gezeigt, nicht noch einmal als Spalten.
-      const source = extractActivity(m.results).rest;
+      const source = extractActivity(m.results, { serviceName: m.serviceName }).rest;
       const flat = source.flatMap((r) =>
         isInternalResult(r) || isActivityBlockResult(r) ? [] : (expandStructuredResult(r, m.results)?.rows ?? [r]),
       );

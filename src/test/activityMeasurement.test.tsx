@@ -38,7 +38,7 @@ describe("Aktivitätsmessblock (echte Daten P260305)", () => {
   });
 
   it("Messbedingungen: AV, FR (feucht), Sollwerte der Anlage", () => {
-    expect(cats[0].conditions).toEqual({ av: 41.38, fr: 1.44, channels: null, cells: null, no: 200, nh3: 240, h2o: 10, o2: 10 });
+    expect(cats[0].conditions).toEqual({ av: 41.38, fr: 1.44, no: 200, nh3: 240, h2o: 10, o2: 10 });
     expect(cats[1].conditions.no).toBe(233);
   });
 
@@ -68,7 +68,9 @@ describe("Aktivitätsmessblock (echte Daten P260305)", () => {
     const { view, rest } = extractActivity([other, block()]);
     expect(view?.official).toBe(false);
     expect(view?.catalysts).toHaveLength(2);
-    expect(rest).toEqual([other]);
+    // Werte ohne Zuordnung stehen unter „Weitere Angaben“ (nichts geht verloren), nicht mehr in einer Resttabelle
+    expect(view?.other).toEqual([{ label: "Zusatz", value: 41.38, unit: null }]);
+    expect(rest).toEqual([]);
     expect(extractActivity([block(true)]).view?.official).toBe(true);
   });
 });
@@ -177,9 +179,11 @@ describe("Einzelfelder (AV n, FR n, Kanäle, Zellenzahl) gehören zum Katalysato
 
   it("übernimmt Kanäle und Zellenzahl je Katalysator; die Einzelfelder erscheinen nicht mehr extra", () => {
     const { view, rest } = extractActivity([...fields, other, block()]);
-    expect(view!.catalysts[0].conditions).toMatchObject({ av: 41.38, fr: 1.44, channels: 8, cells: 64 });
-    expect(view!.catalysts[1].conditions).toMatchObject({ channels: 9, cells: 66 });
-    expect(rest).toEqual([other]); // nichts anderes geht verloren
+    expect(view!.catalysts[0].conditions).toMatchObject({ av: 41.38, fr: 1.44 });
+    expect(view!.catalysts[0].sampleData.map((f) => [f.label, f.value])).toEqual([["Anzahl Kanäle", 8], ["Zellenzahl", 64]]);
+    expect(view!.catalysts[1].sampleData.map((f) => [f.label, f.value])).toEqual([["Anzahl Kanäle", 9], ["Zellenzahl", 66]]);
+    expect(view!.other.map((f) => f.label)).toEqual(["Zusatz"]); // nichts geht verloren
+    expect(rest).toEqual([]);
   });
 
   it("AV und FR kommen aus dem Katalysator-Eintrag; die Einzelfelder nur als Ersatz", () => {
