@@ -214,7 +214,7 @@ export default function ResultsMatrixTable({
                       title={structured ? "Strukturierter Wert – Details in der Seitenleiste" : interim ? "vorläufiger Wert" : undefined}
                     >
                       {structured ? "–" : formatResultDisplayValue(cell.value, cell.text, cell.present, precision)}
-                      {interim && !structured && cell.present && <sup className="ml-0.5 font-sans text-[9px]">vorl.</sup>}
+                      
                     </td>
                   );
                 })}

@@ -654,7 +654,7 @@ export default function ResultsDatabasePage() {
                 Die Probenübersicht zeigt alle gespeicherten Messwerte einer Probe – offizielle
                 Ergebnisse sind deutlich hervorgehoben, vorläufige Arbeitswerte gekennzeichnet.
                 Auch Ergebnismatrix sowie Statistik &amp; Diagramme zeigen offizielle und vorläufige
-                Werte; vorläufige sind in der Matrix grau mit „vorl.“ markiert.
+                Werte; vorläufige sind in der Matrix grau dargestellt.
               </TooltipContent>
             </UiTooltip>
           </h1>
@@ -744,7 +744,7 @@ export default function ResultsDatabasePage() {
                   Ergebnismatrix
                   <InfoHint label="Hinweise zur Ergebnismatrix">
                     Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte. Es werden offizielle und
-                    vorläufige Ergebnisse gezeigt (vorläufige grau mit „vorl.“); ein fehlender Wert bleibt leer, ein gemessener Wert 0 wird als 0
+                    vorläufige Ergebnisse gezeigt (vorläufige grau); ein fehlender Wert bleibt leer, ein gemessener Wert 0 wird als 0
                     angezeigt. Die Auswahl der Messart und das Ausblenden leerer Spalten betreffen nur diese
                     Ansicht – der Export enthält unverändert immer alle Spalten.
                   </InfoHint>

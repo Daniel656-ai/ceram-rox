@@ -22,7 +22,7 @@ const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
 const nfMean = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 4 });
 const fmt = (v: number | string) => (typeof v === "number" ? nf.format(v) : v);
 
-/** Werte einer Zelle; vorläufige Werte dezent grau mit kleinem „vorl.“. */
+/** Werte einer Zelle; vorläufige Werte dezent grau. */
 function CellValues({ vals, interim }: { vals: Array<number | string>; interim?: boolean[] }) {
   return (
     <>
@@ -32,7 +32,6 @@ function CellValues({ vals, interim }: { vals: Array<number | string>; interim?:
           {interim?.[i] ? (
             <span className="text-muted-foreground" title="vorläufiger Wert">
               {fmt(v)}
-              <sup className="ml-0.5 font-sans text-[9px]">vorl.</sup>
             </span>
           ) : (
             fmt(v)
@@ -72,7 +71,7 @@ export default function OrderComparisonView({
             )}
           </span>
           <InfoHint label="Hinweise zur Ergebnisübersicht">
-            Je Analyseart eine Tabelle mit den Proben des Auftrags. Offizielle und vorläufige Werte werden gezeigt; vorläufige sind grau und mit „vorl.“ gekennzeichnet.
+            Je Analyseart eine Tabelle mit den Proben des Auftrags. Offizielle und vorläufige Werte werden gezeigt; vorläufige sind grau, offizielle schwarz.
             Hat eine Probe mehrere Durchläufe, steht jeder in einer eigenen Unterzeile. Klick auf eine Probe
             öffnet ihre Messungen.
           </InfoHint>
