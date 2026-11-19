@@ -61,3 +61,29 @@ describe("describeOrderDeletion (Löschdialog eines ganzen Auftrags)", () => {
     expect(d.blockers).toHaveLength(1);
   });
 });
+
+import { confirmNumberMatches } from "../orderDeleteSummary";
+
+describe("Löschen mit Messdaten", () => {
+  it("listet Messdaten als mitgelöscht und Zeitbuchungen als gelöst", () => {
+    const d = describeOrderDeletion({
+      blockers: [], real_results: 2, raw_datasets: 1, corrections: 3, import_operations: 1, work_logs: 4,
+      material_bookings: 2, official_reports: 1, reports: 2, started: true, time_entries: 2,
+    });
+    expect(d.removed).toEqual([
+      "2 Messergebnis(se)", "1 Rohdatensatz/-sätze", "3 Korrektur(en)/Korrekturhistorie", "1 Import-Vorgang/-Vorgänge",
+      "4 Arbeitszeit-Eintrag/-Einträge", "2 Materialbuchung(en)", "1 offizielle(r) Bericht(e)",
+      "begonnene oder abgeschlossene Aufgaben/Prozesse", "1 automatisch angelegte(r) Bericht(e) ohne Inhalt",
+    ]);
+    expect(d.released).toEqual(["2 Zeitbuchung(en) (bleiben bestehen, werden vom Auftrag gelöst)"]);
+    expect(d.blockers).toEqual([]);
+  });
+
+  it("confirmNumberMatches: ohne Groß-/Kleinschreibung und Randleerzeichen, nie bei leerer Eingabe", () => {
+    expect(confirmNumberMatches(" dt0260001 ", ["6666", "DT0260001"])).toBe(true);
+    expect(confirmNumberMatches("6666", ["6666"])).toBe(true);
+    expect(confirmNumberMatches("666", ["6666"])).toBe(false);
+    expect(confirmNumberMatches("", [""])).toBe(false);
+    expect(confirmNumberMatches("x", undefined)).toBe(false);
+  });
+});

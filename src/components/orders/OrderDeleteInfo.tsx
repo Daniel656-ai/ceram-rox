@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter } from "@/components/ui/alert-dialog";
-import { describeOrderAttachments, describeOrderDeletion, type OrderDeleteSummary } from "@/lib/orders/orderDeleteSummary";
+import { Input } from "@/components/ui/input";
+import { confirmNumberMatches, describeOrderAttachments, describeOrderDeletion, type OrderDeleteSummary } from "@/lib/orders/orderDeleteSummary";
 
 function useOrderDeleteSummary(orderId: string) {
   return useQuery({
@@ -59,6 +61,11 @@ function DeleteInfoView({ data, isLoading, isError }: { data: OrderDeleteSummary
   if (nothing) return <p className="text-sm text-muted-foreground">Am Auftrag hängen keine Dateien oder Unterlagen.</p>;
   return (
     <div className="space-y-2">
+      {data?.needs_confirmation && (
+        <p role="alert" className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm font-medium">
+          Dieser Auftrag enthält Messdaten. Sie werden unwiderruflich gelöscht; eine Sicherungskopie liegt im Löschprotokoll.
+        </p>
+      )}
       <List title="Beim Löschen werden mitgelöscht:" items={d.removed} tone="danger" />
       <List title="Beim Löschen werden gelöst (bleiben bestehen):" items={d.released} tone="neutral" />
       <List title="Bleiben bestehen:" items={d.kept} tone="neutral" />
@@ -66,18 +73,40 @@ function DeleteInfoView({ data, isLoading, isError }: { data: OrderDeleteSummary
   );
 }
 
-/** Inhalt des Löschdialogs: Info + Schaltflächen. Bei Sperrgründen (z. B. Messdaten) ist „Löschen“ gesperrt. */
-export function OrderDeleteBody({ orderId, pending, onConfirm }: { orderId: string; pending: boolean; onConfirm: () => void }) {
+/**
+ * Inhalt des Löschdialogs: Info + Schaltflächen. Bei Messdaten muss die Auftragsnummer eingetippt werden
+ * (die Datenbank prüft sie zusätzlich). Sperrgründe (nur interne Prüfaufträge) sperren „Löschen“.
+ */
+export function OrderDeleteBody({
+  orderId,
+  pending,
+  onConfirm,
+}: {
+  orderId: string;
+  pending: boolean;
+  onConfirm: (confirmNumber?: string) => void;
+}) {
   const { data, isLoading, isError } = useOrderDeleteSummary(orderId);
+  const [typed, setTyped] = useState("");
   const blocked = !!data && (data.blockers?.length ?? 0) > 0;
+  const needsNumber = !!data && data.needs_confirmation === true && !blocked;
+  const numberOk = !needsNumber || confirmNumberMatches(typed, data?.confirm_numbers);
   return (
     <>
       <DeleteInfoView data={data} isLoading={isLoading} isError={isError} />
+      {needsNumber && (
+        <div className="space-y-1">
+          <label htmlFor="order-delete-confirm" className="text-sm font-medium">
+            Zur Bestätigung die Auftragsnummer eingeben: <span className="font-mono">{data?.confirm_numbers?.[0] ?? ""}</span>
+          </label>
+          <Input id="order-delete-confirm" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+        </div>
+      )}
       <AlertDialogFooter>
         <AlertDialogCancel>Abbrechen</AlertDialogCancel>
         <AlertDialogAction
-          disabled={pending || isLoading || blocked}
-          onClick={onConfirm}
+          disabled={pending || isLoading || blocked || !numberOk}
+          onClick={() => onConfirm(needsNumber ? typed.trim() : undefined)}
           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
         >
           Löschen
