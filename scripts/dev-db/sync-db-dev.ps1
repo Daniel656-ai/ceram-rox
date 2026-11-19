@@ -141,11 +141,20 @@ function Get-AllMigrationKeys {
     return $keys
 }
 
-# Zeitpunkt, an dem die Datei ins Repo kam (aeltester Add-Commit). $null = nicht ermittelbar.
+# Liest Unix-Zeitstempel aus der Ausgabe von "git log --format=%ct". Leer = keine.
+function Read-GitStamps($Result) {
+    if ($Result.ExitCode -ne 0) { return @() }
+    return @($Result.Output -split "\r?\n" | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int64]$_ })
+}
+
+# Zeitpunkt, an dem die Datei ins Repo kam. $null = nicht ermittelbar.
+# 1. aeltester Add-Commit (-m: auch Merge-Commits zaehlen; --follow: Umbenennungen)
+# 2. sonst aeltester Commit, der die Datei beruehrt (z. B. Datei kam durch Umnummerieren in einem Merge-Commit)
 function Get-AddedTimestamp([string]$Key) {
-    $r = Invoke-Native "git" @("-C", $RepoRoot, "log", "--diff-filter=A", "--follow", "--format=%ct", "--", $Key)
-    if ($r.ExitCode -ne 0) { return $null }
-    $stamps = @($r.Output -split "\r?\n" | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int64]$_ })
+    $stamps = Read-GitStamps (Invoke-Native "git" @("-C", $RepoRoot, "log", "-m", "--diff-filter=A", "--follow", "--format=%ct", "--", $Key))
+    if ($stamps.Count -eq 0) {
+        $stamps = Read-GitStamps (Invoke-Native "git" @("-C", $RepoRoot, "log", "--format=%ct", "--", $Key))
+    }
     if ($stamps.Count -eq 0) { return $null }
     return ($stamps | Measure-Object -Minimum).Minimum
 }
@@ -177,6 +186,13 @@ function Get-PendingMigrations {
             Stop-Sync "Zeitpunkt fuer '$key' nicht aus dem Git-Verlauf ermittelbar (Datei nicht eingecheckt oder flacher Klon?) - nichts wurde eingespielt"
         }
         $items += [pscustomobject]@{ Key = $key; Name = (Split-Path $key -Leaf); Time = $ts }
+    }
+    # drizzle-Migrationen: nie vor der Vorgaengernummer einspielen (Umnummerieren darf die Reihenfolge nicht drehen;
+    # die Nummer entspricht dem idx in drizzle/migrations/meta/_journal.json).
+    $prev = [int64]0
+    foreach ($it in @($items | Where-Object { $_.Key -like "drizzle/*" } | Sort-Object -Property Name)) {
+        if ($it.Time -lt $prev) { $it.Time = $prev }
+        $prev = $it.Time
     }
     # nach Zeitpunkt im Repo, bei Gleichstand nach Dateiname
     return @($items | Sort-Object -Property @{ Expression = "Time"; Ascending = $true }, @{ Expression = "Name"; Ascending = $true })

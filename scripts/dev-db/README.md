@@ -51,7 +51,7 @@ Ohne vorhandene `applied-migrations.txt` bricht jeder Lauf ab (Schutz davor, all
 
 1. Sicherheitsprüfung (siehe oben).
 2. Neue Dateien ermitteln: alles, was weder in `applied` noch in `ignore` steht. Sortiert wird nach dem
-   Zeitpunkt, an dem die Datei ins Repo kam (`git log --diff-filter=A`, ältester Add-Commit), bei Gleichstand
+   Zeitpunkt, an dem die Datei ins Repo kam (`git log -m --diff-filter=A --follow`, ältester Add-Commit; findet sich keiner, z. B. weil die Datei durch Umnummerieren in einem Merge-Commit kam, gilt der älteste Commit, der die Datei berührt; drizzle-Dateien werden nie vor ihrer Vorgängernummer eingespielt), bei Gleichstand
    nach Dateiname – über beide Ordner hinweg. Lässt sich der Zeitpunkt nicht ermitteln (z. B. flacher Klon),
    bricht der Lauf ab, ohne etwas einzuspielen. Hinweis: Maßgeblich ist der Commit-Zeitpunkt auf dem Weg nach `main`.
 3. Keine neuen Dateien: eine Log-Zeile, fertig.
