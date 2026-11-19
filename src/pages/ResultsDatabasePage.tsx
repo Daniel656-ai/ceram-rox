@@ -697,11 +697,14 @@ export default function ResultsDatabasePage() {
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
-          <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
-          <TabsTrigger value="statistics">Statistik & Diagramme</TabsTrigger>
-        </TabsList>
+        {/* Solange die Seitenleiste offen ist, sind die Reiter ausgeblendet (wieder sichtbar nach dem Zurück-Pfeil). */}
+        {!panelOpen && (
+          <TabsList>
+            <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
+            <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
+            <TabsTrigger value="statistics">Statistik & Diagramme</TabsTrigger>
+          </TabsList>
+        )}
 
         {/* Sample View (3 Ebenen) */}
         <TabsContent value="samples">
