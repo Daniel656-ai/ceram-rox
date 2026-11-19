@@ -717,7 +717,7 @@ export default function ResultsDatabasePage() {
                   }}
                   compareOrderKey={compareOrderKey}
                   compact={panelOpen && isWide}
-                  headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
+                  headerExtra={panelOpen ? undefined : <OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
                 />
               ) : (
                 <SampleOverviewTable
@@ -728,7 +728,7 @@ export default function ResultsDatabasePage() {
                   }}
                   selectedSampleKey={selectedSample?.orderKey == null ? selectedSample?.sampleKey ?? null : null}
                   compact={panelOpen && isWide}
-                  headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
+                  headerExtra={panelOpen ? undefined : <OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
                 />
               )}
           </SidePanelLayout>
