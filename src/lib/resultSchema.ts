@@ -31,7 +31,8 @@ export function paramKey(label: string): string {
   if (!raw) return "";
   // Gas mit Richtung: eigener, eindeutiger Schlüssel (NO2 in / NO₂ in / no2_in -> "no2in"; NO in -> "noin").
   const gas = parseGasInOut(raw);
-  if (gas) return `${gas.gas.toLowerCase()}${gas.dir}`;
+  // Eine Endziffer (no2_in_1) wird nicht angezeigt, trennt aber Spalten (no2_in_1 ≠ no2_in_2).
+  if (gas) return `${gas.gas.toLowerCase()}${gas.dir}${gas.index}`;
   const ek = elementKey(raw);
   if (ek) return ek;
   const norm = raw

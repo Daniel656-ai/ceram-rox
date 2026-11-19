@@ -97,3 +97,36 @@ describe("Spaltenschlüssel (paramKey) für Gas mit Richtung", () => {
     expect(paramKey("N2O out")).not.toBe(paramKey("NO out"));
   });
 });
+
+describe("Echte Schlüssel der Aktivitätsmessung (Endziffer, „anzeige“)", () => {
+  it.each([
+    ["no_anzeige_in_1", "NO in"],
+    ["no_anzeige_out_1", "NO out"],
+    ["no2_in_1", "NO₂ in"],
+    ["no2_out_1", "NO₂ out"],
+    ["n2o_in_1", "N₂O in"],
+    ["n2o_out_1", "N₂O out"],
+    ["nh3_in_1", "NH₃ in"],
+    ["nh3_out_1", "NH₃ out"],
+    ["co_in_2", "CO in"],
+    ["co2_out_1", "CO₂ out"],
+  ])("humanizeKey(%s) -> %s", (key, expected) => {
+    expect(humanizeKey(key)).toBe(expected);
+    expect(formatElementLabel(key)).toBe(expected);
+  });
+
+  it("resultLabel ohne Endziffer; paramKey trennt Endziffern", () => {
+    expect(resultLabel({ display_label: null, result_name: "form:f:no2_in_1" })).toBe("NO₂ in");
+    expect(paramKey("no2_in_1")).toBe(paramKey("NO2 in 1"));
+    expect(paramKey("no2_in_1")).not.toBe(paramKey("no2_in_2"));
+    expect(paramKey("no_anzeige_in_1")).toBe(paramKey("NO in 1"));
+    expect(paramKey("no_anzeige_in_1")).not.toBe(paramKey("no2_in_1"));
+  });
+
+  it("Fehlalarme: andere Wörter mit in/out bleiben unverändert", () => {
+    expect(humanizeKey("temperatur_1")).toBe("Temperatur 1");
+    expect(humanizeKey("av_messung")).toBe("Av messung");
+    expect(humanizeKey("eta_nox")).toBe("Eta nox");
+    expect(humanizeKey("anzahl_in")).toBe("Anzahl in");
+  });
+});

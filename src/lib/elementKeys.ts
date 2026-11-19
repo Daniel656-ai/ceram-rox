@@ -159,11 +159,12 @@ function stripUnitSuffix(raw: string): string {
 const GAS_FORMULAS = ["NO", "NO2", "N2O", "NH3", "CO", "CO2", "H2O", "O2", "N2", "SO2", "SO3", "H2", "CH4", "HCl", "HC"];
 const GAS_BY_LOWER = new Map(GAS_FORMULAS.map((g) => [g.toLowerCase(), g]));
 
-export function parseGasInOut(raw: string): { gas: string; dir: "in" | "out" } | null {
-  const m = String(raw ?? "").trim().match(/^(.+?)[\s_-]+(in|out)$/i);
+export function parseGasInOut(raw: string): { gas: string; dir: "in" | "out"; index: string } | null {
+  // <Gas>[ _anzeige] _ (in|out) [ _ Zahl ]   z. B. no2_in, no_anzeige_in_1, n2o_out_1, "NO2 in"
+  const m = String(raw ?? "").trim().match(/^(.+?)(?:[\s_-]+anzeige)?[\s_-]+(in|out)(?:[\s_-]*(\d+))?$/i);
   if (!m) return null;
   const gas = GAS_BY_LOWER.get(plainFormula(m[1]).replace(/_/g, "").toLowerCase());
-  return gas ? { gas, dir: m[2].toLowerCase() as "in" | "out" } : null;
+  return gas ? { gas, dir: m[2].toLowerCase() as "in" | "out", index: m[3] ?? "" } : null;
 }
 
 /** „no2_in“ / „NO2 in“ -> „NO₂ in“; null, wenn keine Gasbezeichnung mit Richtung. */
