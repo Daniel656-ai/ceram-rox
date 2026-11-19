@@ -19,6 +19,7 @@ import { InfoHint } from "@/components/results/InfoHint";
 import SampleLabel from "@/components/results/SampleLabel";
 import ActivityMeasurementView from "@/components/results/ActivityMeasurementView";
 import { extractActivity } from "@/lib/results/activityMeasurement";
+import { isInternalResult } from "@/lib/results/internalResults";
 import OrderExcelExportButton from "@/components/order/OrderExcelExportButton";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
@@ -57,17 +58,26 @@ export default function OrderComparisonView({
 }) {
   const sections = useMemo(() => buildOrderComparison(order), [order]);
   // Aktivitätsmessungen: eigene Darstellung je Probe/Messung (Messbedingungen + Temperaturtabelle je Katalysator).
-  const activities = useMemo(
-    () =>
-      order.samples.flatMap((sample) =>
-        sample.measurements.flatMap((m) => {
-          const { view } = extractActivity(m.results);
-          return view ? [{ sample, serviceName: m.serviceName || "Aktivitätsmessung", measurementId: m.measurementId, view }] : [];
-        }),
-      ),
-    [order],
-  );
-  const activityServices = useMemo(() => new Set(activities.map((a) => a.serviceName)), [activities]);
+  const activities = useMemo(() => {
+    const withView = order.samples.flatMap((sample) =>
+      sample.measurements.flatMap((m) => {
+        const { view } = extractActivity(m.results);
+        return view ? [{ sample, serviceName: m.serviceName || "Aktivitätsmessung", measurementId: m.measurementId, view }] : [];
+      }),
+    );
+    const services = new Set(withView.map((a) => a.serviceName));
+    // Gleiche Messart, aber ohne Temperaturdaten und ohne sonstige Werte: nur eine kurze Zeile.
+    const empty = order.samples.flatMap((sample) =>
+      sample.measurements.flatMap((m) => {
+        if (!services.has(m.serviceName || "Aktivitätsmessung")) return [];
+        const { view, rest } = extractActivity(m.results);
+        const hasValue = rest.some((r) => !isInternalResult(r) && (r.value !== null || (r.remarks ?? "").trim() !== ""));
+        return view || hasValue ? [] : [{ sample, serviceName: m.serviceName || "Aktivitätsmessung", measurementId: m.measurementId }];
+      }),
+    );
+    return { withView, empty };
+  }, [order]);
+  const activityServices = useMemo(() => new Set(activities.withView.map((a) => a.serviceName)), [activities]);
   const [showMean, setShowMean] = useState(false);
   const anyMultiple = sections.some((s) => s.hasMultipleRuns);
   const meanAvailable = sections.filter((s) => s.hasMultipleRuns).every((s) => s.meanAvailable);
@@ -111,11 +121,11 @@ export default function OrderComparisonView({
           )}
         </div>
       </div>
-      {sections.length === 0 && activities.length === 0 && (
+      {sections.length === 0 && activities.withView.length === 0 && (
         <p className="py-6 text-center text-sm text-muted-foreground">Keine Messungen in diesem Auftrag.</p>
       )}
       {sections.map((sec) =>
-        sec.columns.length === 0 && activityServices.has(sec.serviceName) ? null : sec.columns.length === 0 ? (
+        (sec.columns.length === 0 || !sectionHasValues(sec)) && activityServices.has(sec.serviceName) ? null : sec.columns.length === 0 ? (
           // Analyse ohne jeden Wert: nur eine kurze Zeile statt einer großen Karte.
           <p
             key={sec.serviceName}
@@ -127,7 +137,7 @@ export default function OrderComparisonView({
           <SectionTable key={sec.serviceName} sec={sec} meanOn={meanOn} onSelectSample={onSelectSample} />
         ),
       )}
-      {activities.map((a) => (
+      {activities.withView.map((a) => (
         <Card key={a.measurementId}>
           <CardHeader className="pb-2">
             <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
@@ -143,9 +153,18 @@ export default function OrderComparisonView({
           </CardContent>
         </Card>
       ))}
+      {activities.empty.map((a) => (
+        <p key={a.measurementId} className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{a.serviceName}</span> · <SampleLabel number={a.sample.sampleNumber} name={a.sample.sampleName} /> – keine Messwerte erfasst
+        </p>
+      ))}
     </div>
   );
 }
+
+/** Hat die Tabelle irgendwo einen Wert? (Spalten entstehen auch aus leeren Feldern.) */
+const sectionHasValues = (sec: ComparisonSection): boolean =>
+  sec.rows.some((row) => row.runs.some((run) => Object.keys(run.cells).length > 0));
 
 function SampleCell({ row, label, first }: { row: ComparisonRow; label: string | null; first: boolean }) {
   return (

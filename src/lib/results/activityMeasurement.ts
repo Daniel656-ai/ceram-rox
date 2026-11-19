@@ -26,6 +26,9 @@ export type ActivityValue = number | string | null;
 export interface ActivityConditions {
   av: ActivityValue;
   fr: ActivityValue;
+  /** Anzahl der Kanäle / Zellenzahl – aus den Einzelfeldern mit derselben Nummer (AV1 -> Katalysator /1). */
+  channels: ActivityValue;
+  cells: ActivityValue;
   no: ActivityValue;
   nh3: ActivityValue;
   h2o: ActivityValue;
@@ -130,6 +133,8 @@ function buildCatalyst(entry: Obj): ActivityCatalyst | null {
   const conditions: ActivityConditions = {
     av: av ?? null,
     fr: firstValue(c, /^fr_?feucht$/i),
+    channels: null,
+    cells: null,
     no: firstValue(c, /^no_anlage$/i),
     nh3: firstValue(c, /^nh3_anlage$/i),
     h2o: firstValue(c, /^h2o_anlage$/i),
@@ -155,10 +160,33 @@ export function parseActivityBlock(r: Pick<SampleResultValue, "value" | "remarks
 export const isActivityBlockResult = (r: Pick<SampleResultValue, "value" | "remarks">): boolean =>
   parseActivityBlock(r) !== null;
 
-/** Trennt die Aktivitätsmessblöcke von den übrigen Ergebnissen (nichts geht verloren). */
+/** Einzelfelder, die zu einem Katalysator gehören: av_1, fr_1, anzahl_der_kanale_av1, zellenzahl_av1 (Nummer = Katalysator). */
+const FLAT_FIELDS: Array<{ re: RegExp; field: "av" | "fr" | "channels" | "cells" }> = [
+  { re: /^av_?(\d+)$/i, field: "av" },
+  { re: /^fr_?(\d+)$/i, field: "fr" },
+  { re: /^anzahl.*kan.*?(\d+)$/i, field: "channels" },
+  { re: /^zellenzahl.*?(\d+)$/i, field: "cells" },
+];
+
+const resultKey = (r: Pick<SampleResultValue, "result_name">): string =>
+  r.result_name.startsWith("form:") ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1) : r.result_name;
+
+/** Katalysator zu Nummer n: Endung „/n“ der kat_nr, sonst die n-te Position. */
+function catalystIndexFor(catalysts: ActivityCatalyst[], n: number): number {
+  const byTitle = catalysts.findIndex((c) => new RegExp(`/${n}\\s*$`).test(c.title ?? ""));
+  if (byTitle >= 0) return byTitle;
+  return catalysts.every((c) => !/\/\d+\s*$/.test(c.title ?? "")) && n >= 1 && n <= catalysts.length ? n - 1 : -1;
+}
+
+/**
+ * Trennt die Aktivitätsmessblöcke von den übrigen Ergebnissen und übernimmt die Einzelfelder
+ * (AV n, FR n, Anzahl Kanäle AVn, Zellenzahl AVn) in die Messbedingungen des Katalysators n.
+ * Übernommene Einzelfelder erscheinen nicht mehr zusätzlich in `rest`; alles andere bleibt erhalten.
+ * AV und FR kommen weiterhin aus dem Katalysator-Eintrag – die Einzelfelder nur als Ersatz.
+ */
 export function extractActivity<T extends SampleResultValue>(results: T[]): { view: ActivityView | null; rest: T[] } {
   const catalysts: ActivityCatalyst[] = [];
-  const rest: T[] = [];
+  let rest: T[] = [];
   let official = true;
   for (const r of results) {
     const c = parseActivityBlock(r);
@@ -167,5 +195,24 @@ export function extractActivity<T extends SampleResultValue>(results: T[]): { vi
       if (r.is_official !== true) official = false;
     } else rest.push(r);
   }
-  return { view: catalysts.length ? { official, catalysts } : null, rest };
+  if (catalysts.length === 0) return { view: null, rest };
+
+  const remaining: T[] = [];
+  for (const r of rest) {
+    const key = resultKey(r);
+    const hit = FLAT_FIELDS.map((f) => ({ f, m: key.match(f.re) })).find((x) => x.m);
+    const idx = hit ? catalystIndexFor(catalysts, Number(hit.m![1])) : -1;
+    if (!hit || idx < 0) {
+      remaining.push(r);
+      continue;
+    }
+    const cond = catalysts[idx].conditions;
+    const v = asValue(r.value ?? r.remarks);
+    if (v !== null) {
+      if (hit.f.field === "av" || hit.f.field === "fr") cond[hit.f.field] ??= v;
+      else cond[hit.f.field] = v;
+    }
+  }
+  rest = remaining;
+  return { view: { official, catalysts }, rest };
 }

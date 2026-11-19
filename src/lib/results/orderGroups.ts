@@ -7,7 +7,7 @@ import {
   type SampleMeasurementRecord,
 } from "@/lib/results/sampleResultsAggregation";
 import { expandStructuredResult, isInternalResult } from "@/lib/results/internalResults";
-import { isActivityBlockResult } from "@/lib/results/activityMeasurement";
+import { extractActivity, isActivityBlockResult } from "@/lib/results/activityMeasurement";
 
 /**
  * Auftragsbezogene Gruppierung der Probenübersicht. Reine Navigation/Anzeige:
@@ -153,7 +153,10 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
       // sind weitere Durchläufe: jeder bekommt eine eigene Unterzeile statt "a / b / c" in einer Zelle.
       const occurrences = new Map<string, number>();
       // Strukturierte Werte (Blöcke/JSON) werden in einzelne Werte zerlegt – nie roher Text.
-      const flat = m.results.flatMap((r) =>
+      // Aktivitätsmessung: Block und übernommene Einzelfelder (AV n, FR n, Kanäle, Zellenzahl) werden in der
+      // eigenen Aktivitätsdarstellung gezeigt, nicht noch einmal als Spalten.
+      const source = extractActivity(m.results).rest;
+      const flat = source.flatMap((r) =>
         isInternalResult(r) || isActivityBlockResult(r) ? [] : (expandStructuredResult(r, m.results)?.rows ?? [r]),
       );
       for (const r of flat) {

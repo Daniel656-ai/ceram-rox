@@ -126,7 +126,7 @@ describe("Wertetabelle", () => {
     const { container } = render(
       <TooltipProvider><SampleMeasurementResultsTable measurement={measurement([val({ remarks: emptyBlock })])} /></TooltipProvider>,
     );
-    expect(screen.getByText(/keine Werte erfasst/)).toBeTruthy();
+    expect(screen.getByText(/keine Messwerte erfasst/)).toBeTruthy();
     expect(container.textContent).not.toMatch(/gas_einstellungen|fr_trocken|k_wert: null/);
   });
 

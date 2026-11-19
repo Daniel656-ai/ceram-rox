@@ -110,12 +110,13 @@ export function activityExportRows(view: ActivityView): ExportCell[][] {
   for (const cat of view.catalysts) {
     rows.push([text(cat.title ? `Aktivitätsmessung · Katalysator ${cat.title}` : "Aktivitätsmessung"), text(status)]);
     rows.push([text("Messbedingungen")]);
+    const c = cat.conditions;
+    const extra = c.channels !== null || c.cells !== null;
     rows.push([
-      text("AV [m/h]"), text("FR [Nm³/h]"), text("NO in [ppm]"), text(`${formatElementKey("NH3")} in [ppm]`),
+      text("AV [m/h]"), text("FR [Nm³/h]"), ...(extra ? [text("Anzahl Kanäle"), text("Zellenzahl")] : []), text("NO in [ppm]"), text(`${formatElementKey("NH3")} in [ppm]`),
       text(`${formatElementKey("H2O")} in [%]`), text(`${formatElementKey("O2")} in [%]`), text(`${formatElementKey("N2")} in`),
     ]);
-    const c = cat.conditions;
-    rows.push([c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].map(activityCell).concat([text("Rest")]));
+    rows.push((extra ? [c.av, c.fr, c.channels, c.cells, c.no, c.nh3, c.h2o, c.o2] : [c.av, c.fr, c.no, c.nh3, c.h2o, c.o2]).map(activityCell).concat([text("Rest")]));
     rows.push([]);
     rows.push([text("Ergebnisse je Temperatur")]);
     rows.push([

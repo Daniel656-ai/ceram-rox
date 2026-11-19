@@ -58,11 +58,13 @@ export function SampleMeasurementResultsTable({
   const { view: activity, rest } = useMemo(() => extractActivity(measurement.results), [measurement.results]);
   const { visible, protocols, details } = useMemo(() => prepareDisplayResults(rest), [rest]);
   const instances = useMemo(() => groupResultsByInstance(visible), [visible]);
+  // Nur leere Felder gespeichert (kein Wert, kein Text): statt einer Tabelle voller „–“ eine kurze Zeile.
+  const onlyEmpty = !activity && visible.length > 0 && visible.every((r) => r.value === null && (r.remarks ?? "").trim() === "");
 
   return (
     <div className="space-y-3">
       {activity && <ActivityMeasurementView view={activity} />}
-      {instances.map((inst) => (
+      {!onlyEmpty && instances.map((inst) => (
         <div key={inst.instanceKey || "__base"} className="space-y-1">
           {inst.instanceKey && (
             <p className="text-xs font-medium text-muted-foreground">
@@ -144,9 +146,9 @@ export function SampleMeasurementResultsTable({
         <ImportProtocolInfo key={i} protocol={p} />
       ))}
       {details.length > 0 && <DetailsInfo items={details} />}
-      {visible.length === 0 && protocols.length === 0 && !activity && (
+      {(visible.length === 0 || onlyEmpty) && protocols.length === 0 && !activity && (
         <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{measurement.serviceName || "Messung"}</span> – keine Werte erfasst
+          <span className="font-medium text-foreground">{measurement.serviceName || "Messung"}</span> – keine Messwerte erfasst
         </p>
       )}
     </div>

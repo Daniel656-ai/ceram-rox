@@ -38,7 +38,7 @@ describe("Aktivitätsmessblock (echte Daten P260305)", () => {
   });
 
   it("Messbedingungen: AV, FR (feucht), Sollwerte der Anlage", () => {
-    expect(cats[0].conditions).toEqual({ av: 41.38, fr: 1.44, no: 200, nh3: 240, h2o: 10, o2: 10 });
+    expect(cats[0].conditions).toEqual({ av: 41.38, fr: 1.44, channels: null, cells: null, no: 200, nh3: 240, h2o: 10, o2: 10 });
     expect(cats[1].conditions.no).toBe(233);
   });
 
@@ -64,7 +64,7 @@ describe("Aktivitätsmessblock (echte Daten P260305)", () => {
   });
 
   it("extractActivity trennt den Block von den übrigen Werten", () => {
-    const other = res({ result_name: "form:f:av_1", display_label: "AV 1", value: 41.38 });
+    const other = res({ result_name: "form:f:bemerkung_zahl", display_label: "Zusatz", value: 41.38 });
     const { view, rest } = extractActivity([other, block()]);
     expect(view?.official).toBe(false);
     expect(view?.catalysts).toHaveLength(2);
@@ -109,9 +109,8 @@ describe("Darstellung", () => {
     const m = {
       measurementId: "m1", measurementNumber: "M260640", serviceName: "Aktivitätsmessung", sampleNumber: "P260305", sampleName: "FG26_0330",
       orderNumber: "FG-260016", results: [
-        res({ result_name: "form:f:av_1", display_label: "AV 1", value: 41.38, unit: "m/h" }),
-        res({ result_name: "form:f:fr_1", display_label: "FR 1", value: 1.44, unit: "Nm^{3}/h" }),
-        res({ result_name: "form:f:zellenzahl_av2", display_label: "Zellenzahl_{ (AV2)}", value: 64 }),
+        res({ result_name: "form:f:durchfluss_extra", display_label: "Durchfluss extra", value: 1.44, unit: "Nm^{3}/h" }),
+        res({ result_name: "form:f:zellenzahl_av9", display_label: "Zellenzahl_{ (AV9)}", value: 64 }),
         block(),
       ],
     } as unknown as SampleMeasurementRecord;
@@ -119,9 +118,9 @@ describe("Darstellung", () => {
     expect(screen.getByTestId("activity-measurement")).toBeTruthy();
     expect(screen.queryByText(/Eta nox/i)).toBeNull();
     expect(screen.queryByText(/No2 in 1/i)).toBeNull();
-    expect(screen.getByText("AV 1")).toBeTruthy();
+    expect(screen.getByText("Durchfluss extra")).toBeTruthy();
     expect(screen.getByText("Nm³/h")).toBeTruthy();
-    expect(screen.getByText("Zellenzahl (AV2)")).toBeTruthy();
+    expect(screen.getByText("Zellenzahl (AV9)")).toBeTruthy();
   });
 });
 
@@ -158,5 +157,79 @@ describe("Aufräumen: Einheiten und Beschriftungen", () => {
   it("darstellbare Auszeichnungen bleiben (V_{2}O_{5}, Nm^{3})", () => {
     expect(cleanUnmappableMarkup("V_{2}O_{5}")).toBe("V_{2}O_{5}");
     expect(toUnicode(cleanUnmappableMarkup("Nm^{3}/h"))).toBe("Nm³/h");
+  });
+});
+
+describe("Einzelfelder (AV n, FR n, Kanäle, Zellenzahl) gehören zum Katalysator mit derselben Nummer", () => {
+  const flat = (key: string, label: string, value: number, unit: string | null = null) =>
+    res({ result_name: `form:f:${key}`, display_label: label, value, unit });
+  const fields = [
+    flat("anzahl_der_kanale_av1", "Anzahl der Kanäle (AV1)", 8),
+    flat("anzahl_der_kanale_av2", "Anzahl der Kanäle (AV2)", 9),
+    flat("av_1", "AV 1", 41.38, "m/h"),
+    flat("av_2", "AV 2", 41.38, "m/h"),
+    flat("fr_1", "FR 1", 1.44, "Nm^{3}/h"),
+    flat("fr_2", "FR 2", 1.44, "Nm^{3}/h"),
+    flat("zellenzahl_av1", "Zellenzahl_{ AV1}", 64),
+    flat("zellenzahl_av2", "Zellenzahl_{ (AV2)}", 66),
+  ];
+  const other = res({ result_name: "form:f:bemerkung_zusatz", display_label: "Zusatz", value: 7 });
+
+  it("übernimmt Kanäle und Zellenzahl je Katalysator; die Einzelfelder erscheinen nicht mehr extra", () => {
+    const { view, rest } = extractActivity([...fields, other, block()]);
+    expect(view!.catalysts[0].conditions).toMatchObject({ av: 41.38, fr: 1.44, channels: 8, cells: 64 });
+    expect(view!.catalysts[1].conditions).toMatchObject({ channels: 9, cells: 66 });
+    expect(rest).toEqual([other]); // nichts anderes geht verloren
+  });
+
+  it("AV und FR kommen aus dem Katalysator-Eintrag; die Einzelfelder nur als Ersatz", () => {
+    const av1 = flat("av_1", "AV 1", 99);
+    const fr1 = flat("fr_1", "FR 1", 99);
+    const { view } = extractActivity([av1, fr1, block()]);
+    expect(view!.catalysts[0].conditions).toMatchObject({ av: 41.38, fr: 1.44 });
+  });
+
+  it("ohne Aktivitätsblock bleiben die Einzelfelder unverändert", () => {
+    const { view, rest } = extractActivity(fields);
+    expect(view).toBeNull();
+    expect(rest).toHaveLength(fields.length);
+  });
+
+  it("Darstellung: Spalten Anzahl Kanäle und Zellenzahl in den Messbedingungen", () => {
+    const view = extractActivity([...fields, block()]).view!;
+    render(<TooltipProvider><ActivityMeasurementView view={view} /></TooltipProvider>);
+    expect(screen.getAllByText("Anzahl Kanäle")).toHaveLength(2);
+    expect(screen.getAllByText("Zellenzahl")).toHaveLength(2);
+  });
+
+  it("Probendetail: obere Einzeltabelle entfällt, Messbedingungen zeigen Kanäle/Zellenzahl", () => {
+    const m = { measurementId: "m1", measurementNumber: "M1", serviceName: "Aktivitätsmessung", sampleNumber: "P260305", sampleName: "FG26_0330", orderNumber: "FG-260016", results: [...fields, block()] } as unknown as SampleMeasurementRecord;
+    render(<TooltipProvider><SampleMeasurementResultsTable measurement={m} /></TooltipProvider>);
+    expect(screen.queryByText("AV 1")).toBeNull();
+    expect(screen.queryByText("Parameter")).toBeNull();
+    expect(screen.getAllByText("Zellenzahl")).toHaveLength(2);
+  });
+});
+
+describe("Proben ohne Temperaturdaten: nur eine kurze Zeile", () => {
+  const empty = (key: string, label: string) => res({ result_name: `form:f:${key}`, display_label: label, value: null });
+
+  it("Probendetail: nur leere Felder -> „keine Messwerte erfasst“ statt Tabelle voller Striche", () => {
+    const m = { measurementId: "m2", measurementNumber: "M2", serviceName: "Aktivitätsmessung", sampleNumber: "P2", sampleName: "FG26_0331", orderNumber: "A", results: [empty("av_1", "AV 1"), empty("fr_1", "FR 1")] } as unknown as SampleMeasurementRecord;
+    render(<TooltipProvider><SampleMeasurementResultsTable measurement={m} /></TooltipProvider>);
+    expect(screen.getByText(/keine Messwerte erfasst/)).toBeTruthy();
+    expect(screen.queryByText("Parameter")).toBeNull();
+  });
+
+  it("Ergebnisübersicht: Probe ohne Daten in derselben Messart = Kurzzeile, keine leere Tabellenzeile", () => {
+    const withData = { measurementId: "m1", serviceName: "Aktivitätsmessung", results: [block()] } as unknown as SampleMeasurementRecord;
+    const noData = { measurementId: "m2", serviceName: "Aktivitätsmessung", results: [empty("av_1", "AV 1"), empty("fr_1", "FR 1")] } as unknown as SampleMeasurementRecord;
+    const s1 = { sampleKey: "A", sampleNumber: "P260305", sampleName: "FG26_0330", measurements: [withData] } as unknown as SampleGroup;
+    const s2 = { sampleKey: "B", sampleNumber: "P260306", sampleName: "FG26_0331", measurements: [noData] } as unknown as SampleGroup;
+    const order = { orderKey: "o", orderId: "o", displayNumber: "FG-260016", projectNames: [], samples: [s1, s2], measurementCount: 2, officialCount: 0, interimCount: 2, lastActivityAt: null } as OrderGroup;
+    // wie OrderComparisonView: leere Felder zählen nicht als Werte
+    const sec = buildOrderComparison(order).find((s) => s.serviceName === "Aktivitätsmessung");
+    const hasCells = sec?.rows.some((r) => r.runs.some((run) => Object.keys(run.cells).length > 0)) ?? false;
+    expect(hasCells).toBe(false);
   });
 });

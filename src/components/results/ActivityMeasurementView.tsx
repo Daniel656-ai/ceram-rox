@@ -28,6 +28,8 @@ function Head({ label, unit }: { label: string; unit?: string }) {
 function CatalystBlock({ cat, official }: { cat: ActivityCatalyst; official: boolean }) {
   const tone = official ? "" : "text-muted-foreground";
   const c = cat.conditions;
+  // Anzahl Kanäle / Zellenzahl nur, wenn für diesen Katalysator vorhanden.
+  const showExtra = c.channels !== null || c.cells !== null;
   return (
     <div className="space-y-3">
       {cat.title && (
@@ -43,6 +45,8 @@ function CatalystBlock({ cat, official }: { cat: ActivityCatalyst; official: boo
               <tr>
                 <Head label="AV" unit="m/h" />
                 <Head label="FR" unit="Nm^{3}/h" />
+                {showExtra && <Head label="Anzahl Kanäle" />}
+                {showExtra && <Head label="Zellenzahl" />}
                 <Head label="NO in" unit="ppm" />
                 <Head label={`${gasName("NH3")} in`} unit="ppm" />
                 <Head label={`${formatElementKey("H2O")} in`} unit="%" />
@@ -52,7 +56,7 @@ function CatalystBlock({ cat, official }: { cat: ActivityCatalyst; official: boo
             </thead>
             <tbody>
               <tr className={`border-t font-mono ${tone}`}>
-                {[c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].map((v, i) => (
+                {(showExtra ? [c.av, c.fr, c.channels, c.cells, c.no, c.nh3, c.h2o, c.o2] : [c.av, c.fr, c.no, c.nh3, c.h2o, c.o2]).map((v, i) => (
                   <td key={i} className="whitespace-nowrap p-2 text-right">{fmt(v)}</td>
                 ))}
                 <td className="whitespace-nowrap p-2 text-right font-sans">Rest</td>
