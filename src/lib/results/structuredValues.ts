@@ -1,4 +1,4 @@
-import { elementKey, elementLibrary, formatElementLabel } from "@/lib/elementKeys";
+import { elementKey, elementLibrary, formatElementLabel, formatGasInOut } from "@/lib/elementKeys";
 import { parseImportProtocol, type ImportProtocol } from "@/lib/results/importProtocol";
 
 /**
@@ -53,6 +53,9 @@ export function parseStructuredText(text: string | null | undefined): unknown {
 
 /** Lesbarer Name zu einem technischen Schlüssel („al_2_o_3“ -> Al₂O₃, „fr_trocken“ -> Fr trocken). */
 export function humanizeKey(key: string): string {
+  // Gas mit Richtung: no2_in -> „NO₂ in“, n2o_out -> „N₂O out“.
+  const gas = formatGasInOut(String(key));
+  if (gas) return gas;
   const tokens = String(key).split("_").filter(Boolean);
   // Chemische Formel nur bei „Buchstaben-Ziffern-Token“ (z. B. sio_2, al_2_o_3, fe_2_o_3).
   if (tokens.length > 1 && tokens.some((t) => /^\d+$/.test(t)) && tokens.every((t) => /^\d+$/.test(t) || /^[a-z]{1,3}$/i.test(t))) {

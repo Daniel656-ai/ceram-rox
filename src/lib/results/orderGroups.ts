@@ -1,3 +1,4 @@
+import { formatGasInOut } from "@/lib/elementKeys";
 import {
   groupRecordsBySample,
   isOfficialResult,
@@ -108,7 +109,12 @@ export interface ComparisonSection {
   meanAvailable: boolean;
 }
 
-const labelOf = (r: { display_label: string | null; result_name: string }): string => {
+const labelOf = (r: { display_label: string | null; result_name: string }): string => rawLabelOf(r);
+
+const rawLabelOf = (r: { display_label: string | null; result_name: string }): string => {
+  // Gasbezeichnungen mit Richtung („no2_in“) einheitlich als „NO₂ in“.
+  const gas = formatGasInOut(r.display_label || (r.result_name.startsWith("form:") ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1) : r.result_name));
+  if (gas) return gas;
   if (r.display_label) return r.display_label;
   const raw = r.result_name.startsWith("form:")
     ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1)
