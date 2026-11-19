@@ -3,7 +3,7 @@ import SampleLabel from "@/components/results/SampleLabel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, X, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { ResultCountBadges } from "@/components/results/ResultCountBadges";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
