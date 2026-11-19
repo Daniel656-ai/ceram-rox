@@ -84,3 +84,16 @@ describe("Gasnamen in allen Ergebnisansichten", () => {
     expect(labels).toEqual(["NO₂ in", "N₂O out", "CO₂ out"]);
   });
 });
+
+import { paramKey } from "@/lib/resultSchema";
+
+describe("Spaltenschlüssel (paramKey) für Gas mit Richtung", () => {
+  it("gleiche Schreibweisen -> gleicher Schlüssel; verschiedene Gase/Richtungen -> verschiedene Schlüssel", () => {
+    expect(paramKey("NO2 in")).toBe(paramKey("NO₂ in"));
+    expect(paramKey("NO₂ in")).toBe(paramKey("no2_in"));
+    expect(paramKey("NO₂ in")).not.toBe(paramKey("N₂O in"));
+    expect(paramKey("NO₂ in")).not.toBe(paramKey("NO in"));
+    expect(paramKey("NO₂ in")).not.toBe(paramKey("NO₂ out"));
+    expect(paramKey("N2O out")).not.toBe(paramKey("NO out"));
+  });
+});
