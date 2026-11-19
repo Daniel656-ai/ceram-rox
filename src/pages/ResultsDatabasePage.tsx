@@ -71,7 +71,6 @@ export default function ResultsDatabasePage() {
   const [selectedSample, setSelectedSample] = useState<{ orderKey: string | null; sampleKey: string } | null>(null);
   const [tab, setTab] = useState("samples");
   const [overviewMode, setOverviewMode] = useState<OverviewMode>("order");
-  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [compareOrderKey, setCompareOrderKey] = useState<string | null>(null);
   const [inspectedMeasurement, setInspectedMeasurement] = useState<SampleMeasurementRecord | null>(null);
 
@@ -232,7 +231,7 @@ export default function ResultsDatabasePage() {
       key={`${selectedSample?.orderKey ?? ""}:${activeSample.sampleKey}`}
       group={activeSample}
       onBack={compareOrder ? () => setSelectedSample(null) : undefined}
-      backLabel="Zurück zur Ergebnisübersicht"
+      backLabel={overviewMode === "order" ? "Zurück zum Auftrag" : "Zurück zur Ergebnisübersicht"}
       onClose={closePanel}
       onOpenInspector={setInspectedMeasurement}
     />
@@ -246,8 +245,9 @@ export default function ResultsDatabasePage() {
 
   // Wechsel per Pfeiltasten (nur geteilte Ansicht, nicht beim Tippen oder bei offenen Dialogen).
   const listNavItems = useMemo(
-    () => buildNavItems(overviewMode, orderGroups, expandedOrders, sampleGroups),
-    [overviewMode, orderGroups, expandedOrders, sampleGroups]
+    // Nach Auftrag: Pfeiltasten wechseln zwischen den Proben des geöffneten Auftrags.
+    () => buildNavItems(overviewMode, orderGroups, new Set(compareOrderKey ? [compareOrderKey] : []), sampleGroups),
+    [overviewMode, orderGroups, compareOrderKey, sampleGroups]
   );
   const matrixNav = useMemo(() => matrixNavItems(matrixRecords), [matrixRecords]);
   const navItems = tab === "table" ? matrixNav : listNavItems;
@@ -706,25 +706,11 @@ export default function ResultsDatabasePage() {
               {overviewMode === "order" ? (
                 <OrderOverviewTable
                   orders={orderGroups}
-                  expanded={expandedOrders}
-                  onToggle={(key) =>
-                    setExpandedOrders((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(key)) next.delete(key);
-                      else next.add(key);
-                      return next;
-                    })
-                  }
-                  onSelectSample={(o, s) => {
-                    setCompareOrderKey(null);
-                    setSelectedSample({ orderKey: o.orderKey, sampleKey: s.sampleKey });
-                  }}
                   onOpenOverview={(o) => {
                     setSelectedSample(null);
                     setCompareOrderKey(o.orderKey);
                   }}
-                  selected={selectedSample}
-                  compareOrderKey={selectedSample ? null : compareOrderKey}
+                  compareOrderKey={compareOrderKey}
                   compact={panelOpen && isWide}
                   headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
                 />

@@ -1,9 +1,9 @@
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, ClipboardList } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
-import { formatSampleDate, type SampleGroup } from "@/lib/results/sampleResultsAggregation";
+import { formatSampleDate } from "@/lib/results/sampleResultsAggregation";
 import type { OrderGroup } from "@/lib/results/orderGroups";
 import { InfoHint } from "@/components/results/InfoHint";
 import { ResultCountBadges } from "@/components/results/ResultCountBadges";
@@ -34,42 +34,28 @@ export function OverviewModeToggle({ mode, onChange }: { mode: OverviewMode; onC
 }
 
 /**
- * Übersicht nach Auftrag. Pfeil links klappt die Proben auf, Klick auf die
- * Auftragszeile öffnet die Ergebnisübersicht des Auftrags (Seitenleiste),
- * Klick auf eine Probe öffnet ihre Messungen.
- * `compact` (Seitenleiste offen): nur Auftrag/Probe und Messwerte, einzeilig.
+ * Übersicht nach Auftrag: nur Aufträge. Klick auf die Auftragszeile öffnet rechts die Ergebnisübersicht
+ * des Auftrags mit allen Proben und Werten; von dort aus öffnet man die Details einer Probe.
+ * `compact` (Seitenleiste offen): nur Auftrag und Messwerte, einzeilig.
  */
 export default function OrderOverviewTable({
   orders,
-  expanded,
-  onToggle,
-  onSelectSample,
   onOpenOverview,
   headerExtra,
-  selected,
   compareOrderKey,
   compact = false,
 }: {
   orders: OrderGroup[];
-  expanded: Set<string>;
-  onToggle: (orderKey: string) => void;
-  onSelectSample: (order: OrderGroup, sample: SampleGroup) => void;
   onOpenOverview: (order: OrderGroup) => void;
   headerExtra?: ReactNode;
-  /** Aktuell in der Seitenleiste geöffnete Probe bzw. Ergebnisübersicht (Markierung). */
-  selected?: { orderKey: string | null; sampleKey: string } | null;
   compareOrderKey?: string | null;
   compact?: boolean;
 }) {
-  const isSel = (o: OrderGroup, s: SampleGroup) =>
-    !!selected && selected.orderKey === o.orderKey && selected.sampleKey === s.sampleKey;
-
   const table = (
     <table className={`w-full text-sm ${compact ? "table-fixed" : ""}`}>
       <thead className="bg-muted/50">
         <tr>
-          <th className="w-8 p-2" />
-          <th className="p-2 text-left font-medium">Auftrag / Probe</th>
+          <th className="p-2 text-left font-medium">Auftrag</th>
           {!compact && <th className="p-2 text-left font-medium">Projekt / Bezeichnung</th>}
           <th className={`p-2 text-left font-medium ${compact ? "w-[140px]" : ""}`}>Messarten</th>
           {!compact && <th className="p-2 text-right font-medium">Proben</th>}
@@ -80,30 +66,15 @@ export default function OrderOverviewTable({
       </thead>
       <tbody>
         {orders.map((o) => {
-          const open = expanded.has(o.orderKey);
           const orderSel = compareOrderKey === o.orderKey;
           return (
-            <Fragment key={o.orderKey}>
-              <tr
+            <tr
+              key={o.orderKey}
                 className={`cursor-pointer border-t font-medium transition-colors hover:bg-muted/40 ${orderSel ? "bg-primary/10" : "bg-muted/20"}`}
                 data-selected-row={orderSel ? "true" : undefined}
                 onClick={() => onOpenOverview(o)}
                 title="Ergebnisübersicht des Auftrags öffnen"
               >
-                <td className="p-1 text-muted-foreground">
-                  <button
-                    type="button"
-                    className="rounded p-1 hover:bg-accent"
-                    aria-label={open ? "Proben einklappen" : "Proben aufklappen"}
-                    aria-expanded={open}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggle(o.orderKey);
-                    }}
-                  >
-                    {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
-                </td>
                 <td className="truncate whitespace-nowrap p-2 font-mono">
                   {o.displayNumber || "–"}
                   <span className="ml-2 font-sans text-xs font-normal text-muted-foreground">
@@ -120,39 +91,7 @@ export default function OrderOverviewTable({
                 {!compact && (
                   <td className="p-2 text-xs font-normal text-muted-foreground">{formatSampleDate(o.lastActivityAt)}</td>
                 )}
-              </tr>
-              {open &&
-                o.samples.map((s) => (
-                  <tr
-                    key={`${o.orderKey}:${s.sampleKey}`}
-                    className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${isSel(o, s) ? "bg-primary/10" : ""}`}
-                    data-selected-row={isSel(o, s) ? "true" : undefined}
-                    aria-selected={isSel(o, s)}
-                    onClick={() => onSelectSample(o, s)}
-                  >
-                    <td className="p-2" />
-                    <td className="truncate whitespace-nowrap p-2 pl-4" title={s.sampleName || undefined}>
-                      <span className="font-mono">{s.sampleNumber || "–"}</span>
-                      {s.originalSampleNumber && (
-                        <span className="ml-1 text-[10px] text-muted-foreground">(Ersatz für {s.originalSampleNumber})</span>
-                      )}
-                      {compact && s.sampleName && (
-                        <span className="ml-2 text-xs text-muted-foreground">{s.sampleName}</span>
-                      )}
-                    </td>
-                    {!compact && <td className="p-2">{s.sampleName || "–"}</td>}
-                    <td className="p-2"><ServiceChips measurements={s.measurements} compact={compact} /></td>
-                    {!compact && <td className="p-2" />}
-                    {!compact && <td className="p-2 text-right">{s.measurements.length}</td>}
-                    <td className="whitespace-nowrap p-2">
-                      <ResultCountBadges official={s.officialCount} interim={s.interimCount} />
-                    </td>
-                    {!compact && (
-                      <td className="p-2 text-xs text-muted-foreground">{formatSampleDate(s.lastActivityAt)}</td>
-                    )}
-                  </tr>
-                ))}
-            </Fragment>
+            </tr>
           );
         })}
       </tbody>
@@ -166,8 +105,8 @@ export default function OrderOverviewTable({
           <CardTitle className="flex items-center gap-2 text-base">
             <ClipboardList className="h-4 w-4" /> Aufträge
             <InfoHint label="Hinweise zur Auftragsliste">
-              Pfeil links klappt die Proben eines Auftrags auf. Klick auf die Auftragszeile öffnet die
-              Ergebnisübersicht des Auftrags, Klick auf eine Probe öffnet ihre Messungen. Die Chips zeigen die
+              Klick auf einen Auftrag öffnet rechts die Ergebnisübersicht mit allen Proben und Werten; dort
+              öffnet ein Klick auf eine Probe ihre Details. Die Chips zeigen die
               Messarten; ein Klick darauf zeigt Anzahl offizieller und vorläufiger Werte je Messart.
             </InfoHint>
           </CardTitle>

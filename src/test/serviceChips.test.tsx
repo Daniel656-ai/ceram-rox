@@ -109,19 +109,18 @@ describe("Tabellen mit Messarten-Spalte", () => {
   };
   const wrap = (ui: React.ReactElement) => render(<TooltipProvider>{ui}</TooltipProvider>);
 
-  it("Auftragszeile und Probenzeilen zeigen ihre Messarten", () => {
+  it("Auftragszeile zeigt die Messarten aller Proben (keine Probenzeilen mehr)", () => {
     wrap(
-      <OrderOverviewTable orders={[order()]} expanded={new Set(["o"])} onToggle={() => {}} onSelectSample={() => {}} onOpenOverview={() => {}} />,
+      <OrderOverviewTable orders={[order()]} onOpenOverview={() => {}} />,
     );
     expect(screen.getByText("Messarten")).toBeTruthy();
-    // Auftrag: BET + RFA; P1: BET + RFA; P2: RFA
-    expect(screen.getAllByText("BET")).toHaveLength(2);
-    expect(screen.getAllByText("RFA")).toHaveLength(3);
+    expect(screen.getAllByText("BET")).toHaveLength(1);
+    expect(screen.getAllByText("RFA")).toHaveLength(1);
   });
 
   it("bei offener Seitenleiste bleibt die Spalte erhalten (kompakt)", () => {
     wrap(
-      <OrderOverviewTable orders={[order()]} expanded={new Set()} onToggle={() => {}} onSelectSample={() => {}} onOpenOverview={() => {}} compact />,
+      <OrderOverviewTable orders={[order()]} onOpenOverview={() => {}} compact />,
     );
     expect(screen.getByText("Messarten")).toBeTruthy();
     expect(screen.getByText("2 Messarten")).toBeTruthy();
@@ -137,7 +136,7 @@ describe("Tabellen mit Messarten-Spalte", () => {
   it("Klick auf die Zeile öffnet weiterhin die Ergebnisübersicht, Klick auf die Chips nicht", () => {
     const onOpen = vi.fn();
     wrap(
-      <OrderOverviewTable orders={[order()]} expanded={new Set()} onToggle={() => {}} onSelectSample={() => {}} onOpenOverview={onOpen} />,
+      <OrderOverviewTable orders={[order()]} onOpenOverview={onOpen} />,
     );
     fireEvent.click(screen.getAllByText("BET")[0]);
     expect(onOpen).not.toHaveBeenCalled();
