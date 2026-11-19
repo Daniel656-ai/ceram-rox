@@ -14,7 +14,7 @@
 
 import { resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { formatResultLabel } from "@/lib/resultLabels";
-import { elementKey } from "@/lib/elementKeys";
+import { elementKey, parseGasInOut } from "@/lib/elementKeys";
 import { reorderNoxItems, noxDisplayLabels } from "@/lib/noxColumnOrder";
 
 /**
@@ -29,6 +29,10 @@ import { reorderNoxItems, noxDisplayLabels } from "@/lib/noxColumnOrder";
 export function paramKey(label: string): string {
   const raw = String(label ?? "").trim();
   if (!raw) return "";
+  // Gas mit Richtung: eigener, eindeutiger Schlüssel (NO2 in / NO₂ in / no2_in -> "no2in"; NO in -> "noin").
+  const gas = parseGasInOut(raw);
+  // Eine Endziffer (no2_in_1) wird nicht angezeigt, trennt aber Spalten (no2_in_1 ≠ no2_in_2).
+  if (gas) return `${gas.gas.toLowerCase()}${gas.dir}${gas.index}`;
   const ek = elementKey(raw);
   if (ek) return ek;
   const norm = raw

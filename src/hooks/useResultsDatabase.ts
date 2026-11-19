@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { formatGasInOut } from "@/lib/elementKeys";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatResultLabel } from "@/lib/resultLabels";
@@ -171,11 +172,14 @@ export function useResultsDatabase() {
 
 /** Sichtbare, fachliche Bezeichnung eines Ergebnisses – niemals technische IDs. */
 export function resultLabel(r: { display_label?: string | null; result_name: string }): string {
-  if (r.display_label) return r.display_label;
   // Fallback für Altdaten mit technischem Key (`form:<uuid>:<key>`).
   const raw = r.result_name.startsWith("form:")
     ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1)
     : r.result_name;
+  // Gasbezeichnungen mit Richtung („no2_in“, „NO2 in“) einheitlich als „NO₂ in“.
+  const gas = formatGasInOut(r.display_label || raw);
+  if (gas) return gas;
+  if (r.display_label) return r.display_label;
   return raw
     .replace(/_/g, " ")
     .replace(/\s+/g, " ")
