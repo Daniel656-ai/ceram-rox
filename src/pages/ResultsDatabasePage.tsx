@@ -292,8 +292,8 @@ export default function ResultsDatabasePage() {
     expandByMeasurementInstance(source).map((r) => {
       const row: Record<string, any> = {
         "Auftrag": r.orderNumber,
+        "Probenbezeichnung": r.sampleName || r.sampleNumber,
         "Probe": r.sampleNumber || r.sampleName,
-        "Probenbezeichnung": r.sampleName,
         "Dienstleistung": r.serviceName,
         "Analyse": r.measurementNumber,
         "Messung": r.instanceLabel ?? "",

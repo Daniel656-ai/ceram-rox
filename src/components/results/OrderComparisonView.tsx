@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Columns3 } from "lucide-react";
+import { ArrowLeft, Columns3 } from "lucide-react";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import {
   buildOrderComparison,
@@ -16,6 +16,7 @@ import {
 import type { SampleGroup } from "@/lib/results/sampleResultsAggregation";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { InfoHint } from "@/components/results/InfoHint";
+import SampleLabel from "@/components/results/SampleLabel";
 import OrderExcelExportButton from "@/components/order/OrderExcelExportButton";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
@@ -63,6 +64,9 @@ export default function OrderComparisonView({
       {/* Kopf in einer Zeile: Auftrag · Projekt (nur wenn vorhanden) · Schließen */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Zurück" title="Zurück" onClick={onClose}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <Columns3 className="h-4 w-4 shrink-0" />
           <span className="truncate text-base font-semibold">
             Auftrag <span className="font-mono">{order.displayNumber}</span>
@@ -91,9 +95,6 @@ export default function OrderComparisonView({
               Mittelwert anzeigen
             </label>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Seitenleiste schließen" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       </div>
       {sections.length === 0 && (
@@ -121,8 +122,7 @@ function SampleCell({ row, label, first }: { row: ComparisonRow; label: string |
     <td className="whitespace-nowrap p-2">
       {first ? (
         <>
-          <span className="font-mono">{row.sample.sampleNumber || "–"}</span>
-          {row.sample.sampleName && <span className="ml-1 text-xs text-muted-foreground">{row.sample.sampleName}</span>}
+          <SampleLabel number={row.sample.sampleNumber} name={row.sample.sampleName} />
           {label && <span className="ml-2 text-xs text-muted-foreground">· {label}</span>}
         </>
       ) : (
@@ -172,10 +172,7 @@ function SectionTable({
                       onClick={() => onSelectSample(row.sample)}
                     >
                       <td className="whitespace-nowrap p-2">
-                        <span className="font-mono">{row.sample.sampleNumber || "–"}</span>
-                        {row.sample.sampleName && (
-                          <span className="ml-1 text-xs text-muted-foreground">{row.sample.sampleName}</span>
-                        )}
+                        <SampleLabel number={row.sample.sampleNumber} name={row.sample.sampleName} />
                         <span className="ml-2 text-xs text-muted-foreground">· Ø n={row.runs.length}</span>
                       </td>
                       {cols.map((c) => {

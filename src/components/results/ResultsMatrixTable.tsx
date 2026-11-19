@@ -12,6 +12,7 @@ import { useResultDisplayPrecision } from "@/hooks/useResultDisplayPrecision";
 import { formatResultDisplayValue, resolveResultPrecision } from "@/lib/resultDisplayPrecision";
 import { useTranslation } from "react-i18next";
 import { parseStructuredText } from "@/lib/results/structuredValues";
+import SampleLabel from "@/components/results/SampleLabel";
 
 /**
  * Kompakter, fixierter Identifikationsbereich. Breiten orientieren sich am
@@ -134,14 +135,11 @@ export default function ResultsMatrixTable({
                 >
                   <div
                     title={[
-                      r.sampleName,
+                      r.sampleNumber,
                       r.originalSampleNumber ? `Ersatzprobe für ${r.originalSampleNumber}` : "",
                     ].filter(Boolean).join(" · ") || undefined}
                   >
-                    <span className="font-mono text-xs leading-tight">{r.sampleNumber || "–"}</span>
-                    {r.sampleName ? (
-                      <div className="text-[10px] leading-tight text-muted-foreground truncate">{r.sampleName}</div>
-                    ) : null}
+                    <SampleLabel number={r.sampleNumber} name={r.sampleName} stacked className="truncate text-xs leading-tight" />
                   </div>
                 </td>
                 <td

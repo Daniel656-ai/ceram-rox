@@ -101,8 +101,8 @@ function sampleSheet(
   name: string,
 ): ExportSheet {
   const rows: ExportCell[][] = [];
-  rows.push([text("Probe"), text(sample.sampleNumber || "–")]);
-  rows.push([text("Bezeichnung"), text(sample.sampleName || "–")]);
+  rows.push([text("Probenbezeichnung"), text(sample.sampleName || sample.sampleNumber || "–")]);
+  rows.push([text("Probennummer"), text(sample.sampleNumber || "–")]);
   if (sample.originalSampleNumber) rows.push([text("Ersatzprobe für"), text(sample.originalSampleNumber)]);
   rows.push([text("Auftrag"), text(header.orderNumber)]);
   if (header.project) rows.push([text("Projekt"), text(header.project)]);
@@ -190,8 +190,8 @@ export function buildOrderExport(input: OrderExportInput): OrderExportResult | n
   ov.push([text("Hinweis"), text("Offizielle und vorläufige Werte; die Spalte „Status“ in den Probenblättern kennzeichnet sie.")]);
   ov.push([]);
   ov.push([
-    text("Probe"),
-    text("Bezeichnung"),
+    text("Probenbezeichnung"),
+    text("Probennummer"),
     text("Abgeschlossen am"),
     ...serviceSections.map((s) => text(`${s.serviceName} (Anzahl Werte)`)),
   ]);
@@ -212,8 +212,8 @@ export function buildOrderExport(input: OrderExportInput): OrderExportResult | n
     const counts = serviceSections.map((sec) => valueCount(sec.rows.find((r) => r.sample.sampleKey === s.sampleKey)));
     totalValues += counts.reduce((a, b) => a + b, 0);
     ov.push([
+      text(s.sampleName || s.sampleNumber || "–"),
       text(s.sampleNumber || "–"),
-      text(s.sampleName || "–"),
       latest ? date(latest) : text("–"),
       ...counts.map((n) => (n > 0 ? num(n, "0") : text("–"))),
     ]);

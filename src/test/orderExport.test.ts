@@ -86,15 +86,15 @@ describe("Auftrags-Excel: Aufbau", () => {
 
   it("Übersicht: Probenliste mit Anzahl Werte je Messart, Probe mit nur vorläufigen Werten wird mitgezählt", () => {
     const ov = sheetByName(run().sheets, "Übersicht");
-    const headerIdx = ov.rows.findIndex((r) => r[0]?.v === "Probe");
+    const headerIdx = ov.rows.findIndex((r) => r[0]?.v === "Probenbezeichnung");
     const header = ov.rows[headerIdx].map((c) => c.v);
-    expect(header.slice(0, 3)).toEqual(["Probe", "Bezeichnung", "Abgeschlossen am"]);
+    expect(header.slice(0, 3)).toEqual(["Probenbezeichnung", "Probennummer", "Abgeschlossen am"]);
     expect(header.slice(3)).toEqual(["BET (Anzahl Werte)", "DIL (Anzahl Werte)", "RFA (Anzahl Werte)"]);
     const p1 = ov.rows[headerIdx + 1].map((c) => c.v);
-    expect(p1[0]).toBe("P260039");
+    expect(p1[0]).toBe("Fliese weiß");
     expect(p1.slice(3)).toEqual([1, 1, 6]);
     const p2 = ov.rows[headerIdx + 2].map((c) => c.v);
-    expect(p2[0]).toBe("P260042");
+    expect(p2[0]).toBe("Glasur A");
     expect(p2.slice(3)).toEqual(["–", "–", 1]);
   });
 
@@ -130,8 +130,8 @@ describe("Auftrags-Excel: Probenblatt", () => {
 
   it("Kopf mit Probe, Bezeichnung und Auftrag", () => {
     const rows = p1().rows;
-    expect(rows[0].map((c) => c.v)).toEqual(["Probe", "P260039"]);
-    expect(rows[1].map((c) => c.v)).toEqual(["Bezeichnung", "Fliese weiß"]);
+    expect(rows[0].map((c) => c.v)).toEqual(["Probenbezeichnung", "Fliese weiß"]);
+    expect(rows[1].map((c) => c.v)).toEqual(["Probennummer", "P260039"]);
     expect(rows[2].map((c) => c.v)).toEqual(["Auftrag", "MWI260003"]);
   });
 

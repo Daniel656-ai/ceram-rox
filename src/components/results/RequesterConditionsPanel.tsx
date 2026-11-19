@@ -1,4 +1,5 @@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import SampleLabel from "@/components/results/SampleLabel";
 import type { ResultRecord } from "@/hooks/useResultsDatabase";
 import { resolveRequesterConditions } from "@/lib/results/requesterConditions";
 
@@ -25,7 +26,7 @@ export default function RequesterConditionsPanel({
             <SheetDescription asChild>
               <div className="space-y-0.5 text-xs">
                 <div>Auftrag: <span className="font-mono">{record.orderIdentity?.number || record.orderNumber}</span></div>
-                <div>Probe: <span className="font-mono">{record.sampleNumber || "–"}</span>{record.sampleName ? ` · ${record.sampleName}` : ""}</div>
+                <div>Probe: <SampleLabel number={record.sampleNumber} name={record.sampleName} /></div>
                 <div>Messung: <span className="font-mono">{record.measurementNumber}</span> · {record.serviceName}</div>
                 {record.instanceLabel && <div>Durchlauf: {record.instanceLabel}</div>}
               </div>
