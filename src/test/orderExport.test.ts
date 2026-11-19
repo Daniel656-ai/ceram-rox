@@ -47,12 +47,12 @@ function defaultRecords(): SampleMeasurementRecord[] {
       res("Al2O3", 1, { instance_key: "a", instance_label: "Lauf 1" }),
       res("Al2O3", 2, { instance_key: "b", instance_label: "Lauf 2" }),
       res("Al2O3", 3, { instance_key: "c", instance_label: "Lauf 3" }),
-      res("Vorläufig", 99, { is_official: false }),
     ]),
+    rec({ id: "s1", no: "P260039", name: "Fliese weiß" }, "DIL", [res("Vorläufig", 99, { is_official: false })]),
     rec({ id: "s1", no: "P260039", name: "Fliese weiß" }, "BET", [
       res("Spezifische Oberfläche - BET", 12.3456, { unit: "m²/g" }),
     ]),
-    // P260042: nur vorläufige Werte -> keine offiziellen Werte
+    // P260042: nur vorläufige Werte
     rec({ id: "s2", no: "P260042", name: "Glasur A" }, "RFA", [res("SiO2", 5, { is_official: false })]),
   ];
 }
@@ -76,7 +76,7 @@ describe("Auftrags-Excel: Aufbau", () => {
     expect(kv["Auftragsdatum"].v).toBeInstanceOf(Date);
     expect(kv["Auftragsstatus"].v).toBe("Abgeschlossen");
     expect(kv["Bemerkung"].v).toBe("–");
-    expect(String(kv["Hinweis"].v)).toMatch(/offizielle Werte/);
+    expect(String(kv["Hinweis"].v)).toMatch(/vorläufige Werte/);
 
     const withProject = run({}, defaultRecords().map((r) => ({ ...r, projectName: "Projekt X", remarks: "Eilig" })));
     const ov2 = sheetByName(withProject.sheets, "Übersicht");
@@ -84,23 +84,29 @@ describe("Auftrags-Excel: Aufbau", () => {
     expect(ov2.rows.some((r) => r[0]?.v === "Bemerkung" && r[1]?.v === "Eilig")).toBe(true);
   });
 
-  it("Übersicht: Probenliste mit Anzahl Werte je Messart, Probe ohne offizielle Werte mit „–“", () => {
+  it("Übersicht: Probenliste mit Anzahl Werte je Messart, Probe mit nur vorläufigen Werten wird mitgezählt", () => {
     const ov = sheetByName(run().sheets, "Übersicht");
-    const headerIdx = ov.rows.findIndex((r) => r[0]?.v === "Probe");
+    const headerIdx = ov.rows.findIndex((r) => r[0]?.v === "Probenbezeichnung");
     const header = ov.rows[headerIdx].map((c) => c.v);
-    expect(header.slice(0, 3)).toEqual(["Probe", "Bezeichnung", "Abgeschlossen am"]);
-    expect(header.slice(3)).toEqual(["BET (Anzahl Werte)", "RFA (Anzahl Werte)"]);
+    expect(header.slice(0, 3)).toEqual(["Probenbezeichnung", "Probennummer", "Abgeschlossen am"]);
+    expect(header.slice(3)).toEqual(["BET (Anzahl Werte)", "DIL (Anzahl Werte)", "RFA (Anzahl Werte)"]);
     const p1 = ov.rows[headerIdx + 1].map((c) => c.v);
-    expect(p1[0]).toBe("P260039");
-    expect(p1.slice(3)).toEqual([1, 6]);
+    expect(p1[0]).toBe("Fliese weiß");
+    expect(p1.slice(3)).toEqual([1, 1, 6]);
     const p2 = ov.rows[headerIdx + 2].map((c) => c.v);
-    expect(p2[0]).toBe("P260042");
-    expect(p2.slice(3)).toEqual(["–", "–"]);
+    expect(p2[0]).toBe("Glasur A");
+    expect(p2.slice(3)).toEqual(["–", "–", 1]);
   });
 
-  it("Probe ohne offizielle Werte bekommt trotzdem ein Blatt mit Hinweis", () => {
+  it("Probe mit nur vorläufigen Werten bekommt ein Blatt mit Status „vorläufig“", () => {
     const sh = sheetByName(run().sheets, "P260042");
-    expect(cellText(sh)).toContain("keine offiziellen Werte");
+    expect(cellText(sh)).toContain("vorläufig");
+  });
+
+  it("Probe ganz ohne Werte bekommt trotzdem ein Blatt mit Hinweis", () => {
+    const recs = [rec({ id: "s3", no: "P3" }, "RFA", [])];
+    const sh = sheetByName(run({}, recs).sheets, "P3");
+    expect(cellText(sh)).toContain("keine Werte");
   });
 
   it("Dateiname: Auftragsnummer_Ergebnisse_Datum.xlsx", () => {
@@ -124,19 +130,19 @@ describe("Auftrags-Excel: Probenblatt", () => {
 
   it("Kopf mit Probe, Bezeichnung und Auftrag", () => {
     const rows = p1().rows;
-    expect(rows[0].map((c) => c.v)).toEqual(["Probe", "P260039"]);
-    expect(rows[1].map((c) => c.v)).toEqual(["Bezeichnung", "Fliese weiß"]);
+    expect(rows[0].map((c) => c.v)).toEqual(["Probenbezeichnung", "Fliese weiß"]);
+    expect(rows[1].map((c) => c.v)).toEqual(["Probennummer", "P260039"]);
     expect(rows[2].map((c) => c.v)).toEqual(["Auftrag", "MWI260003"]);
   });
 
   it("je Messart eine Tabelle untereinander; Einheit im Spaltenkopf; Durchläufe als eigene Zeilen; Ø als feste Zahl", () => {
     const rows = p1().rows.map((r) => r.map((c) => c.v));
     const rfa = rows.findIndex((r) => r[0] === "RFA");
-    expect(rows[rfa + 1]).toEqual(["Lauf", "SiO₂ [%]", "Al₂O₃ [%]"]);
+    expect(rows[rfa + 1]).toEqual(["Lauf", "SiO₂ [%]", "Al₂O₃ [%]", "Status"]);
     expect(rows.slice(rfa + 2, rfa + 5)).toEqual([
-      ["Lauf 1", 7.18, 1],
-      ["Lauf 2", 7.3, 2],
-      ["Lauf 3", 6.34, 3],
+      ["Lauf 1", 7.18, 1, "offiziell"],
+      ["Lauf 2", 7.3, 2, "offiziell"],
+      ["Lauf 3", 6.34, 3, "offiziell"],
     ]);
     const mean = rows[rfa + 5];
     expect(mean[0]).toBe("Ø (n=3)");
@@ -144,17 +150,18 @@ describe("Auftrags-Excel: Probenblatt", () => {
     expect(mean[2]).toBeCloseTo(2, 10);
     const bet = rows.findIndex((r) => r[0] === "BET");
     expect(bet).toBeLessThan(rfa); // Messarten alphabetisch (BET vor RFA)
-    expect(rows[bet + 1]).toEqual(["Lauf", "Spezifische Oberfläche - BET [m²/g]"]);
-    expect(rows[bet + 2]).toEqual(["1", 12.3456]);
-    // einzelner Durchlauf: kein Mittelwert (nächste Zeile ist leer, danach beginnt RFA)
+    expect(rows[bet + 1]).toEqual(["Lauf", "Spezifische Oberfläche - BET [m²/g]", "Status"]);
+    expect(rows[bet + 2]).toEqual(["1", 12.3456, "offiziell"]);
+    // einzelner Durchlauf: kein Mittelwert (nächste Zeile ist leer, danach beginnt DIL)
     expect(rows[bet + 3].every((v) => v === null || v === undefined)).toBe(true);
-    expect(rows[bet + 4][0]).toBe("RFA");
+    expect(rows[bet + 4][0]).toBe("DIL");
   });
 
-  it("nur offizielle Werte (vorläufige tauchen nirgends auf)", () => {
-    const all = run().sheets.flatMap((s) => s.rows.flat().map((c) => c.v));
-    expect(all).not.toContain(99);
-    expect(all).not.toContain("Vorläufig");
+  it("vorläufige Werte erscheinen mit Status „vorläufig“", () => {
+    const rows = p1().rows.map((r) => r.map((c) => c.v));
+    const dil = rows.findIndex((r) => r[0] === "DIL");
+    expect(rows[dil + 1]).toEqual(["Lauf", "Vorläufig [%]", "Status"]);
+    expect(rows[dil + 2]).toEqual(["1", 99, "vorläufig"]);
   });
 
   it("kein Mittelwert, wenn die Durchläufe keine Wiederholungen sind (unterschiedlicher Kontext)", () => {
@@ -168,7 +175,7 @@ describe("Auftrags-Excel: Probenblatt", () => {
     expect(rows.some((r) => String(r[0]).startsWith("Ø"))).toBe(false);
     // Messkontext als Spalte
     const rfa = rows.findIndex((r) => r[0] === "RFA");
-    expect(rows[rfa + 1]).toEqual(["Lauf", "Messkontext", "SiO₂ [%]"]);
+    expect(rows[rfa + 1]).toEqual(["Lauf", "Messkontext", "SiO₂ [%]", "Status"]);
     expect(rows[rfa + 2][1]).toBe("Messstelle: A");
   });
 

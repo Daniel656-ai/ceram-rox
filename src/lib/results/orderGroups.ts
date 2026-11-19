@@ -84,8 +84,10 @@ export interface ComparisonRun {
   label: string | null;
   /** Kontext des Durchlaufs (z. B. Messstelle) – nur zur Erkennung echter Wiederholungen/Tooltip. */
   context: Record<string, string> | null;
-  /** Offizielle Werte je Spalte (normalerweise genau einer). */
+  /** Werte je Spalte (offiziell und vorläufig; normalerweise genau einer). */
   cells: Record<string, Array<number | string>>;
+  /** Je Wert in `cells` (gleiche Reihenfolge): true = vorläufig. */
+  interim: Record<string, boolean[]>;
 }
 export interface ComparisonRow {
   sample: SampleGroup;
@@ -97,7 +99,7 @@ export interface ComparisonSection {
   serviceId: string | null;
   columns: ComparisonColumn[];
   rows: ComparisonRow[];
-  /** Werte dieser Analyseart (ohne interne Einträge) – für die Kurzzeile ohne offizielle Werte. */
+  /** Anzahl Werte dieser Analyseart (ohne interne Einträge). */
   officialCount: number;
   interimCount: number;
   /** Mindestens eine Probe hat mehrere Durchläufe. */
@@ -117,7 +119,7 @@ const labelOf = (r: { display_label: string | null; result_name: string }): stri
 export const stableContext = (c: Record<string, string> | null): string =>
   JSON.stringify(Object.entries(c ?? {}).sort(([a], [b]) => a.localeCompare(b)));
 
-/** Je Analyseart (Dienstleistung) eine Tabelle: Proben mit Durchläufen als Zeilen, offizielle Parameter als Spalten. */
+/** Je Analyseart (Dienstleistung) eine Tabelle: Proben mit Durchläufen als Zeilen, Parameter als Spalten (offizielle UND vorläufige Werte). */
 export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
   const sections = new Map<
     string,
@@ -147,11 +149,9 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
         isInternalResult(r) ? [] : (expandStructuredResult(r, m.results)?.rows ?? [r]),
       );
       for (const r of flat) {
-        if (!isOfficialResult(r)) {
-          sec.interimCount += 1;
-          continue;
-        }
-        sec.officialCount += 1;
+        const isInterim = !isOfficialResult(r);
+        if (isInterim) sec.interimCount += 1;
+        else sec.officialCount += 1;
         const label = labelOf(r);
         const key = `${label}::${r.unit ?? ""}`;
         if (!sec.columns.has(key)) {
@@ -173,11 +173,13 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
             label: occ === 0 ? r.instance_label?.trim() || null : null,
             context: r.instance_context && Object.keys(r.instance_context).length ? r.instance_context : null,
             cells: {},
+            interim: {},
           };
           runsOfMeasurement.set(runKey, run);
           row.runs.push(run);
         }
         (run.cells[key] ??= []).push(v);
+        (run.interim[key] ??= []).push(isInterim);
       }
     }
   }
@@ -186,8 +188,8 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
     for (const row of s.rows) {
       if (row.runs.length > 1) row.runs.forEach((run, i) => { run.label = run.label || `Lauf ${i + 1}`; });
       else if (row.runs[0]) row.runs[0].label = null;
-      // Probe ohne offizielle Werte in dieser Analyseart: trotzdem eine (leere) Zeile.
-      if (row.runs.length === 0) row.runs.push({ key: `${row.sample.sampleKey}:empty`, label: null, context: null, cells: {} });
+      // Probe ohne Werte in dieser Analyseart: trotzdem eine (leere) Zeile.
+      if (row.runs.length === 0) row.runs.push({ key: `${row.sample.sampleKey}:empty`, label: null, context: null, cells: {}, interim: {} });
     }
     const multi = s.rows.filter((r) => r.runs.length > 1);
     return {
@@ -225,3 +227,11 @@ export const contextText = (c: Record<string, string> | null): string | undefine
 /** Sind alle Durchläufe einer Probe echte Wiederholungen (gleicher Kontext)? Nur dann ist ein Mittelwert sinnvoll. */
 export const runsAreRepeats = (row: ComparisonRow): boolean =>
   new Set(row.runs.map((r) => stableContext(r.context))).size <= 1;
+
+/** Status eines Durchlaufs für Anzeige/Export: offiziell, vorläufig oder gemischt. */
+export function runStatus(run: ComparisonRun): "offiziell" | "vorläufig" | "teilweise vorläufig" | null {
+  const flags = Object.values(run.interim).flat();
+  if (flags.length === 0) return null;
+  const n = flags.filter(Boolean).length;
+  return n === 0 ? "offiziell" : n === flags.length ? "vorläufig" : "teilweise vorläufig";
+}

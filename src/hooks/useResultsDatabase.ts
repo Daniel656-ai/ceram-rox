@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { orderElementResults } from "@/lib/rfaFixedElements";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
+import { isInternalResult } from "@/lib/results/internalResults";
 
 
 export interface ResultRecord {
@@ -100,13 +101,11 @@ export function useResultsDatabase() {
   return useQuery({
     queryKey: ["results-database"],
     queryFn: async () => {
-      // Die Ergebnisdatenbank zeigt ausschließlich Ergebnisse an, die
-      // ausdrücklich als „Offizielles Ergebnis" freigegeben wurden.
-      // Der Bearbeitungsstatus einer Tätigkeit (z. B. „erledigt") ist dafür
-      // ohne Bedeutung: Erledigte Tätigkeiten ohne offizielles Ergebnis
-      // bleiben in ihren Auftrags-/Arbeitsansichten sichtbar, erzeugen hier
-      // aber keinen Eintrag. Normale Messwerte (measurement_parameters) sind
-      // bewusst nicht Teil dieser Sicht.
+      // Die Ergebnisdatenbank zeigt IMMER offizielle UND vorläufige Ergebnisse
+      // (Kennzeichnung über `is_official` am Wert). Technische Einträge
+      // (Importprotokoll, Konfiguration) sind keine Messwerte und fehlen hier.
+      // Der Bearbeitungsstatus einer Tätigkeit ist ohne Bedeutung. Normale
+      // Messwerte (measurement_parameters) sind bewusst nicht Teil dieser Sicht.
       const measurements = await api.measurementResults.listOfficialDatabase();
       // Preserve the existing optional name-resolution behavior.
       const profiles = await api.measurementResults.listDatabaseProfiles().catch(() => []);
@@ -152,19 +151,16 @@ export function useResultsDatabase() {
           actualDurationHours: m.actual_duration_hours,
           standardDurationHours: service?.standard_duration_hours || 0,
           inputParameters,
-          // Nur ausdrücklich als „Offizielles Ergebnis" freigegebene Werte
-          // gehören in die Ergebnisdatenbank – alle anderen Formularwerte und
-          // Messwerte bleiben ausschließlich in den Arbeitsansichten sichtbar.
+          // Offizielle und vorläufige Werte; `is_official` unterscheidet sie.
           outputResults: orderElementResults(
-            (m.measurement_results || []).filter((r: any) => r.is_official === true)
+            (m.measurement_results || []).filter((r: any) => !isInternalResult(r))
           ),
           remarks: order?.notes || "",
           orderSharedFormData: order?.shared_form_data ?? null,
         };
       });
 
-      // Ohne freigegebenes offizielles Ergebnis entsteht kein Eintrag in der
-      // Ergebnisdatenbank – unabhängig vom Bearbeitungsstatus der Tätigkeit.
+      // Ohne jeden Ergebniswert entsteht kein Eintrag in der Ergebnisdatenbank.
       return records.filter((r) => r.outputResults.length > 0);
 
 

@@ -6,6 +6,7 @@ import { formatSampleDate, type SampleGroup } from "@/lib/results/sampleResultsA
 import { InfoHint } from "@/components/results/InfoHint";
 import { ResultCountBadges } from "@/components/results/ResultCountBadges";
 import ServiceChips from "@/components/results/ServiceChips";
+import SampleLabel from "@/components/results/SampleLabel";
 
 /**
  * Ebene 1: Probenübersicht. Dient ausschließlich der Navigation – die
@@ -30,11 +31,9 @@ export default function SampleOverviewTable({
       <thead className="bg-muted/50">
         <tr>
           <th className="p-2 text-left font-medium">Probe</th>
-          {!compact && <th className="p-2 text-left font-medium">Probenbezeichnung</th>}
           {!compact && <th className="p-2 text-left font-medium">Projekt</th>}
           {!compact && <th className="p-2 text-left font-medium">Auftrag</th>}
           <th className={`p-2 text-left font-medium ${compact ? "w-[140px]" : ""}`}>Messarten</th>
-          {!compact && <th className="p-2 text-right font-medium">Analysen</th>}
           <th className={`p-2 text-left font-medium ${compact ? "w-[200px]" : ""}`}>Messwerte</th>
           {!compact && <th className="p-2 text-left font-medium">Letzte Aktivität</th>}
           {!compact && <th className="p-2" />}
@@ -50,17 +49,14 @@ export default function SampleOverviewTable({
             onClick={() => onSelect(g)}
           >
             <td className={`p-2 ${compact ? "truncate whitespace-nowrap" : ""}`} title={g.sampleName || undefined}>
-              <span className="font-mono">{g.sampleNumber || "–"}</span>
+              <SampleLabel number={g.sampleNumber} name={g.sampleName} />
               {g.originalSampleNumber && (
                 <span className="ml-1 text-[10px] text-muted-foreground">(Ersatz für {g.originalSampleNumber})</span>
               )}
-              {compact && g.sampleName && <span className="ml-2 text-xs text-muted-foreground">{g.sampleName}</span>}
             </td>
-            {!compact && <td className="p-2">{g.sampleName || "–"}</td>}
             {!compact && <td className="p-2">{g.projectNames.join(", ") || "–"}</td>}
             {!compact && <td className="p-2 font-mono text-xs">{g.orderDisplayNumbers.join(", ") || "–"}</td>}
             <td className="p-2"><ServiceChips measurements={g.measurements} compact={compact} /></td>
-            {!compact && <td className="p-2 text-right">{g.measurements.length}</td>}
             <td className="whitespace-nowrap p-2">
               <ResultCountBadges official={g.officialCount} interim={g.interimCount} />
             </td>

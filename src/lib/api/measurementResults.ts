@@ -35,7 +35,7 @@ export const measurementResults = {
         samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name)
       ),
       measurement_results!inner(id, result_name, value, unit, temperature_range_from, temperature_range_to, temperature_unit, remarks, measured_at, display_label, is_official, instance_key, instance_label, instance_context)
-    `).neq("measurement_orders.order_type", "internal").eq("measurement_results.is_official", true).order("updated_at", { ascending: false })
+    `).neq("measurement_orders.order_type", "internal").order("updated_at", { ascending: false })
   ),
   listDatabaseProfiles: () => unwrap(dbClient.from("profiles").select("user_id, first_name, last_name")),
   /**

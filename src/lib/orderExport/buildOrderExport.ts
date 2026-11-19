@@ -4,6 +4,7 @@ import {
   contextText,
   groupRecordsByOrder,
   runsAreRepeats,
+  runStatus,
   type ComparisonRow,
   type ComparisonSection,
 } from "@/lib/results/orderGroups";
@@ -14,7 +15,7 @@ import { toUnicode } from "@/lib/richText";
 
 /**
  * Excel-Export eines ganzen Auftrags: Blatt „Übersicht“ + je Probe ein Blatt (Blattname = Probennummer),
- * im Probenblatt je Messart eine kleine Tabelle untereinander. Nur offizielle Werte, nur lesen.
+ * im Probenblatt je Messart eine kleine Tabelle untereinander. Offizielle und vorläufige Werte (Spalte „Status“), nur lesen.
  * Reine Funktion (kein Download, keine Datenbank) – gut testbar.
  */
 
@@ -100,8 +101,8 @@ function sampleSheet(
   name: string,
 ): ExportSheet {
   const rows: ExportCell[][] = [];
-  rows.push([text("Probe"), text(sample.sampleNumber || "–")]);
-  rows.push([text("Bezeichnung"), text(sample.sampleName || "–")]);
+  rows.push([text("Probenbezeichnung"), text(sample.sampleName || sample.sampleNumber || "–")]);
+  rows.push([text("Probennummer"), text(sample.sampleNumber || "–")]);
   if (sample.originalSampleNumber) rows.push([text("Ersatzprobe für"), text(sample.originalSampleNumber)]);
   rows.push([text("Auftrag"), text(header.orderNumber)]);
   if (header.project) rows.push([text("Projekt"), text(header.project)]);
@@ -124,12 +125,14 @@ function sampleSheet(
       text("Lauf"),
       ...(withContext ? [text("Messkontext")] : []),
       ...cols.map((c) => text(toUnicode(formatResultLabel(c.label, c.unit)))),
+      text("Status"),
     ]);
     row.runs.forEach((run, i) => {
       rows.push([
         text(run.label ?? String(i + 1)),
         ...(withContext ? [text(contextText(run.context))] : []),
         ...cols.map((c, ci) => runCell(run.cells[c.key], zs[ci])),
+        text(runStatus(run)),
       ]);
     });
     // Mittelwert nur bei echten Wiederholungen (gleicher Kontext), als feste Zahl.
@@ -148,13 +151,14 @@ function sampleSheet(
           text(`Ø (n=${lo === hi ? lo : `${lo}–${hi}`})`),
           ...(withContext ? [blank] : []),
           ...stats.map((s, ci) => (s.mean === null ? blank : num(s.mean, zs[ci]))),
+          blank,
         ]);
       }
     }
     rows.push([]);
     tables += 1;
   }
-  if (tables === 0) rows.push([text("keine offiziellen Werte")]);
+  if (tables === 0) rows.push([text("keine Werte")]);
   return { name, rows };
 }
 
@@ -183,11 +187,11 @@ export function buildOrderExport(input: OrderExportInput): OrderExportResult | n
   ov.push([text("Auftragsstatus"), text(status || "–")]);
   ov.push([text("Bemerkung"), text(remarks || "–")]);
   ov.push([text("Exportiert am"), { v: input.exportDate, z: DATE_FORMAT }]);
-  ov.push([text("Hinweis"), text("Nur offizielle Werte. Vorläufige Werte sind nicht enthalten.")]);
+  ov.push([text("Hinweis"), text("Offizielle und vorläufige Werte; die Spalte „Status“ in den Probenblättern kennzeichnet sie.")]);
   ov.push([]);
   ov.push([
-    text("Probe"),
-    text("Bezeichnung"),
+    text("Probenbezeichnung"),
+    text("Probennummer"),
     text("Abgeschlossen am"),
     ...serviceSections.map((s) => text(`${s.serviceName} (Anzahl Werte)`)),
   ]);
@@ -208,8 +212,8 @@ export function buildOrderExport(input: OrderExportInput): OrderExportResult | n
     const counts = serviceSections.map((sec) => valueCount(sec.rows.find((r) => r.sample.sampleKey === s.sampleKey)));
     totalValues += counts.reduce((a, b) => a + b, 0);
     ov.push([
+      text(s.sampleName || s.sampleNumber || "–"),
       text(s.sampleNumber || "–"),
-      text(s.sampleName || "–"),
       latest ? date(latest) : text("–"),
       ...counts.map((n) => (n > 0 ? num(n, "0") : text("–"))),
     ]);

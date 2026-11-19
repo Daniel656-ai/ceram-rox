@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Columns3 } from "lucide-react";
+import { ArrowLeft, Columns3 } from "lucide-react";
 import { HorizontalScrollArea } from "@/components/ui/HorizontalScrollArea";
 import {
   buildOrderComparison,
@@ -16,13 +16,34 @@ import {
 import type { SampleGroup } from "@/lib/results/sampleResultsAggregation";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { InfoHint } from "@/components/results/InfoHint";
+import SampleLabel from "@/components/results/SampleLabel";
 import OrderExcelExportButton from "@/components/order/OrderExcelExportButton";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
 const nfMean = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 4 });
 const fmt = (v: number | string) => (typeof v === "number" ? nf.format(v) : v);
 
-/** Proben eines Auftrags nebeneinander: je Analyseart eine Tabelle (nur offizielle Werte), je Durchlauf eine Unterzeile. */
+/** Werte einer Zelle; vorläufige Werte dezent grau. */
+function CellValues({ vals, interim }: { vals: Array<number | string>; interim?: boolean[] }) {
+  return (
+    <>
+      {vals.map((v, i) => (
+        <Fragment key={i}>
+          {i > 0 && " / "}
+          {interim?.[i] ? (
+            <span className="text-muted-foreground" title="vorläufiger Wert">
+              {fmt(v)}
+            </span>
+          ) : (
+            fmt(v)
+          )}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+/** Proben eines Auftrags nebeneinander: je Analyseart eine Tabelle (offizielle und vorläufige Werte), je Durchlauf eine Unterzeile. */
 export default function OrderComparisonView({
   order,
   onClose,
@@ -43,6 +64,9 @@ export default function OrderComparisonView({
       {/* Kopf in einer Zeile: Auftrag · Projekt (nur wenn vorhanden) · Schließen */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Zurück" title="Zurück" onClick={onClose}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <Columns3 className="h-4 w-4 shrink-0" />
           <span className="truncate text-base font-semibold">
             Auftrag <span className="font-mono">{order.displayNumber}</span>
@@ -51,7 +75,7 @@ export default function OrderComparisonView({
             )}
           </span>
           <InfoHint label="Hinweise zur Ergebnisübersicht">
-            Je Analyseart eine Tabelle mit den Proben des Auftrags. Es werden nur offizielle Werte gezeigt.
+            Je Analyseart eine Tabelle mit den Proben des Auftrags. Offizielle und vorläufige Werte werden gezeigt; vorläufige sind grau, offizielle schwarz.
             Hat eine Probe mehrere Durchläufe, steht jeder in einer eigenen Unterzeile. Klick auf eine Probe
             öffnet ihre Messungen.
           </InfoHint>
@@ -71,9 +95,6 @@ export default function OrderComparisonView({
               Mittelwert anzeigen
             </label>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Seitenleiste schließen" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       </div>
       {sections.length === 0 && (
@@ -81,13 +102,12 @@ export default function OrderComparisonView({
       )}
       {sections.map((sec) =>
         sec.columns.length === 0 ? (
-          // Analyse ohne offizielle Werte: nur eine kurze Zeile statt einer großen Karte.
+          // Analyse ohne jeden Wert: nur eine kurze Zeile statt einer großen Karte.
           <p
             key={sec.serviceName}
             className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground"
           >
-            <span className="font-medium text-foreground">{sec.serviceName}</span> – noch keine offiziellen Werte
-            {sec.interimCount > 0 ? ` (${sec.interimCount} vorläufig)` : ""}
+            <span className="font-medium text-foreground">{sec.serviceName}</span> – noch keine Werte
           </p>
         ) : (
           <SectionTable key={sec.serviceName} sec={sec} meanOn={meanOn} onSelectSample={onSelectSample} />
@@ -102,8 +122,7 @@ function SampleCell({ row, label, first }: { row: ComparisonRow; label: string |
     <td className="whitespace-nowrap p-2">
       {first ? (
         <>
-          <span className="font-mono">{row.sample.sampleNumber || "–"}</span>
-          {row.sample.sampleName && <span className="ml-1 text-xs text-muted-foreground">{row.sample.sampleName}</span>}
+          <SampleLabel number={row.sample.sampleNumber} name={row.sample.sampleName} />
           {label && <span className="ml-2 text-xs text-muted-foreground">· {label}</span>}
         </>
       ) : (
@@ -153,10 +172,7 @@ function SectionTable({
                       onClick={() => onSelectSample(row.sample)}
                     >
                       <td className="whitespace-nowrap p-2">
-                        <span className="font-mono">{row.sample.sampleNumber || "–"}</span>
-                        {row.sample.sampleName && (
-                          <span className="ml-1 text-xs text-muted-foreground">{row.sample.sampleName}</span>
-                        )}
+                        <SampleLabel number={row.sample.sampleNumber} name={row.sample.sampleName} />
                         <span className="ml-2 text-xs text-muted-foreground">· Ø n={row.runs.length}</span>
                       </td>
                       {cols.map((c) => {
@@ -191,7 +207,7 @@ function SectionTable({
                           const vals = run.cells[c.key];
                           return (
                             <td key={c.key} className="whitespace-nowrap p-2 text-right font-mono">
-                              {vals && vals.length ? vals.map(fmt).join(" / ") : "–"}
+                              {vals && vals.length ? <CellValues vals={vals} interim={run.interim[c.key]} /> : "–"}
                             </td>
                           );
                         })}

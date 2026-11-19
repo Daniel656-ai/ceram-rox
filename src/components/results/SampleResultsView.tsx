@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
+import SampleLabel from "@/components/results/SampleLabel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, X, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { ResultCountBadges } from "@/components/results/ResultCountBadges";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -298,30 +299,29 @@ export default function SampleResultsView({
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          {/* Kopf in einer Zeile: [Zurück] Probe · Bezeichnung … [X] */}
+          {/* Kopf in einer Zeile: [←] Bezeichnung · Nummer */}
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 text-base">
-              {onBack && (
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onBack}>
-                  <ArrowLeft className="mr-1 h-3.5 w-3.5" /> {backLabel}
+              {(onBack || onClose) && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  aria-label={onBack ? backLabel : "Zurück"}
+                  title={onBack ? backLabel : "Zurück"}
+                  onClick={onBack ?? onClose}
+                >
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
               <FlaskConical className="h-4 w-4 shrink-0" />
-              <span>
-                Probe <span className="font-mono">{group.sampleNumber || "–"}</span>
-              </span>
-              {group.sampleName && <span className="font-normal text-muted-foreground">· {group.sampleName}</span>}
+              <SampleLabel number={group.sampleNumber} name={group.sampleName} />
               {group.originalSampleNumber && (
                 <Badge variant="outline" className="text-[10px]">
                   Ersatzprobe für {group.originalSampleNumber}
                 </Badge>
               )}
             </CardTitle>
-            {onClose && (
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Seitenleiste schließen" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            )}
           </div>
           <p className="text-xs text-muted-foreground">
             Projekt: {group.projectNames.join(", ") || "–"} · Auftrag:{" "}
