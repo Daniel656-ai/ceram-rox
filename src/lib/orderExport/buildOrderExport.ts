@@ -12,6 +12,13 @@ import type { SampleGroup, SampleMeasurementRecord } from "@/lib/results/sampleR
 import { resolveResultPrecision, type PrecisionDefinitions } from "@/lib/resultDisplayPrecision";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { toUnicode } from "@/lib/richText";
+import { formatElementKey } from "@/lib/elementKeys";
+import {
+  ACTIVITY_GAS_UNIT,
+  extractActivity,
+  type ActivityValue,
+  type ActivityView,
+} from "@/lib/results/activityMeasurement";
 
 /**
  * Excel-Export eines ganzen Auftrags: Blatt „Übersicht“ + je Probe ein Blatt (Blattname = Probennummer),
@@ -93,6 +100,45 @@ function runCell(values: Array<number | string> | undefined, z: string | undefin
   return text(values.map(String).join(" / "));
 }
 
+const activityCell = (v: ActivityValue): ExportCell =>
+  v === null ? blank : typeof v === "number" ? num(v) : text(v);
+
+/** Aktivitätsmessung: je Katalysator „Messbedingungen“ und „Ergebnisse je Temperatur“ (Gase in/out als eigene Zahlenspalten). */
+export function activityExportRows(view: ActivityView): ExportCell[][] {
+  const rows: ExportCell[][] = [];
+  const status = view.official ? "offiziell" : "vorläufig";
+  for (const cat of view.catalysts) {
+    rows.push([text(cat.title ? `Aktivitätsmessung · Katalysator ${cat.title}` : "Aktivitätsmessung"), text(status)]);
+    rows.push([text("Messbedingungen")]);
+    const c = cat.conditions;
+    const extra = c.channels !== null || c.cells !== null;
+    rows.push([
+      text("AV [m/h]"), text("FR [Nm³/h]"), ...(extra ? [text("Anzahl Kanäle"), text("Zellenzahl")] : []), text("NO in [ppm]"), text(`${formatElementKey("NH3")} in [ppm]`),
+      text(`${formatElementKey("H2O")} in [%]`), text(`${formatElementKey("O2")} in [%]`), text(`${formatElementKey("N2")} in`),
+    ]);
+    rows.push((extra ? [c.av, c.fr, c.channels, c.cells, c.no, c.nh3, c.h2o, c.o2] : [c.av, c.fr, c.no, c.nh3, c.h2o, c.o2]).map(activityCell).concat([text("Rest")]));
+    rows.push([]);
+    rows.push([text("Ergebnisse je Temperatur")]);
+    rows.push([
+      text("Temperatur [°C]"), text("η NOx [%]"), text("K-Wert [Nm/h]"),
+      ...cat.gasColumns.flatMap((g) => [
+        text(`${formatElementKey(g)} in [${ACTIVITY_GAS_UNIT[g]}]`),
+        text(`${formatElementKey(g)} out [${ACTIVITY_GAS_UNIT[g]}]`),
+      ]),
+      text("Status"),
+    ]);
+    for (const r of cat.rows) {
+      rows.push([
+        activityCell(r.temperature), activityCell(r.eta), activityCell(r.k),
+        ...cat.gasColumns.flatMap((g) => [activityCell(r.gases[g]?.in ?? null), activityCell(r.gases[g]?.out ?? null)]),
+        text(status),
+      ]);
+    }
+    rows.push([]);
+  }
+  return rows;
+}
+
 function sampleSheet(
   sample: SampleGroup,
   sections: ComparisonSection[],
@@ -156,6 +202,12 @@ function sampleSheet(
       }
     }
     rows.push([]);
+    tables += 1;
+  }
+  for (const m of sample.measurements) {
+    const { view } = extractActivity(m.results);
+    if (!view) continue;
+    rows.push(...activityExportRows(view));
     tables += 1;
   }
   if (tables === 0) rows.push([text("keine Werte")]);

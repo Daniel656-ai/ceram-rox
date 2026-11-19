@@ -8,11 +8,12 @@
  */
 
 import { formatElementLabel } from "@/lib/elementKeys";
+import { toUnicode } from "@/lib/richText";
 
 /** Einheitliche Anzeige: `Feldname [Einheit]` bzw. `Feldname` ohne Einheit. */
 export function formatResultLabel(label: string, unit?: string | null): string {
   const name = formatElementLabel(label);
-  const u = (unit ?? "").trim();
+  const u = toUnicode((unit ?? "").trim());
   if (!u) return name;
   // Ist die Einheit bereits im Namen enthalten (Altdaten/Import), nicht doppeln.
   if (new RegExp(`\\[\\s*${u.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\]$`).test(name)) return name;

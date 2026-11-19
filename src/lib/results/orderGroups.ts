@@ -1,4 +1,5 @@
 import { formatGasInOut } from "@/lib/elementKeys";
+import { cleanUnmappableMarkup } from "@/lib/richText";
 import {
   groupRecordsBySample,
   isOfficialResult,
@@ -6,6 +7,7 @@ import {
   type SampleMeasurementRecord,
 } from "@/lib/results/sampleResultsAggregation";
 import { expandStructuredResult, isInternalResult } from "@/lib/results/internalResults";
+import { extractActivity, isActivityBlockResult } from "@/lib/results/activityMeasurement";
 
 /**
  * Auftragsbezogene Gruppierung der Probenübersicht. Reine Navigation/Anzeige:
@@ -115,7 +117,7 @@ const rawLabelOf = (r: { display_label: string | null; result_name: string }): s
   // Gasbezeichnungen mit Richtung („no2_in“) einheitlich als „NO₂ in“.
   const gas = formatGasInOut(r.display_label || (r.result_name.startsWith("form:") ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1) : r.result_name));
   if (gas) return gas;
-  if (r.display_label) return r.display_label;
+  if (r.display_label) return cleanUnmappableMarkup(r.display_label);
   const raw = r.result_name.startsWith("form:")
     ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1)
     : r.result_name;
@@ -151,8 +153,11 @@ export function buildOrderComparison(order: OrderGroup): ComparisonSection[] {
       // sind weitere Durchläufe: jeder bekommt eine eigene Unterzeile statt "a / b / c" in einer Zelle.
       const occurrences = new Map<string, number>();
       // Strukturierte Werte (Blöcke/JSON) werden in einzelne Werte zerlegt – nie roher Text.
-      const flat = m.results.flatMap((r) =>
-        isInternalResult(r) ? [] : (expandStructuredResult(r, m.results)?.rows ?? [r]),
+      // Aktivitätsmessung: Block und übernommene Einzelfelder (AV n, FR n, Kanäle, Zellenzahl) werden in der
+      // eigenen Aktivitätsdarstellung gezeigt, nicht noch einmal als Spalten.
+      const source = extractActivity(m.results).rest;
+      const flat = source.flatMap((r) =>
+        isInternalResult(r) || isActivityBlockResult(r) ? [] : (expandStructuredResult(r, m.results)?.rows ?? [r]),
       );
       for (const r of flat) {
         const isInterim = !isOfficialResult(r);
