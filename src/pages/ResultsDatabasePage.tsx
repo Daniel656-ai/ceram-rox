@@ -697,11 +697,14 @@ export default function ResultsDatabasePage() {
       />
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
-          <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
-          <TabsTrigger value="statistics">Statistik & Diagramme</TabsTrigger>
-        </TabsList>
+        {/* Solange die Seitenleiste offen ist, sind die Reiter ausgeblendet (wieder sichtbar nach dem Zurück-Pfeil). */}
+        {!panelOpen && (
+          <TabsList>
+            <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
+            <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
+            <TabsTrigger value="statistics">Statistik & Diagramme</TabsTrigger>
+          </TabsList>
+        )}
 
         {/* Sample View (3 Ebenen) */}
         <TabsContent value="samples">
@@ -717,7 +720,7 @@ export default function ResultsDatabasePage() {
                   }}
                   compareOrderKey={compareOrderKey}
                   compact={panelOpen && isWide}
-                  headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
+                  headerExtra={panelOpen ? undefined : <OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
                 />
               ) : (
                 <SampleOverviewTable
@@ -728,7 +731,7 @@ export default function ResultsDatabasePage() {
                   }}
                   selectedSampleKey={selectedSample?.orderKey == null ? selectedSample?.sampleKey ?? null : null}
                   compact={panelOpen && isWide}
-                  headerExtra={<OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
+                  headerExtra={panelOpen ? undefined : <OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
                 />
               )}
           </SidePanelLayout>
