@@ -33,7 +33,8 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste, Link2 } from "lucide-react";
+import { FillRowsCtx } from "./fillRowsContext";
+import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste, Link2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -245,6 +246,20 @@ const spanStyle = (n: { rowSpan?: number }): React.CSSProperties | undefined => 
  * Ziel: gleiche Label-Zone, gleiche Kontrollhöhe, gleiche Abstände. Der
  * Außenabstand kommt ausschließlich vom Grid (gap), nie vom Element selbst.
  * ---------------------------------------------------------------- */
+
+export { FillRowsCtx };
+
+/** Hinweistext eines Feldes: in schmalen Spalten nur als Symbol mit Tooltip (kein Text in Ein-Wort-Zeilen). */
+function FieldHint({ text }: { text: string }) {
+  return (
+    <div className="rox-hint">
+      <p className="rox-hint-text text-xs text-muted-foreground">{text}</p>
+      <span className="rox-hint-icon text-muted-foreground" title={text} aria-label={text}>
+        <Info className="h-3 w-3" />
+      </span>
+    </div>
+  );
+}
 
 /** Reservierte Höhe der Label-Zeile (Bezeichnung + eigene Einheitenzeile). */
 const LABEL_ZONE =
@@ -974,7 +989,7 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
         highlight={highlight}
         icon={<Link2 className="h-3 w-3 text-primary shrink-0 mt-[1px]" />}
         control={<MasterDataFieldControl field={field} mdRef={mdRef} />}
-        footer={desc ? <p className="text-xs text-muted-foreground">{desc}</p> : null}
+        footer={desc ? <FieldHint text={String(desc)} /> : null}
       />
     );
   }
@@ -997,7 +1012,7 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
                 ? (src?.display_name || vs!.source.label || vs!.source.field_key)
                 : linkOriginLabel(vs)}
             </p>
-            {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+            {desc && <FieldHint text={String(desc)} />}
           </>
         }
       />
@@ -1015,7 +1030,7 @@ function FieldWithLabel({ field, node, allFields, highlight }: { field: FormFiel
       footer={
         <>
           <GlobalValidationHint field={field} />
-          {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+          {desc && <FieldHint text={String(desc)} />}
         </>
       }
     />
@@ -1578,7 +1593,7 @@ function RepeaterEntry({
     if (item.type === "calculation") {
       const p = cellProps(item);
       return (
-        <div key={item.id} className={cn(p.className, sticky)} style={p.style}>
+        <div key={item.id} className={cn(p.className, sticky, "min-w-0")} style={p.style}>
           <CalculationDisplay
             node={{
               id: item.id, type: "calculation", scope: "local",
@@ -1628,7 +1643,7 @@ function RepeaterEntry({
           </div>
         </div>
         {header}
-        <div className={denseUnit ? "overflow-x-auto -mx-1 px-1 pb-1" : undefined}>
+        <div className={denseUnit ? "overflow-x-auto -mx-1 px-1 pb-1" : "min-w-0 max-w-full overflow-x-auto -mx-1 px-1 pt-1 pb-1"}>
           <div
             className={cn("grid items-end", !denseUnit && "grid-cols-12", repeaterGapClass(tree.gap))}
             style={denseUnit ? { gridTemplateColumns: `repeat(12, minmax(${denseUnit}px, 1fr))` } : undefined}
@@ -2072,6 +2087,27 @@ function MeasurementBlockField({
  * Bereich scrollt horizontal, statt alles zusammenzuquetschen. Abschnitte mit
  * normalen Feldbreiten bleiben unverändert.
  */
+/** Einzelnes Feld (Breite 5–8) allein in seiner Zeile -> volle Breite. Andere Knoten unverändert. */
+export function fillLoneFields(nodes: LayoutNode[]): LayoutNode[] {
+  const w = (n: LayoutNode) => Math.max(1, Math.min(12, Math.round(Number((n as any).width ?? 12))));
+  const isCell = (n: LayoutNode) => (n.type === "field" || n.type === "calculation") && n.visible !== false && !(n as any).rowSpan;
+  const out = nodes.slice();
+  let row: number[] = [];
+  let sum = 0;
+  const flush = () => {
+    if (row.length === 1 && sum >= 5 && sum <= 8) out[row[0]] = { ...out[row[0]], width: 12 } as LayoutNode;
+    row = []; sum = 0;
+  };
+  nodes.forEach((n, i) => {
+    if (n.visible === false) return;
+    if (!isCell(n)) { flush(); return; }
+    if (sum + w(n) > 12) flush();
+    row.push(i); sum += w(n);
+  });
+  flush();
+  return out;
+}
+
 function NodeGrid({ children: nodes, fields }: { children: LayoutNode[]; fields: FormField[] }) {
   const unit = useMemo(() => {
     let u = 0;
@@ -2084,12 +2120,14 @@ function NodeGrid({ children: nodes, fields }: { children: LayoutNode[]; fields:
     return u > 0 ? u : null;
   }, [nodes]);
 
+  const fillRows = useContext(FillRowsCtx);
+  const shown = useMemo(() => (fillRows ? fillLoneFields(nodes) : nodes), [fillRows, nodes]);
   const grid = (
     <div
       className={cn("grid gap-3 items-end", !unit && "grid-cols-12")}
       style={unit ? { gridTemplateColumns: `repeat(12, minmax(${unit}px, 1fr))` } : undefined}
     >
-      {nodes.map((c) => <RenderNode key={c.id} node={c} fields={fields} />)}
+      {shown.map((c) => <RenderNode key={c.id} node={c} fields={fields} />)}
     </div>
   );
   return unit ? <div className="overflow-x-auto -mx-1 px-1 pb-1">{grid}</div> : grid;
@@ -2141,14 +2179,16 @@ function RenderNode({ node, fields }: { node: LayoutNode; fields: FormField[] })
     case "columns": {
       const n = node as ColumnsNode;
       return (
-        <div className={cn("rox-cols gap-3", widthCls(n.width), n.className)} style={columnsGridStyle(n) as any}>
-          {n.children.map(col => (
-            <div key={col.id} className="min-w-0">
-              <div className="grid grid-cols-12 gap-3">
-                {col.children.map(c => <RenderNode key={c.id} node={c} fields={fields} />)}
+        <div className={cn("rox-cols-host min-w-0", widthCls(n.width), n.className)}>
+          <div className="rox-cols gap-3" style={columnsGridStyle(n) as any}>
+            {n.children.map(col => (
+              <div key={col.id} className="min-w-0">
+                <div className="grid grid-cols-12 gap-3">
+                  {col.children.map(c => <RenderNode key={c.id} node={c} fields={fields} />)}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       );
     }
@@ -2226,7 +2266,7 @@ function CalculationDisplay({ node }: { node: CalculationNode }) {
       footer={
         <>
           {res?.error && <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{res.error}</p>}
-          {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
+          {desc && <FieldHint text={String(desc)} />}
         </>
       }
     />

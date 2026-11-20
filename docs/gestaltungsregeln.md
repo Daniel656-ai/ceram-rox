@@ -76,8 +76,16 @@ Formulare (Auftragserstellung, Messwerteingabe, Prozessschritte) sowie für die 
 9. **Pilot Plant – Auftrag erstellen:** Die Dienstleistungen kommen allein aus den Häkchen im Auftragsformular (rechts erscheint die Karte
    „Dienstleistungen“). Der Block „Aufgaben“ (Servicepakete, Vorlagen, „Zusätzliche Dienstleistungen“) wird bei Pilot Plant nicht gezeigt;
    bei Laboraufträgen bleibt er.
-10. **Einheitliche Breite (Formulare/Masken):** Alle Auftragsarten einer Maske haben **dieselbe Maximalbreite und denselben Aufbau**
-    (Auftrag erstellen: `max-w-6xl` für Auftragsdetails, Formular und Aufgaben). Beim Umschalten der Auftragsart springt das Layout nicht –
-    nur die passenden Felder kommen dazu oder fallen weg.
+10. **Einheitliche, volle Breite (Formulare/Masken):** Alle Auftragsarten einer Maske haben **dieselbe Breite und denselben Aufbau** –
+    sie nutzen die **volle Breite des Inhaltsbereichs** (Auftrag erstellen: `max-w-none`). Bei Pilot Plant stehen Auftragsformular (links) und
+    Dienstleistungen (rechts) im Verhältnis **2 : 3**, damit die Dienstleistungs-Masken Platz haben. Beim Umschalten der Auftragsart springt das
+    Layout nicht – nur die passenden Felder kommen dazu oder fallen weg.
 11. **Kurze Felder paarweise nebeneinander:** zusammengehörige kurze Felder stehen in einer Zeile (Auftragstyp + Verrechnet, Priorität + Fälligkeit).
     Ein Feld, das nur manchmal erscheint (Verrechnet), behält seinen Platz in der Zeile, damit nichts verrutscht.
+12. **Spalten richten sich nach dem Platz, nicht nach dem Bildschirm:** Spaltengruppen (z. B. Maschinenvorgabe / Extrudieren / Kalzinieren /
+    Rückstellmuster) wechseln ihre Spaltenzahl nach der **Breite ihres Bereichs** (Container), damit sie auch in einer halben Seite gleichmäßig
+    nebeneinander stehen und nicht gequetscht werden.
+13. **Hinweistexte** unter Feldern laufen nie in einer Ein-Wort-Spalte nach unten: In sehr schmalen Spalten erscheint nur ein Info-Symbol mit Tooltip.
+14. **Karten-Inhalt bleibt in der Karte:** Tabellen/Zeilen (z. B. Rohstoff-Tabelle) scrollen bei Bedarf innerhalb der Karte, sie ragen nie darüber hinaus.
+15. **Auftragsformular – Lücken schließen:** Ein einzelnes Feld, das allein in seiner Rasterzeile steht (Breite 5–8), wird im Auftragsformular auf die
+    volle Zeilenbreite gezogen. Das gilt nur dort; Messwerteingabe und andere Formulare bleiben wie definiert.

@@ -198,24 +198,32 @@
 /* Flexible Spaltenlayouts im Formulardesigner/-renderer.
    Mobil einspaltig, Tablet reduziert, Desktop mit konfigurierten Verhältnissen. */
 @layer components {
+  .rox-cols-host { container-type: inline-size; }
   .rox-cols {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
   }
-  @media (min-width: 640px) {
+  @container (min-width: 26rem) {
     .rox-cols {
       grid-template-columns: var(--rox-cols-md, minmax(0, 1fr));
     }
   }
-  @media (min-width: 1024px) {
+  @container (min-width: 40rem) {
     .rox-cols {
       grid-template-columns: var(--rox-cols-lg, minmax(0, 1fr));
     }
   }
-  @media (min-width: 1280px) {
+  @container (min-width: 52rem) {
     .rox-cols {
       grid-template-columns: var(--rox-cols-xl, var(--rox-cols-lg, minmax(0, 1fr)));
     }
+  }
+  /* Hinweistexte: in sehr schmalen Spalten nur Symbol mit Tooltip. */
+  .rox-hint { container-type: inline-size; }
+  .rox-hint .rox-hint-icon { display: none; }
+  @container (max-width: 9rem) {
+    .rox-hint .rox-hint-text { display: none; }
+    .rox-hint .rox-hint-icon { display: inline-flex; }
   }
   /* Druck/PDF: konfigurierte Spaltenstruktur bleibt vollständig erhalten. */
   @media print {
