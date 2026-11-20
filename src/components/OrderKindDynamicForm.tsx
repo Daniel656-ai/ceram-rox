@@ -8,7 +8,6 @@ import { topLevelFields } from "@/lib/api/formFields";
 import { normalizeLayout, type FormLayoutTree, type LayoutNode } from "@/lib/api/formDefinitionLayout";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 interface Props {
   orderKind: OrderKind;
@@ -98,7 +97,6 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           {form?.name || "Auftragsformular"}
-          <Badge variant="outline" className="text-[10px]">Template</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>

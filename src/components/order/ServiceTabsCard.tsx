@@ -34,14 +34,15 @@ export default function ServiceTabsCard({
   onRemove: (uid: string) => void;
   t: (key: string, opts?: any) => string;
 }) {
+  const empty = measurements.length === 0 && (allMeasurements?.length ?? 0) === 0;
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className={empty ? "py-3" : undefined}>
         <CardTitle className="text-base">
           {t("orders:serviceTabs.title", { defaultValue: "Dienstleistungen" })}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className={empty ? "pt-0 pb-3" : undefined}>
         {measurements.length === 0 && (allMeasurements?.length ?? 0) > 0 ? (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
