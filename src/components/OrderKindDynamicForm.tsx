@@ -7,6 +7,7 @@ import type { FormField } from "@/lib/api/formFields";
 import { topLevelFields } from "@/lib/api/formFields";
 import { normalizeLayout, type FormLayoutTree, type LayoutNode } from "@/lib/api/formDefinitionLayout";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
+import { FillRowsCtx } from "@/components/ServiceDesigner/fillRowsContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 interface Props {
@@ -103,13 +104,15 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
         {fieldsLoading ? (
           <p className="text-sm text-muted-foreground">Lade Formular…</p>
         ) : (
-          <FormLayoutRenderer
-            layout={layout}
-            fields={typedFields}
-            permissions={permissions}
-            values={values}
-            onChange={(key, v) => onChange({ [key]: v })}
-          />
+          <FillRowsCtx.Provider value={true}>
+            <FormLayoutRenderer
+              layout={layout}
+              fields={typedFields}
+              permissions={permissions}
+              values={values}
+              onChange={(key, v) => onChange({ [key]: v })}
+            />
+          </FillRowsCtx.Provider>
         )}
       </CardContent>
     </Card>

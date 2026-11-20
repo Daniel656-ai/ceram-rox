@@ -107,3 +107,36 @@ describe("Texte der Auftragserstellung", () => {
     expect((en as any).duplicate_hint).toMatch(/several times/);
   });
 });
+
+import { fillLoneFields } from "@/components/ServiceDesigner/FormLayoutRenderer";
+describe("Zeilen füllen (Auftragsformular)", () => {
+  const fld = (id: string, width: number, extra: any = {}) => ({ id, type: "field", field_id: id, width, ...extra }) as any;
+  it("einzelnes Feld (6) allein in der Zeile wird auf 12 gezogen", () => {
+    const out = fillLoneFields([fld("a", 6), fld("b", 6), fld("c", 6), fld("d", 12)]);
+    expect(out.map((n: any) => n.width)).toEqual([6, 6, 12, 12]);
+  });
+  it("vollständige Zeilen und schmale/breite Einzelfelder bleiben unverändert", () => {
+    const out = fillLoneFields([fld("a", 6), fld("b", 6), fld("c", 3), fld("d", 12)]);
+    expect(out.map((n: any) => n.width)).toEqual([6, 6, 3, 12]);
+  });
+  it("Feld neben Abschnitt/Reiter wird gefüllt, Abschnitte bleiben", () => {
+    const sec = { id: "s", type: "section", children: [], width: 12 } as any;
+    const out = fillLoneFields([fld("a", 6), sec]);
+    expect((out[0] as any).width).toBe(12);
+    expect(out[1]).toBe(sec);
+  });
+});
+
+describe("Hinweistext in schmalen Spalten", () => {
+  it("Beschreibung wird als Text mit Symbol-Tooltip ausgegeben", () => {
+    const withDesc = [f("a", "rm_roh", "RM-roh", { description: "Hinweis zum Rohstoff" })];
+    const lay = { version: 1, nodes: [{ id: "n", type: "field", field_id: "a", width: 2 }] } as unknown as FormLayoutTree;
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <FormLayoutRenderer fields={withDesc} layout={lay} values={{}} onChange={() => {}} />
+      </QueryClientProvider>,
+    );
+    expect(container.querySelector(".rox-hint-text")?.textContent).toBe("Hinweis zum Rohstoff");
+    expect(container.querySelector(".rox-hint-icon")?.getAttribute("title")).toBe("Hinweis zum Rohstoff");
+  });
+});

@@ -935,7 +935,7 @@ export default function CreateOrderPage() {
 
   return (
     // Einheitliche Maximalbreite für alle Auftragsarten (docs/gestaltungsregeln.md)
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-none">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
@@ -1092,7 +1092,7 @@ export default function CreateOrderPage() {
           </CardContent>
         </Card>
 
-      <div className={pilotSingle ? "space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start" : "space-y-6"}>
+      <div className={pilotSingle ? "space-y-6 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-8 lg:items-start" : "space-y-6"}>
       <div className="space-y-6 min-w-0">
         {/* Dynamic, template-driven form for the selected Auftragsart.
             Fields, sections, labels and validations come exclusively from the
