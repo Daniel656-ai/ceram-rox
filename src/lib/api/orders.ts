@@ -97,7 +97,7 @@ export const orders = {
     notes?: string;
     priority?: OrderPriority;
     sample_id?: string;
-    order_kind?: "pilot_plant" | "labor" | "combined" | "legacy";
+    order_kind?: "pilot_plant" | "labor" | "legacy";
     pp_experiment_number?: string | null;
     pp_v2o5_percent?: number | null;
     pp_experiment_date?: string | null;
@@ -155,7 +155,7 @@ export const orders = {
       due_date: string | null;
       notes: string | null;
       priority: OrderPriority;
-      order_kind: "pilot_plant" | "labor" | "combined" | "legacy";
+      order_kind: "pilot_plant" | "labor" | "legacy";
       pp_experiment_number: string | null;
       pp_v2o5_percent: number | null;
       pp_experiment_date: string | null;
