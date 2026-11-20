@@ -931,7 +931,8 @@ export default function CreateOrderPage() {
   }
 
   return (
-    <div className={pilotSingle ? "space-y-6 max-w-none" : "space-y-6 max-w-3xl"}>
+    // Einheitliche Maximalbreite für alle Auftragsarten (docs/gestaltungsregeln.md)
+    <div className="space-y-6 max-w-6xl">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
@@ -989,6 +990,8 @@ export default function CreateOrderPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {/* Auftragstyp und Verrechnet nebeneinander; „Verrechnet“ erscheint nur bei Kundenaufträgen, die Zeile springt nicht. */}
+            <div className="grid items-start gap-4 sm:grid-cols-2">
             <div>
               <Label>{t("orders:order_type")} *</Label>
               <Select value={orderType} onValueChange={setOrderType} disabled={isEdit && locks.typeLocked}>
@@ -1010,7 +1013,7 @@ export default function CreateOrderPage() {
               <div>
                 <Label>{t("orders:billing.billed")}</Label>
                 <Select value={isBilled ? "yes" : "no"} onValueChange={(v) => setIsBilled(v === "yes")}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="no">{t("orders:billing.no")}</SelectItem>
                     <SelectItem value="yes">{t("orders:billing.yes")}</SelectItem>
@@ -1018,6 +1021,7 @@ export default function CreateOrderPage() {
                 </Select>
               </div>
             )}
+            </div>
             <div>
               <Label>{t("orders:kind_label")} *</Label>
               <Select

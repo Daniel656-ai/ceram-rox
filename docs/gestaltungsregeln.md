@@ -76,3 +76,8 @@ Formulare (Auftragserstellung, Messwerteingabe, Prozessschritte) sowie für die 
 9. **Pilot Plant – Auftrag erstellen:** Die Dienstleistungen kommen allein aus den Häkchen im Auftragsformular (rechts erscheint die Karte
    „Dienstleistungen“). Der Block „Aufgaben“ (Servicepakete, Vorlagen, „Zusätzliche Dienstleistungen“) wird bei Pilot Plant nicht gezeigt;
    bei Laboraufträgen bleibt er.
+10. **Einheitliche Breite (Formulare/Masken):** Alle Auftragsarten einer Maske haben **dieselbe Maximalbreite und denselben Aufbau**
+    (Auftrag erstellen: `max-w-6xl` für Auftragsdetails, Formular und Aufgaben). Beim Umschalten der Auftragsart springt das Layout nicht –
+    nur die passenden Felder kommen dazu oder fallen weg.
+11. **Kurze Felder paarweise nebeneinander:** zusammengehörige kurze Felder stehen in einer Zeile (Auftragstyp + Verrechnet, Priorität + Fälligkeit).
+    Ein Feld, das nur manchmal erscheint (Verrechnet), behält seinen Platz in der Zeile, damit nichts verrutscht.
