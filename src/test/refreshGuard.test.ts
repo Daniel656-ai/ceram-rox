@@ -28,8 +28,11 @@ describe("refreshCurrentView", () => {
     const fn = vi.fn().mockResolvedValueOnce([1]).mockRejectedValue(new Error("net"));
     const obs = new QueryObserver(qc, { queryKey: ["x"], queryFn: fn });
     const unsub = obs.subscribe(() => {});
-    await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(1));
+    // Erst warten, bis der erste Ladevorgang ABGESCHLOSSEN ist. Läuft er noch, liefert eine neuere
+    // TanStack-Query-Version beim Neuladen den bereits laufenden Ladevorgang zurück (kein zweiter Aufruf, kein Fehler).
+    await vi.waitFor(() => expect(qc.getQueryState(["x"])?.status).toBe("success"));
     await expect(refreshCurrentView(qc)).rejects.toThrow();
+    expect(fn).toHaveBeenCalledTimes(2);
     unsub();
   });
 
