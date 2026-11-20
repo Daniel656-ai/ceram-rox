@@ -141,3 +141,40 @@ describe("BET: BET-Feld vorhanden, aber leer", () => {
     expect(screen.queryByText(/Tara|Brutto|Rohr|SMP/i)).toBeNull();
   });
 });
+
+import { fireEvent } from "@testing-library/react";
+import { restrictGroupToService } from "@/lib/results/sampleResultsAggregation";
+
+describe("Probendetail aus einer Messart: nur Messungen dieser Messart", () => {
+  const act = (id: string): SampleMeasurementRecord =>
+    ({ ...meas([res("av_1", "AV 1", 41.38, "m/h", false)], "Aktivitätsmessung", id), orderId: "o" }) as any;
+  const group = () => ({
+    sampleKey: "A", sampleId: "s", sampleNumber: "P1", sampleName: "X", originalSampleNumber: null, projectNames: [], orderDisplayNumbers: ["BR-1"], orderIds: ["o"],
+    measurements: [meas(betResults(), "BET", "m-bet"), act("m-act")], officialCount: 1, interimCount: 6, lastActivityAt: null,
+  }) as any;
+
+  it("mit Messart: nur diese Messart, Zähler passend", () => {
+    const g = restrictGroupToService(group(), "BET");
+    expect(g.measurements.map((m: any) => m.serviceName)).toEqual(["BET"]);
+    expect([g.officialCount, g.interimCount]).toEqual([1, 0]);
+    expect(restrictGroupToService(group(), "Aktivitätsmessung").measurements).toHaveLength(1);
+  });
+
+  it("ohne Messart-Bezug (Nach Probe) oder unbekannte Messart: alle Messarten wie bisher", () => {
+    const g = group();
+    expect(restrictGroupToService(g, null)).toBe(g);
+    expect(restrictGroupToService(g, undefined)).toBe(g);
+    expect(restrictGroupToService(g, "Gibt es nicht")).toBe(g);
+  });
+
+  it("Auftragsansicht gibt beim Klick die Messart mit (BET-Zeile und Sektionstabelle)", () => {
+    const sample = { sampleKey: "A", sampleNumber: "P1", sampleName: "X", projectNames: [], orderDisplayNumbers: ["BR-1"], orderIds: ["o"], measurements: [meas(betResults(), "BET", "m-bet"), act("m-act"), meas([res("wert", "Wert", 5, "mm", true)], "Dilatometrie", "m-dil")], officialCount: 1, interimCount: 0, lastActivityAt: null } as any;
+    const order = { orderKey: "o", orderId: "o", displayNumber: "BR-1", projectNames: [], samples: [sample], measurementCount: 2, officialCount: 1, interimCount: 0, lastActivityAt: null } as unknown as OrderGroup;
+    const onSelect = vi.fn();
+    render(<TooltipProvider><OrderComparisonView order={order} onClose={() => {}} onSelectSample={onSelect} /></TooltipProvider>);
+    fireEvent.click(screen.getByText("98,7008"));
+    expect(onSelect).toHaveBeenLastCalledWith(sample, "BET");
+    fireEvent.click(screen.getByText("5"));
+    expect(onSelect).toHaveBeenLastCalledWith(sample, "Dilatometrie");
+  });
+});

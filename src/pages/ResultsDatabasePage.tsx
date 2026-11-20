@@ -6,7 +6,7 @@ import { useSampleResultsDatabase } from "@/hooks/useSampleResultsDatabase";
 import SampleOverviewTable from "@/components/results/SampleOverviewTable";
 import SampleResultsView from "@/components/results/SampleResultsView";
 import ResultDetailInspector from "@/components/results/ResultDetailInspector";
-import { groupRecordsBySample, matchesSampleFilters, type SampleGroup, type SampleMeasurementRecord } from "@/lib/results/sampleResultsAggregation";
+import { groupRecordsBySample, matchesSampleFilters, restrictGroupToService, type SampleGroup, type SampleMeasurementRecord } from "@/lib/results/sampleResultsAggregation";
 import { groupRecordsByOrder } from "@/lib/results/orderGroups";
 import OrderOverviewTable, { OverviewModeToggle, type OverviewMode } from "@/components/results/OrderOverviewTable";
 import OrderComparisonView from "@/components/results/OrderComparisonView";
@@ -68,7 +68,7 @@ export default function ResultsDatabasePage() {
   // Probenbezogene 3-Ebenen-Sicht (alle Werte: offiziell + vorläufig).
   const { data: sampleRecords = [] } = useSampleResultsDatabase();
   // Auswahl: Probe (optional im Kontext eines Auftrags). Reihenfolge der Ansichten: Probendetail > Auftragsvergleich > Übersicht.
-  const [selectedSample, setSelectedSample] = useState<{ orderKey: string | null; sampleKey: string } | null>(null);
+  const [selectedSample, setSelectedSample] = useState<{ orderKey: string | null; sampleKey: string; service?: string | null } | null>(null);
   const [tab, setTab] = useState("samples");
   const [overviewMode, setOverviewMode] = useState<OverviewMode>("order");
   const [compareOrderKey, setCompareOrderKey] = useState<string | null>(null);
@@ -205,7 +205,9 @@ export default function ResultsDatabasePage() {
     if (!selectedSample) return null;
     if (selectedSample.orderKey) {
       const order = orderGroups.find((o) => o.orderKey === selectedSample.orderKey);
-      return order?.samples.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null;
+      const group = order?.samples.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null;
+      // Aus einer Messart der Auftragsansicht geöffnet: nur die Messungen dieser Messart.
+      return group ? restrictGroupToService(group, selectedSample.service) : null;
     }
     return sampleGroups.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null;
   }, [selectedSample, sampleGroups, orderGroups]);
@@ -228,7 +230,7 @@ export default function ResultsDatabasePage() {
   };
   const panel = activeSample ? (
     <SampleResultsView
-      key={`${selectedSample?.orderKey ?? ""}:${activeSample.sampleKey}`}
+      key={`${selectedSample?.orderKey ?? ""}:${activeSample.sampleKey}:${selectedSample?.service ?? ""}`}
       group={activeSample}
       onBack={compareOrder ? () => setSelectedSample(null) : undefined}
       backLabel={overviewMode === "order" ? "Zurück zum Auftrag" : "Zurück zur Ergebnisübersicht"}
@@ -239,7 +241,7 @@ export default function ResultsDatabasePage() {
     <OrderComparisonView
       order={compareOrder}
       onClose={closePanel}
-      onSelectSample={(s) => setSelectedSample({ orderKey: compareOrder.orderKey, sampleKey: s.sampleKey })}
+      onSelectSample={(s, service) => setSelectedSample({ orderKey: compareOrder.orderKey, sampleKey: s.sampleKey, service: service ?? null })}
     />
   ) : null;
 
@@ -262,7 +264,8 @@ export default function ResultsDatabasePage() {
       const next = stepSelection(navItems, selectedSample, e.key === "ArrowDown" ? 1 : -1);
       if (!next) return;
       e.preventDefault();
-      setSelectedSample(next);
+      // Pfeiltasten bleiben in derselben Messart, falls die Probe aus einer Messart geöffnet wurde.
+      setSelectedSample({ ...next, service: selectedSample.service ?? null });
       setCompareOrderKey((c) => compareKeyAfterStep(c, next));
     };
     window.addEventListener("keydown", onKey);

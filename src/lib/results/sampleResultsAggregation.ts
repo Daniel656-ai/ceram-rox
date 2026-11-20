@@ -142,6 +142,26 @@ export function groupRecordsBySample(records: SampleMeasurementRecord[]): Sample
   );
 }
 
+/**
+ * Probendetail mit Messart-Bezug: nur die Messungen DIESER Messart (Zähler passend neu berechnet).
+ * Ohne Messart oder ohne passende Messung bleibt die Probe unverändert (alle Messarten).
+ */
+export function restrictGroupToService(group: SampleGroup, serviceName: string | null | undefined): SampleGroup {
+  if (!serviceName) return group;
+  const measurements = group.measurements.filter((m) => (m.serviceName || "") === serviceName);
+  if (measurements.length === 0 || measurements.length === group.measurements.length) return group;
+  let officialCount = 0;
+  let interimCount = 0;
+  for (const rec of measurements) {
+    for (const r of displayResults(rec.serviceName, rec.results)) {
+      if (isInternalResult(r)) continue;
+      if (isOfficialResult(r)) officialCount += 1;
+      else interimCount += 1;
+    }
+  }
+  return { ...group, measurements, officialCount, interimCount };
+}
+
 /** Durchlauf-Instanzen einer Messung (Messdatenblock/Repeater), stabil sortiert. */
 export interface MeasurementInstance {
   instanceKey: string;

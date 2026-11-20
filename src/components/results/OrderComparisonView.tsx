@@ -57,7 +57,8 @@ export default function OrderComparisonView({
 }: {
   order: OrderGroup;
   onClose: () => void;
-  onSelectSample: (sample: SampleGroup) => void;
+  /** Öffnet die Probe; `serviceName` = Messart, aus der geklickt wurde (nur deren Messungen werden gezeigt). */
+  onSelectSample: (sample: SampleGroup, serviceName?: string) => void;
 }) {
   const sections = useMemo(() => buildOrderComparison(order), [order]);
   // Aktivitätsmessungen: eigene Darstellung je Probe/Messung (Messbedingungen + Temperaturtabelle je Katalysator).
@@ -95,7 +96,7 @@ export default function OrderComparisonView({
             value: betValue(r),
             official: isOfficialResult(r),
             runLabel: r.instance_label || null,
-            onClick: () => onSelectSample(sample),
+            onClick: () => onSelectSample(sample, m.serviceName || undefined),
           });
           byService.set(m.serviceName || "BET", rows);
         }
@@ -181,7 +182,7 @@ export default function OrderComparisonView({
             <ActivityMeasurementView
               view={a.view}
               sample={{ number: a.sample.sampleNumber, name: a.sample.sampleName }}
-              onSampleClick={() => onSelectSample(a.sample)}
+              onSampleClick={() => onSelectSample(a.sample, a.serviceName)}
             />
           </CardContent>
         </Card>
@@ -221,7 +222,8 @@ function SectionTable({
 }: {
   sec: ComparisonSection;
   meanOn: boolean;
-  onSelectSample: (sample: SampleGroup) => void;
+  /** Öffnet die Probe; `serviceName` = Messart, aus der geklickt wurde (nur deren Messungen werden gezeigt). */
+  onSelectSample: (sample: SampleGroup, serviceName?: string) => void;
 }) {
   const cols: ComparisonColumn[] = sec.columns;
   return (
@@ -251,7 +253,7 @@ function SectionTable({
                     <tr
                       key={rowKey}
                       className="cursor-pointer border-t hover:bg-muted/40"
-                      onClick={() => onSelectSample(row.sample)}
+                      onClick={() => onSelectSample(row.sample, sec.serviceName)}
                     >
                       <td className="whitespace-nowrap p-2">
                         <SampleLabel number={row.sample.sampleNumber} name={row.sample.sampleName} />
@@ -281,7 +283,7 @@ function SectionTable({
                       <tr
                         key={run.key}
                         className={`cursor-pointer hover:bg-muted/40 ${ri === 0 ? "border-t" : ""}`}
-                        onClick={() => onSelectSample(row.sample)}
+                        onClick={() => onSelectSample(row.sample, sec.serviceName)}
                         title={contextText(run.context)}
                       >
                         <SampleCell row={row} label={run.label} first={ri === 0} />
