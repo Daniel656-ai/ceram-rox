@@ -57,6 +57,9 @@ import {
 
 
 
+// Servicepakete wurden nie benutzt (0 Messungen) – Kasten in der Auftragserstellung ausgeblendet; Pakete im Admin bleiben.
+const SHOW_SERVICE_PACKAGES = false;
+
 const newUid = () =>
   (typeof crypto !== "undefined" && "randomUUID" in crypto)
     ? crypto.randomUUID()
@@ -1174,7 +1177,8 @@ export default function CreateOrderPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {servicePackages.length > 0 && (
+            {/* Servicepakete: in der Auftragserstellung ausgeblendet (nie benutzt, Aufgabe 019); Pakete im Admin bleiben. */}
+            {SHOW_SERVICE_PACKAGES && servicePackages.length > 0 && (
               <div className="rounded-md border bg-muted/30 p-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <Layers className="h-4 w-4 text-primary" />
