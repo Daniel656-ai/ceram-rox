@@ -1,5 +1,6 @@
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { isInternalResult } from "@/lib/results/internalResults";
+import { displayResults } from "@/lib/results/betMeasurement";
 import { de } from "date-fns/locale";
 
 /**
@@ -126,7 +127,8 @@ export function groupRecordsBySample(records: SampleMeasurementRecord[]): Sample
     if (displayNum && !g.orderDisplayNumbers.includes(displayNum)) g.orderDisplayNumbers.push(displayNum);
     if (rec.orderId && !g.orderIds.includes(rec.orderId)) g.orderIds.push(rec.orderId);
     if (rec.originalSampleNumber && !g.originalSampleNumber) g.originalSampleNumber = rec.originalSampleNumber;
-    for (const r of rec.results) {
+    // BET: nur der BET-Wert zählt (Hilfswerte werden nicht angezeigt).
+    for (const r of displayResults(rec.serviceName, rec.results)) {
       // Interne Einträge (Importprotokoll) sind keine Messwerte und zählen nicht mit.
       if (isInternalResult(r)) continue;
       if (isOfficialResult(r)) g.officialCount += 1;

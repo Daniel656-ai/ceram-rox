@@ -3,6 +3,8 @@ import SampleLabel from "@/components/results/SampleLabel";
 import ActivityMeasurementView from "@/components/results/ActivityMeasurementView";
 import { extractActivity } from "@/lib/results/activityMeasurement";
 import { toUnicode } from "@/lib/richText";
+import BetResultsTable from "@/components/results/BetResultsTable";
+import { betValue, displayResults, isBetResult, isBetService } from "@/lib/results/betMeasurement";
 import { measurementStatusLabel } from "@/lib/results/statusLabels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,12 +55,31 @@ export function SampleMeasurementResultsTable({
 }) {
   const canCorrect = useCanCorrectResults();
   // Interne Einträge (Importprotokoll) sind keine Messwerte: nicht in der Tabelle.
+  // BET: nur das Ergebnis „Probe | BET [m²/g]“ (Hilfswerte und Importinfo werden nicht angezeigt).
+  const betResults = useMemo(
+    () => (isBetService(measurement.serviceName) ? measurement.results.filter(isBetResult) : []),
+    [measurement.results, measurement.serviceName],
+  );
   // Aktivitätsmessblock: eigene Darstellung (Messbedingungen + Temperaturtabelle je Katalysator).
   const { view: activity, rest } = useMemo(() => extractActivity(measurement.results, { serviceName: measurement.serviceName }), [measurement.results, measurement.serviceName]);
   const { visible, protocols, details } = useMemo(() => prepareDisplayResults(rest), [rest]);
   const instances = useMemo(() => groupResultsByInstance(visible), [visible]);
   // Nur leere Felder gespeichert (kein Wert, kein Text): statt einer Tabelle voller „–“ eine kurze Zeile.
   const onlyEmpty = !activity && visible.length > 0 && visible.every((r) => r.value === null && (r.remarks ?? "").trim() === "");
+
+  if (betResults.length > 0 && betResults.some((r) => betValue(r) !== null)) {
+    return (
+      <BetResultsTable
+        rows={betResults.map((r) => ({
+          key: r.id,
+          sample: { number: measurement.sampleNumber, name: measurement.sampleName },
+          value: betValue(r),
+          official: isOfficialResult(r),
+          runLabel: r.instance_label || null,
+        }))}
+      />
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -337,7 +358,7 @@ export default function SampleResultsView({
 
       {group.measurements.map((m) => {
         // Interne Einträge (Importprotokoll) zählen nicht als Messwerte.
-        const real = splitInternalResults(m.results).visible;
+        const real = splitInternalResults(displayResults(m.serviceName, m.results)).visible;
         const officialCount = real.filter(isOfficialResult).length;
         const interimCount = real.length - officialCount;
         const isOpen = expanded.has(m.measurementId);

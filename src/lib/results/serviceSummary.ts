@@ -1,4 +1,5 @@
 import { isInternalResult } from "@/lib/results/internalResults";
+import { displayResults } from "@/lib/results/betMeasurement";
 import { isOfficialResult, type SampleMeasurementRecord } from "@/lib/results/sampleResultsAggregation";
 
 /**
@@ -24,7 +25,7 @@ export function summarizeServices(measurements: SampleMeasurementRecord[]): Serv
       byName.set(name, s);
     }
     s.analyses += 1;
-    for (const r of m.results ?? []) {
+    for (const r of displayResults(m.serviceName, m.results ?? [])) {
       if (isInternalResult(r)) continue;
       if (isOfficialResult(r)) s.official += 1;
       else s.interim += 1;

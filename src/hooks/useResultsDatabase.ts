@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { displayResults } from "@/lib/results/betMeasurement";
 import { cleanUnmappableMarkup } from "@/lib/richText";
 import { formatGasInOut } from "@/lib/elementKeys";
 import { api } from "@/lib/api";
@@ -155,7 +156,8 @@ export function useResultsDatabase() {
           inputParameters,
           // Offizielle und vorläufige Werte; `is_official` unterscheidet sie.
           outputResults: orderElementResults(
-            (m.measurement_results || []).filter((r: any) => !isInternalResult(r))
+            // BET: nur der BET-Wert (Hilfswerte bleiben gespeichert, werden aber nicht angezeigt).
+            displayResults(service?.service_name, (m.measurement_results || []).filter((r: any) => !isInternalResult(r)) as any[])
           ),
           remarks: order?.notes || "",
           orderSharedFormData: order?.shared_form_data ?? null,
