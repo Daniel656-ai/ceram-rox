@@ -28,3 +28,7 @@
 # Gestaltung
 
 - Bei jeder Änderung an der Oberfläche gelten die Regeln in `docs/gestaltungsregeln.md`.
+
+# Nicht nach Prod übertragen
+
+- Bei der späteren Übertragung nach Prod (Ceram-Repo) gehen `package-lock.json` und `.github/workflows/dev-web.yml` **nicht** mit. Beide gelten nur für dieses Dev-Repo: `package-lock.json` wird hier mit `npm install --package-lock-only` gepflegt und vom Dev-Web-Bau per `npm ci` genutzt.
