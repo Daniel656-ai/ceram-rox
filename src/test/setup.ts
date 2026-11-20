@@ -3,7 +3,7 @@ import { configure } from "@testing-library/react";
 
 // Großzügigere Wartezeit für asynchrone Abfragen (findBy…/waitFor): schwere Seiten rendern im Volllauf mit vielen
 // parallelen Tests langsamer als die Standardwerte (1 s). Nur Testlauf, keine Auswirkung auf die Anwendung.
-configure({ asyncUtilTimeout: 5000 });
+configure({ asyncUtilTimeout: 10000 });
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,

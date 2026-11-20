@@ -190,7 +190,7 @@ export default function TemplatesPage() {
                 {Object.entries(servicesByCategory).map(([cat, services]) => (
                   <div key={cat}>
                     <div className="px-3 py-1.5 bg-muted text-xs font-medium text-muted-foreground sticky top-0">
-                      {cat === "labor" ? "Labor" : cat === "pilot_plant" ? "Technikum" : cat}
+                      {cat === "labor" ? "Labor" : cat === "pilot_plant" ? "Pilot Plant" : cat}
                     </div>
                     {(services as any[]).map((s: any) => (
                       <label key={s.id} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer">
