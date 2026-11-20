@@ -20,6 +20,9 @@ import SampleLabel from "@/components/results/SampleLabel";
 import ActivityMeasurementView from "@/components/results/ActivityMeasurementView";
 import { extractActivity } from "@/lib/results/activityMeasurement";
 import { isInternalResult } from "@/lib/results/internalResults";
+import BetResultsTable, { type BetRow } from "@/components/results/BetResultsTable";
+import { betValue, isBetResult, isBetService } from "@/lib/results/betMeasurement";
+import { isOfficialResult } from "@/lib/results/sampleResultsAggregation";
 import OrderExcelExportButton from "@/components/order/OrderExcelExportButton";
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
@@ -54,7 +57,8 @@ export default function OrderComparisonView({
 }: {
   order: OrderGroup;
   onClose: () => void;
-  onSelectSample: (sample: SampleGroup) => void;
+  /** Öffnet die Probe; `serviceName` = Messart, aus der geklickt wurde (nur deren Messungen werden gezeigt). */
+  onSelectSample: (sample: SampleGroup, serviceName?: string) => void;
 }) {
   const sections = useMemo(() => buildOrderComparison(order), [order]);
   // Aktivitätsmessungen: eigene Darstellung je Probe/Messung (Messbedingungen + Temperaturtabelle je Katalysator).
@@ -78,6 +82,28 @@ export default function OrderComparisonView({
     return { withView, empty };
   }, [order]);
   const activityServices = useMemo(() => new Set(activities.withView.map((a) => a.serviceName)), [activities]);
+  // BET: je Probe eine Zeile „Probe | BET [m²/g]“ (Hilfswerte werden nicht angezeigt).
+  const bet = useMemo(() => {
+    const byService = new Map<string, BetRow[]>();
+    for (const sample of order.samples) {
+      for (const m of sample.measurements) {
+        if (!isBetService(m.serviceName)) continue;
+        for (const r of m.results.filter(isBetResult)) {
+          const rows = byService.get(m.serviceName || "BET") ?? [];
+          rows.push({
+            key: `${m.measurementId}-${r.id}`,
+            sample: { number: sample.sampleNumber, name: sample.sampleName },
+            value: betValue(r),
+            official: isOfficialResult(r),
+            runLabel: r.instance_label || null,
+            onClick: () => onSelectSample(sample, m.serviceName || undefined),
+          });
+          byService.set(m.serviceName || "BET", rows);
+        }
+      }
+    }
+    return byService;
+  }, [order, onSelectSample]);
   const [showMean, setShowMean] = useState(false);
   const anyMultiple = sections.some((s) => s.hasMultipleRuns);
   const meanAvailable = sections.filter((s) => s.hasMultipleRuns).every((s) => s.meanAvailable);
@@ -121,11 +147,11 @@ export default function OrderComparisonView({
           )}
         </div>
       </div>
-      {sections.length === 0 && activities.withView.length === 0 && (
+      {sections.length === 0 && activities.withView.length === 0 && bet.size === 0 && (
         <p className="py-6 text-center text-sm text-muted-foreground">Keine Messungen in diesem Auftrag.</p>
       )}
       {sections.map((sec) =>
-        (sec.columns.length === 0 || !sectionHasValues(sec)) && activityServices.has(sec.serviceName) ? null : sec.columns.length === 0 ? (
+        bet.has(sec.serviceName) || ((sec.columns.length === 0 || !sectionHasValues(sec)) && activityServices.has(sec.serviceName)) ? null : sec.columns.length === 0 ? (
           // Analyse ohne jeden Wert: nur eine kurze Zeile statt einer großen Karte.
           <p
             key={sec.serviceName}
@@ -137,6 +163,16 @@ export default function OrderComparisonView({
           <SectionTable key={sec.serviceName} sec={sec} meanOn={meanOn} onSelectSample={onSelectSample} />
         ),
       )}
+      {[...bet.entries()].map(([service, rows]) => (
+        <Card key={`bet-${service}`}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{service}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <BetResultsTable rows={rows} />
+          </CardContent>
+        </Card>
+      ))}
       {activities.withView.map((a) => (
         <Card key={a.measurementId}>
           <CardHeader className="pb-2">
@@ -146,7 +182,7 @@ export default function OrderComparisonView({
             <ActivityMeasurementView
               view={a.view}
               sample={{ number: a.sample.sampleNumber, name: a.sample.sampleName }}
-              onSampleClick={() => onSelectSample(a.sample)}
+              onSampleClick={() => onSelectSample(a.sample, a.serviceName)}
             />
           </CardContent>
         </Card>
@@ -186,7 +222,8 @@ function SectionTable({
 }: {
   sec: ComparisonSection;
   meanOn: boolean;
-  onSelectSample: (sample: SampleGroup) => void;
+  /** Öffnet die Probe; `serviceName` = Messart, aus der geklickt wurde (nur deren Messungen werden gezeigt). */
+  onSelectSample: (sample: SampleGroup, serviceName?: string) => void;
 }) {
   const cols: ComparisonColumn[] = sec.columns;
   return (
@@ -216,7 +253,7 @@ function SectionTable({
                     <tr
                       key={rowKey}
                       className="cursor-pointer border-t hover:bg-muted/40"
-                      onClick={() => onSelectSample(row.sample)}
+                      onClick={() => onSelectSample(row.sample, sec.serviceName)}
                     >
                       <td className="whitespace-nowrap p-2">
                         <SampleLabel number={row.sample.sampleNumber} name={row.sample.sampleName} />
@@ -246,7 +283,7 @@ function SectionTable({
                       <tr
                         key={run.key}
                         className={`cursor-pointer hover:bg-muted/40 ${ri === 0 ? "border-t" : ""}`}
-                        onClick={() => onSelectSample(row.sample)}
+                        onClick={() => onSelectSample(row.sample, sec.serviceName)}
                         title={contextText(run.context)}
                       >
                         <SampleCell row={row} label={run.label} first={ri === 0} />

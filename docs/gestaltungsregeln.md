@@ -35,3 +35,21 @@ Umsetzung: `src/lib/results/activityMeasurement.ts` (Zuordnung), `src/components
    Einheiten und Auszeichnungen lesbar (`Nm^{3}/h` → Nm³/h, `Zellenzahl_{ (AV2)}` → Zellenzahl (AV2)).
 8. **Neue Formularversion:** zuerst Feldnamen prüfen (`scripts/analyse/aktivitaet-varianten.sql`), dann die Zuordnung in
    `activityMeasurement.ts` ergänzen und einen Test mit den echten Feldnamen anlegen. Die Ansicht selbst bleibt unverändert.
+
+## BET
+
+Gilt in der Ergebnisdatenbank überall: **Auftragsansicht (Seitenleiste), Probendetail, Ergebnismatrix, Zähler und Excel**
+(Auftrags-Excel und Export der Ergebnisdatenbank). Umsetzung: `src/lib/results/betMeasurement.ts` (Erkennung,
+`displayResults`), `src/components/results/BetResultsTable.tsx` (Ansicht).
+
+1. **Nur das Ergebnis.** BET zeigt ausschließlich „Spezifische Oberfläche BET“ in **m²/g** – je Probe eine Zeile
+   (**Probe | BET [m²/g]**). Vorläufig grau, offiziell normal.
+2. **Keine Hilfswerte.** Tara, Brutto, Probengewicht (Netto), Rohr-Nr., SMP-Nummer und die Importinfo
+   („Messdatenimport“) werden nicht angezeigt. Sie bleiben **in der Datenbank gespeichert – nichts wird gelöscht**.
+3. **Erkennung über Messart + Feldzuordnung** (nicht nur über die Beschriftung): Messart „BET“ bzw. „Spezifische
+   Oberfläche“ und das Ergebnisfeld (Schlüssel `spezifische_oberflache_bet`, Beschriftung mit „Oberfläche … BET“ oder
+   ein `*bet*`-Feld mit Einheit m²/g). Dadurch passt es auch bei anderen Formularversionen.
+4. **Sicherheitsnetz:** Findet sich in einer BET-Messung kein BET-Ergebnisfeld, bleibt alles sichtbar (nichts geht verloren).
+5. **Zähler** (offiziell/vorläufig) zählen bei BET nur den BET-Wert.
+6. **Neue Formularversion:** zuerst Feldnamen prüfen (BET-Abfrage analog `scripts/analyse/aktivitaet-varianten.sql`), dann
+   die Erkennung in `betMeasurement.ts` ergänzen und einen Test mit den echten Feldnamen anlegen.
