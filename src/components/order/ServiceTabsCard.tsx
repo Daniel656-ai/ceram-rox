@@ -36,7 +36,7 @@ export default function ServiceTabsCard({
 }) {
   const empty = measurements.length === 0 && (allMeasurements?.length ?? 0) === 0;
   return (
-    <Card className="min-w-0 overflow-hidden">
+    <Card className="min-w-0">
       <CardHeader className={empty ? "py-3" : undefined}>
         <CardTitle className="text-base">
           {t("orders:serviceTabs.title", { defaultValue: "Dienstleistungen" })}

@@ -1643,7 +1643,7 @@ function RepeaterEntry({
           </div>
         </div>
         {header}
-        <div className={denseUnit ? "overflow-x-auto -mx-1 px-1 pb-1" : "min-w-0 max-w-full overflow-x-auto"}>
+        <div className={denseUnit ? "overflow-x-auto -mx-1 px-1 pb-1" : "min-w-0 max-w-full overflow-x-auto -mx-1 px-1 pt-1 pb-1"}>
           <div
             className={cn("grid items-end", !denseUnit && "grid-cols-12", repeaterGapClass(tree.gap))}
             style={denseUnit ? { gridTemplateColumns: `repeat(12, minmax(${denseUnit}px, 1fr))` } : undefined}
