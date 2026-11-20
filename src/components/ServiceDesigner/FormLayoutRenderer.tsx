@@ -265,9 +265,10 @@ function FormItemShell({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className={cn("flex h-full flex-col gap-1", highlight && HIGHLIGHT_CLS)}>
+    <div className="flex h-full flex-col gap-1">
       <Label className={LABEL_ZONE}>
-        <span className="flex items-start gap-1 font-medium">
+        {/* Hervorheben bei Feldern = Beschriftung fett (kein farbiger Kasten); Pflicht nur mit * (docs/gestaltungsregeln.md). */}
+        <span className={cn("flex items-start gap-1", highlight ? "font-semibold text-foreground" : "font-medium")}>
           {icon}
           <span className="line-clamp-2">
             {typeof label === "string" ? <RichText value={label} /> : label}
@@ -2237,7 +2238,8 @@ function TabsInner({ defaultTab, tabs, children }: { defaultTab: string; tabs: {
   const [val, setVal] = useState(defaultTab);
   return (
     <Tabs value={val} onValueChange={setVal}>
-      <TabsList>
+      {/* Reiter umbrechen und bleiben innerhalb der Karte (docs/gestaltungsregeln.md). */}
+      <TabsList className="h-auto w-full flex-wrap justify-start">
         {tabs.map(t => <TabsTrigger key={t.id} value={t.id}><RichText value={t.title} /></TabsTrigger>)}
       </TabsList>
       {children}

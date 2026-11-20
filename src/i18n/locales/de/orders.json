@@ -126,6 +126,7 @@
   "measurements_section": "Aufgaben",
   "add_measurement": "Aufgabe hinzufügen",
   "select_service": "Dienstleistung auswählen...",
+  "duplicate_hint": "Dieselbe Dienstleistung kann mehrfach hinzugefügt werden – jede Position ist unabhängig.",
   "no_measurements_hint": "Noch keine Aufgaben hinzugefügt. Wählen Sie mindestens eine Dienstleistung aus.",
   "workstation": "Arbeitsplatz",
   "choose_workstation": "Wählen...",

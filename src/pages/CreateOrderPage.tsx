@@ -57,6 +57,9 @@ import {
 
 
 
+// Servicepakete wurden nie benutzt (0 Messungen) – Kasten in der Auftragserstellung ausgeblendet; Pakete im Admin bleiben.
+const SHOW_SERVICE_PACKAGES = false;
+
 const newUid = () =>
   (typeof crypto !== "undefined" && "randomUUID" in crypto)
     ? crypto.randomUUID()
@@ -931,7 +934,8 @@ export default function CreateOrderPage() {
   }
 
   return (
-    <div className={pilotSingle ? "space-y-6 max-w-none" : "space-y-6 max-w-3xl"}>
+    // Einheitliche Maximalbreite für alle Auftragsarten (docs/gestaltungsregeln.md)
+    <div className="space-y-6 max-w-6xl">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
@@ -989,6 +993,8 @@ export default function CreateOrderPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {/* Auftragstyp und Verrechnet nebeneinander; „Verrechnet“ erscheint nur bei Kundenaufträgen, die Zeile springt nicht. */}
+            <div className="grid items-start gap-4 sm:grid-cols-2">
             <div>
               <Label>{t("orders:order_type")} *</Label>
               <Select value={orderType} onValueChange={setOrderType} disabled={isEdit && locks.typeLocked}>
@@ -1010,7 +1016,7 @@ export default function CreateOrderPage() {
               <div>
                 <Label>{t("orders:billing.billed")}</Label>
                 <Select value={isBilled ? "yes" : "no"} onValueChange={(v) => setIsBilled(v === "yes")}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="no">{t("orders:billing.no")}</SelectItem>
                     <SelectItem value="yes">{t("orders:billing.yes")}</SelectItem>
@@ -1018,6 +1024,7 @@ export default function CreateOrderPage() {
                 </Select>
               </div>
             )}
+            </div>
             <div>
               <Label>{t("orders:kind_label")} *</Label>
               <Select
@@ -1068,16 +1075,19 @@ export default function CreateOrderPage() {
                 <p className="mt-1 text-xs text-muted-foreground">🔒 Gesperrt: Am Auftrag wurde bereits gearbeitet.</p>
               )}
             </div>
-            <div>
-              <Label>{t("orders:priority")}</Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(priorityLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
-                </SelectContent>
-              </Select>
+            {/* Priorität und Fälligkeit nebeneinander (docs/gestaltungsregeln.md) */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>{t("orders:priority")}</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(priorityLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5"><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
             </div>
-            <div><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
             <div><Label>{t("orders:notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders:notes_placeholder")} rows={3} /></div>
           </CardContent>
         </Card>
@@ -1154,7 +1164,8 @@ export default function CreateOrderPage() {
             onAmended={() => { void editData.refetchOrder?.(); queryClient.invalidateQueries({ queryKey: ["order"] }); queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }); }}
           />
         )}
-        {(!isEdit || locks.canEdit) && (
+        {/* Pilot Plant (Neuanlage): Dienstleistungen kommen allein aus den Häkchen im Auftragsformular – kein Block „Aufgaben“. */}
+        {(!isEdit || locks.canEdit) && !(pilotSingle && !isEdit) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1166,7 +1177,8 @@ export default function CreateOrderPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {servicePackages.length > 0 && (
+            {/* Servicepakete: in der Auftragserstellung ausgeblendet (nie benutzt, Aufgabe 019); Pakete im Admin bleiben. */}
+            {SHOW_SERVICE_PACKAGES && servicePackages.length > 0 && (
               <div className="rounded-md border bg-muted/30 p-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <Layers className="h-4 w-4 text-primary" />

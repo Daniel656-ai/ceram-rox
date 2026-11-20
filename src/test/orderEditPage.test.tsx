@@ -440,7 +440,7 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
     await screen.findByText("Auftrag MWI260003 bearbeiten");
     expect(screen.getByTestId("service-tabs")).toBeTruthy();
     expect(container.querySelector('[class*="lg:grid-cols-2"]')).not.toBeNull();
-    expect(container.querySelector('[class*="max-w-none"]')).not.toBeNull();
+    expect(container.querySelector('[class*="max-w-6xl"]')).not.toBeNull();
     // Reihenfolge links: Formular, bestehende Dienstleistungen, „Dienstleistungen hinzufügen“
     const text = container.textContent ?? "";
     expect(text.indexOf("nur lesbar")).toBeGreaterThan(-1);
@@ -452,6 +452,6 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
     await screen.findByText("Auftrag MWI260003 bearbeiten");
     expect(screen.queryByTestId("service-tabs")).toBeNull();
     expect(container.querySelector('[class*="lg:grid-cols-2"]')).toBeNull();
-    expect(container.querySelector('[class*="max-w-3xl"]')).not.toBeNull();
+    expect(container.querySelector('[class*="max-w-6xl"]')).not.toBeNull();
   });
 });

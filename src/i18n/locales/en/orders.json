@@ -126,6 +126,7 @@
   "measurements_section": "Tasks",
   "add_measurement": "Add Task",
   "select_service": "Select service...",
+  "duplicate_hint": "The same service can be added several times – each item is independent.",
   "no_measurements_hint": "No tasks added yet. Select at least one service.",
   "workstation": "Workstation",
   "choose_workstation": "Choose...",
