@@ -131,3 +131,13 @@ describe("BET: Zähler und Excel", () => {
     for (const n of [60.6222, 30.9049, 30.4309, 9]) expect(cells).not.toContain(n); // Hilfswerte nicht im Excel
   });
 });
+
+describe("BET: BET-Feld vorhanden, aber leer", () => {
+  it("zeigt „Probe | –“ statt der Hilfswerte", () => {
+    const leer = betResults().map((r) => (r.id === "spezifische_oberflache_bet" ? { ...r, value: null } : r));
+    render(<TooltipProvider><SampleMeasurementResultsTable measurement={meas(leer)} /></TooltipProvider>);
+    expect(screen.getByTestId("bet-results")).toBeTruthy();
+    expect(screen.getByText("–")).toBeTruthy();
+    expect(screen.queryByText(/Tara|Brutto|Rohr|SMP/i)).toBeNull();
+  });
+});

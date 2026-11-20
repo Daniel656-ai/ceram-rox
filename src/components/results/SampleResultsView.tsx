@@ -67,7 +67,7 @@ export function SampleMeasurementResultsTable({
   // Nur leere Felder gespeichert (kein Wert, kein Text): statt einer Tabelle voller „–“ eine kurze Zeile.
   const onlyEmpty = !activity && visible.length > 0 && visible.every((r) => r.value === null && (r.remarks ?? "").trim() === "");
 
-  if (betResults.length > 0 && betResults.some((r) => betValue(r) !== null)) {
+  if (betResults.length > 0) {
     return (
       <BetResultsTable
         rows={betResults.map((r) => ({
