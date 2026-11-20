@@ -250,7 +250,7 @@ function OrderDetailPageInner() {
         </div>
         {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
           <Badge variant="secondary" className="font-normal">
-            {(order as any).order_kind === "pilot_plant" ? "Pilot Plant" : (order as any).order_kind === "labor" ? "Labor" : "Kombiniert"}
+            {(order as any).order_kind === "pilot_plant" ? "Pilot Plant" : (order as any).order_kind === "labor" ? "Labor" : "Klassisch"}
           </Badge>
         )}
         {(order as any).workflow_status && <WorkflowStatusBadge status={(order as any).workflow_status} />}
@@ -333,7 +333,7 @@ function OrderDetailPageInner() {
             ((order as any).order_measurements || []).some((m: any) => m.assigned_to === user?.id))
         }
         processSlot={
-          linkedInstance ? (
+          linkedInstance && (order as any).order_kind !== "pilot_plant" ? (
             <ProcessOrderTabs legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
           ) : undefined
         }

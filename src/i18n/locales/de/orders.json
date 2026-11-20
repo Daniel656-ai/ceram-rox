@@ -16,7 +16,6 @@
   "kind": {
     "pilot_plant": "Pilot Plant",
     "labor": "Labor",
-    "combined": "Kombinierter Auftrag",
     "legacy": "Klassisch"
   },
   "workflow": {

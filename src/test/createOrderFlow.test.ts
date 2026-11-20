@@ -68,12 +68,12 @@ describe("persistOrderLevelData", () => {
     expect(apiMock.orderSamples.add).not.toHaveBeenCalled();
   });
 
-  it("Pilot Plant: Bausteine anlegen, Fehler nur als Hinweis (Auftrag bleibt)", async () => {
+  it("Pilot Plant: legt keine alten Bausteine und keinen Prozess-Ablauf an (Aufgabe 018), auch nicht mit gewählter Vorlage", async () => {
     await persistOrderLevelData({ ...base, orderKind: "pilot_plant" });
-    expect(apiMock.pilotPlantBlocks.seed).toHaveBeenCalledWith("o1");
-    apiMock.pilotPlantBlocks.seed.mockRejectedValueOnce(new Error("kaputt"));
-    await expect(persistOrderLevelData({ ...base, orderKind: "pilot_plant" })).resolves.toBeUndefined();
-    expect(toastMock.error).toHaveBeenCalledWith("Pilot-Plant-Bausteine: kaputt");
+    await persistOrderLevelData({ ...base, orderKind: "pilot_plant", processTemplateId: "t1", processTemplates: [{ id: "t1", name: "n" }] });
+    expect(apiMock.pilotPlantBlocks.seed).not.toHaveBeenCalled();
+    expect(apiMock.orderInstances.create).not.toHaveBeenCalled();
+    expect(apiMock.workflowEngine.seedFromTemplate).not.toHaveBeenCalled();
   });
 
   it("Auftragsformular: Werte werden unter template gespeichert, nur mit Formular-ID und Werten", async () => {
@@ -116,16 +116,15 @@ describe("persistOrderLevelData", () => {
 
   it("Proben werden n:m zugeordnet; Fehler nur als Hinweis; Reihenfolge der Schritte unverändert", async () => {
     const order_: string[] = [];
-    apiMock.pilotPlantBlocks.seed.mockImplementation(async () => { order_.push("seed"); });
     apiMock.orderSharedFormData.merge.mockImplementation(async () => { order_.push("merge"); });
     apiMock.orderInstances.create.mockImplementation(async () => { order_.push("instance"); return { id: "i" }; });
     apiMock.workflowEngine.seedFromTemplate.mockImplementation(async () => { order_.push("workflow"); });
     apiMock.orderSamples.add.mockImplementation(async () => { order_.push("samples"); });
     await persistOrderLevelData({
-      ...base, orderKind: "pilot_plant", dynamicFormId: "f", dynamicValues: { a: 1 },
+      ...base, orderKind: "labor", dynamicFormId: "f", dynamicValues: { a: 1 },
       processTemplateId: "t", processTemplates: [{ id: "t", name: "n" }], selectedSampleIds: ["s1"],
     });
-    expect(order_).toEqual(["seed", "merge", "instance", "workflow", "samples"]);
+    expect(order_).toEqual(["merge", "instance", "workflow", "samples"]);
     expect(apiMock.orderSamples.add).toHaveBeenCalledWith("o1", ["s1"], "u1");
     apiMock.orderSamples.add.mockRejectedValueOnce(new Error("weg"));
     await persistOrderLevelData({ ...base, selectedSampleIds: ["s1"] });

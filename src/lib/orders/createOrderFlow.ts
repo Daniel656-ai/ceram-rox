@@ -52,16 +52,9 @@ export interface PersistOrderLevelInput {
 /** Schritte direkt nach dem Anlegen des Auftrags (alle mit eigener Fehlermeldung, ohne den Auftrag zu verwerfen). */
 export async function persistOrderLevelData(input: PersistOrderLevelInput): Promise<void> {
   const { order, user, orderKind, dynamicFormId, dynamicValues, processTemplateId, processTemplates, projectId, selectedSampleIds } = input;
-  // Pilot Plant: seed process blocks. Alle fachlichen Angaben kommen aus
-  // dem konfigurierten Auftraggeberformular (siehe unten), nicht aus Code.
-  if (orderKind === "pilot_plant") {
-    try {
-      await api.pilotPlantBlocks.seed(order.id);
-    } catch (err: any) {
-      toast.error(`Pilot-Plant-Bausteine: ${err.message}`);
-    }
-  }
-
+  // Pilot Plant: Es werden KEINE alten Bausteine (pilot_plant_blocks) und KEIN Prozess-Ablauf mehr angelegt
+  // (Aufgabe 018). Alle fachlichen Angaben kommen aus dem konfigurierten Auftraggeberformular (siehe unten);
+  // die Herstellung läuft über die Pilot-Plant-Messarten.
 
   // Persist template-driven dynamic form values (no hardcoded fields).
   if (dynamicFormId && Object.keys(dynamicValues).length > 0) {
@@ -82,7 +75,7 @@ export async function persistOrderLevelData(input: PersistOrderLevelInput): Prom
 
   // Phase 5: If a process template was selected, spin up an order_instance
   // linked to this measurement_order and seed its workflow steps.
-  if (processTemplateId && processTemplateId !== "__none__") {
+  if (orderKind !== "pilot_plant" && processTemplateId && processTemplateId !== "__none__") {
     try {
       const tpl = (processTemplates as any[]).find(t => t.id === processTemplateId);
       let snapshot: Record<string, unknown> | null = null;

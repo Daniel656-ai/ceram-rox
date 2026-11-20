@@ -1286,7 +1286,7 @@ export default function CreateOrderPage() {
         </Card>
         )}
 
-        {!isEdit && role !== "auftraggeber" && measurements.length > 0 && (
+        {!isEdit && role !== "auftraggeber" && orderKind !== "pilot_plant" && measurements.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Prozessvorlage (optional)</CardTitle>
@@ -1297,11 +1297,8 @@ export default function CreateOrderPage() {
               <SelectContent>
                 <SelectItem value="__none__">– Keine Vorlage –</SelectItem>
                 {(processTemplates as any[])
-                  .filter((tpl) => {
-                    if (orderKind === "pilot_plant") return tpl.kind === "pilot_plant";
-                    if (orderKind === "labor") return tpl.kind === "labor";
-                    return true;
-                  })
+                  // Prozessvorlagen gibt es nur für Laboraufträge (Pilot Plant: stillgelegt, Aufgabe 018).
+                  .filter((tpl) => tpl.kind === "labor")
                   .map((tpl) => (
                     <SelectItem key={tpl.id} value={tpl.id}>
                       {tpl.name} {tpl.kind === "pilot_plant" ? "· PP" : "· Labor"} · v{tpl.version}

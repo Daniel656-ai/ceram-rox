@@ -568,7 +568,7 @@ function EditServiceDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="labor">Labor</SelectItem>
-                  <SelectItem value="pilot_plant">Technikum</SelectItem>
+                  <SelectItem value="pilot_plant">Pilot Plant</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -636,7 +636,7 @@ function EditServiceDialog({
                     />
                     <span>{s.service_name}</span>
                     <Badge variant="outline" className="text-[10px]">
-                      {s.category === "pilot_plant" ? "Technikum" : "Labor"}
+                      {s.category === "pilot_plant" ? "Pilot Plant" : "Labor"}
                     </Badge>
                   </label>
                 ))}

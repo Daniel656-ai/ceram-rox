@@ -361,15 +361,11 @@ export const orders = {
       }
     }
 
-    // --- Pilot-Plant-Bausteine frisch erzeugen (keine Statusübernahme) ---
-    if (src.order_kind === "pilot_plant" || src.is_pilot_plant_process) {
-      try {
-        await dbClient.rpc("pp_seed_blocks" as any, { _order_id: newOrder.id } as any);
-      } catch { /* optional */ }
-    }
+    // Pilot Plant: keine alten Bausteine und kein Prozess-Ablauf mehr (Aufgabe 018).
+    const isPilotPlantSource = src.order_kind === "pilot_plant" || !!src.is_pilot_plant_process;
 
-    // --- Prozess-/Workflow-Konfiguration: neue Instanz aus gleicher Vorlage ---
-    const srcInstance: any = await unwrap(
+    // --- Prozess-/Workflow-Konfiguration: neue Instanz aus gleicher Vorlage (nicht bei Pilot Plant) ---
+    const srcInstance: any = isPilotPlantSource ? null : await unwrap(
       dbClient
         .from("order_instances" as any)
         .select("*")
