@@ -58,7 +58,6 @@ export default function OrderOverviewTable({
           <th className="p-2 text-left font-medium">Auftrag</th>
           {!compact && <th className="p-2 text-left font-medium">Projekt / Bezeichnung</th>}
           <th className={`p-2 text-left font-medium ${compact ? "w-[140px]" : ""}`}>Messarten</th>
-          {!compact && <th className="p-2 text-right font-medium">Proben</th>}
           <th className={`p-2 text-left font-medium ${compact ? "w-[200px]" : ""}`}>Messwerte</th>
           {!compact && <th className="p-2 text-left font-medium">Letzte Aktivität</th>}
         </tr>
@@ -82,7 +81,6 @@ export default function OrderOverviewTable({
                 </td>
                 {!compact && <td className="p-2 font-normal">{o.projectNames.join(", ") || "–"}</td>}
                 <td className="p-2 font-normal"><ServiceChips measurements={o.samples.flatMap((s) => s.measurements)} compact={compact} /></td>
-                {!compact && <td className="p-2 text-right">{o.samples.length}</td>}
                 <td className="whitespace-nowrap p-2 font-normal">
                   <ResultCountBadges official={o.officialCount} interim={o.interimCount} />
                 </td>

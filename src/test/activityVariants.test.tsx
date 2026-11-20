@@ -252,3 +252,35 @@ describe("Vorgabe: Kopf – Probe, Katalysator nur bei echter Katalysatornummer"
     expect(r2).toContain("Aktivitätsmessung");
   });
 });
+
+import { measurementStatusLabel } from "@/lib/results/statusLabels";
+import { SampleMeasurementResultsTable } from "@/components/results/SampleResultsView";
+import OrderOverviewTable from "@/components/results/OrderOverviewTable";
+import type { OrderGroup } from "@/lib/results/orderGroups";
+
+describe("Aufgabe 016: Verschönerungen (Punkte 1–3)", () => {
+  it("Statuswerte auf Deutsch; Unbekanntes bleibt unverändert", () => {
+    expect(measurementStatusLabel("completed")).toBe("abgeschlossen");
+    expect(measurementStatusLabel("in_progress")).toBe("in Bearbeitung");
+    expect(measurementStatusLabel("open")).toBe("offen");
+    expect(measurementStatusLabel("cancelled")).toBe("abgebrochen");
+    expect(measurementStatusLabel("Sonderstatus")).toBe("Sonderstatus");
+    expect(measurementStatusLabel(null)).toBe("");
+  });
+
+  it("Auftragsübersicht: keine Spalte „Proben“, die Anzahl steht neben der Auftragsnummer", () => {
+    const sample = (k: string) => ({ sampleKey: k, sampleNumber: k, sampleName: "", measurements: [], officialCount: 0, interimCount: 0 }) as any;
+    const order = { orderKey: "o", orderId: "o", displayNumber: "FG-1", projectNames: ["P"], samples: [sample("a"), sample("b"), sample("c"), sample("d")], measurementCount: 0, officialCount: 0, interimCount: 0, lastActivityAt: null } as unknown as OrderGroup;
+    render(<TooltipProvider><OrderOverviewTable orders={[order]} onOpenOverview={() => {}} /></TooltipProvider>);
+    expect(screen.queryByRole("columnheader", { name: "Proben" })).toBeNull();
+    expect(screen.getByText("4 Proben")).toBeTruthy();
+  });
+
+  it("Probendetail: keine Reiter, kein „Formular“ – die Werte stehen direkt da", () => {
+    const m = { measurementId: "m1", measurementNumber: "M1", serviceName: "Dilatometrie", sampleNumber: "P1", sampleName: "X", orderNumber: "A", results: [fl("wert", "Wert", 5, "mm")] } as any;
+    render(<TooltipProvider><SampleMeasurementResultsTable measurement={m} /></TooltipProvider>);
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.queryByText("Formular")).toBeNull();
+    expect(screen.getByText("Parameter")).toBeTruthy(); // Wertetabelle direkt sichtbar
+  });
+});

@@ -3,16 +3,15 @@ import SampleLabel from "@/components/results/SampleLabel";
 import ActivityMeasurementView from "@/components/results/ActivityMeasurementView";
 import { extractActivity } from "@/lib/results/activityMeasurement";
 import { toUnicode } from "@/lib/richText";
+import { measurementStatusLabel } from "@/lib/results/statusLabels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { ResultCountBadges } from "@/components/results/ResultCountBadges";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { prepareDisplayResults, splitInternalResults, type DetailItem, type ImportProtocol } from "@/lib/results/internalResults";
 import { parseStructuredText } from "@/lib/results/structuredValues";
-import CompletedResultForm from "@/components/CompletedResultForm";
 import RequesterConditionsPanel from "@/components/results/RequesterConditionsPanel";
 import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
 import ResultCorrectionDialog, { type CorrectionContext } from "@/components/results/ResultCorrectionDialog";
@@ -232,9 +231,8 @@ export function ImportProtocolInfo({ protocol: p }: { protocol: ImportProtocol }
 
 /**
  * Ebene 2: alle Messungen einer Probe im fachlichen Zusammenhang.
- * Formularlayout (Formulardesigner) ist maßgeblich; die vollständige
- * Messwerttabelle darunter garantiert verlustfreie Darstellung inklusive
- * historischer Messungen ohne Formularlayout (Fallback).
+ * Die vollständige Messwerttabelle (bzw. die Aktivitätsdarstellung) garantiert verlustfreie Darstellung
+ * inklusive historischer Messungen. Formulare werden hier nicht angezeigt.
  */
 export default function SampleResultsView({
   group,
@@ -376,7 +374,7 @@ export default function SampleResultsView({
                   {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
                   <CardTitle className="text-base">{m.serviceName || "Messung"}</CardTitle>
                   <Badge variant="outline" className="font-mono text-[10px]">{m.measurementNumber}</Badge>
-                  <Badge variant="secondary" className="text-[10px]">{m.status}</Badge>
+                  <Badge variant="secondary" className="text-[10px]">{measurementStatusLabel(m.status)}</Badge>
                   <ResultCountBadges official={officialCount} interim={interimCount} />
                   <span className="text-xs text-muted-foreground">
                     Auftrag <span className="font-mono">{m.orderDisplayNumber || m.orderNumber}</span>
@@ -408,25 +406,8 @@ export default function SampleResultsView({
             </CardHeader>
             {isOpen && (
               <CardContent>
-                {/* Standard: kompakte, vollständige Wertetabelle. Das Original-Formular
-                    (Formulardesigner, schreibgeschützt) wird nur auf Klick geladen. */}
-                <Tabs defaultValue="values">
-                  <TabsList>
-                    <TabsTrigger value="values">Werte</TabsTrigger>
-                    <TabsTrigger value="form">Formular</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="values" className="mt-3">
-                    <SampleMeasurementResultsTable measurement={m} onCorrect={setCorrection} />
-                  </TabsContent>
-                  <TabsContent value="form" className="mt-3">
-                    <CompletedResultForm
-                      measurementId={m.measurementId}
-                      serviceId={m.serviceId}
-                      measurementNumber={m.measurementNumber}
-                      serviceName={m.serviceName}
-                    />
-                  </TabsContent>
-                </Tabs>
+                {/* Nur die Werte: in der Ergebnisdarstellung werden keine Formulare gezeigt (docs/gestaltungsregeln.md). */}
+                <SampleMeasurementResultsTable measurement={m} onCorrect={setCorrection} />
               </CardContent>
             )}
           </Card>
