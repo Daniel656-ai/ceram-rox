@@ -31,4 +31,4 @@
 
 # Nicht nach Prod übertragen
 
-- Bei der späteren Übertragung nach Prod (Ceram-Repo) gehen `package-lock.json` und `.github/workflows/dev-web.yml` **nicht** mit. Beide gelten nur für dieses Dev-Repo: `package-lock.json` wird hier mit `npm install --package-lock-only` gepflegt und vom Dev-Web-Bau per `npm ci` genutzt.
+- Bei der späteren Übertragung nach Prod (Ceram-Repo) gehen `package-lock.json` und `.github/workflows/dev-web.yml` **nicht** mit. Beide gelten nur für dieses Dev-Repo: `package-lock.json` wird hier mit `npm install --package-lock-only` gepflegt (alle Paketadressen zeigen auf `registry.npmjs.org`) und lokal per `npm ci` installiert.
