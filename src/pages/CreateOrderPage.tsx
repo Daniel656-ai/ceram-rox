@@ -1157,7 +1157,8 @@ export default function CreateOrderPage() {
             onAmended={() => { void editData.refetchOrder?.(); queryClient.invalidateQueries({ queryKey: ["order"] }); queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }); }}
           />
         )}
-        {(!isEdit || locks.canEdit) && (
+        {/* Pilot Plant (Neuanlage): Dienstleistungen kommen allein aus den Häkchen im Auftragsformular – kein Block „Aufgaben“. */}
+        {(!isEdit || locks.canEdit) && !(pilotSingle && !isEdit) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

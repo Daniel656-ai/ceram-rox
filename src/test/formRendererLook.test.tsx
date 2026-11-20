@@ -98,3 +98,12 @@ describe("Auftragserstellung: Karten", () => {
     expect(screen.getByText(/Wählen Sie links eine Dienstleistung/)).toBeTruthy();
   });
 });
+
+import de from "@/i18n/locales/de/orders.json";
+import en from "@/i18n/locales/en/orders.json";
+describe("Texte der Auftragserstellung", () => {
+  it("duplicate_hint ist in de und en übersetzt (kein Rohtext)", () => {
+    expect((de as any).duplicate_hint).toMatch(/mehrfach/);
+    expect((en as any).duplicate_hint).toMatch(/several times/);
+  });
+});

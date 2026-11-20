@@ -73,3 +73,6 @@ Formulare (Auftragserstellung, Messwerteingabe, Prozessschritte) sowie für die 
 7. **Leere Karten sind kompakt:** Solange in der Karte „Dienstleistungen“ nichts gewählt ist, zeigt sie nur Titel und einen Hinweis in einer Zeile.
 8. **Lücken im Raster** (z. B. ein einzelnes Feld mit Leerraum daneben) sind **keine Renderer-Sache**: Sie werden im Formulardesigner über die
    Feldbreiten (Summe je Zeile = 12) bereinigt.
+9. **Pilot Plant – Auftrag erstellen:** Die Dienstleistungen kommen allein aus den Häkchen im Auftragsformular (rechts erscheint die Karte
+   „Dienstleistungen“). Der Block „Aufgaben“ (Servicepakete, Vorlagen, „Zusätzliche Dienstleistungen“) wird bei Pilot Plant nicht gezeigt;
+   bei Laboraufträgen bleibt er.
