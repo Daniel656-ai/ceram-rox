@@ -21,6 +21,7 @@ Du bist der test-runner. Du prüfst den aktuellen Branch und meldest eindeutig *
      (Get-Item "$S\main-wt\node_modules").Delete()   # ZUERST nur die Junction lösen …
      git worktree remove --force "$S\main-wt"         # … erst dann den Worktree entfernen
      ```
+     Aus dem Bash-Werkzeug diesen Block unverändert über `powershell -NoProfile -Command "…"` ausführen. Nie in Bash-Befehle (`rm -rf`, `mklink` über `cmd //c`) übersetzen.
      **Wichtig:** Den Worktree nie entfernen, solange die Junction besteht, sonst wird das echte `node_modules` mitgelöscht. Ein Test, der auf `main` schon rot ist, ist ein **unmarkierter bekannter Fehler**. Der Lauf ist trotzdem ROT, mit dem Hinweis, den Test nach `tasks/Fehler.md` aufzunehmen und zu markieren (siehe `docs/tests.md`).
    - **Durch die Änderung kaputt:** Rot auf dem Branch, grün auf `main`. Mit `git diff main...HEAD --stat` die wahrscheinlich verursachenden Dateien benennen.
 5. Bekannte Fehler: Tests, die mit `test.fails`/`it.fails` oder `skip` und einem Verweis `Fehler.md#F-<nr>` markiert sind, zählen als bekannte Fehler. Ihre Anzahl wird gemeldet. Ein markierter `fails`-Test, der plötzlich besteht, wird als Hinweis gemeldet („Fehler F-<nr> eventuell behoben“), aber der Lauf bleibt rot, bis die Markierung angepasst ist. So bleibt der Lauf ehrlich.
