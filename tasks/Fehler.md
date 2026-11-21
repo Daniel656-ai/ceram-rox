@@ -1,6 +1,6 @@
-# Gefundene Fehler (Aufgabe 021)#3 | Issue angelegt |#4 | Issue angelegt |#5 | Issue angelegt |#6 | Issue angelegt |#7 | Issue angelegt |#8 | Issue angelegt |#9 | Issue angelegt |#10 | Issue angelegt |#11 | Issue angelegt |#12 | Issue angelegt |#13 | Issue angelegt |#14 | Issue angelegt |#3 | Issue angelegt |#4 | Issue angelegt |#5 | Issue angelegt |#6 | Issue angelegt |#7 | Issue angelegt |#8 | Issue angelegt |#9 | Issue angelegt |#10 | Issue angelegt |#11 | Issue angelegt |#12 | Issue angelegt |#13 | Issue angelegt |#14 | Issue angelegt |
+# Gefundene Fehler (Aufgabe 021)
 
-Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nicht** nebenbei behoben (siehe `docs/tests.md`, Abschnitt „Bekannte Fehler“). Nach Durchsicht durch Daniel wird je Fehler ein GitHub-Issue mit Label `bug` angelegt (F-1 bis F-12: #3 bis #14, angelegt am 2026-11-21) (Vorlage `.github/ISSUE_TEMPLATE/bug.md`).
+Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nicht** nebenbei behoben (siehe `docs/tests.md`, Abschnitt „Bekannte Fehler“). Nach Durchsicht durch Daniel wird je Fehler ein GitHub-Issue mit Label `bug` angelegt (Vorlage `.github/ISSUE_TEMPLATE/bug.md`). Für F-1 bis F-12 sind das die Issues #3 bis #14 (angelegt am 2026-11-21).
 
 | Nr | Bereich | Kurzbeschreibung | Schweregrad | Test (Markierung) | Issue | Status |
 |---|---|---|---|---|---|---|
