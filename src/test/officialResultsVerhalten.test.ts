@@ -360,7 +360,7 @@ describe("Ergebniskandidaten eines klassischen Dienstleistungsformulars", () => 
     expect(calc.value).toBeUndefined();
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-1
+  // Bekannter Fehler: tasks/Fehler.md#F-1 (Issue #3)
   it.fails("liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt", () => {
     const [, , calc] = buildServiceResultCandidates(
       [
