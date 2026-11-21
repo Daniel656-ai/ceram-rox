@@ -55,6 +55,16 @@ describe("Feldtypen: Feldschlüssel aus Bezeichnung (slugify)", () => {
     expect(slugify("Ätzdauer Café")).toBe("atzdauer_cafe");
   });
 
+  // Bekannter Fehler: tasks/Fehler.md#F-12
+  it.fails("ersetzt ß durch ss, statt es wegzulassen", () => {
+    expect(slugify("Größe")).toBe("grosse");
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-12
+  it.fails("endet auch nach dem Kürzen auf 60 Zeichen nicht auf einem Unterstrich", () => {
+    expect(slugify(`${"a".repeat(59)} b`)).toMatch(/[a-z0-9]$/);
+  });
+
   it("entfernt führende und abschließende Unterstriche", () => {
     expect(slugify("  _Wert_  ")).toBe("wert");
     expect(slugify("--- ")).toBe("");
