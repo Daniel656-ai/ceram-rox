@@ -6,14 +6,14 @@
 
 Die Software funktioniert, aber die Codebasis ist unaufgeräumt. Bevor wir umbauen, soll jede Funktionalität durch Tests abgesichert sein, und jeder künftige Umbau wird vor dem Merge automatisch geprüft.
 
-## Ausgangslage (Stand 2026-11-21, `main` @ `e401284a`)
+## Ausgangslage (Stand 2026-11-21, `main` @ `5e52dc3c`)
 
-- 156 Testdateien mit 1438 Tests (Vitest, jsdom). Fast nur reine Logik, das Backend ist gemockt.
-- Für die Datenbank gibt es keine automatischen Tests: Funktionen, Trigger und RLS sind ungetestet. 206 Migrationen, ca. 560 Policies (inkl. überschriebener Fassungen). Nur zwei manuelle SQL-Skripte unter `scripts/`.
-- Keine Seiten- oder E2E-Tests.
-- Volllauf auf `main` ist **nicht grün** (6 Dateien / 37 Tests rot, u. a. wegen `localStorage` unter Node ≥ 25).
+- 188 Testdateien mit 1807 Tests (Vitest, jsdom). Überwiegend reine Logik, das Backend ist gemockt. Dazu einige Komponenten-/Seitentests.
+- Für die Datenbank gibt es keine automatischen Tests: Funktionen, Trigger und RLS sind ungetestet. 206 Migrationen in `supabase/migrations` plus 48 in `drizzle/migrations`, ca. 560 Policies (inkl. überschriebener Fassungen). Nur zwei manuelle SQL-Skripte unter `scripts/`.
+- Keine E2E-Tests.
+- Volllauf auf `main` ist **nicht grün**: 4 Dateien / 35 Tests rot, alle wegen `localStorage` unter Node ≥ 25.
 - Typprüfung (`tsc -p tsconfig.app.json --noEmit`) läuft ohne Fehler.
-- Kein CI-Lauf für Tests. `release.yml` baut und veröffentlicht bei jedem Push auf `main`, ohne Tests.
+- Kein CI-Lauf für Tests. `dev-web.yml` baut nach dem Merge nur die Web-Vorschau.
 
 Details: `tasks/Tests.md` (Abschnitt „Bestand und Lücken“).
 
@@ -32,7 +32,7 @@ Details: `tasks/Tests.md` (Abschnitt „Bestand und Lücken“).
 - Neue oder geänderte Funktionalität braucht passende Tests (Standards in `docs/tests.md`).
 - Beim Schreiben der Tests werden nur Testdateien, Test-Helfer und Test-Konfiguration geändert. Kein Anwendungscode, keine Migration, keine Daten, keine Rechte.
 - Gefundene Fehler werden nicht nebenbei behoben. Sie werden in `tasks/Fehler.md` gesammelt, der Test wird als „bekannter Fehler“ markiert (`test.fails` bzw. `skip` mit Verweis), und je Fehler gibt es ein Issue mit Label `bug`.
-- Je Bereich ein Branch `improve/tests-<bereich>`. Jeder Bereich braucht mindestens zwei grüne Läufe hintereinander und das APPROVED des Reviewers.
+- Je Bereich ein Branch `improve/tests-<bereich>`. Jeder Bereich braucht mindestens zwei grüne Läufe hintereinander und das APPROVED des Reviewers. Merges werden gebündelt (mehrere Bereiche pro Merge).
 - Nur das Dev-Repo. Nie Ceram-Repo, Lovable oder Prod.
 
 ## Infrastruktur
@@ -43,7 +43,7 @@ Details: `tasks/Tests.md` (Abschnitt „Bestand und Lücken“).
 - [ ] `docs/tests.md` (Standards, Tests starten)
 - [ ] GitHub-Action: Tests und Typprüfung bei Push und PR auf `main`
 - [ ] Issue-Vorlage `.github/ISSUE_TEMPLATE/bug.md`
-- [ ] Lokale Testdatenbank für DB-Logik (Aufbau noch offen)
+- [ ] Lokale Testdatenbank PGlite (spielt `supabase/migrations` und `drizzle/migrations` ab)
 
 ## Checkliste je Bereich (Reihenfolge nach Risiko)
 
@@ -54,11 +54,11 @@ Details: `tasks/Tests.md` (Abschnitt „Bestand und Lücken“).
 - [ ] **Fertigungsfreigaben:** Anforderungsprüfung Fertigungsunterlagen, Statusfluss/Feldkoerzierung, Spezifikationswerte, PDF-Import-Pipeline, Freigabe-API
 - [ ] **Aufträge:** Excel-Import, Workflow/Status (Client), Auftrags-API, Anlegen (Smoke-Test)
 - [ ] **Lager/Rohstoffe:** Gefahrstoffklassen, Etikettenfelder/-symbole, Gebinde-API, Mischungen/Chargen-API
-- [ ] **Pilot Plant:** Prozess-Engine, Step-Runs, Prozessvorlagen, Guided Stepper
+- [ ] **Pilot Plant:** Prozess-Engine, Step-Runs, Prozessvorlagen, Guided Stepper (alter Prozess `pilot_plant_blocks` wird nicht getestet)
 - [ ] **Proben:** Etikettendruck, Proben-API, Ersatzprobe/Umhängen
 - [ ] **m³-Liste:** Konstanten-Erkennung, Template, PDF-Export vertiefen
 - [ ] **Sonstiges:** Feiertage, ISO-Woche, Übersetzungs-Schlüssel, Diagramm-Export
-- [ ] **Datenbank** (nach Aufbau der Testdatenbank): RLS je Rolle inkl. externer Kunden, Nummernkreise, Auftragssperre/Workflow-Trigger, Bestandsbuchung, Chargen-RPCs, Ergebnis-/Korrektur-RPCs
+- [ ] **Datenbank** (nach Aufbau der Testdatenbank): RLS je Rolle inkl. externer Kunden, Nummernkreise, Auftragssperre/Workflow-Trigger, Auftrag bearbeiten/löschen, Bestandsbuchung, Chargen-RPCs, Ergebnis-/Korrektur-RPCs
 
 ## Fertig, wenn
 

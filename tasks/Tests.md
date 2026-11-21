@@ -2,37 +2,35 @@
 
 ## Bestand und Lücken
 
-Stand: 2026-11-21, Branch `main` (Commit `e401284a`). Ermittelt durch Lesen von Code, Tests und Migrationen und durch einen Volllauf. Die Abdeckung ist eine Einschätzung anhand von Testtiteln und Importen, keine Coverage-Messung.
+Stand: 2026-11-21, Branch `main` (Commit `5e52dc3c`). Ermittelt durch Lesen von Code, Tests und Migrationen und durch einen Volllauf. Die Abdeckung ist eine Einschätzung anhand von Testtiteln und Importen, keine Coverage-Messung.
 
 ### Ausgangslage
 
 | Punkt | Befund |
 |---|---|
-| Test-Framework | Vitest 3 (jsdom, `globals`), Setup `src/test/setup.ts` (nur `jest-dom` und `matchMedia`-Stub), Befehl `npm test` |
-| Testdateien | 156 Dateien, 1438 Tests (rund 120 in `src/test/`, der Rest neben dem Code in `src/lib/**`) |
-| Art der Tests | fast nur reine Logik, Backend per `vi.mock("../client")` gemockt; nur 3 API-Tests (`src/lib/api/__tests__`) |
-| Seiten-/E2E-Tests | keine (Ausnahme: einzelne Komponententests wie `ordersPageSamples.test.tsx`, `UseAsTemplateDialog.test.tsx`) |
+| Test-Framework | Vitest 3 (jsdom, `globals`, `testTimeout`/`hookTimeout` 20 s), Setup `src/test/setup.ts` (`jest-dom`, `asyncUtilTimeout` 10 s, `matchMedia`-Stub), Befehl `npm test` |
+| Testdateien | 188 Dateien, 1807 Tests (überwiegend in `src/test/`, der Rest neben dem Code in `src/lib/**`) |
+| Art der Tests | überwiegend reine Logik; Backend per `vi.mock` gemockt; nur 3 API-Tests (`src/lib/api/__tests__`). Dazu einige Komponenten-/Seitentests (u. a. `orderEditPage.test.tsx` für `CreateOrderPage` im Bearbeiten-Modus, Ergebnisansichten) |
+| E2E-Tests | keine |
 | DB-Tests (Funktionen/Trigger/RLS) | keine im Testlauf. Nur manuelle Skripte mit einem Wegwerf-Postgres: `scripts/test-order-deletion-local.py`, `scripts/test-equipment-local.py` |
-| DB-Umfang | 206 Migrationen in `supabase/migrations`, zusätzlich `drizzle/migrations` (Equipment u. a., zweiter Strang). Roh gezählt (inkl. überschriebener Fassungen): ca. 236 Funktionen, 186 Trigger, 562 Policies, ca. 616 `has_role(`- und 370 `has_permission(`-Aufrufe |
-| Typprüfung | `npx tsc -p tsconfig.app.json --noEmit`: 0 Fehler (lokal ca. 6 min) |
-| Volllauf auf `main` | **nicht grün**: 6 Dateien / 37 Tests rot, siehe „Rote Tests auf main“ |
-| CI | nur `.github/workflows/release.yml`: baut und veröffentlicht bei **jedem Push auf `main`** (Versionssprung, Tauri-Release), ohne Tests und ohne Typprüfung |
+| DB-Umfang | 206 Migrationen in `supabase/migrations` und 48 in `drizzle/migrations` (0000–0047, aktiv, u. a. Equipment, Auftrag bearbeiten/löschen, m³ löschen). Roh gezählt (inkl. überschriebener Fassungen): ca. 236 Funktionen, 186 Trigger, 562 Policies, ca. 616 `has_role(`- und 370 `has_permission(`-Aufrufe |
+| Typprüfung | `npx tsc -p tsconfig.app.json --noEmit`: 0 Fehler (ca. 2 min) |
+| Volllauf auf `main` | **nicht grün**: 4 Dateien / 35 Tests rot, alle wegen `localStorage` (siehe unten); 1772 grün; Dauer ca. 5 min |
+| CI | `release.yml` (Desktop-Release, im Dev-Repo per `if` abgeschaltet) und `dev-web.yml` (Web-Vorschau nach Merge, Node `lts/*`). Beide ohne Tests und ohne Typprüfung |
 | PGlite o. Ä. | nicht installiert |
 
 ### Rote Tests auf main
 
-Lokal läuft Node v26.13.1, `release.yml` nutzt Node 20. Die bisher erkannte Ursache ist `localStorage` unter Node ≥ 25: Node bringt ein eigenes globales `localStorage` mit, das jsdom überdeckt und ohne `--localstorage-file` `undefined` ist. Das ist ein Umgebungsproblem, kein Fachfehler (Annahme, noch nicht mit Node 20/22 gegengeprüft).
+Lokal läuft Node v26.13.1. Seit Node 25 gibt es ein eigenes globales `localStorage`, das ohne `--localstorage-file` `undefined` ist und das `localStorage` von jsdom überdeckt. Das ist ein Umgebungsproblem und kein Fachfehler. Es trifft aber auch die CI, sobald `lts/*` auf Node ≥ 25 springt. Behebung im Branch `improve/tests-basis` (nur Test-Setup).
 
-| Testdatei | Rot | Fehlerbild | Vermutete Ursache |
-|---|---|---|---|
-| `src/lib/modularReport/__tests__/modularReport.test.ts` | 17/17 | `Cannot read properties of undefined (reading 'clear')` | `localStorage` (Node ≥ 25) |
-| `src/test/taskServiceFilter.test.ts` | 11/11 | wie oben | `localStorage` |
-| `src/test/ordersPageSamples.test.tsx` | 5 | wie oben bzw. `STACK_TRACE_ERROR` | `localStorage` |
-| `src/test/orderFilterPersistence.test.tsx` | 2 | gespeicherte Filter werden nicht wiederhergestellt bzw. auf ein anderes Konto übertragen | vermutlich `localStorage` (Persistenz) |
-| `src/test/nestedMeasurementRenderer.test.tsx` | 1 | `STACK_TRACE_ERROR` (Punkte hinzufügen/umsortieren/duplizieren/entfernen) | unklar: Umgebung, Zeitlimit oder echter Fehler |
-| `src/test/refreshGuard.test.ts` | 1 | „meldet Ladefehler“: Promise wird erfüllt statt abgelehnt | unklar: möglicherweise echter Fehler |
+| Testdatei | Rot | Fehlerbild |
+|---|---|---|
+| `src/lib/modularReport/__tests__/modularReport.test.ts` | 17/17 | `Cannot read properties of undefined (reading 'clear')` |
+| `src/test/taskServiceFilter.test.ts` | 11/11 | wie oben |
+| `src/test/ordersPageSamples.test.tsx` | 5/5 | wie oben |
+| `src/test/orderFilterPersistence.test.tsx` | 2/2 | gespeicherte Filter werden nicht wiederhergestellt bzw. landen beim falschen Konto, weil der Speicher fehlt |
 
-Bewertung: 34 von 37 roten Tests gehen sehr wahrscheinlich auf `localStorage` zurück. Die beiden Einzelfälle muss ich auf Node 20/22 gegenprüfen, bevor ich sie als Umgebungsproblem oder als echten Fehler einordne.
+Die beiden Einzelfälle aus dem ersten Lauf (`refreshGuard`, `nestedMeasurementRenderer`) sind auf dem aktuellen `main` grün.
 
 ### Legende
 
@@ -46,9 +44,12 @@ Bewertung: 34 von 37 roten Tests gehen sehr wahrscheinlich auf `localStorage` zu
 
 | Funktionalität | Quelle | Vorhandene Tests | Abdeckung | Risiko | Art |
 |---|---|---|---|---|---|
-| Auftrag anlegen (Formular, Service-Tabs, Auswahl/Abwahl, Wertübergabe) | `pages/CreateOrderPage.tsx` (1547 Z.), `lib/orderCreation/*`, `lib/orderServiceSelection.ts`, `lib/orderFormValueHandover.ts` | `orderServiceSelection`, `serviceDeselection`, `activeServiceTab`, `serviceFormStatus`, `orderFormValueHandover`, `serviceTabsFiltering` | teilweise (Hilfslogik gut, Seite keine) | hoch | R/U |
+| Auftrag anlegen (Formular, Service-Tabs, Auswahl/Abwahl, Wertübergabe, Anlegeablauf) | `pages/CreateOrderPage.tsx`, `lib/orders/createOrderFlow.ts`, `lib/orderCreation/*`, `lib/orderServiceSelection.ts`, `lib/orderFormValueHandover.ts` | `createOrderFlow`, `orderServiceSelection`, `serviceDeselection`, `activeServiceTab`, `serviceFormStatus`, `orderFormValueHandover`, `serviceTabsFiltering`, `formRendererLook.test.tsx` | teilweise (Ablauf und Hilfslogik gut, Seite im Anlege-Modus keine) | hoch | R/U |
+| Auftrag bearbeiten (Ausgangsstand, Änderungen berechnen, Leistungen ergänzen/entfernen, Hinweis an Messdienstleister) | `lib/orders/orderEdit.ts`, `editServiceTicks.ts`, `CreateOrderPage.tsx` (Bearbeiten-Modus), `OrderChangeNotice.tsx`, drizzle 0039–0042, 0045 | `orderEdit` (28), `editServiceTicks` (20), `orderEditUi.test.tsx`, `orderEditPage.test.tsx` (21), `orderChangeNotice.test.tsx` | gut (Client), DB keine | hoch | R/U/DB |
 | Auftrags-API (CRUD, Instanzen, Analyse-Anforderungen) | `lib/api/orders.ts`, `orderInstances.ts`, `orderAnalysisRequests.ts` | – | keine | hoch | A |
-| Auftrag löschen/stornieren (RPC `cancel_or_delete_order`), einzelne Messung löschen | `lib/api/orders.ts`, `lib/measurementRun/deleteMeasurement.ts` | `api/__tests__/orderDeletion.test.ts` (gemockt), `deleteMeasurement.test.ts`; manuell `scripts/test-order-deletion*` | teilweise | hoch | A/DB |
+| Auftrag löschen/stornieren (inkl. Anhänge, Ersteller/Master), einzelne Messung löschen | `lib/api/orders.ts`, `lib/orders/orderDeleteSummary.ts`, `orderStoragePaths.ts`, `OrderDeleteInfo.tsx`, `lib/measurementRun/deleteMeasurement.ts`, drizzle 0036/0037/0043/0046/0047 | `api/__tests__/orderDeletion.test.ts` (gemockt), `orderDeleteSummary`, `orderStoragePaths`, `orderDeleteDialog.test.tsx`, `deleteMeasurement`; manuell `scripts/test-order-deletion*` | gut (Client), DB nur manuell | hoch | R/A/DB |
+| Auftrags-Excel-Export | `lib/orderExport/{buildOrderExport,toWorkbook}.ts`, `OrderExcelExportButton.tsx` | `orderExport` (16), `orderExcelButton.test.tsx` | gut | mittel | R/U |
+| Freigabe-Bezeichnung am Auftrag | `lib/orders/orderReleaseLabel.ts` | `orderReleaseLabel` | gut | niedrig | R |
 | Auftragsnummer (Trigger `generate_order_number`), Umnummerieren (RPCs `preview_/renumber_user_orders`) | Migrationen, `lib/orders/renumber.ts` | `renumberOrders.test.ts` (nur Client) | teilweise | hoch | R/DB |
 | Experiment-/Versuchsnummer | `lib/orders/experimentNumber.ts` | `experimentNumber`, `experimentNumberResolution`, `api/__tests__/orderExperimentNumber` | gut | niedrig | R/A |
 | Identität, Auftragsart, Masse-Typ, Projektpflicht, Abrechnungsstatus | `lib/orders/{orderIdentity,orderKind,orderMasseType,projectRequirement,billing}.ts` | `orderIdentity`, `orderKindClassification`, `orderMasseType`, `projectRequirement`, `billing` | gut | niedrig | R |
@@ -89,7 +90,9 @@ Bewertung: 34 von 37 roten Tests gehen sehr wahrscheinlich auf `localStorage` zu
 | Messdatei-Import (Profile, Klassifikation, Blöcke, RFA-Fälle) | `lib/measurementImport.ts` (504 Z.), `measurementClassification.ts`, `measurementBlocks.ts` | `measurementImport` (5), `measurementClassification`, `measurementBlocks`, `rfa*` (5 Dateien) | teilweise | mittel | R |
 | Geräte-Importe Netzsch, Gassorption/BJH, Geometrie | `lib/instrumentImport/*` | `netzschImport`, `gasSorptionImport`, `gasSorptionSmp`, `bjhWorkbookImport`, `bjhCharts`, `geometryImport` | gut | niedrig | R |
 | Kurven (Datensatz, Auswertepunkte, Zoom, Beschriftung, Export) | `lib/curves/*` | `analysisTypes`, `curveEvaluationPoints`, `curveZoom`, `curveViewerZoom.test.tsx`, `labelLayout` | teilweise (`dataset.ts`, `export.ts` keine) | mittel | R |
-| Ergebnisdatenbank (Seite, Aggregation, Diagramme, Anzeigegenauigkeit) | `pages/ResultsDatabasePage.tsx` (1124 Z.), `lib/results/sampleResultsAggregation.ts`, `lib/orderResultsAggregation.ts`, `orderResultsStructure.ts`, `resultDisplayPrecision.ts` | `sampleResultsAggregation`, `resultsChartData`, `resultDisplayPrecision` | teilweise (Auftrags-Aggregation keine) | hoch | R/U |
+| Ergebnisdatenbank: Daten und Aggregation (offizielle und vorläufige Werte, Matrix, Filter, Gruppen nach Auftrag, Durchläufe, interne Einträge, strukturierte Werte) | `hooks/useResultsDatabase.ts`, `lib/resultsMatrix.ts`, `lib/results/{resultsFilters,orderGroups,internalResults,sampleResultsAggregation,sampleNavigation}.ts`, `resultDisplayPrecision.ts`, `resultLabels.ts` | `resultsAllValues`, `resultsMatrix`, `resultsFilters.test.tsx`, `orderGroups`, `orderRuns.test.tsx`, `internalResults`, `structuredValues.test.tsx`, `sampleNavigation`, `sampleResultsAggregation`, `resultsChartData`, `resultDisplayPrecision`, `gasInOutLabels` | gut | mittel | R |
+| Ergebnisdatenbank: Ansichten (Übersichten, Matrix-Seitenleiste, Messarten-Chips, Aktivitäts- und BET-Darstellung) | `pages/ResultsDatabasePage.tsx`, `components/results/*` | `resultsMatrixPanel`, `orderOverviewCompact`, `serviceChips`, `activityMeasurement` (20), `activityVariants` (25), `betMeasurement` (13), `sampleLabel` | teilweise (Komponenten gut, Seite selbst keine) | mittel | U |
+| Auftrags-Ergebnisaggregation/-struktur (Auftragsdetail) | `lib/orderResultsAggregation.ts`, `orderResultsStructure.ts` | – | keine | hoch | R |
 | Statistik | `lib/resultsStatistics.ts` | `resultsStatistics` | gut | niedrig | R |
 | Ergebnis-/Auftraggeber-Bedingungen | `lib/resultConditions.ts`, `lib/results/requesterConditions.ts` | `calcResultConditions*`, `requesterConditions` | gut | niedrig | R |
 
@@ -119,7 +122,7 @@ Bewertung: 34 von 37 roten Tests gehen sehr wahrscheinlich auf `localStorage` zu
 | Funktionalität | Quelle | Vorhandene Tests | Abdeckung | Risiko | Art |
 |---|---|---|---|---|---|
 | Neuer Prozess (Templates `kind='pilot_plant'`, Step-Runs, Guided Stepper, Runtime-Panel) | `lib/api/processTemplates.ts`, `orderStepRuns.ts`, `workflowEngine.ts`, `PilotPlantGuidedStepper.tsx`, `ProcessRuntimePanel.tsx` | – | keine | hoch | A/U/DB |
-| Alter Prozess (Blöcke, als `@deprecated` markiert) | `lib/api/pilotPlantProcess.ts`, `PilotPlantProcessPanel.tsx` | – | keine | mittel | A/U |
+| Alter Prozess (Blöcke, `pilot_plant_blocks`) | `lib/api/pilotPlantProcess.ts`, `PilotPlantProcessPanel.tsx` | `pilotPlantTab.test.tsx` (nur Anzeige) | – | – | **nicht testen**: nicht mehr in Gebrauch |
 | Mundstück 293/1 (Planung, Paarung, Sync) | `lib/rules/mundstueck293.ts`, `lib/api/mundstueck293.ts` | `mundstueck293`, `mundstueck293AnalysePpp`, `mundstueck293Sync` | gut | niedrig | R/A |
 | Pilot-Plant-Liste → auszulösende Leistung | `lib/orderServiceSelection.ts` | `pilotPlantServiceRef` | gut | niedrig | R |
 | Auftragsart/Versuchsnummer Pilot Plant | `lib/orders/orderKind.ts`, `orderIdentity.ts` | siehe Aufträge | gut | niedrig | R |
@@ -133,6 +136,8 @@ Bewertung: 34 von 37 roten Tests gehen sehr wahrscheinlich auf `localStorage` zu
 | TEST-Markierung | `lib/m3List/testMarking.ts` | `testMarkingMulti`, `step1` | gut | mittel | R |
 | Konstanten-Erkennung, Template, PDF-Export | `lib/m3List/{constants,template,pdfExport}.ts` | `constantsRecognition` (2), `template` (6), `pdfExport` (4) | teilweise | mittel | R |
 | Probenahme-Reihenfolge, NOx-Übergabe | `lib/m3List/noxHandover.ts`, `lib/noxColumnOrder.ts` | `m3SamplingOrder`, `noxColumnOrder` | gut | niedrig | R |
+| Probenbezeichnungen | `lib/m3List/sampleNames.ts` | `sampleNames` | gut | niedrig | R |
+| m³-Liste löschen (Berechtigung, Hinweis) | `lib/productionDocuments/m3Delete.ts`, drizzle 0038/0044 | `m3Delete` | gut (Client), DB keine | mittel | R/DB |
 | m³-Formular (UI, Speichern) | `components/productionDocuments/M3ListForm.tsx` | – | keine | mittel | U |
 
 ### 7. Projekte
@@ -202,7 +207,8 @@ Bewertung: 34 von 37 roten Tests gehen sehr wahrscheinlich auf `localStorage` zu
 | Abwesenheiten, Arbeitszeiten, Ausfallzeiten (Überlappungsprüfung in DB), ICS-Feed | `lib/api/absences.ts`, `workSchedules.ts`, `downtimes.ts`, Edge Function `absence-ics-feed` | – | keine | mittel | A/DB |
 | Feiertage Österreich, ISO-Woche | `lib/austrian-holidays.ts`, `lib/isoWeek.ts` | – | keine | niedrig | R |
 | Übersetzungen (5 Sprachen, Schlüsselvollständigkeit) | `src/i18n/locales/*` | – | keine | niedrig | R |
-| Desktop-Updater, Release | `components/UpdateChecker.tsx`, `src-tauri/*`, `release.yml` | – | keine | hoch | – |
+| Desktop-Updater, Release | `components/UpdateChecker.tsx`, `src-tauri/*`, `release.yml` (im Dev-Repo abgeschaltet) | – | keine | mittel | – |
+| Dev-Web-Vorschau | `.github/workflows/dev-web.yml` | – | keine | niedrig | – |
 | MCP-Werkzeuge | `lib/mcp/*`, Edge Function `mcp` | – | keine | mittel | A |
 | Exporte Excel/Diagramme | `lib/chartExport.ts`, `controllingExport.ts` | indirekt `bjhCharts`, `resultsChartData` | teilweise | niedrig/mittel | R |
 | Admin: Datenbank/Integritätsprüfung, Sync, Statistik, Firmeneinstellungen, Symbole, Etikettenvorlagen, Arbeitspaket-Kategorien | `pages/Admin*.tsx`, Edge Function `db-integrity-check` | – | keine | mittel | U/A |
@@ -217,19 +223,21 @@ Je Bereich ein Branch `improve/tests-<bereich>`. Innerhalb eines Bereichs zuerst
 
 | # | Branch | Inhalt (Schwerpunkt) | Warum zuerst |
 |---|---|---|---|
-| 0 | `improve/tests-basis` | Volllauf auf `main` grün machen: `localStorage` für Node ≥ 25 im Test-Setup absichern, übrige rote Tests klären oder als bekannten Fehler markieren | ohne grünen Ausgangspunkt kann der test-runner nicht zwischen „durch Änderung kaputt“ und „vorher schon kaputt“ unterscheiden |
-| 1 | `improve/tests-ergebnisse` | `officialResults` (vorläufig/offiziell), Auftrags-Ergebnisaggregation, `curves/dataset`/`export`, Messungs-API | Kern der Laborergebnisse, 535 Zeilen mit nur 3 Tests |
+| 0 | `improve/tests-basis` | Volllauf auf `main` grün machen: `localStorage` für Node ≥ 25 im Test-Setup absichern (35 rote Tests) | ohne grünen Ausgangspunkt kann der test-runner nicht zwischen „durch Änderung kaputt“ und „vorher schon kaputt“ unterscheiden |
+| 1 | `improve/tests-ergebnisse` | `officialResults` (vorläufig/offiziell), Auftrags-Ergebnisaggregation/-struktur, `curves/dataset`/`export`, Messungs-API | Kern der Laborergebnisse, 535 Zeilen mit nur 3 Tests |
 | 2 | `improve/tests-formulare` | `formulaEngine` systematisch, `calculationBindings`, `reportPlaceholders`/`reportBindings`, `globalValidation`, `formFieldTypes`, `repeaterAggregation` | alle Berechnungen und Berichte hängen daran |
 | 3 | `improve/tests-projekte` | `costBreakdown`, `projectServiceAggregation` (inkl. doppeltem `measurementHours`), `controllingExport` | Geld und Stunden ohne einen einzigen Test |
 | 4 | `improve/tests-rechte` | `passwordPolicy`, `roles`, Permission-Keys Client ↔ SQL (Abgleich wie `audit-permissions.ts`), `externalCustomer`, Auth-Context-Verhalten | Sicherheitsgrenze im Client |
 | 5 | `improve/tests-freigaben` | `productionDocuments/requirements`, `productionRelease/fields`, `specValues`, `importPipeline` (reine Anteile), Freigabe-API | große ungetestete Pipeline |
-| 6 | `improve/tests-auftraege` | `excel-import`, Workflow-/Status-Client, Auftrags-API, Smoke-Tests für `CreateOrderPage` | größte Seite, viele Abläufe |
+| 6 | `improve/tests-auftraege` | `excel-import`, Workflow-/Status-Client, Auftrags-API, `CreateOrderPage` im Anlege-Modus (Bearbeiten ist schon abgedeckt) | größte Seite, viele Abläufe |
 | 7 | `improve/tests-lager` | `hazardClasses`, `labels/fields`/`symbols`, Gebinde-API, Mischungs-/Chargen-API | Bestandsbuchung |
 | 8 | `improve/tests-pilot-plant` | `workflowEngine`, `orderStepRuns`, `processTemplates`, Stepper | neuer Prozess ungetestet |
 | 9 | `improve/tests-proben` | `labels/print`, Proben-API, Ersatzprobe/Umhängen | überwiegend schon gut |
 | 10 | `improve/tests-m3` | `constants`, `template`, `pdfExport` vertiefen | schon gut abgedeckt |
 | 11 | `improve/tests-sonstiges` | Feiertage, ISO-Woche, i18n-Schlüsselvollständigkeit, `chartExport` | geringes Risiko |
-| DB | `improve/tests-db-*` | Testdatenbank (z. B. PGlite) mit allen Migrationen; danach RLS je Rolle, Nummernkreise, Auftragssperre/Workflow, Bestandsbuchung, Chargen, Ergebnis-RPCs | höchstes Risiko insgesamt, braucht aber erst die Entscheidung zum Aufbau |
+| DB | `improve/tests-db-*` | Testdatenbank PGlite: spielt `supabase/migrations` **und** `drizzle/migrations` ab, mit Ersatz für das Supabase-Schema `auth`. Danach RLS je Rolle (inkl. externer Kunden), Nummernkreise, Auftragssperre/Workflow, Auftrag bearbeiten/löschen (drizzle 0036–0047), Bestandsbuchung, Chargen, Ergebnis-RPCs | höchstes Risiko insgesamt; Aufbau mit dir abstimmen, bevor es losgeht |
+
+Merges werden gebündelt: Schritt 1 und 2 zusammen, in Schritt 3 mehrere Bereiche pro Merge.
 
 ## Testübersicht (fortlaufend gepflegt)
 
