@@ -88,12 +88,12 @@ describe("Berichts-Platzhalter: Werte formatieren", () => {
     expect(formatPlaceholderValue("12 %")).toBe("12 %");
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-10
+  // Bekannter Fehler: tasks/Fehler.md#F-10 (Issue #12)
   it.fails("zeigt ein ungültiges Datum nicht als „Invalid Date“, sondern als Text oder leer", () => {
     expect(["2025-13-45", "—"]).toContain(formatPlaceholderValue("2025-13-45"));
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-10
+  // Bekannter Fehler: tasks/Fehler.md#F-10 (Issue #12)
   // Zeitzonenunabhängig formuliert: heute erscheint in UTC und Europe/Vienna eine Uhrzeit,
   // westlich von UTC zusätzlich der Vortag (3.11.2025).
   it.fails("zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)", () => {
@@ -272,12 +272,12 @@ describe("Berichts-Feldkatalog: Werte formatieren", () => {
     expect(formatReportValue(s)).toBe("4.11.2025, 10:30:00");
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-10
+  // Bekannter Fehler: tasks/Fehler.md#F-10 (Issue #12)
   it.fails("zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Feldkatalog, Format „auto“)", () => {
     expect(formatReportValue("2025-11-04")).toMatch(/^0?4\.11\.2025$/);
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-9
+  // Bekannter Fehler: tasks/Fehler.md#F-9 (Issue #11)
   it.fails("zeigt den Wert eines Feldes mit 4 Nachkommastellen im Format „auto“ ungekürzt", () => {
     const feld = formField({ field_key: "dichte", decimal_places: 4, unit: "g/cm³" });
     expect(formatReportValue(2.6125, { unit: feld.unit })).toBe("2,6125 g/cm³");

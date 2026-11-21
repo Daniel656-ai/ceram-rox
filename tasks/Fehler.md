@@ -1,21 +1,21 @@
 # Gefundene Fehler (Aufgabe 021)
 
-Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nicht** nebenbei behoben (siehe `docs/tests.md`, Abschnitt „Bekannte Fehler“). Nach Durchsicht durch Daniel wird je Fehler ein GitHub-Issue mit Label `bug` angelegt (Vorlage `.github/ISSUE_TEMPLATE/bug.md`).
+Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nicht** nebenbei behoben (siehe `docs/tests.md`, Abschnitt „Bekannte Fehler“). Nach Durchsicht durch Daniel wird je Fehler ein GitHub-Issue mit Label `bug` angelegt (Vorlage `.github/ISSUE_TEMPLATE/bug.md`). Für F-1 bis F-12 sind das die Issues #3 bis #14 (angelegt am 2026-11-21).
 
 | Nr | Bereich | Kurzbeschreibung | Schweregrad | Test (Markierung) | Issue | Status |
 |---|---|---|---|---|---|---|
-| F-1 | Messungen/Ergebnisse | Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis (klassisches Formular) | hoch | `src/test/officialResultsVerhalten.test.ts` › „liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt“ (`it.fails`) | – | offen |
-| F-2 | Messungen/Ergebnisse | Leere Textwerte uneinheitlich: Aggregation liefert `""`, Ergebnisstruktur `null` | niedrig | kein Test (Verhalten bewusst nicht festgeschrieben) | – | offen |
-| F-3 | Formulare / Formel-Engine | `ROUND(feld, n)` liefert bei leerem Feld den Wert `n` statt leer | hoch | `src/test/formulaEngineVerhalten.test.ts` › „ROUND eines leeren Feldes bleibt leer …“ (`it.fails`) | – | offen |
-| F-4 | Formulare / Formel-Engine | Feldwert nur aus Leerzeichen zählt als 0 statt als leer | niedrig | `src/test/formulaEngineVerhalten.test.ts` › „behandelt einen Feldwert nur aus Leerzeichen wie einen leeren Wert statt als 0“ (`it.fails`) | – | offen |
-| F-5 | Formulare / Formel-Engine | `ROUND(a, n)` mit leerem `n` rundet still auf eine ganze Zahl | mittel | `src/test/formulaEngineVerhalten.test.ts` › „ROUND mit leerer Stellenzahl meldet einen Fehler …“ (`it.fails`) | – | offen |
-| F-6 | Formulare / Formel-Engine | `ROUND` rundet nicht wie Excel (negative Hälften, Gleitkomma) | mittel | `src/test/formulaEngineVerhalten.test.ts` › „ROUND rundet negative Hälften wie Excel …“, „ROUND rundet wie Excel ohne Gleitkomma-Abweichung …“ (2 × `it.fails`) | – | offen |
-| F-7 | Formulare / Formel-Engine | Feldwert im englischen Format `"1,234.5"` wird still als 1 gelesen | mittel | `src/test/formulaEngineVerhalten.test.ts` › „meldet einen Feldwert im englischen Format …“ (`it.fails`) | – | offen |
-| F-8 | Formulare / Formel-Engine | `1.2.3` in der Formel ergibt keinen Wert und keine Fehlermeldung | niedrig | `src/test/formulaEngineVerhalten.test.ts` › „meldet eine Zahl mit zwei Dezimalpunkten …“ (`it.fails`) | – | offen |
-| F-9 | Formulare / Bericht | Format „auto“ kürzt Zahlen auf 3 Nachkommastellen statt die Nachkommastellen des Feldes zu verwenden | niedrig | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt den Wert eines Feldes mit 4 Nachkommastellen im Format „auto“ ungekürzt“ (`it.fails`) | – | offen |
-| F-10 | Formulare / Bericht | Ungültiges Datum erscheint als „Invalid Date“; reines Datum wird mit Uhrzeit und je nach Zeitzone mit Vortag angezeigt | mittel | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“ …“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „… (Feldkatalog, Format „auto“)“ (3 × `it.fails`) | – | offen |
-| F-11 | Formulare / Validierung | Pflichtregel akzeptiert Wert nur aus Leerzeichen; Bereichsprüfung übergeht `"1.234,5"` | mittel | `src/test/globalValidation.test.ts` › „meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe“, „prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze“ (2 × `it.fails`) | – | offen |
-| F-12 | Formulare / Formulardesigner | `slugify` verliert ß und kann auf `_` enden | niedrig | `src/test/formFieldTypes.test.ts` › „ersetzt ß durch ss, statt es wegzulassen“, „endet auch nach dem Kürzen auf 60 Zeichen nicht auf einem Unterstrich“ (2 × `it.fails`) | – | offen |
+| F-1 | Messungen/Ergebnisse | Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis (klassisches Formular) | hoch | `src/test/officialResultsVerhalten.test.ts` › „liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt“ (`it.fails`) | #3 | Issue angelegt |
+| F-2 | Messungen/Ergebnisse | Leere Textwerte uneinheitlich: Aggregation liefert `""`, Ergebnisstruktur `null` | niedrig | kein Test (Verhalten bewusst nicht festgeschrieben) | #4 | Issue angelegt |
+| F-3 | Formulare / Formel-Engine | `ROUND(feld, n)` liefert bei leerem Feld den Wert `n` statt leer | hoch | `src/test/formulaEngineVerhalten.test.ts` › „ROUND eines leeren Feldes bleibt leer …“ (`it.fails`) | #5 | Issue angelegt |
+| F-4 | Formulare / Formel-Engine | Feldwert nur aus Leerzeichen zählt als 0 statt als leer | niedrig | `src/test/formulaEngineVerhalten.test.ts` › „behandelt einen Feldwert nur aus Leerzeichen wie einen leeren Wert statt als 0“ (`it.fails`) | #6 | Issue angelegt |
+| F-5 | Formulare / Formel-Engine | `ROUND(a, n)` mit leerem `n` rundet still auf eine ganze Zahl | mittel | `src/test/formulaEngineVerhalten.test.ts` › „ROUND mit leerer Stellenzahl meldet einen Fehler …“ (`it.fails`) | #7 | Issue angelegt |
+| F-6 | Formulare / Formel-Engine | `ROUND` rundet nicht wie Excel (negative Hälften, Gleitkomma) | mittel | `src/test/formulaEngineVerhalten.test.ts` › „ROUND rundet negative Hälften wie Excel …“, „ROUND rundet wie Excel ohne Gleitkomma-Abweichung …“ (2 × `it.fails`) | #8 | Issue angelegt |
+| F-7 | Formulare / Formel-Engine | Feldwert im englischen Format `"1,234.5"` wird still als 1 gelesen | mittel | `src/test/formulaEngineVerhalten.test.ts` › „meldet einen Feldwert im englischen Format …“ (`it.fails`) | #9 | Issue angelegt |
+| F-8 | Formulare / Formel-Engine | `1.2.3` in der Formel ergibt keinen Wert und keine Fehlermeldung | niedrig | `src/test/formulaEngineVerhalten.test.ts` › „meldet eine Zahl mit zwei Dezimalpunkten …“ (`it.fails`) | #10 | Issue angelegt |
+| F-9 | Formulare / Bericht | Format „auto“ kürzt Zahlen auf 3 Nachkommastellen statt die Nachkommastellen des Feldes zu verwenden | niedrig | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt den Wert eines Feldes mit 4 Nachkommastellen im Format „auto“ ungekürzt“ (`it.fails`) | #11 | Issue angelegt |
+| F-10 | Formulare / Bericht | Ungültiges Datum erscheint als „Invalid Date“; reines Datum wird mit Uhrzeit und je nach Zeitzone mit Vortag angezeigt | mittel | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“ …“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „… (Feldkatalog, Format „auto“)“ (3 × `it.fails`) | #12 | Issue angelegt |
+| F-11 | Formulare / Validierung | Pflichtregel akzeptiert Wert nur aus Leerzeichen; Bereichsprüfung übergeht `"1.234,5"` | mittel | `src/test/globalValidation.test.ts` › „meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe“, „prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze“ (2 × `it.fails`) | #13 | Issue angelegt |
+| F-12 | Formulare / Formulardesigner | `slugify` verliert ß und kann auf `_` enden | niedrig | `src/test/formFieldTypes.test.ts` › „ersetzt ß durch ss, statt es wegzulassen“, „endet auch nach dem Kürzen auf 60 Zeichen nicht auf einem Unterstrich“ (2 × `it.fails`) | #14 | Issue angelegt |
 
 ## F-1: Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis
 
@@ -29,8 +29,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `{ value: 99, official: true, error: null }`
 - **Schweregrad:** hoch (veralteter Wert erscheint als offizielles Ergebnis)
 - **Test:** `src/test/officialResultsVerhalten.test.ts` › „liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt“ (`it.fails`; Gegenprobe: mit probeweiser Korrektur wird der Test rot)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #3
+- **Status:** Issue angelegt
 
 ## F-2: Leere Textwerte uneinheitlich (`""` vs. `null`)
 
@@ -45,8 +45,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `""` bzw. `null`
 - **Schweregrad:** niedrig
 - **Test:** keiner (Verhalten bewusst nicht festgeschrieben)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #4
+- **Status:** Issue angelegt
 
 ## F-3: `ROUND(feld, n)` liefert bei leerem Feld den Wert `n` statt leer
 
@@ -59,8 +59,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `{ value: 2, error: null }`
 - **Schweregrad:** hoch (falscher Zahlenwert statt leerem Ergebnis, betrifft jede Rundungsformel auf ein noch leeres Feld)
 - **Test:** `src/test/formulaEngineVerhalten.test.ts` › „ROUND eines leeren Feldes bleibt leer, statt die Nachkommastellen als Wert zu liefern“ (`it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #5
+- **Status:** Issue angelegt
 
 ## F-4: Feldwert nur aus Leerzeichen zählt als 0 statt als leer
 
@@ -73,8 +73,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `{ value: 1, error: null }`
 - **Schweregrad:** niedrig
 - **Test:** `src/test/formulaEngineVerhalten.test.ts` › „behandelt einen Feldwert nur aus Leerzeichen wie einen leeren Wert statt als 0“ (`it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #6
+- **Status:** Issue angelegt
 
 ## F-5: `ROUND(a, n)` mit leerem `n` rundet still auf eine ganze Zahl
 
@@ -87,8 +87,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `{ value: 3, error: null }`
 - **Schweregrad:** mittel
 - **Test:** `src/test/formulaEngineVerhalten.test.ts` › „ROUND mit leerer Stellenzahl meldet einen Fehler statt still auf eine ganze Zahl zu runden“ (`it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #7
+- **Status:** Issue angelegt
 
 ## F-6: `ROUND` rundet nicht wie Excel (kaufmännisch)
 
@@ -102,8 +102,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** −2 bzw. 1
 - **Schweregrad:** mittel
 - **Test:** `src/test/formulaEngineVerhalten.test.ts` › „ROUND rundet negative Hälften wie Excel von der Null weg: ROUND(-2.5) = -3“ und „ROUND rundet wie Excel ohne Gleitkomma-Abweichung: ROUND(1.005; 2) = 1,01“ (2 × `it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #8
+- **Status:** Issue angelegt
 
 ## F-7: Feldwert im englischen Format wird still als 1 gelesen
 
@@ -116,8 +116,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `{ value: 1, error: null }`
 - **Schweregrad:** mittel
 - **Test:** `src/test/formulaEngineVerhalten.test.ts` › „meldet einen Feldwert im englischen Format (1,234.5) als Fehler statt still mit 1 zu rechnen“ (`it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #9
+- **Status:** Issue angelegt
 
 ## F-8: `1.2.3` in der Formel ohne Fehlermeldung
 
@@ -130,8 +130,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `{ value: null, error: null }`
 - **Schweregrad:** niedrig
 - **Test:** `src/test/formulaEngineVerhalten.test.ts` › „meldet eine Zahl mit zwei Dezimalpunkten in der Formel (1.2.3) als Fehler“ (`it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #10
+- **Status:** Issue angelegt
 
 ## F-9: Bericht kürzt Zahlen im Format „auto“ auf 3 Nachkommastellen
 
@@ -145,8 +145,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `"2,613 g/cm³"`
 - **Schweregrad:** niedrig
 - **Test:** `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt den Wert eines Feldes mit 4 Nachkommastellen im Format „auto“ ungekürzt“ (`it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #11
+- **Status:** Issue angelegt
 
 ## F-10: Datumsanzeige im Bericht: „Invalid Date“ und reines Datum mit Uhrzeit/Vortag
 
@@ -162,8 +162,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** 1. „Invalid Date“; 2. „4.11.2025, 01:00:00“ (Vienna) bzw. „3.11.2025, 19:00:00“ (New York)
 - **Schweregrad:** mittel
 - **Test:** `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“, sondern als Text oder leer“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Feldkatalog, Format „auto“)“ (3 × `it.fails`; geprüft in Europe/Vienna, UTC und America/New_York)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #12
+- **Status:** Issue angelegt
 
 ## F-11: Globale Validierung: Leerzeichen als Pflichtangabe, deutsches Tausenderformat ungeprüft
 
@@ -179,8 +179,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** jeweils `null` (kein Verstoß)
 - **Schweregrad:** mittel
 - **Test:** `src/test/globalValidation.test.ts` › „meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe“, „prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze“ (2 × `it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #13
+- **Status:** Issue angelegt
 
 ## F-12: `slugify` verliert ß und kann auf `_` enden
 
@@ -197,8 +197,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** 1. `gro_e`; 2. 59 × `a` gefolgt von `_`
 - **Schweregrad:** niedrig
 - **Test:** `src/test/formFieldTypes.test.ts` › „ersetzt ß durch ss, statt es wegzulassen“, „endet auch nach dem Kürzen auf 60 Zeichen nicht auf einem Unterstrich“ (2 × `it.fails`)
-- **Issue:** –
-- **Status:** offen
+- **Issue:** #14
+- **Status:** Issue angelegt
 
 ## Flackernde Tests (beobachtet, kein Anwendungsfehler nachgewiesen)
 

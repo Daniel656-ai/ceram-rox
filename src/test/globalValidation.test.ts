@@ -39,7 +39,7 @@ describe("Globale Validierung: Pflichtangabe", () => {
     }
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-11
+  // Bekannter Fehler: tasks/Fehler.md#F-11 (Issue #13)
   it.fails("meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe", () => {
     expect(evaluateValidation("   ", pflicht)).toEqual(expect.objectContaining({ message: "Pflichtangabe." }));
   });
@@ -84,7 +84,7 @@ describe("Globale Validierung: Bereich, Minimum, Maximum", () => {
     expect(evaluateValidation(6, nurMax)?.message).toBe("Wert muss zwischen ? und 5 liegen.");
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-11
+  // Bekannter Fehler: tasks/Fehler.md#F-11 (Issue #13)
   it.fails("prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze", () => {
     const bisTausend = regel({ rule_type: "range", min_value: 0, max_value: 1000 });
     expect(evaluateValidation("1.234,5", bisTausend)).toEqual(
