@@ -14,6 +14,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 | F-8 | Formulare / Formel-Engine | `1.2.3` in der Formel ergibt keinen Wert und keine Fehlermeldung | niedrig | `src/test/formulaEngineVerhalten.test.ts` › „meldet eine Zahl mit zwei Dezimalpunkten …“ (`it.fails`) | – | offen |
 | F-9 | Formulare / Bericht | Format „auto“ kürzt Zahlen auf 3 Nachkommastellen statt die Nachkommastellen des Feldes zu verwenden | niedrig | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt den Wert eines Feldes mit 4 Nachkommastellen im Format „auto“ ungekürzt“ (`it.fails`) | – | offen |
 | F-10 | Formulare / Bericht | Ungültiges Datum erscheint als „Invalid Date“; reines Datum wird mit Uhrzeit und je nach Zeitzone mit Vortag angezeigt | mittel | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“ …“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „… (Feldkatalog, Format „auto“)“ (3 × `it.fails`) | – | offen |
+| F-11 | Formulare / Validierung | Pflichtregel akzeptiert Wert nur aus Leerzeichen; Bereichsprüfung übergeht `"1.234,5"` | mittel | `src/test/globalValidation.test.ts` › „meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe“, „prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze“ (2 × `it.fails`) | – | offen |
+| F-12 | Formulare / Formulardesigner | `slugify` verliert ß und kann auf `_` enden | niedrig | `src/test/formFieldTypes.test.ts` › „ersetzt ß durch ss, statt es wegzulassen“, „endet auch nach dem Kürzen auf 60 Zeichen nicht auf einem Unterstrich“ (2 × `it.fails`) | – | offen |
 
 ## F-1: Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis
 
@@ -160,6 +162,41 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** 1. „Invalid Date“; 2. „4.11.2025, 01:00:00“ (Vienna) bzw. „3.11.2025, 19:00:00“ (New York)
 - **Schweregrad:** mittel
 - **Test:** `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“, sondern als Text oder leer“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Feldkatalog, Format „auto“)“ (3 × `it.fails`; geprüft in Europe/Vienna, UTC und America/New_York)
+- **Issue:** –
+- **Status:** offen
+
+## F-11: Globale Validierung: Leerzeichen als Pflichtangabe, deutsches Tausenderformat ungeprüft
+
+- **Bereich:** Formulare / Validierung
+- **Datei:** `src/lib/globalValidation.ts:27` (`isEmpty`), `src/lib/globalValidation.ts:57` (Zahlumwandlung)
+- **Beschreibung:**
+  - `isEmpty` prüft nur auf `""`; ein Wert nur aus Leerzeichen erfüllt daher die Pflichtregel.
+  - Die Zahlumwandlung ersetzt nur das erste Komma: `"1.234,5"` wird zu `"1.234.5"` und damit NaN. Nicht numerische Werte werden toleriert, die Grenze wird also gar nicht geprüft.
+- **Schritte zum Nachstellen:**
+  1. `evaluateValidation("   ", { rule_type: "required", … })`
+  2. `evaluateValidation("1.234,5", { rule_type: "range", min_value: 0, max_value: 1000, … })`
+- **Erwartet:** 1. Verstoß „Pflichtangabe.“; 2. Verstoß „Wert muss zwischen 0 und 1000 liegen.“
+- **Tatsächlich:** jeweils `null` (kein Verstoß)
+- **Schweregrad:** mittel
+- **Test:** `src/test/globalValidation.test.ts` › „meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe“, „prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze“ (2 × `it.fails`)
+- **Issue:** –
+- **Status:** offen
+
+## F-12: `slugify` verliert ß und kann auf `_` enden
+
+- **Bereich:** Formulare / Formulardesigner (Feldschlüssel aus Bezeichnung, `FieldEditDialog`)
+- **Datei:** `src/lib/formFieldTypes.ts:50-52` (`slugify`)
+- **Beschreibung:**
+  - ß wird von `normalize("NFD")` nicht zerlegt und fällt als Sonderzeichen weg: „Größe“ wird zu `gro_e`.
+  - Die Kürzung auf 60 Zeichen erfolgt nach dem Entfernen der Randunterstriche, ein Schlüssel kann daher auf `_` enden.
+  - **Hinweis von Daniel:** Eine Korrektur darf nur neue Schlüssel betreffen, bestehende Feldschlüssel nie ändern.
+- **Schritte zum Nachstellen:**
+  1. `slugify("Größe")`
+  2. `slugify("a".repeat(59) + " b")`
+- **Erwartet:** 1. `grosse` (ß → ss, wie Umlaute ohne Punkte); 2. Schlüssel endet auf Buchstabe/Ziffer
+- **Tatsächlich:** 1. `gro_e`; 2. 59 × `a` gefolgt von `_`
+- **Schweregrad:** niedrig
+- **Test:** `src/test/formFieldTypes.test.ts` › „ersetzt ß durch ss, statt es wegzulassen“, „endet auch nach dem Kürzen auf 60 Zeichen nicht auf einem Unterstrich“ (2 × `it.fails`)
 - **Issue:** –
 - **Status:** offen
 

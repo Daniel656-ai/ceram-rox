@@ -39,6 +39,11 @@ describe("Globale Validierung: Pflichtangabe", () => {
     }
   });
 
+  // Bekannter Fehler: tasks/Fehler.md#F-11
+  it.fails("meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe", () => {
+    expect(evaluateValidation("   ", pflicht)).toEqual(expect.objectContaining({ message: "Pflichtangabe." }));
+  });
+
   it("akzeptiert 0, false und gefüllte Listen als Angabe", () => {
     expect(evaluateValidation(0, pflicht)).toBeNull();
     expect(evaluateValidation(false, pflicht)).toBeNull();
@@ -77,6 +82,14 @@ describe("Globale Validierung: Bereich, Minimum, Maximum", () => {
     const nurMax = regel({ rule_type: "range", max_value: 5 });
     expect(evaluateValidation(-100, nurMax)).toBeNull();
     expect(evaluateValidation(6, nurMax)?.message).toBe("Wert muss zwischen ? und 5 liegen.");
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-11
+  it.fails("prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze", () => {
+    const bisTausend = regel({ rule_type: "range", min_value: 0, max_value: 1000 });
+    expect(evaluateValidation("1.234,5", bisTausend)).toEqual(
+      expect.objectContaining({ message: "Wert muss zwischen 0 und 1000 liegen." }),
+    );
   });
 
   it("toleriert leere und nicht numerische Werte (Pflicht steuert das Formular)", () => {
