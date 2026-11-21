@@ -21,7 +21,9 @@ Stand: 2026-11-21, Branch `main` (Commit `5e52dc3c`). Ermittelt durch Lesen von 
 
 ### Rote Tests auf main
 
-Lokal läuft Node v26.13.1. Seit Node 25 gibt es ein eigenes globales `localStorage`, das ohne `--localstorage-file` `undefined` ist und das `localStorage` von jsdom überdeckt. Das ist ein Umgebungsproblem und kein Fachfehler. Es trifft aber auch die CI, sobald `lts/*` auf Node ≥ 25 springt. Behebung im Branch `improve/tests-basis` (nur Test-Setup).
+Lokal läuft Node v26.13.1. Seit Node 25 gibt es ein eigenes globales `localStorage`, das ohne `--localstorage-file` `undefined` ist und das `localStorage` von jsdom überdeckt. Das ist ein Umgebungsproblem und kein Fachfehler. Es trifft aber auch die CI, sobald `lts/*` auf Node ≥ 25 springt.
+
+**Behoben in `improve/tests-basis`:** `src/test/setup.ts` setzt den `localStorage` von jsdom ein, wenn das globale `localStorage` fehlt. Danach Volllauf 1807/1807 grün (Node 26).
 
 | Testdatei | Rot | Fehlerbild |
 |---|---|---|
