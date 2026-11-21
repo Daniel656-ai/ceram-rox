@@ -86,6 +86,16 @@ describe("Formel-Engine: Zahlen", () => {
     expect(val("a + 0", { a: "-3,5 mm" })).toBe(-3.5);
   });
 
+  // Bekannter Fehler: tasks/Fehler.md#F-7
+  it.fails("meldet einen Feldwert im englischen Format (1,234.5) als Fehler statt still mit 1 zu rechnen", () => {
+    expect(evaluateFormula("a + 0", { a: "1,234.5" }).error).toEqual(expect.any(String));
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-8
+  it.fails("meldet eine Zahl mit zwei Dezimalpunkten in der Formel (1.2.3) als Fehler", () => {
+    expect(evaluateFormula("1.2.3 + 1", {}).error).toEqual(expect.any(String));
+  });
+
   it("wertet Wahrheitswerte aus Feldern als 1 und 0", () => {
     expect(val("a * 10 + b", { a: true, b: false })).toBe(10);
   });
@@ -160,6 +170,13 @@ describe("Formel-Engine: Funktionen", () => {
     expect(val("COUNT(L)", ctx)).toBe(3);
   });
 
+  it("SUM, MIN und MAX übergehen ein leeres Feld wie Excel und rechnen mit den übrigen Werten", () => {
+    const ctx = { a: "", b: null };
+    expect(val("SUM(a, 5)", ctx)).toBe(5);
+    expect(val("MIN(a, 5)", ctx)).toBe(5);
+    expect(val("MAX(a, b, -5)", ctx)).toBe(-5);
+  });
+
   it("COUNT zählt einzelne leere Werte nicht", () => {
     expect(val("COUNT(a, b, c)", { a: 1, b: "", c: 3 })).toBe(2);
   });
@@ -187,6 +204,21 @@ describe("Formel-Engine: Funktionen", () => {
   // Bekannter Fehler: tasks/Fehler.md#F-3
   it.fails("ROUND eines leeren Feldes bleibt leer, statt die Nachkommastellen als Wert zu liefern", () => {
     expect(evaluateFormula("ROUND(a, 2)", { a: "" })).toEqual({ value: null, error: null });
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-5
+  it.fails("ROUND mit leerer Stellenzahl meldet einen Fehler statt still auf eine ganze Zahl zu runden", () => {
+    expect(evaluateFormula("ROUND(a, n)", { a: 2.567, n: "" }).error).toEqual(expect.any(String));
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-6
+  it.fails("ROUND rundet negative Hälften wie Excel von der Null weg: ROUND(-2.5) = -3", () => {
+    expect(val("ROUND(-2.5)")).toBe(-3);
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-6
+  it.fails("ROUND rundet wie Excel ohne Gleitkomma-Abweichung: ROUND(1.005; 2) = 1,01", () => {
+    expect(val("ROUND(1.005; 2)")).toBe(1.01);
   });
 
   it("ROUND eines bekannten Feldes ohne Kontexteintrag bleibt leer", () => {
