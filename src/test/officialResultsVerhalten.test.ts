@@ -360,4 +360,19 @@ describe("Ergebniskandidaten eines klassischen Dienstleistungsformulars", () => 
     expect(calc.value).toBeUndefined();
   });
 
+  // Bekannter Fehler: tasks/Fehler.md#F-1
+  it.fails("liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt", () => {
+    const [, , calc] = buildServiceResultCandidates(
+      [
+        serviceField({ field_key: "a" }),
+        serviceField({ field_key: "b" }),
+        serviceField({ field_key: "produkt", field_type: "computed", is_result: true, validation: { formula: "a * b" } }),
+      ],
+      { a: 2, produkt: 99 },
+    );
+    // Erwartet wie bei verknüpften Formularen: kein Wert bzw. kein offizielles Ergebnis.
+    const giltAlsOffiziellesErgebnis = calc.official && calc.value != null;
+    expect(giltAlsOffiziellesErgebnis).toBe(false);
+  });
+
 });

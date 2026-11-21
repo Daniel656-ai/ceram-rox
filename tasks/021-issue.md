@@ -37,12 +37,12 @@ Details: `tasks/Tests.md` (Abschnitt „Bestand und Lücken“).
 
 ## Infrastruktur
 
-- [ ] Volllauf auf `main` grün (Basis für „durch Änderung kaputt“ vs. „bekannter Fehler“)
-- [ ] Subagent `.claude/agents/test-runner.md`
-- [ ] Regel in `CLAUDE.md`
-- [ ] `docs/tests.md` (Standards, Tests starten)
-- [ ] GitHub-Action: Tests und Typprüfung bei Push und PR auf `main`
-- [ ] Issue-Vorlage `.github/ISSUE_TEMPLATE/bug.md`
+- [x] Volllauf auf `main` grün (Basis für „durch Änderung kaputt“ vs. „bekannter Fehler“)
+- [x] Subagent `.claude/agents/test-runner.md`
+- [x] Regel in `CLAUDE.md`
+- [x] `docs/tests.md` (Standards, Tests starten)
+- [x] GitHub-Action: Tests und Typprüfung bei Push und PR auf `main`
+- [x] Issue-Vorlage `.github/ISSUE_TEMPLATE/bug.md`
 - [ ] Lokale Testdatenbank PGlite (spielt `supabase/migrations` und `drizzle/migrations` ab)
 
 ## Checkliste je Bereich (Reihenfolge nach Risiko)
