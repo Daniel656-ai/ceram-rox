@@ -12,6 +12,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 | F-6 | Formulare / Formel-Engine | `ROUND` rundet nicht wie Excel (negative Hälften, Gleitkomma) | mittel | `src/test/formulaEngineVerhalten.test.ts` › „ROUND rundet negative Hälften wie Excel …“, „ROUND rundet wie Excel ohne Gleitkomma-Abweichung …“ (2 × `it.fails`) | – | offen |
 | F-7 | Formulare / Formel-Engine | Feldwert im englischen Format `"1,234.5"` wird still als 1 gelesen | mittel | `src/test/formulaEngineVerhalten.test.ts` › „meldet einen Feldwert im englischen Format …“ (`it.fails`) | – | offen |
 | F-8 | Formulare / Formel-Engine | `1.2.3` in der Formel ergibt keinen Wert und keine Fehlermeldung | niedrig | `src/test/formulaEngineVerhalten.test.ts` › „meldet eine Zahl mit zwei Dezimalpunkten …“ (`it.fails`) | – | offen |
+| F-9 | Formulare / Bericht | Format „auto“ kürzt Zahlen auf 3 Nachkommastellen statt die Nachkommastellen des Feldes zu verwenden | niedrig | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt den Wert eines Feldes mit 4 Nachkommastellen im Format „auto“ ungekürzt“ (`it.fails`) | – | offen |
+| F-10 | Formulare / Bericht | Ungültiges Datum erscheint als „Invalid Date“; reines Datum wird mit Uhrzeit und je nach Zeitzone mit Vortag angezeigt | mittel | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“ …“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „… (Feldkatalog, Format „auto“)“ (3 × `it.fails`) | – | offen |
 
 ## F-1: Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis
 
@@ -126,6 +128,38 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Tatsächlich:** `{ value: null, error: null }`
 - **Schweregrad:** niedrig
 - **Test:** `src/test/formulaEngineVerhalten.test.ts` › „meldet eine Zahl mit zwei Dezimalpunkten in der Formel (1.2.3) als Fehler“ (`it.fails`)
+- **Issue:** –
+- **Status:** offen
+
+## F-9: Bericht kürzt Zahlen im Format „auto“ auf 3 Nachkommastellen
+
+- **Bereich:** Formulare / Bericht (Feldblock im Berichtsdesigner)
+- **Datei:** `src/lib/reportFieldCatalog.ts:122-125` (`formatReportValue`, `n.toLocaleString("de-DE")` ohne Stellenangabe)
+- **Beschreibung:** `toLocaleString` rundet standardmäßig auf höchstens 3 Nachkommastellen. Ein Messwert eines Feldes mit 4 Nachkommastellen erscheint im Bericht still gerundet. Gewünscht (Entscheidung Daniel): die Nachkommastellen des Feldes verwenden. Hinweis: Die Feldinformation fehlt heute auf dem Weg zum Bericht – `ReportFieldItem` und `ReportFieldFormatting` kennen keine Nachkommastellen, `src/hooks/useReportFieldCatalog.ts` gibt `decimal_places` (Formularfeld) bzw. `decimals` (globale Berechnung) nicht weiter.
+- **Schritte zum Nachstellen:**
+  1. Formularfeld `dichte` mit `decimal_places: 4`, Wert `2.6125`, Feldblock im Format „auto“
+  2. `formatReportValue(2.6125, { unit: "g/cm³" })`
+- **Erwartet:** `"2,6125 g/cm³"`
+- **Tatsächlich:** `"2,613 g/cm³"`
+- **Schweregrad:** niedrig
+- **Test:** `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt den Wert eines Feldes mit 4 Nachkommastellen im Format „auto“ ungekürzt“ (`it.fails`)
+- **Issue:** –
+- **Status:** offen
+
+## F-10: Datumsanzeige im Bericht: „Invalid Date“ und reines Datum mit Uhrzeit/Vortag
+
+- **Bereich:** Formulare / Bericht (Platzhalter und Feldblöcke)
+- **Datei:** `src/lib/reportPlaceholders.ts:178-179` (`formatPlaceholderValue`), `src/lib/reportFieldCatalog.ts:129-131` (`formatReportValue`, Format „auto“)
+- **Beschreibung:**
+  - `formatPlaceholderValue` prüft das Datum nicht auf Gültigkeit; `toLocaleString` wirft nicht, sondern liefert „Invalid Date“, der `catch`-Rückfall greift daher nie.
+  - Ein reines Datum `"2025-11-04"` wird als UTC-Mitternacht gelesen und mit Uhrzeit angezeigt (Europe/Vienna „4.11.2025, 01:00:00“, UTC „4.11.2025, 00:00:00“); westlich von UTC erscheint der Vortag („3.11.2025, 19:00:00“ in America/New_York).
+- **Schritte zum Nachstellen:**
+  1. `formatPlaceholderValue("2025-13-45")`
+  2. `formatPlaceholderValue("2025-11-04")` bzw. `formatReportValue("2025-11-04")`
+- **Erwartet:** 1. der Text selbst oder „—“; 2. „4.11.2025“ in jeder Zeitzone, ohne Uhrzeit
+- **Tatsächlich:** 1. „Invalid Date“; 2. „4.11.2025, 01:00:00“ (Vienna) bzw. „3.11.2025, 19:00:00“ (New York)
+- **Schweregrad:** mittel
+- **Test:** `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“, sondern als Text oder leer“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Feldkatalog, Format „auto“)“ (3 × `it.fails`; geprüft in Europe/Vienna, UTC und America/New_York)
 - **Issue:** –
 - **Status:** offen
 

@@ -20,6 +20,7 @@ import {
   resolveBindingPath,
 } from "@/lib/reportBindings";
 import { formatReportValue, resolveReportPath, sampleValueFor } from "@/lib/reportFieldCatalog";
+import { formField } from "./fixtures/resultCandidates";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -85,6 +86,18 @@ describe("Berichts-Platzhalter: Werte formatieren", () => {
     expect(formatPlaceholderValue("2025-11-04T10:30:00")).toBe("4.11.2025, 10:30:00");
     expect(formatPlaceholderValue("Probe 2025-11-04")).toBe("Probe 2025-11-04");
     expect(formatPlaceholderValue("12 %")).toBe("12 %");
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-10
+  it.fails("zeigt ein ungültiges Datum nicht als „Invalid Date“, sondern als Text oder leer", () => {
+    expect(["2025-13-45", "—"]).toContain(formatPlaceholderValue("2025-13-45"));
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-10
+  // Zeitzonenunabhängig formuliert: heute erscheint in UTC und Europe/Vienna eine Uhrzeit,
+  // westlich von UTC zusätzlich der Vortag (3.11.2025).
+  it.fails("zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)", () => {
+    expect(formatPlaceholderValue("2025-11-04")).toMatch(/^0?4\.11\.2025$/);
   });
 });
 
@@ -257,6 +270,17 @@ describe("Berichts-Feldkatalog: Werte formatieren", () => {
     expect(formatReportValue(s, { format: "datetime" })).toBe("4.11.2025, 10:30:00");
     expect(formatReportValue("kein Datum", { format: "date" })).toBe("kein Datum");
     expect(formatReportValue(s)).toBe("4.11.2025, 10:30:00");
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-10
+  it.fails("zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Feldkatalog, Format „auto“)", () => {
+    expect(formatReportValue("2025-11-04")).toMatch(/^0?4\.11\.2025$/);
+  });
+
+  // Bekannter Fehler: tasks/Fehler.md#F-9
+  it.fails("zeigt den Wert eines Feldes mit 4 Nachkommastellen im Format „auto“ ungekürzt", () => {
+    const feld = formField({ field_key: "dichte", decimal_places: 4, unit: "g/cm³" });
+    expect(formatReportValue(2.6125, { unit: feld.unit })).toBe("2,6125 g/cm³");
   });
 
   it("zeigt Wahrheitswerte, Listen, Tabellen und Objekte lesbar", () => {
