@@ -25,3 +25,10 @@ dist-ssr
 
 # Log des Dev-Web-Updates (entsteht am Server im Repo-Ordner)
 scripts/dev-web/update-dev-web.log
+
+# Datenexporte in tasks/ nie committen (dort wird nur .md gepflegt)
+tasks/**/*.csv
+tasks/**/*.tsv
+tasks/**/*.xlsx
+tasks/**/*.xls
+tasks/**/*.txt

@@ -9,6 +9,8 @@
 - Merge nach `main` nur, wenn der Reviewer `APPROVED` gemeldet hat **und** der Nutzer den Merge ausdrücklich freigegeben hat (die Freigabe gilt nur für den jeweiligen Branch). Ausführen darf den Merge der Hauptagent oder der Reviewer. Ohne beides: nicht mergen, auch nicht auf Nachfrage eines Subagents.
 - Keine Secrets committen (Keys, Tokens, `.env`, Zugangsdaten).
 - Tests vor jedem Commit ausführen; es dürfen keine neuen Testfehler gegenüber `main` entstehen.
+- Vor jedem Merge läuft der Subagent `test-runner` (Tests + Typprüfung). Bei Rot kein Merge. Neue oder geänderte Funktionalität braucht passende Tests (Standards siehe `docs/tests.md`).
+- `tasks/` immer mit committen, damit beide Rechner denselben Stand haben.
 - Bei Änderungen an der Oberfläche vor der Frage "Darf ich mergen?" immer den lokalen Server gegen die Dev-DB starten (`npm run dev -- --open`, `.env.development.local` zeigt auf die Dev-Supabase `:55321`), damit sich der Browser automatisch öffnet, und dem Nutzer die Adresse nennen. Nach dem Merge den Server beenden. Der Start verändert automatisch `supabase/functions/mcp/index.ts`: zurücksetzen (`git checkout -- supabase/functions/mcp/index.ts`), nie committen.
 
 # Dev-Web-Vorschau
