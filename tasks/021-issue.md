@@ -1,6 +1,6 @@
 # Sicherheitsnetz aus Tests vor dem Aufräumen
 
-> Repo: `danielgass95-sketch/ceram-rox-dev` · Labels: `tests`, `technische Schuld`
+> Angelegt als https://github.com/danielgass95-sketch/ceram-rox-dev/issues/1
 
 ## Ziel
 
