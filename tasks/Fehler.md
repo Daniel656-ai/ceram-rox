@@ -20,7 +20,7 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 ## F-1: Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis
 
 - **Bereich:** Messungen/Ergebnisse (klassisches Dienstleistungsformular)
-- **Datei:** `src/lib/officialResults.ts:509` (`buildServiceResultCandidates`, `if (result.value == null || result.error) continue;`)
+- **Datei:** `src/lib/officialResults.ts:512` (`buildServiceResultCandidates`, `if (result.value == null || result.error) continue;`)
 - **Beschreibung:** Ist eine Eingabe eines Rechenfelds leer, liefert die Formel keinen Wert. Der Zweig überspringt dann nur das Rechenfeld, ein früher gespeicherter Wert in `taskValues` bleibt in `resolved` stehen. Er wird weiter als offizielles Ergebnis ohne Fehler geliefert. Bei verknüpften Formularen (`buildLinkedFormResultCandidates`) ergibt derselbe Fall `null`.
 - **Schritte zum Nachstellen:**
   1. Felder `a`, `b` und Rechenfeld `produkt` mit Formel `a * b`, `is_result: true`
