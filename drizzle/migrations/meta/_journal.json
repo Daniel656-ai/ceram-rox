@@ -351,6 +351,13 @@
       "when": 1795468400000,
       "tag": "0049_order_edit_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1795554800000,
+      "tag": "0050_m3_delete_lovable_samples",
+      "breakpoints": true
     }
   ]
 }
