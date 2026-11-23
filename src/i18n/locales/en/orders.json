@@ -16,7 +16,6 @@
   "kind": {
     "pilot_plant": "Pilot Plant",
     "labor": "Lab",
-    "combined": "Combined order",
     "legacy": "Classic"
   },
   "workflow": {
@@ -110,6 +109,8 @@
   "due_date": "Due Date",
   "no_orders": "No orders found",
   "delete_title": "Delete order?",
+  "delete_confirm": "Really delete order {{number}}?",
+  "delete_has_results": "Order already has results",
   "delete_description": "This order and all associated tasks will be permanently deleted.",
   "deleted": "Order deleted",
   "delete_error": "Error deleting",
@@ -125,6 +126,7 @@
   "measurements_section": "Tasks",
   "add_measurement": "Add Task",
   "select_service": "Select service...",
+  "duplicate_hint": "The same service can be added several times – each item is independent.",
   "no_measurements_hint": "No tasks added yet. Select at least one service.",
   "workstation": "Workstation",
   "choose_workstation": "Choose...",

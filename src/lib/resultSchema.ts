@@ -14,7 +14,7 @@
 
 import { resultLabel, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { formatResultLabel } from "@/lib/resultLabels";
-import { elementKey } from "@/lib/elementKeys";
+import { elementKey, parseGasInOut } from "@/lib/elementKeys";
 import { reorderNoxItems, noxDisplayLabels } from "@/lib/noxColumnOrder";
 
 /**
@@ -29,6 +29,10 @@ import { reorderNoxItems, noxDisplayLabels } from "@/lib/noxColumnOrder";
 export function paramKey(label: string): string {
   const raw = String(label ?? "").trim();
   if (!raw) return "";
+  // Gas mit Richtung: eigener, eindeutiger Schlüssel (NO2 in / NO₂ in / no2_in -> "no2in"; NO in -> "noin").
+  const gas = parseGasInOut(raw);
+  // Eine Endziffer (no2_in_1) wird nicht angezeigt, trennt aber Spalten (no2_in_1 ≠ no2_in_2).
+  if (gas) return `${gas.gas.toLowerCase()}${gas.dir}${gas.index}`;
   const ek = elementKey(raw);
   if (ek) return ek;
   const norm = raw
@@ -184,10 +188,10 @@ export function resultCell(record: ResultRecord, key: string): ResultCellValue {
 /** Same exact result lookup for cell content and display-only metadata. */
 export function resultForColumn(record: ResultRecord, key: string) {
   const wanted = paramKey(key);
-  return (
-    record.outputResults.find((o) => resultLabel(o) === key) ??
-    record.outputResults.find((o) => paramKey(resultLabel(o)) === wanted)
-  );
+  // Offizielle Werte haben Vorrang vor vorläufigen mit gleicher Bezeichnung.
+  const pick = (match: (o: ResultRecord["outputResults"][number]) => boolean) =>
+    record.outputResults.find((o) => match(o) && o.is_official === true) ?? record.outputResults.find(match);
+  return pick((o) => resultLabel(o) === key) ?? pick((o) => paramKey(resultLabel(o)) === wanted);
 }
 
 /** Exportwert: leer, wenn kein Ergebnis vorliegt; 0, wenn 0 gemessen wurde. */

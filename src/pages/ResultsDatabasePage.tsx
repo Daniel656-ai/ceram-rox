@@ -1,12 +1,24 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import RichText from "@/components/forms/RichText";
 import { toUnicode } from "@/lib/richText";
-import { useResultsDatabase, getUniqueParameterNames, getParameterValue, resultLabel, expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
+import { useResultsDatabase, getUniqueParameterNames, expandByMeasurementInstance, type ResultRecord } from "@/hooks/useResultsDatabase";
 import { useSampleResultsDatabase } from "@/hooks/useSampleResultsDatabase";
 import SampleOverviewTable from "@/components/results/SampleOverviewTable";
 import SampleResultsView from "@/components/results/SampleResultsView";
 import ResultDetailInspector from "@/components/results/ResultDetailInspector";
-import { groupRecordsBySample, matchesSampleFilters, type SampleGroup, type SampleMeasurementRecord } from "@/lib/results/sampleResultsAggregation";
+import { groupRecordsBySample, matchesSampleFilters, restrictGroupToService, type SampleGroup, type SampleMeasurementRecord } from "@/lib/results/sampleResultsAggregation";
+import { groupRecordsByOrder } from "@/lib/results/orderGroups";
+import OrderOverviewTable, { OverviewModeToggle, type OverviewMode } from "@/components/results/OrderOverviewTable";
+import OrderComparisonView from "@/components/results/OrderComparisonView";
+import { InfoHint } from "@/components/results/InfoHint";
+import {
+  ALL_SERVICES, buildServiceOptions, columnsForService, matrixNavItems, matrixRowSelection, nonEmptyColumns,
+  readMatrixPref, recordsForService,
+  resolveMatrixService, writeMatrixPref,
+} from "@/lib/resultsMatrix";
+import SidePanelLayout from "@/components/results/SidePanelLayout";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { buildNavItems, compareKeyAfterStep, stepSelection } from "@/lib/results/sampleNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +28,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Database, BarChart3, Filter, X, Search, Image, FileCode2, Lightbulb, Save, Trash2 } from "lucide-react";
+import { Download, Database, BarChart3, Image, FileCode2, Lightbulb, Save, Trash2, Info, ChevronDown } from "lucide-react";
+import { Tooltip as UiTooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ResultsFilterBar from "@/components/results/ResultsFilterBar";
+import { EMPTY_RESULTS_FILTERS, type ResultsFilters } from "@/lib/results/resultsFilters";
 import { format, parseISO, isAfter, isBefore } from "date-fns";
 import { de } from "date-fns/locale";
 import * as XLSX from "xlsx";
@@ -48,7 +67,11 @@ export default function ResultsDatabasePage() {
 
   // Probenbezogene 3-Ebenen-Sicht (alle Werte: offiziell + vorläufig).
   const { data: sampleRecords = [] } = useSampleResultsDatabase();
-  const [selectedSample, setSelectedSample] = useState<SampleGroup | null>(null);
+  // Auswahl: Probe (optional im Kontext eines Auftrags). Reihenfolge der Ansichten: Probendetail > Auftragsvergleich > Übersicht.
+  const [selectedSample, setSelectedSample] = useState<{ orderKey: string | null; sampleKey: string; service?: string | null } | null>(null);
+  const [tab, setTab] = useState("samples");
+  const [overviewMode, setOverviewMode] = useState<OverviewMode>("order");
+  const [compareOrderKey, setCompareOrderKey] = useState<string | null>(null);
   const [inspectedMeasurement, setInspectedMeasurement] = useState<SampleMeasurementRecord | null>(null);
 
   /**
@@ -63,26 +86,21 @@ export default function ResultsDatabasePage() {
   );
   const allParamColumns = useMemo(() => flattenSchemas(serviceSchemas), [serviceSchemas]);
   const [hiddenParams, setHiddenParams] = useState<string[]>([]);
-  const visibleParamColumns = useMemo(
-    () => allParamColumns.filter((c) => !hiddenParams.includes(c.key)),
-    [allParamColumns, hiddenParams]
-  );
   const toggleParam = (key: string) =>
     setHiddenParams((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
-  // Filters
-  const [serviceFilter, setServiceFilter] = useState<string>("all");
-  const [projectFilter, setProjectFilter] = useState<string>("all");
-  const [creatorFilter, setCreatorFilter] = useState<string>("all");
-  const [technicianFilter, setTechnicianFilter] = useState<string>("all");
-  const [sampleFilter, setSampleFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [searchText, setSearchText] = useState("");
-  // Ergebnismerkmale (z. B. Vorgabetemperatur) – Merkmale und Werte entstehen
-  // ausschließlich aus den tatsächlich gespeicherten Ergebnissen.
-  const [conditionKey, setConditionKey] = useState<string>("all");
-  const [conditionValue, setConditionValue] = useState<string>("all");
+  // Filters – Ergebnismerkmale (z. B. Vorgabetemperatur): Merkmale und Werte
+  // entstehen ausschließlich aus den tatsächlich gespeicherten Ergebnissen.
+  const [filters, setFilters] = useState<ResultsFilters>(EMPTY_RESULTS_FILTERS);
+  const updateFilters = (patch: Partial<ResultsFilters>) => setFilters((prev) => ({ ...prev, ...patch }));
+  const {
+    serviceFilter, projectFilter, creatorFilter, technicianFilter,
+    dateFrom, dateTo, conditionKey, conditionValue,
+  } = filters;
+  // Textfilter getrimmt anwenden – deckungsgleich mit der Chip-Anzeige
+  // (reine Leerzeichen gelten nicht als aktiver Filter).
+  const searchText = filters.searchText.trim();
+  const sampleFilter = filters.sampleFilter.trim();
 
   // Chart state
   const [chartType, setChartType] = useState<"scatter" | "bar" | "line">("scatter");
@@ -122,10 +140,6 @@ export default function ResultsDatabasePage() {
   const uniqueCreators = useMemo(() => [...new Set(records.map(r => r.createdByName).filter(Boolean))].sort(), [records]);
   const uniqueTechnicians = useMemo(() => [...new Set(records.map(r => r.assignedToName).filter(Boolean))].sort(), [records]);
   const conditionDimensions = useMemo(() => collectConditionDimensions(records), [records]);
-  const conditionValues = useMemo(
-    () => conditionDimensions.find((d) => d.key === conditionKey)?.values ?? [],
-    [conditionDimensions, conditionKey]
-  );
 
   // Apply filters
   const filteredRecords = useMemo(() => {
@@ -148,6 +162,31 @@ export default function ResultsDatabasePage() {
     });
   }, [records, serviceFilter, projectFilter, creatorFilter, technicianFilter, conditionKey, conditionValue, sampleFilter, dateFrom, dateTo, searchText]);
 
+  // ---- Ergebnismatrix: Messart, leere Spalten (nur Anzeige, Export bleibt unverändert) ----
+  const serviceOptions = useMemo(() => buildServiceOptions(serviceSchemas, records, filteredRecords), [serviceSchemas, records, filteredRecords]);
+  const [storedService, setStoredService] = useState<string | null>(() => readMatrixPref("service"));
+  const matrixService = resolveMatrixService(storedService, serviceOptions);
+  const changeMatrixService = (key: string) => {
+    setStoredService(key);
+    writeMatrixPref("service", key);
+  };
+  const [hideEmptyColumns, setHideEmptyColumns] = useState<boolean>(() => readMatrixPref("hideEmpty") !== "0");
+  const changeHideEmpty = (v: boolean) => {
+    setHideEmptyColumns(v);
+    writeMatrixPref("hideEmpty", v ? "1" : "0");
+  };
+  const matrixRecords = useMemo(() => recordsForService(filteredRecords, matrixService), [filteredRecords, matrixService]);
+  const matrixColumns = useMemo(() => columnsForService(serviceSchemas, matrixService), [serviceSchemas, matrixService]);
+  const candidateMatrixColumns = useMemo(
+    () => matrixColumns.filter((c) => !hiddenParams.includes(c.key)),
+    [matrixColumns, hiddenParams]
+  );
+  const shownMatrixColumns = useMemo(
+    () => (hideEmptyColumns ? nonEmptyColumns(candidateMatrixColumns, matrixRecords) : candidateMatrixColumns),
+    [hideEmptyColumns, candidateMatrixColumns, matrixRecords]
+  );
+  const hiddenEmptyCount = candidateMatrixColumns.length - shownMatrixColumns.length;
+
   // Probengruppen aus denselben globalen Filtern (wirken in allen drei Ansichten gleich).
   const filteredSampleRecords = useMemo(
     () =>
@@ -160,41 +199,104 @@ export default function ResultsDatabasePage() {
     [sampleRecords, serviceFilter, projectFilter, creatorFilter, technicianFilter, sampleFilter, dateFrom, dateTo, searchText]
   );
   const sampleGroups = useMemo(() => groupRecordsBySample(filteredSampleRecords), [filteredSampleRecords]);
-  // Ausgewählte Probe immer aus den aktuell gefilterten Gruppen auflösen,
-  // damit Filteränderungen sofort wirken.
-  const activeSample = useMemo(
-    () => (selectedSample ? sampleGroups.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null : null),
-    [selectedSample, sampleGroups]
+  const orderGroups = useMemo(() => groupRecordsByOrder(filteredSampleRecords), [filteredSampleRecords]);
+  // Auswahl immer aus den aktuell gefilterten Gruppen auflösen, damit Filteränderungen sofort wirken.
+  const activeSample = useMemo(() => {
+    if (!selectedSample) return null;
+    if (selectedSample.orderKey) {
+      const order = orderGroups.find((o) => o.orderKey === selectedSample.orderKey);
+      const group = order?.samples.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null;
+      // Aus einer Messart der Auftragsansicht geöffnet: nur die Messungen dieser Messart.
+      return group ? restrictGroupToService(group, selectedSample.service) : null;
+    }
+    return sampleGroups.find((g) => g.sampleKey === selectedSample.sampleKey) ?? null;
+  }, [selectedSample, sampleGroups, orderGroups]);
+  const compareOrder = useMemo(
+    () => (compareOrderKey ? orderGroups.find((o) => o.orderKey === compareOrderKey) ?? null : null),
+    [compareOrderKey, orderGroups]
   );
 
-  const clearFilters = () => {
-    setServiceFilter("all");
-    setProjectFilter("all");
-    setCreatorFilter("all");
-    setTechnicianFilter("all");
-    setSampleFilter("");
-    setDateFrom("");
-    setDateTo("");
-    setSearchText("");
-    setConditionKey("all");
-    setConditionValue("all");
+  // ---- Seitenleiste: Probe bzw. Ergebnisübersicht rechts neben der Liste ----
+  const isWide = useMediaQuery("(min-width: 1280px)");
+  const panelOpen = !!activeSample || !!compareOrder;
+  const closePanel = () => {
+    setSelectedSample(null);
+    setCompareOrderKey(null);
   };
+  const changeOverviewMode = (m: OverviewMode) => {
+    // Auswahlschlüssel unterscheiden sich je Ansicht – daher zurücksetzen.
+    closePanel();
+    setOverviewMode(m);
+  };
+  const panel = activeSample ? (
+    <SampleResultsView
+      key={`${selectedSample?.orderKey ?? ""}:${activeSample.sampleKey}:${selectedSample?.service ?? ""}`}
+      group={activeSample}
+      onBack={compareOrder ? () => setSelectedSample(null) : undefined}
+      backLabel={overviewMode === "order" ? "Zurück zum Auftrag" : "Zurück zur Ergebnisübersicht"}
+      onClose={closePanel}
+      onOpenInspector={setInspectedMeasurement}
+    />
+  ) : compareOrder ? (
+    <OrderComparisonView
+      order={compareOrder}
+      onClose={closePanel}
+      onSelectSample={(s, service) => setSelectedSample({ orderKey: compareOrder.orderKey, sampleKey: s.sampleKey, service: service ?? null })}
+    />
+  ) : null;
 
-  const hasActiveFilters = serviceFilter !== "all" || projectFilter !== "all" || creatorFilter !== "all" || technicianFilter !== "all" || conditionKey !== "all" || sampleFilter || dateFrom || dateTo || searchText;
+  // Wechsel per Pfeiltasten (nur geteilte Ansicht, nicht beim Tippen oder bei offenen Dialogen).
+  const listNavItems = useMemo(
+    // Nach Auftrag: Pfeiltasten wechseln zwischen den Proben des geöffneten Auftrags.
+    () => buildNavItems(overviewMode, orderGroups, new Set(compareOrderKey ? [compareOrderKey] : []), sampleGroups),
+    [overviewMode, orderGroups, compareOrderKey, sampleGroups]
+  );
+  const matrixNav = useMemo(() => matrixNavItems(matrixRecords), [matrixRecords]);
+  const navItems = tab === "table" ? matrixNav : listNavItems;
+  useEffect(() => {
+    if (!isWide || !selectedSample) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key !== "ArrowDown" && e.key !== "ArrowUp") || e.defaultPrevented) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.("input, textarea, select, [contenteditable='true'], [role='combobox'], [role='listbox'], [role='menu']")) return;
+      if (document.querySelector("[role='dialog']")) return;
+      const next = stepSelection(navItems, selectedSample, e.key === "ArrowDown" ? 1 : -1);
+      if (!next) return;
+      e.preventDefault();
+      // Pfeiltasten bleiben in derselben Messart, falls die Probe aus einer Messart geöffnet wurde.
+      setSelectedSample({ ...next, service: selectedSample.service ?? null });
+      setCompareOrderKey((c) => compareKeyAfterStep(c, next));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isWide, selectedSample, navItems]);
+  // Gewählte Zeile sichtbar halten.
+  useEffect(() => {
+    if (!selectedSample && !compareOrderKey) return;
+    const id = requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>("[data-selected-row='true']")?.scrollIntoView?.({ block: "nearest" })
+    );
+    return () => cancelAnimationFrame(id);
+  }, [selectedSample, compareOrderKey]);
 
   // ==========================================================
   // Export – die Spaltenstruktur ist immer identisch (stabile
   // Ergebnisdefinition), unabhängig von Filtern, Datensatzanzahl oder
   // gerade sichtbaren Spalten. Fehlende Werte bleiben leer, 0 bleibt 0.
   // ==========================================================
+  const rowStatus = (r: ResultRecord) => {
+    const n = r.outputResults.filter((o) => o.is_official !== true).length;
+    return n === 0 ? "offiziell" : n === r.outputResults.length ? "vorläufig" : "teilweise vorläufig";
+  };
   const buildExportRows = (source: ResultRecord[]) =>
     // Mehrere eigenständige Messungen einer Tätigkeit werden als eigene
     // Zeilen exportiert – die Spaltenstruktur bleibt identisch.
     expandByMeasurementInstance(source).map((r) => {
       const row: Record<string, any> = {
         "Auftrag": r.orderNumber,
+        "Probenbezeichnung": r.sampleName || r.sampleNumber,
         "Probe": r.sampleNumber || r.sampleName,
-        "Probenbezeichnung": r.sampleName,
         "Dienstleistung": r.serviceName,
         "Analyse": r.measurementNumber,
         "Messung": r.instanceLabel ?? "",
@@ -204,6 +306,7 @@ export default function ResultsDatabasePage() {
         "Projekt": r.projectName || r.projectNumber,
         "Auftraggeber": r.createdByName,
         "Messdienstleister": r.assignedToName,
+        "Status": rowStatus(r),
       };
       allParamColumns.forEach((col) => {
         row[toUnicode(columnHeader(col))] = exportCell(r, col.key);
@@ -236,7 +339,7 @@ export default function ResultsDatabasePage() {
   const exportToExcel = () => downloadWorkbook(filteredRecords, "xlsx", "gefiltert");
   const exportAllToExcel = () => downloadWorkbook(records, "xlsx", "alle");
 
-  // Chart data – identische Datenbasis wie die Ergebnisdatenbank (nur offizielle Ergebnisse)
+  // Chart data – identische Datenbasis wie die Ergebnisdatenbank (offizielle und vorläufige Ergebnisse)
   const chartSources = useMemo(() => buildChartSources(filteredRecords), [filteredRecords]);
   const numericParams = useMemo(() => collectNumericParameters(filteredRecords), [filteredRecords]);
   const numericKeys = useMemo(() => new Set(numericParams.map(p => p.key)), [numericParams]);
@@ -534,191 +637,213 @@ export default function ResultsDatabasePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Database className="h-6 w-6 text-primary" />
             Ergebnisdatenbank
+            <UiTooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-full text-muted-foreground hover:text-foreground"
+                  aria-label="Hinweise zur Ergebnisdatenbank"
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-sm text-xs font-normal leading-relaxed">
+                Die Probenübersicht zeigt alle gespeicherten Messwerte einer Probe – offizielle
+                Ergebnisse sind deutlich hervorgehoben, vorläufige Arbeitswerte gekennzeichnet.
+                Auch Ergebnismatrix sowie Statistik &amp; Diagramme zeigen offizielle und vorläufige
+                Werte; vorläufige sind in der Matrix grau dargestellt.
+              </TooltipContent>
+            </UiTooltip>
           </h1>
-          <p className="text-muted-foreground">
-            {filteredRecords.length} von {records.length} Messungen mit offiziellem Ergebnis
+          <p className="text-sm text-muted-foreground">
+            {filteredRecords.length} von {records.length} Messungen mit Ergebnis ({records.filter((r) => r.outputResults.some((o) => o.is_official === true)).length} mit offiziellem Wert)
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Die Probenübersicht zeigt alle gespeicherten Messwerte einer Probe – offizielle
-            Ergebnisse sind deutlich hervorgehoben, vorläufige Arbeitswerte gekennzeichnet.
-            Ergebnismatrix und Statistik &amp; Diagramme basieren unverändert ausschließlich
-            auf ausdrücklich freigegebenen offiziellen Ergebnissen.
-          </p>
-
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportToCSV} disabled={filteredRecords.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToExcel} disabled={filteredRecords.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportAllToExcel} disabled={records.length === 0}>
-            <Download className="h-4 w-4 mr-1" /> Alle Ergebnisse
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" disabled={records.length === 0}>
+              <Download className="h-4 w-4 mr-1" /> Export <ChevronDown className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+              Gefilterte Ergebnisse ({filteredRecords.length})
+            </DropdownMenuLabel>
+            <DropdownMenuItem onSelect={exportToExcel} disabled={filteredRecords.length === 0}>
+              Als Excel (.xlsx)
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={exportToCSV} disabled={filteredRecords.length === 0}>
+              Als CSV
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={exportAllToExcel} disabled={records.length === 0}>
+              Alle Ergebnisse als Excel ({records.length})
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Filter className="h-4 w-4" /> Filter
-            </CardTitle>
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-1" /> Zurücksetzen
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Volltextsuche..." value={searchText} onChange={e => setSearchText(e.target.value)} className="pl-9" />
-            </div>
-            <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger><SelectValue placeholder="Messart" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Messarten</SelectItem>
-                {uniqueServices.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger><SelectValue placeholder="Projekt" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Projekte</SelectItem>
-                {uniqueProjects.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-              <SelectTrigger><SelectValue placeholder="Auftraggeber" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Auftraggeber</SelectItem>
-                {uniqueCreators.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={technicianFilter} onValueChange={setTechnicianFilter}>
-              <SelectTrigger><SelectValue placeholder="Messdienstleister" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Messdienstleister</SelectItem>
-                {uniqueTechnicians.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input placeholder="Proben-ID..." value={sampleFilter} onChange={e => setSampleFilter(e.target.value)} />
-            {conditionDimensions.length > 0 && (
-              <>
-                <Select
-                  value={conditionKey}
-                  onValueChange={(v) => { setConditionKey(v); setConditionValue("all"); }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Ergebnismerkmal" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle Ergebnismerkmale</SelectItem>
-                    {conditionDimensions.map(d => <SelectItem key={d.key} value={d.key}>{d.key}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={conditionValue}
-                  onValueChange={setConditionValue}
-                  disabled={conditionKey === "all"}
-                >
-                  <SelectTrigger><SelectValue placeholder="Wert" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle Werte</SelectItem>
-                    {conditionValues.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </>
-            )}
-            <Input type="date" placeholder="Von" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
-            <Input type="date" placeholder="Bis" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-          </div>
-        </CardContent>
-      </Card>
+      <ResultsFilterBar
+        filters={filters}
+        onChange={updateFilters}
+        services={uniqueServices}
+        projects={uniqueProjects}
+        creators={uniqueCreators}
+        technicians={uniqueTechnicians}
+        conditionDimensions={conditionDimensions}
+      />
 
-      <Tabs defaultValue="samples">
-        <TabsList>
-          <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
-          <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
-          <TabsTrigger value="statistics">Statistik & Diagramme</TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={setTab}>
+        {/* Solange die Seitenleiste offen ist, sind die Reiter ausgeblendet (wieder sichtbar nach dem Zurück-Pfeil). */}
+        {!panelOpen && (
+          <TabsList>
+            <TabsTrigger value="samples">Probenübersicht</TabsTrigger>
+            <TabsTrigger value="table">Ergebnismatrix</TabsTrigger>
+            <TabsTrigger value="statistics">Statistik & Diagramme</TabsTrigger>
+          </TabsList>
+        )}
 
         {/* Sample View (3 Ebenen) */}
         <TabsContent value="samples">
-          {activeSample ? (
-            <SampleResultsView
-              group={activeSample}
-              onBack={() => setSelectedSample(null)}
-              onOpenInspector={setInspectedMeasurement}
-            />
-          ) : (
-            <SampleOverviewTable groups={sampleGroups} onSelect={setSelectedSample} />
-          )}
-          <ResultDetailInspector
-            measurement={inspectedMeasurement}
-            onClose={() => setInspectedMeasurement(null)}
-          />
+          {/* Liste bleibt sichtbar; Probe/Ergebnisübersicht erscheint rechts daneben (breit)
+              bzw. überlagernd (schmal). */}
+          <SidePanelLayout open={panelOpen} isWide={isWide} panel={panel} onClose={closePanel}>
+              {overviewMode === "order" ? (
+                <OrderOverviewTable
+                  orders={orderGroups}
+                  onOpenOverview={(o) => {
+                    setSelectedSample(null);
+                    setCompareOrderKey(o.orderKey);
+                  }}
+                  compareOrderKey={compareOrderKey}
+                  compact={panelOpen && isWide}
+                  headerExtra={panelOpen ? undefined : <OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
+                />
+              ) : (
+                <SampleOverviewTable
+                  groups={sampleGroups}
+                  onSelect={(g) => {
+                    setCompareOrderKey(null);
+                    setSelectedSample({ orderKey: null, sampleKey: g.sampleKey });
+                  }}
+                  selectedSampleKey={selectedSample?.orderKey == null ? selectedSample?.sampleKey ?? null : null}
+                  compact={panelOpen && isWide}
+                  headerExtra={panelOpen ? undefined : <OverviewModeToggle mode={overviewMode} onChange={changeOverviewMode} />}
+                />
+              )}
+          </SidePanelLayout>
         </TabsContent>
 
         {/* Table View */}
         <TabsContent value="table">
+          <SidePanelLayout open={panelOpen} isWide={isWide} panel={panel} onClose={closePanel}>
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-base">
+                <CardTitle className="flex items-center gap-2 text-base">
                   Ergebnismatrix
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte
-                  </span>
+                  <InfoHint label="Hinweise zur Ergebnismatrix">
+                    Eine Analyse = eine Zeile, ein Ergebnisparameter = eine Spalte. Es werden offizielle und
+                    vorläufige Ergebnisse gezeigt (vorläufige grau); ein fehlender Wert bleibt leer, ein gemessener Wert 0 wird als 0
+                    angezeigt. Die Auswahl der Messart und das Ausblenden leerer Spalten betreffen nur diese
+                    Ansicht – der Export enthält unverändert immer alle Spalten.
+                  </InfoHint>
                 </CardTitle>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      Angezeigte Parameter ({visibleParamColumns.length}/{allParamColumns.length})
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-72 max-h-80 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium">Parameter anzeigen</span>
-                      <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setHiddenParams([])}>
-                        Alle
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-xs">
+                    <Checkbox
+                      checked={hideEmptyColumns}
+                      onCheckedChange={(v) => changeHideEmpty(v === true)}
+                    />
+                    Leere Spalten ausblenden
+                    {hideEmptyColumns && hiddenEmptyCount > 0 ? (
+                      <span className="text-muted-foreground">({hiddenEmptyCount} ausgeblendet)</span>
+                    ) : null}
+                  </label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Angezeigte Parameter ({shownMatrixColumns.length}/{matrixColumns.length})
                       </Button>
-                    </div>
-                    <div className="space-y-1.5">
-                      {allParamColumns.map((col) => (
-                        <label key={col.key} className="flex items-center gap-2 text-xs">
-                          <Checkbox
-                            checked={!hiddenParams.includes(col.key)}
-                            onCheckedChange={() => toggleParam(col.key)}
-                          />
-                          <RichText value={columnHeader(col)} />
-                        </label>
-                      ))}
-                      {allParamColumns.length === 0 && (
-                        <p className="text-xs text-muted-foreground">Keine Ergebnisparameter vorhanden.</p>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-72 max-h-80 overflow-y-auto">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium">Parameter anzeigen</span>
+                        <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setHiddenParams([])}>
+                          Alle
+                        </Button>
+                      </div>
+                      <div className="space-y-1.5">
+                        {matrixColumns.map((col) => (
+                          <label key={col.key} className="flex items-center gap-2 text-xs">
+                            <Checkbox
+                              checked={!hiddenParams.includes(col.key)}
+                              onCheckedChange={() => toggleParam(col.key)}
+                            />
+                            <RichText value={columnHeader(col)} />
+                          </label>
+                        ))}
+                        {matrixColumns.length === 0 && (
+                          <p className="text-xs text-muted-foreground">Keine Ergebnisparameter vorhanden.</p>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Die Spaltenstruktur bleibt unabhängig von Filtern stabil. Fehlende Ergebnisse bleiben
-                leer – ein tatsächlich gemessener Wert 0 wird als 0 angezeigt.
-              </p>
+              {/* Messart-Auswahl: meiste Ergebnisse zuerst, „Alle“ zuletzt. */}
+              <div className="flex flex-wrap items-center gap-1 pt-2" role="group" aria-label="Messart">
+                {serviceOptions.map((o) => (
+                  <Button
+                    key={o.key}
+                    type="button"
+                    size="sm"
+                    variant={matrixService === o.key ? "default" : "outline"}
+                    className="h-7 text-xs"
+                    aria-pressed={matrixService === o.key}
+                    disabled={o.resultCount === 0 && matrixService !== o.key}
+                    title={o.resultCount === 0 ? "Keine Ergebnisse unter den aktuellen Filtern" : undefined}
+                    onClick={() => changeMatrixService(o.key)}
+                  >
+                    {o.name}
+                    <span className="ml-1 opacity-70">({o.resultCount})</span>
+                  </Button>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={matrixService === ALL_SERVICES ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  aria-pressed={matrixService === ALL_SERVICES}
+                  onClick={() => changeMatrixService(ALL_SERVICES)}
+                >
+                  Alle
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <ResultsMatrixTable records={filteredRecords} columns={visibleParamColumns} />
+              <ResultsMatrixTable
+                records={matrixRecords}
+                columns={shownMatrixColumns}
+                showServiceColumn={matrixService === ALL_SERVICES}
+                onRowClick={(r) => {
+                  setCompareOrderKey(null);
+                  setSelectedSample(matrixRowSelection(r));
+                }}
+                isRowSelected={(r) => {
+                  const s = matrixRowSelection(r);
+                  return !!selectedSample && selectedSample.orderKey === s.orderKey && selectedSample.sampleKey === s.sampleKey;
+                }}
+              />
             </CardContent>
           </Card>
+          </SidePanelLayout>
         </TabsContent>
 
 
@@ -1119,6 +1244,10 @@ export default function ResultsDatabasePage() {
           </div>
         </TabsContent>
       </Tabs>
+      <ResultDetailInspector
+        measurement={inspectedMeasurement}
+        onClose={() => setInspectedMeasurement(null)}
+      />
     </div>
   );
 }

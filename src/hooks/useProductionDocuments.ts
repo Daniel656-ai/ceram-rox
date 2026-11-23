@@ -101,29 +101,23 @@ export function useEnsureCustomerDocumentation() {
 
 export type { ProductionDocumentRequest };
 
+/** Löscht eine m³-Liste (ggf. samt Beprobungsauftrag und nur dafür erzeugten Proben). */
+export function useDeleteM3List() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; orderId: string | null }) => api.productionDocuments.deleteM3(args.id, args.orderId),
+    onSuccess: async () => {
+      // Auftrag, Proben und Zuordnungen ändern sich: alle aktiven Ansichten neu laden.
+      await qc.invalidateQueries();
+    },
+  });
+}
+
 /** Entfernt eine Fertigungsunterlagen-Anforderung (z. B. eine doppelt angelegte m³-Liste). */
 export function useRemoveProductionDocument() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (id: string) => api.productionDocuments.remove(id),
-    onSuccess: invalidate,
-  });
-}
-
-export function useM3DeletePreview(id: string | null) {
-  return useQuery({
-    queryKey: ["m3-delete-preview", id],
-    queryFn: () => api.productionDocuments.m3DeletePreview(id!),
-    enabled: !!id,
-    staleTime: 0,
-    gcTime: 0,
-  });
-}
-
-export function useDeleteM3List() {
-  const invalidate = useInvalidate();
-  return useMutation({
-    mutationFn: (a: { id: string; hash: string }) => api.productionDocuments.deleteM3List(a.id, a.hash),
     onSuccess: invalidate,
   });
 }

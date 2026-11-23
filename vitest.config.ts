@@ -9,6 +9,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // Einzelne Seiten-Tests sind im Volllauf (parallel) langsam; Standard 5 s war zu knapp.
+    testTimeout: 20000,
+    hookTimeout: 20000,
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },

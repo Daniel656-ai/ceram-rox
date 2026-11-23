@@ -22,6 +22,7 @@ import { ORDER_PRIORITY_LABELS } from "@/lib/types";
 import { ListChecks, History, ArrowRight } from "lucide-react";
 import { SPEC_EVENT, describeSpecChange, specLabel } from "@/components/order/SpecAmendment";
 import { REASSIGN_EVENT, describeReassignment } from "@/lib/measurementRun/reassignmentEvent";
+import { auditFieldLabel, auditValueLabel, describeOrderUpdate } from "@/lib/orders/orderEdit";
 
 const EVENT_LABELS: Record<string, string> = {
   order_created: "Auftrag erstellt",
@@ -109,16 +110,22 @@ export default function OrderWorkflowTab({
         ? `${EVENT_LABELS[SPEC_EVENT]} – ${specLabel(e.metadata?.parameter_label || e.metadata?.parameter_name)}: ${describeSpecChange(e.metadata).join("; ")}${e.metadata?.reason ? ` · „${e.metadata.reason}"` : ""}`
         : e.event_type === REASSIGN_EVENT
           ? describeReassignment(e.metadata, userName)
-          : EVENT_LABELS[e.event_type] || e.event_type,
+          : e.event_type === "order_updated" && Array.isArray(e.metadata?.fields)
+            ? `${EVENT_LABELS.order_updated}: ${describeOrderUpdate(e.metadata)}`
+            : EVENT_LABELS[e.event_type] || e.event_type,
     }));
     const fromAudit = (auditLogs as any[]).map((l) => ({
       id: `a-${l.id}`,
       at: l.changed_at,
       user: l.changed_by,
-      text: `${l.field_name === "priority" ? "Priorität" : l.field_name}: ${
-        ORDER_PRIORITY_LABELS[l.old_value as keyof typeof ORDER_PRIORITY_LABELS] || l.old_value || "–"
+      text: `${auditFieldLabel(l.field_name)}: ${
+        l.field_name === "priority"
+          ? ORDER_PRIORITY_LABELS[l.old_value as keyof typeof ORDER_PRIORITY_LABELS] || l.old_value || "–"
+          : auditValueLabel(l.field_name, l.old_value) ?? "–"
       } → ${
-        ORDER_PRIORITY_LABELS[l.new_value as keyof typeof ORDER_PRIORITY_LABELS] || l.new_value || "–"
+        l.field_name === "priority"
+          ? ORDER_PRIORITY_LABELS[l.new_value as keyof typeof ORDER_PRIORITY_LABELS] || l.new_value || "–"
+          : auditValueLabel(l.field_name, l.new_value) ?? "–"
       }`,
     }));
     return [...fromEvents, ...fromAudit].sort(

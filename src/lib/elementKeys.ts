@@ -12,6 +12,7 @@
  * Das Modul ist generisch: es kennt keine Messfälle und keine Formulare.
  */
 
+import { cleanUnmappableMarkup, toUnicode } from "@/lib/richText";
 const SUB = "₀₁₂₃₄₅₆₇₈₉";
 
 /** Formel-Schreibweise vereinheitlichen: tiefgestellte Ziffern, Leerzeichen. */
@@ -153,12 +154,35 @@ function stripUnitSuffix(raw: string): string {
 
 
 /**
+ * Gasbezeichnungen mit Richtung („NO2 in“, „n2o_out“, „CO₂ out“): Gasformel + „in“/„out“.
+ * Das „in“ ist das Wort „ein“ und nicht Iod + Stickstoff; solche Bezeichnungen sind keine chemische Formel.
+ */
+const GAS_FORMULAS = ["NO", "NO2", "N2O", "NH3", "CO", "CO2", "H2O", "O2", "N2", "SO2", "SO3", "H2", "CH4", "HCl", "HC"];
+const GAS_BY_LOWER = new Map(GAS_FORMULAS.map((g) => [g.toLowerCase(), g]));
+
+export function parseGasInOut(raw: string): { gas: string; dir: "in" | "out"; index: string } | null {
+  // <Gas>[ _anzeige] _ (in|out) [ _ Zahl ]   z. B. no2_in, no_anzeige_in_1, n2o_out_1, "NO2 in"
+  const m = String(raw ?? "").trim().match(/^(.+?)(?:[\s_-]+anzeige)?[\s_-]+(in|out)(?:[\s_-]*(\d+))?$/i);
+  if (!m) return null;
+  const gas = GAS_BY_LOWER.get(plainFormula(m[1]).replace(/_/g, "").toLowerCase());
+  return gas ? { gas, dir: m[2].toLowerCase() as "in" | "out", index: m[3] ?? "" } : null;
+}
+
+/** „no2_in“ / „NO2 in“ -> „NO₂ in“; null, wenn keine Gasbezeichnung mit Richtung. */
+export function formatGasInOut(raw: string): string | null {
+  const g = parseGasInOut(raw);
+  return g ? `${formatElementKey(g.gas)} ${g.dir}` : null;
+}
+
+/**
  * Stabiler Element-/Verbindungsschlüssel einer beliebigen Bezeichnung.
  * Gibt `null` zurück, wenn es sich um keine chemische Bezeichnung handelt.
  */
 export function elementKey(rawName: string): string | null {
   const raw = String(rawName ?? "").trim();
   if (!raw) return null;
+  // Gas mit Richtung („NO2 in“) ist kein Element/keine Verbindung im Sinne der Zuordnung.
+  if (parseGasInOut(raw)) return null;
 
   // 1) Klartext-/Trivialnamen (Silicon dioxide, Tonerde, Glühverlust …)
   const word = plainWord(raw);
@@ -199,6 +223,13 @@ export function formatElementKey(key: string): string {
 export function formatElementLabel(label: string): string {
   const raw = String(label ?? "").trim();
   if (!raw) return "";
+  const gas = formatGasInOut(raw);
+  if (gas) return gas;
+  // „NH_{3} 1“ (Auszeichnung + angehängte Nummer): keine Formel (sonst „NH₃₁“) – nur lesbar machen.
+  if (/[_^]\{[^}]*\}.*\s\d+$/.test(raw)) return toUnicode(cleanUnmappableMarkup(raw));
+  // „NO (2)“, „SiO2 (2)“: Nummer in Klammern ist eine Nummerierung, kein Tiefgestelltes (sonst „NO(₂)“).
+  const numbered = raw.match(/^(.*\S)\s+\((\d+)\)$/);
+  if (numbered) return `${formatElementLabel(numbered[1])} (${numbered[2]})`;
   const formula = canonicalFormula(raw) ?? canonicalFormula(recase(raw));
   return formula ? formatElementKey(formula) : raw;
 }

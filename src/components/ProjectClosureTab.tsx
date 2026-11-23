@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { useWeeklyReviews } from "@/hooks/useWeeklyReviews";
 import type { ProjectClosureReport, DeliveredResult, OpenItem } from "@/lib/api/projectClosure";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  CheckCircle2, ClipboardCheck, FileDown, Plus, Printer, Save, Sparkles, Trash2, Wand2,
+  CheckCircle2, ClipboardCheck, Plus, Printer, Save, Sparkles, Trash2, Wand2,
 } from "lucide-react";
 import { PersonSelect } from "@/components/PersonSelect";
 

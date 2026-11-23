@@ -1,11 +1,51 @@
+import type { OrderEditFacts, OrderChanges } from "@/lib/orders/orderEdit";
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
+import { groupStoragePaths, type StorageFileRef } from "@/lib/orders/orderStoragePaths";
 import type { OrderType, OrderPriority } from "@/lib/types";
 
 const ORDER_LIST_SELECT =
-  "*, projects(project_number, project_name), current_sample:samples!measurement_orders_sample_id_fkey(id, sample_name, sample_number, category), order_samples(sample_id, samples(id, sample_name, sample_number, category)), order_measurements(assigned_to, sample_id, status, current_sample:samples!order_measurements_sample_id_fkey(id, sample_name, sample_number, category), measurement_services(category, sla_monitoring_enabled, sla_yellow_warning_days)), linked_samples:samples!samples_order_id_fkey(id, sample_name, sample_number, category, order_id), produced_samples:samples!samples_pilot_plant_order_id_fkey(id, sample_name, sample_number, category, pilot_plant_order_id)";
+  "*, projects(project_number, project_name), current_sample:samples!measurement_orders_sample_id_fkey(id, sample_name, sample_number, category), order_samples(sample_id, samples(id, sample_name, sample_number, category)), order_measurements(assigned_to, sample_id, status, measurement_results(id), current_sample:samples!order_measurements_sample_id_fkey(id, sample_name, sample_number, category), measurement_services(category, sla_monitoring_enabled, sla_yellow_warning_days)), linked_samples:samples!samples_order_id_fkey(id, sample_name, sample_number, category, order_id), produced_samples:samples!samples_pilot_plant_order_id_fkey(id, sample_name, sample_number, category, pilot_plant_order_id)";
 
 const ORDER_DETAIL_SELECT = `*, projects(project_number, project_name), samples!measurement_orders_sample_id_fkey(id, sample_number, sample_name, description, is_hazardous, location_id, storage_locations(hall, room, shelf, position)), order_samples(id, sample_id, created_at, samples(id, sample_number, sample_name, description, is_hazardous)), order_measurements(*, samples!order_measurements_sample_id_fkey(id, sample_number, sample_name), original_sample:samples!order_measurements_original_sample_id_fkey(id, sample_number, sample_name), measurement_services(service_name, category, hourly_rate, standard_duration_hours, sla_monitoring_enabled, sla_yellow_warning_days), measurement_parameters(*), measurement_results(*), work_logs(*), documents(*))`;
+
+/** Dateien (Messdokumente, Uploads, Berichts-PDFs) eines Auftrags; bei Lesefehlern bleibt die Liste unvollständig. */
+export async function collectOrderStorageFiles(orderId: string): Promise<StorageFileRef[]> {
+  const files: StorageFileRef[] = [];
+  try {
+    const ms: any[] = (await unwrap(dbClient.from("order_measurements").select("id").eq("order_id", orderId))) || [];
+    const ids = ms.map((m) => m.id);
+    if (ids.length) {
+      const docs: any[] = (await unwrap(dbClient.from("documents").select("storage_path").in("order_measurement_id", ids))) || [];
+      for (const d of docs) files.push({ bucket: "measurement-documents", path: d.storage_path });
+      const ups: any[] = (await unwrap(dbClient.from("order_upload_files" as any).select("storage_path").in("measurement_id", ids))) || [];
+      for (const u of ups) files.push({ bucket: "order-uploads", path: u.storage_path });
+    }
+    const reps: any[] = (await unwrap(dbClient.from("order_reports" as any).select("id").eq("order_id", orderId))) || [];
+    if (reps.length) {
+      const vers: any[] =
+        (await unwrap(dbClient.from("order_report_versions" as any).select("pdf_storage_path").in("report_id", reps.map((r) => r.id)))) || [];
+      for (const v of vers) files.push({ bucket: "order-reports", path: v.pdf_storage_path });
+    }
+  } catch {
+    // Nur Aufräumhilfe: Das Löschen des Auftrags selbst hängt nicht davon ab.
+  }
+  return files;
+}
+
+/** Entfernt Dateien aus dem Speicher; gibt die Anzahl zurück, die nicht entfernt werden konnten. */
+export async function removeStorageFiles(files: StorageFileRef[]): Promise<number> {
+  let failed = 0;
+  for (const [bucket, paths] of groupStoragePaths(files)) {
+    try {
+      const { error: rmErr } = await dbClient.storage.from(bucket).remove(paths);
+      if (rmErr) failed += paths.length;
+    } catch {
+      failed += paths.length;
+    }
+  }
+  return failed;
+}
 
 export const orders = {
   /** Master only (server-checked): preview renumbering of a user's orders in one year. */
@@ -57,7 +97,7 @@ export const orders = {
     notes?: string;
     priority?: OrderPriority;
     sample_id?: string;
-    order_kind?: "pilot_plant" | "labor" | "combined" | "legacy";
+    order_kind?: "pilot_plant" | "labor" | "legacy";
     pp_experiment_number?: string | null;
     pp_v2o5_percent?: number | null;
     pp_experiment_date?: string | null;
@@ -80,6 +120,34 @@ export const orders = {
     return data as unknown as boolean;
   },
 
+  /** Aufgabe 012: Sperr-Angaben für die Bearbeiten-Maske (nur lesend, serverseitig geprüft). */
+  editFacts: async (orderId: string): Promise<OrderEditFacts> => {
+    const { data, error } = await dbClient.rpc("order_edit_facts" as any, { _order_id: orderId } as any);
+    if (error) throw new Error(error.message);
+    return data as unknown as OrderEditFacts;
+  },
+
+  /** Aufgabe 012, Stufe 3b: Verlaufseintrag (und Benachrichtigung) für im Bearbeiten-Modus hinzugefügte Dienstleistungen. */
+  logServicesAdded: async (orderId: string, serviceNames: string[], taskCount?: number): Promise<void> => {
+    const { error } = await dbClient.rpc("order_edit_log_services_added" as any, {
+      _order_id: orderId,
+      _service_names: serviceNames,
+      _task_count: taskCount ?? null,
+    } as any);
+    if (error) throw new Error(error.message);
+  },
+
+  /** Aufgabe 012: Änderungen atomar anwenden (Sperren werden serverseitig erneut geprüft und protokolliert). */
+  applyChanges: async (orderId: string, changes: OrderChanges, reason?: string | null): Promise<{ changed: boolean; fields: string[] }> => {
+    const { data, error } = await dbClient.rpc("apply_order_changes" as any, {
+      _order_id: orderId,
+      _changes: changes,
+      _reason: reason?.trim() ? reason.trim() : null,
+    } as any);
+    if (error) throw new Error(error.message);
+    return data as unknown as { changed: boolean; fields: string[] };
+  },
+
   update: (
     id: string,
     fields: Partial<{
@@ -87,7 +155,7 @@ export const orders = {
       due_date: string | null;
       notes: string | null;
       priority: OrderPriority;
-      order_kind: "pilot_plant" | "labor" | "combined" | "legacy";
+      order_kind: "pilot_plant" | "labor" | "legacy";
       pp_experiment_number: string | null;
       pp_v2o5_percent: number | null;
       pp_experiment_date: string | null;
@@ -125,33 +193,29 @@ export const orders = {
         .eq("id", id)
     ),
 
-  delete: async (id: string, expectedHash?: string) => {
-    const { data, error } = expectedHash
-      ? await dbClient.rpc("force_delete_order" as any, { _order_id: id, _expected_hash: expectedHash })
-      : await dbClient.rpc("cancel_or_delete_order", { _order_id: id });
+  /**
+   * Löscht den Auftrag (Datenbank-Funktion prüft Rechte und Sperren) und danach die
+   * zugehörigen Dateien im Speicher. Gibt die Anzahl Dateien zurück, die im Speicher
+   * nicht entfernt werden konnten (der Auftrag ist dann trotzdem gelöscht).
+   */
+  delete: async (id: string, confirmNumber?: string): Promise<number> => {
+    // Pfade VOR dem Löschen einsammeln; danach sind die Datenbankzeilen weg.
+    const files = await collectOrderStorageFiles(id);
+    const { data, error } = await dbClient.rpc(
+      "cancel_or_delete_order",
+      confirmNumber ? { _order_id: id, _confirm_number: confirmNumber } : { _order_id: id },
+    );
     if (error) throw error;
     if (data !== id) throw new Error("Auftrag konnte nicht vollständig gelöscht werden.");
+    // Mit Bestätigungsnummer = der Auftrag hatte Messdaten: Dateien im Speicher bleiben für eine Wiederherstellung
+    // erhalten (das Löschprotokoll sichert nur die Datenbankzeilen).
+    if (confirmNumber) return 0;
+    return removeStorageFiles(files);
   },
 
-  /** Tatsächliche Verknüpfungen vor dem Löschen (serverseitig gezählt) + Prüfschlüssel. */
-  deletePreview: async (id: string) => {
-    const { data, error } = await dbClient.rpc("preview_force_delete_order" as any, { _order_id: id });
-    if (error) throw error;
-    return data as unknown as OrderDeletePreview;
-  },
-
-  /** Serverseitige Freigabe: darf der aktuelle Nutzer den Auftrag noch bearbeiten/löschen? */
-  requesterEditState: async (id: string) => {
-    const { data, error } = await dbClient.rpc("order_requester_edit_state" as any, { _order_id: id });
-    if (error) throw error;
-    return data as { can_edit: boolean; reason: string | null };
-  },
-
-  /** Auftraggeber entfernt eine noch völlig unbearbeitete Dienstleistung seines Auftrags (protokolliert). */
-  requesterRemoveMeasurement: async (measurementId: string, reason: string) => {
-    const { error } = await dbClient.rpc("requester_remove_order_measurement" as any, { _measurement_id: measurementId, _reason: reason });
-    if (error) throw error;
-  },
+  /** Was hängt am Auftrag (Dateien, Berichte, Fertigungsunterlagen, Proben)? Nur für Ersteller/Master. */
+  deleteSummary: (id: string) =>
+    unwrap((dbClient as any).rpc("order_delete_summary", { _order_id: id })),
 
   /** Reduced list used by the ETA calculator. */
   listOpenForETA: () =>
@@ -297,15 +361,11 @@ export const orders = {
       }
     }
 
-    // --- Pilot-Plant-Bausteine frisch erzeugen (keine Statusübernahme) ---
-    if (src.order_kind === "pilot_plant" || src.is_pilot_plant_process) {
-      try {
-        await dbClient.rpc("pp_seed_blocks" as any, { _order_id: newOrder.id } as any);
-      } catch { /* optional */ }
-    }
+    // Pilot Plant: keine alten Bausteine und kein Prozess-Ablauf mehr (Aufgabe 018).
+    const isPilotPlantSource = src.order_kind === "pilot_plant" || !!src.is_pilot_plant_process;
 
-    // --- Prozess-/Workflow-Konfiguration: neue Instanz aus gleicher Vorlage ---
-    const srcInstance: any = await unwrap(
+    // --- Prozess-/Workflow-Konfiguration: neue Instanz aus gleicher Vorlage (nicht bei Pilot Plant) ---
+    const srcInstance: any = isPilotPlantSource ? null : await unwrap(
       dbClient
         .from("order_instances" as any)
         .select("*")
@@ -343,11 +403,3 @@ export const orders = {
   },
 };
 
-
-export interface OrderDeletePreview {
-  links: Record<string, number>;
-  hash: string;
-  order_number: string | null;
-  mode: "force" | "requester";
-  blocked_reason: string | null;
-}

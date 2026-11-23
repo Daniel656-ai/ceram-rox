@@ -23,7 +23,7 @@ import {
 } from "./blocks";
 import type {
   ProductionReleaseChange, ProductionReleaseRow, ProductionReleaseTestParameter,
-  ProductionReleaseSpecSet, ProductionReleaseSpecValue,
+  ProductionReleaseSpecSet,
 } from "@/lib/api/productionReleases";
 import { DEFAULT_RELEASE_TYPE, normalizeReleaseType, parseSpecNumber } from "./releaseTypes";
 import { normalizeSpecSets, describeSaveError } from "./specSets";

@@ -12,7 +12,6 @@ import {
   PilotPlantBlock,
   PilotPlantBlockKey,
   PILOT_PLANT_BLOCK_LABELS,
-  PilotPlantProducedSample,
 } from "@/lib/api/pilotPlantProcess";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

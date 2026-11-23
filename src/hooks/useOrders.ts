@@ -1,7 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import type { OrderType, OrderPriority } from "@/lib/types";
+import { buildOrderReleaseLabels } from "@/lib/orders/orderReleaseLabel";
+
+/** Anzeigetext der Fertigungsfreigabe je Auftrag (für Aufträge ohne Projekt), z. B. "0020-5438 · Rev0". */
+export function useOrderReleaseLabels() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["orders", "release-labels"],
+    queryFn: async () => {
+      const { releases, requests } = await api.productionReleases.listOrderLinks();
+      return buildOrderReleaseLabels(releases, requests);
+    },
+    enabled: !!user,
+  });
+}
 
 export function useOrders() {
   const { user } = useAuth();
@@ -55,10 +68,11 @@ export function useUpdateOrder() {
 export function useDeleteOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (arg: string | { id: string; hash?: string }) =>
-      typeof arg === "string" ? api.orders.delete(arg) : api.orders.delete(arg.id, arg.hash),
-    onSuccess: async (_d, arg) => {
-      qc.removeQueries({ queryKey: ["order", typeof arg === "string" ? arg : arg.id] });
+    mutationFn: (v: string | { id: string; confirmNumber?: string }) =>
+      typeof v === "string" ? api.orders.delete(v) : api.orders.delete(v.id, v.confirmNumber),
+    onSuccess: async (_d, v) => {
+      const id = typeof v === "string" ? v : v.id;
+      qc.removeQueries({ queryKey: ["order", id] });
       // All active order/task/sample views refetch; inactive caches become stale.
       // Includes the actual keys "unassigned-qualified" and "open-measurements-overview".
       await qc.invalidateQueries();
@@ -106,25 +120,5 @@ export function useSetOrderBilled() {
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["order"] });
     },
-  });
-}
-
-/** Serverseitige Bearbeitungs-/Löschfreigabe für eigene, noch nicht begonnene Aufträge. */
-export function useOrderRequesterEditState(orderId: string | undefined, enabled = true) {
-  return useQuery({
-    queryKey: ["order-requester-edit-state", orderId],
-    queryFn: () => api.orders.requesterEditState(orderId!),
-    enabled: !!orderId && enabled,
-    staleTime: 15_000,
-  });
-}
-
-export function useOrderDeletePreview(orderId: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ["order-delete-preview", orderId],
-    queryFn: () => api.orders.deletePreview(orderId),
-    enabled,
-    staleTime: 0,
-    gcTime: 0,
   });
 }

@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -35,7 +37,15 @@ export function OrderWorkflowTabs({
 }) {
   const { t } = useTranslation(["orders", "common"]);
   const kind: string = order?.order_kind || "labor";
-  const showPP = kind === "pilot_plant";
+  // Alte Bausteine (veraltet): Reiter nur, wenn der Auftrag Bausteine mit ausgefüllten Daten hat (Aufgabe 018).
+  const { data: ppBlocks = [] } = useQuery({
+    queryKey: ["pp-blocks", order?.id],
+    queryFn: () => api.pilotPlantBlocks.listForOrder(order.id),
+    enabled: kind === "pilot_plant" && !!order?.id,
+  });
+  const showPP =
+    kind === "pilot_plant" &&
+    (ppBlocks as any[]).some((b) => b.status === "completed" || (b.data && Object.keys(b.data).length > 0));
 
   return (
     <Card>

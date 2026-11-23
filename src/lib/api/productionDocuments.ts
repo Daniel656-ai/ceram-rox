@@ -1,5 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap } from "./_helpers";
+import { collectOrderStorageFiles, removeStorageFiles } from "./orders";
+import type { M3DeletePlan, M3DeleteResult } from "@/lib/productionDocuments/m3Delete";
 import type { DocKind, DocStatus } from "@/lib/productionDocuments/requirements";
 import {
   planCustomerDocumentationSync,
@@ -122,17 +124,21 @@ export const productionDocuments = {
     await unwrap(db.from("production_document_requests").update(fields).eq("id", id));
   },
 
-  /** Verknüpfungen einer m³-Liste vor dem Löschen (nur Master). */
-  async m3DeletePreview(id: string): Promise<M3DeletePreview> {
-    const { data, error } = await (db as any).rpc("preview_delete_m3_list", { _id: id });
-    if (error) throw error;
-    return data as M3DeletePreview;
+  /** Vorschau für den Löschdialog: was wird mitgelöscht, was bleibt, was blockiert? (Ersteller/Master) */
+  async deletePlan(id: string): Promise<M3DeletePlan> {
+    return (await unwrap(db.rpc("m3_list_delete_plan", { _request_id: id }))) as M3DeletePlan;
   },
 
-  /** Löscht nur die m³-Liste serverseitig (Master, Prüfschlüssel, Audit). */
-  async deleteM3List(id: string, expectedHash: string): Promise<void> {
-    const { error } = await (db as any).rpc("delete_m3_list", { _id: id, _expected_hash: expectedHash });
-    if (error) throw error;
+  /**
+   * Löscht die m³-Liste. Mit Auftrag: Auftrag, Anhänge und nur dafür erzeugte, sonst nirgends
+   * verwendete Proben werden in derselben Datenbank-Transaktion mitgelöscht; die Fertigungsfreigabe bleibt.
+   * Danach werden die Dateien des Auftrags im Speicher entfernt (Anzahl nicht entfernter in `orphaned`).
+   */
+  async deleteM3(id: string, orderId: string | null): Promise<M3DeleteResult & { orphaned: number }> {
+    const files = orderId ? await collectOrderStorageFiles(orderId) : [];
+    const result = (await unwrap(db.rpc("delete_m3_list", { _request_id: id }))) as M3DeleteResult;
+    const orphaned = result?.order_deleted ? await removeStorageFiles(files) : 0;
+    return { ...result, orphaned };
   },
 
   async remove(id: string): Promise<void> {
@@ -214,11 +220,3 @@ export const productionDocuments = {
     );
   },
 };
-
-export interface M3DeletePreview {
-  release: { id: string; release_number: string | null; revision_number: number | null; project_name: string | null; customer_name: string | null; article_number: string | null } | null;
-  order: { id: string; order_number: string | null } | null;
-  samples: number;
-  form_value_keys: number;
-  hash: string;
-}

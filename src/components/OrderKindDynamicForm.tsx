@@ -7,8 +7,8 @@ import type { FormField } from "@/lib/api/formFields";
 import { topLevelFields } from "@/lib/api/formFields";
 import { normalizeLayout, type FormLayoutTree, type LayoutNode } from "@/lib/api/formDefinitionLayout";
 import FormLayoutRenderer from "@/components/ServiceDesigner/FormLayoutRenderer";
+import { FillRowsCtx } from "@/components/ServiceDesigner/fillRowsContext";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 interface Props {
   orderKind: OrderKind;
@@ -19,6 +19,10 @@ interface Props {
   /** Called with the loaded template fields (e.g. to read a service selection). */
   onFieldsResolved?: (fields: FormField[]) => void;
   onReady?: (kind: OrderKind, ready: boolean) => void;
+  /** Bearbeiten-Modus: Felder (Schlüssel), die nicht änderbar sein sollen (z. B. Dienstleistungs-Auswahl). */
+  lockedFieldKeys?: string[];
+  /** Bearbeiten-Modus: ganzes Formular nur lesbar. */
+  readOnly?: boolean;
 }
 
 /**
@@ -31,7 +35,7 @@ interface Props {
  *
  * If no template is mapped for this order kind, the component renders nothing.
  */
-export default function OrderKindDynamicForm({ orderKind, values, onChange, onTemplateResolved, onFieldsResolved, onReady }: Props) {
+export default function OrderKindDynamicForm({ orderKind, values, onChange, onTemplateResolved, onFieldsResolved, onReady, lockedFieldKeys, readOnly = false }: Props) {
   const { role } = useAuth();
 
   const { data: mapping, isLoading: mapLoading, isSuccess: mapSuccess } = useQuery({
@@ -69,13 +73,19 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
     return autoLayout(typedFields);
   }, [form?.layout, typedFields]);
 
+  // Gesperrte Felder nutzen die vorhandene „locked“-Berechtigung des Formularrenderers (nur lesbar).
+  const lockedIds = useMemo(
+    () => typedFields.filter((f) => readOnly || (lockedFieldKeys ?? []).includes(f.field_key)).map((f) => f.id),
+    [typedFields, readOnly, lockedFieldKeys],
+  );
   const { data: permissions } = useQuery({
-    queryKey: ["form-field-permissions", formId, role, typedFields.length],
+    queryKey: ["form-field-permissions", formId, role, typedFields.length, lockedIds.join(",")],
     queryFn: () =>
       api.formFieldPermissions.getEffectiveMap(
         formId!,
         role ?? "",
-        typedFields.map((f) => f.id)
+        typedFields.map((f) => f.id),
+        lockedIds,
       ),
     enabled: !!formId && !!role && typedFields.length > 0,
   });
@@ -88,20 +98,21 @@ export default function OrderKindDynamicForm({ orderKind, values, onChange, onTe
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           {form?.name || "Auftragsformular"}
-          <Badge variant="outline" className="text-[10px]">Template</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
         {fieldsLoading ? (
           <p className="text-sm text-muted-foreground">Lade Formular…</p>
         ) : (
-          <FormLayoutRenderer
-            layout={layout}
-            fields={typedFields}
-            permissions={permissions}
-            values={values}
-            onChange={(key, v) => onChange({ [key]: v })}
-          />
+          <FillRowsCtx.Provider value={true}>
+            <FormLayoutRenderer
+              layout={layout}
+              fields={typedFields}
+              permissions={permissions}
+              values={values}
+              onChange={(key, v) => onChange({ [key]: v })}
+            />
+          </FillRowsCtx.Provider>
         )}
       </CardContent>
     </Card>

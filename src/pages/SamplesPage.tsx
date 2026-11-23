@@ -4,7 +4,6 @@ import { useEstimatedCompletion } from "@/hooks/useEstimatedCompletion";
 import { useProjects } from "@/hooks/useProjects";
 import { useStorageLocations } from "@/hooks/useRawMaterials";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,8 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { Search, Plus, Trash2, AlertTriangle, Eye, Inbox, FlaskConical, Clock, Archive, Timer, ShieldAlert, CalendarClock, X, SlidersHorizontal, Tag, CopyPlus, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Inbox, FlaskConical, Clock, Archive, Timer, ShieldAlert, CalendarClock, X, Tag, CopyPlus, CheckCircle2 } from "lucide-react";
 import { SampleScannerInput } from "@/components/SampleScanner";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";

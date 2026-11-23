@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import SampleLabel from "@/components/results/SampleLabel";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -125,8 +126,7 @@ export default function ResultDetailInspector({
               <SheetDescription asChild>
                 <div className="space-y-0.5 text-xs">
                   <div>
-                    Probe: <span className="font-mono">{measurement.sampleNumber || "–"}</span>
-                    {measurement.sampleName ? ` · ${measurement.sampleName}` : ""}
+                    Probe: <SampleLabel number={measurement.sampleNumber} name={measurement.sampleName} />
                   </div>
                   <div>
                     Auftrag: <span className="font-mono">{measurement.orderDisplayNumber || measurement.orderNumber}</span>

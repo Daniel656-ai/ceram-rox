@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { FormDefinition } from "@/lib/api/formDefinitions";
 import type { FieldVisibility } from "@/lib/api/formFieldPermissions";
-import { ROLE_VIEW_PRESETS, DEFAULT_ROLE_KEY } from "@/lib/api/formRoleViews";
+import { ROLE_VIEW_PRESETS } from "@/lib/api/formRoleViews";
 import { normalizeLayout, emptyLayout } from "@/lib/api/formDefinitionLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

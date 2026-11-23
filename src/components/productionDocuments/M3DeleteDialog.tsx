@@ -1,64 +1,103 @@
-import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { useDeleteM3List, useM3DeletePreview } from "@/hooks/useProductionDocuments";
+import { api } from "@/lib/api";
+import { useDeleteM3List } from "@/hooks/useProductionDocuments";
+import { describeM3Delete, type M3DeletePlan } from "@/lib/productionDocuments/m3Delete";
 
-/** Master-only m³ list delete: shows real links; only the list itself is removed. */
-export function M3DeleteDialog({ row, label, onClose }: { row: { id: string } | null; label: string; onClose: () => void }) {
-  const preview = useM3DeletePreview(row?.id ?? null);
+interface Row {
+  id: string;
+  order_id: string | null;
+}
+
+/**
+ * Löschdialog für eine m³-Liste: zeigt vorab, was mitgelöscht wird (Beprobungsauftrag, Dateien,
+ * nur dafür erzeugte Proben), was stehen bleibt und – falls das Löschen nicht möglich ist – den Grund.
+ * Die Fertigungsfreigabe bleibt immer erhalten.
+ */
+export function M3DeleteDialog({ row, onClose }: { row: Row | null; onClose: () => void }) {
   const del = useDeleteM3List();
-  const d = preview.data;
-  const run = async () => {
-    if (!row || !d || del.isPending) return;
+  const { data: plan, isLoading, isError, error } = useQuery({
+    queryKey: ["m3-delete-plan", row?.id],
+    queryFn: () => api.productionDocuments.deletePlan(row!.id) as Promise<M3DeletePlan>,
+    enabled: !!row,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const lines = describeM3Delete(plan);
+  const blocked = plan?.blocked_reason ?? null;
+  const canConfirm = !!plan && !blocked && !del.isPending;
+
+  const confirm = async () => {
+    if (!row || !canConfirm) return;
     try {
-      await del.mutateAsync({ id: row.id, hash: d.hash });
-      toast.success("m³-Liste endgültig gelöscht");
+      const r = await del.mutateAsync({ id: row.id, orderId: row.order_id });
+      toast.success(r.order_deleted ? "m³-Liste und Beprobungsauftrag gelöscht" : "m³-Liste gelöscht");
+      if (r.kept_samples?.length) {
+        toast.info(`${r.kept_samples.length} Probe(n) wurden nicht gelöscht, weil sie anderweitig verwendet werden.`);
+      }
+      if (r.orphaned > 0) toast.warning(`${r.orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
       onClose();
     } catch (e: any) {
-      toast.error("Löschen fehlgeschlagen", { description: e?.message });
-      preview.refetch();
+      toast.error("Löschen fehlgeschlagen", { description: e?.message ?? String(e) });
     }
   };
-  const items: string[] = [];
-  if (d?.release) {
-    items.push(`Fertigungsfreigabe ${d.release.release_number ?? "–"} · Rev${d.release.revision_number ?? "–"} (bleibt erhalten)`);
-    if (d.release.project_name || d.release.customer_name)
-      items.push(`Fertigungsprojekt ${d.release.project_name ?? "–"}${d.release.customer_name ? ` · Kunde ${d.release.customer_name}` : ""} (bleibt erhalten)`);
-  }
-  if (d?.order) items.push(`Beprobungsauftrag ${d.order.order_number ?? ""} (bleibt erhalten)`);
-  if (d && d.samples > 0) items.push(`${d.samples} Proben des Beprobungsauftrags (bleiben erhalten)`);
-  if (d && d.form_value_keys > 0) items.push(`Erfasste Listeninhalte (werden mit der Liste gelöscht, im Protokoll gesichert)`);
 
   return (
     <AlertDialog open={!!row} onOpenChange={(v) => !v && !del.isPending && onClose()}>
-      <AlertDialogContent className="max-w-xl">
+      <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>m³-Liste „{label}“ endgültig löschen?</AlertDialogTitle>
+          <AlertDialogTitle>m³-Liste wirklich löschen?</AlertDialogTitle>
           <AlertDialogDescription>
-            Es wird ausschließlich diese m³-Liste gelöscht. Versuche, Proben, Aufträge, Fertigungsfreigaben und Projekte bleiben erhalten.
+            Gelöscht wird die m³-Liste. Das kann nicht rückgängig gemacht werden.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="text-sm space-y-2">
-          {preview.isLoading && <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Verknüpfungen werden geprüft…</div>}
-          {preview.isError && <div className="text-destructive">{(preview.error as any)?.message}</div>}
-          {d && (
-            <>
-              <div className="font-medium">Vorhandene Verknüpfungen</div>
-              {items.length === 0 ? <div className="text-muted-foreground">Keine Verknüpfungen vorhanden.</div> : (
-                <ul className="list-disc pl-5 space-y-1">{items.map((t) => <li key={t}>{t}</li>)}</ul>
-              )}
-              <div className="text-muted-foreground">Zugehörige Versuche: keine (m³-Listen sind nicht mit Versuchen verknüpft).</div>
-            </>
-          )}
-        </div>
+
+        {isLoading && <p className="text-sm text-muted-foreground">Prüfe, was an der m³-Liste hängt …</p>}
+        {isError && (
+          <p className="text-sm text-destructive">
+            Die Prüfung ist fehlgeschlagen: {(error as any)?.message ?? "Unbekannter Fehler"}. Löschen ist nicht möglich.
+          </p>
+        )}
+        {blocked && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+            <p className="font-medium">Löschen nicht möglich</p>
+            <p>{blocked}</p>
+          </div>
+        )}
+        {plan && !blocked && (
+          <div className="space-y-2 text-sm">
+            {lines.some((l) => l.kind === "delete") && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                <p className="font-medium">Mit der m³-Liste werden gelöscht:</p>
+                <ul className="mt-1 list-disc pl-5">
+                  {lines.filter((l) => l.kind === "delete").map((l) => <li key={l.text}>{l.text}</li>)}
+                </ul>
+              </div>
+            )}
+            {lines.some((l) => l.kind === "keep") && (
+              <div className="rounded-md border p-3">
+                <p className="font-medium">Bleibt bestehen:</p>
+                <ul className="mt-1 list-disc pl-5">
+                  {lines.filter((l) => l.kind === "keep").map((l) => <li key={l.text}>{l.text}</li>)}
+                </ul>
+              </div>
+            )}
+            {lines.filter((l) => l.kind === "info").map((l) => (
+              <p key={l.text} className="text-muted-foreground">{l.text}</p>
+            ))}
+          </div>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel disabled={del.isPending}>Abbrechen</AlertDialogCancel>
-          <Button variant="destructive" disabled={!d || del.isPending} onClick={run}>
-            {del.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}m³-Liste endgültig löschen
+          <Button variant="destructive" disabled={!canConfirm} onClick={confirm}>
+            {del.isPending ? "Lösche …" : "Löschen"}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

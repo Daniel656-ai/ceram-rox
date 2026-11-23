@@ -1,9 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { displayResults } from "@/lib/results/betMeasurement";
+import { cleanUnmappableMarkup } from "@/lib/richText";
+import { formatGasInOut } from "@/lib/elementKeys";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatResultLabel } from "@/lib/resultLabels";
 import { orderElementResults } from "@/lib/rfaFixedElements";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
+import { isInternalResult } from "@/lib/results/internalResults";
 
 
 export interface ResultRecord {
@@ -100,13 +104,11 @@ export function useResultsDatabase() {
   return useQuery({
     queryKey: ["results-database"],
     queryFn: async () => {
-      // Die Ergebnisdatenbank zeigt ausschließlich Ergebnisse an, die
-      // ausdrücklich als „Offizielles Ergebnis" freigegeben wurden.
-      // Der Bearbeitungsstatus einer Tätigkeit (z. B. „erledigt") ist dafür
-      // ohne Bedeutung: Erledigte Tätigkeiten ohne offizielles Ergebnis
-      // bleiben in ihren Auftrags-/Arbeitsansichten sichtbar, erzeugen hier
-      // aber keinen Eintrag. Normale Messwerte (measurement_parameters) sind
-      // bewusst nicht Teil dieser Sicht.
+      // Die Ergebnisdatenbank zeigt IMMER offizielle UND vorläufige Ergebnisse
+      // (Kennzeichnung über `is_official` am Wert). Technische Einträge
+      // (Importprotokoll, Konfiguration) sind keine Messwerte und fehlen hier.
+      // Der Bearbeitungsstatus einer Tätigkeit ist ohne Bedeutung. Normale
+      // Messwerte (measurement_parameters) sind bewusst nicht Teil dieser Sicht.
       const measurements = await api.measurementResults.listOfficialDatabase();
       // Preserve the existing optional name-resolution behavior.
       const profiles = await api.measurementResults.listDatabaseProfiles().catch(() => []);
@@ -152,19 +154,17 @@ export function useResultsDatabase() {
           actualDurationHours: m.actual_duration_hours,
           standardDurationHours: service?.standard_duration_hours || 0,
           inputParameters,
-          // Nur ausdrücklich als „Offizielles Ergebnis" freigegebene Werte
-          // gehören in die Ergebnisdatenbank – alle anderen Formularwerte und
-          // Messwerte bleiben ausschließlich in den Arbeitsansichten sichtbar.
+          // Offizielle und vorläufige Werte; `is_official` unterscheidet sie.
           outputResults: orderElementResults(
-            (m.measurement_results || []).filter((r: any) => r.is_official === true)
+            // BET: nur der BET-Wert (Hilfswerte bleiben gespeichert, werden aber nicht angezeigt).
+            displayResults(service?.service_name, (m.measurement_results || []).filter((r: any) => !isInternalResult(r)) as any[])
           ),
           remarks: order?.notes || "",
           orderSharedFormData: order?.shared_form_data ?? null,
         };
       });
 
-      // Ohne freigegebenes offizielles Ergebnis entsteht kein Eintrag in der
-      // Ergebnisdatenbank – unabhängig vom Bearbeitungsstatus der Tätigkeit.
+      // Ohne jeden Ergebniswert entsteht kein Eintrag in der Ergebnisdatenbank.
       return records.filter((r) => r.outputResults.length > 0);
 
 
@@ -175,11 +175,14 @@ export function useResultsDatabase() {
 
 /** Sichtbare, fachliche Bezeichnung eines Ergebnisses – niemals technische IDs. */
 export function resultLabel(r: { display_label?: string | null; result_name: string }): string {
-  if (r.display_label) return r.display_label;
   // Fallback für Altdaten mit technischem Key (`form:<uuid>:<key>`).
   const raw = r.result_name.startsWith("form:")
     ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1)
     : r.result_name;
+  // Gasbezeichnungen mit Richtung („no2_in“, „NO2 in“) einheitlich als „NO₂ in“.
+  const gas = formatGasInOut(r.display_label || raw);
+  if (gas) return gas;
+  if (r.display_label) return cleanUnmappableMarkup(r.display_label);
   return raw
     .replace(/_/g, " ")
     .replace(/\s+/g, " ")

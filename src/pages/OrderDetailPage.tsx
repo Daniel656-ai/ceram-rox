@@ -1,27 +1,23 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ProcessContextProvider } from "@/context/ProcessContextProvider";
 import { resolveOrderLevelSampleId } from "@/lib/samples/activeSampleContext";
-import { useOrderDetail, useUpdateOrderStatus, useUpdateOrder, useDeleteOrder, useOrderRequesterEditState, useOrderAuditLog, useCopyOrder } from "@/hooks/useOrders";
+import { useOrderDetail, useDeleteOrder, useOrderAuditLog, useCopyOrder } from "@/hooks/useOrders";
 import { useUpdateMeasurementStatus, useAddWorkLog, useDurchfuehrer, useAssignMeasurement, useUpdateMeasurementRanking } from "@/hooks/useMeasurements";
 import { useAuth } from "@/contexts/AuthContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderRunSheetButton } from "@/components/OrderRunSheet";
 import { BillingStatusControl } from "@/components/orders/BillingStatus";
 import { canEditBilled } from "@/lib/orders/billing";
-import { ORDER_TYPE_LABELS, CATEGORY_LABELS, ORDER_PRIORITY_LABELS } from "@/lib/types";
-import { PRIORITY_LEVELS, normalizePriority, priorityLabelKey } from "@/lib/orders/priority";
+import { ORDER_TYPE_LABELS } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { OrderDeleteDialog } from "@/components/orders/OrderDeleteDialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Clock, Pencil, Trash2, Copy, Info } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Info } from "lucide-react";
 import { PriorityBadge } from "@/components/PriorityBadge";
 import { WorkflowStatusBadge } from "@/components/WorkflowStatusBadge";
 import { OrderWorkflowTabs } from "@/components/OrderWorkflowTabs";
@@ -36,7 +32,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useProjectMembers } from "@/hooks/useProjectMembers";
 import { useServicePermissions } from "@/hooks/useServicePermissions";
 import { useUsers } from "@/hooks/useUsers";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OrderReportTab from "@/components/OrderReportTab";
 import { ProcessOrderTabs } from "@/components/workflow/ProcessOrderTabs";
 import CompletedResultForm from "@/components/CompletedResultForm";
@@ -44,6 +40,7 @@ import OrderResultsOverview from "@/components/OrderResultsOverview";
 import OrderHeaderSummary from "@/components/order/OrderHeaderSummary";
 import OrderProductionDocuments from "@/components/order/OrderProductionDocuments";
 import AdminDeleteMeasurementsCard from "@/components/order/AdminDeleteMeasurementsCard";
+import { OrderDeleteBody } from "@/components/orders/OrderDeleteInfo";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
@@ -71,9 +68,7 @@ function OrderDetailPageInner() {
     enabled: !!id,
   });
   const updateMeasurementStatus = useUpdateMeasurementStatus();
-  const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
-  const { data: requesterEditState, isLoading: requesterEditLoading, isError: requesterEditError, refetch: refetchRequesterEdit, isFetching: requesterEditFetching } = useOrderRequesterEditState(id);
   const copyOrder = useCopyOrder();
   const isCopy = searchParams.get("copied") === "1";
   const handleCopyOrder = async () => {
@@ -104,12 +99,6 @@ function OrderDetailPageInner() {
   const [actualDuration, setActualDuration] = useState("");
   const [deviationReason, setDeviationReason] = useState("");
 
-  // Edit dialog state
-  const [editOpen, setEditOpen] = useState(false);
-  const [editOrderType, setEditOrderType] = useState("");
-  const [editPriority, setEditPriority] = useState("");
-  const [editDueDate, setEditDueDate] = useState("");
-  const [editNotes, setEditNotes] = useState("");
 
   const { data: allUsers = [] } = useUsers();
   const creator = (allUsers as any[]).find((u) => u.user_id === (order as any)?.created_by);
@@ -137,12 +126,7 @@ function OrderDetailPageInner() {
     </div>
   );
 
-  const isOwnRequesterOrder = isRequester && (order as any).created_by === user?.id;
-  // Freigabe serverseitig anhand der tatsächlichen Aufgaben-/Bearbeitungsstände.
-  const canEditDelete = role === "master" || (isOwnRequesterOrder && requesterEditState?.can_edit === true);
-  const canOpenEditForm = canEditDelete && (order as any).order_type !== "internal" && requesterEditState?.can_edit === true;
-  const showStartedLock = role !== "master" && isOwnRequesterOrder && requesterEditState && !requesterEditState.can_edit
-    && (requesterEditState.reason === "started" || requesterEditState.reason === "locked");
+  const canEditDelete = role === "master" || (isRequester && (order as any).created_by === user?.id && order.status === "open");
   const canEditPriority = role === "master" || (order as any).created_by === user?.id;
   const myMembership = (projectMembers as any[]).find((m) => m.user_id === user?.id);
   const isProjectLead = myMembership?.role === "owner" || myMembership?.role === "leader";
@@ -222,35 +206,13 @@ function OrderDetailPageInner() {
 
   // File upload moved to MeasurementDocuments component
 
-  const openEditDialog = () => {
-    setEditOrderType((order as any).order_type);
-    setEditPriority(normalizePriority((order as any).priority));
-    setEditDueDate((order as any).due_date || "");
-    setEditNotes((order as any).notes || "");
-    setEditOpen(true);
-  };
 
-  const handleEditSubmit = async () => {
-    try {
-      await updateOrder.mutateAsync({
-        id: order.id,
-        order_type: editOrderType as any,
-        priority: editPriority as any,
-        due_date: editDueDate || null,
-        notes: editNotes || null,
-      });
-      toast.success("Auftrag aktualisiert");
-      setEditOpen(false);
-    } catch (err: any) {
-      toast.error("Fehler", { description: err.message });
-    }
-  };
-
-  const handleDelete = async () => {
+  const handleDelete = async (confirmNumber?: string) => {
     if (deleteOrder.isPending) return;
     try {
-      await deleteOrder.mutateAsync(order.id);
+      const orphaned = await deleteOrder.mutateAsync({ id: order.id, confirmNumber });
       toast.success("Messauftrag gelöscht");
+      if (orphaned > 0) toast.warning(`${orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
       navigate("/auftraege");
     } catch (err: any) {
       toast.error("Fehler beim Löschen", { description: err.message });
@@ -288,7 +250,7 @@ function OrderDetailPageInner() {
         </div>
         {(order as any).order_kind && (order as any).order_kind !== "legacy" && (
           <Badge variant="secondary" className="font-normal">
-            {(order as any).order_kind === "pilot_plant" ? "Pilot Plant" : (order as any).order_kind === "labor" ? "Labor" : "Kombiniert"}
+            {["pilot_plant", "combined"].includes((order as any).order_kind) ? "Pilot Plant" : (order as any).order_kind === "labor" ? "Labor" : "Klassisch"}
           </Badge>
         )}
         {(order as any).workflow_status && <WorkflowStatusBadge status={(order as any).workflow_status} />}
@@ -296,41 +258,30 @@ function OrderDetailPageInner() {
         <BillingStatusControl order={order as any} canEdit={canEditBilled(order as any, user?.id, role === "master")} />
         {/* Kopierfunktion temporär deaktiviert – Handler/Hook bleiben erhalten */}
         <OrderRunSheetButton order={order} />
-        {role !== "master" && isOwnRequesterOrder && order.status === "open" && (requesterEditLoading || requesterEditError) && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-            {requesterEditLoading ? t("requesterEdit.checking") : t("requesterEdit.checkError")}
-            {requesterEditError && (
-              <Button variant="outline" size="sm" disabled={requesterEditFetching} onClick={() => refetchRequesterEdit()}>
-                {t("requesterEdit.retry")}
-              </Button>
-            )}
-          </div>
-        )}
         {(canEditDelete || canEditPriority) && (
           <div className="flex gap-2">
-            {canOpenEditForm && (
-              <Button variant="outline" size="sm" onClick={() => navigate(`/auftraege/neu?edit=${order.id}`)}>
-                <Pencil className="h-4 w-4 mr-1" /> {t("requesterEdit.edit")}
-              </Button>
-            )}
-            {(role === "master" || canOpenEditForm || (!isOwnRequesterOrder && canEditPriority)) && (
-            <Button variant="outline" size="sm" onClick={openEditDialog}>
-              <Pencil className="h-4 w-4 mr-1" /> {canOpenEditForm ? t("requesterEdit.quickEdit") : "Bearbeiten"}
+            <Button variant="outline" size="sm" onClick={() => navigate(`/auftraege/${order.id}/bearbeiten`)}>
+              <Pencil className="h-4 w-4 mr-1" /> Bearbeiten
             </Button>
-            )}
-            {canEditDelete && (
-            <OrderDeleteDialog orderId={order.id} trigger={<Button variant="destructive" size="sm">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
                   <Trash2 className="h-4 w-4 mr-1" /> Löschen
-                </Button>} onDeleted={() => navigate("/auftraege")} />
-            )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Auftrag löschen?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Dieser Auftrag und alle zugehörigen Aufgaben werden unwiderruflich gelöscht.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <OrderDeleteBody orderId={order.id} pending={deleteOrder.isPending} onConfirm={handleDelete} />
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </div>
-      {showStartedLock && (
-        <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-          {t("requesterEdit.lockedHint")}
-        </div>
-      )}
 
       {false && isCopy && (
         <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
@@ -382,7 +333,7 @@ function OrderDetailPageInner() {
             ((order as any).order_measurements || []).some((m: any) => m.assigned_to === user?.id))
         }
         processSlot={
-          linkedInstance ? (
+          linkedInstance && (order as any).order_kind !== "pilot_plant" ? (
             <ProcessOrderTabs legacyOrderId={id!} orderInstanceId={linkedInstance.id} />
           ) : undefined
         }
@@ -436,55 +387,6 @@ function OrderDetailPageInner() {
 
 
 
-      {/* Edit Order Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Auftrag bearbeiten</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            {canEditDelete && (
-              <div>
-                <Label>Auftragstyp</Label>
-                <Select value={editOrderType} onValueChange={setEditOrderType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ORDER_TYPE_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {/* Verrechnungsstatus: nur Kundenaufträge, speichert sofort über set_order_billed */}
-            {editOrderType === "customer" && (order as any).order_type === "customer" && (
-              <BillingStatusControl order={order as any} canEdit={canEditBilled(order as any, user?.id, role === "master")} />
-            )}
-            {canEditDelete && (
-              <div>
-                <Label>Priorität</Label>
-                <Select value={editPriority} onValueChange={setEditPriority}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PRIORITY_LEVELS.map((p) => (
-                      <SelectItem key={p} value={p}>{tc(priorityLabelKey(p))}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {canEditDelete && (
-              <div>
-                <Label>Fälligkeitsdatum</Label>
-                <Input type="date" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} />
-              </div>
-            )}
-            <div>
-              <Label>Anmerkungen</Label>
-              <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Anmerkungen zum Auftrag" rows={3} />
-            </div>
-            <Button onClick={handleEditSubmit}>Speichern</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
