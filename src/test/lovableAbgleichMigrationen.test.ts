@@ -62,15 +62,45 @@ describe("0049 – Schutz begonnener Aufträge per Policy", () => {
     }
   });
 
-  it("setzt den Schalter innerhalb der zwei Bearbeiten-Funktionen per set_config (kein ALTER FUNCTION SET, das Supabase ablehnt)", () => {
-    expect(sql).toContain("public.apply_order_changes(uuid,jsonb,text)");
-    expect(sql).toContain("public.order_edit_remove_services(uuid,uuid[],text)");
-    expect(sql).toContain("PERFORM set_config(''app.order_edit'', ''on'', true);");
+  const normal = (t: string) => t.replace(/\r\n/g, "\n");
+  /** Funktionstext apply_order_changes (von CREATE OR REPLACE bis "END $$;") aus einer Migration. */
+  const funktion = (text: string) => {
+    const t = normal(text);
+    const a = t.indexOf("CREATE OR REPLACE FUNCTION public.apply_order_changes(");
+    const e = t.indexOf("END $$;", a);
+    return t.slice(a, e + "END $$;".length).split("\n");
+  };
+
+  it("setzt den Schalter per set_config als erste Anweisung von apply_order_changes (kein ALTER FUNCTION SET, das Supabase ablehnt)", () => {
+    const zeilen = funktion(sql);
+    const begin = zeilen.indexOf("BEGIN");
+    expect(begin).toBeGreaterThan(-1);
+    expect(zeilen[begin + 1]).toMatch(/^ {2}PERFORM set_config\('app\.order_edit', 'on', true\);/);
     expect(sql).not.toMatch(/^ALTER FUNCTION[^;]*SET\s+app\.order_edit/im);
   });
 
+  it("apply_order_changes ist Zeile für Zeile die Fassung aus 0042 – nur die Schalter-Zeile kommt hinzu", () => {
+    const alt = funktion(lese("0042_order_edit_remove_services.sql"));
+    const neu = funktion(sql).filter((z) => !z.includes("PERFORM set_config('app.order_edit'"));
+    expect(neu).toEqual(alt);
+  });
+
+  it("lässt order_edit_remove_services unverändert (SECURITY DEFINER, Besitzer umgeht die Policies)", () => {
+    expect(sql).not.toMatch(/CREATE OR REPLACE FUNCTION public\.order_edit_remove_services/);
+    expect(sql).not.toMatch(/ALTER FUNCTION public\.order_edit_remove_services/);
+  });
+
+  it("prüft den Schalter in der Selbstprüfung auch bei Windows-Zeilenenden (\\r\\n)", () => {
+    expect(sql).toContain("BEGIN\\r?\\n\\s*PERFORM set_config");
+  });
+
+  it("behält Rechte von apply_order_changes (nur angemeldete Benutzer)", () => {
+    expect(sql).toContain("REVOKE ALL ON FUNCTION public.apply_order_changes(uuid, jsonb, text) FROM PUBLIC, anon;");
+    expect(sql).toContain("GRANT EXECUTE ON FUNCTION public.apply_order_changes(uuid, jsonb, text) TO authenticated;");
+  });
+
   it("macht den Schalter nur transaktionslokal (dritter Parameter true)", () => {
-    const aufrufe = sql.match(/set_config\(''app\.order_edit'',[^)]*\)/g) ?? [];
+    const aufrufe = sql.match(/set_config\('app\.order_edit',[^)]*\)/g) ?? [];
     expect(aufrufe.length).toBeGreaterThan(0);
     for (const a of aufrufe) expect(a).toMatch(/, true\)$/);
   });
