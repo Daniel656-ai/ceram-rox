@@ -26,18 +26,23 @@
 --   vorbefüllten Formularwerte ("form:…", nicht offiziell, innerhalb 10 Minuten).
 --   Auftrag begonnen = Status nicht "open" ODER mindestens eine Aufgabe nicht unberührt ODER Zeitbuchungen ODER Berichte.
 --
--- Schalter für unsere Funktionen: apply_order_changes (läuft mit den Rechten des Erstellers) und
--- order_edit_remove_services bekommen per ALTER FUNCTION ... SET app.order_edit = 'on' einen Funktions-Schalter.
--- PostgreSQL setzt ihn nur WÄHREND des Aufrufs und stellt den alten Wert danach wieder her. Der Funktionskörper bleibt
--- unverändert. Kein Client kann ihn selbst setzen (Prüfung siehe tasks/023-zusammenfuehrung.md, Abschnitt "Schalter").
--- ACHTUNG: Ersetzt eine spätere Migration eine dieser Funktionen mit CREATE OR REPLACE, bleibt die SET-Option erhalten
--- (PostgreSQL übernimmt sie), bei DROP+CREATE nicht – die Selbstprüfung unten würde das erkennen, wenn 0049 neu läuft.
+-- Schalter für unsere Funktionen: apply_order_changes (läuft mit den Rechten des Erstellers) und order_edit_remove_services
+-- setzen als erste Anweisung  PERFORM set_config('app.order_edit', 'on', true)  (true = nur bis zum Ende der Transaktion).
+-- (Ein ALTER FUNCTION ... SET app.order_edit scheitert in Supabase: postgres ist kein Superuser, "permission denied to set parameter".
+-- set_config innerhalb einer Funktion braucht keine Sonderrechte; dasselbe Muster nutzen wir seit Langem für app.bypass_order_lock.)
+-- Die Zeile wird per Textersatz in die BESTEHENDEN Funktionstexte eingefügt (pg_get_functiondef + CREATE OR REPLACE, wie Lovable 0039):
+-- Der übrige Funktionskörper bleibt Zeichen für Zeichen unverändert, Rechte und Kommentar der Funktionen bleiben erhalten.
+-- Gültigkeit: Eine Schnittstellen-Anfrage ist genau EINE Transaktion mit genau EINEM Funktionsaufruf; danach ist der Schalter weg.
+-- Kein Client kann ihn selbst setzen (Prüfung siehe tasks/023-zusammenfuehrung.md, Abschnitt "Schalter"): set_config ist über die
+-- Schnittstelle nicht aufrufbar und keine andere öffentliche Funktion setzt app.order_edit.
+-- ACHTUNG: Ersetzt eine spätere Migration eine dieser Funktionen vollständig (CREATE OR REPLACE mit eigenem Text), geht die Zeile verloren –
+-- dann müsste sie dort mit übernommen werden. Die Selbstprüfung unten würde das beim erneuten Ausführen von 0049 erkennen.
 --
 -- Zusätzlich: public.order_sync_primary_sample(uuid) (SECURITY DEFINER). Der Client hielt measurement_orders.sample_id bisher
 -- per direktem UPDATE aktuell; das wäre an begonnenen Aufträgen jetzt blockiert (Proben hinzufügen/entfernen ist dort erlaubt).
 -- Die Funktion macht dasselbe, geprüft: nur Master oder Ersteller, sonst keine Wirkung.
 --
--- Mehrfach ausführbar (CREATE OR REPLACE, DROP POLICY IF EXISTS, ALTER FUNCTION). Selbstprüfung am Ende.
+-- Mehrfach ausführbar (CREATE OR REPLACE, DROP POLICY IF EXISTS; der Textersatz überspringt bereits angepasste Funktionen). Selbstprüfung am Ende.
 
 -- 1) Hilfsfunktionen (nur lesend; von den Policies aufgerufen, deshalb für angemeldete Benutzer ausführbar)
 
@@ -101,10 +106,29 @@ END $$;
 REVOKE ALL ON FUNCTION public.order_sync_primary_sample(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.order_sync_primary_sample(uuid) TO authenticated;
 
--- 2) Schalter an unseren Bearbeiten-Funktionen (Funktionskörper unverändert)
+-- 2) Schalter an unseren Bearbeiten-Funktionen (Funktionskörper sonst unverändert)
 
-ALTER FUNCTION public.apply_order_changes(uuid, jsonb, text) SET app.order_edit = 'on';
-ALTER FUNCTION public.order_edit_remove_services(uuid, uuid[], text) SET app.order_edit = 'on';
+DO $do$
+DECLARE
+  _sig text;
+  _def text;
+  _zeile constant text := '  PERFORM set_config(''app.order_edit'', ''on'', true);';
+  _body int;   -- Position des Funktionskörpers ($function$ aus pg_get_functiondef)
+  _p int;      -- Position des ersten BEGIN im Körper (relativ)
+  _idx int;    -- Einfügestelle: erstes Zeichen hinter "BEGIN" + Zeilenumbruch
+BEGIN
+  FOREACH _sig IN ARRAY ARRAY['public.apply_order_changes(uuid,jsonb,text)', 'public.order_edit_remove_services(uuid,uuid[],text)'] LOOP
+    IF to_regprocedure(_sig) IS NULL THEN RAISE EXCEPTION '0049: Funktion % fehlt (0039/0042 zuerst einspielen)', _sig; END IF;
+    _def := pg_get_functiondef(to_regprocedure(_sig));
+    CONTINUE WHEN position('set_config(''app.order_edit''' IN _def) > 0;   -- schon angepasst
+    IF position('$function$' IN _def) = 0 THEN RAISE EXCEPTION '0049: Funktionstext von % nicht lesbar', _sig; END IF;
+    _body := position('$function$' IN _def) + length('$function$');
+    _p := position(chr(10) || 'BEGIN' || chr(10) IN substr(_def, _body));
+    IF _p = 0 THEN RAISE EXCEPTION '0049: BEGIN in % nicht gefunden', _sig; END IF;
+    _idx := (_body - 1) + _p + length(chr(10) || 'BEGIN' || chr(10));
+    EXECUTE substr(_def, 1, _idx - 1) || _zeile || chr(10) || substr(_def, _idx);
+  END LOOP;
+END $do$;
 
 -- 3) Einschränkende Policies
 
@@ -156,8 +180,12 @@ DO $$
 DECLARE _f text;
 BEGIN
   FOREACH _f IN ARRAY ARRAY['public.apply_order_changes(uuid,jsonb,text)', 'public.order_edit_remove_services(uuid,uuid[],text)'] LOOP
-    IF NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.oid = to_regprocedure(_f) AND 'app.order_edit=on' = ANY (p.proconfig)) THEN
-      RAISE EXCEPTION '0049: Funktions-Schalter app.order_edit fehlt an %', _f;
+    IF position('set_config(''app.order_edit'', ''on'', true)' IN pg_get_functiondef(to_regprocedure(_f))) = 0 THEN
+      RAISE EXCEPTION '0049: Schalter app.order_edit fehlt in %', _f;
+    END IF;
+    -- die Zeile muss VOR der ersten Anweisung der Funktion stehen (direkt hinter dem ersten BEGIN)
+    IF position('BEGIN' || chr(10) || '  PERFORM set_config(''app.order_edit''' IN pg_get_functiondef(to_regprocedure(_f))) = 0 THEN
+      RAISE EXCEPTION '0049: Schalter app.order_edit steht nicht am Anfang von %', _f;
     END IF;
   END LOOP;
   IF (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND permissive = 'RESTRICTIVE'
