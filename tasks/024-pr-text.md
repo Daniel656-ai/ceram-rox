@@ -1,6 +1,6 @@
 # PR-Text für Stefan (Prod-Repo, Draft-PR)
 
-Zum Einfügen in GitHub. Branch: `uebernahme-dev-2026-11`, Ziel: `main`. Vor dem Öffnen bitte die mit **[BITTE PRÜFEN]** markierten Stellen ausfüllen.
+Zum Einfügen in GitHub. Branch: `uebernahme-dev-2026-11` (Stand `84a96927`, gepusht), Ziel: `main`. Alle Prüfpunkte sind ausgefüllt; als **Draft** öffnen.
 
 **Titel:** Übernahme Dev-Stand (ceram-rox-dev) – Löschen, Bearbeiten, Ergebnisdatenbank, Auftragserstellung, Pilot Plant, BET, Aktivitätsmessung
 
@@ -91,7 +91,8 @@ Hinweis: Der erste Commit (Merge von `dev/main`) übersetzt allein noch nicht (u
 
 - Im Prod-Klon (Branch-Stand): `tsc` 0 Fehler, Vitest 204 Dateien / 2123 Tests grün, `npm run build` erfolgreich.
 - Reviewer-Prüfung des Branches (Diff gegen `main`, Journal, m³-Formular, gesperrte Funktionen nirgends mehr aufgerufen, keine Dev-Adressen/Zugangsdaten): **APPROVED**, keine Findings.
-- Dev-Datenbank: 0038–0049 eingespielt (0049 am 23.11. um 13:10). Die Tests aus `tasks/023-testanleitung.md` sind durchgelaufen: Bearbeiten, Löschen (auch der Fall mit `order_form_versions`), m³-Liste löschen, drei Rollen (Ersteller ohne Master, Messdienstleister, Master) – alles in Ordnung. **[BITTE PRÜFEN: 0050 nach dem Test in Dev nachtragen; ebenso den Test der Oberfläche dieses Branches gegen die Dev-Datenbank (m³-Liste: Proben ergänzen, Nachrüst-Panel, Löschen). Bis dahin den PR nicht aus dem Draft nehmen.]**
+- Dev-Datenbank: 0038–0049 eingespielt (0049 am 23.11. um 13:10). Die Tests aus `tasks/023-testanleitung.md` sind durchgelaufen: Bearbeiten, Löschen (auch der Fall mit `order_form_versions`), m³-Liste löschen, drei Rollen (Ersteller ohne Master, Messdienstleister, Master) – alles in Ordnung. **0050** ist am 23.11. um 14:42 in die Dev-Datenbank eingespielt und geprüft.
+- **Oberflächentest dieses Branches gegen die Dev-Datenbank** (lokal, `localhost:8080`, ausschließlich Dev-Backend `172.30.100.162:55321`, kein Prod-Zugriff): in Ordnung (m³-Liste: Proben ergänzen, Nachrüst-Panel, Löschen).
 - Nicht möglich/nicht gemacht: Ausführen gegen die Produktionsdatenbank (nie), Installation mit `npm ci` (Prod-`package-lock.json` ist nicht synchron; Prod nutzt `bun.lock`/`npm install --force`).
 
 ## Rollback
