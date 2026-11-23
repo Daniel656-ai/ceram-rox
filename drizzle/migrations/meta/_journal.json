@@ -337,6 +337,20 @@
       "when": 1795295600000,
       "tag": "0047_order_delete_always_master_creator",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1795382000000,
+      "tag": "0048_lovable_abgleich_sperren",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1795468400000,
+      "tag": "0049_order_edit_policies",
+      "breakpoints": true
     }
   ]
 }
