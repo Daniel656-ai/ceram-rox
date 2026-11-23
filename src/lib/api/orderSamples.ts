@@ -97,21 +97,9 @@ export const orderSamples = {
    * damit bestehende Ansichten/Reports weiter funktionieren.
    */
   syncPrimary: async (orderId: string) => {
-    const rows: any = await unwrap(
-      dbClient
-        .from("order_samples")
-        .select("sample_id, created_at")
-        .eq("order_id", orderId)
-        .order("created_at", { ascending: true })
-        .limit(1)
-    );
-    const first = rows?.[0]?.sample_id ?? null;
-    await run(
-      dbClient
-        .from("measurement_orders")
-        .update({ sample_id: first } as any)
-        .eq("id", orderId)
-    );
+    // Datenbank-Funktion (Aufgabe 023): setzt die erste Probe nur für Ersteller/Master. Ein direktes UPDATE
+    // wäre an begonnenen Aufträgen durch die einschränkenden Policies (0049) blockiert.
+    await run((dbClient as any).rpc("order_sync_primary_sample", { _order_id: orderId }));
   },
 
   /**
