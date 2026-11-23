@@ -1,0 +1,89 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+/**
+ * Aufgabe 023: Abgleich mit Lovable (Prod). Es gibt hier keine echte Datenbank; geprüft wird, dass die Migrationen
+ * die zugesagten Schutzregeln enthalten (Text), damit sie nicht versehentlich verloren gehen.
+ */
+const lese = (datei: string) => readFileSync(resolve(__dirname, "../../drizzle/migrations", datei), "utf8");
+
+describe("0038 – Abgleich mit Lovable", () => {
+  const sql = lese("0038_m3_list_delete.sql");
+
+  it("entfernt vorhandene INSERT/UPDATE-Regeln, bevor sie neu angelegt werden", () => {
+    for (const art of ["insert", "update"]) {
+      const regel = `"Authenticated ${art} production_document_requests"`;
+      const drop = sql.indexOf(`DROP POLICY IF EXISTS ${regel}`);
+      const create = sql.indexOf(`CREATE POLICY ${regel}`);
+      expect(drop, `DROP POLICY IF EXISTS für ${art}`).toBeGreaterThan(-1);
+      expect(create).toBeGreaterThan(drop);
+    }
+  });
+});
+
+describe("0048 – Lovable-Trigger entfernen, Funktionen sperren", () => {
+  const sql = lese("0048_lovable_abgleich_sperren.sql");
+
+  it("entfernt beide Lovable-Trigger", () => {
+    expect(sql).toContain("DROP TRIGGER IF EXISTS trg_guard_requester_order_edit ON public.measurement_orders");
+    expect(sql).toContain("DROP TRIGGER IF EXISTS trg_guard_requester_param_edit ON public.measurement_parameters");
+  });
+
+  it("sperrt genau die drei Lovable-Funktionen und löscht keine", () => {
+    for (const sig of [
+      "public.force_delete_order(uuid,text)",
+      "public.delete_m3_list(uuid,text)",
+      "public.requester_remove_order_measurement(uuid,text)",
+    ]) expect(sql).toContain(`'${sig}'`);
+    expect(sql).toContain("REVOKE ALL ON FUNCTION");
+    expect(sql).not.toMatch(/DROP FUNCTION/i);
+  });
+
+  it("vermerkt: in Prod nur gemeinsam mit 0049, neuer Oberfläche und Freigabe", () => {
+    expect(sql).toMatch(/NUR 0048 UND 0049 GEMEINSAM/);
+    expect(sql).toMatch(/Stefan/);
+  });
+});
+
+describe("0049 – Schutz begonnener Aufträge per Policy", () => {
+  const sql = lese("0049_order_edit_policies.sql");
+
+  it("legt fünf einschränkende Policies an", () => {
+    const anzahl = (sql.match(/CREATE POLICY order_edit_restrict_\w+ ON [\w.]+ AS RESTRICTIVE/g) ?? []).length;
+    expect(anzahl).toBe(5);
+  });
+
+  it("lässt Master immer und unsere Bearbeiten-Funktionen über den Schalter durch", () => {
+    const policies = sql.split("CREATE POLICY").slice(1);
+    for (const p of policies) {
+      expect(p).toContain("has_role(auth.uid(), 'master'");
+      expect(p).toContain("current_setting('app.order_edit', true)");
+    }
+  });
+
+  it("setzt den Schalter an genau den zwei Bearbeiten-Funktionen", () => {
+    expect(sql).toContain("ALTER FUNCTION public.apply_order_changes(uuid, jsonb, text) SET app.order_edit = 'on'");
+    expect(sql).toContain("ALTER FUNCTION public.order_edit_remove_services(uuid, uuid[], text) SET app.order_edit = 'on'");
+    expect(sql).not.toMatch(/set_config\(\s*'app\.order_edit'/);
+  });
+
+  it("gibt die Hilfsfunktionen nicht an anon", () => {
+    for (const f of ["order_is_started", "order_measurement_is_untouched", "order_sync_primary_sample"]) {
+      expect(sql).toMatch(new RegExp(`REVOKE ALL ON FUNCTION public\\.${f}\\(uuid\\) FROM PUBLIC, anon;`));
+    }
+  });
+
+  it("vermerkt: in Prod nur gemeinsam mit 0048, neuer Oberfläche und Freigabe", () => {
+    expect(sql).toMatch(/NUR 0048 UND 0049 GEMEINSAM/);
+    expect(sql).toMatch(/Stefan/);
+  });
+});
+
+describe("Migrationsliste", () => {
+  it("führt 0048 und 0049 im Journal", () => {
+    const journal = readFileSync(resolve(__dirname, "../../drizzle/migrations/meta/_journal.json"), "utf8");
+    expect(journal).toContain("0048_lovable_abgleich_sperren");
+    expect(journal).toContain("0049_order_edit_policies");
+  });
+});
