@@ -17,6 +17,10 @@ BEGIN
     EXECUTE format('DROP POLICY %I ON public.production_document_requests', p.policyname);
   END LOOP;
 END $$;
+-- Abgleich mit Lovable (Prod, 0040): INSERT/UPDATE-Regeln mit gleichem Namen und Inhalt existieren dort bereits.
+-- Vorher entfernen, damit die Migration auf frischer Dev-DB, nach Lovable und auf Prod gleich durchläuft.
+DROP POLICY IF EXISTS "Authenticated insert production_document_requests" ON public.production_document_requests;
+DROP POLICY IF EXISTS "Authenticated update production_document_requests" ON public.production_document_requests;
 CREATE POLICY "Authenticated insert production_document_requests"
   ON public.production_document_requests FOR INSERT TO authenticated WITH CHECK (true);
 CREATE POLICY "Authenticated update production_document_requests"
