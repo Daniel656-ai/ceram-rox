@@ -39,7 +39,7 @@ Gründe für "gesperrt": Auftrag gesperrt/abgeschlossen, Status nicht "open", ir
 Warum das uns trifft:
 - `apply_order_changes` ist **SECURITY INVOKER**, läuft also mit den Rechten des Erstellers. Sein `UPDATE measurement_orders SET …` (Priorität, Fälligkeit, Anmerkungen, Formularwerte …) ist ein direktes Statement auf Tiefe 1. Die Datenbankrolle ist `authenticated`. Der Trigger greift also.
 - Unser Bearbeiten ist ausdrücklich **auch bei begonnenen Aufträgen** erlaubt. Der Trigger verbietet genau das für Ersteller. Der Ersteller bekommt dann beim Speichern die Lovable-Fehlermeldung.
-- `order_edit_remove_services` ist SECURITY DEFINER. Die Datenbankrolle bleibt dabei `authenticated`, deshalb wird der Trigger auch hier nicht umgangen. Das Löschen von Parametern wird über Fremdschlüssel-Kaskaden ausgelöst (Tiefe >1, vom Trigger ignoriert). Direkte Parameter-Änderungen innerhalb unserer Funktionen träfe er dagegen.
+- *(Analysestand vor der Umsetzung; der Trigger ist seit 0048 entfernt.)* `order_edit_remove_services` ist SECURITY DEFINER. Die Datenbankrolle bleibt dabei `authenticated`, deshalb wäre der Trigger auch hier nicht umgangen worden. Das Löschen von Parametern wird über Fremdschlüssel-Kaskaden ausgelöst (Tiefe >1, vom Trigger ignoriert). Direkte Parameter-Änderungen innerhalb unserer Funktionen träfe er dagegen.
 - Die Aussage im Lovable-Kommentar, SECURITY-DEFINER-Funktionen blieben unberührt, stimmt nur für Folgetrigger. Sie stimmt nicht für direkte Statements in den Funktionen.
 
 `order_edit_locks`: Es gibt kein solches Objekt im Code. Der Begriff steht nur im Vorschlag `tasks/012`. Die Sperren in unserer Lösung sind die bestehenden `is_order_locked` und `SELECT … FOR UPDATE` in `apply_order_changes`. Beide kollidieren nicht mit Lovable.
@@ -53,8 +53,8 @@ Neue Migration: `DROP TRIGGER IF EXISTS trg_guard_requester_order_edit ON measur
 - Vorteil: einfach, sicher, ohne Eingriff in unsere Funktionen. Unsere Regeln gelten allein.
 - Nachteil: Der Trigger war eine zweite Absicherung gegen direkte Client-Schreibzugriffe auf `measurement_orders`/`measurement_parameters`. Diese Absicherung fällt weg. Offene Prüfung vor Prod: Welche Schreibrechte (Policies) hat ein Ersteller auf `measurement_orders` und `measurement_parameters` direkt über die API? Ich habe das hier nicht geprüft (keine DB-Zugriffe). Das wäre ein eigener kleiner Schritt.
 
-**Variante B – Trigger behalten, mit Schalter durchlassen.**
-`guard_requester_order_edit` wird per `CREATE OR REPLACE` so geändert, dass er bei gesetztem Schalter `app.order_edit = 'on'` sofort durchlässt. `apply_order_changes` und `order_edit_remove_services` setzen den Schalter transaktionslokal (`set_config(…, true)`). Das gleiche Muster nutzen wir schon mit `app.order_force_delete`.
+**Variante B – Trigger behalten, mit Schalter durchlassen.** *(Nicht gewählt. Umgesetzt wurde Variante A plus Policies; der Schalter sitzt nur in `apply_order_changes`, siehe Abschnitt "Umsetzung".)*
+`guard_requester_order_edit` wird per `CREATE OR REPLACE` so geändert, dass er bei gesetztem Schalter `app.order_edit = 'on'` sofort durchlässt. `apply_order_changes` und `order_edit_remove_services` würden den Schalter transaktionslokal setzen (`set_config(…, true)`). Das gleiche Muster nutzen wir schon mit `app.order_force_delete`.
 - Vorteil: Schutz gegen direkte Zugriffe bleibt.
 - Nachteil: Wir müssten die zwei Funktionen (ca. 350 Zeilen) in einer neuen Migration neu schreiben. Mehr Aufwand, mehr Risiko.
 
@@ -118,7 +118,7 @@ Branch `improve/lovable-abgleich`. Dateien:
 |---|---|
 | `drizzle/migrations/0038_m3_list_delete.sql` | ergänzt: `DROP POLICY IF EXISTS` für "Authenticated insert/update production_document_requests" vor dem Anlegen |
 | `drizzle/migrations/0048_lovable_abgleich_sperren.sql` | Lovables Trigger `trg_guard_requester_order_edit` / `trg_guard_requester_param_edit` entfernen; `force_delete_order(uuid,text)`, `delete_m3_list(uuid,text)`, `requester_remove_order_measurement(uuid,text)` per `REVOKE` sperren (nicht gelöscht) |
-| `drizzle/migrations/0049_order_edit_policies.sql` | Hilfsfunktionen, fünf einschränkende Policies, Schalter `app.order_edit` (set_config als erste Zeile von `apply_order_changes` und `order_edit_remove_services`), `order_sync_primary_sample` |
+| `drizzle/migrations/0049_order_edit_policies.sql` | Hilfsfunktionen, fünf einschränkende Policies, Schalter `app.order_edit` (`apply_order_changes` komplett neu angelegt, `set_config` als erste Anweisung), `order_sync_primary_sample` |
 | `src/lib/api/orderSamples.ts` | `syncPrimary` ruft `order_sync_primary_sample` statt direktem UPDATE |
 | `tasks/lovable-prod/` | Lovable-Kopien 0034–0040 (nur zum Lesen) |
 | `tasks/023-testanleitung.md`, `023-testuser-dev.sql`, `023-testfaelle-dev.sql` | Testanleitung, Testbenutzer (nur Dev), SQL-Prüfung |
@@ -140,15 +140,20 @@ Ergebnis: **Nein.** Geprüft in allen Migrationen (`drizzle/migrations`, `supaba
 3. **Keine Funktion im Schema `public`**, die beliebiges SQL ausführt oder `set_config` weiterreicht (Suche nach `set_config`, `exec_sql`,
    `run_sql`, `execute_sql` ergab nichts). Die Schnittstelle (PostgREST) macht nur Funktionen aus `public` aufrufbar; `pg_catalog.set_config`
    gehört nicht dazu. Oberfläche und Edge Functions rufen kein `set_config`/`SET` auf (Suche in `src/`, `supabase/functions/`).
-4. **Der Schalter selbst (geändert nach dem ersten Dev-Lauf):** `ALTER FUNCTION … SET app.order_edit` scheitert in Supabase
-   (`permission denied to set parameter`, postgres ist kein Superuser). Deshalb steht jetzt als **erste Anweisung** in `apply_order_changes`
-   und `order_edit_remove_services`: `PERFORM set_config('app.order_edit', 'on', true)`. 0049 fügt diese eine Zeile per Textersatz
-   (`pg_get_functiondef` + `CREATE OR REPLACE`, wie Lovable 0039) hinter dem ersten `BEGIN` ein; der übrige Funktionstext bleibt unverändert.
-   Der dritte Parameter `true` macht ihn **transaktionslokal**: Er gilt nur bis zum Ende der Transaktion. Eine Schnittstellen-Anfrage ist genau eine
-   Transaktion mit genau einem Funktionsaufruf, danach ist der Schalter weg (und wird auch auf einer weiterverwendeten Verbindung nicht mitgenommen).
-   `app.order_edit` kommt in keiner anderen Migration vor (der Test `lovableAbgleichMigrationen.test.ts` prüft das), keine öffentliche Funktion nimmt
-   einen Einstellungsnamen entgegen, und `set_config` selbst ist über die Schnittstelle nicht aufrufbar. Beide Funktionen prüfen selbst,
-   wer sie aufrufen darf (Ersteller/Master).
+4. **Der Schalter selbst (zweimal nach Dev-Läufen geändert):**
+   - Erster Lauf: `ALTER FUNCTION … SET app.order_edit` scheitert in Supabase (`permission denied to set parameter`, postgres ist kein Superuser).
+   - Zweiter Lauf: Der Textersatz im bestehenden Funktionstext fand `BEGIN` nicht, weil die Datei auf dem Windows-Server mit CRLF ausgecheckt wird
+     und im Funktionstext `BEGIN\r\n` steht.
+   - Jetzt: 0049 legt `apply_order_changes` **vollständig neu an**. Der Text stammt Zeile für Zeile aus der letzten gültigen Fassung (0042; ein Test
+     vergleicht beide), einzige Änderung ist die **erste Anweisung** `PERFORM set_config('app.order_edit', 'on', true)`. Rechte (nur angemeldete
+     Benutzer), SECURITY INVOKER und search_path bleiben wie bisher. Die Selbstprüfung am Ende erkennt die Zeile mit `\n` und mit `\r\n`.
+   - `order_edit_remove_services` (SECURITY DEFINER, Besitzer postgres) braucht den Schalter nicht: Der Besitzer umgeht die Policies, und im Projekt gibt es
+     kein `FORCE ROW LEVEL SECURITY` (Suche in allen Migrationen: kein Treffer). Die Funktion bleibt unverändert.
+   - Der dritte Parameter `true` macht den Schalter **transaktionslokal**: Er gilt nur bis zum Ende der Transaktion. Eine Schnittstellen-Anfrage ist genau eine
+     Transaktion mit genau einem Funktionsaufruf, danach ist der Schalter weg (und wird auch auf einer weiterverwendeten Verbindung nicht mitgenommen).
+   - `app.order_edit` kommt in keiner anderen Migration vor (der Test `lovableAbgleichMigrationen.test.ts` prüft das), keine öffentliche Funktion nimmt
+     einen Einstellungsnamen entgegen, und `set_config` selbst ist über die Schnittstelle nicht aufrufbar. `apply_order_changes` prüft selbst,
+     wer sie aufrufen darf (Ersteller/Master).
 5. Annahme: Direkte Datenbankverbindungen (Rollen `postgres`, `authenticator`) sind für Clients nicht offen; Clients kommen nur über die
    Schnittstelle. Das gilt genauso für den bestehenden Schalter `app.bypass_order_lock`.
 
@@ -187,3 +192,24 @@ Master sind nie blockiert, zugewiesene Messdienstleister bei `order_measurements
 Nach dem Merge nach `main` holt der Dev-Sync (`scripts/dev-db/sync-db-dev.ps1`, alle 10 Minuten über `update-dev-web.ps1`) die Dateien selbst.
 0038 war bisher fehlgeschlagen und nicht eingetragen: der nächste Lauf nimmt dort wieder auf und spielt 0038 bis 0049 nacheinander ein.
 Kontrolle über `sync-db-dev.log` und die Testanleitung `tasks/023-testanleitung.md`.
+
+## Vorschlag (nicht umgesetzt): feste LF-Zeilenenden für `.sql` per `.gitattributes`
+
+Befund: Im Repo liegen alle Migrationsdateien mit LF (`git ls-files --eol`: 251 von 252 Dateien `i/lf`). Auf den Windows-Rechnern und dem Server werden sie wegen
+`core.autocrlf=true` mit CRLF ausgecheckt (`w/crlf`). `psql -f` schickt den Text so an die Datenbank; Funktionstexte enthalten dann `\r`
+(Ursache des zweiten 0049-Fehlers). Auf Prod/Linux (LF) wäre derselbe Text ohne `\r`. Dieselbe Migration ergibt also in Dev und Prod verschiedene Funktionstexte.
+
+Vorschlag: Datei `.gitattributes` im Repo-Wurzelordner mit
+
+```
+*.sql text eol=lf
+drizzle/migrations/meta/*.json text eol=lf
+```
+
+- Wirkung: Beim Auschecken bekommen diese Dateien auf allen Rechnern LF. Der gespeicherte Inhalt im Repo ändert sich nicht (er ist schon LF),
+  es entsteht also keine Änderung an bestehenden Migrationen und keine neue Prüfsumme.
+- Vorteil: Dev (Windows) und Prod spielen byte-gleich ein; Textvergleiche (`pg_get_functiondef`) und künftige Textersatz-Migrationen sind unabhängig vom Rechner.
+- Nachteile/Hinweise: Bereits in der Dev-DB eingespielte Funktionen behalten ihr `\r` (kein Problem, nur kosmetisch). Die Windows-Arbeitskopien müssen einmal
+  neu ausgecheckt werden (`git rm --cached -r . && git reset --hard` oder `git add --renormalize .`), sonst bleiben vorhandene Dateien CRLF, bis sie sich ändern.
+  Das Ceram-Repo (Prod) bräuchte dieselbe Datei; sie gehört zu den Dingen, die bei der Übertragung nach Prod mitgenommen werden müssen.
+- Meine Einschätzung: sinnvoll und risikoarm. Umsetzen erst auf Deinen Wunsch, als eigener kleiner Branch.
