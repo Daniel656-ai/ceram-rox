@@ -386,6 +386,13 @@
       "when": 1796140426582,
       "tag": "0049_order_edit_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1796226826582,
+      "tag": "0050_m3_delete_lovable_samples",
+      "breakpoints": true
     }
   ]
 }
