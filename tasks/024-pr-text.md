@@ -92,7 +92,7 @@ Hinweis: Der erste Commit (Merge von `dev/main`) übersetzt allein noch nicht (u
 - Im Prod-Klon (Branch-Stand): `tsc` 0 Fehler, Vitest 204 Dateien / 2123 Tests grün, `npm run build` erfolgreich.
 - Reviewer-Prüfung des Branches (Diff gegen `main`, Journal, m³-Formular, gesperrte Funktionen nirgends mehr aufgerufen, keine Dev-Adressen/Zugangsdaten): **APPROVED**, keine Findings.
 - Dev-Datenbank: 0038–0049 eingespielt (0049 am 23.11. um 13:10). Die Tests aus `tasks/023-testanleitung.md` sind durchgelaufen: Bearbeiten, Löschen (auch der Fall mit `order_form_versions`), m³-Liste löschen, drei Rollen (Ersteller ohne Master, Messdienstleister, Master) – alles in Ordnung. **0050** ist am 23.11. um 14:42 in die Dev-Datenbank eingespielt und geprüft.
-- **Oberflächentest dieses Branches gegen die Dev-Datenbank** (lokal, `localhost:8080`, ausschließlich Dev-Backend `172.30.100.162:55321`, kein Prod-Zugriff): in Ordnung (m³-Liste: Proben ergänzen, Nachrüst-Panel, Löschen).
+- **Oberflächentest dieses Branches gegen die Dev-Datenbank** (lokal gestartet, ausschließlich gegen das Dev-Backend (Firmenserver), kein Prod-Zugriff): in Ordnung (m³-Liste: Proben ergänzen, Nachrüst-Panel, Löschen).
 - Nicht möglich/nicht gemacht: Ausführen gegen die Produktionsdatenbank (nie), Installation mit `npm ci` (Prod-`package-lock.json` ist nicht synchron; Prod nutzt `bun.lock`/`npm install --force`).
 
 ## Rollback
