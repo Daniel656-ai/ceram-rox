@@ -138,3 +138,26 @@ describe("Migrationsliste", () => {
     expect(journal).toContain("0049_order_edit_policies");
   });
 });
+
+describe("0050 – m³-Liste löschen erkennt Lovable-Proben", () => {
+  const normal = (t: string) => t.replace(/\r\n/g, "\n");
+  const fn = (t: string) => normal(t).slice(normal(t).indexOf("CREATE OR REPLACE FUNCTION public.m3_list_sample_plan"));
+  const sql = lese("0050_m3_delete_lovable_samples.sql");
+
+  it("erkennt zusätzlich die Beschreibung 'm³-Liste Zeile N' als aus der m³-Liste erzeugt", () => {
+    expect(sql).toContain("s.description LIKE 'Aus m³-Liste%' OR s.description LIKE 'm³-Liste Zeile %'");
+  });
+
+  it("ist bis auf diese eine Bedingung identisch zu 0044 (nichts wird zusätzlich gelöscht)", () => {
+    const alt = fn(lese("0044_fix_m3_sample_plan_array_cast.sql")).split("\n");
+    const neu = fn(sql).split("\n");
+    expect(neu.length).toBe(alt.length);
+    const unterschiede = neu.map((z, i) => (z === alt[i] ? null : i)).filter((i) => i !== null);
+    expect(unterschiede).toHaveLength(1);
+  });
+
+  it("steht im Journal", () => {
+    const journal = readFileSync(resolve(__dirname, "../../drizzle/migrations/meta/_journal.json"), "utf8");
+    expect(journal).toContain("0050_m3_delete_lovable_samples");
+  });
+});
