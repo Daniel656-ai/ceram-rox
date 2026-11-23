@@ -71,9 +71,12 @@ SELECT tgname FROM pg_trigger WHERE tgname LIKE 'trg_guard_requester%';  -- muss
 ## Teil C – Schalter-Prüfung
 
 ```sql
-SELECT proname, proconfig FROM pg_proc WHERE proname IN ('apply_order_changes','order_edit_remove_services');
--- jeweils proconfig mit {"app.order_edit=on", ...}
-SELECT current_setting('app.order_edit', true);   -- ausserhalb der Funktionen: leer oder NULL
+-- Die Zeile muss direkt hinter dem ersten BEGIN stehen (beide Zeilen müssen true liefern)
+SELECT proname,
+       position('BEGIN' || chr(10) || '  PERFORM set_config(''app.order_edit'', ''on'', true)' IN pg_get_functiondef(oid)) > 0 AS schalter_am_anfang
+  FROM pg_proc WHERE proname IN ('apply_order_changes','order_edit_remove_services');
+-- In einer neuen Verbindung/Transaktion ist der Schalter nicht gesetzt: leer oder NULL
+SELECT current_setting('app.order_edit', true);
 ```
 
 ## Aufräumen

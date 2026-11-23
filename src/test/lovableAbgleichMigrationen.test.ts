@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -62,10 +62,31 @@ describe("0049 – Schutz begonnener Aufträge per Policy", () => {
     }
   });
 
-  it("setzt den Schalter an genau den zwei Bearbeiten-Funktionen", () => {
-    expect(sql).toContain("ALTER FUNCTION public.apply_order_changes(uuid, jsonb, text) SET app.order_edit = 'on'");
-    expect(sql).toContain("ALTER FUNCTION public.order_edit_remove_services(uuid, uuid[], text) SET app.order_edit = 'on'");
-    expect(sql).not.toMatch(/set_config\(\s*'app\.order_edit'/);
+  it("setzt den Schalter innerhalb der zwei Bearbeiten-Funktionen per set_config (kein ALTER FUNCTION SET, das Supabase ablehnt)", () => {
+    expect(sql).toContain("public.apply_order_changes(uuid,jsonb,text)");
+    expect(sql).toContain("public.order_edit_remove_services(uuid,uuid[],text)");
+    expect(sql).toContain("PERFORM set_config(''app.order_edit'', ''on'', true);");
+    expect(sql).not.toMatch(/^ALTER FUNCTION[^;]*SET\s+app\.order_edit/im);
+  });
+
+  it("macht den Schalter nur transaktionslokal (dritter Parameter true)", () => {
+    const aufrufe = sql.match(/set_config\(''app\.order_edit'',[^)]*\)/g) ?? [];
+    expect(aufrufe.length).toBeGreaterThan(0);
+    for (const a of aufrufe) expect(a).toMatch(/, true\)$/);
+  });
+
+  it("setzt app.order_edit in keiner anderen Migration und gibt keine Funktion, die den Namen als Parameter nimmt", () => {
+    const dir = resolve(__dirname, "../../drizzle/migrations");
+    const andere = readdirSync(dir).filter((f) => f.endsWith(".sql") && !f.startsWith("0049_"));
+    for (const f of andere) {
+      expect(readFileSync(resolve(dir, f), "utf8"), f).not.toMatch(/app\.order_edit/);
+    }
+    const supa = resolve(__dirname, "../../supabase/migrations");
+    for (const f of readdirSync(supa).filter((x) => x.endsWith(".sql"))) {
+      expect(readFileSync(resolve(supa, f), "utf8"), f).not.toMatch(/app\.order_edit/);
+    }
+    // Nur feste Namen: kein set_config mit Variable als erstem Argument in 0049
+    expect(sql).not.toMatch(/set_config\(\s*[_a-z]/i);
   });
 
   it("gibt die Hilfsfunktionen nicht an anon", () => {
