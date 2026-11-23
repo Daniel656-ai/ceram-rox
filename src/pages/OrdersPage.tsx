@@ -1,4 +1,3 @@
-import { showOwnOrderActions } from "@/lib/orders/requesterEdit";
 import { TaskServiceFilterPopover } from "@/components/orders/TaskServiceFilterPopover";
 import { SlaBadge } from "@/components/sla/SlaBadge";
 import { aggregateSla, computeServiceSla, slaInputFromMeasurement } from "@/lib/sla/slaCalculator";
@@ -7,9 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useServices, useMyQualifiedServiceIds } from "@/hooks/useMeasurements";
 import { loadTaskFilterState, saveTaskFilterState, effectiveServiceIds, buildTaskServicePredicate, isTaskFilterActive, DEFAULT_TASK_FILTER, type TaskFilterState, type CompetenceState } from "@/lib/tasks/taskServiceFilter";
 import { TaskOrderIdentity } from "@/components/orders/TaskOrderIdentity";
-import { OrderDeleteDialog } from "@/components/orders/OrderDeleteDialog";
-import { RequesterOrderRowActions } from "@/components/orders/RequesterOrderRowActions";
-import { useOrders, useDeleteOrder, useCopyOrder } from "@/hooks/useOrders";
+import { useOrders, useDeleteOrder, useCopyOrder, useOrderReleaseLabels } from "@/hooks/useOrders";
 import { resolveOrderKind } from "@/lib/orders/orderKind";
 import { resolveOrderMasseType } from "@/lib/orders/orderMasseType";
 import { orderFilterColumns } from "@/lib/orders/orderFilterColumns";
@@ -20,6 +17,7 @@ import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
 import { samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
 import { SampleLinks } from "@/components/orders/SampleLinks";
+import { OrderDeleteBody } from "@/components/orders/OrderDeleteInfo";
 import {
   useMyMeasurements,
   useUnassignedQualifiedMeasurements,
@@ -37,8 +35,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Search, Trash2, Copy, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox, RotateCcw } from "lucide-react";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Plus, Search, Trash2, FileSpreadsheet, ArrowUp, ArrowDown, ArrowUpDown, HandshakeIcon, Inbox, RotateCcw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useMemo, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,6 +60,7 @@ function OrdersOverview() {
   const showSla = !isExternalCustomer(customRoleIds);
   const { t, i18n } = useTranslation(["orders", "common", "measurements", "samples"]);
   const { data: orders = [], isLoading } = useOrders();
+  const { data: releaseLabels } = useOrderReleaseLabels();
   const { data: myMeasurements = [], isLoading: isLoadingMine } = useMyMeasurements();
   const { data: isAnyProjectLead = false } = useIsAnyProjectLead();
   const deleteOrder = useDeleteOrder();
@@ -98,7 +97,7 @@ function OrdersOverview() {
       case "order_kind": return kindLabel(o);
       case "mass_type": return resolveOrderMasseType(o).join(", ");
       case "project_number": return o.projects?.project_number ?? "";
-      case "project_name": return o.projects?.project_name ?? "";
+      case "project_name": return o.projects?.project_name ?? releaseLabels?.get(o.id) ?? "";
       case "order_type": return o.order_type ?? "";
       case "ranking": return 3 - priorityRank(o.priority);
       case "status": return o.status ?? "";
@@ -172,7 +171,8 @@ function OrdersOverview() {
   }
 
   const canCreateOrder = role === "master" || isRequester || isAnyProjectLead;
-  const canShowActions = role === "master" || isRequester || isAnyProjectLead;
+  const canShowActions = role === "master" || isRequester || isAnyProjectLead
+    || orders.some((o: any) => o.created_by === user?.id);
 
   const handleCopy = async (id: string) => {
     try {
@@ -184,13 +184,17 @@ function OrdersOverview() {
     }
   };
 
+  const canDelete = (o: any) => {
+    // Master: alle Aufträge; sonst nur der Ersteller. Verbindlich prüft die Datenbank (cancel_or_delete_order).
+    return role === "master" || o.created_by === user?.id;
+  };
 
-
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, confirmNumber?: string) => {
     if (deleteOrder.isPending) return;
     try {
-      await deleteOrder.mutateAsync(id);
+      const orphaned = await deleteOrder.mutateAsync({ id, confirmNumber });
       toast.success(t("orders:deleted"));
+      if (orphaned > 0) toast.warning(`${orphaned} Datei(en) konnten im Speicher nicht entfernt werden.`);
     } catch (err: any) {
       toast.error(t("orders:delete_error"), { description: err.message });
     }
@@ -293,7 +297,7 @@ function OrdersOverview() {
                         </Link>
                       ) : "–"}
                     </TableCell>
-                    <TableCell>{o.projects?.project_name || "–"}</TableCell>
+                    <TableCell>{o.projects?.project_name || releaseLabels?.get(o.id) || "–"}</TableCell>
                     <TableCell>{kindLabel(o)}</TableCell>
                     <TableCell className="whitespace-normal">{resolveOrderMasseType(o).join(", ") || "–"}</TableCell>
                     <TableCell>{t(`common:order_type_${o.order_type}`)}<BillingStatusText order={o as any} /></TableCell>
@@ -315,17 +319,23 @@ function OrdersOverview() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                         {/* Kopiervorschau temporär deaktiviert – siehe useCopyOrder/Hooks & API bleiben erhalten */}
-                        {role === "master" && (
-                          <OrderDeleteDialog orderId={o.id} trigger={<Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
+                        {canDelete(o) && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" aria-label={t("common:delete")}>
                                 <Trash2 className="h-4 w-4" />
-                              </Button>} />
-                        )}
-                        {showOwnOrderActions({ hasRole, userId: user?.id, createdBy: o.created_by, status: o.status }) && (
-                          <RequesterOrderRowActions orderId={o.id} renderDelete={role === "master" ? () => null : () => (
-                          <OrderDeleteDialog orderId={o.id} trigger={<Button size="icon" variant="ghost" className="h-8 w-8 text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>} />
-                          )} />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t("orders:delete_title")}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("orders:delete_confirm", { number: o.order_number ?? o.id })} {t("orders:delete_description")}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <OrderDeleteBody orderId={o.id} pending={deleteOrder.isPending} onConfirm={(n) => handleDelete(o.id, n)} />
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                         </div>
                       </TableCell>

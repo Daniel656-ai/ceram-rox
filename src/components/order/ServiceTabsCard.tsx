@@ -34,14 +34,15 @@ export default function ServiceTabsCard({
   onRemove: (uid: string) => void;
   t: (key: string, opts?: any) => string;
 }) {
+  const empty = measurements.length === 0 && (allMeasurements?.length ?? 0) === 0;
   return (
-    <Card>
-      <CardHeader>
+    <Card className="min-w-0">
+      <CardHeader className={empty ? "py-3" : undefined}>
         <CardTitle className="text-base">
           {t("orders:serviceTabs.title", { defaultValue: "Dienstleistungen" })}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className={empty ? "pt-0 pb-3" : undefined}>
         {measurements.length === 0 && (allMeasurements?.length ?? 0) > 0 ? (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
@@ -62,7 +63,7 @@ export default function ServiceTabsCard({
             })}
           </p>
         ) : (
-          <Tabs value={activeUid ?? measurements[0].uid} onValueChange={onActivate}>
+          <Tabs value={activeUid ?? measurements[0].uid} onValueChange={onActivate} className="min-w-0">
             <TabsList className="flex-wrap h-auto justify-start">
               {measurements.map((m) => (
                 <TabsTrigger key={m.uid} value={m.uid} className="max-w-[220px]">
@@ -76,7 +77,7 @@ export default function ServiceTabsCard({
                 key={m.uid}
                 value={m.uid}
                 forceMount
-                className="data-[state=inactive]:hidden mt-3"
+                className="data-[state=inactive]:hidden mt-3 min-w-0"
               >
                 <MeasurementRow
                   m={m}

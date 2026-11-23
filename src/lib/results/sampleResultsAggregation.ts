@@ -1,4 +1,6 @@
 import { format, parseISO, isAfter, isBefore } from "date-fns";
+import { isInternalResult } from "@/lib/results/internalResults";
+import { displayResults } from "@/lib/results/betMeasurement";
 import { de } from "date-fns/locale";
 
 /**
@@ -59,6 +61,10 @@ export interface SampleMeasurementRecord {
   results: SampleResultValue[];
   /** Read-only: shared_form_data des Auftrags (durchlaufgebundene Vorgaben). */
   orderSharedFormData?: unknown;
+  /** Auftragsstatus, Workflow-Status und Anlagedatum (nur für den Excel-Export; optional). */
+  orderStatus?: string | null;
+  orderWorkflowStatus?: string | null;
+  orderCreatedAt?: string | null;
 }
 
 /** Ebene 1: eine Probe mit allen zugehörigen Messungen. */
@@ -121,7 +127,10 @@ export function groupRecordsBySample(records: SampleMeasurementRecord[]): Sample
     if (displayNum && !g.orderDisplayNumbers.includes(displayNum)) g.orderDisplayNumbers.push(displayNum);
     if (rec.orderId && !g.orderIds.includes(rec.orderId)) g.orderIds.push(rec.orderId);
     if (rec.originalSampleNumber && !g.originalSampleNumber) g.originalSampleNumber = rec.originalSampleNumber;
-    for (const r of rec.results) {
+    // BET: nur der BET-Wert zählt (Hilfswerte werden nicht angezeigt).
+    for (const r of displayResults(rec.serviceName, rec.results)) {
+      // Interne Einträge (Importprotokoll) sind keine Messwerte und zählen nicht mit.
+      if (isInternalResult(r)) continue;
       if (isOfficialResult(r)) g.officialCount += 1;
       else g.interimCount += 1;
     }
@@ -131,6 +140,26 @@ export function groupRecordsBySample(records: SampleMeasurementRecord[]): Sample
   return [...groups.values()].sort((a, b) =>
     (a.sampleNumber || "￿").localeCompare(b.sampleNumber || "￿", "de")
   );
+}
+
+/**
+ * Probendetail mit Messart-Bezug: nur die Messungen DIESER Messart (Zähler passend neu berechnet).
+ * Ohne Messart oder ohne passende Messung bleibt die Probe unverändert (alle Messarten).
+ */
+export function restrictGroupToService(group: SampleGroup, serviceName: string | null | undefined): SampleGroup {
+  if (!serviceName) return group;
+  const measurements = group.measurements.filter((m) => (m.serviceName || "") === serviceName);
+  if (measurements.length === 0 || measurements.length === group.measurements.length) return group;
+  let officialCount = 0;
+  let interimCount = 0;
+  for (const rec of measurements) {
+    for (const r of displayResults(rec.serviceName, rec.results)) {
+      if (isInternalResult(r)) continue;
+      if (isOfficialResult(r)) officialCount += 1;
+      else interimCount += 1;
+    }
+  }
+  return { ...group, measurements, officialCount, interimCount };
 }
 
 /** Durchlauf-Instanzen einer Messung (Messdatenblock/Repeater), stabil sortiert. */

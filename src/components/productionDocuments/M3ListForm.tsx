@@ -194,6 +194,67 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   };
 
   /**
+   * „Proben aus m³-Liste ergänzen“ für einen bestehenden Auftrag: legt fehlende Proben nach demselben Plan an wie
+   * „Beprobungsauftrag erstellen“ (Probennummer = Artikelpräfix + Elementnummer, TEST-Markierung beachtet) und ordnet
+   * sie dem Auftrag zu. Am Auftrag bereits vorhandene Proben werden nicht doppelt angelegt; eine Nummer, die woanders
+   * vergeben ist, bricht ab (es wird dann nichts angelegt). Aufgaben legt diese Funktion nicht an – dafür gibt es die
+   * Nachrüstung für Administratoren (Proben-Nachprüfung).
+   */
+  const ensureSamples = async (orderId: string): Promise<{ created: number; existing: number }> => {
+    const rel = (release ?? {}) as Record<string, unknown>;
+    const plan = planM3Samples(rel.article_number ?? derived.values.article_number, derivedRows, testMarking);
+    if (!plan.length) throw new Error("Keine Proben erzeugt: In der m³-Liste gibt es keine Zeile mit Elementnummer.");
+    const linked = (await api.orderSamples.list(orderId)) as { samples?: { sample_number?: string | null } | null }[];
+    const have = new Set(linked.map((l) => l.samples?.sample_number).filter(Boolean) as string[]);
+    const todo = plan.filter((p) => !have.has(p.sampleNumber));
+    const taken = await api.samples.findExistingNumbers(todo.map((p) => p.sampleNumber));
+    if (taken.length) {
+      throw new Error(`Probennummer bereits vergeben: ${taken.join(", ")}. Es wurden keine Proben angelegt.`);
+    }
+    const articleNo = String(rel.article_number ?? derived.values.article_number ?? "").trim();
+    const ids: string[] = [];
+    for (const p of todo) {
+      const s = (await api.samples.create(
+        {
+          sample_name: `${articleNo} · Element ${p.elementNumber}`,
+          description: `m³-Liste Zeile ${p.rowIndex + 1}`,
+          created_by: user!.id,
+          project_id: (rel.project_id as string | null) ?? null,
+          order_id: orderId,
+          status: "neu",
+          is_hazardous: false,
+          hazard_categories: [],
+          tags: ["m3_beprobung"],
+        },
+        { explicitNumber: p.sampleNumber }
+      )) as { id: string; sample_number: string };
+      if (s.sample_number !== p.sampleNumber) {
+        throw new Error(
+          `Die Datenbank hat die Probennummer ${p.sampleNumber} durch ${s.sample_number} ersetzt – Datenbankanpassung fehlt.`
+        );
+      }
+      ids.push(s.id);
+    }
+    if (ids.length) await api.orderSamples.add(orderId, ids, user!.id);
+    await qc.invalidateQueries({ queryKey: ["samples"] });
+    await qc.invalidateQueries({ queryKey: ["orders"] });
+    return { created: ids.length, existing: plan.length - ids.length };
+  };
+
+  const addSamplesToExistingOrder = async () => {
+    if (!user?.id || !request.order_id) return;
+    setCreatingOrder(true);
+    try {
+      const r = await ensureSamples(request.order_id);
+      toast.success(`Proben ergänzt: ${r.created} neu, ${r.existing} bereits vorhanden.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Proben konnten nicht angelegt werden.");
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
+  /**
    * Fachlicher Ablauf: Fertigungsfreigabe → m³-Liste → Beprobung → Laborauftrag.
    * Der Auftrag entsteht ausschließlich hier, aus genau dieser m³-Liste, und wird
    * anschließend über die bestehende Funktion `linkReleaseToOrder` der
@@ -204,7 +265,11 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     if (!user?.id || !request.based_on_release_id) return;
     setCreatingOrder(true);
     try {
-      const rel = (release ?? {}) as Record<string, unknown>;
+      if (!release) {
+        toast.error("Beprobungsauftrag nicht erstellt: Die Fertigungsfreigabe ist noch nicht geladen. Bitte kurz warten und erneut versuchen.");
+        return;
+      }
+      const rel = release as Record<string, unknown>;
       // Probenplan und Duplikatprüfung VOR jeder Schreiboperation, damit bei
       // Konflikten weder Auftrag noch Proben teilweise entstehen.
       const samplePlan = planM3Samples(rel.article_number ?? derived.values.article_number, derivedRows, testMarking);
@@ -322,9 +387,13 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
               : "Noch keiner. Der Laborauftrag zur Beprobung wird aus dieser m³-Liste erzeugt und der Produktionsfreigabe zugeordnet."}
           </div>
         </div>
-        {!request.order_id && (
+        {!request.order_id ? (
           <Button variant="outline" onClick={createSamplingOrder} disabled={creatingOrder}>
             Beprobungsauftrag erstellen
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={addSamplesToExistingOrder} disabled={creatingOrder}>
+            Proben aus m³-Liste ergänzen
           </Button>
         )}
       </div>

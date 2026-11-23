@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Play, CheckCircle2, ShieldCheck, AlertTriangle, Plus, Scale, Beaker, FileWarning } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, ShieldCheck, Plus, Scale, Beaker, FileWarning } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";

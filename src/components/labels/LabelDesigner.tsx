@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Rnd } from "react-rnd";
-import type { LabelElement, LabelLayout, LabelTemplate } from "@/lib/api/labelTemplates";
+import type { LabelElement, LabelLayout } from "@/lib/api/labelTemplates";
 import { LABEL_FIELDS, LabelDataContext, PRESET_SIZES, LABEL_CATEGORIES, resolveField } from "@/lib/labels/fields";
 import { useMergedSymbols } from "@/hooks/useMergedSymbols";
 import { LabelRenderer, LABEL_MM_TO_PX } from "./LabelRenderer";

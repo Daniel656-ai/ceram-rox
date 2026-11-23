@@ -16,7 +16,6 @@
   "kind": {
     "pilot_plant": "Pilot Plant",
     "labor": "Labor",
-    "combined": "Kombinierter Auftrag",
     "legacy": "Klassisch"
   },
   "workflow": {
@@ -110,6 +109,8 @@
   "due_date": "Fälligkeit",
   "no_orders": "Keine Aufträge gefunden",
   "delete_title": "Auftrag löschen?",
+  "delete_confirm": "Auftrag {{number}} wirklich löschen?",
+  "delete_has_results": "Auftrag hat bereits Ergebnisse",
   "delete_description": "Dieser Auftrag und alle zugehörigen Aufgaben werden unwiderruflich gelöscht.",
   "deleted": "Auftrag gelöscht",
   "delete_error": "Fehler beim Löschen",
@@ -125,6 +126,7 @@
   "measurements_section": "Aufgaben",
   "add_measurement": "Aufgabe hinzufügen",
   "select_service": "Dienstleistung auswählen...",
+  "duplicate_hint": "Dieselbe Dienstleistung kann mehrfach hinzugefügt werden – jede Position ist unabhängig.",
   "no_measurements_hint": "Noch keine Aufgaben hinzugefügt. Wählen Sie mindestens eine Dienstleistung aus.",
   "workstation": "Arbeitsplatz",
   "choose_workstation": "Wählen...",

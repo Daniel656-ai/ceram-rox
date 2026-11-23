@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { billedForCreate } from "@/lib/orders/billing";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProjects, useCreateProject } from "@/hooks/useProjects";
+import { useProjects } from "@/hooks/useProjects";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { useServices, useAddOrderMeasurement } from "@/hooks/useMeasurements";
 import { useTemplates, useApplyTemplate } from "@/hooks/useTemplates";
@@ -23,48 +23,42 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, AlertCircle, Zap, CheckCircle2, ClipboardList, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff } from "lucide-react";
+import { ArrowLeft, AlertCircle, Zap, CheckCircle2, ClipboardList, Layers, Package as PackageIcon, ChevronsUpDown, Save, Loader2, CloudOff, Lock } from "lucide-react";
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
-import { parseLinkedFormValueKey } from "@/components/ServiceLinkedForms";
-import { buildPayloadFromOrder } from "@/lib/orderTemplateCopy";
-import { adoptLoadedSelection, applyPilotPlantColumnFallback } from "@/lib/orders/requesterEdit";
-import { buildRequesterParameterRows, diffRequesterParameters, planServiceChanges } from "@/lib/orders/requesterEdit";
 import MeasurementRow from "@/components/order/MeasurementRow";
 import ServiceTabsCard from "@/components/order/ServiceTabsCard";
 import { nextActiveServiceTab, EMPTY_ACTIVE_TAB, type ActiveServiceTabState } from "@/lib/orderCreation/activeServiceTab";
 import { useCustomerFormServices, planServiceTabs } from "@/lib/orderCreation/serviceFormMetadata";
 import { planPilotServiceDeselection, removeDraftServices } from "@/lib/orderCreation/serviceDeselection";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { buildFormValueResultPayload } from "@/lib/orderFormValueHandover";
 import OrderDraftsPanel from "@/components/orders/OrderDraftsPanel";
 import TemplateReviewPanel from "@/components/orders/TemplateReviewPanel";
 import { useOrderDraftAutosave } from "@/hooks/useOrderDraftAutosave";
 import { useRefreshGuard } from "@/lib/refreshGuard";
+import { useOrderEditData } from "@/hooks/useOrderEditData";
+import ExistingServicesReadOnly from "@/components/order/ExistingServicesReadOnly";
+import { lockedTickGroups, planTickChange, syncTicksToPending, syncTicksToRemoval } from "@/lib/orders/editServiceTicks";
+import { deriveLocks, diffOrderEdit, formStateFromOrder, serviceRemovalInfo, snapshotFromOrder, toggleServiceRemoval, validateServiceRemoval, type EditSnapshot } from "@/lib/orders/orderEdit";
+import { isServiceField } from "@/lib/orderServiceSelection";
+import { experimentNumberPatch as experimentNumberPatchForEdit } from "@/lib/orders/experimentNumber";
 import type { OrderDraft, OrderDraftPayload } from "@/lib/api/orderDrafts";
 import type { FormField } from "@/lib/api/formFields";
-import { planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
+import { normalizeToken, planServiceSync, readServiceSelectionEntries } from "@/lib/orderServiceSelection";
 import { isProjectRequired } from "@/lib/orders/projectRequirement";
-import { planRuleTriggers, ruleStepKey } from "@/lib/ruleEvaluation";
+import { planRuleTriggers } from "@/lib/ruleEvaluation";
 import { experimentNumberPatch } from "@/lib/orders/experimentNumber";
 import { draftPositionEdited, hasDraftValue, missingDraftFiles, normalizeRestoredDraft } from "@/lib/orderDraftSafety";
+import {
+  createMeasurementTasks, payloadToFormState, persistOrderLevelData, runPostCreateSyncs,
+  type SelectedMeasurement,
+} from "@/lib/orders/createOrderFlow";
 
-interface SelectedMeasurement {
-  uid: string;
-  service_id: string;
-  service_name: string;
-  /** "template" = aus der Auswahl im Auftraggeberformular, "manual" = zusätzlich gebucht. */
-  origin?: "template" | "manual" | "rule";
-  /** Nur bei origin "rule": auslösende Position und Regel. */
-  rule_source_uid?: string | null;
-  rule_id?: string | null;
-  /** Auswahlwert, aus dem die Position entstanden ist. */
-  selection_token?: string | null;
-  source_package_id?: string | null;
-  source_package_name?: string | null;
-}
 
+
+// Servicepakete wurden nie benutzt (0 Messungen) – Kasten in der Auftragserstellung ausgeblendet; Pakete im Admin bleiben.
+const SHOW_SERVICE_PACKAGES = false;
 
 const newUid = () =>
   (typeof crypto !== "undefined" && "randomUUID" in crypto)
@@ -76,6 +70,9 @@ const newUid = () =>
 export default function CreateOrderPage() {
   const { t } = useTranslation(["orders", "common"]);
   const navigate = useNavigate();
+  // Bearbeiten-Modus: dieselbe Maske, geöffnet unter /auftraege/<id>/bearbeiten (Aufgabe 012).
+  const { id: editOrderId } = useParams();
+  const isEdit = !!editOrderId;
   const queryClient = useQueryClient();
   const { user, role } = useAuth();
   const { hasPermission } = usePermissions();
@@ -142,11 +139,7 @@ export default function CreateOrderPage() {
   const draftsEnabled = hasPermission("orders.drafts.manage");
   const [draftId, setDraftId] = useState<string | null>(searchParams.get("draft"));
   const [loadedDraft, setLoadedDraft] = useState<OrderDraft | null>(null);
-  const [draftLoading, setDraftLoading] = useState(!!searchParams.get("draft") || !!searchParams.get("edit"));
-  // Bearbeitungsmodus (?edit=<Auftrags-ID>): eigener, noch nicht begonnener Auftrag.
-  const editOrderId = searchParams.get("edit");
-  const editAdopted = useRef(false);
-  const editBaseline = useRef<{ measurementIds: Record<string, string[]>; payload: OrderDraftPayload; order: any } | null>(null);
+  const [draftLoading, setDraftLoading] = useState(!!searchParams.get("draft"));
   const [draftLoadFailed, setDraftLoadFailed] = useState(false);
   const [closingDraft, setClosingDraft] = useState(false);
   const localCreatedId = useRef<string | null>(null);
@@ -174,7 +167,7 @@ export default function CreateOrderPage() {
   const urlDraftId = searchParams.get("draft");
   useEffect(() => { setPendingDeselection(null); }, [urlDraftId, orderKind, mode]);
   const draftHydrated = !urlDraftId || urlDraftId === localCreatedId.current || loadedDraft?.id === urlDraftId;
-  const autosaveEnabled = !editOrderId && draftsEnabled && mode === "single" && !draftLoading && draftHydrated && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
+  const autosaveEnabled = draftsEnabled && !isEdit && mode === "single" && !draftLoading && draftHydrated && !draftLoadFailed && templateReady && servicesReady && (measurements.length === 0 || rulesReady);
   const autosave = useOrderDraftAutosave({
     enabled: autosaveEnabled,
     userId: user?.id,
@@ -192,17 +185,59 @@ export default function CreateOrderPage() {
   });
   // „Ansicht aktualisieren": Entwurf vorher sichern; ohne Bestätigung abbrechen.
   useRefreshGuard(async () => {
+    if (isEdit) return; // Bearbeiten: kein Entwurf, nur Speichern/Verwerfen
     if (!hasDraftContent) return;
     if (!autosaveEnabled) throw new Error("draft not ready");
     const id = await autosave.saveNow();
     if (!id) throw new Error("draft not saved");
   });
 
+  // ---------------------------------------------------------------------
+  // Bearbeiten-Modus: Maskenstand aus dem bestehenden Auftrag laden (derselbe Stand wie ein Entwurf)
+  // ---------------------------------------------------------------------
+  const editData = useOrderEditData(editOrderId);
+  const locks = useMemo(() => deriveLocks(editData.facts), [editData.facts]);
+  const editBaseline = useRef<EditSnapshot | null>(null);
+  const [editHydrated, setEditHydrated] = useState(false);
+  const [editReason, setEditReason] = useState("");
+  // Stufe 3a: zum Entfernen vorgemerkte Dienstleistungen (service_id) – wirksam erst beim Speichern.
+  const [removedServiceIds, setRemovedServiceIds] = useState<string[]>([]);
+  const serviceInfos = useMemo(
+    () => serviceRemovalInfo(editData.facts, editData.order?.order_measurements ?? []),
+    [editData.facts, editData.order],
+  );
+  // Stufe 3c: Häkchen im Auftragsformular <-> Dienstleistungen (gleiche Auflösung wie beim Erstellen).
+  const existingServiceIds = useMemo(() => new Set(serviceInfos.map((i) => i.serviceId)), [serviceInfos]);
+  const tickEnv = useMemo(() => ({ fields: templateFields as any[], services: services as any[] }), [templateFields, services]);
+  const setRemovalAndTicks = (nextRemoved: string[]) => {
+    const base = editBaseline.current?.templateValues ?? {};
+    const prevRemoved = removedServiceIds;
+    setRemovedServiceIds(nextRemoved);
+    setDynamicValues((prev) => ({ ...prev, ...syncTicksToRemoval({ values: prev, baseline: base, env: tickEnv, prevRemoved, nextRemoved }) }));
+  };
+  useEffect(() => {
+    if (!isEdit || editHydrated || !editData.order || !editData.facts) return;
+    const st = formStateFromOrder(editData.order);
+    setSelectedProjectId(st.selectedProjectId);
+    setOrderType(st.orderType);
+    setOrderKind(st.orderKind);
+    setPriority(st.priority);
+    setDueDate(st.dueDate);
+    setNotes(st.notes);
+    setSelectedSampleIds(st.selectedSampleIds);
+    setDynamicValues(st.dynamicValues);
+    setDynamicFormId(st.dynamicFormId);
+    setIsBilled(st.isBilled);
+    editBaseline.current = snapshotFromOrder(editData.order);
+    reconcileAllowed.current = false; // Dienstleistungen werden im Bearbeiten-Modus nicht automatisch abgeglichen
+    setEditHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, editHydrated, editData.order, editData.facts]);
+
   // Entwurf laden (?draft=<id>) – exakt an seinem bisherigen Stand.
   useEffect(() => {
     const id = searchParams.get("draft");
     if (!id) {
-      if (searchParams.get("edit")) return;
       setDraftLoading(false);
       if (loadedDraft) {
         setSelectedProjectId(""); setOrderType(""); setIsBilled(false); setOrderKind("labor"); setPriority("normal"); setDueDate(""); setNotes("");
@@ -223,24 +258,22 @@ export default function CreateOrderPage() {
         if (cancelled) return;
         if (!d) throw new Error("Entwurf nicht gefunden");
         const p = normalizeRestoredDraft(d.payload || {});
-        setSelectedProjectId(p.selectedProjectId ?? "");
-        setOrderType(p.orderType ?? "");
-        setOrderKind(p.orderKind === "pilot_plant" ? "pilot_plant" : "labor");
-        setPriority(p.priority ?? "normal");
-        setDueDate(p.dueDate ?? "");
-        setNotes(p.notes ?? "");
-        setMeasurements((p.measurements ?? []) as SelectedMeasurement[]);
-        setSelectedSampleIds(p.selectedSampleIds ?? []);
-        setProcessTemplateId(p.processTemplateId ?? "__none__");
-        setMeasurementParams((p.measurementParams ?? {}) as any);
-        setMeasurementFormValues((p.measurementFormValues ?? {}) as any);
-        setDynamicValues((p.dynamicValues ?? {}) as any);
-        setDynamicFormId(p.dynamicFormId ?? null);
+        const s = payloadToFormState(p);
+        setSelectedProjectId(s.selectedProjectId);
+        setOrderType(s.orderType);
+        setOrderKind(s.orderKind);
+        setPriority(s.priority);
+        setDueDate(s.dueDate);
+        setNotes(s.notes);
+        setMeasurements(s.measurements);
+        setSelectedSampleIds(s.selectedSampleIds);
+        setProcessTemplateId(s.processTemplateId);
+        setMeasurementParams(s.measurementParams);
+        setMeasurementFormValues(s.measurementFormValues);
+        setDynamicValues(s.dynamicValues);
+        setDynamicFormId(s.dynamicFormId);
         // Zuletzt aktiver Reiter wird mit dem Entwurf wiederhergestellt.
-        setServiceTab({
-          active: p.activeMeasurementUid ?? null,
-          order: (p.serviceTabOrder ?? []) as string[],
-        });
+        setServiceTab(s.serviceTab);
         setDraftId(d.id);
         setLoadedDraft({ ...d, payload: p });
       })
@@ -249,50 +282,6 @@ export default function CreateOrderPage() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.get("draft")]);
-
-  // Bestehenden Auftrag in dasselbe Erstellungsformular laden (nur lesend).
-  useEffect(() => {
-    if (!editOrderId) return;
-    let cancelled = false;
-    setDraftLoading(true);
-    setDraftLoadFailed(false);
-    reconcileAllowed.current = false;
-    (async () => {
-      const state = await api.orders.requesterEditState(editOrderId);
-      if (!state.can_edit) {
-        toast.error(t("orders:requesterEdit.notAllowed"), { description: state.reason === "started" || state.reason === "locked" ? t("orders:requesterEdit.lockedHint") : undefined });
-        navigate(`/auftraege/${editOrderId}`, { replace: true });
-        return;
-      }
-      const [{ payload, measurementIds }, order] = await Promise.all([
-        buildPayloadFromOrder(editOrderId, { services: true, packages: true, conditions: true, orderForm: true, samples: true, attachments: false, edit: true }),
-        api.orders.get(editOrderId),
-      ]);
-      if (cancelled) return;
-      const p = normalizeRestoredDraft(payload);
-      editBaseline.current = { measurementIds, payload: JSON.parse(JSON.stringify(p)), order };
-      setSelectedProjectId(p.selectedProjectId ?? "");
-      setOrderType(p.orderType ?? "");
-      setIsBilled(!!(order as any)?.is_billed);
-      setOrderKind(p.orderKind === "pilot_plant" ? "pilot_plant" : "labor");
-      setPriority(((order as any)?.priority as any) ?? "normal");
-      setDueDate((order as any)?.due_date ? String((order as any).due_date).slice(0, 10) : "");
-      setNotes(p.notes ?? "");
-      setMeasurements((p.measurements ?? []) as SelectedMeasurement[]);
-      setSelectedSampleIds(p.selectedSampleIds ?? []);
-      setMeasurementParams((p.measurementParams ?? {}) as any);
-      setMeasurementFormValues((p.measurementFormValues ?? {}) as any);
-      setDynamicValues((p.dynamicValues ?? {}) as any);
-      setDynamicFormId(p.dynamicFormId ?? null);
-      setServiceTab({ active: null, order: [] });
-      editAdopted.current = false;
-      setLoadedDraft({ id: `edit:${editOrderId}`, payload: p } as any);
-    })()
-      .catch((e: any) => { if (!cancelled) { setDraftLoadFailed(true); toast.error(t("orders:requesterEdit.loadError"), { description: e.message }); } })
-      .finally(() => { if (!cancelled) setDraftLoading(false); });
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editOrderId]);
 
   const handleSaveAndClose = async () => {
     if (closingDraft) return;
@@ -393,6 +382,35 @@ export default function CreateOrderPage() {
   const [unresolvedSelection, setUnresolvedSelection] = useState<string[]>([]);
 
   const handleDynamicChange = (patch: Record<string, unknown>) => {
+    if (isEdit) {
+      const next = { ...dynamicValues, ...patch };
+      const plan = planTickChange({
+        prev: dynamicValues, next, env: tickEnv, existingServiceIds, removedServiceIds,
+        pending: measurements.map((m) => ({ uid: m.uid, service_id: m.service_id, origin: m.origin, selection_token: m.selection_token })),
+      });
+      let removed = removedServiceIds;
+      for (const id of plan.unremoveServiceIds) if (removed.includes(id)) removed = toggleServiceRemoval(removed, id, serviceInfos);
+      for (const id of plan.removeServiceIds) if (!removed.includes(id)) removed = toggleServiceRemoval(removed, id, serviceInfos);
+      const tickPatch = syncTicksToRemoval({ values: next, baseline: editBaseline.current?.templateValues ?? {}, env: tickEnv, prevRemoved: removedServiceIds, nextRemoved: removed });
+      setDynamicValues({ ...next, ...tickPatch });
+      if (removed !== removedServiceIds) setRemovedServiceIds(removed);
+      if (plan.add.length > 0 || plan.removePendingTokens.length > 0) {
+        const drop = new Set(plan.removePendingTokens.map((tk) => normalizeToken(tk)));
+        const additions: SelectedMeasurement[] = plan.add.map((a) => ({
+          uid: newUid(), service_id: a.service.id, service_name: a.service.service_name, origin: "template", selection_token: a.token,
+        }));
+        const droppedUids = measurements
+          .filter((m) => m.origin === "template" && drop.has(normalizeToken(m.selection_token ?? m.service_name)))
+          .map((m) => m.uid);
+        pendingAddedUids.current.push(...additions.map((a) => a.uid));
+        setMeasurements((prev) => [...prev.filter((m) => !droppedUids.includes(m.uid)), ...additions]);
+        if (droppedUids.length > 0) {
+          setMeasurementFormValues((prev) => { const n = { ...prev }; droppedUids.forEach((u) => delete n[u]); return n; });
+          setMeasurementParams((prev) => { const n = { ...prev }; droppedUids.forEach((u) => delete n[u]); return n; });
+        }
+      }
+      return;
+    }
     if ((loadedDraft && !reconcileAllowed.current) || pendingDeselection) return;
     if (orderKind === "pilot_plant" && mode === "single") {
       const removal = planPilotServiceDeselection({ values: dynamicValues, patch, fields: templateFields, services, measurements });
@@ -416,26 +434,6 @@ export default function CreateOrderPage() {
     setPendingDeselection(null);
   };
 
-  // Bearbeitungsmodus: sobald Formular und Katalog bereit sind, einmalig
-  // fehlende PP-Stammdaten aus den Auftragsspalten ergänzen und die geladenen
-  // Positionen ihrer Formularauswahl zuordnen (keine Duplikate, stabile uids).
-  useEffect(() => {
-    if (!editOrderId || editAdopted.current || draftLoading || draftLoadFailed || !templateReady || !servicesReady) return;
-    const base = editBaseline.current;
-    if (!base) return;
-    editAdopted.current = true;
-    const { values: filledValues, filled } = applyPilotPlantColumnFallback(dynamicValues, templateFields as any, base.order as any);
-    const selection = readServiceSelectionEntries(filledValues, templateFields as any, services as any);
-    const adopted = adoptLoadedSelection(measurementsRef.current as any, selection, services as any) as SelectedMeasurement[];
-    if (filled.length > 0) {
-      setDynamicValues(filledValues as any);
-      base.payload.dynamicValues = { ...(base.payload.dynamicValues ?? {}), ...Object.fromEntries(filled.map((k) => [k, filledValues[k]])) };
-    }
-    if (!dynamicFormId && templateFields.length > 0 && filled.length > 0) setDynamicFormId((templateFields[0] as any).form_definition_id ?? null);
-    setMeasurements(adopted);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editOrderId, draftLoading, draftLoadFailed, templateReady, servicesReady, templateFields, services]);
-
   /** Aktueller Abgleich Auswahl -> echte Positionen (eine einzige Quelle). */
   const buildServicePlan = (current: SelectedMeasurement[]) =>
     planServiceSync({
@@ -448,7 +446,7 @@ export default function CreateOrderPage() {
     });
 
   useEffect(() => {
-    if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || !reconcileAllowed.current) return;
+    if (isEdit || draftLoading || draftLoadFailed || !templateReady || !servicesReady || !reconcileAllowed.current) return;
     const plan = buildServicePlan(measurementsRef.current);
     setUnresolvedSelection(plan.unresolved);
     if (plan.add.length === 0 && plan.remove.length === 0) return;
@@ -481,6 +479,17 @@ export default function CreateOrderPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dynamicValues, templateFields, services, draftLoading, templateReady, servicesReady]);
+
+  // Stufe 3c, Gleichlauf Karte -> Häkchen (nur Bearbeiten-Modus): hinzugefügte/entfernte neue Positionen passen die Häkchen an.
+  useEffect(() => {
+    if (!isEdit || !editHydrated || !servicesReady || !editBaseline.current) return;
+    const patch = syncTicksToPending({
+      values: dynamicValues, baseline: editBaseline.current.templateValues, env: tickEnv, existingServiceIds,
+      pending: measurements.map((m) => ({ uid: m.uid, service_id: m.service_id, origin: m.origin, selection_token: m.selection_token })),
+    });
+    if (Object.keys(patch).length > 0) setDynamicValues((prev) => ({ ...prev, ...patch }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [measurements, editHydrated, servicesReady, tickEnv]);
 
   // Aktiven Reiter nachführen: neu hinzugekommene Positionen aktivieren,
   // abgewählte aus der Reihenfolge entfernen, Fallback bei Abwahl des Aktiven.
@@ -545,7 +554,7 @@ export default function CreateOrderPage() {
     });
 
   useEffect(() => {
-    if (draftLoading || !templateReady || !servicesReady || !ruleQueryReady || !reconcileAllowed.current) return;
+    if (isEdit || draftLoading || !templateReady || !servicesReady || !ruleQueryReady || !reconcileAllowed.current) return;
     const plan = buildRulePlan(measurementsRef.current, formValuesRef.current);
     const additions = ruleAdditions(plan);
     if (additions.length === 0 && plan.remove.length === 0) return;
@@ -653,7 +662,119 @@ export default function CreateOrderPage() {
   // Produktionsaufträge nicht. Keine Sonderlogik an anderer Stelle.
   const projectRequired = isProjectRequired(orderType);
 
-  const computeEffectiveMeasurements = (): SelectedMeasurement[] => {
+  // Bearbeiten: Änderungen gegen den Ausgangsstand berechnen und atomar anwenden (Sperren prüft die Datenbank erneut).
+  const { data: allSamplesForLabels = [] } = useSamples();
+  const handleEditSubmit = async () => {
+    if (!editOrderId || !editBaseline.current || !editData.facts) return;
+    if (!orderType) { toast.error(t("orders:fill_required")); return; }
+    if (projectRequired && !selectedProjectId) { toast.error(t("orders:select_project_error")); return; }
+    if (orderKind !== "pilot_plant" && selectedSampleIds.length === 0) { toast.error(t("orders:fill_required")); return; }
+    const diff = currentEditDiff();
+    if (!diff || (!diff.changes && diff.billedChange === null && diff.addedServiceNames.length === 0)) { toast.info("Es gibt keine Änderungen zu speichern."); return; }
+    if (measurements.length > 0 && (!servicesReady || !ruleQueryReady)) {
+      toast.error("Dienstleistungen und Regeln werden noch geladen. Bitte einen Moment warten."); return;
+    }
+    const removalError = validateServiceRemoval(removedServiceIds, serviceInfos);
+    if (removalError) { toast.error(removalError); return; }
+    if (diff.reasonRequired && !editReason.trim()) {
+      toast.error("Bitte eine Begründung für die Änderung angeben.", { description: diff.reasonWhy.join(", ") });
+      return;
+    }
+    if (diff.reasonRequired && editReason.trim().length < diff.reasonMinLength) {
+      toast.error(`Die Begründung muss mindestens ${diff.reasonMinLength} Zeichen lang sein.`, { description: diff.reasonWhy.join(", ") });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (diff.changes) await api.orders.applyChanges(editOrderId, diff.changes, editReason);
+      if (diff.billedChange !== null) await api.orders.setBilled(editOrderId, diff.billedChange);
+
+      // Stufe 3b: neue Dienstleistungen mit dem vorhandenen Erstellen-Ablauf anlegen (je Probe eine Aufgabe, Vorgaben,
+      // Formularwerte, Dateien, Regeln). Nicht „ganz oder gar nicht“: bei einem Fehler wird klar gemeldet.
+      let addError: string | null = null;
+      if (measurements.length > 0 && user) {
+        try {
+          const effective: SelectedMeasurement[] = [...measurements];
+          effective.push(...ruleAdditions(buildRulePlan(effective, measurementFormValues)));
+          await createMeasurementTasks({
+            order: { id: editOrderId }, user, effectiveMeasurements: effective, selectedSampleIds, dueDate,
+            measurementParams, measurementFormValues, addMeasurement,
+          });
+          await runPostCreateSyncs(editOrderId);
+          try {
+            await api.orders.logServicesAdded(
+              editOrderId, [...new Set(effective.map((m) => m.service_name))], effective.length * Math.max(1, selectedSampleIds.length),
+            );
+          } catch (logErr) { console.warn("Verlaufseintrag für hinzugefügte Dienstleistungen fehlgeschlagen", logErr); }
+        } catch (err: any) {
+          addError = err?.message ?? String(err);
+        }
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["order", editOrderId] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-audit-log"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }),
+        queryClient.invalidateQueries({ queryKey: ["sample-results-database"] }),
+      ]);
+      if (addError) {
+        toast.error("Dienstleistungen nur teilweise angelegt", {
+          description: `Die übrigen Änderungen wurden gespeichert, aber das Anlegen der neuen Dienstleistungen ist fehlgeschlagen (${addError}). Bitte die Aufgaben im Auftrag prüfen und Fehlendes erneut hinzufügen.`,
+          duration: 20000,
+        });
+      } else {
+        toast.success("Auftrag aktualisiert");
+      }
+      navigate(`/auftraege/${editOrderId}`);
+    } catch (err: any) {
+      toast.error("Änderungen konnten nicht gespeichert werden", { description: err.message });
+    } finally { setSubmitting(false); }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isEdit) { await handleEditSubmit(); return; }
+    if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || (measurements.length > 0 && !ruleQueryReady)) {
+      toast.error("Formular wird noch geladen oder konnte nicht vollständig geladen werden"); return;
+    }
+    if (missingDraftFiles(draftPayload).length > 0 && JSON.stringify(draftPayload).includes("__draft_file_missing")) {
+      toast.error("Bitte fehlende Dateianhänge erneut auswählen"); return;
+    }
+    const isPurePP = orderKind === "pilot_plant";
+    // Labor requires sample + measurements. Pilot Plant / Combined may start without a sample; measurements optional for pure PP.
+    if (!user || !orderType) {
+      toast.error(t("orders:fill_required"));
+      return;
+    }
+    if (!isPurePP && (measurements.length === 0 || selectedSampleIds.length === 0)) {
+      toast.error(t("orders:fill_required"));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      // Projektzuordnung ist nur für projektbezogene Aufträge (F&E) verpflichtend.
+      // Kunden- und Produktionsaufträge dürfen ohne Projekt gespeichert werden.
+      const projectId = selectedProjectId || null;
+      if (!projectId && projectRequired) { toast.error(t("orders:select_project_error")); setSubmitting(false); return; }
+
+      const order = await createOrder.mutateAsync({
+        project_id: projectId, order_type: orderType as any, created_by: user.id,
+        is_billed: billedForCreate(orderType, isBilled),
+        priority: priority as any,
+        due_date: dueDate || undefined, notes: notes || undefined,
+        sample_id: selectedSampleIds[0] || undefined,
+        order_kind: orderKind,
+        pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
+        ...experimentNumberPatch(dynamicFormId ? templateFields : [], dynamicValues),
+      });
+
+      // Pilot-Plant-Bausteine, Auftragsformular, Prozessvorlage und Proben (Ablauf unverändert,
+      // siehe src/lib/orders/createOrderFlow.ts).
+      await persistOrderLevelData({
+        order, user, orderKind, dynamicFormId, dynamicValues, processTemplateId,
+        processTemplates: processTemplates as any[], projectId, selectedSampleIds,
+      });
+
       // Sicherheitsnetz: Auswahl im Auftraggeberformular auch beim Speichern
       // abgleichen, falls der laufende Abgleich (z.B. direkt nach dem Laden
       // eines Entwurfs) noch nicht gegriffen hat. Gleiche Logik, keine zweite.
@@ -675,405 +796,13 @@ export default function CreateOrderPage() {
         });
       }
 
-      return effectiveMeasurements;
-  };
-
-  const persistNewMeasurements = async (orderId: string, list: SelectedMeasurement[], sampleTargets: Array<string | null>) => {
-    if (!user) return;
       // Je Probe und Dienstleistung entsteht eine eigene Aufgabe, damit
       // Ergebnisse eindeutig der jeweiligen Probe zugeordnet bleiben.
-
-      const createdByUidSample = new Map<string, string>();
-      for (let idx = 0; idx < list.length * sampleTargets.length; idx++) {
-        const m = list[Math.floor(idx / sampleTargets.length)];
-        const sampleTarget = sampleTargets[idx % sampleTargets.length];
-        const isRule = m.origin === "rule";
-        // Duplikatschutz: bereits (z.B. über feste Abhängigkeit) vorhanden → nicht erneut anlegen.
-        if (isRule && (await api.ruleTriggers.exists(orderId, m.service_id, sampleTarget))) continue;
-        const createdMeasurement = await addMeasurement.mutateAsync({
-          order_id: orderId, service_id: m.service_id,
-          sample_id: sampleTarget,
-          due_date: dueDate || undefined,
-          source_package_id: m.source_package_id ?? null,
-          source_package_name_snapshot: m.source_package_name ?? null,
-          ...(isRule
-            ? {
-                origin: "workflow" as const,
-                source_measurement_id: createdByUidSample.get(`${m.rule_source_uid}|${sampleTarget}`) ?? null,
-                source_step_key: m.rule_id ? ruleStepKey(m.rule_id) : null,
-              }
-            : {}),
-        });
-        createdByUidSample.set(`${m.uid}|${sampleTarget}`, createdMeasurement.id);
-        const params = measurementParams[m.uid];
-        if (params && Object.keys(params).length > 0) {
-          const defs = await api.serviceParameters.listByIdsForService(m.service_id, Object.keys(params));
-          if (defs && defs.length > 0) {
-            const inserts = defs.filter((d: any) => (params[d.id] || "").trim()).map((d: any) => ({ order_measurement_id: createdMeasurement.id, parameter_name: d.parameter_name, parameter_value: params[d.id], unit: d.unit || null }));
-            if (inserts.length > 0) { await api.measurementParameters.bulkInsert(inserts); }
-          }
-        }
-        // Service Designer Formulardaten persistieren
-        const formVals = measurementFormValues[m.uid];
-        if (formVals && Object.keys(formVals).length > 0) {
-          const fields = await api.serviceDataFields.listForService(m.service_id);
-          const uploadKeys = new Set(
-            fields.filter((f: any) => f.field_type === "file" || f.field_type === "image").map((f: any) => f.field_key)
-          );
-
-          // Helper: is this value an upload-field value? (array of UploadValueEntry)
-          const isUploadValue = (v: any) =>
-            Array.isArray(v) && v.length > 0 && v.every((x) => x && typeof x === "object" && "__id" in x && ("pendingFile" in x || "templateId" in x || "storagePath" in x));
-
-          // Process a single upload entry
-          const persistUpload = async (fieldKey: string, entryIndex: number | null, entry: any) => {
-            try {
-              if (entry.pendingFile instanceof File) {
-                await api.orderUploads.uploadFile({
-                  measurementId: createdMeasurement.id,
-                  fieldKey,
-                  entryIndex,
-                  file: entry.pendingFile,
-                  uploadedBy: user!.id,
-                });
-              } else if (entry.templateId) {
-                const templates = await api.serviceFieldTemplates.listForField(
-                  (fields.find((f: any) => f.field_key === fieldKey) as any)?.id
-                );
-                const tpl = templates.find((t: any) => t.id === entry.templateId);
-                if (tpl) {
-                  await api.orderUploads.attachTemplate({
-                    measurementId: createdMeasurement.id,
-                    fieldKey,
-                    entryIndex,
-                    template: tpl,
-                    uploadedBy: user!.id,
-                  });
-                }
-              }
-            } catch (err: any) {
-              toast.error(`Upload „${entry.name}" fehlgeschlagen`, { description: err.message });
-            }
-          };
-
-          // Split values: uploads vs. parameters, including inside repeatable arrays
-          const paramInserts: Array<{ order_measurement_id: string; parameter_name: string; parameter_value: string; unit: string | null }> = [];
-          // Werte verknüpfter Formulare (Dienstleistung → Formular) je Aufgabe
-          const linkedFormValues: Array<{ formId: string; fieldKey: string; value: any }> = [];
-          for (const [key, v] of Object.entries(formVals)) {
-            if (v == null) continue;
-
-            const linked = parseLinkedFormValueKey(key);
-            if (linked) {
-              linkedFormValues.push({ formId: linked.formId, fieldKey: linked.fieldKey, value: v });
-              continue;
-            }
-
-
-            // Top-level upload field
-            if (uploadKeys.has(key) && isUploadValue(v)) {
-              for (const entry of v as any[]) await persistUpload(key, null, entry);
-              continue;
-            }
-
-            // Repeatable section: array of entries
-            if (key.startsWith("repeat:") && Array.isArray(v)) {
-              if (v.length === 0) continue;
-              // Extract upload entries from each repeatable entry and remove them from the JSON
-              const cleaned = v.map((entry: any, idx: number) => {
-                if (!entry || typeof entry !== "object") return entry;
-                const out: Record<string, any> = {};
-                for (const [ek, ev] of Object.entries(entry)) {
-                  if (uploadKeys.has(ek) && isUploadValue(ev)) {
-                    // fire-and-forget within the loop; sequenced via for..of below
-                    // We push a task list instead so ordering is deterministic.
-                    (persistUpload as any)._pending = (persistUpload as any)._pending || [];
-                    for (const uploadEntry of ev as any[]) {
-                      (persistUpload as any)._pending.push([ek, idx, uploadEntry]);
-                    }
-                  } else {
-                    out[ek] = ev;
-                  }
-                }
-                return out;
-              });
-              paramInserts.push({
-                order_measurement_id: createdMeasurement.id,
-                parameter_name: key,
-                parameter_value: JSON.stringify(cleaned),
-                unit: null,
-              });
-              continue;
-            }
-
-            if (typeof v === "string" && v.trim() === "") continue;
-
-            const f = fields.find((x: any) => x.field_key === key);
-            paramInserts.push({
-              order_measurement_id: createdMeasurement.id,
-              parameter_name: (f as any)?.display_name || key,
-              parameter_value:
-                typeof v === "boolean" ? (v ? "true" : "false")
-                  : (Array.isArray(v) || (v && typeof v === "object")) ? JSON.stringify(v)
-                  : String(v),
-              unit: (f as any)?.unit || null,
-            });
-          }
-
-          // Drain queued repeatable uploads
-          const pending: Array<[string, number, any]> = (persistUpload as any)._pending || [];
-          for (const [fk, idx, entry] of pending) await persistUpload(fk, idx, entry);
-          (persistUpload as any)._pending = [];
-
-          // Werte der verknüpften Formulare je Aufgabe persistieren
-          if (linkedFormValues.length > 0) {
-            const formIds = [...new Set(linkedFormValues.map((x) => x.formId))];
-            for (const fid of formIds) {
-              const ff = await api.formFields.listForForm(fid);
-              for (const item of linkedFormValues.filter((x) => x.formId === fid)) {
-                const def = (ff as any[]).find((x) => x.field_key === item.fieldKey);
-                const raw = item.value;
-                if (typeof raw === "string" && raw.trim() === "") continue;
-                paramInserts.push({
-                  order_measurement_id: createdMeasurement.id,
-                  parameter_name: def?.display_name || item.fieldKey,
-                  parameter_value:
-                    typeof raw === "boolean" ? (raw ? "true" : "false")
-                      : typeof raw === "object" ? JSON.stringify(raw)
-                      : String(raw),
-                  unit: def?.unit || null,
-                });
-
-                // Zusätzlich als normaler Formularwert derselben Messung
-                // ablegen (`form:<Formular>:<Feldschlüssel>`), damit die
-                // Messdienstleisteransicht und der bestehende Formel-Scope
-                // exakt dasselbe Feld lesen. Kein neues Feld, keine zweite
-                // Feldinstanz – nur derselbe Wert unter dem vorhandenen
-                // Feldschlüssel. Die Auftragsparameter oben bleiben unberührt.
-                const payload = buildFormValueResultPayload({
-                  measurementId: createdMeasurement.id,
-                  formId: fid,
-                  fieldKey: item.fieldKey,
-                  raw,
-                  def,
-                  measuredBy: user!.id,
-                });
-                if (!payload) continue;
-                try {
-                  await api.measurementResults.create(payload as any);
-                } catch (err: any) {
-                  // Der Auftrag bleibt gültig; nur die Vorbelegung fehlt dann.
-                  console.warn("Formularwert konnte nicht übernommen werden", err);
-                }
-              }
-            }
-          }
-
-          if (paramInserts.length > 0) {
-            await api.measurementParameters.bulkInsert(paramInserts);
-          }
-        }
-      }
-  };
-
-  /** Vorgaben-Zeilen einer Position (gleiche Regeln wie Neuanlage). */
-  const buildRowsFor = async (serviceId: string, formVals: Record<string, any> | undefined, params: Record<string, string> | undefined) => {
-    const [fields, legacyDefs] = await Promise.all([
-      api.serviceDataFields.listForService(serviceId),
-      api.serviceParameters.listForService(serviceId),
-    ]);
-    const formIds = [...new Set(Object.keys(formVals ?? {}).map((k) => parseLinkedFormValueKey(k)?.formId).filter(Boolean) as string[])];
-    const linkedFields: Record<string, any[]> = {};
-    for (const fid of formIds) linkedFields[fid] = await api.formFields.listForForm(fid);
-    return {
-      fields,
-      rows: buildRequesterParameterRows({ formValues: formVals, params, fields: fields as any, legacyDefs: legacyDefs as any, linkedFields, parseLinkedKey: parseLinkedFormValueKey }),
-    };
-  };
-
-  /** Speichern im Bearbeitungsmodus: bestehender Auftrag wird aktualisiert, keine neue Nummer. */
-  const handleEditSubmit = async () => {
-    const base = editBaseline.current;
-    if (!user || !editOrderId || !base) return;
-    const projectId = selectedProjectId || null;
-    if (!projectId && projectRequired) { toast.error(t("orders:select_project_error")); return; }
-    setSubmitting(true);
-    const reason = t("orders:requesterEdit.reason");
-    try {
-      // Serverseitige Freigabe unmittelbar vor dem Schreiben erneut prüfen.
-      const state = await api.orders.requesterEditState(editOrderId);
-      if (!state.can_edit) throw new Error(t("orders:requesterEdit.lockedHint"));
-
-      await api.orders.update(editOrderId, {
-        project_id: projectId, order_type: orderType as any, priority: priority as any,
-        due_date: dueDate || null, notes: notes || null,
-        ...experimentNumberPatch(dynamicFormId ? templateFields : [], dynamicValues),
-      } as any);
-      if (dynamicFormId) {
-        await api.orderSharedFormData.merge(editOrderId, {
-          template: { form_definition_id: dynamicFormId, order_kind: orderKind, values: dynamicValues, saved_at: new Date().toISOString(), saved_by: user.id },
-        });
-      }
-
-      const effective = computeEffectiveMeasurements();
-      const plan = planServiceChanges(base.measurementIds, effective.map((m) => m.uid));
-      for (const omId of plan.removedMeasurementIds) await api.orders.requesterRemoveMeasurement(omId, reason);
-
-      const existingById = new Map<string, any>(((base.order?.order_measurements ?? []) as any[]).map((m) => [m.id, m]));
-      for (const uid of plan.kept) {
-        const m = effective.find((x) => x.uid === uid)!;
-        const baseline = await buildRowsFor(m.service_id, base.payload.measurementFormValues?.[uid] as any, base.payload.measurementParams?.[uid] as any);
-        const next = await buildRowsFor(m.service_id, measurementFormValues[uid], measurementParams[uid]);
-        for (const omId of base.measurementIds[uid]) {
-          const existing = (existingById.get(omId)?.measurement_parameters ?? []) as any[];
-          const diff = diffRequesterParameters(existing, baseline.rows, next.rows);
-          for (const a of diff.amend) await api.measurementParameters.amend(a.id, a.value, reason, a.name);
-          if (diff.insert.length > 0) {
-            await api.measurementParameters.bulkInsert(diff.insert.map((r) => ({ order_measurement_id: omId, parameter_name: r.name, parameter_value: r.value, unit: r.unit })));
-          }
-          // Neu gewählte Dateien (bestehende Anhänge bleiben unverändert).
-          for (const [key, v] of Object.entries(measurementFormValues[uid] ?? {})) {
-            if (!Array.isArray(v)) continue;
-            for (const entry of v as any[]) {
-              if (entry?.pendingFile instanceof File) {
-                await api.orderUploads.uploadFile({ measurementId: omId, fieldKey: key, entryIndex: null, file: entry.pendingFile, uploadedBy: user.id });
-              }
-            }
-          }
-        }
-      }
-
-      const added = effective.filter((m) => plan.addedUids.includes(m.uid));
-      if (added.length > 0) {
-        const sampleTargets: Array<string | null> = selectedSampleIds.length > 0 ? selectedSampleIds : [null];
-        await persistNewMeasurements(editOrderId, added, sampleTargets);
-      }
-      try { await api.ruleTriggers.syncOrder(editOrderId); } catch (err) { console.warn("Regel-Auslöser konnten nicht abgeglichen werden", err); }
-      try { await api.mundstueck293.syncOrder(editOrderId); } catch (err) { console.warn("Mundstück 293/1 konnte nicht abgeglichen werden", err); }
-
-      await queryClient.invalidateQueries();
-      toast.success(t("orders:requesterEdit.saved"));
-      navigate(`/auftraege/${editOrderId}`);
-    } catch (err: any) {
-      toast.error(t("orders:requesterEdit.saveError"), { description: err.message });
-    } finally { setSubmitting(false); }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (draftLoading || draftLoadFailed || !templateReady || !servicesReady || (measurements.length > 0 && !ruleQueryReady)) {
-      toast.error("Formular wird noch geladen oder konnte nicht vollständig geladen werden"); return;
-    }
-    if (missingDraftFiles(draftPayload).length > 0 && JSON.stringify(draftPayload).includes("__draft_file_missing")) {
-      toast.error("Bitte fehlende Dateianhänge erneut auswählen"); return;
-    }
-    const isPurePP = orderKind === "pilot_plant";
-    // Labor requires sample + measurements. Pilot Plant / Combined may start without a sample; measurements optional for pure PP.
-    if (!user || !orderType) {
-      toast.error(t("orders:fill_required"));
-      return;
-    }
-    if (!isPurePP && (measurements.length === 0 || selectedSampleIds.length === 0)) {
-      toast.error(t("orders:fill_required"));
-      return;
-    }
-    if (editOrderId) { await handleEditSubmit(); return; }
-    setSubmitting(true);
-    try {
-      // Projektzuordnung ist nur für projektbezogene Aufträge (F&E) verpflichtend.
-      // Kunden- und Produktionsaufträge dürfen ohne Projekt gespeichert werden.
-      const projectId = selectedProjectId || null;
-      if (!projectId && projectRequired) { toast.error(t("orders:select_project_error")); setSubmitting(false); return; }
-
-      const order = await createOrder.mutateAsync({
-        project_id: projectId, order_type: orderType as any, created_by: user.id,
-        is_billed: billedForCreate(orderType, isBilled),
-        priority: priority as any,
-        due_date: dueDate || undefined, notes: notes || undefined,
-        sample_id: selectedSampleIds[0] || undefined,
-        order_kind: orderKind,
-        pp_issuer_user_id: orderKind === "pilot_plant" ? user.id : null,
-        ...experimentNumberPatch(dynamicFormId ? templateFields : [], dynamicValues),
+      await createMeasurementTasks({
+        order, user, effectiveMeasurements, selectedSampleIds, dueDate,
+        measurementParams, measurementFormValues, addMeasurement,
       });
-
-      // Pilot Plant: seed process blocks. Alle fachlichen Angaben kommen aus
-      // dem konfigurierten Auftraggeberformular (siehe unten), nicht aus Code.
-      if (orderKind === "pilot_plant") {
-        try {
-          await api.pilotPlantBlocks.seed(order.id);
-        } catch (err: any) {
-          toast.error(`Pilot-Plant-Bausteine: ${err.message}`);
-        }
-      }
-
-
-      // Persist template-driven dynamic form values (no hardcoded fields).
-      if (dynamicFormId && Object.keys(dynamicValues).length > 0) {
-        try {
-          await api.orderSharedFormData.merge(order.id, {
-            template: {
-              form_definition_id: dynamicFormId,
-              order_kind: orderKind,
-              values: dynamicValues,
-              saved_at: new Date().toISOString(),
-              saved_by: user.id,
-            },
-          });
-        } catch (err: any) {
-          toast.error(`Formularvorlage: ${err.message}`);
-        }
-      }
-
-      // Phase 5: If a process template was selected, spin up an order_instance
-      // linked to this measurement_order and seed its workflow steps.
-      if (processTemplateId && processTemplateId !== "__none__") {
-        try {
-          const tpl = (processTemplates as any[]).find(t => t.id === processTemplateId);
-          let snapshot: Record<string, unknown> | null = null;
-          try { snapshot = await api.processTemplates.snapshot(processTemplateId); } catch { /* optional */ }
-          const instance = await api.orderInstances.create({
-            template_id: processTemplateId,
-            template_snapshot: snapshot,
-            project_id: projectId,
-            legacy_order_id: order.id,
-            order_number: order.order_number,
-            title: tpl?.name ?? null,
-            status: "planned",
-            sample_ids: selectedSampleIds.length > 0 ? selectedSampleIds : null,
-            shared_data: {},
-            created_by: user.id,
-          });
-          await api.workflowEngine.seedFromTemplate(instance.id, processTemplateId);
-        } catch (err: any) {
-          toast.error(`Prozessvorlage: ${err.message}`);
-        }
-      }
-
-
-
-
-
-      // Alle ausgewählten Proben dem Auftrag zuordnen (n:m)
-      if (selectedSampleIds.length > 0) {
-        try {
-          await api.orderSamples.add(order.id, selectedSampleIds, user.id);
-        } catch (err: any) {
-          toast.error(`Probenzuordnung: ${err.message}`);
-        }
-      }
-
-      const effectiveMeasurements = computeEffectiveMeasurements();
-      const sampleTargets: Array<string | null> =
-        selectedSampleIds.length > 0 ? selectedSampleIds : [null];
-      await persistNewMeasurements(order.id, effectiveMeasurements, sampleTargets);
-
-      // Sicherheitsnetz: ausgelöste Dienstleistungen gegen den gespeicherten
-      // Stand abgleichen (idempotent, erzeugt keine Duplikate).
-      try { await api.ruleTriggers.syncOrder(order.id); }
-      catch (err) { console.warn("Regel-Auslöser konnten nicht abgeglichen werden", err); }
-      // Regel „Mundstück 293/1“ (Raumgewicht / Wasseraufnahme / Schwindung).
-      try { await api.mundstueck293.syncOrder(order.id); }
-      catch (err) { console.warn("Mundstück 293/1 konnte nicht abgeglichen werden", err); }
+      await runPostCreateSyncs(order.id);
 
       // Auftrag wurde eingereicht → Entwurf wird entfernt (kein Datenverlust,
       // die Daten leben ab jetzt im produktiven Auftrag).
@@ -1127,23 +856,101 @@ export default function CreateOrderPage() {
         <CloudOff className="h-3.5 w-3.5" /> Änderungen konnten nicht gespeichert werden
       </span>
     ) : autosave.state === "dirty" ? <span className="text-xs text-muted-foreground">{t("orders:draftSafety.unsaved")}</span> : null;
-
-  // Zweispaltiger Dienstleistungsbereich nur für die Pilot-Plant-Einzelauftragserstellung.
+  // Zweispaltiger Dienstleistungsbereich für Pilot-Plant-Einzelaufträge – im Bearbeiten-Modus genau wie beim Erstellen.
   const pilotSingle = mode === "single" && orderKind === "pilot_plant";
 
+  // Felder des Auftragsformulars, die Dienstleistungen auslösen: im Bearbeiten-Modus gesperrt (Dienstleistungen
+  // sind in dieser Stufe schreibgeschützt).
+  // Stufe 3c: Sperre pro Gruppe (Auswahlfeld) – nur gesperrt, wenn eine Dienstleistung eines gesetzten Häkchens begonnen ist.
+  const lockedTemplateKeys = isEdit
+    ? servicesReady
+      ? lockedTickGroups(
+          editBaseline.current?.templateValues ?? {}, tickEnv,
+          new Set(serviceInfos.filter((i) => !i.removable).map((i) => i.serviceId)),
+        )
+      : templateFields.filter((f) => isServiceField(f as any, services as any)).map((f) => f.field_key)
+    : undefined;
+  const lockedTickLabels = (lockedTemplateKeys ?? [])
+    .map((k) => templateFields.find((f) => f.field_key === k)?.display_name ?? k);
+
+  // Vorschau (Bearbeiten-Modus): durch Regeln zusätzlich ausgelöste Dienstleistungen (nur Namen).
+  const rulePreviewNames: string[] = isEdit && measurements.length > 0 && ruleQueryReady
+    ? [...new Set(ruleAdditions(buildRulePlan(measurements, measurementFormValues)).map((a) => a.service_name))]
+    : [];
+
+  // Änderungen gegenüber dem Ausgangsstand (nur Bearbeiten-Modus).
+  function currentEditDiff() {
+    const base = editBaseline.current;
+    if (!isEdit || !base || !editHydrated) return null;
+    const exp = experimentNumberPatchForEdit(dynamicFormId ? templateFields : [], dynamicValues).pp_experiment_number;
+    const cur: EditSnapshot = {
+      orderType, projectId: selectedProjectId, priority, dueDate, notes,
+      sampleIds: selectedSampleIds, templateFormId: base.templateFormId ?? dynamicFormId,
+      templateValues: dynamicValues, isBilled,
+    };
+    return diffOrderEdit(base, cur, {
+      started: locks.started,
+      addServices: [...measurements.map((m) => ({ name: m.service_name })), ...rulePreviewNames.map((name) => ({ name }))],
+      addSampleCount: selectedSampleIds.length,
+      removeServices: serviceInfos
+        .filter((i) => removedServiceIds.includes(i.serviceId))
+        .map((i) => ({ id: i.serviceId, name: i.name, tasks: i.tasks.length })),
+      experimentNumber: exp,
+      expectedUpdatedAt: editData.facts?.updated_at,
+      labels: {
+        orderType: (v) => ({ customer: "Kunde", production: "Produktion", rnd: "F&E" } as Record<string, string>)[v] ?? v,
+        project: (id) => {
+          const p = (projects as any[]).find((x) => x.id === id);
+          return p ? `${p.project_number}${p.project_name ? " – " + p.project_name : ""}` : "kein Projekt";
+        },
+        sample: (id) => (allSamplesForLabels as any[]).find((x) => x.id === id)?.sample_number ?? id,
+        priority: (v) => ({ niedrig: "niedrig", normal: "normal", hoch: "hoch", sehr_hoch: "sehr hoch" } as Record<string, string>)[v] ?? v,
+      },
+    });
+  }
+  const editDiff = currentEditDiff();
+
+  // Bearbeiten-Modus: Laden / keine Berechtigung (alle Hooks stehen oberhalb).
+  if (isEdit && (editData.isLoading || (editData.order && editData.facts && !editHydrated))) {
+    return <div className="flex h-64 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+  }
+  if (isEdit && (editData.error || !editData.order || !editData.facts)) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center space-y-3">
+        <p className="text-lg font-medium">Auftrag nicht gefunden.</p>
+        <p className="text-sm text-muted-foreground">{editData.error?.message || "Der Auftrag existiert nicht oder Sie haben keine Berechtigung."}</p>
+        <Button variant="outline" onClick={() => navigate("/auftraege")}>Zur Auftragsübersicht</Button>
+      </div>
+    );
+  }
+  if (isEdit && !locks.canEdit) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center space-y-3">
+        <p className="text-lg font-medium">Dieser Auftrag kann nicht bearbeitet werden.</p>
+        <p className="text-sm text-muted-foreground">{locks.blockedReason}</p>
+        <Button variant="outline" onClick={() => navigate(`/auftraege/${editOrderId}`)}>Zurück zum Auftrag</Button>
+      </div>
+    );
+  }
+
   return (
-    <div className={pilotSingle ? "space-y-6 max-w-none" : "space-y-6 max-w-3xl"}>
+    // Einheitliche Maximalbreite für alle Auftragsarten (docs/gestaltungsregeln.md)
+    <div className="space-y-6 max-w-none">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{editOrderId ? t("orders:requesterEdit.title", { number: editBaseline.current?.order?.order_number ?? "" }) : t("orders:create_title")}</h1>
-          <p className="text-muted-foreground">{editOrderId ? t("orders:requesterEdit.banner") : t("orders:create_subtitle")}</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {isEdit ? `Auftrag ${editData.facts?.order_number ?? ""} bearbeiten` : t("orders:create_title")}
+          </h1>
+          <p className="text-muted-foreground">
+            {isEdit ? "Gleiche Maske wie beim Erstellen. 🔒 = gesperrt, weil bereits in Bearbeitung. Änderungen werden protokolliert." : t("orders:create_subtitle")}
+          </p>
         </div>
-        {mode === "single" && draftsEnabled && !editOrderId && saveIndicator}
+        {!isEdit && mode === "single" && draftsEnabled && saveIndicator}
       </div>
 
-      {mode === "single" && !editOrderId && <OrderDraftsPanel activeDraftId={draftId} beforeSwitch={beforeDraftSwitch} onNew={startNewDraft} />}
-      {mode === "single" && missingDraftFiles(draftPayload).length > 0 && (
+      {!isEdit && mode === "single" && <OrderDraftsPanel activeDraftId={draftId} beforeSwitch={beforeDraftSwitch} onNew={startNewDraft} />}
+      {!isEdit && mode === "single" && missingDraftFiles(draftPayload).length > 0 && (
         <p role="status" className="text-sm text-destructive">{t("orders:draftSafety.files", { names: missingDraftFiles(draftPayload).join(", ") })}</p>
       )}
 
@@ -1158,8 +965,8 @@ export default function CreateOrderPage() {
       )}
 
 
-      {/* Mode toggle */}
-      {!editOrderId && <div className="flex gap-2">
+      {/* Mode toggle (nicht im Bearbeiten-Modus) */}
+      {!isEdit && <div className="flex gap-2">
         <Button
           variant={mode === "single" ? "default" : "outline"}
           size="sm"
@@ -1186,20 +993,30 @@ export default function CreateOrderPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">{t("orders:order_details")}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {/* Auftragstyp und Verrechnet nebeneinander; „Verrechnet“ erscheint nur bei Kundenaufträgen, die Zeile springt nicht. */}
+            <div className="grid items-start gap-4 sm:grid-cols-2">
             <div>
               <Label>{t("orders:order_type")} *</Label>
-              <Select value={orderType} onValueChange={setOrderType}>
+              <Select value={orderType} onValueChange={setOrderType} disabled={isEdit && locks.typeLocked}>
                 <SelectTrigger><SelectValue placeholder={t("orders:choose_type")} /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(orderTypeLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
                 </SelectContent>
               </Select>
+              {isEdit && locks.typeLocked && (
+                <p className="mt-1 text-xs text-muted-foreground">🔒 Gesperrt: Am Auftrag wurde bereits gearbeitet.</p>
+              )}
+              {isEdit && !locks.typeLocked && orderType !== editBaseline.current?.orderType && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Folgen: F&amp;E braucht ein Projekt; das Verrechnet-Kennzeichen gilt nur für Kundenaufträge. Begründung erforderlich.
+                </p>
+              )}
             </div>
             {orderType === "customer" && (
               <div>
                 <Label>{t("orders:billing.billed")}</Label>
                 <Select value={isBilled ? "yes" : "no"} onValueChange={(v) => setIsBilled(v === "yes")}>
-                  <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="no">{t("orders:billing.no")}</SelectItem>
                     <SelectItem value="yes">{t("orders:billing.yes")}</SelectItem>
@@ -1207,11 +1024,12 @@ export default function CreateOrderPage() {
                 </Select>
               </div>
             )}
+            </div>
             <div>
               <Label>{t("orders:kind_label")} *</Label>
               <Select
                 value={orderKind}
-                disabled={!!editOrderId}
+                disabled={isEdit}
                 onValueChange={(v) => {
                   const next = v as "labor" | "pilot_plant";
                   setOrderKind(next);
@@ -1228,18 +1046,20 @@ export default function CreateOrderPage() {
                   <SelectItem value="pilot_plant">{t("orders:kind.pilot_plant")}</SelectItem>
                 </SelectContent>
               </Select>
+              {isEdit && <p className="mt-1 text-xs text-muted-foreground">🔒 Die Auftragsart kann nicht geändert werden.</p>}
             </div>
             {orderKind !== "pilot_plant" && (
               <div>
                 <Label>{t("orders:sample")} *</Label>
-                <SampleSelector values={selectedSampleIds} onValuesChange={editOrderId ? () => {} : setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} />
+                <SampleSelector values={selectedSampleIds} onValuesChange={setSelectedSampleIds} projectId={selectedProjectId || undefined} projectRequired={projectRequired} lockedValues={isEdit ? [...locks.lockedSampleIds] : undefined} />
+                {isEdit && <p className="mt-1 text-xs text-muted-foreground">Proben mit Aufgaben (🔒) bleiben zugeordnet. Für neu hinzugefügte Proben werden in dieser Version noch keine Aufgaben angelegt.</p>}
               </div>
             )}
             <div>
               <Label>
                 {t("common:project")} {projectRequired ? "*" : <span className="text-muted-foreground font-normal">({t("orders:project_optional")})</span>}
               </Label>
-              <Select value={selectedProjectId || "__none__"} onValueChange={(v) => setSelectedProjectId(v === "__none__" ? "" : v)}>
+              <Select value={selectedProjectId || "__none__"} disabled={isEdit && locks.projectLocked} onValueChange={(v) => setSelectedProjectId(v === "__none__" ? "" : v)}>
                 <SelectTrigger aria-label={t("orders:select_project")}><SelectValue placeholder={t("orders:choose_project")} /></SelectTrigger>
                 <SelectContent>
                   {!projectRequired && <SelectItem value="__none__">{t("orders:no_project")}</SelectItem>}
@@ -1251,22 +1071,28 @@ export default function CreateOrderPage() {
               {!projectRequired && (
                 <p className="text-xs text-muted-foreground mt-1">{t("orders:project_optional_hint")}</p>
               )}
+              {isEdit && locks.projectLocked && (
+                <p className="mt-1 text-xs text-muted-foreground">🔒 Gesperrt: Am Auftrag wurde bereits gearbeitet.</p>
+              )}
             </div>
-            <div>
-              <Label>{t("orders:priority")}</Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(priorityLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
-                </SelectContent>
-              </Select>
+            {/* Priorität und Fälligkeit nebeneinander (docs/gestaltungsregeln.md) */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>{t("orders:priority")}</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(priorityLabels).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5"><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
             </div>
-            <div><Label>{t("orders:due_date")}</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
             <div><Label>{t("orders:notes")}</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("orders:notes_placeholder")} rows={3} /></div>
           </CardContent>
         </Card>
 
-      <div className={pilotSingle ? "space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start" : "space-y-6"}>
+      <div className={pilotSingle ? "space-y-6 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-8 lg:items-start" : "space-y-6"}>
       <div className="space-y-6 min-w-0">
         {/* Dynamic, template-driven form for the selected Auftragsart.
             Fields, sections, labels and validations come exclusively from the
@@ -1278,7 +1104,16 @@ export default function CreateOrderPage() {
           onTemplateResolved={setDynamicFormId}
           onFieldsResolved={setTemplateFields}
           onReady={onTemplateReady}
+          lockedFieldKeys={lockedTemplateKeys}
         />
+        {isEdit && servicesReady && lockedTickLabels.length > 0 && (
+          <p role="note" className="-mt-3 flex items-start gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+            <span>
+              Gesperrt: {lockedTickLabels.join(", ")} – bereits in Bearbeitung. Neue Dienstleistungen bitte über „Dienstleistungen hinzufügen“.
+            </span>
+          </p>
+        )}
 
         {/* Die im Auftraggeberformular ausgewählten Dienstleistungen erscheinen
             sofort mit ihrem bestehenden Auftraggeberformular – noch ohne
@@ -1319,10 +1154,22 @@ export default function CreateOrderPage() {
 
 
 
+        {isEdit && (
+          <ExistingServicesReadOnly
+            measurements={editData.order?.order_measurements ?? []}
+            facts={editData.facts}
+            canAmend={locks.canEdit}
+            removedServiceIds={removedServiceIds}
+            onToggleRemove={(id) => setRemovalAndTicks(toggleServiceRemoval(removedServiceIds, id, serviceInfos))}
+            onAmended={() => { void editData.refetchOrder?.(); queryClient.invalidateQueries({ queryKey: ["order"] }); queryClient.invalidateQueries({ queryKey: ["order-activity", editOrderId] }); }}
+          />
+        )}
+        {/* Pilot Plant (Neuanlage): Dienstleistungen kommen allein aus den Häkchen im Auftragsformular – kein Block „Aufgaben“. */}
+        {(!isEdit || locks.canEdit) && !(pilotSingle && !isEdit) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">{t("orders:measurements_section")}</CardTitle>
+              <CardTitle className="text-base">{isEdit ? "Dienstleistungen hinzufügen" : t("orders:measurements_section")}</CardTitle>
               <TemplateManager
                 selectedServiceIds={measurements.map((m) => m.service_id)}
                 onApplyTemplate={handleApplyTemplate}
@@ -1330,7 +1177,8 @@ export default function CreateOrderPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {servicePackages.length > 0 && (
+            {/* Servicepakete: in der Auftragserstellung ausgeblendet (nie benutzt, Aufgabe 019); Pakete im Admin bleiben. */}
+            {SHOW_SERVICE_PACKAGES && servicePackages.length > 0 && (
               <div className="rounded-md border bg-muted/30 p-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <Layers className="h-4 w-4 text-primary" />
@@ -1421,8 +1269,15 @@ export default function CreateOrderPage() {
               </p>
             </div>
 
+            {isEdit && measurements.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Neue Dienstleistungen werden beim Speichern für alle {selectedSampleIds.length || 1} Proben des Auftrags angelegt
+                (je Probe eine Aufgabe), wie beim Erstellen.
+                {rulePreviewNames.length > 0 && ` Durch Regeln zusätzlich ausgelöst (sofern noch nicht vorhanden): ${rulePreviewNames.join(", ")}.`}
+              </p>
+            )}
             {measurements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("orders:no_measurements_hint")}</p>
+              <p className="text-sm text-muted-foreground">{isEdit ? "Keine neue Dienstleistung ausgewählt." : t("orders:no_measurements_hint")}</p>
             ) : pilotSingle ? null : (
               <div className="space-y-3">
                 {extraMeasurements.map((m, idx) => (
@@ -1441,8 +1296,9 @@ export default function CreateOrderPage() {
             )}
           </CardContent>
         </Card>
+        )}
 
-        {role !== "auftraggeber" && measurements.length > 0 && (
+        {!isEdit && role !== "auftraggeber" && orderKind !== "pilot_plant" && measurements.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Prozessvorlage (optional)</CardTitle>
@@ -1453,11 +1309,8 @@ export default function CreateOrderPage() {
               <SelectContent>
                 <SelectItem value="__none__">– Keine Vorlage –</SelectItem>
                 {(processTemplates as any[])
-                  .filter((tpl) => {
-                    if (orderKind === "pilot_plant") return tpl.kind === "pilot_plant";
-                    if (orderKind === "labor") return tpl.kind === "labor";
-                    return true;
-                  })
+                  // Prozessvorlagen gibt es nur für Laboraufträge (Pilot Plant: stillgelegt, Aufgabe 018).
+                  .filter((tpl) => tpl.kind === "labor")
                   .map((tpl) => (
                     <SelectItem key={tpl.id} value={tpl.id}>
                       {tpl.name} {tpl.kind === "pilot_plant" ? "· PP" : "· Labor"} · v{tpl.version}
@@ -1484,15 +1337,50 @@ export default function CreateOrderPage() {
           />
         )}
 
+        {isEdit && (
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Was wird geändert?</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {editDiff && editDiff.lines.length > 0 ? (
+                <ul className="list-disc space-y-0.5 pl-5 text-sm">
+                  {editDiff.lines.map((l, i) => (<li key={i}>{l}</li>))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Noch keine Änderungen.</p>
+              )}
+              <div>
+                <Label htmlFor="edit-reason">
+                  Grund der Änderung {editDiff?.reasonRequired ? "*" : <span className="font-normal text-muted-foreground">(optional)</span>}
+                </Label>
+                <Textarea
+                  id="edit-reason"
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  rows={2}
+                  placeholder="z. B. falsch angelegt, Projekt gewechselt …"
+                  aria-required={!!editDiff?.reasonRequired}
+                />
+                {editDiff?.reasonRequired && (
+                  <p className="mt-1 text-xs text-amber-700">Begründung erforderlich: {editDiff.reasonWhy.join(", ")}.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="flex gap-3 flex-wrap items-center">
-          <Button type="submit" disabled={submitting}>{submitting ? t("orders:submitting") : editOrderId ? t("orders:requesterEdit.save") : t("orders:submit_order")}</Button>
-          {draftsEnabled && !editOrderId && (
+          <Button type="submit" disabled={submitting || (isEdit && (!editDiff || editDiff.lines.length === 0))}>
+            {isEdit ? (submitting ? "Speichere …" : "Änderungen speichern") : submitting ? t("orders:submitting") : t("orders:submit_order")}
+          </Button>
+          {!isEdit && draftsEnabled && (
             <Button type="button" variant="secondary" onClick={handleSaveAndClose} disabled={!autosaveEnabled || closingDraft || submitting}>
               <Save className="h-4 w-4 mr-2" /> Entwurf speichern &amp; schließen
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={() => navigate(-1)}>{t("common:cancel")}</Button>
-          {draftsEnabled && saveIndicator}
+          <Button type="button" variant="outline" onClick={() => (isEdit ? navigate(`/auftraege/${editOrderId}`) : navigate(-1))}>
+            {isEdit ? "Änderungen verwerfen" : t("common:cancel")}
+          </Button>
+          {!isEdit && draftsEnabled && saveIndicator}
         </div>
       </div>
 

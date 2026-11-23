@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Beaker, Factory, Layers, Trash2 } from "lucide-react";
+import { Beaker, Factory, Trash2 } from "lucide-react";
 
 const KINDS: { key: OrderKind; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "labor", label: "Labor", icon: Beaker },

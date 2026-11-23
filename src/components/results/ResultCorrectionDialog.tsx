@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import SampleLabel from "@/components/results/SampleLabel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,9 +82,8 @@ export default function ResultCorrectionDialog({
 
         <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1 text-sm border rounded-md p-3 bg-muted/30">
           <dt className="text-muted-foreground">Probe</dt>
-          <dd className="font-mono">
-            {context.sampleNumber}
-            {context.sampleName ? <span className="font-sans text-muted-foreground"> · {context.sampleName}</span> : null}
+          <dd>
+            <SampleLabel number={context.sampleNumber} name={context.sampleName} />
           </dd>
           {context.orderNumber && (
             <>

@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import OrderResultsDetail from "@/components/order/OrderResultsDetail";
+import OrderExcelExportButton from "@/components/order/OrderExcelExportButton";
 import PhotoDocumentationCard from "@/components/order/PhotoDocumentationCard";
 import RecipeDocumentationCard from "@/components/order/RecipeDocumentationCard";
 
@@ -76,7 +77,10 @@ export default function OrderClosureTab({ order }: { order: any }) {
 
       <Card>
         <CardHeader className="py-3">
-          <CardTitle className="text-base">Offizielle Ergebnisse</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base">Offizielle Ergebnisse</CardTitle>
+            <OrderExcelExportButton orderId={order.id} label="Auftrag als Excel exportieren" />
+          </div>
           <p className="text-xs text-muted-foreground">
             Es werden ausschließlich Werte angezeigt, die ausdrücklich als offizielles Ergebnis
             freigegeben wurden – inklusive Probenbezug und tatsächlich gemessener Probe.

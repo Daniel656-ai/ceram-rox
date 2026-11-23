@@ -15,7 +15,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, AlertTriangle, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield, ClipboardCheck, Briefcase, Pencil } from "lucide-react";
+import { ArrowLeft, FlaskConical, Clock, DollarSign, FileText, Printer, CalendarClock, Package, Download, CheckCircle2, RotateCcw, Users, ClipboardList, Shield, ClipboardCheck, Briefcase, Pencil } from "lucide-react";
 import { useMemo, useRef, useCallback, useState } from "react";
 import { EditProjectIdentityDialog } from "@/components/EditProjectIdentityDialog";
 import { ProjectMaterialCosts } from "@/components/ProjectMaterialCosts";

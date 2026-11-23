@@ -1,9 +1,19 @@
 import { useMemo, useState } from "react";
+import SampleLabel from "@/components/results/SampleLabel";
+import ActivityMeasurementView from "@/components/results/ActivityMeasurementView";
+import { extractActivity } from "@/lib/results/activityMeasurement";
+import { toUnicode } from "@/lib/richText";
+import BetResultsTable from "@/components/results/BetResultsTable";
+import { betValue, displayResults, isBetResult, isBetService } from "@/lib/results/betMeasurement";
+import { measurementStatusLabel } from "@/lib/results/statusLabels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine } from "lucide-react";
-import CompletedResultForm from "@/components/CompletedResultForm";
+import { ArrowLeft, FlaskConical, History, ClipboardList, PanelRightOpen, PencilLine, MoreHorizontal, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { ResultCountBadges } from "@/components/results/ResultCountBadges";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { prepareDisplayResults, splitInternalResults, type DetailItem, type ImportProtocol } from "@/lib/results/internalResults";
+import { parseStructuredText } from "@/lib/results/structuredValues";
 import RequesterConditionsPanel from "@/components/results/RequesterConditionsPanel";
 import CorrectionHistoryDialog from "@/components/results/CorrectionHistoryDialog";
 import ResultCorrectionDialog, { type CorrectionContext } from "@/components/results/ResultCorrectionDialog";
@@ -21,35 +31,13 @@ import {
 
 const nf = new Intl.NumberFormat("de-AT", { maximumFractionDigits: 6 });
 
-/** Lesbare, verlustfreie Darstellung komplexer JSON-Werte (z. B. Repeater-Einträge). */
-function fmtJsonValue(parsed: unknown): string {
-  const entry = (obj: Record<string, unknown>) =>
-    Object.entries(obj)
-      .filter(([k]) => !k.startsWith("__"))
-      .map(([k, v]) => `${k}: ${typeof v === "object" && v !== null ? fmtJsonValue(v) : String(v)}`)
-      .join(", ");
-  if (Array.isArray(parsed))
-    return parsed
-      .map((item, i) => {
-        const inner = typeof item === "object" && item !== null && !Array.isArray(item)
-          ? entry(item as Record<string, unknown>)
-          : String(item);
-        return parsed.length > 1 ? `Eintrag ${i + 1} – ${inner}` : inner;
-      })
-      .join(" | ");
-  if (typeof parsed === "object" && parsed !== null) return entry(parsed as Record<string, unknown>);
-  return String(parsed);
-}
-
+/**
+ * Anzeigewert einer einzelnen Zeile. Strukturierte Werte (JSON-Objekt/-Liste) werden vorher in
+ * einzelne Zeilen zerlegt (prepareDisplayResults) und erscheinen hier nie als Rohtext.
+ */
 function fmtValue(r: SampleResultValue): string {
   if (r.value !== null && r.value !== undefined) return nf.format(r.value);
-  if (r.remarks) {
-    try {
-      return fmtJsonValue(JSON.parse(r.remarks));
-    } catch {
-      return r.remarks;
-    }
-  }
+  if (r.remarks) return parseStructuredText(r.remarks) !== undefined ? "–" : r.remarks;
   return "–";
 }
 
@@ -66,11 +54,37 @@ export function SampleMeasurementResultsTable({
   onCorrect?: (ctx: CorrectionContext) => void;
 }) {
   const canCorrect = useCanCorrectResults();
-  const instances = useMemo(() => groupResultsByInstance(measurement.results), [measurement.results]);
+  // Interne Einträge (Importprotokoll) sind keine Messwerte: nicht in der Tabelle.
+  // BET: nur das Ergebnis „Probe | BET [m²/g]“ (Hilfswerte und Importinfo werden nicht angezeigt).
+  const betResults = useMemo(
+    () => (isBetService(measurement.serviceName) ? measurement.results.filter(isBetResult) : []),
+    [measurement.results, measurement.serviceName],
+  );
+  // Aktivitätsmessblock: eigene Darstellung (Messbedingungen + Temperaturtabelle je Katalysator).
+  const { view: activity, rest } = useMemo(() => extractActivity(measurement.results, { serviceName: measurement.serviceName }), [measurement.results, measurement.serviceName]);
+  const { visible, protocols, details } = useMemo(() => prepareDisplayResults(rest), [rest]);
+  const instances = useMemo(() => groupResultsByInstance(visible), [visible]);
+  // Nur leere Felder gespeichert (kein Wert, kein Text): statt einer Tabelle voller „–“ eine kurze Zeile.
+  const onlyEmpty = !activity && visible.length > 0 && visible.every((r) => r.value === null && (r.remarks ?? "").trim() === "");
+
+  if (betResults.length > 0) {
+    return (
+      <BetResultsTable
+        rows={betResults.map((r) => ({
+          key: r.id,
+          sample: { number: measurement.sampleNumber, name: measurement.sampleName },
+          value: betValue(r),
+          official: isOfficialResult(r),
+          runLabel: r.instance_label || null,
+        }))}
+      />
+    );
+  }
 
   return (
     <div className="space-y-3">
-      {instances.map((inst) => (
+      {activity && <ActivityMeasurementView view={activity} sample={{ number: measurement.sampleNumber, name: measurement.sampleName }} />}
+      {!onlyEmpty && instances.map((inst) => (
         <div key={inst.instanceKey || "__base"} className="space-y-1">
           {inst.instanceKey && (
             <p className="text-xs font-medium text-muted-foreground">
@@ -97,11 +111,11 @@ export function SampleMeasurementResultsTable({
                       key={r.id}
                       className={official ? "border-t bg-primary/5" : "border-t"}
                     >
-                      <td className={`p-2 ${official ? "font-semibold" : ""}`}>{resultLabel(r)}</td>
+                      <td className={`p-2 ${official ? "font-semibold" : ""}`}>{toUnicode(resultLabel(r))}</td>
                       <td className={`p-2 text-right font-mono ${official ? "font-semibold" : ""}`}>
                         {fmtValue(r)}
                       </td>
-                      <td className="p-2 text-xs text-muted-foreground">{r.unit || "–"}</td>
+                      <td className="p-2 text-xs text-muted-foreground">{r.unit ? toUnicode(r.unit) : "–"}</td>
                       <td className="p-2">
                         {official ? (
                           <Badge variant="default" className="text-[10px]">Offiziell</Badge>
@@ -112,7 +126,7 @@ export function SampleMeasurementResultsTable({
                       <td className="p-2 text-xs text-muted-foreground">{formatSampleDate(r.measured_at)}</td>
                       {onCorrect && (
                         <td className="p-2 text-right">
-                          {canCorrect && (
+                          {canCorrect && !(r as { derived?: boolean }).derived && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -148,28 +162,128 @@ export function SampleMeasurementResultsTable({
           </HorizontalScrollArea>
         </div>
       ))}
+      {protocols.map((p, i) => (
+        <ImportProtocolInfo key={i} protocol={p} />
+      ))}
+      {details.length > 0 && <DetailsInfo items={details} />}
+      {(visible.length === 0 || onlyEmpty) && protocols.length === 0 && !activity && (
+        <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{measurement.serviceName || "Messung"}</span> – keine Messwerte erfasst
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Einstellungen/Schalter (keine Messwerte) – aufklappbar unter „Details“. */
+export function DetailsInfo({ items }: { items: DetailItem[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs">
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 text-left text-muted-foreground"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <Info className="h-3.5 w-3.5" />
+        <span>Einstellungen ({items.length})</span>
+      </button>
+      {open && (
+        <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5">
+          {items.map((it, i) => (
+            <div key={i} className="contents">
+              <dt className="text-muted-foreground">
+                {it.group ? `${it.group} · ` : ""}
+                {it.label}
+              </dt>
+              <dd className="break-all">{it.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+/** Kompakte Importinfo mit aufklappbaren Details (statt technischem Rohtext). */
+export function ImportProtocolInfo({ protocol: p }: { protocol: ImportProtocol }) {
+  const [open, setOpen] = useState(false);
+  const date = p.importedAt ? formatSampleDate(p.importedAt) : null;
+  const rows: Array<[string, string]> = [];
+  if (p.profile) rows.push(["Profil", p.profile]);
+  if (p.sample) rows.push(["Probe in der Datei", p.sample]);
+  if (p.source) rows.push(["Quelle", p.source]);
+  if (p.count !== null) rows.push(["Übernommene Werte", String(p.count)]);
+  if (p.unassignedCount > 0) rows.push(["Nicht zugeordnete Werte", String(p.unassignedCount)]);
+  if (p.hasCurves) rows.push(["Kurven", "vorhanden (siehe Rohdaten & Kurven)"]);
+  if (p.rawDatasetId) rows.push(["Rohdaten-ID", p.rawDatasetId]);
+  for (const m of p.metadata) rows.push([m.label, m.value]);
+  return (
+    <div className="rounded-md border bg-muted/20 px-3 py-2 text-xs">
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 text-left text-muted-foreground"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        <Info className="h-3.5 w-3.5" />
+        <span>
+          Importiert{date ? ` am ${date}` : ""}
+          {p.source ? ` aus ${p.source}` : ""}
+          {p.profile ? ` (${p.profile})` : ""}
+        </span>
+      </button>
+      {open && rows.length > 0 && (
+        <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5">
+          {rows.map(([k, v], i) => (
+            <div key={i} className="contents">
+              <dt className="text-muted-foreground">{k}</dt>
+              <dd className="break-all">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }
 
 /**
  * Ebene 2: alle Messungen einer Probe im fachlichen Zusammenhang.
- * Formularlayout (Formulardesigner) ist maßgeblich; die vollständige
- * Messwerttabelle darunter garantiert verlustfreie Darstellung inklusive
- * historischer Messungen ohne Formularlayout (Fallback).
+ * Die vollständige Messwerttabelle (bzw. die Aktivitätsdarstellung) garantiert verlustfreie Darstellung
+ * inklusive historischer Messungen. Formulare werden hier nicht angezeigt.
  */
 export default function SampleResultsView({
   group,
   onBack,
+  backLabel = "Zurück",
+  onClose,
   onOpenInspector,
 }: {
   group: SampleGroup;
-  onBack: () => void;
+  /** Optional: Rücksprung (z. B. zur Ergebnisübersicht des Auftrags). */
+  onBack?: () => void;
+  backLabel?: string;
+  /** Schließt die Seitenleiste. */
+  onClose?: () => void;
   onOpenInspector: (measurement: SampleMeasurementRecord) => void;
 }) {
   const [conditionsRecord, setConditionsRecord] = useState<ResultRecord | null>(null);
   const [historyFor, setHistoryFor] = useState<SampleMeasurementRecord | null>(null);
   const [correction, setCorrection] = useState<CorrectionContext | null>(null);
+  // Analysen starten eingeklappt (nur Kopfzeile); bei genau einer Analyse gleich offen.
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(group.measurements.length === 1 ? [group.measurements[0].measurementId] : []),
+  );
+  const toggleExpanded = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const toConditionsRecord = (m: SampleMeasurementRecord): ResultRecord =>
     ({
@@ -207,24 +321,32 @@ export default function SampleResultsView({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" onClick={onBack}>
-          <ArrowLeft className="mr-1 h-4 w-4" /> Zurück zur Probenübersicht
-        </Button>
-      </div>
-
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex flex-wrap items-center gap-2">
-            <FlaskConical className="h-4 w-4" />
-            Probe <span className="font-mono">{group.sampleNumber || "–"}</span>
-            {group.sampleName && <span className="font-normal text-muted-foreground">· {group.sampleName}</span>}
-            {group.originalSampleNumber && (
-              <Badge variant="outline" className="text-[10px]">
-                Ersatzprobe für {group.originalSampleNumber}
-              </Badge>
-            )}
-          </CardTitle>
+          {/* Kopf in einer Zeile: [←] Bezeichnung · Nummer */}
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex min-w-0 flex-wrap items-center gap-2 text-base">
+              {(onBack || onClose) && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  aria-label={onBack ? backLabel : "Zurück"}
+                  title={onBack ? backLabel : "Zurück"}
+                  onClick={onBack ?? onClose}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <FlaskConical className="h-4 w-4 shrink-0" />
+              <SampleLabel number={group.sampleNumber} name={group.sampleName} />
+              {group.originalSampleNumber && (
+                <Badge variant="outline" className="text-[10px]">
+                  Ersatzprobe für {group.originalSampleNumber}
+                </Badge>
+              )}
+            </CardTitle>
+          </div>
           <p className="text-xs text-muted-foreground">
             Projekt: {group.projectNames.join(", ") || "–"} · Auftrag:{" "}
             <span className="font-mono">{group.orderDisplayNumbers.join(", ") || "–"}</span> ·{" "}
@@ -235,57 +357,80 @@ export default function SampleResultsView({
       </Card>
 
       {group.measurements.map((m) => {
-        const officialCount = m.results.filter(isOfficialResult).length;
-        const interimCount = m.results.length - officialCount;
+        // Interne Einträge (Importprotokoll) zählen nicht als Messwerte.
+        const real = splitInternalResults(displayResults(m.serviceName, m.results)).visible;
+        const officialCount = real.filter(isOfficialResult).length;
+        const interimCount = real.length - officialCount;
+        const isOpen = expanded.has(m.measurementId);
+        // Analyse ohne offizielle Werte: nur eine kurze Zeile statt einer großen Karte
+        // (Klick klappt die volle Karte auf).
+        if (officialCount === 0 && !isOpen) {
+          return (
+            <button
+              key={m.measurementId}
+              type="button"
+              className="flex w-full items-center gap-2 rounded-md border border-dashed px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted/40"
+              onClick={() => toggleExpanded(m.measurementId)}
+              aria-expanded={false}
+            >
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                <span className="font-medium text-foreground">{m.serviceName || "Messung"}</span>
+                {" "}– noch keine offiziellen Werte
+                {interimCount > 0 ? ` (${interimCount} vorläufig)` : ""}
+              </span>
+            </button>
+          );
+        }
         return (
           <Card key={m.measurementId}>
-            <CardHeader className="pb-3">
+            <CardHeader className="py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-base flex flex-wrap items-center gap-2">
-                  {m.serviceName || "Messung"}
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-left"
+                  onClick={() => toggleExpanded(m.measurementId)}
+                  aria-expanded={isOpen}
+                >
+                  {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                  <CardTitle className="text-base">{m.serviceName || "Messung"}</CardTitle>
                   <Badge variant="outline" className="font-mono text-[10px]">{m.measurementNumber}</Badge>
-                  <Badge variant="secondary" className="text-[10px]">{m.status}</Badge>
-                  <Badge variant="default" className="text-[10px]">{officialCount} offiziell</Badge>
-                  {interimCount > 0 && (
-                    <Badge variant="secondary" className="text-[10px]">{interimCount} vorläufig</Badge>
-                  )}
-                </CardTitle>
-                <div className="flex flex-wrap gap-1">
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setConditionsRecord(toConditionsRecord(m))}>
-                    <ClipboardList className="mr-1 h-3.5 w-3.5" /> Auftraggeber-Vorgaben
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setHistoryFor(m)}>
-                    <History className="mr-1 h-3.5 w-3.5" /> Änderungshistorie
-                  </Button>
+                  <Badge variant="secondary" className="text-[10px]">{measurementStatusLabel(m.status)}</Badge>
+                  <ResultCountBadges official={officialCount} interim={interimCount} />
+                  <span className="text-xs text-muted-foreground">
+                    Auftrag <span className="font-mono">{m.orderDisplayNumber || m.orderNumber}</span>
+                    {m.assignedToName ? ` · ${m.assignedToName}` : ""}
+                    {m.completedAt ? ` · ${formatSampleDate(m.completedAt)}` : ""}
+                  </span>
+                </button>
+                <div className="flex gap-1">
                   <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => onOpenInspector(m)}>
                     <PanelRightOpen className="mr-1 h-3.5 w-3.5" /> Details
                   </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-7 w-7" aria-label="Weitere Aktionen">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setConditionsRecord(toConditionsRecord(m))}>
+                        <ClipboardList className="mr-2 h-4 w-4" /> Auftraggeber-Vorgaben
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setHistoryFor(m)}>
+                        <History className="mr-2 h-4 w-4" /> Änderungshistorie
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Auftrag <span className="font-mono">{m.orderDisplayNumber || m.orderNumber}</span>
-                {m.projectName ? ` · Projekt ${m.projectName}` : ""}
-                {m.assignedToName ? ` · Messdienstleister ${m.assignedToName}` : ""}
-                {m.completedAt ? ` · abgeschlossen am ${formatSampleDate(m.completedAt)}` : ""}
-              </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Fachlicher Zusammenhang: Formularlayout aus dem Formulardesigner (schreibgeschützt). */}
-              <CompletedResultForm
-                measurementId={m.measurementId}
-                serviceId={m.serviceId}
-                measurementNumber={m.measurementNumber}
-                serviceName={m.serviceName}
-              />
-              {/* Verlustfreie Gesamtsicht aller Werte (Fallback bei historischen
-                  Messungen ohne Formularlayout und offizielle Kennzeichnung). */}
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Alle Messwerte dieser Analyse (jeder gespeicherte Wert genau einmal)
-                </p>
+            {isOpen && (
+              <CardContent>
+                {/* Nur die Werte: in der Ergebnisdarstellung werden keine Formulare gezeigt (docs/gestaltungsregeln.md). */}
                 <SampleMeasurementResultsTable measurement={m} onCorrect={setCorrection} />
-              </div>
-            </CardContent>
+              </CardContent>
+            )}
           </Card>
         );
       })}

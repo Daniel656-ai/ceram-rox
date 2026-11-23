@@ -21,3 +21,11 @@ describe("whole order deletion API", () => {
     await expect(orders.delete("order-1")).rejects.toThrow("nicht vollständig");
   });
 });
+describe("order deletion with measurement data", () => {
+  it("sends the confirmation number to the RPC", async () => {
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: "order-1", error: null });
+    await orders.delete("order-1", "DT0260001");
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("cancel_or_delete_order", { _order_id: "order-1", _confirm_number: "DT0260001" });
+  });
+});

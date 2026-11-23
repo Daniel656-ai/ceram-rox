@@ -8,22 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, RotateCcw, Search, Trash2 } from "lucide-react";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import ProductionReleasesPage from "@/pages/ProductionReleasesPage";
 import ReleaseRevisionPicker, { useReleaseRevisionList } from "@/components/productionDocuments/ReleaseRevisionPicker";
 import ReleaseSourceValues from "@/components/productionDocuments/ReleaseSourceValues";
 import M3SampleRetrofitPanel from "@/components/productionDocuments/M3SampleRetrofitPanel";
-import { M3DeleteDialog } from "@/components/productionDocuments/M3DeleteDialog";
 import M3ListForm from "@/components/productionDocuments/M3ListForm";
 import CustomerDocumentationTable from "@/components/productionDocuments/CustomerDocumentationTable";
 import { SortableHead } from "@/components/list/SortableHead";
 import { useListSort } from "@/lib/list/listSorting";
 import { ensureM3Template } from "@/lib/m3List/template";
 import { useAuth } from "@/contexts/AuthContext";
+import { M3DeleteDialog } from "@/components/productionDocuments/M3DeleteDialog";
+import { canDeleteM3 } from "@/lib/productionDocuments/m3Delete";
 import { useProductionDocumentRequests, useRequestProductionDocument } from "@/hooks/useProductionDocuments";
 import { useOrders } from "@/hooks/useOrders";
 import { useProjects } from "@/hooks/useProjects";
@@ -148,10 +145,11 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
   /** m³: Anzeige „erste 9 Zeichen article_number + Projektname“ – nur Darstellung. */
   const m3Label = (r: any) =>
     m3OrderLabel(r.based_on_release_id ? releaseById.get(r.based_on_release_id) : null, projectNameById);
-  const { role: authRole, hasRole: authHasRole } = useAuth() as any;
-  const isMaster = authRole === "master" || !!authHasRole?.("master");
+  const { user: authUser, role } = useAuth();
   const [deleteRow, setDeleteRow] = useState<any>(null);
 
+  /** Löschen: nur Ersteller der m³-Liste und Master (verbindlich in der Datenbank geprüft). */
+  const canDeleteRow = (r: any) => isM3 && canDeleteM3(r, authUser, role);
   const sort = useListSort<"order" | "source" | "status" | "requested">({
     initialKey: "requested",
     initialDir: "desc",
@@ -325,12 +323,12 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
                         Auftrag öffnen
                       </Button>
                     )}
-                    {isM3 && isMaster && (
+                    {canDeleteRow(r) && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-destructive"
-                        title="m³-Liste löschen (Administrator)"
+                        title="m³-Liste löschen"
                         onClick={() => setDeleteRow(r)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -346,7 +344,7 @@ function FollowUpTable({ kind }: { kind: DocKind }) {
 
       {isM3 && <NewM3Dialog open={newOpen} onOpenChange={setNewOpen} />}
 
-      <M3DeleteDialog row={deleteRow} label={deleteRow ? (() => { const l = m3Label(deleteRow) as any; return typeof l === "string" ? l : (l?.label ?? "–"); })() : ""} onClose={() => setDeleteRow(null)} />
+      <M3DeleteDialog row={deleteRow} onClose={() => setDeleteRow(null)} />
 
       <Dialog open={!!sourceId} onOpenChange={(v) => !v && setSourceId(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
