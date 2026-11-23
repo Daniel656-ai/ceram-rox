@@ -39,7 +39,7 @@ Gründe für "gesperrt": Auftrag gesperrt/abgeschlossen, Status nicht "open", ir
 Warum das uns trifft:
 - `apply_order_changes` ist **SECURITY INVOKER**, läuft also mit den Rechten des Erstellers. Sein `UPDATE measurement_orders SET …` (Priorität, Fälligkeit, Anmerkungen, Formularwerte …) ist ein direktes Statement auf Tiefe 1. Die Datenbankrolle ist `authenticated`. Der Trigger greift also.
 - Unser Bearbeiten ist ausdrücklich **auch bei begonnenen Aufträgen** erlaubt. Der Trigger verbietet genau das für Ersteller. Der Ersteller bekommt dann beim Speichern die Lovable-Fehlermeldung.
-- `order_edit_remove_services` ist SECURITY DEFINER. Die Datenbankrolle bleibt dabei `authenticated`, deshalb wird der Trigger auch hier nicht umgangen. Das Löschen von Parametern wird über Fremdschlüssel-Kaskaden ausgelöst (Tiefe >1, vom Trigger ignoriert). Direkte Parameter-Änderungen innerhalb unserer Funktionen träfe er dagegen.
+- *(Analysestand vor der Umsetzung; der Trigger ist seit 0048 entfernt.)* `order_edit_remove_services` ist SECURITY DEFINER. Die Datenbankrolle bleibt dabei `authenticated`, deshalb wäre der Trigger auch hier nicht umgangen worden. Das Löschen von Parametern wird über Fremdschlüssel-Kaskaden ausgelöst (Tiefe >1, vom Trigger ignoriert). Direkte Parameter-Änderungen innerhalb unserer Funktionen träfe er dagegen.
 - Die Aussage im Lovable-Kommentar, SECURITY-DEFINER-Funktionen blieben unberührt, stimmt nur für Folgetrigger. Sie stimmt nicht für direkte Statements in den Funktionen.
 
 `order_edit_locks`: Es gibt kein solches Objekt im Code. Der Begriff steht nur im Vorschlag `tasks/012`. Die Sperren in unserer Lösung sind die bestehenden `is_order_locked` und `SELECT … FOR UPDATE` in `apply_order_changes`. Beide kollidieren nicht mit Lovable.
@@ -53,8 +53,8 @@ Neue Migration: `DROP TRIGGER IF EXISTS trg_guard_requester_order_edit ON measur
 - Vorteil: einfach, sicher, ohne Eingriff in unsere Funktionen. Unsere Regeln gelten allein.
 - Nachteil: Der Trigger war eine zweite Absicherung gegen direkte Client-Schreibzugriffe auf `measurement_orders`/`measurement_parameters`. Diese Absicherung fällt weg. Offene Prüfung vor Prod: Welche Schreibrechte (Policies) hat ein Ersteller auf `measurement_orders` und `measurement_parameters` direkt über die API? Ich habe das hier nicht geprüft (keine DB-Zugriffe). Das wäre ein eigener kleiner Schritt.
 
-**Variante B – Trigger behalten, mit Schalter durchlassen.**
-`guard_requester_order_edit` wird per `CREATE OR REPLACE` so geändert, dass er bei gesetztem Schalter `app.order_edit = 'on'` sofort durchlässt. `apply_order_changes` und `order_edit_remove_services` setzen den Schalter transaktionslokal (`set_config(…, true)`). Das gleiche Muster nutzen wir schon mit `app.order_force_delete`.
+**Variante B – Trigger behalten, mit Schalter durchlassen.** *(Nicht gewählt. Umgesetzt wurde Variante A plus Policies; der Schalter sitzt nur in `apply_order_changes`, siehe Abschnitt "Umsetzung".)*
+`guard_requester_order_edit` wird per `CREATE OR REPLACE` so geändert, dass er bei gesetztem Schalter `app.order_edit = 'on'` sofort durchlässt. `apply_order_changes` und `order_edit_remove_services` würden den Schalter transaktionslokal setzen (`set_config(…, true)`). Das gleiche Muster nutzen wir schon mit `app.order_force_delete`.
 - Vorteil: Schutz gegen direkte Zugriffe bleibt.
 - Nachteil: Wir müssten die zwei Funktionen (ca. 350 Zeilen) in einer neuen Migration neu schreiben. Mehr Aufwand, mehr Risiko.
 

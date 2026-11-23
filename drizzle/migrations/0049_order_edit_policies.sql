@@ -393,7 +393,6 @@ CREATE POLICY order_edit_restrict_measurements_update ON public.order_measuremen
 
 -- 4) Selbstprüfung (Abbruch = nichts wird übernommen)
 DO $$
-DECLARE _f text;
 BEGIN
   -- Die Zeile muss in apply_order_changes direkt hinter dem ersten BEGIN stehen (Zeilenenden \n oder \r\n).
   IF pg_get_functiondef(to_regprocedure('public.apply_order_changes(uuid,jsonb,text)'))
