@@ -55,13 +55,24 @@ export const samples = {
     }));
   },
 
-  async create(sample: Record<string, any>) {
+  /** Bereits vergebene Probennummern aus der übergebenen Liste. */
+  async findExistingNumbers(numbers: string[]): Promise<string[]> {
+    if (!numbers.length) return [];
+    const rows = await unwrap(dbClient.from("samples").select("sample_number").in("sample_number", numbers));
+    return (rows || []).map((r: any) => r.sample_number as string);
+  },
+
+  /**
+   * Standard: Datenbank vergibt PYYNNNN. Nur mit `opts.explicitNumber` (m³-Beprobung)
+   * wird eine fachlich vorgegebene Nummer übernommen.
+   */
+  async create(sample: Record<string, any>, opts?: { explicitNumber?: string }) {
     const data = await unwrap(
       dbClient
         .from("samples")
         .insert({
           ...sample,
-          sample_number: "WILL_BE_OVERWRITTEN",
+          sample_number: opts?.explicitNumber?.trim() || "WILL_BE_OVERWRITTEN",
           hazard_categories: sample.hazard_categories || [],
         } as any)
         .select()

@@ -257,5 +257,22 @@
     "removeWarning": "This service already contains entries. Removing it will permanently and irreversibly delete all of its entries.",
     "removeConfirm": "Delete permanently",
     "noCustomerForms": "No additional requester information is required for the selected services."
+  },
+  "requesterEdit": {
+    "edit": "Edit",
+    "quickEdit": "Quick edit",
+    "deleteConfirm": "Do you really want to delete this order? It will be removed from all active order overviews and will no longer be available to the service providers.",
+    "lockedHint": "This order can no longer be edited or deleted because a service provider has already started working on it. Please contact the administrator.",
+    "title": "Edit order {{number}}",
+    "banner": "You are editing an existing order. Order number, creator, creation date and sample assignment are kept.",
+    "save": "Save changes",
+    "saved": "Order updated",
+    "saveError": "Order could not be updated",
+    "loadError": "Order could not be loaded for editing",
+    "notAllowed": "This order cannot be edited.",
+    "reason": "Edited by requester",
+    "checking": "Checking edit permission …",
+    "checkError": "The edit permission could not be checked.",
+    "retry": "Check again"
   }
 }

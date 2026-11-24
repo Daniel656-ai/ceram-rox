@@ -4,9 +4,15 @@ import { stripRecipeLotAssignments, type RecipeEntry } from "@/lib/recipeSection
 
 type InputDefinition = Partial<Omit<FormField, "field_type">> & { field_key: string; field_type: string };
 const excludedKeys = new Set(["versuchsnummer", "pp_experiment_number", "order_number", "sample_number", "measurement_number"]);
-export function templateInputAllowed(field: InputDefinition) {
-  return !field.is_result && !["computed", "file", "image", "measurement_import"].includes(field.field_type)
-    && !excludedKeys.has(field.field_key) && field.binding_path !== "order.versuchsnummer";
+/**
+ * preserveIdentity: nur für das Bearbeiten eines bestehenden Auftrags (nie für
+ * Vorlagenkopien) – Versuchsnummer und Chargenzuordnungen bleiben dann erhalten.
+ */
+export interface TemplateInputOptions { preserveIdentity?: boolean }
+export function templateInputAllowed(field: InputDefinition, opts: TemplateInputOptions = {}) {
+  if (field.is_result || ["computed", "file", "image", "measurement_import"].includes(field.field_type)) return false;
+  if (opts.preserveIdentity) return true;
+  return !excludedKeys.has(field.field_key) && field.binding_path !== "order.versuchsnummer";
 }
 export function parseTemplateInput(raw: unknown, field: InputDefinition): unknown {
   if (raw == null) return raw;
@@ -29,10 +35,10 @@ export function parseTemplateInput(raw: unknown, field: InputDefinition): unknow
 }
 
 /** Allowlist inputs per owning definition; calculations and previous run identities never travel. */
-export function copyTemplateInputs(values: Record<string, unknown>, fields: InputDefinition[], definitionScope: InputDefinition[] = fields): Record<string, unknown> {
+export function copyTemplateInputs(values: Record<string, unknown>, fields: InputDefinition[], definitionScope: InputDefinition[] = fields, opts: TemplateInputOptions = {}): Record<string, unknown> {
   const output: Record<string, unknown> = {};
   for (const field of fields) {
-    if (!templateInputAllowed(field)) continue;
+    if (!templateInputAllowed(field, opts)) continue;
     const meta = field.metadata as { repeater?: { storage_key?: string }; measurement_block?: { storage_key?: string } } | undefined;
     const key = meta?.repeater?.storage_key ?? meta?.measurement_block?.storage_key ?? field.field_key;
     if (!(key in values)) continue;
@@ -47,9 +53,10 @@ export function copyTemplateInputs(values: Record<string, unknown>, fields: Inpu
       });
       output[key] = raw.map(entry => {
         if (!entry || typeof entry !== "object") throw new Error(`Nicht lesbarer Wiederholungsbereich: ${key}`);
-        return { ...copyTemplateInputs(entry as Record<string, unknown>, children, definitionScope), __instance_id: crypto.randomUUID() };
+        const keepId = opts.preserveIdentity && typeof (entry as any).__instance_id === "string" ? (entry as any).__instance_id : crypto.randomUUID();
+        return { ...copyTemplateInputs(entry as Record<string, unknown>, children, definitionScope, opts), __instance_id: keepId };
       });
-    } else if (field.field_type === "raw_material_recipe" && Array.isArray(raw)) {
+    } else if (field.field_type === "raw_material_recipe" && Array.isArray(raw) && !opts.preserveIdentity) {
       // Vorlagenkopien übernehmen keine ungeprüfte alte Gebindezuordnung:
       // container_id/lot_number werden zurückgesetzt, alle übrigen Werte bleiben.
       output[key] = stripRecipeLotAssignments(structuredClone(raw) as RecipeEntry[]);

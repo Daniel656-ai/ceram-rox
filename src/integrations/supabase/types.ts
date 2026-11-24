@@ -10684,6 +10684,8 @@ export type Database = {
         }
         Returns: string
       }
+      _m3_delete_links: { Args: { _id: string }; Returns: Json }
+      _order_delete_links: { Args: { _order_id: string }; Returns: Json }
       _order_lock_bypass: { Args: never; Returns: boolean }
       _order_measurement_delete_facts: {
         Args: { _measurement_id: string }
@@ -10922,6 +10924,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_m3_list: {
+        Args: { _expected_hash: string; _id: string }
+        Returns: string
+      }
       delete_order_measurement: {
         Args: { _measurement_id: string; _reason: string }
         Returns: string
@@ -11018,6 +11024,10 @@ export type Database = {
       finalize_project_closure: {
         Args: { _closure_id: string }
         Returns: undefined
+      }
+      force_delete_order: {
+        Args: { _expected_hash: string; _order_id: string }
+        Returns: string
       }
       get_container_positions: {
         Args: { _container_id: string; _include_depleted?: boolean }
@@ -11363,6 +11373,10 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      m3_retrofit_order_samples: {
+        Args: { _order_id: string; _plan: Json }
+        Returns: Json
+      }
       measurement_has_official_result: {
         Args: { _measurement_id: string }
         Returns: boolean
@@ -11398,6 +11412,11 @@ export type Database = {
         Args: { _order_id: string }
         Returns: boolean
       }
+      order_requester_block_reason: {
+        Args: { _order_id: string }
+        Returns: string
+      }
+      order_requester_edit_state: { Args: { _order_id: string }; Returns: Json }
       portfolio_time_allocation: {
         Args: { _end?: string; _portfolio_id: string; _start?: string }
         Returns: {
@@ -11425,10 +11444,12 @@ export type Database = {
       }
       pp_seed_blocks: { Args: { _order_id: string }; Returns: undefined }
       pp_start_block: { Args: { _block_id: string }; Returns: undefined }
+      preview_delete_m3_list: { Args: { _id: string }; Returns: Json }
       preview_delete_order_measurement: {
         Args: { _measurement_id: string }
         Returns: Json
       }
+      preview_force_delete_order: { Args: { _order_id: string }; Returns: Json }
       preview_renumber_user_orders: {
         Args: { _start_value: number; _user_id: string; _year: number }
         Returns: Json
@@ -11562,6 +11583,10 @@ export type Database = {
           p_results: Json
         }
         Returns: Json
+      }
+      requester_remove_order_measurement: {
+        Args: { _measurement_id: string; _reason: string }
+        Returns: string
       }
       resolve_workflow_template: {
         Args: { p_order_id: string }
