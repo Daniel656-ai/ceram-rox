@@ -35,6 +35,18 @@
 
 - Bei der späteren Übertragung nach Prod (Ceram-Repo) gehen `package-lock.json` und `.github/workflows/dev-web.yml` **nicht** mit. Beide gelten nur für dieses Dev-Repo: `package-lock.json` wird hier mit `npm install --package-lock-only` gepflegt (alle Paketadressen zeigen auf `registry.npmjs.org`) und lokal sowie im Dev-Web-Bau (`dev-web.yml`) per `npm ci` installiert.
 
+# Reine Dev-Dateien (für Prod-Abgleiche)
+
+Diese Dateien gibt es nur im Dev-Repo. Sie gehen nie nach Prod, und beim Zurückholen des Prod-Stands (Merge von `prod/main` oder `prod/lovable`) gilt immer der Dev-Stand:
+
+- `tasks/` (inkl. `tasks/lovable-prod/`), `CLAUDE.md`, `.claude/`, `.gitignore`, `.github/ISSUE_TEMPLATE/`
+- `scripts/dev-db/`, `scripts/dev-web/`, `scripts/konfig-snapshot/`, `scripts/test-runner/` (Dev-Werkzeuge; `compare-main.ps1` wird vom Subagent `test-runner` gebraucht), `scripts/analyse/` (falls vorhanden)
+- `.github/workflows/dev-web.yml`, `.github/workflows/release.yml` (Dev-Fassung mit der Zusatzbedingung `github.repository != 'danielgass95-sketch/ceram-rox-dev'`)
+- `package-lock.json`
+- `docs/konfig-abhaengigkeiten.md`
+
+Nach jedem solchen Merge prüfen, ob reine Dev-Dateien verloren gingen: `git diff --name-status <Dev-main vor dem Merge> HEAD` ansehen und gelöschte Dateien aus dieser Liste zurückholen. (Beim Merge aus Aufgabe 025 gingen `scripts/test-runner/compare-main.ps1` und `scripts/analyse/aktivitaet-varianten.sql` verloren und `.github/workflows/tests.yml` wurde auf den Prod-Stand gesetzt.)
+
 # Abhängigkeiten zwischen Code und Konfiguration
 
 - Die Liste `docs/konfig-abhaengigkeiten.md` nennt die Stellen im Code, die an Formularen, Feldschlüsseln, Dienstleistungsnamen, Workflows usw. hängen.
