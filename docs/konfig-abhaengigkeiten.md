@@ -43,7 +43,7 @@ b8abe423 (2026-11-24). Es stehen **keine Messwerte und keine Kundendaten** in di
 - **Betroffen:** Messart „Aktivitätsmessung" (Formular mit Messblock oder flachen Feldern je Temperaturstufe).
 - **Schlüssel im Code:** Block `aktivitatsmessblock`, Unterblock `gas_einstellungen`, Katalysatorkennung `kat_nr`, `test_nr`, `temperatur_n`, `eta_nox`, `eta_nox_kopie`, `eta_nox_kopie_kopie`, `k_wert`, `k_wert_kopie`, Gase `<gas>_in_n` / `<gas>_out_n` (NO, NH3, NO2, N2O, CO, CO2), Altfelder `no`, `no_2`, `nh3_1`, `nh3_2`, `h2o`, `o2`, `co`. Erkennung über die **Struktur** (Muster), nicht über feste Nummern.
 - **Wenn umbenannt/gelöscht:** Das Muster greift evtl. nicht mehr. Dann landet der Wert unter „Weitere Angaben" (nichts geht verloren), oder eine Spalte/ein Bereich fehlt mit Hinweis. Wird der Feldname so geändert, dass kein Muster passt, ändert sich die Reihenfolge/Zuordnung zu Katalysator oder Temperaturstufe. Stille Abweichung möglich (Zahl landet in falscher Stufe).
-- **Bei Änderung:** Feldnamen der neuen Formularversion prüfen (das früher genannte Skript `scripts/analyse/aktivitaet-varianten.sql` liegt nicht mehr im Repo; die Feldnamen z. B. aus dem Konfig-Schnappschuss oder per Abfrage auf `form_fields` holen), Zuordnung in `activityMeasurement.ts` ergänzen, Test mit den echten Feldnamen anlegen.
+- **Bei Änderung:** Feldnamen der neuen Formularversion prüfen (dafür gibt es die reine Abfrage `scripts/analyse/aktivitaet-varianten.sql`; die Feldnamen lassen sich auch aus dem Konfig-Schnappschuss holen), Zuordnung in `activityMeasurement.ts` ergänzen, Test mit den echten Feldnamen anlegen.
 
 ### 2. BET (spezifische Oberfläche)
 
