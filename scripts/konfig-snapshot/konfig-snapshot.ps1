@@ -189,6 +189,7 @@ function Export-Datenbank {
             $r = Invoke-Psql @("-c", $q)
             if ($r.ExitCode -ne 0) { Stop-Lauf "Liste $eltern fehlgeschlagen: $($r.Output)" }
             $entitaeten = @(Get-Lines $r.Output)
+            Write-Log "$($b.Ordner): $($entitaeten.Count) Eintraege aus $eltern als Einzeldateien."
 
             # Kindtabellen mit passender Fremdschluessel-Spalte
             $kinder = @()
@@ -288,6 +289,13 @@ function Invoke-Git([string[]]$GitArgs) {
 function Update-Repo([string]$Neu) {
     if (-not (Test-Path -LiteralPath $Ziel)) { New-Item -ItemType Directory -Path $Ziel -Force | Out-Null }
     $istRepo = Test-Path -LiteralPath (Join-Path $Ziel ".git")
+    # Schutz: Der Zielordner wird bei jedem Lauf (ausser .git) geleert. Das ist nur erlaubt, wenn er leer ist,
+    # ein Git-Repository ist oder von diesem Skript stammt (Markerdatei). Sonst Abbruch (falsches -Ziel).
+    $marker = Join-Path $Ziel "_uebersprungen.txt"
+    $inhalt = @(Get-ChildItem -LiteralPath $Ziel -Force)
+    if ($inhalt.Count -gt 0 -and -not $istRepo -and -not (Test-Path -LiteralPath $marker)) {
+        Stop-Lauf "Zielordner '$Ziel' ist nicht leer und kein Konfig-Repository. Zum Schutz vor Datenverlust wird er nicht geleert. Leeren Ordner angeben."
+    }
     if ($istRepo -eq $false -and -not $KeinGit) {
         $r = Invoke-Git @("init")
         if ($r.ExitCode -ne 0) { Stop-Lauf "git init fehlgeschlagen: $($r.Output)" }
@@ -321,8 +329,8 @@ function Update-Repo([string]$Neu) {
     }
 
     if ($RemoteUrl) {
-        if ($RemoteUrl -match '://[^/@]*:[^/@]*@') {
-            Write-Log "PUSH-FEHLER: -RemoteUrl enthaelt Zugangsdaten (Benutzer:Passwort). Nicht erlaubt. Lokaler Commit bleibt."
+        if ($RemoteUrl -match '://[^/]*@') {
+            Write-Log "PUSH-FEHLER: -RemoteUrl enthaelt Anmeldedaten (Benutzer oder Token vor dem @). Nicht erlaubt. Lokaler Commit bleibt."
             return 3
         }
         $rem = Invoke-Git @("remote", "get-url", "origin")

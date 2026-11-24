@@ -100,6 +100,13 @@ Register-ScheduledTask -TaskName "Konfig-Schnappschuss" -Action $aktion -Trigger
   `https://<gitea>/<firma>/konfig-historie/commit/<hash>.diff`. Diesen Text kann man weitergeben; Claude gleicht ihn dann mit `docs/konfig-abhaengigkeiten.md` ab (Regel in `CLAUDE.md`).
 - Strukturänderungen stehen in `schema.sql`.
 
+## Schutz und Hinweise
+
+- **Zielordner wird geleert:** Bei jedem Lauf wird der Inhalt von `-Ziel` (außer `.git`) durch den neuen Stand ersetzt, damit gelöschte Formulare als Löschung im Diff erscheinen. Deshalb bricht das Skript ab, wenn `-Ziel` nicht leer ist und weder ein Git-Repository noch ein früherer Schnappschuss ist. Immer einen eigenen, leeren Ordner verwenden.
+- **Anderer Windows-Benutzer:** Läuft der Task unter einem anderen Benutzer als dem, der den Ordner angelegt hat, kann Git „dubious ownership“ melden. Dann einmalig als Task-Benutzer ausführen: `git config --global --add safe.directory C:/CeramRox_Backups/konfig-historie`.
+- **Maskierung** betrifft nur Spaltennamen. Geheimnisse, die **in** einem JSON-Wert stehen (z. B. in `sync_settings`), werden nicht erkannt. Nach dem Dev-Test `5-einstellungen/` kurz ansehen, bevor das Repository eingerichtet wird.
+- **Adresse mit Anmeldedaten** (`https://benutzer@…`, `https://token@…`) wird abgelehnt.
+
 ## Grenzen
 
 - Es wird gespeichert, **was** sich geändert hat und **an welchem Tag** (Zeitpunkt des Laufs), nicht **wer**. Die Tabellen haben meist kein „geändert von“.
