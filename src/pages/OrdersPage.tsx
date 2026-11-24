@@ -15,7 +15,7 @@ import { useDataTable } from "@/components/data-table";
 import { useUsers } from "@/hooks/useUsers";
 import { orderIdentity } from "@/lib/orders/orderIdentity";
 import { orderSampleLinks } from "@/lib/orders/orderSamples";
-import { samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
+import { formatSampleDescription, normalizeSearchText, samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
 import { SampleLinks } from "@/components/orders/SampleLinks";
 import { OrderDeleteBody } from "@/components/orders/OrderDeleteInfo";
 import {
@@ -493,14 +493,15 @@ function DurchfuehrerTasksView({
   };
 
   const matches = (m: any) => {
-    const q = search.toLowerCase();
+    const q = normalizeSearchText(search);
     const matchesSearch = !q ||
-      m.measurement_number?.toLowerCase().includes(q) ||
-      m.measurement_services?.service_name?.toLowerCase().includes(q) ||
-      m.measurement_orders?.order_number?.toLowerCase().includes(q) ||
-      (m.measurement_orders ? orderIdentity(m.measurement_orders).number.toLowerCase().includes(q) : false) ||
-      m.measurement_orders?.projects?.project_number?.toLowerCase().includes(q) ||
-      m.measurement_orders?.projects?.project_name?.toLowerCase().includes(q) ||
+      normalizeSearchText(m.measurement_number).includes(q) ||
+      normalizeSearchText(m.measurement_services?.service_name).includes(q) ||
+      normalizeSearchText(m.measurement_orders?.order_number).includes(q) ||
+      normalizeSearchText(m.measurement_orders?.pp_experiment_number).includes(q) ||
+      (m.measurement_orders ? normalizeSearchText(orderIdentity(m.measurement_orders).number).includes(q) : false) ||
+      normalizeSearchText(m.measurement_orders?.projects?.project_number).includes(q) ||
+      normalizeSearchText(m.measurement_orders?.projects?.project_name).includes(q) ||
       samplesMatchSearch(taskSamples(m), q);
     const matchesStatus = statusFilter === "all" || m.status === statusFilter;
     return matchesSearch && matchesStatus && servicePredicate(m.service_id);
@@ -588,9 +589,9 @@ function DurchfuehrerTasksView({
 
       {/* Gemeinsame Filter für beide Bereiche */}
       <div className="flex gap-3 flex-wrap items-center">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 min-w-[260px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder={t("orders:search_placeholder")} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder={t("orders:my_tasks_search_placeholder")} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("common:status")} /></SelectTrigger>
@@ -625,7 +626,7 @@ function DurchfuehrerTasksView({
       )}
 
       {/* Temporärer Messdurchlauf: eigene + freie qualifizierte Aufgaben; freie werden beim Start über die bestehende Übernahme übernommen */}
-      <MeasurementRunPicker tasks={assigned} freeTasks={free} otherTasks={others} claim={(id) => claim.mutateAsync(id)} />
+      <MeasurementRunPicker tasks={assigned} freeTasks={free} otherTasks={others} claim={(id) => claim.mutateAsync(id)} searchQuery={search} />
       {(filterActive || search.trim() !== "" || statusFilter !== "all") &&
         ![...assigned, ...free, ...others].some((m: any) => m.status !== "completed") && (
         <Card>
@@ -649,6 +650,7 @@ function DurchfuehrerTasksView({
                 <SortableHead label="Dienstleistung" sortKey="service" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:order_number")} sortKey="order_number" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <TableHead>{t("samples:sample_designation", "Probenbezeichnung")}</TableHead>
+                <TableHead>{t("orders:myTasks.col_sample_description", "Probenbeschreibung")}</TableHead>
                 <SortableHead label="Ersteller" sortKey="creator" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
                 <SortableHead label={t("common:status")} sortKey="status" spec={sortAssigned} setter={setSortAssigned} storageKey="myTasks.sort.assigned" />
@@ -659,10 +661,14 @@ function DurchfuehrerTasksView({
             </TableHeader>
             <TableBody>
               {isLoadingMine ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : assigned.length === 0 ? (
-                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
-              ) : assigned.map((m: any) => (
+                <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">{t("measurements:no_measurements", "Keine Aufgaben")}</TableCell></TableRow>
+              ) : assigned.map((m: any) => {
+                const sample = taskSamples(m)[0];
+                const rawDescription = sample?.description ?? null;
+                const description = formatSampleDescription(rawDescription);
+                return (
                 <TableRow key={m.id}>
                   <TableCell className="font-mono font-medium">
                     <Link to={`/aufgaben/${m.id}`} className="text-primary hover:underline">{m.measurement_number}</Link>
@@ -670,6 +676,15 @@ function DurchfuehrerTasksView({
                   <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
                   <TableCell><TaskOrderIdentity order={m.measurement_orders} /></TableCell>
                   <TableCell><SampleLinks samples={taskSamples(m)} /></TableCell>
+                  <TableCell className="min-w-[140px] max-w-[240px] whitespace-normal">
+                    {description ? (
+                      <div className="line-clamp-2 break-words text-xs leading-snug" title={rawDescription ?? description}>
+                        {description}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">–</span>
+                    )}
+                  </TableCell>
                   <TableCell>{m.creator_profile ? `${m.creator_profile.first_name} ${m.creator_profile.last_name}` : "–"}</TableCell>
                   <TableCell>
                     {m.measurement_orders?.projects?.project_number ? (
@@ -688,7 +703,8 @@ function DurchfuehrerTasksView({
                     />
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
@@ -713,6 +729,7 @@ function DurchfuehrerTasksView({
                 <SortableHead label="Dienstleistung" sortKey="service" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:order_number")} sortKey="order_number" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <TableHead>{t("samples:sample_designation", "Probenbezeichnung")}</TableHead>
+                <TableHead>{t("orders:myTasks.col_sample_description", "Probenbeschreibung")}</TableHead>
                 <SortableHead label={t("orders:project_number")} sortKey="project" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:priority")} sortKey="priority" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
                 <SortableHead label={t("orders:due_date")} sortKey="due_date" spec={sortFree} setter={setSortFree} storageKey="myTasks.sort.free" />
@@ -722,10 +739,14 @@ function DurchfuehrerTasksView({
             </TableHeader>
             <TableBody>
               {isLoadingFree ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">{t("common:loading")}</TableCell></TableRow>
               ) : free.length === 0 ? (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Aktuell keine freien Aufträge für deine Qualifikationen.</TableCell></TableRow>
-              ) : free.map((m: any) => (
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Aktuell keine freien Aufträge für deine Qualifikationen.</TableCell></TableRow>
+              ) : free.map((m: any) => {
+                const sample = taskSamples(m)[0];
+                const rawDescription = sample?.description ?? null;
+                const description = formatSampleDescription(rawDescription);
+                return (
                 <TableRow key={m.id}>
                   <TableCell className="font-mono font-medium">{m.measurement_number}</TableCell>
                   <TableCell>{m.measurement_services?.service_name || "–"}</TableCell>
@@ -735,6 +756,15 @@ function DurchfuehrerTasksView({
                     </Link>
                   </TableCell>
                   <TableCell><SampleLinks samples={taskSamples(m)} /></TableCell>
+                  <TableCell className="min-w-[140px] max-w-[240px] whitespace-normal">
+                    {description ? (
+                      <div className="line-clamp-2 break-words text-xs leading-snug" title={rawDescription ?? description}>
+                        {description}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">–</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {m.measurement_orders?.projects?.project_number ? (
                       <Link to={`/projekte/${m.measurement_orders.project_id}`} className="text-destructive underline underline-offset-2 hover:opacity-80">
@@ -761,7 +791,8 @@ function DurchfuehrerTasksView({
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

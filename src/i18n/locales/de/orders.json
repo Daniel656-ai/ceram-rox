@@ -75,6 +75,7 @@
   "new_order": "Neuer Auftrag",
   "excel_import": "Excel-Import",
   "search_placeholder": "Auftrag, Probe, Projekt, Auftraggeber oder Versuchsnummer…",
+  "my_tasks_search_placeholder": "Suche nach Probe, Probenbeschreibung, Auftrag, Versuch oder Projekt …",
   "filters": {
     "mass_type": "Massetyp",
     "requester": "Auftraggeber",
@@ -274,5 +275,22 @@
     "checking": "Bearbeitungsfreigabe wird geprüft …",
     "checkError": "Die Bearbeitungsfreigabe konnte nicht geprüft werden.",
     "retry": "Erneut prüfen"
+  },
+  "myTasks": {
+    "col_select": "Auswahl",
+    "col_sample_number": "Probennummer",
+    "col_sample_name": "Probenname",
+    "col_sample_description": "Probenbeschreibung",
+    "col_order_experiment": "Auftrag / Versuch",
+    "col_project": "Projekt",
+    "col_priority": "Priorität",
+    "col_due_date": "Fälligkeit",
+    "col_status": "Status",
+    "col_action": "Aktion",
+    "available": "Verfügbar",
+    "assigned_to_me": "Mir zugewiesen",
+    "edit": "Bearbeiten",
+    "claim_and_edit": "Übernehmen & bearbeiten",
+    "claiming": "Übernehme…"
   }
 }
