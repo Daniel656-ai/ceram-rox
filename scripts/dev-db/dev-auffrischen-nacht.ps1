@@ -3,12 +3,11 @@
 # Grundlage: dev-db-auffrischen.ps1 (Handlauf). Dieses Skript ist die automatische Fassung fuer die Aufgabenplanung.
 #
 # Ablauf:
-#   1. Abbruch ohne Aenderung, wenn "dev-auffrischen.STOP" im Skriptordner oder im dev-state-Ordner liegt.
+#   1. Abbruch ohne Aenderung, wenn "dev-auffrischen.STOP" (Skriptordner oder dev-state) oder sync-db.STOP (Prod-Ordner) existiert.
 #   2. Task "Dev-Web Update" pausieren; am Ende IMMER wieder einschalten (auch bei Fehler).
 #   3. (entfaellt: keine Sicherung der Dev-DB mehr; vorhandene dev-vorher-*.dump bleiben unberuehrt)
 #   4. Prod -> Dev kopieren. Prod wird NUR GELESEN (pg_dump, SELECT). Container fest geprueft, bei Vertauschung Abbruch.
 #   5. dev-statepplied-migrations.txt = Prod-Listen PLUS alle Migrationsdateien im Prod-Code-Ordner (vorher Kopie der alten Liste).
-#   0. Zusaetzlich Abbruch ohne Aenderung, wenn sync-db.STOP im Prod-Ordner liegt (Prod evtl. nicht auf Stand).
 #   6. sync-db-dev.ps1 spielt die reinen Dev-Migrationen ein.
 #   7. Testbenutzer neu anlegen (scripts\dev-db\testuser-dev.sql, nur Dev).
 #   8. dev-state\auffrischen-status.txt: Datum, OK/Fehler, Anzahl eingespielter Dev-Migrationen.
