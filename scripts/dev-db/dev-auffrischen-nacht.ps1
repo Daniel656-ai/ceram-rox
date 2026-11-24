@@ -7,7 +7,7 @@
 #   2. Task "Dev-Web Update" pausieren; am Ende IMMER wieder einschalten (auch bei Fehler).
 #   3. (entfaellt: keine Sicherung der Dev-DB mehr; vorhandene dev-vorher-*.dump bleiben unberuehrt)
 #   4. Prod -> Dev kopieren. Prod wird NUR GELESEN (pg_dump, SELECT). Container fest geprueft, bei Vertauschung Abbruch.
-#   5. dev-statepplied-migrations.txt = Prod-Listen PLUS alle Migrationsdateien im Prod-Code-Ordner (vorher Kopie der alten Liste).
+#   5. dev-state/applied-migrations.txt = Prod-Listen PLUS alle Migrationsdateien im Prod-Code-Ordner (vorher Kopie der alten Liste).
 #   6. sync-db-dev.ps1 spielt die reinen Dev-Migrationen ein.
 #   7. Testbenutzer neu anlegen (scripts\dev-db\testuser-dev.sql, nur Dev).
 #   8. dev-state\auffrischen-status.txt: Datum, OK/Fehler, Anzahl eingespielter Dev-Migrationen.
