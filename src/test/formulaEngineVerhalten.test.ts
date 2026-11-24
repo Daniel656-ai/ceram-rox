@@ -201,9 +201,11 @@ describe("Formel-Engine: Funktionen", () => {
     expect(val("ROUND(1234.5678, -2)")).toBe(1200);
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-3 (Issue #5)
-  it.fails("ROUND eines leeren Feldes bleibt leer, statt die Nachkommastellen als Wert zu liefern", () => {
+  // Fehler F-3 (Issue #5), behoben: tasks/Fehler.md#F-3
+  it("ROUND eines leeren Feldes bleibt leer, statt die Nachkommastellen als Wert zu liefern", () => {
     expect(evaluateFormula("ROUND(a, 2)", { a: "" })).toEqual({ value: null, error: null });
+    expect(evaluateFormula("ROUND(a, 2)", { a: null })).toEqual({ value: null, error: null });
+    expect(evaluateFormula("ROUND(a)", { a: "" })).toEqual({ value: null, error: null });
   });
 
   // Bekannter Fehler: tasks/Fehler.md#F-5 (Issue #7)
