@@ -75,6 +75,7 @@
   "new_order": "New Order",
   "excel_import": "Excel Import",
   "search_placeholder": "Order, sample, project, requester or experiment number…",
+  "my_tasks_search_placeholder": "Search by sample, sample description, order, experiment or project …",
   "filters": {
     "mass_type": "Mass type",
     "requester": "Requester",
@@ -274,5 +275,22 @@
     "checking": "Checking edit permission …",
     "checkError": "The edit permission could not be checked.",
     "retry": "Check again"
+  },
+  "myTasks": {
+    "col_select": "Select",
+    "col_sample_number": "Sample No.",
+    "col_sample_name": "Sample Name",
+    "col_sample_description": "Sample Description",
+    "col_order_experiment": "Order / Experiment",
+    "col_project": "Project",
+    "col_priority": "Priority",
+    "col_due_date": "Due Date",
+    "col_status": "Status",
+    "col_action": "Action",
+    "available": "Available",
+    "assigned_to_me": "Assigned to me",
+    "edit": "Edit",
+    "claim_and_edit": "Claim & edit",
+    "claiming": "Claiming…"
   }
 }
