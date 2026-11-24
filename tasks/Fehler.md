@@ -16,6 +16,7 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 | F-10 | Formulare / Bericht | Ungültiges Datum erscheint als „Invalid Date“; reines Datum wird mit Uhrzeit und je nach Zeitzone mit Vortag angezeigt | mittel | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“ …“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „… (Feldkatalog, Format „auto“)“ (3 × `it.fails`) | #12 | Issue angelegt |
 | F-11 | Formulare / Validierung | Pflichtregel akzeptiert Wert nur aus Leerzeichen; Bereichsprüfung übergeht `"1.234,5"` | mittel | `src/test/globalValidation.test.ts` › „meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe“, „prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze“ (2 × `it.fails`) | #13 | Issue angelegt |
 | F-12 | Formulare / Formulardesigner | `slugify` verliert ß und kann auf `_` enden | niedrig | `src/test/formFieldTypes.test.ts` › „ersetzt ß durch ss, statt es wegzulassen“, „endet auch nach dem Kürzen auf 60 Zeichen nicht auf einem Unterstrich“ (2 × `it.fails`) | #14 | Issue angelegt |
+| F-13 | Tests / Auftrag bearbeiten | Test in `orderEditPage.test.tsx` (Gruppe „3c“) ist instabil: im Volllauf gelegentlich rot, einzeln grün | niedrig (Test, kein Anwendungsfehler nachgewiesen) | `src/test/orderEditPage.test.tsx` › „3c: Entfernen über die Liste nimmt das Häkchen heraus, Rückgängig bringt es zurück“ und „3c: begonnene Dienstleistung sperrt ihre ganze Gruppe mit Hinweis; andere Gruppen bleiben frei“ (nicht markiert) | – | offen (nur eingetragen) |
 
 ## F-1: Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis
 
@@ -202,6 +203,25 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Issue:** #14
 - **Status:** Issue angelegt
 
+## F-13: Instabiler Test `orderEditPage` Gruppe „3c“ (Häkchen / Dienstleistungen im Bearbeiten-Modus)
+
+- **Bereich:** Tests / Seite „Auftrag bearbeiten“ (`src/test/orderEditPage.test.tsx`, Stufe 3c)
+- **Datei:** `src/test/orderEditPage.test.tsx:381` („Entfernen über die Liste …“) und `:426` („begonnene Dienstleistung sperrt …“); zugehörige Seite `CreateOrderPage` (schwere Seite)
+- **Beschreibung:** Einzelne Tests der Gruppe „3c“ schlagen im parallelen Volllauf gelegentlich fehl und laufen einzeln (Datei allein, 21/21) immer grün. Ein Anwendungsfehler ist nicht nachgewiesen; vermutet wird Zeitverhalten unter Last (Abwarten über `waitFor`, Standard-Zeitgrenze). Beobachtet wurden **beide** Varianten:
+  - **Variante A, „Entfernen über die Liste nimmt das Häkchen heraus, Rückgängig bringt es zurück“:** nach „Rückgängig“ zeigt `tick-values` nicht rechtzeitig `["rfa","bet"]`, sondern noch `["rfa"]` (`expected '["rfa","bet"]' to be '["rfa"]'`, Zeitüberschreitung beim Abwarten).
+  - **Variante B, „begonnene Dienstleistung sperrt ihre ganze Gruppe mit Hinweis; andere Gruppen bleiben frei“:** `locked-keys` ist beim Prüfen noch leer (`expected '' to be 'dienstleistungen'`), die Seite ist also noch nicht fertig aufgebaut.
+- **Weitere beobachtete Tests derselben Gruppe:** siehe Tabelle „Flackernde Tests“ unten („Häkchen entfernen …“, „Häkchen wieder setzen …“).
+- **Auftreten:** 2026-11-24, mehrere Volllaufe verschiedener Branches (u. a. Aufgaben 026, 027, 032, 031); jeweils nur dieser eine Test rot, im Wiederholungslauf grün; die Änderungen der Branches betrafen diese Seite nicht.
+- **Schritte zum Nachstellen:**
+  1. `npx vitest run` (Volllauf, mehrere Testdateien parallel)
+  2. gelegentlich Fehlschlag in einem der „3c“-Tests; `npx vitest run src/test/orderEditPage.test.tsx` allein: grün
+- **Erwartet:** Test besteht in jedem Lauf, auch unter Last
+- **Tatsächlich:** gelegentlicher Fehlschlag im Volllauf (siehe Varianten A und B)
+- **Schweregrad:** niedrig (stört die Aussagekraft des Volllaufs, kein Fehler im Produkt nachgewiesen)
+- **Test:** beide oben genannten Tests (nicht markiert, laufen normal mit)
+- **Issue:** noch keins
+- **Status:** offen (nur eingetragen, noch nicht behoben). Mögliche Richtungen für später: auf das fertige Rendern der Seite warten statt auf feste Zeiten, Zeitgrenze für diese Datei erhöhen, Last der Seite im Test verringern.
+
 ## Flackernde Tests (beobachtet, kein Anwendungsfehler nachgewiesen)
 
 Tests, die im Volllauf gelegentlich rot und einzeln grün sind. Sie werden nicht markiert, solange kein Fehler in der Anwendung nachgewiesen ist. Jedes Auftreten wird hier vermerkt.
@@ -210,6 +230,7 @@ Tests, die im Volllauf gelegentlich rot und einzeln grün sind. Sie werden nicht
 |---|---|---|---|---|
 | `src/test/orderEditPage.test.tsx` › „3c: Häkchen entfernen -> Dienstleistung zum Entfernen vorgemerkt (mit Begründung), Formularwert und Entfernen gehen gemeinsam“ | 2026-11-21, Volllauf auf `improve/tests-ergebnisse` (1928/1929) | Text „Dienstleistung(en) entfernt: BET (1 Aufgabe)“ nicht gefunden | 21/21 grün | Zeitverhalten unter Last im parallelen Volllauf (schwere Seite `CreateOrderPage`). Vermutlich derselbe Test wie der einmalige Fehlschlag im Review von PR #2 (dort nicht benannt). |
 | `src/test/orderEditPage.test.tsx` › „3c: Häkchen wieder setzen nimmt das vorgemerkte Entfernen zurück“ | 2026-11-21, Volllauf auf `improve/tests-formulare` (2076/2077) | `Unable to find role="alert"` | 21/21 grün | Wie oben, Nachbartest in derselben Datei. Die ganze Datei `orderEditPage.test.tsx` scheint unter Last anfällig. |
+| `src/test/orderEditPage.test.tsx` › „3c: Entfernen über die Liste nimmt das Häkchen heraus, Rückgängig bringt es zurück“ und „3c: begonnene Dienstleistung sperrt ihre ganze Gruppe mit Hinweis …“ | 2026-11-24, mehrere Volllaufe (siehe F-13) | `expected '["rfa","bet"]' to be '["rfa"]'` bzw. `expected '' to be 'dienstleistungen'` | 21/21 grün | Wie oben; jetzt als **F-13** geführt. |
 
 ## Hinweise fürs Aufräumen (keine Fehler)
 
