@@ -140,7 +140,7 @@ b8abe423 (2026-11-24). Es stehen **keine Messwerte und keine Kundendaten** in di
 
 ### 13. Workflows und Prozesse
 
-- **Code:** Datenbankfunktionen `wf_start_step`, `wf_complete_step`, `wf_start_task`, `wf_complete_task`, `wf_finalize_order`, `wf_seed_from_template`, `expand_service_workflow`, `expand_order_workflows`, `create_order_workflow_instance`; Oberfläche `WorkflowDesigner`, `WorkflowStepsDesigner`, `TaskExecutionPage`, `ProcessRuntimePanel`.
+- **Code:** Datenbankfunktionen `wf_start_step`, `wf_complete_step`, `wf_start_task`, `wf_finalize_order`, `wf_seed_from_template`, `expand_service_workflow`, `expand_order_workflows`, `create_order_workflow_instance`; Oberfläche `WorkflowDesigner`, `WorkflowStepsDesigner`, `TaskExecutionPage`, `ProcessRuntimePanel`.
 - **Hängt an:** `service_workflows`, `service_workflow_definitions`, `service_workflow_steps`, `service_workflow_step_services`, `process_templates`, `process_steps`. Laufende Aufträge halten eine Kopie bzw. verweisen auf Schritte (`order_workflow_tasks`, `order_step_runs`, `order_process_services`).
 - **Wenn umbenannt/gelöscht:** Löschen eines Schritts oder einer Zuordnung, während Aufträge darauf laufen, kann laufende Aufträge unvollständig machen (Schritt fehlt, Abschluss nicht möglich). Änderungen an Definitionen gelten nur für neu angelegte Aufträge, wenn die Kopie schon erzeugt wurde. Nicht im Detail geprüft, welche Tabellen mit Löschschutz versehen sind.
 - **Risiko:** hoch bei Löschungen, niedrig bei reinen Beschriftungen.
