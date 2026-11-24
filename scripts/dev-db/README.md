@@ -127,31 +127,44 @@ Ablauf: STOP-Datei prüfen → Containernamen und Ports prüfen (Vertauschung = 
 (Kopie der alten Liste als `applied-migrations.bak-<Datum>.txt`, die neuesten 7 bleiben) → `sync-db-dev.ps1` → Testbenutzer
 (`testuser-dev.sql`) → Status. Der Task „Dev-Web Update“ wird **immer** wieder eingeschaltet, auch bei einem Fehler.
 
-### Prod-Migrationslisten
+### Prod-Migrationslisten und neue Dev-Liste
 
-Das Skript braucht die zwei Listen, die der Prod-Abgleich (`sync-db.ps1` im Ceram-Repo) führt:
-`-ProdMigrationenDatei` (`applied-migrations.txt`, Supabase-Migrationen) und `-ProdDrizzleDatei` (`applied-drizzle-migrations.txt`).
-Erkannt werden diese Zeilenformate (Kommentarzeilen mit `#` und Leerzeilen werden übersprungen):
+Standardpfade (per Parameter änderbar):
+
+| Parameter | Standard | Inhalt |
+|---|---|---|
+| `-ProdMigrationenDatei` | `C:\Users\Daniel.Gass\Ceram_Rox\applied-migrations.txt` | Supabase-Migrationen, Zeilen wie `20260209155559_<uuid>.sql` (ohne Ordner) |
+| `-ProdDrizzleDatei` | `C:\Users\Daniel.Gass\Ceram_Rox\applied-drizzle-migrations.txt` | drizzle-Migrationen, Zeilen wie `0050_m3_delete_lovable_samples.sql` (ohne Ordner); erste Zeile ist ein `#`-Kommentar |
+| `-ProdCodeOrdner` | `C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox` | Prod-Code: `supabase/migrations` und `drizzle/migrations` |
+| `-ProdStopDatei` | `C:\Users\Daniel.Gass\Ceram_Rox\sync-db.STOP` | existiert sie, ist Prod evtl. nicht auf Stand: Abbruch ohne Änderung |
+
+**Neue Dev-Liste** (`dev-state\applied-migrations.txt`) = Prod-Listen **plus** alle Migrationsdateien, die auch im Prod-Code-Ordner liegen.
+Leerzeilen und `#`-Zeilen werden ignoriert, doppelte Einträge entfernt und die Prod-Einträge ins Dev-Format umgesetzt
+(`supabase/migrations/<datei>` bzw. `drizzle/migrations/<datei>`). Nachgespielt wird danach nur, was **ausschließlich im Dev-Repo** liegt;
+Lücken der Prod-Listen (z. B. eine Seed-Migration, die in Prod enthalten, aber nicht gelistet ist) werden so nicht erneut eingespielt.
+Das Log nennt jede Datei, die nur aus dem Prod-Code ergänzt wurde.
+
+Erkannt werden außerdem diese Schreibweisen (Ordner optional, `.sql` optional):
 
 | Liste | erkannte Zeilen |
 |---|---|
-| Supabase | `supabase/migrations/<14 Ziffern>_<name>.sql`, `<14 Ziffern>_<name>[.sql]`, nur `<14 Ziffern>` (Version, muss im Repo eindeutig sein) |
-| drizzle | `drizzle/migrations/<NNNN>_<name>.sql`, `<NNNN>_<name>[.sql]` |
+| Supabase | `<14 Ziffern>_<name>.sql`, `supabase/migrations/<14 Ziffern>_<name>.sql`, nur `<14 Ziffern>` (Version, muss im Repo eindeutig sein) |
+| drizzle | `<NNNN>_<name>.sql`, `drizzle/migrations/<NNNN>_<name>.sql` |
 
-**Jede andere Zeile führt zum Abbruch vor jeder Änderung**, ebenso eine leere oder fehlende Liste. So kann ein unbekanntes Format
-die Dev-Liste nicht verfälschen. Das Ergebnis (Schlüssel wie `supabase/migrations/<datei>.sql` und `drizzle/migrations/<datei>.sql`)
-steht anschließend in `dev-state\applied-migrations.txt`. Einträge der Prod-Liste, die es im Repo nicht gibt (z. B. nur in Prod),
-werden mitgeschrieben und im Log gezählt; `ignore-migrations.txt` bleibt unberührt.
+**Jede andere Zeile führt zum Abbruch vor jeder Änderung**, ebenso eine leere oder fehlende Liste, ein fehlender Prod-Code-Ordner
+oder ein fehlender Unterordner darin. Einträge, die es im Dev-Repo nicht (mehr) gibt, werden mitgeschrieben und im Log gezählt;
+`ignore-migrations.txt` bleibt unberührt.
 
 ### Zuerst: Trockenlauf
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dev-db\dev-auffrischen-nacht.ps1 -Trockenlauf `
-  -ProdMigrationenDatei "<Pfad>\applied-migrations.txt" -ProdDrizzleDatei "<Pfad>\applied-drizzle-migrations.txt"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dev-db\dev-auffrischen-nacht.ps1 -Trockenlauf
 ```
 
-Prüft Container, Ports, PostgreSQL-Versionen und beide Listen und zeigt den Plan samt den reinen Dev-Migrationen, die danach
-eingespielt würden. Ändert nichts (auch nicht den Task). Erst wenn die Zahlen stimmen, einen Handlauf mit Rückfrage `JA` machen
+(Die Pfade der Prod-Listen und des Prod-Codes sind als Standard eingetragen, siehe oben.)
+
+Prüft Container, Ports, PostgreSQL-Versionen und die Listen und zeigt: die **neue Dev-Liste (Anzahl, bisherige Anzahl)**, die aus dem
+Prod-Code ergänzten Dateien und die **Liste der Migrationen, die danach nachgespielt würden** (nur die, die ausschließlich im Dev-Repo liegen). Ändert nichts (auch nicht den Task). Erst wenn die Zahlen stimmen, einen Handlauf mit Rückfrage `JA` machen
 (gleicher Aufruf ohne `-Trockenlauf`), danach die Aufgabenplanung einrichten.
 
 Test gegen eine **Kopie** der Dev-DB: `-DevContainer <Name der Kopie>` (muss mit `supabase_db_` beginnen, darf nicht Prod sein und
@@ -165,7 +178,7 @@ läuft z. B. um 02:00, das Auffrischen um 03:00:
 
 ```powershell
 $aktion = New-ScheduledTaskAction -Execute "powershell.exe" -Argument `
-  '-NoProfile -ExecutionPolicy Bypass -File "C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox-dev\scripts\dev-db\dev-auffrischen-nacht.ps1" -OhneRueckfrage -ProdMigrationenDatei "<Pfad>\applied-migrations.txt" -ProdDrizzleDatei "<Pfad>\applied-drizzle-migrations.txt"'
+  '-NoProfile -ExecutionPolicy Bypass -File "C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox-dev\scripts\dev-db\dev-auffrischen-nacht.ps1" -OhneRueckfrage'
 $zeit = New-ScheduledTaskTrigger -Daily -At 03:00
 $recht = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -RunLevel Highest
 Register-ScheduledTask -TaskName "Dev-Auffrischen Nacht" -Action $aktion -Trigger $zeit -Principal $recht `
@@ -175,7 +188,10 @@ Register-ScheduledTask -TaskName "Dev-Auffrischen Nacht" -Action $aktion -Trigge
 Der Task-Benutzer braucht Docker-Zugriff und Schreibrechte auf `C:\CeramRox_Backups\dev` und `dev-state`. Ohne `-OhneRueckfrage`
 fragt das Skript nach `JA` (Handstart).
 
-### STOP-Datei
+### STOP-Dateien
+
+Zusätzlich bricht der Lauf ohne jede Änderung ab, wenn **`C:\Users\Daniel.Gass\Ceram_Rox\sync-db.STOP`** existiert (`-ProdStopDatei`): Dann ist Prod
+evtl. nicht auf Stand. Status und Log wie unten; der Status bleibt unverändert.
 
 Liegt eine Datei **`dev-auffrischen.STOP`** im Skriptordner (`scripts\dev-db\`) **oder** in `dev-state\`, bricht der Lauf sofort
 ohne jede Änderung ab (Eintrag im Log, Status „UEBERSPRUNGEN“). Zum Anhalten einfach die Datei anlegen (leere Datei genügt), zum

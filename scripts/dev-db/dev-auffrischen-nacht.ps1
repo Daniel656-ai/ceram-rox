@@ -7,7 +7,8 @@
 #   2. Task "Dev-Web Update" pausieren; am Ende IMMER wieder einschalten (auch bei Fehler).
 #   3. (entfaellt: keine Sicherung der Dev-DB mehr; vorhandene dev-vorher-*.dump bleiben unberuehrt)
 #   4. Prod -> Dev kopieren. Prod wird NUR GELESEN (pg_dump, SELECT). Container fest geprueft, bei Vertauschung Abbruch.
-#   5. dev-state\applied-migrations.txt = genau die in Prod eingespielten Migrationen (vorher Kopie der alten Liste).
+#   5. dev-statepplied-migrations.txt = Prod-Listen PLUS alle Migrationsdateien im Prod-Code-Ordner (vorher Kopie der alten Liste).
+#   0. Zusaetzlich Abbruch ohne Aenderung, wenn sync-db.STOP im Prod-Ordner liegt (Prod evtl. nicht auf Stand).
 #   6. sync-db-dev.ps1 spielt die reinen Dev-Migrationen ein.
 #   7. Testbenutzer neu anlegen (scripts\dev-db\testuser-dev.sql, nur Dev).
 #   8. dev-state\auffrischen-status.txt: Datum, OK/Fehler, Anzahl eingespielter Dev-Migrationen.
@@ -17,8 +18,7 @@
 #   (ohne Parameter)        Handstart mit Rueckfrage "JA"
 #   -OhneRueckfrage         fuer die Aufgabenplanung (Nachtlauf)
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dev-db\dev-auffrischen-nacht.ps1 -Trockenlauf `
-#       -ProdMigrationenDatei <Pfad zu applied-migrations.txt> -ProdDrizzleDatei <Pfad zu applied-drizzle-migrations.txt>
+#   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dev-db\dev-auffrischen-nacht.ps1 -Trockenlauf
 #
 # Rueckgabewert: 0 = ok (oder STOP-Datei / Trockenlauf), 1 = Fehler.
 
@@ -26,8 +26,10 @@
 param(
     [switch]$OhneRueckfrage,
     [switch]$Trockenlauf,
-    [string]$ProdMigrationenDatei = "",   # Prod-Liste der Supabase-Migrationen (applied-migrations.txt)
-    [string]$ProdDrizzleDatei     = "",   # Prod-Liste der drizzle-Migrationen (applied-drizzle-migrations.txt)
+    [string]$ProdMigrationenDatei = "C:\Users\Daniel.Gass\Ceram_Rox\applied-migrations.txt",          # Prod: Supabase-Migrationen (<14 Ziffern>_<uuid>.sql, ohne Ordner)
+    [string]$ProdDrizzleDatei     = "C:\Users\Daniel.Gass\Ceram_Rox\applied-drizzle-migrations.txt",  # Prod: drizzle-Migrationen (NNNN_name.sql, ohne Ordner)
+    [string]$ProdCodeOrdner       = "C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox",                       # Prod-Code (drizzle/migrations, supabase/migrations)
+    [string]$ProdStopDatei        = "C:\Users\Daniel.Gass\Ceram_Rox\sync-db.STOP",                    # existiert sie, ist Prod evtl. nicht auf Stand: Abbruch
     [string]$DevContainer         = "supabase_db_ceram-rox-dev",   # nur zum Testen gegen eine Kopie aendern (siehe README)
     [string]$StateDir             = "C:\Users\Daniel.Gass\Ceram_Rox\dev-state",
     [string]$TaskName             = "Dev-Web Update"
@@ -119,6 +121,19 @@ function Read-List([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { return @() }
     return @(Get-Content -LiteralPath $Path -Encoding UTF8 | ForEach-Object { $_.Trim() } |
         Where-Object { $_ -ne "" -and -not $_.StartsWith("#") })
+}
+
+# Migrationsdateien eines Code-Ordners (Dev-Repo oder Prod-Code) im Schluesselformat der Dev-Liste.
+function Get-CodeKeys([string]$Root) {
+    if (-not $Root -or -not (Test-Path -LiteralPath $Root)) { Stop-Lauf "Prod-Code-Ordner nicht gefunden: $Root (-ProdCodeOrdner)" }
+    if ((Resolve-Path -LiteralPath $Root).Path.TrimEnd("\") -ieq $RepoRoot.TrimEnd("\")) { Stop-Lauf "-ProdCodeOrdner darf nicht das Dev-Repo sein." }
+    $keys = @()
+    foreach ($rel in @("supabase/migrations", "drizzle/migrations")) {
+        $dir = Join-Path $Root ($rel -replace "/", "\")
+        if (-not (Test-Path -LiteralPath $dir)) { Stop-Lauf "Im Prod-Code fehlt der Ordner $rel ($Root)" }
+        $keys += @(Get-ChildItem -LiteralPath $dir -Filter "*.sql" -File | ForEach-Object { "$rel/$($_.Name)" })
+    }
+    return $keys
 }
 
 function Get-RepoKeys {
@@ -261,6 +276,14 @@ function Invoke-Hauptablauf {
         }
     }
 
+    # STOP-Datei des Prod-Abgleichs: Prod ist evtl. nicht auf Stand
+    if (Test-Path -LiteralPath $ProdStopDatei) {
+        Write-Log "Prod-STOP-Datei gefunden ($ProdStopDatei) - Prod evtl. nicht auf Stand. Abbruch ohne Aenderung."
+        $script:Ergebnis = "UEBERSPRUNGEN"; $script:Meldung = "sync-db.STOP gefunden"; $script:StatusSchreiben = $false
+        $script:Exit = 0
+        return
+    }
+
     # nur ein Lauf gleichzeitig
     $script:mutex = New-Object System.Threading.Mutex($false, "Global\ceram-rox-dev-auffrischen")
     try { $script:hasLock = $script:mutex.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $script:hasLock = $true }
@@ -277,11 +300,17 @@ function Invoke-Hauptablauf {
     $prodSupabase = @(Read-ProdListe $ProdMigrationenDatei "supabase" $repoKeys)
     $prodDrizzle  = @(Read-ProdListe $ProdDrizzleDatei "drizzle" $repoKeys)
     $prodAlle     = @($prodSupabase + $prodDrizzle | Sort-Object -Unique)
+    # Migrationsdateien, die auch im Prod-Code liegen, gelten ebenfalls als eingespielt (schliesst Luecken der Prod-Listen,
+    # z. B. Seed-Migrationen). Nachgespielt wird nur, was ausschliesslich im Dev-Repo liegt.
+    $codeKeys     = @(Get-CodeKeys $ProdCodeOrdner)
+    $neueListe    = @($prodAlle + $codeKeys | Sort-Object -Unique)
     $ignored      = @(Read-List $IgnoreFile)
-    $nurDev       = @($repoKeys | Where-Object { ($prodAlle -notcontains $_) -and ($ignored -notcontains $_) })
-    $nurProd      = @($prodAlle | Where-Object { $repoKeys -notcontains $_ })
-    Write-Log ("Prod-Listen: {0} Supabase- und {1} drizzle-Migrationen. Im Repo: {2}. Davon reine Dev-Migrationen: {3}. In Prod, aber nicht im Repo: {4}." -f `
-        $prodSupabase.Count, $prodDrizzle.Count, $repoKeys.Count, $nurDev.Count, $nurProd.Count)
+    $nurDev       = @($repoKeys | Where-Object { ($neueListe -notcontains $_) -and ($ignored -notcontains $_) })
+    $nurProd      = @($neueListe | Where-Object { $repoKeys -notcontains $_ })
+    $nurCode      = @($codeKeys | Where-Object { $prodAlle -notcontains $_ })
+    Write-Log ("Prod-Listen: {0} Supabase- und {1} drizzle-Migrationen. Prod-Code: {2} Dateien, davon {3} nicht in den Listen (werden ergaenzt). Neue Dev-Liste: {4}. Im Dev-Repo: {5}, davon nur in Dev: {6}. In Prod-Liste/-Code, aber nicht im Dev-Repo: {7}." -f `
+        $prodSupabase.Count, $prodDrizzle.Count, $codeKeys.Count, $nurCode.Count, $neueListe.Count, $repoKeys.Count, $nurDev.Count, $nurProd.Count)
+    foreach ($k in $nurCode) { Write-Log "  ergaenzt aus Prod-Code (nicht in den Prod-Listen): $k" }
     if ($IstStandardDev) {
         foreach ($f in @($SyncScript, $TestuserSql)) { if (-not (Test-Path -LiteralPath $f)) { Stop-Lauf "Datei fehlt: $f" } }
     }
@@ -297,7 +326,7 @@ function Invoke-Hauptablauf {
         Write-Log "  1. Task '$TaskName' pausieren (am Ende wieder einschalten)"
         Write-Log "  2. Schema public + Benutzerkonten aus $Prod nach $DevContainer kopieren (Prod nur lesend)"
         if ($IstStandardDev) {
-            Write-Log "  3. $AppliedFile (Kopie der alten Liste) auf $($prodAlle.Count) Eintraege aus Prod setzen"
+            Write-Log "  3. $AppliedFile (Kopie der alten Liste) neu setzen: $($neueListe.Count) Eintraege (Prod-Listen + Prod-Code), bisher $(@(Read-List $AppliedFile).Count)"
             Write-Log "  4. sync-db-dev.ps1: $($nurDev.Count) reine Dev-Migrationen einspielen:"
             foreach ($k in $nurDev) { Write-Log "       $k" }
             Write-Log "  5. Testbenutzer aus testuser-dev.sql anlegen"
@@ -403,8 +432,8 @@ NOTIFY pgrst, 'reload schema';
             if ($alt.Count -gt $BakToKeep) { $alt | Select-Object -Skip $BakToKeep | ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force } }
         }
         $kopf = "# Von dev-auffrischen-nacht.ps1 am {0} aus den Prod-Listen gesetzt" -f (Get-Date -Format "yyyy-MM-dd HH:mm")
-        Schreibe $AppliedFile ($kopf + "`n" + ($prodAlle -join "`n") + "`n")
-        Write-Log "applied-migrations.txt gesetzt: $($prodAlle.Count) Eintraege."
+        Schreibe $AppliedFile ($kopf + "`n" + ($neueListe -join "`n") + "`n")
+        Write-Log "applied-migrations.txt gesetzt: $($neueListe.Count) Eintraege."
         $vorher = @(Read-List $AppliedFile).Count
 
         # 6. reine Dev-Migrationen einspielen
