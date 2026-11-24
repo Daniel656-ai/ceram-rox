@@ -1,6 +1,6 @@
 # 029b: Konfigurationstabellen, die Benutzer über die Oberfläche ändern
 
-Stand: 2026-11-24, Dev-`main` (b8abe423). Nur Analyse, nichts geändert, nicht committet.
+Stand: 2026-11-24, Dev-`main` (b8abe423). Nur Analyse, am Code und an der Datenbank nichts geändert.
 
 **Quelle:** Schreibzugriffe (`insert`/`update`/`upsert`/`delete`) in `src/lib/api` und `src/hooks`, Spalten aus `src/integrations/supabase/types.ts` (das ist der Stand der Prod-/Lovable-Struktur, nicht der Dev-DB). Zuordnung zur Oberfläche aus den Seiten und Designer-Komponenten.
 **Weggelassen:** Benutzer, Rollen, Rechte (`profiles`, `user_*`, `custom_roles`, `role_permissions`), Aufträge, Proben, Messwerte, Projekte, Berichte, Chargen und Container.
