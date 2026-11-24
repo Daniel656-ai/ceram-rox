@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { orderSampleLinks, orderSamples, samplesMatchSearch, taskSamples } from "@/lib/orders/orderSamples";
+import {
+  formatSampleDescription,
+  normalizeSearchText,
+  orderSampleLinks,
+  orderSamples,
+  samplesMatchSearch,
+  taskSamples,
+} from "@/lib/orders/orderSamples";
 
-const sample = (id: string, name = "Probe", number = "P260001") => ({ id, sample_name: name, sample_number: number });
+const sample = (id: string, name = "Probe", number = "P260001", description?: string | null) => ({
+  id,
+  sample_name: name,
+  sample_number: number,
+  ...(description !== undefined ? { description } : {}),
+});
 
 describe("readable current order samples", () => {
   it("links one readable direct sample to its existing detail route", () => {
@@ -85,6 +97,26 @@ describe("readable current order samples", () => {
     expect(samplesMatchSearch([sample("s1", "")], "p260001")).toBe(true);
     expect(samplesMatchSearch([{ id: "s1", sample_name: null, sample_number: null }], "missing")).toBe(false);
     expect(samplesMatchSearch([sample("s1")], "missing")).toBe(false);
+  });
+  it("searches sample description robustly across case, whitespace, line breaks and special characters", () => {
+    const withCustomerId = sample("s1", "Probe A", "P260001", "Kunden-ID 2026-ABC-0085");
+    expect(samplesMatchSearch([withCustomerId], "2026-abc-0085")).toBe(true);
+    expect(samplesMatchSearch([withCustomerId], "   2026-ABC-0085   ")).toBe(true);
+    expect(samplesMatchSearch([withCustomerId], "kunden-id   2026-abc-0085")).toBe(true);
+
+    const multiline = sample("s2", "Probe B", "P260002", "Charge 12/2026\r\n  Unter_Typ.A-42  \nEnde");
+    expect(samplesMatchSearch([multiline], "12/2026 unter_typ.a-42")).toBe(true);
+    expect(samplesMatchSearch([multiline], "unter_typ.a-42")).toBe(true);
+
+    const emptyDesc = sample("s3", "Probe C", "P260003", "   ");
+    const nullDesc = sample("s4", "Probe D", "P260004", null);
+    expect(samplesMatchSearch([emptyDesc, nullDesc], "2026-abc-0085")).toBe(false);
+    expect(samplesMatchSearch([withCustomerId], "   ")).toBe(false);
+
+    expect(normalizeSearchText("  A\n\t  B-C/D_E.F  ")).toBe("a b-c/d_e.f");
+    expect(formatSampleDescription("  Beschreibung  ")).toBe("Beschreibung");
+    expect(formatSampleDescription("   \n ")).toBeNull();
+    expect(formatSampleDescription(null)).toBeNull();
   });
   it("only uses a task's own matching hydrated sample", () => {
     expect(taskSamples({ sample_id: "s1", samples: sample("s1") }).map(s => s.id)).toEqual(["s1"]);

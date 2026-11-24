@@ -2,6 +2,7 @@ export type OrderSampleRef = {
   id: string;
   sample_name: string | null;
   sample_number: string | null;
+  description?: string | null;
   category?: string | null;
 };
 
@@ -64,10 +65,25 @@ export function sampleLinks(readable: OrderSampleRef[]) {
   });
 }
 
+/** Normalisiert Such- und Vergleichstexte (Kleinschreibung, Whitespace/Zeilenumbrüche zusammenfassen, Sonderzeichen erhalten). */
+export function normalizeSearchText(value: string | null | undefined): string {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/** Getrimmte Probenbeschreibung für die Tabellenanzeige oder null bei leerem Wert. */
+export function formatSampleDescription(description: string | null | undefined): string | null {
+  const trimmed = description?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export function samplesMatchSearch(samples: OrderSampleRef[], query: string): boolean {
-  const q = query.trim().toLowerCase();
-  return samples.some(sample => [sample.sample_name, sample.sample_number]
-    .some(value => !!value?.toLowerCase().includes(q)));
+  const q = normalizeSearchText(query);
+  if (!q) return false;
+  return samples.some(sample => [sample.sample_name, sample.sample_number, sample.description]
+    .some(value => normalizeSearchText(value).includes(q)));
 }
 
 /** Never substitute an order-level sample for the task's own sample. */
