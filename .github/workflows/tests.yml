@@ -25,12 +25,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # gleiche Node-Version wie dev-web.yml
           node-version: lts/*
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # wie release.yml: Prod pflegt Lovables bun.lock, die package-lock.json ist nicht synchron (npm ci würde scheitern)
+        run: npm install --force --no-audit --no-fund
 
       - name: Typprüfung
         run: npm run typecheck

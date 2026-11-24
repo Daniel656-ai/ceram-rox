@@ -23,6 +23,8 @@ export interface CopyOptions {
   orderForm: boolean;
   samples: boolean;
   attachments: boolean;
+  /** Bearbeitung des bestehenden Auftrags: Identitäten/Chargen nicht verwerfen. */
+  edit?: boolean;
 }
 
 export const DEFAULT_COPY_OPTIONS: CopyOptions = {
@@ -34,7 +36,7 @@ export const DEFAULT_COPY_OPTIONS: CopyOptions = {
   attachments: false,
 };
 
-export const COPY_OPTION_LABELS: Record<keyof CopyOptions, string> = {
+export const COPY_OPTION_LABELS: Record<Exclude<keyof CopyOptions, "edit">, string> = {
   services: "Dienstleistungen",
   packages: "Servicepakete (Herkunft)",
   conditions: "Messbedingungen, Vorgaben & Auswertungsvorgaben",
@@ -170,10 +172,12 @@ export function resolveParameterField<S extends ResolvableField, L extends Resol
 export async function buildPayloadFromOrder(
   orderId: string,
   opts: CopyOptions
-): Promise<{ payload: OrderDraftPayload; label: string; warnings: TemplateCopyWarning[] }> {
+): Promise<{ payload: OrderDraftPayload; label: string; warnings: TemplateCopyWarning[]; measurementIds: Record<string, string[]> }> {
   const order = await api.orders.get(orderId);
+  const measurementIds: Record<string, string[]> = {};
   if (!order) throw new Error("Auftrag nicht gefunden");
   const warnings: TemplateCopyWarning[] = [];
+  const inputOpts = { preserveIdentity: opts.edit === true };
 
   const payload: OrderDraftPayload = {
     selectedProjectId: order.project_id ?? "",
@@ -195,7 +199,7 @@ export async function buildPayloadFromOrder(
     const tpl = (order.shared_form_data as { template?: { values?: Record<string, unknown>; form_definition_id?: string } } | null)?.template;
     if (tpl?.values && tpl.form_definition_id) {
       const fields = await api.formFields.listForForm(tpl.form_definition_id);
-      payload.dynamicValues = copyTemplateInputs(tpl.values, fields);
+      payload.dynamicValues = copyTemplateInputs(tpl.values, fields, fields, inputOpts);
       payload.dynamicFormId = tpl.form_definition_id;
     }
   }
@@ -204,6 +208,7 @@ export async function buildPayloadFromOrder(
     // Zuerst pro Ausführungszeile die fachlichen Werte aufbereiten, danach
     // eindeutige probenweise Fächerungen zu je einer Vorlagenkarte bündeln.
     interface RowBuild {
+      measurement_id: string;
       service_id: string;
       service_name: string;
       source_package_id: string | null;
@@ -215,6 +220,7 @@ export async function buildPayloadFromOrder(
     const rows: RowBuild[] = [];
     for (const m of order.order_measurements ?? []) {
       const row: RowBuild = {
+        measurement_id: m.id,
         service_id: m.service_id,
         service_name: m.measurement_services?.service_name ?? "Dienstleistung",
         source_package_id: opts.packages ? m.source_package_id ?? null : null,
@@ -263,11 +269,11 @@ export async function buildPayloadFromOrder(
           continue;
         }
         if (candidate) {
-          if (!templateInputAllowed(candidate.def)) continue;
+          if (!templateInputAllowed(candidate.def, inputOpts)) continue;
           const parsed = parseTemplateInput(p.parameter_value, candidate.def);
           const ownerFields: Parameters<typeof copyTemplateInputs>[1] = candidate.key.startsWith("form:")
             ? linkedDefinitions.find(link => candidate.key.startsWith(`form:${link.formId}:`))?.fields ?? [] : fields;
-          const copied = copyTemplateInputs({ [candidate.def.field_key]: parsed }, ownerFields);
+          const copied = copyTemplateInputs({ [candidate.def.field_key]: parsed }, ownerFields, ownerFields, inputOpts);
           if (candidate.def.field_key in copied) values[candidate.key] = copied[candidate.def.field_key];
           continue;
         }
@@ -277,7 +283,7 @@ export async function buildPayloadFromOrder(
           try { parsedRows = JSON.parse(p.parameter_value); } catch { throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`); }
           if (!Array.isArray(parsedRows)) throw new Error(`Wiederholungsbereich „${name}“ ist nicht lesbar`);
           const childFields = fields.filter(f => section.fields.some(ref => ref.field_id === f.id));
-          values[name] = parsedRows.map(r => ({ ...copyTemplateInputs(r, childFields), __id: newUid() }));
+          values[name] = parsedRows.map(r => ({ ...copyTemplateInputs(r, childFields, childFields, inputOpts), __id: opts.edit && typeof r?.__id === "string" ? r.__id : newUid() }));
           continue;
         }
         const definitions = legacyDefinitions.filter(d => d.parameter_name === name);
@@ -295,6 +301,7 @@ export async function buildPayloadFromOrder(
     for (const group of groups) {
       const row = rows[group[0]];
       const uid = newUid();
+      measurementIds[uid] = group.map((i) => rows[i].measurement_id);
       payload.measurements?.push({
         uid,
         service_id: row.service_id,
@@ -318,7 +325,7 @@ export async function buildPayloadFromOrder(
   }
 
   const label = order.order_number ? `Auftrag ${order.order_number}` : "Auftrag";
-  return { payload: deepCopy(payload), label, warnings };
+  return { payload: deepCopy(payload), label, warnings, measurementIds };
 }
 
 /** Baut aus einem bestehenden Entwurf einen unabhängigen Entwurfs-Payload. */
