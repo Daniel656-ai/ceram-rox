@@ -195,3 +195,5 @@ Fortsetzen löschen. Sinnvoll, wenn in Dev gerade an etwas gearbeitet wird, das 
   spielt fehlende Dev-Migrationen nach.
 - Die Datei `testuser-dev.sql` (früher `tasks/023-testuser-dev.sql`) läuft nur mit `-v nur_dev=ja` und enthält ein erfundenes
   Test-Passwort für Dev.
+- Bei der STOP-Datei bleibt `auffrischen-status.txt` unverändert (nur das Log bekommt einen Eintrag).
+- Das aufgerufene `sync-db-dev.ps1` legt bei anstehenden Dev-Migrationen weiterhin selbst eine Sicherung `dev_vor_migration_*.dump` an (die letzten 5 bleiben). Das ist unabhängig von der entfallenen Sicherung im Nachtlauf.

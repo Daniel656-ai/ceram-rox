@@ -255,7 +255,7 @@ function Invoke-Hauptablauf {
     foreach ($d in @($ScriptDir, $StateDir)) {
         if (Test-Path -LiteralPath (Join-Path $d $StopName)) {
             Write-Log "STOP-Datei gefunden ($d\$StopName) - Abbruch ohne Aenderung."
-            $script:Ergebnis = "UEBERSPRUNGEN"; $script:Meldung = "STOP-Datei gefunden"
+            $script:Ergebnis = "UEBERSPRUNGEN"; $script:Meldung = "STOP-Datei gefunden"; $script:StatusSchreiben = $false   # Status bleibt unveraendert
             $script:Exit = 0
             return
         }
@@ -314,7 +314,7 @@ function Invoke-Hauptablauf {
         Write-Host ""
         Write-Host "In DEV ($DevContainer) werden Schema public und Benutzerkonten durch den Prod-Stand ersetzt." -ForegroundColor Yellow
         $a = Read-Host "Zum Fortfahren JA eingeben"
-        if ($a -ne "JA") { Write-Log "Abgebrochen durch Benutzer, nichts geaendert."; $script:StatusSchreiben = $false; $script:Exit = 0; return }
+        if ($a -cne "JA") { Write-Log "Abgebrochen durch Benutzer, nichts geaendert."; $script:StatusSchreiben = $false; $script:Exit = 0; return }
     }
 
     # 2. Task pausieren
