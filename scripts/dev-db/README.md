@@ -113,3 +113,115 @@ inkonsistent.
 
 `C:\Users\Daniel.Gass\Ceram_Rox\dev-state\sync-db-dev.log`; das Update-Log (`scripts\dev-web\update-dev-web.log`)
 enthält pro Lauf nur eine Zeile zum DB-Sync.
+
+## Nachtlauf: Dev aus Prod auffrischen (`dev-auffrischen-nacht.ps1`)
+
+Kopiert jede Nacht Schema `public` und die Benutzerkonten aus der Firmen-DB (Prod) nach Dev, setzt die Migrationsliste auf den
+Prod-Stand, spielt danach die reinen Dev-Migrationen ein (`sync-db-dev.ps1`) und legt die Testbenutzer neu an.
+Grundlage ist `dev-db-auffrischen.ps1` (Handlauf, unverändert abgelegt). **Prod wird nur gelesen** (`pg_dump`, `SELECT`;
+im Prod-Container liegt kurz `/tmp/devsync`, das am Ende gelöscht wird). Eine Sicherung der Dev-DB gibt es nicht mehr; vorhandene
+`dev-vorher-*.dump` werden nicht angefasst.
+
+Ablauf: STOP-Datei prüfen → Containernamen und Ports prüfen (Vertauschung = Abbruch), Prod-Listen einlesen → Task
+„Dev-Web Update“ pausieren → Prod nach Dev kopieren (eine Transaktion) → `applied-migrations.txt` auf den Prod-Stand setzen
+(Kopie der alten Liste als `applied-migrations.bak-<Datum>.txt`, die neuesten 7 bleiben) → `sync-db-dev.ps1` → Testbenutzer
+(`testuser-dev.sql`) → Status. Der Task „Dev-Web Update“ wird **immer** wieder eingeschaltet, auch bei einem Fehler.
+
+### Prod-Migrationslisten und neue Dev-Liste
+
+Standardpfade (per Parameter änderbar):
+
+| Parameter | Standard | Inhalt |
+|---|---|---|
+| `-ProdMigrationenDatei` | `C:\Users\Daniel.Gass\Ceram_Rox\applied-migrations.txt` | Supabase-Migrationen, Zeilen wie `20260209155559_<uuid>.sql` (ohne Ordner) |
+| `-ProdDrizzleDatei` | `C:\Users\Daniel.Gass\Ceram_Rox\applied-drizzle-migrations.txt` | drizzle-Migrationen, Zeilen wie `0050_m3_delete_lovable_samples.sql` (ohne Ordner); erste Zeile ist ein `#`-Kommentar |
+| `-ProdCodeOrdner` | `C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox` | Prod-Code: `supabase/migrations` und `drizzle/migrations` |
+| `-ProdStopDatei` | `C:\Users\Daniel.Gass\Ceram_Rox\sync-db.STOP` | existiert sie, ist Prod evtl. nicht auf Stand: Abbruch ohne Änderung |
+| `-ProdListenAusnahmen` | `drizzle/migrations/0001_lot_mrs_number_and_sequential_container_code.sql` | Prod-Code-Dateien, die ausnahmsweise in keiner Prod-Liste stehen dürfen (siehe Schutzprüfung 1) |
+
+**Neue Dev-Liste** (`dev-state\applied-migrations.txt`) = Prod-Listen **plus** alle Migrationsdateien, die auch im Prod-Code-Ordner liegen.
+Leerzeilen und `#`-Zeilen werden ignoriert, doppelte Einträge entfernt und die Prod-Einträge ins Dev-Format umgesetzt
+(`supabase/migrations/<datei>` bzw. `drizzle/migrations/<datei>`). Nachgespielt wird danach nur, was **ausschließlich im Dev-Repo** liegt;
+Lücken der Prod-Listen (z. B. eine Seed-Migration, die in Prod enthalten, aber nicht gelistet ist) werden so nicht erneut eingespielt.
+Das Log nennt jede Datei, die nur aus dem Prod-Code ergänzt wurde.
+
+Erkannt werden außerdem diese Schreibweisen (Ordner optional, `.sql` optional):
+
+| Liste | erkannte Zeilen |
+|---|---|
+| Supabase | `<14 Ziffern>_<name>.sql`, `supabase/migrations/<14 Ziffern>_<name>.sql`, nur `<14 Ziffern>` (Version, muss im Repo eindeutig sein) |
+| drizzle | `<NNNN>_<name>.sql`, `drizzle/migrations/<NNNN>_<name>.sql` |
+
+**Jede andere Zeile führt zum Abbruch vor jeder Änderung**, ebenso eine leere oder fehlende Liste, ein fehlender Prod-Code-Ordner
+oder ein fehlender Unterordner darin. Einträge, die es im Dev-Repo nicht (mehr) gibt, werden mitgeschrieben und im Log gezählt;
+`ignore-migrations.txt` bleibt unberührt.
+
+**Zwei Schutzprüfungen für den Prod-Code (beide vor jeder Änderung, auch im Trockenlauf):**
+
+1. **„Prod-DB auf Stand“:** Jede Migrationsdatei im Prod-Code-Ordner, die in **keiner** Prod-Liste steht, führt zum Abbruch mit der Meldung
+   `Prod-DB evtl. nicht auf Stand: <Dateien>`. Hintergrund: Liegt eine Migration schon im Prod-Code, ist aber noch nicht in der Prod-Datenbank,
+   würde Dev sie als eingespielt führen, obwohl sie im aus Prod kopierten Schema fehlt. Ausnahmen gelten nur für die Liste im Parameter
+   `-ProdListenAusnahmen`; Standard (und derzeit einziger Eintrag):
+   `drizzle/migrations/0001_lot_mrs_number_and_sequential_container_code.sql` (in der Prod-DB geprüft vorhanden, fehlt nur in der Prod-Liste).
+   Weitere Einträge nur nach Prüfung in der Prod-DB und nur im Skript-Standardwert ergänzen. Das Log nennt, welche Ausnahmen genutzt wurden.
+2. **Prod-Code-Ordner nicht leer:** In `drizzle/migrations` **und** `supabase/migrations` des Prod-Codes muss mindestens eine `.sql`-Datei
+   liegen, sonst Abbruch (falscher Pfad oder leerer Ordner).
+
+### Zuerst: Trockenlauf
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dev-db\dev-auffrischen-nacht.ps1 -Trockenlauf
+```
+
+(Die Pfade der Prod-Listen und des Prod-Codes sind als Standard eingetragen, siehe oben.)
+
+Prüft Container, Ports, PostgreSQL-Versionen und die Listen und zeigt: die **neue Dev-Liste (Anzahl, bisherige Anzahl)**, die aus dem
+Prod-Code ergänzten Dateien und die **Liste der Migrationen, die danach nachgespielt würden** (nur die, die ausschließlich im Dev-Repo liegen). Ändert nichts (auch nicht den Task). Erst wenn die Zahlen stimmen, einen Handlauf mit Rückfrage `JA` machen
+(gleicher Aufruf ohne `-Trockenlauf`), danach die Aufgabenplanung einrichten.
+
+Test gegen eine **Kopie** der Dev-DB: `-DevContainer <Name der Kopie>` (muss mit `supabase_db_` beginnen, darf nicht Prod sein und
+nicht am Prod-Port 54322 hängen). Dann werden Kopieren und Prüfung ausgeführt, aber **nicht** die echte Migrationsliste, `sync-db-dev.ps1`,
+die Testbenutzer und die Statusdatei angefasst.
+
+### Geplanten Task anlegen (nachts, nach dem Konfig-Snapshot)
+
+Mit höchsten Rechten, weil der Task „Dev-Web Update“ pausiert wird (`Disable-/Enable-ScheduledTask`). Der Konfig-Schnappschuss
+läuft z. B. um 02:00, das Auffrischen um 03:00:
+
+```powershell
+$aktion = New-ScheduledTaskAction -Execute "powershell.exe" -Argument `
+  '-NoProfile -ExecutionPolicy Bypass -File "C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox-dev\scripts\dev-db\dev-auffrischen-nacht.ps1" -OhneRueckfrage'
+$zeit = New-ScheduledTaskTrigger -Daily -At 03:00
+$recht = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -RunLevel Highest
+Register-ScheduledTask -TaskName "Dev-Auffrischen Nacht" -Action $aktion -Trigger $zeit -Principal $recht `
+  -Description "Dev-DB nachts aus Prod auffrischen (Prod nur lesend)"
+```
+
+Der Task-Benutzer braucht Docker-Zugriff und Schreibrechte auf `C:\CeramRox_Backups\dev` und `dev-state`. Ohne `-OhneRueckfrage`
+fragt das Skript nach `JA` (Handstart).
+
+### STOP-Dateien
+
+Zusätzlich bricht der Lauf ohne jede Änderung ab, wenn **`C:\Users\Daniel.Gass\Ceram_Rox\sync-db.STOP`** existiert (`-ProdStopDatei`): Dann ist Prod
+evtl. nicht auf Stand. Status und Log wie unten; der Status bleibt unverändert.
+
+Liegt eine Datei **`dev-auffrischen.STOP`** im Skriptordner (`scripts\dev-db\`) **oder** in `dev-state\`, bricht der Lauf sofort
+ohne jede Änderung ab (Eintrag im Log, Status „UEBERSPRUNGEN“). Zum Anhalten einfach die Datei anlegen (leere Datei genügt), zum
+Fortsetzen löschen. Sinnvoll, wenn in Dev gerade an etwas gearbeitet wird, das nicht überschrieben werden soll.
+
+### Status und Log
+
+- `dev-state\auffrischen-status.txt`: Datum, Ergebnis (`OK`, `Fehler`, `UEBERSPRUNGEN`), Anzahl eingespielter Dev-Migrationen, Meldung.
+- `dev-state\dev-auffrischen.log`: ausführliches Log (letzte ca. 2000 Zeilen), dort auch die Ausgabe von `sync-db-dev.ps1`.
+- Ist der Task „Dev-Web Update“ nach einem Lauf aus, steht im Log „BITTE VON HAND EINSCHALTEN“ (z. B. fehlende Rechte).
+
+### Hinweise
+
+- Das Repo auf dem Server (`C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox-dev`) muss aktuell sein; das übernimmt das Update-Skript alle 10 Minuten
+  (`git pull`). Das Auffrischen zieht selbst nichts nach.
+- Nach einem Fehler **nach** dem Kopieren hat Dev den Prod-Stand und die gesetzte Liste; das nächste reguläre `sync-db-dev.ps1`
+  spielt fehlende Dev-Migrationen nach.
+- Die Datei `testuser-dev.sql` (früher `tasks/023-testuser-dev.sql`) läuft nur mit `-v nur_dev=ja` und enthält ein erfundenes
+  Test-Passwort für Dev.
+- Bei der STOP-Datei bleibt `auffrischen-status.txt` unverändert (nur das Log bekommt einen Eintrag).
+- Das aufgerufene `sync-db-dev.ps1` legt bei anstehenden Dev-Migrationen weiterhin selbst eine Sicherung `dev_vor_migration_*.dump` an (die letzten 5 bleiben). Das ist unabhängig von der entfallenen Sicherung im Nachtlauf.

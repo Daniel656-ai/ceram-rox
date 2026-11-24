@@ -7,7 +7,7 @@
 -- Master: ein vorhandener Master-Benutzer der Dev-Datenbank (keinen neuen anlegen).
 --
 -- Ausführen (am Server, im DEV-Container, Name VOR dem Ausführen prüfen – darf NICHT die Produktion sein):
---   docker exec -i supabase_db_ceram-rox-dev psql -U postgres -d postgres -v nur_dev=ja -f - < tasks/023-testuser-dev.sql
+--   docker exec -i supabase_db_ceram-rox-dev psql -U postgres -d postgres -v nur_dev=ja -f - < scripts/dev-db/testuser-dev.sql
 -- Ohne  -v nur_dev=ja  bricht das Skript sofort ab. Mehrfach ausführbar (vorhandene Benutzer bleiben).
 -- Aufräumen: siehe Ende der Datei.
 
