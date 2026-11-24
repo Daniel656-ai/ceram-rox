@@ -30,7 +30,7 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Schweregrad:** hoch (veralteter Wert erscheint als offizielles Ergebnis)
 - **Test:** `src/test/officialResultsVerhalten.test.ts` › „liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt“ (`it.fails`; Gegenprobe: mit probeweiser Korrektur wird der Test rot)
 - **Issue:** #3
-- **Status:** behoben (Branch `fix/f1-rechenwert-fehlende-eingabe`)
+- **Status:** behoben (Branch `fix/f1-rechenwert-fehlende-eingabe`, Commit bac6b4f1)
 - **Behebung:** Fehlt eine Eingabe oder ist die Formel fehlerhaft, wird ein früher gespeicherter Wert des Rechenfelds verworfen (`officialResults.ts`). Das Rechenfeld liefert dann keinen Wert (leer), verknüpfte Formulare taten das schon. Test jetzt ein normaler Test, dazu 2 neue Tests und ein Absicherungstest für verknüpfte Formulare.
 
 ## F-2: Leere Textwerte uneinheitlich (`""` vs. `null`)
