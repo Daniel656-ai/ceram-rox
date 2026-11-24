@@ -4,7 +4,7 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 
 | Nr | Bereich | Kurzbeschreibung | Schweregrad | Test (Markierung) | Issue | Status |
 |---|---|---|---|---|---|---|
-| F-1 | Messungen/Ergebnisse | Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis (klassisches Formular) | hoch | `src/test/officialResultsVerhalten.test.ts` › „liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt“ (`it.fails`) | #3 | Issue angelegt |
+| F-1 | Messungen/Ergebnisse | Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis (klassisches Formular) | hoch | `src/test/officialResultsVerhalten.test.ts` › „liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt“ (normaler Test, vormals `it.fails`) | #3 | behoben (Branch fix/f1-rechenwert-fehlende-eingabe) |
 | F-2 | Messungen/Ergebnisse | Leere Textwerte uneinheitlich: Aggregation liefert `""`, Ergebnisstruktur `null` | niedrig | kein Test (Verhalten bewusst nicht festgeschrieben) | #4 | Issue angelegt |
 | F-3 | Formulare / Formel-Engine | `ROUND(feld, n)` liefert bei leerem Feld den Wert `n` statt leer | hoch | `src/test/formulaEngineVerhalten.test.ts` › „ROUND eines leeren Feldes bleibt leer …“ (`it.fails`) | #5 | Issue angelegt |
 | F-4 | Formulare / Formel-Engine | Feldwert nur aus Leerzeichen zählt als 0 statt als leer | niedrig | `src/test/formulaEngineVerhalten.test.ts` › „behandelt einen Feldwert nur aus Leerzeichen wie einen leeren Wert statt als 0“ (`it.fails`) | #6 | Issue angelegt |
@@ -30,7 +30,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Schweregrad:** hoch (veralteter Wert erscheint als offizielles Ergebnis)
 - **Test:** `src/test/officialResultsVerhalten.test.ts` › „liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt“ (`it.fails`; Gegenprobe: mit probeweiser Korrektur wird der Test rot)
 - **Issue:** #3
-- **Status:** Issue angelegt
+- **Status:** behoben (Branch `fix/f1-rechenwert-fehlende-eingabe`)
+- **Behebung:** Fehlt eine Eingabe oder ist die Formel fehlerhaft, wird ein früher gespeicherter Wert des Rechenfelds verworfen (`officialResults.ts`). Das Rechenfeld liefert dann keinen Wert (leer), verknüpfte Formulare taten das schon. Test jetzt ein normaler Test, dazu 2 neue Tests und ein Absicherungstest für verknüpfte Formulare.
 
 ## F-2: Leere Textwerte uneinheitlich (`""` vs. `null`)
 
