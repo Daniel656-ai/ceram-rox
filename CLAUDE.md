@@ -42,7 +42,7 @@
 
 # Konfig-Diff aus Gitea prüfen
 
-Der tägliche Konfigurations-Schnappschuss (`scripts/konfig-snapshot`) legt Änderungen an Prod-Formularen, Dienstleistungen, Workflows usw. als Commits in Gitea ab. Wird ein solcher Diff zur Prüfung vorgelegt:
+Der tägliche Konfigurations-Schnappschuss (`scripts/konfig-snapshot`, kommt mit Aufgabe 030) legt Änderungen an Prod-Formularen, Dienstleistungen, Workflows usw. als Commits in Gitea ab. Wird ein solcher Diff zur Prüfung vorgelegt:
 
 1. Den Diff gegen `docs/konfig-abhaengigkeiten.md` abgleichen: Welche geänderten, umbenannten oder gelöschten Schlüssel, Namen oder Strukturen kommen dort vor?
 2. Die betroffenen Stellen im Code nennen (Datei, Eintrag der Liste, erwartete Folge).

@@ -43,7 +43,7 @@ b8abe423 (2026-11-24). Es stehen **keine Messwerte und keine Kundendaten** in di
 - **Betroffen:** Messart „Aktivitätsmessung" (Formular mit Messblock oder flachen Feldern je Temperaturstufe).
 - **Schlüssel im Code:** Block `aktivitatsmessblock`, Unterblock `gas_einstellungen`, Katalysatorkennung `kat_nr`, `test_nr`, `temperatur_n`, `eta_nox`, `eta_nox_kopie`, `eta_nox_kopie_kopie`, `k_wert`, `k_wert_kopie`, Gase `<gas>_in_n` / `<gas>_out_n` (NO, NH3, NO2, N2O, CO, CO2), Altfelder `no`, `no_2`, `nh3_1`, `nh3_2`, `h2o`, `o2`, `co`. Erkennung über die **Struktur** (Muster), nicht über feste Nummern.
 - **Wenn umbenannt/gelöscht:** Das Muster greift evtl. nicht mehr. Dann landet der Wert unter „Weitere Angaben" (nichts geht verloren), oder eine Spalte/ein Bereich fehlt mit Hinweis. Wird der Feldname so geändert, dass kein Muster passt, ändert sich die Reihenfolge/Zuordnung zu Katalysator oder Temperaturstufe. Stille Abweichung möglich (Zahl landet in falscher Stufe).
-- **Bei Änderung:** `scripts/analyse/aktivitaet-varianten.sql` bzw. Feldnamen der neuen Version prüfen, Zuordnung in `activityMeasurement.ts` ergänzen, Test mit den echten Feldnamen anlegen.
+- **Bei Änderung:** Feldnamen der neuen Formularversion prüfen (das früher genannte Skript `scripts/analyse/aktivitaet-varianten.sql` liegt nicht mehr im Repo; die Feldnamen z. B. aus dem Konfig-Schnappschuss oder per Abfrage auf `form_fields` holen), Zuordnung in `activityMeasurement.ts` ergänzen, Test mit den echten Feldnamen anlegen.
 
 ### 2. BET (spezifische Oberfläche)
 
@@ -147,7 +147,7 @@ b8abe423 (2026-11-24). Es stehen **keine Messwerte und keine Kundendaten** in di
 
 ### 14. Sonstiges (kleine Abhängigkeiten)
 
-- **Projektkosten Knetung:** `src/pages/ProjectDetailPage.tsx` filtert Dienstleistungen, deren Name „knetung" enthält. Wird die Dienstleistung umbenannt, fehlt sie in der Auswertung. Risiko niedrig.
+- **Projektkosten Knetung:** `src/pages/ProjectDetailPage.tsx` filtert in einer Auswertung Dienstleistungen, deren Name „knetung" enthält (die Kosten selbst kommen aus `useProjectKnetungMaterials`, nicht vom Namen). Wird die Dienstleistung umbenannt, fehlt sie in dieser Auswertung. Risiko niedrig.
 - **Gefahrstoffe:** `src/lib/hazardClasses.ts` (feste Klassenliste), Empfänger über `hazard_notification_recipients`.
 - **Etiketten:** `label_templates` und Firmendaten (`company_settings`) werden gelesen. Etikettenvorlagen sind unabhängig vom Ergebnisschema.
 - **Prüfmittel, Arbeitsplätze, Kostenarten:** rein verwaltend, keine Auswirkung auf Ergebnisse.
