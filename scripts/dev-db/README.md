@@ -113,3 +113,85 @@ inkonsistent.
 
 `C:\Users\Daniel.Gass\Ceram_Rox\dev-state\sync-db-dev.log`; das Update-Log (`scripts\dev-web\update-dev-web.log`)
 enthält pro Lauf nur eine Zeile zum DB-Sync.
+
+## Nachtlauf: Dev aus Prod auffrischen (`dev-auffrischen-nacht.ps1`)
+
+Kopiert jede Nacht Schema `public` und die Benutzerkonten aus der Firmen-DB (Prod) nach Dev, setzt die Migrationsliste auf den
+Prod-Stand, spielt danach die reinen Dev-Migrationen ein (`sync-db-dev.ps1`) und legt die Testbenutzer neu an.
+Grundlage ist `dev-db-auffrischen.ps1` (Handlauf, unverändert abgelegt). **Prod wird nur gelesen** (`pg_dump`, `SELECT`;
+im Prod-Container liegt kurz `/tmp/devsync`, das am Ende gelöscht wird). Eine Sicherung der Dev-DB gibt es nicht mehr; vorhandene
+`dev-vorher-*.dump` werden nicht angefasst.
+
+Ablauf: STOP-Datei prüfen → Containernamen und Ports prüfen (Vertauschung = Abbruch), Prod-Listen einlesen → Task
+„Dev-Web Update“ pausieren → Prod nach Dev kopieren (eine Transaktion) → `applied-migrations.txt` auf den Prod-Stand setzen
+(Kopie der alten Liste als `applied-migrations.bak-<Datum>.txt`, die neuesten 7 bleiben) → `sync-db-dev.ps1` → Testbenutzer
+(`testuser-dev.sql`) → Status. Der Task „Dev-Web Update“ wird **immer** wieder eingeschaltet, auch bei einem Fehler.
+
+### Prod-Migrationslisten
+
+Das Skript braucht die zwei Listen, die der Prod-Abgleich (`sync-db.ps1` im Ceram-Repo) führt:
+`-ProdMigrationenDatei` (`applied-migrations.txt`, Supabase-Migrationen) und `-ProdDrizzleDatei` (`applied-drizzle-migrations.txt`).
+Erkannt werden diese Zeilenformate (Kommentarzeilen mit `#` und Leerzeilen werden übersprungen):
+
+| Liste | erkannte Zeilen |
+|---|---|
+| Supabase | `supabase/migrations/<14 Ziffern>_<name>.sql`, `<14 Ziffern>_<name>[.sql]`, nur `<14 Ziffern>` (Version, muss im Repo eindeutig sein) |
+| drizzle | `drizzle/migrations/<NNNN>_<name>.sql`, `<NNNN>_<name>[.sql]` |
+
+**Jede andere Zeile führt zum Abbruch vor jeder Änderung**, ebenso eine leere oder fehlende Liste. So kann ein unbekanntes Format
+die Dev-Liste nicht verfälschen. Das Ergebnis (Schlüssel wie `supabase/migrations/<datei>.sql` und `drizzle/migrations/<datei>.sql`)
+steht anschließend in `dev-state\applied-migrations.txt`. Einträge der Prod-Liste, die es im Repo nicht gibt (z. B. nur in Prod),
+werden mitgeschrieben und im Log gezählt; `ignore-migrations.txt` bleibt unberührt.
+
+### Zuerst: Trockenlauf
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dev-db\dev-auffrischen-nacht.ps1 -Trockenlauf `
+  -ProdMigrationenDatei "<Pfad>\applied-migrations.txt" -ProdDrizzleDatei "<Pfad>\applied-drizzle-migrations.txt"
+```
+
+Prüft Container, Ports, PostgreSQL-Versionen und beide Listen und zeigt den Plan samt den reinen Dev-Migrationen, die danach
+eingespielt würden. Ändert nichts (auch nicht den Task). Erst wenn die Zahlen stimmen, einen Handlauf mit Rückfrage `JA` machen
+(gleicher Aufruf ohne `-Trockenlauf`), danach die Aufgabenplanung einrichten.
+
+Test gegen eine **Kopie** der Dev-DB: `-DevContainer <Name der Kopie>` (muss mit `supabase_db_` beginnen, darf nicht Prod sein und
+nicht am Prod-Port 54322 hängen). Dann werden Kopieren und Prüfung ausgeführt, aber **nicht** die echte Migrationsliste, `sync-db-dev.ps1`,
+die Testbenutzer und die Statusdatei angefasst.
+
+### Geplanten Task anlegen (nachts, nach dem Konfig-Snapshot)
+
+Mit höchsten Rechten, weil der Task „Dev-Web Update“ pausiert wird (`Disable-/Enable-ScheduledTask`). Der Konfig-Schnappschuss
+läuft z. B. um 02:00, das Auffrischen um 03:00:
+
+```powershell
+$aktion = New-ScheduledTaskAction -Execute "powershell.exe" -Argument `
+  '-NoProfile -ExecutionPolicy Bypass -File "C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox-dev\scripts\dev-db\dev-auffrischen-nacht.ps1" -OhneRueckfrage -ProdMigrationenDatei "<Pfad>\applied-migrations.txt" -ProdDrizzleDatei "<Pfad>\applied-drizzle-migrations.txt"'
+$zeit = New-ScheduledTaskTrigger -Daily -At 03:00
+$recht = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -RunLevel Highest
+Register-ScheduledTask -TaskName "Dev-Auffrischen Nacht" -Action $aktion -Trigger $zeit -Principal $recht `
+  -Description "Dev-DB nachts aus Prod auffrischen (Prod nur lesend)"
+```
+
+Der Task-Benutzer braucht Docker-Zugriff und Schreibrechte auf `C:\CeramRox_Backups\dev` und `dev-state`. Ohne `-OhneRueckfrage`
+fragt das Skript nach `JA` (Handstart).
+
+### STOP-Datei
+
+Liegt eine Datei **`dev-auffrischen.STOP`** im Skriptordner (`scripts\dev-db\`) **oder** in `dev-state\`, bricht der Lauf sofort
+ohne jede Änderung ab (Eintrag im Log, Status „UEBERSPRUNGEN“). Zum Anhalten einfach die Datei anlegen (leere Datei genügt), zum
+Fortsetzen löschen. Sinnvoll, wenn in Dev gerade an etwas gearbeitet wird, das nicht überschrieben werden soll.
+
+### Status und Log
+
+- `dev-state\auffrischen-status.txt`: Datum, Ergebnis (`OK`, `Fehler`, `UEBERSPRUNGEN`), Anzahl eingespielter Dev-Migrationen, Meldung.
+- `dev-state\dev-auffrischen.log`: ausführliches Log (letzte ca. 2000 Zeilen), dort auch die Ausgabe von `sync-db-dev.ps1`.
+- Ist der Task „Dev-Web Update“ nach einem Lauf aus, steht im Log „BITTE VON HAND EINSCHALTEN“ (z. B. fehlende Rechte).
+
+### Hinweise
+
+- Das Repo auf dem Server (`C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox-dev`) muss aktuell sein; das übernimmt das Update-Skript alle 10 Minuten
+  (`git pull`). Das Auffrischen zieht selbst nichts nach.
+- Nach einem Fehler **nach** dem Kopieren hat Dev den Prod-Stand und die gesetzte Liste; das nächste reguläre `sync-db-dev.ps1`
+  spielt fehlende Dev-Migrationen nach.
+- Die Datei `testuser-dev.sql` (früher `tasks/023-testuser-dev.sql`) läuft nur mit `-v nur_dev=ja` und enthält ein erfundenes
+  Test-Passwort für Dev.

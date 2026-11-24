@@ -10,7 +10,7 @@ nicht passt, bitte die Meldung weitergeben – dann korrigiere ich es.
    `C:\Users\Daniel.Gass\Ceram_Rox\dev-state\sync-db-dev.log` müssen 0038 bis 0049 ohne Fehler stehen.
 2. Testbenutzer anlegen (Dev-Container, Name vorher prüfen):
    ```powershell
-   Get-Content tasks\023-testuser-dev.sql -Raw | docker exec -i supabase_db_ceram-rox-dev psql -U postgres -d postgres -v nur_dev=ja -f -
+   Get-Content scripts/dev-db/testuser-dev.sql -Raw | docker exec -i supabase_db_ceram-rox-dev psql -U postgres -d postgres -v nur_dev=ja -f -
    ```
    Ergebnis: `test-ersteller@example.test` (Auftraggeber) und `test-dienstleister@example.test` (Messdienstleister),
    Passwort für beide `Dev-Test-023!`. Der **Master** ist ein vorhandener Master-Benutzer der Dev-Datenbank.

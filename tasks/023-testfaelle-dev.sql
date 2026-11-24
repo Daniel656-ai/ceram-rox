@@ -1,6 +1,6 @@
 -- Aufgabe 023: Prüfung der Policies aus 0049 in der DEV-Datenbank (nur Dev; alles läuft in einer Transaktion und wird zurückgerollt).
 --
--- Voraussetzung: 0048/0049 sind in Dev eingespielt; Testbenutzer aus tasks/023-testuser-dev.sql sind angelegt;
+-- Voraussetzung: 0048/0049 sind in Dev eingespielt; Testbenutzer aus scripts/dev-db/testuser-dev.sql sind angelegt;
 -- ein BEGONNENER Auftrag, der dem Testbenutzer "Ersteller" gehört (siehe tasks/023-testanleitung.md, Schritt 2).
 --
 -- Aufruf (am Server, im DEV-Container):
