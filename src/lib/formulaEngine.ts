@@ -73,6 +73,9 @@ const FUNCTIONS: Record<string, FnImpl> = {
     return f.length % 2 ? f[m] : (f[m - 1] + f[m]) / 2;
   },
   ROUND: (a) => {
+    // Fehlt der zu rundende Wert selbst (leeres Feld), bleibt das Ergebnis leer.
+    // Sonst würde flat() ihn entfernen und die Stellenzahl als Wert gelten (F-3).
+    if (typeof a[0] === "number" && !Number.isFinite(a[0])) return NaN;
     const f = flat(a);
     const [x, n = 0] = f;
     const p = Math.pow(10, n);

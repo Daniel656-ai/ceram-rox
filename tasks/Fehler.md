@@ -6,7 +6,7 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 |---|---|---|---|---|---|---|
 | F-1 | Messungen/Ergebnisse | Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis (klassisches Formular) | hoch | `src/test/officialResultsVerhalten.test.ts` › „liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt“ (normaler Test, vormals `it.fails`) | #3 | behoben (Branch fix/f1-rechenwert-fehlende-eingabe) |
 | F-2 | Messungen/Ergebnisse | Leere Textwerte uneinheitlich: Aggregation liefert `""`, Ergebnisstruktur `null` | niedrig | kein Test (Verhalten bewusst nicht festgeschrieben) | #4 | Issue angelegt |
-| F-3 | Formulare / Formel-Engine | `ROUND(feld, n)` liefert bei leerem Feld den Wert `n` statt leer | hoch | `src/test/formulaEngineVerhalten.test.ts` › „ROUND eines leeren Feldes bleibt leer …“ (`it.fails`) | #5 | Issue angelegt |
+| F-3 | Formulare / Formel-Engine | `ROUND(feld, n)` liefert bei leerem Feld den Wert `n` statt leer | hoch | `src/test/formulaEngineVerhalten.test.ts` › „ROUND eines leeren Feldes bleibt leer …“ (normaler Test, vormals `it.fails`) | #5 | behoben (Branch fix/f3-fehler) |
 | F-4 | Formulare / Formel-Engine | Feldwert nur aus Leerzeichen zählt als 0 statt als leer | niedrig | `src/test/formulaEngineVerhalten.test.ts` › „behandelt einen Feldwert nur aus Leerzeichen wie einen leeren Wert statt als 0“ (`it.fails`) | #6 | Issue angelegt |
 | F-5 | Formulare / Formel-Engine | `ROUND(a, n)` mit leerem `n` rundet still auf eine ganze Zahl | mittel | `src/test/formulaEngineVerhalten.test.ts` › „ROUND mit leerer Stellenzahl meldet einen Fehler …“ (`it.fails`) | #7 | Issue angelegt |
 | F-6 | Formulare / Formel-Engine | `ROUND` rundet nicht wie Excel (negative Hälften, Gleitkomma) | mittel | `src/test/formulaEngineVerhalten.test.ts` › „ROUND rundet negative Hälften wie Excel …“, „ROUND rundet wie Excel ohne Gleitkomma-Abweichung …“ (2 × `it.fails`) | #8 | Issue angelegt |
@@ -61,7 +61,8 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Schweregrad:** hoch (falscher Zahlenwert statt leerem Ergebnis, betrifft jede Rundungsformel auf ein noch leeres Feld)
 - **Test:** `src/test/formulaEngineVerhalten.test.ts` › „ROUND eines leeren Feldes bleibt leer, statt die Nachkommastellen als Wert zu liefern“ (`it.fails`)
 - **Issue:** #5
-- **Status:** Issue angelegt
+- **Status:** behoben (Branch `fix/f3-fehler`, Commit 408bc64a)
+- **Behebung:** `ROUND` gibt bei leerem ersten Argument jetzt „unvollständig“ (leer) zurück, statt die Stellenzahl als Wert zu nehmen (`formulaEngine.ts`). Test ist jetzt ein normaler Test (zusätzlich `null` und `ROUND(a)`).
 
 ## F-4: Feldwert nur aus Leerzeichen zählt als 0 statt als leer
 
