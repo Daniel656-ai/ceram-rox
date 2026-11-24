@@ -34,3 +34,18 @@
 # Nicht nach Prod übertragen
 
 - Bei der späteren Übertragung nach Prod (Ceram-Repo) gehen `package-lock.json` und `.github/workflows/dev-web.yml` **nicht** mit. Beide gelten nur für dieses Dev-Repo: `package-lock.json` wird hier mit `npm install --package-lock-only` gepflegt (alle Paketadressen zeigen auf `registry.npmjs.org`) und lokal sowie im Dev-Web-Bau (`dev-web.yml`) per `npm ci` installiert.
+
+# Abhängigkeiten zwischen Code und Konfiguration
+
+- Die Liste `docs/konfig-abhaengigkeiten.md` nennt die Stellen im Code, die an Formularen, Feldschlüsseln, Dienstleistungsnamen, Workflows usw. hängen.
+- Wer Code ändert, der an bestimmten Konfigurationen hängt (Feldschlüssel, Formular- oder Dienstleistungsnamen, Auftragsarten, Formeln, Ergebnisnamen), aktualisiert `docs/konfig-abhaengigkeiten.md` **im selben Branch**. Neue Abhängigkeiten werden ergänzt, entfallene entfernt.
+
+# Konfig-Diff aus Gitea prüfen
+
+Der tägliche Konfigurations-Schnappschuss (`scripts/konfig-snapshot`) legt Änderungen an Prod-Formularen, Dienstleistungen, Workflows usw. als Commits in Gitea ab. Wird ein solcher Diff zur Prüfung vorgelegt:
+
+1. Den Diff gegen `docs/konfig-abhaengigkeiten.md` abgleichen: Welche geänderten, umbenannten oder gelöschten Schlüssel, Namen oder Strukturen kommen dort vor?
+2. Die betroffenen Stellen im Code nennen (Datei, Eintrag der Liste, erwartete Folge).
+3. Eine Anpassung vorschlagen (Code, Test, Eintrag in der Liste). Gibt es keine betroffene Stelle, das ausdrücklich sagen.
+4. **Nichts ohne mein ausdrückliches Ja umsetzen.** Nur berichten und vorschlagen, keine Änderung an Code, Konfiguration oder Datenbank.
+5. Strukturänderungen aus `schema.sql` zusätzlich mit den Migrationen abgleichen (Änderungen an Migrationen vorbei melden).
