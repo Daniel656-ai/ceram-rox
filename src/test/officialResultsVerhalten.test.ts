@@ -360,8 +360,8 @@ describe("Ergebniskandidaten eines klassischen Dienstleistungsformulars", () => 
     expect(calc.value).toBeUndefined();
   });
 
-  // Bekannter Fehler: tasks/Fehler.md#F-1 (Issue #3)
-  it.fails("liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt", () => {
+  // Fehler F-1 (Issue #3): tasks/Fehler.md#F-1
+  it("liefert einen gespeicherten Rechenwert nicht mehr als offizielles Ergebnis, wenn eine Eingabe fehlt", () => {
     const [, , calc] = buildServiceResultCandidates(
       [
         serviceField({ field_key: "a" }),
@@ -373,6 +373,42 @@ describe("Ergebniskandidaten eines klassischen Dienstleistungsformulars", () => 
     // Erwartet wie bei verknüpften Formularen: kein Wert bzw. kein offizielles Ergebnis.
     const giltAlsOffiziellesErgebnis = calc.official && calc.value != null;
     expect(giltAlsOffiziellesErgebnis).toBe(false);
+  });
+
+  it("F-1: fehlt eine Eingabe, hat das Rechenfeld keinen Wert und keine Fehlermeldung", () => {
+    const [, , calc] = buildServiceResultCandidates(
+      [
+        serviceField({ field_key: "a" }),
+        serviceField({ field_key: "b" }),
+        serviceField({ field_key: "produkt", field_type: "computed", is_result: true, validation: { formula: "a * b" } }),
+      ],
+      { a: 2, produkt: 99 },
+    );
+    expect(calc.kind).toBe("calculation");
+    expect(calc.value == null).toBe(true);
+  });
+
+  it("F-1: ein Rechenfeld, das auf ein anderes Rechenfeld baut, verliert den alten Wert, wenn die Eingabe fehlt", () => {
+    const kandidaten = buildServiceResultCandidates(
+      [
+        serviceField({ field_key: "a" }),
+        serviceField({ field_key: "b", field_type: "computed", validation: { formula: "a * 2" } }),
+        serviceField({ field_key: "c", field_type: "computed", is_result: true, validation: { formula: "b + 1" } }),
+      ],
+      { b: 50, c: 51 },
+    );
+    expect(kandidaten.find((c) => c.key === "b")?.value == null).toBe(true);
+    expect(kandidaten.find((c) => c.key === "c")?.value == null).toBe(true);
+  });
+
+  it("F-1: verknüpftes Formular – fehlt eine Eingabe, gilt der alte gespeicherte Rechenwert nicht", () => {
+    const kandidaten = buildLinkedFormResultCandidates(
+      FORM,
+      [formField({ field_key: "a" }), formField({ field_key: "b" })],
+      [formCalculation({ calc_key: "produkt", formula: "a * b", is_result: true })],
+      { [k("a")]: 2, [k("produkt")]: 99 },
+    );
+    expect(kandidaten.find((c) => c.key === k("produkt"))?.value == null).toBe(true);
   });
 
 });
