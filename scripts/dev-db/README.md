@@ -137,6 +137,7 @@ Standardpfade (per Parameter änderbar):
 | `-ProdDrizzleDatei` | `C:\Users\Daniel.Gass\Ceram_Rox\applied-drizzle-migrations.txt` | drizzle-Migrationen, Zeilen wie `0050_m3_delete_lovable_samples.sql` (ohne Ordner); erste Zeile ist ein `#`-Kommentar |
 | `-ProdCodeOrdner` | `C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox` | Prod-Code: `supabase/migrations` und `drizzle/migrations` |
 | `-ProdStopDatei` | `C:\Users\Daniel.Gass\Ceram_Rox\sync-db.STOP` | existiert sie, ist Prod evtl. nicht auf Stand: Abbruch ohne Änderung |
+| `-ProdListenAusnahmen` | `drizzle/migrations/0001_lot_mrs_number_and_sequential_container_code.sql` | Prod-Code-Dateien, die ausnahmsweise in keiner Prod-Liste stehen dürfen (siehe Schutzprüfung 1) |
 
 **Neue Dev-Liste** (`dev-state\applied-migrations.txt`) = Prod-Listen **plus** alle Migrationsdateien, die auch im Prod-Code-Ordner liegen.
 Leerzeilen und `#`-Zeilen werden ignoriert, doppelte Einträge entfernt und die Prod-Einträge ins Dev-Format umgesetzt
@@ -154,6 +155,17 @@ Erkannt werden außerdem diese Schreibweisen (Ordner optional, `.sql` optional):
 **Jede andere Zeile führt zum Abbruch vor jeder Änderung**, ebenso eine leere oder fehlende Liste, ein fehlender Prod-Code-Ordner
 oder ein fehlender Unterordner darin. Einträge, die es im Dev-Repo nicht (mehr) gibt, werden mitgeschrieben und im Log gezählt;
 `ignore-migrations.txt` bleibt unberührt.
+
+**Zwei Schutzprüfungen für den Prod-Code (beide vor jeder Änderung, auch im Trockenlauf):**
+
+1. **„Prod-DB auf Stand“:** Jede Migrationsdatei im Prod-Code-Ordner, die in **keiner** Prod-Liste steht, führt zum Abbruch mit der Meldung
+   `Prod-DB evtl. nicht auf Stand: <Dateien>`. Hintergrund: Liegt eine Migration schon im Prod-Code, ist aber noch nicht in der Prod-Datenbank,
+   würde Dev sie als eingespielt führen, obwohl sie im aus Prod kopierten Schema fehlt. Ausnahmen gelten nur für die Liste im Parameter
+   `-ProdListenAusnahmen`; Standard (und derzeit einziger Eintrag):
+   `drizzle/migrations/0001_lot_mrs_number_and_sequential_container_code.sql` (in der Prod-DB geprüft vorhanden, fehlt nur in der Prod-Liste).
+   Weitere Einträge nur nach Prüfung in der Prod-DB und nur im Skript-Standardwert ergänzen. Das Log nennt, welche Ausnahmen genutzt wurden.
+2. **Prod-Code-Ordner nicht leer:** In `drizzle/migrations` **und** `supabase/migrations` des Prod-Codes muss mindestens eine `.sql`-Datei
+   liegen, sonst Abbruch (falscher Pfad oder leerer Ordner).
 
 ### Zuerst: Trockenlauf
 

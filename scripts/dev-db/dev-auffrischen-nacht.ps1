@@ -4,6 +4,7 @@
 #
 # Ablauf:
 #   1. Abbruch ohne Aenderung, wenn "dev-auffrischen.STOP" (Skriptordner oder dev-state) oder sync-db.STOP (Prod-Ordner) existiert.
+#      Weitere Abbrueche vor jeder Aenderung: Prod-Code enthaelt Migrationen, die in keiner Prod-Liste stehen (Ausnahmen: -ProdListenAusnahmen); leerer Prod-Code-Ordner.
 #   2. Task "Dev-Web Update" pausieren; am Ende IMMER wieder einschalten (auch bei Fehler).
 #   3. (entfaellt: keine Sicherung der Dev-DB mehr; vorhandene dev-vorher-*.dump bleiben unberuehrt)
 #   4. Prod -> Dev kopieren. Prod wird NUR GELESEN (pg_dump, SELECT). Container fest geprueft, bei Vertauschung Abbruch.
@@ -29,6 +30,9 @@ param(
     [string]$ProdDrizzleDatei     = "C:\Users\Daniel.Gass\Ceram_Rox\applied-drizzle-migrations.txt",  # Prod: drizzle-Migrationen (NNNN_name.sql, ohne Ordner)
     [string]$ProdCodeOrdner       = "C:\Users\Daniel.Gass\Ceram_Rox\ceram-rox",                       # Prod-Code (drizzle/migrations, supabase/migrations)
     [string]$ProdStopDatei        = "C:\Users\Daniel.Gass\Ceram_Rox\sync-db.STOP",                    # existiert sie, ist Prod evtl. nicht auf Stand: Abbruch
+    # Ausnahmen der Pruefung "Prod-DB auf Stand": Migrationsdateien im Prod-Code, die in KEINER Prod-Liste stehen duerfen.
+    # Derzeit nur 0001 (in der Prod-DB geprueft vorhanden, fehlt nur in der Prod-Liste, Seed vom 09.10.). Weitere nur nach Pruefung in der Prod-DB!
+    [string[]]$ProdListenAusnahmen = @("drizzle/migrations/0001_lot_mrs_number_and_sequential_container_code.sql"),
     [string]$DevContainer         = "supabase_db_ceram-rox-dev",   # nur zum Testen gegen eine Kopie aendern (siehe README)
     [string]$StateDir             = "C:\Users\Daniel.Gass\Ceram_Rox\dev-state",
     [string]$TaskName             = "Dev-Web Update"
@@ -130,7 +134,9 @@ function Get-CodeKeys([string]$Root) {
     foreach ($rel in @("supabase/migrations", "drizzle/migrations")) {
         $dir = Join-Path $Root ($rel -replace "/", "\")
         if (-not (Test-Path -LiteralPath $dir)) { Stop-Lauf "Im Prod-Code fehlt der Ordner $rel ($Root)" }
-        $keys += @(Get-ChildItem -LiteralPath $dir -Filter "*.sql" -File | ForEach-Object { "$rel/$($_.Name)" })
+        $dateien = @(Get-ChildItem -LiteralPath $dir -Filter "*.sql" -File | ForEach-Object { "$rel/$($_.Name)" })
+        if ($dateien.Count -eq 0) { Stop-Lauf "Im Prod-Code liegt keine .sql-Datei in $rel ($Root) - Ordner leer oder falscher Pfad." }
+        $keys += $dateien
     }
     return $keys
 }
@@ -307,6 +313,13 @@ function Invoke-Hauptablauf {
     $nurDev       = @($repoKeys | Where-Object { ($neueListe -notcontains $_) -and ($ignored -notcontains $_) })
     $nurProd      = @($neueListe | Where-Object { $repoKeys -notcontains $_ })
     $nurCode      = @($codeKeys | Where-Object { $prodAlle -notcontains $_ })
+    # Pruefung "Prod-DB auf Stand": Jede Migrationsdatei im Prod-Code muss in einer Prod-Liste stehen (Ausnahmen: -ProdListenAusnahmen).
+    # Sonst wurde sie evtl. noch nicht in die Prod-DB eingespielt; Dev wuerde sie als eingespielt fuehren, obwohl sie im kopierten Schema fehlt.
+    $nichtAufStand = @($nurCode | Where-Object { $ProdListenAusnahmen -notcontains $_ })
+    if ($nichtAufStand.Count -gt 0) { Stop-Lauf "Prod-DB evtl. nicht auf Stand: $($nichtAufStand -join ', ')" }
+    $ausnahmenGenutzt = @($nurCode | Where-Object { $ProdListenAusnahmen -contains $_ })
+    Write-Log ("Pruefung 'Prod-DB auf Stand': OK. Alle {0} Prod-Code-Migrationen stehen in den Prod-Listen; Ausnahmen genutzt: {1} von {2} ({3})." -f `
+        ($codeKeys.Count - $ausnahmenGenutzt.Count), $ausnahmenGenutzt.Count, $ProdListenAusnahmen.Count, ($ausnahmenGenutzt -join ', '))
     Write-Log ("Prod-Listen: {0} Supabase- und {1} drizzle-Migrationen. Prod-Code: {2} Dateien, davon {3} nicht in den Listen (werden ergaenzt). Neue Dev-Liste: {4}. Im Dev-Repo: {5}, davon nur in Dev: {6}. In Prod-Liste/-Code, aber nicht im Dev-Repo: {7}." -f `
         $prodSupabase.Count, $prodDrizzle.Count, $codeKeys.Count, $nurCode.Count, $neueListe.Count, $repoKeys.Count, $nurDev.Count, $nurProd.Count)
     foreach ($k in $nurCode) { Write-Log "  ergaenzt aus Prod-Code (nicht in den Prod-Listen): $k" }
@@ -324,6 +337,7 @@ function Invoke-Hauptablauf {
         Write-Log "TROCKENLAUF - es wuerde passieren:"
         Write-Log "  1. Task '$TaskName' pausieren (am Ende wieder einschalten)"
         Write-Log "  2. Schema public + Benutzerkonten aus $Prod nach $DevContainer kopieren (Prod nur lesend)"
+        Write-Log "     Pruefung Prod-DB auf Stand: bestanden (siehe oben; Ausnahmen: $($ProdListenAusnahmen -join ', '))"
         if ($IstStandardDev) {
             Write-Log "  3. $AppliedFile (Kopie der alten Liste) neu setzen: $($neueListe.Count) Eintraege (Prod-Listen + Prod-Code), bisher $(@(Read-List $AppliedFile).Count)"
             Write-Log "  4. sync-db-dev.ps1: $($nurDev.Count) reine Dev-Migrationen einspielen:"
