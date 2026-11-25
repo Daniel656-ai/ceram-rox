@@ -180,7 +180,7 @@ function OtherFields({ fields }: { fields: ActivityField[] }) {
 }
 
 /**
- * Einheitliche Darstellung der Aktivitätsmessung (Regel: tasks/gestaltungsregeln.md, Abschnitt „Aktivitätsmessung“).
+ * Einheitliche Darstellung der Aktivitätsmessung (Regel: docs/gestaltungsregeln.md, Abschnitt „Aktivitätsmessung“).
  * Kopf: Probe (Bezeichnung groß, Nummer klein); „Katalysator …“ nur bei echter Katalysatornummer, die nicht der
  * Probenbezeichnung entspricht.
  */

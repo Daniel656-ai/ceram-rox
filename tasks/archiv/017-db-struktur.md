@@ -7,7 +7,7 @@ Kein Zugriff auf Ceram-Repo, Lovable oder Prod; alle Aussagen stammen aus dem De
 
 - **180 Tabellen** im Schema `public` (laut `src/integrations/supabase/types.ts`); 173 davon werden in den Migrationen angelegt (`supabase/migrations`: 206 Dateien, `drizzle/migrations`: 49 Dateien).
 - **Code-Analyse** (`.from("tabelle")`, Namensnennung in `src/`, `supabase/functions/`, `scripts/` und in SQL-Funktionen/Triggern der Migrationen) ist **statisch** (Text-Suche). Dynamisch zusammengesetzte Tabellennamen würden nicht erkannt; die Angaben „ungenutzt“ sind deshalb Hinweise, keine Beweise.
-- **Echte Zeilenzahlen, Größen und „leer/nicht benutzt“** liefert erst die Abfrage `tasks/017-tabellen.sql` (nur SELECT, eine Abfrage). Bitte im Dev-Studio ausführen und das Ergebnis als `tasks/017-tabellen.csv` ablegen; dann ergänze ich Abschnitt 3 mit Zahlen.
+- **Echte Zeilenzahlen, Größen und „leer/nicht benutzt“** liefert erst die Abfrage `tasks/archiv/017-tabellen.sql` (nur SELECT, eine Abfrage). Bitte im Dev-Studio ausführen und das Ergebnis als `tasks/017-tabellen.csv` ablegen; dann ergänze ich Abschnitt 3 mit Zahlen.
 - Die Aufteilung unten ist meine fachliche Gruppierung nach Tabellennamen und Fremdschlüsseln.
 
 ## 1. Übersicht in Gruppen

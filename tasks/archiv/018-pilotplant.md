@@ -1,7 +1,7 @@
 # Aufgabe 018: Bereich „Pilot Plant & Prototyping“ – Bestandsaufnahme (Schritt 1, nur Analyse)
 
 Stand: 20.11.2026. **Nichts geändert** (keine Tabelle gelöscht, keine Daten, keine Rechte, kein Code). Nur Dev-Repo.
-Die **Zahlen aus der Dev-Datenbank** (`tasks/018-pilotplant-sql-ergebnis.txt`, Abfrage `tasks/018-pilotplant.sql`) sind in **Abschnitt 3a** eingearbeitet; sie verändern die Empfehlung deutlich. Alle anderen Aussagen stammen aus dem Code.
+Die **Zahlen aus der Dev-Datenbank** (`tasks/archiv/018-pilotplant-sql-ergebnis.txt`, Abfrage `tasks/archiv/018-pilotplant.sql`) sind in **Abschnitt 3a** eingearbeitet; sie verändern die Empfehlung deutlich. Alle anderen Aussagen stammen aus dem Code.
 **Wichtig:** Die Zahlen gelten für die **Dev-Datenbank**. Ob es in der Produktion genauso aussieht, ist **nicht geprüft** (kein Zugriff) – vor jeder Entfernung muss das dort gesondert festgestellt werden.
 
 Hinweis zum Namen: „**Prototyping**“ kommt im Code **nirgends** vor. Der Bereich heißt in der Oberfläche „**Pilot Plant**“ bzw. „**Technikum**“ (beide Wörter werden gemischt benutzt).
@@ -146,7 +146,7 @@ Keine Tabelle wird gelöscht, keine Daten werden verändert, keine Rechte angefa
 | 8 | **Arbeitsablauf-Vorlagen** (`workflow_templates`, `pp_standard`/`pp_support`, `origin`) prüfen: im Beispielauftrag ist `origin` leer; vermutlich nicht im Betrieb. | eine Vorlagenart statt dreien | mittel–groß | mittel |
 
 **Empfohlene Reihenfolge:** 3, 4, 5 (sofort, risikoarm, teils nur Pflege) → 1 → 2 → Entscheidung zu 7 → danach 6 und 8.
-Schritt 6 (Entfernen) nur, wenn für die **Produktion** dieselben Zahlen gelten (Abfrage `tasks/018-pilotplant.sql` dort von dir ausführen lassen – ich habe keinen Zugriff).
+Schritt 6 (Entfernen) nur, wenn für die **Produktion** dieselben Zahlen gelten (Abfrage `tasks/archiv/018-pilotplant.sql` dort von dir ausführen lassen – ich habe keinen Zugriff).
 
 ## 6. Offene Fragen an dich
 1. **Werden die alten Bausteine in der Produktion benutzt?** In der Dev-DB nie (0 ausgefüllt, 0 Proben, 0 Zeit). Bitte die Abfrage auch dort laufen lassen oder bestätigen.
@@ -172,7 +172,7 @@ Annahmen: alte 9 Bausteine ungenutzt · neuer Prozess-Ablauf für Pilot Plant ni
 Keine Tabelle gelöscht, keine Daten geändert, keine Rechte/RLS, keine Migration.
 
 ### Doppelte Messarten in der Kategorie Pilot Plant (zur Entscheidung im Admin)
-Aus `tasks/018-pilotplant-sql-ergebnis.txt` (Dev-DB). Im Admin → Messdienstleistungen findest du sie unter „Pilot Plant“; mit dem Schalter „aktiv“ lässt sich eine ausblenden (nicht löschen – an vielen hängen Messungen).
+Aus `tasks/archiv/018-pilotplant-sql-ergebnis.txt` (Dev-DB). Im Admin → Messdienstleistungen findest du sie unter „Pilot Plant“; mit dem Schalter „aktiv“ lässt sich eine ausblenden (nicht löschen – an vielen hängen Messungen).
 
 | Name | Zeilen | Messart-ID (Anfang) | Standarddauer | Hinweis |
 |---|---|---|---|---|

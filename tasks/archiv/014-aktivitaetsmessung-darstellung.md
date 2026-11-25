@@ -1,7 +1,7 @@
 # Aufgabe 014: Darstellung der Aktivitätsmessung in der Ergebnisdatenbank
 
 Stand: **Analyse mit echten Daten (Probe P260305, FG26_0330, Auftrag FG-260016), nichts umgesetzt.**
-Grundlage: `tasks/tasks014-q3.csv` (alle Werte) und `tasks/tasks014-q3-block.csv` (vollständiger Aktivitätsmessblock).
+Grundlage: `tasks014-q3.csv (Export, inzwischen gelöscht)` (alle Werte) und `tasks014-q3-block.csv (Export, inzwischen gelöscht)` (vollständiger Aktivitätsmessblock).
 Entschieden: K-Wert-Einheit „Nm/h“ (wie F1-Blatt) · N₂ in = Text „Rest“ · Formulare nur prüfen und melden, nicht ändern.
 
 ## 1. So sind die Daten wirklich gespeichert
@@ -31,7 +31,7 @@ Plausibilitätsprüfung: η NOx 22,4 % = (199,8 − 155) / 199,8 ✔; K-Wert 10,
 - **Bedeutung:** „NO in“ in Block 1 ist der **Sollwert der Anlage** (200 ppm); die tatsächlich **gemessenen** NO in/out je Temperatur stehen in Block 2 (199,8 / 155 …). Das sind zwei verschiedene Dinge, beides wird gezeigt.
 
 **Frage 4 – Gilt das für alle Aktivitätsmessungen?**
-Sicher gesagt: nur für diese eine Messung (Formular `a8bdb319-…`). Ob ältere Messungen andere Schlüssel haben, sehe ich erst mit den SQL-Abfragen 4 und 8 (`tasks/014-pruefung.sql`).
+Sicher gesagt: nur für diese eine Messung (Formular `a8bdb319-…`). Ob ältere Messungen andere Schlüssel haben, sehe ich erst mit den SQL-Abfragen 4 und 8 (`tasks/archiv/014-pruefung.sql`).
 Deshalb: Die Erkennung läuft **nicht über den Messartnamen**, sondern über die **Struktur**: ein Block-Eintrag mit Liste `gas_einstellungen` und einer Liste mit `temperatur…`-Zeilen. Passt die Struktur nicht → heutige Darstellung. Schlüssel werden **nach Muster** erkannt (`<gas>[_anzeige]_(in|out)[_n]`, `temperatur…`, `eta_nox`, `k_wert…`, `*_anlage`), nicht über feste Namen wie `temperatur_11` (die Zahl ist je Formular verschieden).
 
 ## 3. Befunde zur heutigen Anzeige (an echten Daten bestätigt)
@@ -91,4 +91,4 @@ Festlegungen:
 
 ## Nachtrag (20.11.2026)
 - Umgesetzt und gemergt (`improve/aktivitaet-einheitlich`); Regel in `docs/gestaltungsregeln.md`, Abschnitt „Aktivitätsmessung“.
-- Die Prüfung aller Aktivitätsmessungen (`tasks/014-alle-messungen.sql` / `.csv`) wurde **verworfen** – nicht mehr nötig.
+- Die Prüfung aller Aktivitätsmessungen (`tasks/archiv/014-alle-messungen.sql` / `.csv`) wurde **verworfen** – nicht mehr nötig.

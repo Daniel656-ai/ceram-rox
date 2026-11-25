@@ -24,7 +24,7 @@ const fl = (key: string, label: string, value: number | string | null, unit: str
   });
 const block = () => res({ result_name: "form:f:aktivitatsmessblock", display_label: "Aktivitätsmessblock", remarks: ACTIVITY_BLOCK_JSON });
 
-/* Varianten nach den echten Feldnamen aus tasks/014-varianten.csv */
+/* Varianten nach den echten Feldnamen aus dem Export tasks014-varianten.csv (inzwischen gelöscht; Feldnamen siehe tasks/archiv/014-aktivitaetsmessung-darstellung.md) */
 
 describe("Variante B: flach je Temperaturstufe (FG-260011)", () => {
   const results = [
