@@ -147,7 +147,7 @@ export function activityExportRows(view: ActivityView, sample?: { number?: strin
       rows.push([
         activityCell(r.temperature), activityCell(r.eta), activityCell(r.k),
         ...cat.gasColumns.flatMap((g) => [activityCell(r.gases[g]?.in ?? null), activityCell(r.gases[g]?.out ?? null)]),
-        text(status),
+        text(r.temperatureTarget != null ? `${status} · Vorgabe ${String(r.temperatureTarget)} °C weicht ab` : status),
       ]);
     }
     rows.push([]);
