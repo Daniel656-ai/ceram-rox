@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, configure } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
+
+// F-13: Die Seite ist schwer. Unter Last (parallele Testdateien) brauchte der Aufbau länger als die Standard-Wartezeit von
+// findBy/waitFor (1 s) – die Tests der Gruppe „3c“ waren dadurch zufällig rot. Der Test selbst hat 20 s (vitest.config.ts).
+configure({ asyncUtilTimeout: 10000 });
 
 /**
  * Rauchtest der Seite „Auftrag erstellen“ im Bearbeiten-Modus (/auftraege/<id>/bearbeiten):
@@ -361,10 +365,19 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
     });
   };
 
+  // F-13: Die Überschrift erscheint, bevor die Seite fertig aufgebaut ist (Formularwerte, Dienstleistungen, Sperren werden
+  // nachgeladen). Ein sofortiger Klick ging unter Last verloren bzw. wurde überschrieben. Daher auf den echten Bereit-Zustand warten.
+  const tickReady = async (opts: { touchedBet?: boolean } = {}) => {
+    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    await waitFor(() => expect(screen.getByTestId("tick-values").textContent).toBe('["rfa","bet"]'));
+    if (opts.touchedBet) await waitFor(() => expect(screen.getByTestId("locked-keys").textContent).toBe("dienstleistungen"));
+    else await screen.findByLabelText("Dienstleistung BET entfernen");
+  };
+
   it("3c: Häkchen entfernen -> Dienstleistung zum Entfernen vorgemerkt (mit Begründung), Formularwert und Entfernen gehen gemeinsam", async () => {
     tickSetup();
     mount();
-    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    await tickReady();
     expect(screen.getByTestId("locked-keys").textContent).toBe("");
     fireEvent.click(screen.getByText("Häkchen BET entfernen"));
     expect(await screen.findByText("Dienstleistung(en) entfernt: BET (1 Aufgabe)")).toBeTruthy();
@@ -381,7 +394,7 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
   it("3c: Entfernen über die Liste nimmt das Häkchen heraus, Rückgängig bringt es zurück", async () => {
     tickSetup();
     mount();
-    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    await tickReady();
     fireEvent.click(screen.getByLabelText("Dienstleistung BET entfernen"));
     await waitFor(() => expect(screen.getByTestId("tick-values").textContent).toBe('["rfa"]'));
     fireEvent.click(screen.getByLabelText("Entfernen von BET rückgängig"));
@@ -392,7 +405,7 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
   it("3c: Häkchen wieder setzen nimmt das vorgemerkte Entfernen zurück", async () => {
     tickSetup();
     mount();
-    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    await tickReady();
     fireEvent.click(screen.getByText("Häkchen BET entfernen"));
     await screen.findByRole("alert");
     fireEvent.click(screen.getByText("Häkchen BET setzen"));
@@ -403,7 +416,7 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
   it("3c: Häkchen setzen -> neue Dienstleistung (wie 3b), Gleichlauf in der Karte; Speichern legt je Probe eine Aufgabe an", async () => {
     tickSetup();
     mount();
-    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    await tickReady();
     fireEvent.click(screen.getByText("Häkchen DSC setzen"));
     expect(await screen.findByText("Dienstleistung(en) hinzugefügt: DSC (je Probe eine Aufgabe, 2 Proben)")).toBeTruthy();
     fireEvent.click(screen.getByText("Änderungen speichern"));
@@ -417,7 +430,7 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
   it("3c: Dienstleistung über die Karte hinzufügen setzt das passende Häkchen", async () => {
     tickSetup();
     mount();
-    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    await tickReady();
     fireEvent.click(screen.getAllByRole("combobox").find((el) => /select_service/.test(el.textContent ?? ""))!);
     fireEvent.click(await screen.findByText("DSC"));
     await waitFor(() => expect(screen.getByTestId("tick-values2").textContent).toBe('["dsc"]'));
@@ -426,7 +439,7 @@ describe("Seite „Auftrag erstellen“ im Bearbeiten-Modus", () => {
   it("3c: begonnene Dienstleistung sperrt ihre ganze Gruppe mit Hinweis; andere Gruppen bleiben frei", async () => {
     tickSetup({ touchedBet: true });
     mount();
-    await screen.findByText("Auftrag MWI260003 bearbeiten");
+    await tickReady({ touchedBet: true });
     expect(screen.getByTestId("locked-keys").textContent).toBe("dienstleistungen");
     expect(screen.getByRole("note").textContent).toMatch(/Gesperrt: Dienstleistungen – bereits in Bearbeitung/);
     expect(screen.getByRole("note").textContent).toMatch(/Dienstleistungen hinzufügen/);
