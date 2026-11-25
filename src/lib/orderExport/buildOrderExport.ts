@@ -14,8 +14,8 @@ import { formatResultLabel } from "@/lib/resultLabels";
 import { toUnicode } from "@/lib/richText";
 import { formatElementKey } from "@/lib/elementKeys";
 import {
-  ACTIVITY_GAS_UNIT,
   catalystHeading,
+  gasUnitOf,
   extractActivity,
   hasConditions,
   type ActivityValue,
@@ -123,10 +123,12 @@ export function activityExportRows(view: ActivityView, sample?: { number?: strin
     const c = cat.conditions;
     if (hasConditions(c)) {
       rows.push([
-        text("AV [m/h]"), text("FR [Nm³/h]"), text("NO in [ppm]"), text(`${formatElementKey("NH3")} in [ppm]`),
-        text(`${formatElementKey("H2O")} in [%]`), text(`${formatElementKey("O2")} in [%]`), text(`${formatElementKey("N2")} in`),
+        text("AV [m/h]"), ...(c.sv !== null ? [text("SV [h⁻¹]")] : []), text("FR [Nm³/h]"), text("NO in [ppm]"), text(`${formatElementKey("NH3")} in [ppm]`),
+        text(`${formatElementKey("H2O")} in [%]`), text(`${formatElementKey("O2")} in [%]`),
+        ...c.extra.map((e) => text(`${formatElementKey(e.compound)} in [${e.unit}]`)),
+        text(`${formatElementKey("N2")} in`),
       ]);
-      rows.push([c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].map(activityCell).concat([text("Rest")]));
+      rows.push([c.av, ...(c.sv !== null ? [c.sv] : []), c.fr, c.no, c.nh3, c.h2o, c.o2, ...c.extra.map((e) => e.value)].map(activityCell).concat([text("Rest")]));
     } else rows.push([text("keine Messbedingungen erfasst")]);
     rows.push([]);
     rows.push([text("Ergebnisse je Temperatur")]);
@@ -138,8 +140,8 @@ export function activityExportRows(view: ActivityView, sample?: { number?: strin
     rows.push([
       text("Temperatur [°C]"), text("η NOx [%]"), text("K-Wert [Nm/h]"),
       ...cat.gasColumns.flatMap((g) => [
-        text(`${formatElementKey(g)} in [${ACTIVITY_GAS_UNIT[g]}]`),
-        text(`${formatElementKey(g)} out [${ACTIVITY_GAS_UNIT[g]}]`),
+        text(`${formatElementKey(g)} in [${gasUnitOf(cat, g)}]`),
+        text(`${formatElementKey(g)} out [${gasUnitOf(cat, g)}]`),
       ]),
       text("Status"),
     ]);

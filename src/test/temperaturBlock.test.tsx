@@ -197,3 +197,20 @@ describe("Sperre: Messwerte je Stufe vorhanden?", () => {
     expect(hasStepMeasurementValues(undefined)).toBe(false);
   });
 });
+
+describe("Temperaturliste außerhalb der Aktivitätsansicht", () => {
+  it("Überschrift „Temperatur“ statt „Temperatur 13“, Einträge 1–3", async () => {
+    const { expandStructuredResult } = await import("@/lib/results/internalResults");
+    const c = container(DGA);
+    const rows = expandStructuredResult(c, [c])!.rows;
+    expect(rows.map((r) => r.display_label)).toEqual(["Temperatur", "Temperatur", "Temperatur"]);
+    expect(rows.map((r) => r.value)).toEqual([200, 300, 400]);
+  });
+
+  it("mit Aktivitätsansicht: weder Liste noch Zeilenergebnisse bleiben als eigener Kasten übrig", () => {
+    const all = [container(DGA), row(1, 200), row(2, 300), row(3, 400), flat("temperatur_1", 200), flat("eta_nox", 10)];
+    const { view, rest } = extractActivity(all, SERVICE);
+    expect(view).not.toBeNull();
+    expect(rest).toEqual([]);
+  });
+});

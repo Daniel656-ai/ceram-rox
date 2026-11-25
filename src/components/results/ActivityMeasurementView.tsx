@@ -3,8 +3,8 @@ import SampleLabel from "@/components/results/SampleLabel";
 import { formatElementKey } from "@/lib/elementKeys";
 import { toUnicode } from "@/lib/richText";
 import {
-  ACTIVITY_GAS_UNIT,
   catalystHeading,
+  gasUnitOf,
   hasConditions,
   type ActivityCatalyst,
   type ActivityField,
@@ -74,18 +74,25 @@ function CatalystBlock({ cat, official, heading }: { cat: ActivityCatalyst; offi
               <thead className="bg-muted/50">
                 <tr>
                   <Head label="AV" unit="m/h" />
+                  {c.sv !== null && <Head label="SV" unit="h^{-1}" />}
                   <Head label="FR" unit="Nm^{3}/h" />
                   <Head label="NO in" unit="ppm" />
                   <Head label={`${gasName("NH3")} in`} unit="ppm" />
                   <Head label={`${formatElementKey("H2O")} in`} unit="%" />
                   <Head label={`${formatElementKey("O2")} in`} unit="%" />
+                  {c.extra.map((e) => (
+                    <Head key={e.compound} label={`${formatElementKey(e.compound)} in`} unit={e.unit} />
+                  ))}
                   <Head label={`${formatElementKey("N2")} in`} />
                 </tr>
               </thead>
               <tbody>
                 <tr className={`border-t font-mono ${tone}`}>
-                  {[c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].map((v, i) => (
+                  {[c.av, ...(c.sv !== null ? [c.sv] : []), c.fr, c.no, c.nh3, c.h2o, c.o2].map((v, i) => (
                     <td key={i} className="whitespace-nowrap p-2 text-right">{fmt(v)}</td>
+                  ))}
+                  {c.extra.map((e) => (
+                    <td key={e.compound} className="whitespace-nowrap p-2 text-right">{fmt(e.value)}</td>
                   ))}
                   <td className="whitespace-nowrap p-2 text-right font-sans">Rest</td>
                 </tr>
@@ -109,7 +116,7 @@ function CatalystBlock({ cat, official, heading }: { cat: ActivityCatalyst; offi
                   {cat.gasColumns.map((g) => (
                     <th key={g} className="whitespace-nowrap p-2 text-right font-medium">
                       <div>{gasName(g)}</div>
-                      <div className="text-[11px] font-normal text-muted-foreground">in / out [{ACTIVITY_GAS_UNIT[g]}]</div>
+                      <div className="text-[11px] font-normal text-muted-foreground">in / out [{gasUnitOf(cat, g)}]</div>
                     </th>
                   ))}
                 </tr>
