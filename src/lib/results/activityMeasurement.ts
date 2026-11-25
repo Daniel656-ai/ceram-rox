@@ -2,6 +2,7 @@ import { formatGasInOut, parseGasInOut } from "@/lib/elementKeys";
 import { cleanUnmappableMarkup, toUnicode } from "@/lib/richText";
 import { humanizeKey, parseStructuredText } from "@/lib/results/structuredValues";
 import type { SampleResultValue } from "@/lib/results/sampleResultsAggregation";
+import { parseTemperatureList, stepOfInstance, temperatureOf, temperatureRowInstance } from "@/lib/results/temperatureBlock";
 
 /**
  * Aktivitätsmessung (NOx): EINE Darstellung für alle Formularbefüllungen (siehe tasks/014).
@@ -37,6 +38,8 @@ export interface ActivityConditions {
 }
 export interface ActivityRow {
   temperature: ActivityValue;
+  /** Vorgabe laut Auftrag (Temperaturblock), nur gesetzt, wenn sie vom gemessenen `temperature` abweicht. */
+  temperatureTarget?: ActivityValue;
   eta: ActivityValue;
   k: ActivityValue;
   gases: Partial<Record<ActivityGas, { in: ActivityValue; out: ActivityValue }>>;
@@ -294,9 +297,43 @@ function temperatureFromLabel(label: string | null): number | null {
   return m ? Number(m[1].replace(",", ".")) : null;
 }
 
-/** Variante B/C: Temperaturstufen aus Einzelfeldern. */
-function buildFlatCatalyst(results: SampleResultValue[], relaxed = false): { cat: ActivityCatalyst; used: Set<SampleResultValue>; official: boolean } | null {
-  type Step = { temp: ActivityValue; eta: ActivityValue; k: ActivityValue; gases: ActivityRow["gases"]; labelTemp: number | null };
+/** Temperaturen aus dem Temperaturblock des Auftraggebers: Eintrag i = Stufe i (siehe temperatureBlock.ts). */
+export interface TemperatureBlockData {
+  /** Index 0 = Stufe 1; null = leerer Eintrag (Stufe bleibt frei). */
+  temps: Array<number | null>;
+  /** Beteiligte Ergebnisse (Liste und Zeilenergebnisse): werden nicht noch einmal unter „Weitere Angaben“ gezeigt. */
+  used: SampleResultValue[];
+  official: boolean;
+}
+
+export function collectTemperatureBlock(results: SampleResultValue[]): TemperatureBlockData | null {
+  const container = results.find((r) =>
+    r.value === null && /^temperatur(?:_\d+)?$/i.test(resultKey(r)) && parseTemperatureList(r.remarks) !== null);
+  const rows = results.filter((r) => temperatureRowInstance(resultKey(r)) !== null);
+  if (!container && rows.length === 0) return null;
+  let temps: Array<number | null>;
+  if (container) temps = parseTemperatureList(container.remarks)!;
+  else {
+    temps = [];
+    rows.forEach((r, i) => {
+      const step = stepOfInstance(temperatureRowInstance(resultKey(r))!) ?? i + 1;
+      temps[step - 1] = typeof r.value === "number" && Number.isFinite(r.value) ? r.value : temperatureOf({ v: r.remarks });
+    });
+    for (let i = 0; i < temps.length; i++) temps[i] ??= null;
+  }
+  if (!temps.some((t) => t !== null)) return null;
+  const used = [...(container ? [container] : []), ...rows];
+  // Offiziell zählen die Zeilenergebnisse (je ausgefülltem Eintrag eines); ohne sie die Liste.
+  const official = rows.length > 0 ? rows.every((r) => r.is_official === true) : container?.is_official === true;
+  return { temps, used, official };
+}
+
+const sameTemperature = (a: ActivityValue, b: ActivityValue) =>
+  a === b || (typeof a === "number" && typeof b === "number" && Math.abs(a - b) < 1e-9) || String(a).trim() === String(b).trim();
+
+/** Variante B/C: Temperaturstufen aus Einzelfeldern (und dem Temperaturblock des Auftraggebers). */
+function buildFlatCatalyst(results: SampleResultValue[], relaxed = false, block: TemperatureBlockData | null = null): { cat: ActivityCatalyst; used: Set<SampleResultValue>; official: boolean } | null {
+  type Step = { temp: ActivityValue; target?: ActivityValue; eta: ActivityValue; k: ActivityValue; gases: ActivityRow["gases"]; labelTemp: number | null };
   const steps = new Map<number, Step>();
   const used = new Set<SampleResultValue>();
   let official = true;
@@ -332,8 +369,19 @@ function buildFlatCatalyst(results: SampleResultValue[], relaxed = false): { cat
       if (r.is_official !== true) official = false;
     }
   }
+  if (block) {
+    block.temps.forEach((t, i) => {
+      if (t === null) return; // leerer Eintrag: Stufe bleibt frei, nichts verschiebt sich
+      const s = step(i + 1);
+      if (s.temp === null) s.temp = t;
+      else if (!sameTemperature(s.temp, t)) s.target = t; // gemessen weicht von der Vorgabe ab: beide zeigen
+    });
+    block.used.forEach((r) => used.add(r));
+    if (!block.official) official = false;
+  }
   const rows: ActivityRow[] = [...steps.entries()].sort((a, b) => a[0] - b[0]).map(([, s]) => ({
     temperature: s.temp ?? s.labelTemp,
+    ...(s.target !== undefined && s.target !== null ? { temperatureTarget: s.target } : {}),
     eta: s.eta, k: s.k, gases: s.gases,
   }));
   const hasResult = (r: ActivityRow) => r.eta !== null || r.k !== null || Object.keys(r.gases).length > 0;
@@ -385,8 +433,9 @@ export function extractActivity<T extends SampleResultValue>(
   let used = new Set<SampleResultValue>();
   if (!sawBlock) {
     // Passt nur die Messart (nicht die Struktur), gilt trotzdem unsere Ansicht – sofern überhaupt Werte vorliegen.
-    const hasAnyValue = plain.some((r) => flatValue(r) !== null && !(r.value === null && parseStructuredText(r.remarks) !== undefined));
-    const flat = buildFlatCatalyst(plain, byService && hasAnyValue);
+    const block = collectTemperatureBlock(plain);
+    const hasAnyValue = !!block || plain.some((r) => flatValue(r) !== null && !(r.value === null && parseStructuredText(r.remarks) !== undefined));
+    const flat = buildFlatCatalyst(plain, byService && hasAnyValue, block);
     if (flat) {
       catalysts.push(flat.cat);
       used = flat.used;

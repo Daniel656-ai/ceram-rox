@@ -117,7 +117,17 @@ function CatalystBlock({ cat, official, heading }: { cat: ActivityCatalyst; offi
               <tbody>
                 {cat.rows.map((r, i) => (
                   <tr key={i} className={`border-t font-mono ${tone}`}>
-                    <td className="whitespace-nowrap p-2 text-right">{fmt(r.temperature)}</td>
+                    <td className="whitespace-nowrap p-2 text-right">
+                      {fmt(r.temperature)}
+                      {r.temperatureTarget != null && (
+                        <div
+                          className="font-sans text-[11px] font-normal text-amber-700"
+                          title="Die gemessene Temperatur weicht von der Vorgabe im Auftrag ab."
+                        >
+                          Vorgabe {fmt(r.temperatureTarget)} (weicht ab)
+                        </div>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap p-2 text-right">{fmt(r.eta)}</td>
                     <td className="whitespace-nowrap p-2 text-right">{fmt(r.k)}</td>
                     {cat.gasColumns.map((g) => {

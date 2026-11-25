@@ -22,6 +22,7 @@ import {
   elementFromValueKey,
   INSTANCE_ID_KEY,
 } from "@/lib/measurementBlocks";
+import { isTemperatureBlock, stepOfInstance, temperatureOf } from "@/lib/results/temperatureBlock";
 import { globalConstantScope, type GlobalConstantLike } from "@/lib/globalConstants";
 import {
   containerFields,
@@ -307,16 +308,21 @@ export function buildLinkedFormResultCandidates(
       add_label: repMeta.add_label ?? "Eintrag hinzufügen",
       context_fields: [],
     }, toBlockChildDefs(children));
+    // Temperaturblock (z. B. NOx): Jeder AUSGEFÜLLTE Eintrag ist ein offizielles Ergebnis, leere Einträge
+    // erzeugen gar kein Ergebnis. Die Stufe ist die Position (idx_<n>) – siehe results/temperatureBlock.ts.
+    const temperatureBlock = isTemperatureBlock(repeater, children);
     for (const instance of instances) {
       for (const child of children) {
         const valueKey = valueKeyByFieldId.get(child.id) ?? child.field_key;
+        const rowValue = instance.values[valueKey] ?? instance.values[child.field_key];
+        if (temperatureBlock && temperatureOf({ v: rowValue }) === null) continue;
         instanceCandidates.push({
           kind: "field" as const,
           key: instanceResultKey(prefix, storageKey, instance.instanceId, child.field_key),
           label: child.result_label || child.display_name || child.field_key,
           unit: child.unit ?? null,
-          value: instance.values[valueKey] ?? instance.values[child.field_key],
-          official: child.is_result === true,
+          value: rowValue,
+          official: child.is_result === true || temperatureBlock,
           instanceKey: instance.instanceId,
           instanceLabel: instance.label,
           instanceContext: null,
@@ -479,7 +485,14 @@ export function collectStaleRepeaterInstanceKeys(
       const instanceId = m[1];
       // Positionsbasierte Kennungen (Altdaten ohne __instance_id) sind nach
       // Entfernen/Verschieben mehrdeutig – sie bleiben immer erhalten.
-      if (instanceId.startsWith("idx_")) continue;
+      if (instanceId.startsWith("idx_")) {
+        // Temperaturblock: Die Stufe IST die Position. Ein Zeilenergebnis, dessen Position leer ist oder
+        // nicht mehr existiert, wäre sonst ein verwaistes offizielles Ergebnis.
+        const step = stepOfInstance(instanceId);
+        if (step !== null && isTemperatureBlock(repeater, fields.filter((f) => f.parent_field_id === repeater.id))
+          && temperatureOf(entries[step - 1]) === null) out.add(name);
+        continue;
+      }
       if (!activeIds.has(instanceId)) out.add(name);
     }
   }

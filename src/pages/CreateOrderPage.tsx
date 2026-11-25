@@ -27,6 +27,7 @@ import { ArrowLeft, AlertCircle, Zap, CheckCircle2, ClipboardList, Layers, Packa
 import SampleSelector from "@/components/SampleSelector";
 import TemplateManager from "@/components/TemplateManager";
 import OrderKindDynamicForm from "@/components/OrderKindDynamicForm";
+import { TemperatureOrderLockCtx } from "@/components/ServiceDesigner/fillRowsContext";
 import MeasurementRow from "@/components/order/MeasurementRow";
 import ServiceTabsCard from "@/components/order/ServiceTabsCard";
 import { nextActiveServiceTab, EMPTY_ACTIVE_TAB, type ActiveServiceTabState } from "@/lib/orderCreation/activeServiceTab";
@@ -197,6 +198,12 @@ export default function CreateOrderPage() {
   // ---------------------------------------------------------------------
   const editData = useOrderEditData(editOrderId);
   const locks = useMemo(() => deriveLocks(editData.facts), [editData.facts]);
+  // Messwerte je Temperaturstufe vorhanden -> Temperaturblock: Verschieben/Löschen gesperrt (Reihenfolge = Stufe).
+  const { data: temperatureOrderLocked = false } = useQuery({
+    queryKey: ["order-step-measurements", editOrderId],
+    queryFn: () => api.measurementResults.hasStepMeasurementsForOrder(editOrderId!),
+    enabled: !!editOrderId,
+  });
   const editBaseline = useRef<EditSnapshot | null>(null);
   const [editHydrated, setEditHydrated] = useState(false);
   const [editReason, setEditReason] = useState("");
@@ -1097,15 +1104,17 @@ export default function CreateOrderPage() {
         {/* Dynamic, template-driven form for the selected Auftragsart.
             Fields, sections, labels and validations come exclusively from the
             configured template — never from code. */}
-        <OrderKindDynamicForm
-          orderKind={orderKind}
-          values={dynamicValues}
-          onChange={handleDynamicChange}
-          onTemplateResolved={setDynamicFormId}
-          onFieldsResolved={setTemplateFields}
-          onReady={onTemplateReady}
-          lockedFieldKeys={lockedTemplateKeys}
-        />
+        <TemperatureOrderLockCtx.Provider value={isEdit && temperatureOrderLocked}>
+          <OrderKindDynamicForm
+            orderKind={orderKind}
+            values={dynamicValues}
+            onChange={handleDynamicChange}
+            onTemplateResolved={setDynamicFormId}
+            onFieldsResolved={setTemplateFields}
+            onReady={onTemplateReady}
+            lockedFieldKeys={lockedTemplateKeys}
+          />
+        </TemperatureOrderLockCtx.Provider>
         {isEdit && servicesReady && lockedTickLabels.length > 0 && (
           <p role="note" className="-mt-3 flex items-start gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             <Lock className="mt-0.5 h-3 w-3 shrink-0" />
