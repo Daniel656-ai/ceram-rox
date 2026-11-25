@@ -10,7 +10,7 @@
 - Keine Secrets committen (Keys, Tokens, `.env`, Zugangsdaten).
 - Tests vor jedem Commit ausführen; es dürfen keine neuen Testfehler gegenüber `main` entstehen.
 - Vor jedem Merge läuft der Subagent `test-runner` (Tests + Typprüfung). Bei Rot kein Merge. Neue oder geänderte Funktionalität braucht passende Tests (Standards siehe `docs/tests.md`).
-- `tasks/` immer mit committen, damit beide Rechner denselben Stand haben.
+- `tasks/` immer mit committen, damit beide Rechner denselben Stand haben (außer den lokalen TXT-Dateien, siehe „Aufgabentexte“).
 - Bei Änderungen an der Oberfläche vor der Frage "Darf ich mergen?" immer den lokalen Server gegen die Dev-DB starten (`npm run dev -- --open`, `.env.development.local` zeigt auf die Dev-Supabase `:55321`), damit sich der Browser automatisch öffnet, und dem Nutzer die Adresse nennen. Nach dem Merge den Server beenden. Der Start verändert automatisch `supabase/functions/mcp/index.ts`: zurücksetzen (`git checkout -- supabase/functions/mcp/index.ts`), nie committen.
 
 # Dev-Web-Vorschau
@@ -30,6 +30,12 @@
 # Gestaltung
 
 - Bei jeder Änderung an der Oberfläche gelten die Regeln in `docs/gestaltungsregeln.md`.
+
+# Aufgabentexte
+
+- Zu Beginn jeder Aufgabe den Prompt des Nutzers **wörtlich** als `tasks/NNN-kurztitel.txt` speichern (NNN = Aufgabennummer). Spätere Nachrichten des Nutzers zur selben Aufgabe (Antworten, Ergänzungen, Freigaben) unten anhängen, mit einer Trennzeile `---- Folgenachricht …`.
+- Nach dem Merge der Aufgabe die Datei nach `tasks/archiv/` verschieben. Offene Aufgaben bleiben in `tasks/`.
+- Die TXT-Dateien bleiben **lokal** und werden nie committet: `.gitignore` schließt `tasks/**/*.txt` aus (gilt auch in `tasks/archiv/`). Wo der Wortlaut nicht mehr vorhanden ist, steht oben `REKONSTRUIERT`.
 
 # Nicht nach Prod übertragen
 
