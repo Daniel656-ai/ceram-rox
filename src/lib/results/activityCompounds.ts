@@ -87,3 +87,17 @@ export function compoundRef(label: string | null | undefined, key: string): Comp
 
 /** Schreibweise für die Anzeige: „C2H4“ -> „C₂H₄“. */
 export const compoundLabel = (compound: string): string => formatElementKey(compound);
+
+/**
+ * Raumgeschwindigkeit SV: Beschriftung besteht nur aus "SV" (+ Verwendungszusatz) und die Einheit ist h^-1 (1/h).
+ * Liefert die Nummer der Verwendung (null = ohne Nummer), sonst undefined (kein SV).
+ */
+export function svUsage(label: string | null | undefined, unit: string | null | undefined): number | null | undefined {
+  const u = (unit ?? "").replace(/[\s^{}]/g, "").replace(/⁻¹/g, "-1");
+  if (!/^(h-1|1\/h)$/i.test(u)) return undefined;
+  const tokens = (label ?? "").replace(/[_^]\{([^}]*)\}/g, "$1").split(/[\s_()\-–/]+/).filter(Boolean);
+  const kept = tokens.filter((t) => !/^\d+$/.test(t));
+  if (kept.length !== 1 || kept[0].toUpperCase() !== "SV") return undefined;
+  const n = tokens.find((t) => /^\d+$/.test(t));
+  return n ? Number(n) : null;
+}

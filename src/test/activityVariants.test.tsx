@@ -51,7 +51,7 @@ describe("Variante B: flach je Temperaturstufe (FG-260011)", () => {
   });
 
   it("Dosiermengen stehen unter Weitere Angaben, nicht in den Messbedingungen", () => {
-    expect(view!.catalysts[0].conditions).toEqual({ av: null, fr: null, no: null, nh3: null, h2o: null, o2: null, extra: [] });
+    expect(view!.catalysts[0].conditions).toEqual({ av: null, sv: null, fr: null, no: null, nh3: null, h2o: null, o2: null, extra: [] });
     expect(view!.other.map((f) => f.label)).toEqual(["NO_Anlage", "H2O_Anlage", "O2_Anlage"]);
     expect(rest).toEqual([]);
   });
@@ -77,9 +77,11 @@ describe("Variante C: alt flach (DAB260006)", () => {
     const labels = view!.other.map((f) => f.label);
     // CO ist ein weiteres Eingangsgas und steht jetzt als Spalte in den Messbedingungen (Aufgabe 040), nicht mehr hier.
     expect(view!.catalysts[0].conditions.extra).toEqual([{ compound: "CO", value: 300, unit: "ppm" }]);
-    expect(labels).toEqual(expect.arrayContaining(["NO (2)", "NH₃ 2", "SV 1", "Testbedingungen"]));
+    // SV 1 (Raumgeschwindigkeit, h⁻¹) ist eine eigene Spalte der Messbedingungen (Aufgabe 040), nicht mehr unter „Weitere Angaben“.
+    expect(view!.catalysts[0].conditions.sv).toBe(76051);
+    expect(labels).toEqual(expect.arrayContaining(["NO (2)", "NH₃ 2", "Testbedingungen"]));
     expect(labels).not.toContain("CO");
-    expect(view!.other.find((f) => f.label === "SV 1")?.unit).toBe("h⁻¹");
+    expect(labels).not.toContain("SV 1");
   });
 
   it("nur Bedingungen ohne Temperaturstufen/Ergebnisse: keine Aktivitätsansicht", () => {

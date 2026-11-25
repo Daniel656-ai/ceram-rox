@@ -74,6 +74,7 @@ function CatalystBlock({ cat, official, heading }: { cat: ActivityCatalyst; offi
               <thead className="bg-muted/50">
                 <tr>
                   <Head label="AV" unit="m/h" />
+                  {c.sv !== null && <Head label="SV" unit="h^{-1}" />}
                   <Head label="FR" unit="Nm^{3}/h" />
                   <Head label="NO in" unit="ppm" />
                   <Head label={`${gasName("NH3")} in`} unit="ppm" />
@@ -87,7 +88,7 @@ function CatalystBlock({ cat, official, heading }: { cat: ActivityCatalyst; offi
               </thead>
               <tbody>
                 <tr className={`border-t font-mono ${tone}`}>
-                  {[c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].map((v, i) => (
+                  {[c.av, ...(c.sv !== null ? [c.sv] : []), c.fr, c.no, c.nh3, c.h2o, c.o2].map((v, i) => (
                     <td key={i} className="whitespace-nowrap p-2 text-right">{fmt(v)}</td>
                   ))}
                   {c.extra.map((e) => (

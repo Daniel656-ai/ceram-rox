@@ -2,7 +2,7 @@ import { formatGasInOut, parseGasInOut } from "@/lib/elementKeys";
 import { cleanUnmappableMarkup, toUnicode } from "@/lib/richText";
 import { humanizeKey, parseStructuredText } from "@/lib/results/structuredValues";
 import type { SampleResultValue } from "@/lib/results/sampleResultsAggregation";
-import { compoundRef, isGasUnit, normalizeGasUnit } from "@/lib/results/activityCompounds";
+import { compoundRef, isGasUnit, normalizeGasUnit, svUsage } from "@/lib/results/activityCompounds";
 import { parseTemperatureList, stepOfInstance, temperatureOf, temperatureRowInstance } from "@/lib/results/temperatureBlock";
 
 /**
@@ -35,6 +35,8 @@ export type ActivityValue = number | string | null;
 
 export interface ActivityConditions {
   av: ActivityValue;
+  /** Raumgeschwindigkeit SV [h^-1]; Spalte nur mit Wert. */
+  sv: ActivityValue;
   fr: ActivityValue;
   no: ActivityValue;
   nh3: ActivityValue;
@@ -127,7 +129,7 @@ function gasOf(key: string): { gas: ActivityGas; dir: "in" | "out"; index: numbe
     : null;
 }
 
-const emptyConditions = (): ActivityConditions => ({ av: null, fr: null, no: null, nh3: null, h2o: null, o2: null, extra: [] });
+const emptyConditions = (): ActivityConditions => ({ av: null, sv: null, fr: null, no: null, nh3: null, h2o: null, o2: null, extra: [] });
 
 /* ------------------------------------------------------------------ */
 /* Variante A: Aktivitätsmessblock                                     */
@@ -202,6 +204,7 @@ function buildCatalyst(entry: Obj, position: number): { cat: ActivityCatalyst; e
   const av = rows.map((r) => firstValue(r, /^av/i)).find((v) => v !== null) ?? firstValue(c, /^av/i);
   const conditions: ActivityConditions = {
     av: av ?? null,
+    sv: null,
     fr: firstValue(c, /^fr_?feucht$/i),
     no: firstValue(c, /^no_anlage$/i),
     nh3: firstValue(c, /^nh3_anlage$/i),
@@ -262,7 +265,7 @@ const resultKey = (r: Pick<SampleResultValue, "result_name">): string =>
   r.result_name.startsWith("form:") ? r.result_name.slice(r.result_name.indexOf(":", 5) + 1) : r.result_name;
 
 type SampleKind = "test" | "d" | "ti" | "l" | "channels" | "cells";
-type CondKind = "av" | "fr" | "no" | "nh3" | "h2o" | "o2";
+type CondKind = "av" | "sv" | "fr" | "no" | "nh3" | "h2o" | "o2";
 type Flat =
   | { kind: "sample"; field: SampleKind; idx: number | null }
   | { kind: "cond"; field: CondKind; idx: number | null }
@@ -302,6 +305,10 @@ function classifyFlat(r: SampleResultValue): Flat | null {
   // ältere flache Bauart: no, no_2, nh3_1, nh3_2, h2o, o2
   if ((m = key.match(/^(no|nh3)(?:_(\d+))?$/))) return { kind: "cond", field: m[1] as CondKind, idx: m[2] ? Number(m[2]) : 1 };
   if ((m = key.match(/^(h2o|o2)$/))) return { kind: "cond", field: m[1] as CondKind, idx: null };
+
+  // SV (Raumgeschwindigkeit): aus Beschriftung + Einheit h^-1, nicht aus dem Schluessel (sv_1 -> Verwendung 1).
+  const sv = svUsage(r.display_label, r.unit);
+  if (sv !== undefined) return { kind: "cond", field: "sv", idx: sv };
 
   // Weitere Gase (C2H4, SO2, Propan ...): Verbindung aus der BESCHRIFTUNG, Richtung In/Out, Einheit ppm/%.
   if (isGasUnit(r.unit)) {
@@ -555,7 +562,7 @@ export function extractActivity<T extends SampleResultValue>(
 
 /** Sind überhaupt Messbedingungen vorhanden? (sonst: Hinweis „keine Messbedingungen erfasst“) */
 export const hasConditions = (c: ActivityConditions): boolean =>
-  c.extra.length > 0 || [c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].some((v) => v !== null);
+  c.extra.length > 0 || [c.av, c.sv, c.fr, c.no, c.nh3, c.h2o, c.o2].some((v) => v !== null);
 
 /**
  * Überschrift „Katalysator …“: nur bei echter Katalysatornummer (kat_nr, z. B. FG26_0330/1), die nicht der

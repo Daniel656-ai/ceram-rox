@@ -151,3 +151,47 @@ describe("Alte Aufträge sehen gleich aus", () => {
     expect(view!.other.map((f) => f.label)).toEqual(["NO_Anlage", "H2O_Anlage"]);
   });
 });
+
+describe("SV (Raumgeschwindigkeit) in den Messbedingungen", () => {
+  // DGA260004: SV 1 = 25 000 h⁻¹ (Feld sv_1, Einheit h^{-1})
+  const base = () => [
+    res("temperatur_1", "Temperatur 1", 200, "°C"), res("eta_nox", "η-NOx 1_{(200 °C)}", 27.5, "%"),
+    res("av_1", "AV 1", 41.4, "m/h"), res("fr_1", "FR 1", 1.3, "Nm^{3}/h"), res("no", "NO", 200, "ppm"),
+  ];
+
+  it("erkennt SV aus Beschriftung + Einheit, Verwendungszusatz entfällt, nicht mehr unter „Weitere Angaben“", async () => {
+    const { svUsage } = await import("@/lib/results/activityCompounds");
+    expect(svUsage("SV 1", "h^{-1}")).toBe(1);
+    expect(svUsage("SV", "1/h")).toBeNull();
+    expect(svUsage("SV 2", "h⁻¹")).toBe(2);
+    expect(svUsage("SV (FR_{1})", "1/h")).toBeUndefined(); // anderes Feld, bleibt wie bisher
+    expect(svUsage("SV 1", "ppm")).toBeUndefined();
+    const { view } = extractActivity([...base(), res("sv_1", "SV 1", 25000, "h^{-1}")], SERVICE);
+    expect(view!.catalysts[0].conditions.sv).toBe(25000);
+    expect(view!.other.map((f) => f.label)).not.toContain("SV 1");
+  });
+
+  it("Ansicht: Spalte „SV [h⁻¹]“ direkt nach AV, nur mit Wert", () => {
+    const withSv = extractActivity([...base(), res("sv_1", "SV 1", 25000, "h^{-1}")], SERVICE).view!;
+    const { container } = render(<TooltipProvider><ActivityMeasurementView view={withSv} /></TooltipProvider>);
+    const heads = [...container.querySelectorAll("table")[0].querySelectorAll("th")].map((t) => t.textContent);
+    expect(heads.slice(0, 3)).toEqual(["AV[m/h]", "SV[h⁻¹]", "FR[Nm³/h]"]);
+    const without = extractActivity(base(), SERVICE).view!;
+    expect(without.catalysts[0].conditions.sv).toBeNull();
+  });
+
+  it("zwei Verwendungen: erste in der Tabelle, weitere unter „Weitere Angaben“", () => {
+    const { view } = extractActivity([...base(), res("sv_1", "SV 1", 25000, "h^{-1}"), res("sv_2", "SV 2", 30000, "h^{-1}")], SERVICE);
+    expect(view!.catalysts[0].conditions.sv).toBe(25000);
+    expect(view!.other.map((f) => f.label)).toContain("SV 2");
+    expect(view!.other.map((f) => f.label)).not.toContain("SV 1");
+  });
+
+  it("Excel zieht mit: „SV [h⁻¹]“ nach AV, Wert in derselben Spalte", () => {
+    const { view } = extractActivity([...base(), res("sv_1", "SV 1", 25000, "h^{-1}")], SERVICE);
+    const rows = activityExportRows(view!).map((r) => r.map((c) => c.v));
+    const head = rows.find((r) => r[0] === "AV [m/h]")!;
+    expect(head.slice(0, 3)).toEqual(["AV [m/h]", "SV [h⁻¹]", "FR [Nm³/h]"]);
+    expect(rows[rows.indexOf(head) + 1].slice(0, 3)).toEqual([41.4, 25000, 1.3]);
+  });
+});
