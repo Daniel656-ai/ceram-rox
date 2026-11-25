@@ -1,6 +1,7 @@
 import { dbClient } from "./client";
 import { unwrap, run } from "./_helpers";
 import { buildLinkedFormValues } from "@/lib/linkedFormValues";
+import { hasStepMeasurementValues } from "@/lib/results/temperatureBlock";
 import type { PrecisionDefinitions } from "@/lib/resultDisplayPrecision";
 
 /** Abfrage der probenbezogenen Ergebnissicht (Messung + Auftrag + Probe + Messart + ALLE Ergebniswerte). */
@@ -142,6 +143,25 @@ export const measurementResults = {
         .eq("order_id", orderId)
         .order("created_at", { ascending: true })
     ),
+
+  /**
+   * true, wenn für den Auftrag bereits Messwerte je Temperaturstufe (η-NOx, K-Wert, Gase) vorliegen.
+   * Grundlage der Sperre von Verschieben/Löschen im Temperaturblock (siehe temperatureBlock.ts).
+   */
+  hasStepMeasurementsForOrder: async (orderId: string): Promise<boolean> => {
+    const rows = (await unwrap(
+      dbClient
+        .from("order_measurements")
+        .select("id, measurement_results(result_name, value, remarks)")
+        .eq("order_id", orderId)
+    )) as any[];
+    const values: Record<string, unknown> = {};
+    for (const m of rows) for (const r of m.measurement_results ?? []) {
+      const v = r.value ?? (typeof r.remarks === "string" && r.remarks.trim() !== "" && !/^s*[[{]/.test(r.remarks) ? r.remarks : null);
+      if (v !== null) values[r.result_name] = v;
+    }
+    return hasStepMeasurementValues(values);
+  },
 
   /**
    * Werte aller Globalen Formulare, die innerhalb desselben Auftrags (optional
