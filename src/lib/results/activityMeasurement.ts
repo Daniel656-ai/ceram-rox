@@ -2,7 +2,7 @@ import { formatGasInOut, parseGasInOut } from "@/lib/elementKeys";
 import { cleanUnmappableMarkup, toUnicode } from "@/lib/richText";
 import { humanizeKey, parseStructuredText } from "@/lib/results/structuredValues";
 import type { SampleResultValue } from "@/lib/results/sampleResultsAggregation";
-import { compoundLabel, compoundRef, isGasUnit, normalizeGasUnit } from "@/lib/results/activityCompounds";
+import { compoundRef, isGasUnit, normalizeGasUnit } from "@/lib/results/activityCompounds";
 import { parseTemperatureList, stepOfInstance, temperatureOf, temperatureRowInstance } from "@/lib/results/temperatureBlock";
 
 /**

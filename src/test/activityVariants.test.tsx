@@ -51,7 +51,7 @@ describe("Variante B: flach je Temperaturstufe (FG-260011)", () => {
   });
 
   it("Dosiermengen stehen unter Weitere Angaben, nicht in den Messbedingungen", () => {
-    expect(view!.catalysts[0].conditions).toEqual({ av: null, fr: null, no: null, nh3: null, h2o: null, o2: null });
+    expect(view!.catalysts[0].conditions).toEqual({ av: null, fr: null, no: null, nh3: null, h2o: null, o2: null, extra: [] });
     expect(view!.other.map((f) => f.label)).toEqual(["NO_Anlage", "H2O_Anlage", "O2_Anlage"]);
     expect(rest).toEqual([]);
   });
@@ -75,7 +75,10 @@ describe("Variante C: alt flach (DAB260006)", () => {
     expect(view!.catalysts).toHaveLength(1);
     expect(view!.catalysts[0].conditions).toMatchObject({ av: 41.38, no: 200, nh3: 240, h2o: 10, o2: 100 });
     const labels = view!.other.map((f) => f.label);
-    expect(labels).toEqual(expect.arrayContaining(["NO (2)", "NH₃ 2", "CO", "SV 1", "Testbedingungen"]));
+    // CO ist ein weiteres Eingangsgas und steht jetzt als Spalte in den Messbedingungen (Aufgabe 040), nicht mehr hier.
+    expect(view!.catalysts[0].conditions.extra).toEqual([{ compound: "CO", value: 300, unit: "ppm" }]);
+    expect(labels).toEqual(expect.arrayContaining(["NO (2)", "NH₃ 2", "SV 1", "Testbedingungen"]));
+    expect(labels).not.toContain("CO");
     expect(view!.other.find((f) => f.label === "SV 1")?.unit).toBe("h⁻¹");
   });
 
