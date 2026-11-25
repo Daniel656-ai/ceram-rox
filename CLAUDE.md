@@ -31,6 +31,12 @@
 
 - Bei jeder Änderung an der Oberfläche gelten die Regeln in `docs/gestaltungsregeln.md`.
 
+# Aufgabentexte
+
+- Zu Beginn jeder Aufgabe den Prompt des Nutzers **wörtlich** als `tasks/NNN-kurztitel.txt` speichern (NNN = Aufgabennummer). Spätere Nachrichten des Nutzers zur selben Aufgabe (Antworten, Ergänzungen, Freigaben) unten anhängen, mit einer Trennzeile `---- Folgenachricht …`.
+- Nach dem Merge der Aufgabe die Datei nach `tasks/archiv/` verschieben. Offene Aufgaben bleiben in `tasks/`.
+- Die TXT-Dateien bleiben **lokal** und werden nie committet: `.gitignore` schließt `tasks/**/*.txt` aus (gilt auch in `tasks/archiv/`). Wo der Wortlaut nicht mehr vorhanden ist, steht oben `REKONSTRUIERT`.
+
 # Nicht nach Prod übertragen
 
 - Bei der späteren Übertragung nach Prod (Ceram-Repo) gehen `package-lock.json` und `.github/workflows/dev-web.yml` **nicht** mit. Beide gelten nur für dieses Dev-Repo: `package-lock.json` wird hier mit `npm install --package-lock-only` gepflegt (alle Paketadressen zeigen auf `registry.npmjs.org`) und lokal sowie im Dev-Web-Bau (`dev-web.yml`) per `npm ci` installiert.
