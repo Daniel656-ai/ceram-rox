@@ -509,7 +509,15 @@ export function buildServiceResultCandidates(
         knownReferences: fields.map((candidate) => candidate.field_key),
       });
       errors.set(field.field_key, result.error);
-      if (result.value == null || result.error) continue;
+      if (result.value == null || result.error) {
+        // Fehlt eine Eingabe (oder ist die Formel fehlerhaft), darf kein früher
+        // gespeicherter Wert als Ergebnis stehen bleiben (F-1, Issue #3).
+        if (field.field_key in resolved) {
+          delete resolved[field.field_key];
+          changed = true;
+        }
+        continue;
+      }
       const value = typeof field.decimal_places === "number" && field.decimal_places >= 0
         ? Number(result.value.toFixed(field.decimal_places))
         : result.value;
