@@ -221,7 +221,7 @@ Fortsetzen löschen. Sinnvoll, wenn in Dev gerade an etwas gearbeitet wird, das 
   (`git pull`). Das Auffrischen zieht selbst nichts nach.
 - Nach einem Fehler **nach** dem Kopieren hat Dev den Prod-Stand und die gesetzte Liste; das nächste reguläre `sync-db-dev.ps1`
   spielt fehlende Dev-Migrationen nach.
-- Die Datei `testuser-dev.sql` (früher `scripts/dev-db/testuser-dev.sql`) läuft nur mit `-v nur_dev=ja` und enthält ein erfundenes
+- Die Datei `testuser-dev.sql` (früher unter `tasks/`, jetzt in `scripts/dev-db/`) läuft nur mit `-v nur_dev=ja` und enthält ein erfundenes
   Test-Passwort für Dev.
 - Bei der STOP-Datei bleibt `auffrischen-status.txt` unverändert (nur das Log bekommt einen Eintrag).
 - Das aufgerufene `sync-db-dev.ps1` legt bei anstehenden Dev-Migrationen weiterhin selbst eine Sicherung `dev_vor_migration_*.dump` an (die letzten 5 bleiben). Das ist unabhängig von der entfallenen Sicherung im Nachtlauf.
