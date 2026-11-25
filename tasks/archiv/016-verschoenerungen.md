@@ -12,7 +12,7 @@ Branch: `improve/verschoenerungen-ergebnisdb`. Regeln: `docs/gestaltungsregeln.m
 | 4 | BET nur als Ergebnis (Probe \| BET [m²/g]), keine Hilfswerte; Erkennung über Messart + Feldzuordnung; Excel nur BET-Wert; Regel „BET“ in `docs/gestaltungsregeln.md` | wartet auf `tasks/016-bet-varianten.csv` |
 
 ## Zu Punkt 4 (BET)
-- Abfrage für die Dev-DB: `tasks/016-bet-varianten.sql` (nur SELECT, eine Abfrage, alle Feldnamen/Beschriftungen/Einheiten je Formularversion).
+- Abfrage für die Dev-DB: `tasks/archiv/016-bet-varianten.sql` (nur SELECT, eine Abfrage, alle Feldnamen/Beschriftungen/Einheiten je Formularversion).
 - Ergebnis als `tasks/016-bet-varianten.csv` ablegen (ohne Zeilenlimit). Danach: Varianten erklären, Zuordnung umsetzen, Tests, Reviewer, Vorschau.
 - Hilfswerte (Tara, Brutto, Probengewicht, Rohr-Nr., SMP-Nummer …) bleiben in der Datenbank gespeichert – sie werden nur nicht angezeigt.
 

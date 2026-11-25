@@ -18,7 +18,7 @@ vi.mock("@/hooks/useResultCorrections", () => ({ useCanCorrectResults: () => fal
 vi.mock("@/components/order/OrderExcelExportButton", () => ({ default: () => null }));
 (globalThis as any).ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };
 
-/* Echte Feldnamen aus tasks/016-bet-varianten.csv (Formular BET (v1)) */
+/* Echte Feldnamen aus dem Export tasks016-bet-varianten.csv (inzwischen gelöscht; Formular BET (v1)) */
 const res = (key: string, label: string, value: number | string | null, unit: string | null, official: boolean, remarks: string | null = null): SampleResultValue => ({
   id: key, result_name: `form:f:${key}`, display_label: label, value: typeof value === "number" ? value : null,
   remarks: typeof value === "string" ? value : remarks, unit, is_official: official,

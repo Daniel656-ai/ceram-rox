@@ -33,5 +33,5 @@ Umsetzung: `src/lib/results/activityMeasurement.ts` (Zuordnung), `src/components
    `_kopie` = 2) bzw. Position. Felder ohne Nummer gehören zu allen Katalysatoren.
 7. **Beschriftungen:** Gasnamen mit Richtung „NO₂ in“, „N₂O out“ (Endziffer `_1` wird nicht angezeigt);
    Einheiten und Auszeichnungen lesbar (`Nm^{3}/h` → Nm³/h, `Zellenzahl_{ (AV2)}` → Zellenzahl (AV2)).
-8. **Neue Formularversion:** zuerst Feldnamen prüfen (`tasks/014-varianten.sql`), dann die Zuordnung in
+8. **Neue Formularversion:** zuerst Feldnamen prüfen (`tasks/archiv/014-varianten.sql`), dann die Zuordnung in
    `activityMeasurement.ts` ergänzen und einen Test mit den echten Feldnamen anlegen. Die Ansicht selbst bleibt unverändert.
