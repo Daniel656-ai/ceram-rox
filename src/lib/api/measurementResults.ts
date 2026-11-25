@@ -157,7 +157,7 @@ export const measurementResults = {
     )) as any[];
     const values: Record<string, unknown> = {};
     for (const m of rows) for (const r of m.measurement_results ?? []) {
-      const v = r.value ?? (typeof r.remarks === "string" && r.remarks.trim() !== "" && !/^s*[[{]/.test(r.remarks) ? r.remarks : null);
+      const v = r.value ?? (typeof r.remarks === "string" && r.remarks.trim() !== "" && !/^\s*[[{]/.test(r.remarks) ? r.remarks : null);
       if (v !== null) values[r.result_name] = v;
     }
     return hasStepMeasurementValues(values);
