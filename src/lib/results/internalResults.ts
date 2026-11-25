@@ -1,5 +1,6 @@
 import type { SampleResultValue } from "@/lib/results/sampleResultsAggregation";
 import { parseImportProtocol, type ImportProtocol } from "@/lib/results/importProtocol";
+import { parseTemperatureList } from "@/lib/results/temperatureBlock";
 import {
   analyzeStructured,
   humanizeKey,
@@ -113,6 +114,8 @@ export function expandStructuredResult(
   const parsed = parseStructuredText(r.remarks);
   if (parsed === undefined) return null;
   const a = analyzeStructured(parsed);
+  // Temperaturblock (Liste reiner Temperatureinträge): Überschrift „Temperatur“ statt des technischen Unterfeldnamens („Temperatur 13“).
+  const temperatureList = parseTemperatureList(r.remarks) !== null;
 
   const rows: DisplayResultValue[] = [];
   for (const leaf of a.values) {
@@ -130,7 +133,7 @@ export function expandStructuredResult(
       ...r,
       id: `${r.id}::${leaf.entryId ?? "0"}::${name}`,
       result_name: name,
-      display_label: labelFromPath(leaf.path),
+      display_label: temperatureList ? "Temperatur" : labelFromPath(leaf.path),
       value: num,
       unit: a.units[key] ?? null,
       remarks: num === null ? String(leaf.value) : null,
