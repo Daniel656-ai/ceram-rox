@@ -16,7 +16,7 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 | F-10 | Formulare / Bericht | Ungültiges Datum erscheint als „Invalid Date“; reines Datum wird mit Uhrzeit und je nach Zeitzone mit Vortag angezeigt | mittel | `src/test/reportPlaceholdersVerhalten.test.ts` › „zeigt ein ungültiges Datum nicht als „Invalid Date“ …“, „zeigt ein reines Datum ohne Uhrzeit und ohne Tagesverschiebung (Platzhalter)“, „… (Feldkatalog, Format „auto“)“ (3 × `it.fails`) | #12 | Issue angelegt |
 | F-11 | Formulare / Validierung | Pflichtregel akzeptiert Wert nur aus Leerzeichen; Bereichsprüfung übergeht `"1.234,5"` | mittel | `src/test/globalValidation.test.ts` › „meldet einen Wert nur aus Leerzeichen als fehlende Pflichtangabe“, „prüft auch Werte im deutschen Tausenderformat (1.234,5) gegen die Obergrenze“ (2 × `it.fails`) | #13 | Issue angelegt |
 | F-12 | Formulare / Formulardesigner | `slugify` verliert ß und kann auf `_` enden | niedrig | `src/test/formFieldTypes.test.ts` › „ersetzt ß durch ss, statt es wegzulassen“, „endet auch nach dem Kürzen auf 60 Zeichen nicht auf einem Unterstrich“ (2 × `it.fails`) | #14 | Issue angelegt |
-| F-13 | Tests / Auftrag bearbeiten | Test in `orderEditPage.test.tsx` (Gruppe „3c“) ist instabil: im Volllauf gelegentlich rot, einzeln grün | niedrig (Test, kein Anwendungsfehler nachgewiesen) | `src/test/orderEditPage.test.tsx` › „3c: Entfernen über die Liste nimmt das Häkchen heraus, Rückgängig bringt es zurück“ und „3c: begonnene Dienstleistung sperrt ihre ganze Gruppe mit Hinweis; andere Gruppen bleiben frei“ (nicht markiert) | – | offen (nur eingetragen) |
+| F-13 | Tests / Auftrag bearbeiten | Test in `orderEditPage.test.tsx` (Gruppe „3c“) ist instabil: im Volllauf gelegentlich rot, einzeln grün | niedrig (Test, kein Anwendungsfehler nachgewiesen) | `src/test/orderEditPage.test.tsx` › „3c: Entfernen über die Liste nimmt das Häkchen heraus, Rückgängig bringt es zurück“ und „3c: begonnene Dienstleistung sperrt ihre ganze Gruppe mit Hinweis; andere Gruppen bleiben frei“ (nicht markiert) | – | **behoben** (Aufgabe 042, 2026-11-25) |
 
 ## F-1: Rechenwert mit fehlender Eingabe gilt weiter als offizielles Ergebnis
 
@@ -220,7 +220,10 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
 - **Schweregrad:** niedrig (stört die Aussagekraft des Volllaufs, kein Fehler im Produkt nachgewiesen)
 - **Test:** beide oben genannten Tests (nicht markiert, laufen normal mit)
 - **Issue:** noch keins
-- **Status:** offen (nur eingetragen, noch nicht behoben). Mögliche Richtungen für später: auf das fertige Rendern der Seite warten statt auf feste Zeiten, Zeitgrenze für diese Datei erhöhen, Last der Seite im Test verringern.
+- **Status:** **behoben** (Aufgabe 042, Branch `improve/f13-flaky-test`, 2026-11-25).
+  - **Ursache:** Die Tests klickten, sobald die Überschrift „Auftrag … bearbeiten“ erschien. Die Seite baut sich danach noch auf (Formularwerte, Dienstleistungen und Sperren werden nachgeladen). Unter Last ging der Klick verloren bzw. wurde vom Nachladen überschrieben; der Test wartete dann bis zum Ende der Wartezeit (`findBy`/`waitFor`, Standard 1 s) vergeblich. Kein Anwendungsfehler.
+  - **Messung (Datei `orderEditPage.test.tsx`, 20 Runden × 6 parallele Läufe = 120 Läufe als künstliche Last):** vorher 26 von 120 rot; nur mit längerer Wartezeit 14 von 120 rot (reicht nicht, weil der Klick verloren war, nicht zu langsam); nach der Korrektur **0 von 120 rot**.
+  - **Korrektur (nur in der Testdatei):** Hilfsfunktion `tickReady` – die Tests warten auf den fertigen Zustand (Formularwerte geladen, Sperren/Dienstleistungen da), bevor sie klicken; zusätzlich Wartezeit der Datei auf 10 s (`configure({ asyncUtilTimeout })`).
 
 ## Flackernde Tests (beobachtet, kein Anwendungsfehler nachgewiesen)
 
