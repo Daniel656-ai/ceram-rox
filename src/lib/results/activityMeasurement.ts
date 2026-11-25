@@ -2,6 +2,7 @@ import { formatGasInOut, parseGasInOut } from "@/lib/elementKeys";
 import { cleanUnmappableMarkup, toUnicode } from "@/lib/richText";
 import { humanizeKey, parseStructuredText } from "@/lib/results/structuredValues";
 import type { SampleResultValue } from "@/lib/results/sampleResultsAggregation";
+import { compoundLabel, compoundRef, isGasUnit, normalizeGasUnit } from "@/lib/results/activityCompounds";
 import { parseTemperatureList, stepOfInstance, temperatureOf, temperatureRowInstance } from "@/lib/results/temperatureBlock";
 
 /**
@@ -18,13 +19,17 @@ import { parseTemperatureList, stepOfInstance, temperatureOf, temperatureRowInst
  * Was sich nirgends zuordnen lässt, steht klein unter „Weitere Angaben“ (nichts geht verloren).
  */
 
-export type ActivityGas = "NO" | "NH3" | "NO2" | "N2O" | "CO" | "CO2";
-/** Reihenfolge der Gasspalten in der Temperaturtabelle. */
+/** Formel einer Verbindung ("NO", "C2H4" ...): bekannte Gase fest, weitere dynamisch aus dem Formular. */
+export type ActivityGas = string;
+/** Reihenfolge der BEKANNTEN Gasspalten in der Temperaturtabelle; weitere Verbindungen kommen dahinter. */
 export const ACTIVITY_GAS_ORDER: ActivityGas[] = ["NO", "NH3", "NO2", "N2O", "CO", "CO2"];
-/** Feste Einheiten der Gase (nicht gespeichert, laut Vorgabe fest). */
-export const ACTIVITY_GAS_UNIT: Record<ActivityGas, string> = {
+/** Einheiten der bekannten Gase; weitere Verbindungen tragen die Einheit aus dem Formular (gasUnits). */
+export const ACTIVITY_GAS_UNIT: Record<string, string> = {
   NO: "ppm", NH3: "ppm", NO2: "ppm", N2O: "ppm", CO: "ppm", CO2: "%",
 };
+/** Einheit einer Gasspalte: bekanntes Gas fest, sonst aus dem Formular, sonst ppm. */
+export const gasUnitOf = (cat: { gasUnits?: Record<string, string> }, gas: ActivityGas): string =>
+  ACTIVITY_GAS_UNIT[gas] ?? cat.gasUnits?.[gas] ?? "ppm";
 
 export type ActivityValue = number | string | null;
 
@@ -35,6 +40,13 @@ export interface ActivityConditions {
   nh3: ActivityValue;
   h2o: ActivityValue;
   o2: ActivityValue;
+  /** Weitere Eingangsgase mit Wert (z. B. CO, SO2, C2H4), in der Reihenfolge ihres Auftretens. */
+  extra: ActivityExtraCondition[];
+}
+export interface ActivityExtraCondition {
+  compound: string;
+  value: ActivityValue;
+  unit: string;
 }
 export interface ActivityRow {
   temperature: ActivityValue;
@@ -61,6 +73,8 @@ export interface ActivityCatalyst {
   rows: ActivityRow[];
   /** Nur Gase, die in mindestens einer Zeile einen Wert haben (CO/CO₂ entfallen sonst). */
   gasColumns: ActivityGas[];
+  /** Einheiten weiterer (nicht fest bekannter) Gase aus dem Formular. */
+  gasUnits?: Record<string, string>;
 }
 export interface ActivityView {
   /** true nur, wenn alle beteiligten Werte offiziell sind. */
@@ -113,7 +127,7 @@ function gasOf(key: string): { gas: ActivityGas; dir: "in" | "out"; index: numbe
     : null;
 }
 
-const emptyConditions = (): ActivityConditions => ({ av: null, fr: null, no: null, nh3: null, h2o: null, o2: null });
+const emptyConditions = (): ActivityConditions => ({ av: null, fr: null, no: null, nh3: null, h2o: null, o2: null, extra: [] });
 
 /* ------------------------------------------------------------------ */
 /* Variante A: Aktivitätsmessblock                                     */
@@ -156,8 +170,14 @@ function buildRow(o: Obj): ActivityRow | null {
 const sortRows = (rows: ActivityRow[]) =>
   rows.sort((a, b) => (typeof a.temperature === "number" && typeof b.temperature === "number" ? a.temperature - b.temperature : 0));
 
-const gasColumnsOf = (rows: ActivityRow[]): ActivityGas[] =>
-  ACTIVITY_GAS_ORDER.filter((g) => rows.some((r) => r.gases[g] && (r.gases[g]!.in !== null || r.gases[g]!.out !== null)));
+const gasColumnsOf = (rows: ActivityRow[]): ActivityGas[] => {
+  const has = (g: ActivityGas) => rows.some((r) => r.gases[g] && (r.gases[g]!.in !== null || r.gases[g]!.out !== null));
+  const known = ACTIVITY_GAS_ORDER.filter(has);
+  // Weitere Verbindungen dahinter, in der Reihenfolge ihres Auftretens.
+  const more: ActivityGas[] = [];
+  for (const r of rows) for (const g of Object.keys(r.gases)) if (!ACTIVITY_GAS_ORDER.includes(g) && !more.includes(g) && has(g)) more.push(g);
+  return [...known, ...more];
+};
 
 function buildCatalyst(entry: Obj, position: number): { cat: ActivityCatalyst; extras: ActivityField[] } | null {
   let conditionsObj: Obj | null = null;
@@ -187,6 +207,7 @@ function buildCatalyst(entry: Obj, position: number): { cat: ActivityCatalyst; e
     nh3: firstValue(c, /^nh3_anlage$/i),
     h2o: firstValue(c, /^h2o_anlage$/i),
     o2: firstValue(c, /^o2_anlage$/i),
+    extra: [],
   };
   // kat_nr unverändert als Text (führende Nullen, Kommas bleiben erhalten).
   const katKey = findKey(c, /^kat_?nr$/i);
@@ -281,7 +302,44 @@ function classifyFlat(r: SampleResultValue): Flat | null {
   // ältere flache Bauart: no, no_2, nh3_1, nh3_2, h2o, o2
   if ((m = key.match(/^(no|nh3)(?:_(\d+))?$/))) return { kind: "cond", field: m[1] as CondKind, idx: m[2] ? Number(m[2]) : 1 };
   if ((m = key.match(/^(h2o|o2)$/))) return { kind: "cond", field: m[1] as CondKind, idx: null };
+
+  // Weitere Gase (C2H4, SO2, Propan ...): Verbindung aus der BESCHRIFTUNG, Richtung In/Out, Einheit ppm/%.
+  if (isGasUnit(r.unit)) {
+    const ref = compoundRef(r.display_label, key);
+    if (ref && ref.dir) {
+      const trail = key.match(/_(\d+)$/);
+      return { kind: "gas", gas: ref.compound, dir: ref.dir, step: ref.usage ?? (trail ? Number(trail[1]) : 1) };
+    }
+  }
   return null;
+}
+
+/**
+ * Weitere Eingangsgase der Messbedingungen (ohne In/Out, Einheit ppm/%): Verbindung aus der Beschriftung.
+ * Kommt eine Verbindung mehrfach vor (co, co_2 = "CO (2)"), zaehlt die erste Verwendung mit Wert; die uebrigen bleiben
+ * unter "Weitere Angaben". Bekannte Bedingungen (NO, NH3, H2O, O2) laufen weiter ueber ihre eigenen Regeln.
+ */
+const KNOWN_CONDITIONS = new Set(["NO", "NH3", "H2O", "O2", "N2"]);
+function pickExtraConditions<T extends SampleResultValue>(plain: T[], used: Set<SampleResultValue>): Map<T, ActivityExtraCondition> {
+  const byCompound = new Map<string, Array<{ r: T; usage: number; order: number; value: ActivityValue }>>();
+  plain.forEach((r, order) => {
+    if (used.has(r) || !isGasUnit(r.unit)) return;
+    const value = flatValue(r);
+    if (value === null) return;
+    if (classifyFlat(r)) return; // bekannte Einordnung (Gas je Stufe, Bedingung, Probendaten ...)
+    const ref = compoundRef(r.display_label, resultKey(r).toLowerCase());
+    if (!ref || ref.dir !== null || KNOWN_CONDITIONS.has(ref.compound)) return;
+    const list = byCompound.get(ref.compound) ?? [];
+    list.push({ r, usage: ref.usage ?? 1, order, value });
+    byCompound.set(ref.compound, list);
+  });
+  const chosen: Array<{ r: T; compound: string; order: number; value: ActivityValue }> = [];
+  for (const [compound, list] of byCompound) {
+    const first = [...list].sort((a, b) => a.usage - b.usage || a.order - b.order)[0];
+    chosen.push({ r: first.r, compound, order: first.order, value: first.value });
+  }
+  chosen.sort((a, b) => a.order - b.order);
+  return new Map(chosen.map((c) => [c.r, { compound: c.compound, value: c.value, unit: normalizeGasUnit(c.r.unit) }]));
 }
 
 /** Wert eines Einzelfelds (Zahl oder einfacher Text; strukturierter Text zählt nicht). */
@@ -335,6 +393,7 @@ const sameTemperature = (a: ActivityValue, b: ActivityValue) =>
 function buildFlatCatalyst(results: SampleResultValue[], relaxed = false, block: TemperatureBlockData | null = null): { cat: ActivityCatalyst; used: Set<SampleResultValue>; official: boolean } | null {
   type Step = { temp: ActivityValue; target?: ActivityValue; eta: ActivityValue; k: ActivityValue; gases: ActivityRow["gases"]; labelTemp: number | null };
   const steps = new Map<number, Step>();
+  const gasUnits: Record<string, string> = {};
   const used = new Set<SampleResultValue>();
   let official = true;
   let conditionHints = 0;
@@ -356,7 +415,10 @@ function buildFlatCatalyst(results: SampleResultValue[], relaxed = false, block:
     let written = false;
     if (f.kind === "gas") {
       const cell = (s.gases[f.gas] ??= { in: null, out: null });
-      if (cell[f.dir] === null) { cell[f.dir] = v; written = true; }
+      if (cell[f.dir] === null) {
+        cell[f.dir] = v; written = true;
+        if (!ACTIVITY_GAS_ORDER.includes(f.gas)) gasUnits[f.gas] ??= normalizeGasUnit(r.unit);
+      }
     } else if (f.field === "temp") {
       if (s.temp === null) { s.temp = v; written = true; }
     } else if (s[f.field] === null) {
@@ -392,6 +454,7 @@ function buildFlatCatalyst(results: SampleResultValue[], relaxed = false, block:
   if (!relaxed && !(stepWithResult || (temps >= 2 && conditionHints > 0))) return null;
   const cat: ActivityCatalyst = {
     index: 1, title: null, sampleData: [], conditions: emptyConditions(), rows: sortRows(rows), gasColumns: gasColumnsOf(rows),
+    ...(Object.keys(gasUnits).length ? { gasUnits } : {}),
   };
   return { cat, used, official };
 }
@@ -453,8 +516,11 @@ export function extractActivity<T extends SampleResultValue>(
     sampleFields.set(c, m);
   };
 
+  const extraConditions = pickExtraConditions(plain, used);
   for (const r of plain) {
     if (used.has(r)) continue; // bereits in der Temperaturtabelle
+    const extra = extraConditions.get(r);
+    if (extra) { catalysts.forEach((c) => c.conditions.extra.push(extra)); continue; }
     const v = flatValue(r);
     const structured = r.value === null && (r.remarks ?? "").trim() !== "" && parseStructuredText(r.remarks) !== undefined;
     if (v === null) { rest.push(r); continue; } // leer, strukturiert oder intern: allgemeine Behandlung
@@ -488,7 +554,8 @@ export function extractActivity<T extends SampleResultValue>(
 }
 
 /** Sind überhaupt Messbedingungen vorhanden? (sonst: Hinweis „keine Messbedingungen erfasst“) */
-export const hasConditions = (c: ActivityConditions): boolean => Object.values(c).some((v) => v !== null);
+export const hasConditions = (c: ActivityConditions): boolean =>
+  c.extra.length > 0 || [c.av, c.fr, c.no, c.nh3, c.h2o, c.o2].some((v) => v !== null);
 
 /**
  * Überschrift „Katalysator …“: nur bei echter Katalysatornummer (kat_nr, z. B. FG26_0330/1), die nicht der
