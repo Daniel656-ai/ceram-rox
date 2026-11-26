@@ -9,6 +9,7 @@
 import { jsPDF } from "jspdf";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 import { formatElementNumber } from "./calculations";
+import { rowServicesDescription } from "./rowServices";
 import { buildTestNotice } from "./testMarking";
 
 export interface M3PdfRow {
@@ -18,6 +19,8 @@ export interface M3PdfRow {
   laborKat: string;
   responsible: string;
   test: boolean;
+  remarks?: string;
+  servicesNote?: string | null;
 }
 
 export interface M3PdfModel {
@@ -71,6 +74,8 @@ export function buildM3PdfModel(
       // Leere Verantwortlichkeitsfelder bleiben vollständig leer (kein „—“).
       responsible: r.row_responsible == null || r.row_responsible === "" ? "" : String(r.row_responsible),
       test: testIndices.has(i),
+      remarks: typeof r.row_remarks === "string" ? r.row_remarks.trim() : "",
+      servicesNote: rowServicesDescription(r, String(values.lab_tests ?? "").split(",").map(c => c.trim()).filter(Boolean)),
     })),
     totals: `Reguläre Elementanzahl: ${s(values.regular_element_total)} Stk · Bench-Zusatz: ${s(
       values.bench_extra_pieces ?? 0
@@ -118,7 +123,7 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
     for (const [k, v] of list) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      const lines = doc.splitTextToSize(v, w - labelW) as string[];
+      const lines = doc.splitTextToSize(v.replace(/−/g, "-"), w - labelW) as string[];
       doc.setFont("helvetica", "bold");
       doc.text(k, x, cy + 4);
       doc.setFont("helvetica", "normal");
@@ -214,6 +219,20 @@ export function renderM3Pdf(model: M3PdfModel): jsPDF {
     });
     doc.setTextColor(0);
     y += h;
+    const details = [r.servicesNote, r.remarks ? `Bemerkung: ${r.remarks}` : null].filter((v): v is string => !!v);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    for (const detail of details) {
+      const lines = doc.splitTextToSize(detail, PAGE_W - 2 * M - 2 * PAD) as string[];
+      for (const line of lines) {
+        ensure(LINE + PAD, head);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(line, M + PAD, y + 4);
+        y += LINE;
+      }
+    }
+    if (details.length) y += PAD;
   }
   if (!model.rows.length) text("Keine m³-Zeilen.", M);
   y += 2;
