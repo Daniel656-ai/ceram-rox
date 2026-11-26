@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardList, Clock, CheckCircle2, FolderOpen, Search, Eye } from "lucide-react";
-import { useOrders } from "@/hooks/useOrders";
+import { useOrders, useOrderStatusCounts, useRecentOrders } from "@/hooks/useOrders";
 import { useProjects } from "@/hooks/useProjects";
 import { useMyMeasurements } from "@/hooks/useMeasurements";
 import { useSamples } from "@/hooks/useSamples";
@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ActivityFeed } from "@/components/ActivityFeed";
-import { GitHubCommitStatus } from "@/components/GitHubCommitStatus";
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -24,23 +23,26 @@ import { SampleLinks } from "@/components/orders/SampleLinks";
 export default function Dashboard() {
   const { user, profile, role } = useAuth();
   const { t } = useTranslation(["common", "navigation", "orders", "samples"]);
-  const { data: orders = [] } = useOrders();
-  const { data: projects = [] } = useProjects();
+  const { data: projects = [], isError: projectsError } = useProjects();
   const { data: myMeasurements = [] } = useMyMeasurements();
-  const { data: samples = [] } = useSamples();
-
-  // Fetch all measurements with related data for search
-  const { data: allMeasurements = [] } = useQuery({
-    queryKey: ["dashboard-all-measurements"],
-    queryFn: () => api.measurements.listForDashboardSearch(),
-    enabled: !!user,
-  });
+  // Kacheln und Liste laden schlank (Zählung bzw. 5 Zeilen); Fehler werden angezeigt statt als 0 versteckt.
+  const { data: counts, isError: countsError, refetch: refetchCounts } = useOrderStatusCounts();
+  const { data: recentOrders = [] } = useRecentOrders(5);
 
   // Search state
   const [search, setSearch] = useState("");
 
   const q = search.toLowerCase().trim();
   const hasSearch = q.length >= 2;
+
+  // Die schweren Suchdaten (alle Aufträge, Proben, Aufgaben) werden erst bei einer Suche geladen.
+  const { data: orders = [] } = useOrders({ enabled: hasSearch });
+  const { data: samples = [] } = useSamples({ enabled: hasSearch });
+  const { data: allMeasurements = [] } = useQuery({
+    queryKey: ["dashboard-all-measurements"],
+    queryFn: () => api.measurements.listForDashboardSearch(),
+    enabled: !!user && hasSearch,
+  });
   // Reuse hydrated order relations, never turn the search projection's unkeyed
   // order-level sample into an invented task-specific sample link.
   const samplesByOrder = useMemo(() => new Map((orders as any[]).map(order => [order.id, orderSamples(order)])), [orders]);
@@ -103,9 +105,10 @@ export default function Dashboard() {
     role === "auftraggeber" ? t("common:role_auftraggeber") :
     role === "durchfuehrer" ? t("common:role_durchfuehrer") : "";
 
-  const openOrders = orders.filter(o => o.status === "open").length;
-  const inProgressOrders = orders.filter(o => o.status === "in_progress").length;
-  const completedOrders = orders.filter(o => o.status === "completed").length;
+  const fmt = (n: number | undefined) => (countsError || n === undefined ? "–" : n);
+  const openOrders = fmt(counts?.open);
+  const inProgressOrders = fmt(counts?.in_progress);
+  const completedOrders = fmt(counts?.completed);
   const inProgressMeasurements = myMeasurements.filter(m => m.status === "in_progress").length;
 
   return (
@@ -123,32 +126,37 @@ export default function Dashboard() {
             <CardTitle className="text-sm font-medium text-muted-foreground">{t("navigation:projects")}</CardTitle>
             <FolderOpen className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{projects.length}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{projectsError ? "–" : projects.length}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_open")}</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_open")} (Aufträge)</CardTitle>
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent><div className="text-2xl font-bold">{openOrders}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_in_progress")}</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{role === "durchfuehrer" ? "In Bearbeitung (meine Aufgaben)" : `${t("common:status_in_progress")} (Aufträge)`}</CardTitle>
             <Clock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent><div className="text-2xl font-bold">{role === "durchfuehrer" ? inProgressMeasurements : inProgressOrders}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_completed")}</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_completed")} (Aufträge)</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent><div className="text-2xl font-bold">{completedOrders}</div></CardContent>
         </Card>
       </div>
 
-      {role === "master" && <GitHubCommitStatus />}
+      {countsError && (
+        <p className="text-sm text-destructive">
+          Die Auftragszahlen konnten nicht geladen werden.{" "}
+          <button type="button" className="underline" onClick={() => refetchCounts()}>Erneut versuchen</button>
+        </p>
+      )}
 
       {/* Universal Search */}
       <Card>
@@ -366,11 +374,11 @@ export default function Dashboard() {
               </div>
             )
           ) : (
-            orders.length === 0 ? (
+            recentOrders.length === 0 ? (
               <p className="text-muted-foreground text-sm">{t("common:no_data")}</p>
             ) : (
               <div className="space-y-3">
-                {orders.slice(0, 5).map((o: any) => (
+                {recentOrders.map((o: any) => (
                   <Link key={o.id} to={`/auftraege/${o.id}`} className="block">
                     <div className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/50 transition-colors">
                       <div>
