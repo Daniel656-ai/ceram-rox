@@ -16,11 +16,31 @@ export function useOrderReleaseLabels() {
   });
 }
 
-export function useOrders() {
+export function useOrders(options?: { enabled?: boolean }) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["orders"],
     queryFn: () => api.orders.list(),
+    enabled: !!user && (options?.enabled ?? true),
+  });
+}
+
+/** Aufträge je Status (leichte Zählung fürs Dashboard). Schlüssel beginnt mit "orders" und wird mit der Liste ungültig. */
+export function useOrderStatusCounts() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["orders", "status-counts"],
+    queryFn: () => api.orders.countByStatus(),
+    enabled: !!user,
+  });
+}
+
+/** Zuletzt angelegte Aufträge (schlank, Dashboard). */
+export function useRecentOrders(limit = 5) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["orders", "recent", limit],
+    queryFn: () => api.orders.listRecent(limit),
     enabled: !!user,
   });
 }
