@@ -3,12 +3,12 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildSampleOrderMap } from "@/lib/samples/orderLinks";
 
-export function useSamples() {
+export function useSamples(options?: { enabled?: boolean }) {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["samples"],
     queryFn: () => api.samples.list(),
-    enabled: !!user,
+    enabled: !!user && (options?.enabled ?? true),
   });
 }
 
