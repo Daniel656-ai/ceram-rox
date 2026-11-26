@@ -1,8 +1,11 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClipboardList, Clock, CheckCircle2, FolderOpen, Search, Eye } from "lucide-react";
-import { useOrders } from "@/hooks/useOrders";
+import { ClipboardList, Clock, CheckCircle2, FolderOpen, Search, Eye, Briefcase, Factory, FlaskConical, Inbox } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
+import { useOrders, useOrderStatusCounts, useRecentOrders } from "@/hooks/useOrders";
 import { useProjects } from "@/hooks/useProjects";
 import { useMyMeasurements } from "@/hooks/useMeasurements";
 import { useSamples } from "@/hooks/useSamples";
@@ -13,34 +16,67 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { ActivityFeed } from "@/components/ActivityFeed";
-import { GitHubCommitStatus } from "@/components/GitHubCommitStatus";
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { orderSamples, samplesMatchSearch } from "@/lib/orders/orderSamples";
 import { SampleLinks } from "@/components/orders/SampleLinks";
+import { recentOrderProject, recentOrderDate } from "@/lib/orders/recentOrderLine";
+
+/** Klickbare Kennzahl-Kachel: dezenter Farbakzent links, Hover, Ladezustand und Fehlerzustand ("–"). */
+function StatTile({ to, title, icon, accent, value, loading }: {
+  to: string; title: string; icon: ReactNode; accent: string; value: ReactNode; loading?: boolean;
+}) {
+  return (
+    <Link to={to} className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Card className={cn("h-full border-l-4 transition-colors hover:bg-muted/50", accent)}>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+          {icon}
+        </CardHeader>
+        <CardContent>
+          {loading ? <Skeleton className="h-8 w-14" /> : <div className="text-2xl font-bold">{value}</div>}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+const ORDER_TYPE_ICONS: Record<string, typeof Briefcase> = { customer: Briefcase, production: Factory, rnd: FlaskConical };
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
+      <Inbox className="h-6 w-6" />
+      <p>{text}</p>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { user, profile, role } = useAuth();
   const { t } = useTranslation(["common", "navigation", "orders", "samples"]);
-  const { data: orders = [] } = useOrders();
-  const { data: projects = [] } = useProjects();
+  const { data: projects = [], isError: projectsError, isLoading: projectsLoading } = useProjects();
   const { data: myMeasurements = [] } = useMyMeasurements();
-  const { data: samples = [] } = useSamples();
-
-  // Fetch all measurements with related data for search
-  const { data: allMeasurements = [] } = useQuery({
-    queryKey: ["dashboard-all-measurements"],
-    queryFn: () => api.measurements.listForDashboardSearch(),
-    enabled: !!user,
-  });
+  // Kacheln und Liste laden schlank (Zählung bzw. 5 Zeilen); Fehler werden angezeigt statt als 0 versteckt.
+  const { data: counts, isError: countsError, isLoading: countsLoading, refetch: refetchCounts } = useOrderStatusCounts();
+  const { data: recentOrders = [], isLoading: recentLoading } = useRecentOrders(5);
 
   // Search state
   const [search, setSearch] = useState("");
 
   const q = search.toLowerCase().trim();
   const hasSearch = q.length >= 2;
+
+  // Die schweren Suchdaten (alle Aufträge, Proben, Aufgaben) werden erst bei einer Suche geladen.
+  const { data: orders = [] } = useOrders({ enabled: hasSearch });
+  const { data: samples = [] } = useSamples({ enabled: hasSearch });
+  const { data: allMeasurements = [] } = useQuery({
+    queryKey: ["dashboard-all-measurements"],
+    queryFn: () => api.measurements.listForDashboardSearch(),
+    enabled: !!user && hasSearch,
+  });
   // Reuse hydrated order relations, never turn the search projection's unkeyed
   // order-level sample into an invented task-specific sample link.
   const samplesByOrder = useMemo(() => new Map((orders as any[]).map(order => [order.id, orderSamples(order)])), [orders]);
@@ -103,9 +139,10 @@ export default function Dashboard() {
     role === "auftraggeber" ? t("common:role_auftraggeber") :
     role === "durchfuehrer" ? t("common:role_durchfuehrer") : "";
 
-  const openOrders = orders.filter(o => o.status === "open").length;
-  const inProgressOrders = orders.filter(o => o.status === "in_progress").length;
-  const completedOrders = orders.filter(o => o.status === "completed").length;
+  const fmt = (n: number | undefined) => (countsError || n === undefined ? "–" : n);
+  const openOrders = fmt(counts?.open);
+  const inProgressOrders = fmt(counts?.in_progress);
+  const completedOrders = fmt(counts?.completed);
   const inProgressMeasurements = myMeasurements.filter(m => m.status === "in_progress").length;
 
   return (
@@ -118,37 +155,23 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("navigation:projects")}</CardTitle>
-            <FolderOpen className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{projects.length}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_open")}</CardTitle>
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{openOrders}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_in_progress")}</CardTitle>
-            <Clock className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{role === "durchfuehrer" ? inProgressMeasurements : inProgressOrders}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{t("common:status_completed")}</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{completedOrders}</div></CardContent>
-        </Card>
+        <StatTile to="/projekte" title={t("navigation:projects")} icon={<FolderOpen className="h-4 w-4 text-primary" />}
+          accent="border-l-primary" loading={projectsLoading} value={projectsError ? "–" : projects.length} />
+        <StatTile to="/auftraege" title={`${t("common:status_open")} (Aufträge)`} icon={<ClipboardList className="h-4 w-4 text-muted-foreground" />}
+          accent="border-l-muted-foreground/40" loading={countsLoading} value={openOrders} />
+        <StatTile to="/auftraege" title={role === "durchfuehrer" ? "In Bearbeitung (meine Aufgaben)" : `${t("common:status_in_progress")} (Aufträge)`}
+          icon={<Clock className="h-4 w-4 text-warning" />} accent="border-l-warning"
+          loading={role === "durchfuehrer" ? false : countsLoading} value={role === "durchfuehrer" ? inProgressMeasurements : inProgressOrders} />
+        <StatTile to="/auftraege" title={`${t("common:status_completed")} (Aufträge)`} icon={<CheckCircle2 className="h-4 w-4 text-success" />}
+          accent="border-l-success" loading={countsLoading} value={completedOrders} />
       </div>
 
-      {role === "master" && <GitHubCommitStatus />}
+      {countsError && (
+        <p className="text-sm text-destructive">
+          Die Auftragszahlen konnten nicht geladen werden.{" "}
+          <button type="button" className="underline" onClick={() => refetchCounts()}>Erneut versuchen</button>
+        </p>
+      )}
 
       {/* Universal Search */}
       <Card>
@@ -341,7 +364,7 @@ export default function Dashboard() {
 
       {/* Recent orders / measurements */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="text-lg">
             {role === "durchfuehrer" ? t("measurements:no_measurements", "Meine offenen Aufgaben") : t("orders:title")}
           </CardTitle>
@@ -349,11 +372,11 @@ export default function Dashboard() {
         <CardContent>
           {role === "durchfuehrer" ? (
             myMeasurements.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{t("measurements:no_measurements")}</p>
+              <EmptyState text={t("measurements:no_measurements")} />
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {myMeasurements.slice(0, 5).map((m: any) => (
-                  <div key={m.id} className="flex items-center justify-between p-3 rounded-md border">
+                  <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border">
                     <div>
                       <p className="font-medium">{m.measurement_services?.service_name}</p>
                       <p className="text-sm text-muted-foreground">
@@ -366,25 +389,34 @@ export default function Dashboard() {
               </div>
             )
           ) : (
-            orders.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{t("common:no_data")}</p>
+            recentLoading ? (
+              <div className="space-y-2">{[0, 1, 2].map(k => <Skeleton key={k} className="h-12 w-full" />)}</div>
+            ) : recentOrders.length === 0 ? (
+              <EmptyState text="Noch keine Aufträge vorhanden." />
             ) : (
-              <div className="space-y-3">
-                {orders.slice(0, 5).map((o: any) => (
-                  <Link key={o.id} to={`/auftraege/${o.id}`} className="block">
-                    <div className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/50 transition-colors">
-                      <div>
-                        <p className="font-medium">
-                          {o.projects?.project_number} – {t(`common:order_type_${o.order_type}`, o.order_type)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {o.projects?.project_name || "–"}
-                        </p>
+              <div className="space-y-2">
+                {recentOrders.map((o: any) => {
+                  const TypeIcon = ORDER_TYPE_ICONS[o.order_type] ?? ClipboardList;
+                  const project = recentOrderProject(o);
+                  const date = recentOrderDate(o);
+                  return (
+                    <Link key={o.id} to={`/auftraege/${o.id}`} className="block">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-md border hover:bg-muted/50 transition-colors">
+                        <TypeIcon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate">
+                            {o.order_number && <span className="font-semibold">{o.order_number}</span>}
+                            {o.order_number && " · "}
+                            <span className="text-muted-foreground">{String(t(`common:order_type_${o.order_type}`, o.order_type))}</span>
+                          </p>
+                          {project && <p className="truncate text-xs text-muted-foreground">{project}</p>}
+                        </div>
+                        {date && <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{date}</span>}
+                        <StatusBadge status={o.status} />
                       </div>
-                      <StatusBadge status={o.status} />
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             )
           )}
