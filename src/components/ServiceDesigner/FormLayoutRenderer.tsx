@@ -125,6 +125,9 @@ interface ValuesCtxShape {
 }
 const ValuesCtx = createContext<ValuesCtxShape | null>(null);
 const CalculationInputsCtx = createContext<Record<string, unknown>>({});
+export type RepeaterDetailsRenderer = (args: { field: FormField; index: number; entry: Record<string, unknown>; readonly: boolean; onPatch: (patch: Record<string, unknown>) => void }) => ReactNode;
+const RepeaterDetailsCtx = createContext<RepeaterDetailsRenderer | undefined>(undefined);
+
 
 /** Nested overlay context used inside repeater entries so field values bind to
  *  the entry object instead of the top-level form state. */
@@ -534,6 +537,10 @@ function FieldControl({ field: rawField, readonly }: { field: FormField; readonl
     case "number":
     case "decimal":
     case "percent":
+      if ((field.metadata as Record<string, unknown> | null)?.numeric_text_input === true) {
+        return <Input type="text" inputMode="decimal" disabled={disabled} value={value ?? ""}
+          placeholder={field.default_value ?? ""} onChange={e => setValue(e.target.value)} />;
+      }
       return (
         <Input
           type="number"
@@ -1177,6 +1184,8 @@ function RepeaterField({
   const perm = usePerm(field.id);
   const meta = readRepeaterMeta(field);
   const calcs = useContext(LocalCalcsCtx);
+  const detailsRenderer = useContext(RepeaterDetailsCtx);
+  const identityKey = typeof (field.metadata as any)?.row_identity_key === "string" ? (field.metadata as any).row_identity_key as string : null;
   const parent = useContext(EntryScopeCtx);
   const nested = parent?.owner?.field_type === "measurement_block";
   const managed = nested || hasScopedReferences(field);
@@ -1227,8 +1236,10 @@ function RepeaterField({
   // wie beim Messdatenblock. Repeater ohne Ergebnisunterfelder (z. B. m³-Liste,
   // MS-Auswahl) bleiben unverändert.
   const needsInstanceIds = !managed && children.some((c) => c.is_result === true);
-  const makeUnmanagedEntry = (): Record<string, any> =>
-    needsInstanceIds ? { [INSTANCE_ID_KEY]: newInstanceId() } : {};
+  const makeUnmanagedEntry = (): Record<string, any> => ({
+    ...(needsInstanceIds ? { [INSTANCE_ID_KEY]: newInstanceId() } : {}),
+    ...(identityKey ? { [identityKey]: newInstanceId() } : {}),
+  });
 
   const add = () => {
     const next = [...latest.current, managed ? newTemperatureEntry() : makeUnmanagedEntry()];
@@ -1250,7 +1261,7 @@ function RepeaterField({
       if (r.mundstueck) root?.set(MUNDSTUECK_MS_KEY, r.mundstueck);
       return;
     }
-    const next = entries.filter((_, idx) => idx !== i);
+    const next = latest.current.filter((_, idx) => idx !== i);
     updateEntries(next);
   };
   const moveAt = (i: number, dir: -1 | 1) => {
@@ -1273,29 +1284,25 @@ function RepeaterField({
     // Duplikate erhalten IMMER eine neue Zeilenkennung – Ergebnisse dürfen
     // sich niemals zwei Zeilen teilen.
     if (!managed && typeof copy[INSTANCE_ID_KEY] === "string") copy[INSTANCE_ID_KEY] = newInstanceId();
+    if (identityKey) copy[identityKey] = newInstanceId();
     const next = entries.slice();
     // Gesperrter Temperaturblock: Kopie immer hinten anhängen, damit keine Stufe verrutscht.
     next.splice(stepLocked ? next.length : i + 1, 0, copy);
     updateEntries(next);
   };
 
-  // Auto-seed min_entries + fehlende stabile Zeilenkennungen (Altdaten)
-  // ergänzen – in einem einzigen Update, damit sich keine zwei Microtasks
-  // mit veraltetem Stand überschreiben.
-  if (interactive && !readonly) {
-    const needsId = needsInstanceIds && entries.some((e) => typeof e?.[INSTANCE_ID_KEY] !== "string");
-    const needsSeed = !!meta.min_entries && entries.length < meta.min_entries;
-    if (needsId || needsSeed) {
-      const seeded = entries.map((e) =>
-        needsInstanceIds && typeof e?.[INSTANCE_ID_KEY] !== "string"
-          ? { ...(e ?? {}), [INSTANCE_ID_KEY]: newInstanceId() }
-          : e
-      );
-      while (seeded.length < (meta.min_entries ?? 0)) seeded.push(managed ? newTemperatureEntry() : makeUnmanagedEntry());
-      // Defer to avoid setState during render
-      queueMicrotask(() => updateEntries(seeded));
-    }
-  }
+  // After hydration/commit, seed only against the current row list; never enqueue a captured stale array.
+  useEffect(() => {
+    if (!interactive || readonly) return;
+    const current = latest.current;
+    const needsId = needsInstanceIds && current.some(e => typeof e?.[INSTANCE_ID_KEY] !== "string");
+    const needsSeed = !!meta.min_entries && current.length < meta.min_entries;
+    if (!needsId && !needsSeed) return;
+    const seeded = current.map(e => needsInstanceIds && typeof e?.[INSTANCE_ID_KEY] !== "string"
+      ? { ...(e ?? {}), [INSTANCE_ID_KEY]: newInstanceId() } : e);
+    while (seeded.length < (meta.min_entries ?? 0)) seeded.push(managed ? newTemperatureEntry() : makeUnmanagedEntry());
+    updateEntries(seeded);
+  }, [entries, interactive, readonly, needsInstanceIds, meta.min_entries]);
 
   return (
     <div className="border rounded-md bg-card" data-repeater-key={storageKey}>
@@ -1346,7 +1353,7 @@ function RepeaterField({
         )}
         {entries.map((entry, i) => (
           <RepeaterEntry
-            key={managed && typeof entry[INSTANCE_ID_KEY] === "string" ? entry[INSTANCE_ID_KEY] : i}
+            key={identityKey && typeof entry[identityKey] === "string" ? entry[identityKey] : managed && typeof entry[INSTANCE_ID_KEY] === "string" ? entry[INSTANCE_ID_KEY] : i}
             owner={field}
             managed={managed}
             index={i}
@@ -1367,9 +1374,18 @@ function RepeaterField({
                 {entry.zweck && <span className="text-muted-foreground">{String(entry.zweck)} · Anzahl und Länge gesperrt</span>}
               </div>
             ) : undefined}
+            details={detailsRenderer?.({ field, index: i, entry, readonly: readonly || !interactive,
+              onPatch: (patch) => {
+                const arr = latest.current.slice();
+                const index = identityKey && entry[identityKey] ? arr.findIndex(e => e[identityKey] === entry[identityKey]) : i;
+                if (!arr[index]) return;
+                arr[index] = { ...arr[index], ...patch };
+                updateEntries(arr);
+              },
+            })}
             onChange={(next) => {
               const arr = latest.current.slice();
-              const index = entry[INSTANCE_ID_KEY] ? arr.findIndex((e) => e[INSTANCE_ID_KEY] === entry[INSTANCE_ID_KEY]) : i;
+              const index = identityKey && entry[identityKey] ? arr.findIndex(e => e[identityKey] === entry[identityKey]) : entry[INSTANCE_ID_KEY] ? arr.findIndex((e) => e[INSTANCE_ID_KEY] === entry[INSTANCE_ID_KEY]) : i;
               if (index < 0) return;
               arr[index] = next;
               updateEntries(arr);
@@ -1449,7 +1465,7 @@ function RepeaterTable({
 
 function RepeaterEntry({
   index, entry, children, allFields, readonly, layout, owner, managed = false,
-  canRemove, canReorder, itemLabel, header, labelFieldKey,
+  canRemove, canReorder, itemLabel, header, details, labelFieldKey,
   onChange, onRemove, onMoveUp, onMoveDown, onDuplicate,
 }: {
   owner?: FormField;
@@ -1467,6 +1483,7 @@ function RepeaterEntry({
   labelFieldKey?: string;
   /** Zusätzlicher Kopfbereich (z. B. Messkontext eines Messdatenblocks). */
   header?: ReactNode;
+  details?: ReactNode;
   onChange: (next: Record<string, any>) => void;
   onRemove: () => void;
   onMoveUp: () => void;
@@ -1674,6 +1691,7 @@ function RepeaterEntry({
             )}
           </div>
         </div>
+        {details}
       </div>
     </EntryScopeCtx.Provider>
     </CalcResultsCtx.Provider>
@@ -2321,6 +2339,7 @@ export default function FormLayoutRenderer({
   stepData,
   formData,
   linkSourcesReady = true,
+  repeaterDetails,
 }: {
   layout: FormLayoutTree;
   fields: FormField[];
@@ -2342,6 +2361,8 @@ export default function FormLayoutRenderer({
    * Standard `true` (synchrone/statische Aufrufer bleiben unverändert).
    */
   linkSourcesReady?: boolean;
+  /** Optional domain-specific controls bound to the same repeater row, without template writes. */
+  repeaterDetails?: RepeaterDetailsRenderer;
 }) {
   const interactive = !readOnly && !!(values && onChange);
   const bind = useMemo<ValuesCtxShape>(() => ({
@@ -2466,9 +2487,11 @@ export default function FormLayoutRenderer({
       <LocalCalcsCtx.Provider value={localCalcs}>
       <ValuesCtx.Provider value={bind}>
       <CalculationInputsCtx.Provider value={calculationInputs}>
+      <RepeaterDetailsCtx.Provider value={repeaterDetails}>
         <div className="grid grid-cols-12 gap-3">
           {layout.nodes.map(n => <RenderNode key={n.id} node={n} fields={fields} />)}
         </div>
+      </RepeaterDetailsCtx.Provider>
       </CalculationInputsCtx.Provider>
       </ValuesCtx.Provider>
       </LocalCalcsCtx.Provider>
