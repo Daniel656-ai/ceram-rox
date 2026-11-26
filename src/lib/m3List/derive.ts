@@ -9,11 +9,12 @@
 import {
   elementsPerCubicMeter, elementCountForRow, markingElements, markingRows, laborKat,
   cellCountFromConfiguration, cellCountFromOrderNumber, noxMicro, soxMicro,
-  lengthTolerance, diameterTolerance, innerWallTolerance, labScope, freeTolerance, type M3Constants,
+  labScope, type M3Constants,
   formatElementNumber,
 } from "./calculations";
 import { M3_HEADER_FIELDS, M3_ROWS_KEY } from "./template";
 import { crossSectionFromRelease } from "@/lib/productionRelease/dimensions";
+import { initializeM3Tolerances, parseM3Decimal } from "./workingValues";
 import { benchExtraTestPieces } from "@/lib/samplingCodeMap";
 
 /** Gespeicherte, manuell änderbare Beprobungsauswahl (Kürzel-Liste). */
@@ -33,11 +34,7 @@ export interface M3DeriveResult {
   cellCount: number | null;
 }
 
-const num = (v: unknown): number | null => {
-  if (v === null || v === undefined || v === "") return null;
-  const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-};
+const num = parseM3Decimal;
 
 export function deriveM3Values({ release, orderNumber, stored, constants }: M3DeriveInput): M3DeriveResult {
   const values: Record<string, unknown> = { ...stored };
@@ -79,13 +76,8 @@ export function deriveM3Values({ release, orderNumber, stored, constants }: M3De
     notices.push("Die Zellenzahl stammt aus der Auftragsnummer – in der Produktionsfreigabe ist keine Zellkonfiguration hinterlegt.");
   }
 
-  const variant = num(stored.tolerance_variant) ?? 1;
-  // Freie Toleranzen ergänzen die Varianten 1/2 (nur wenn beide Werte gültig sind).
-  const freeL = stored.tolerance_free === true ? freeTolerance(stored.tol_length_plus, stored.tol_length_minus) : null;
-  const freeD = stored.tolerance_free === true ? freeTolerance(stored.tol_diameter_plus, stored.tol_diameter_minus) : null;
-  values.length_tolerance = freeL ?? lengthTolerance(variant);
-  values.diameter_tolerance = freeD ?? diameterTolerance(variant);
-  values.inner_wall_tolerance = innerWallTolerance(cellCount);
+  const toleranceInputs = initializeM3Tolerances(stored, release, cellCount);
+  for (const key of ["length_tolerance", "diameter_tolerance", "inner_wall_tolerance"]) values[key] = toleranceInputs[key];
 
   const nox = lengthMm != null ? noxMicro(cellCount, lengthMm, num(stored.av_nox)) : null;
   const sox = lengthMm != null ? soxMicro(cellCount, lengthMm, num(stored.av_sox)) : null;
@@ -159,7 +151,7 @@ export function stripDerivedValues(values: Record<string, unknown>): Record<stri
     ...M3_HEADER_FIELDS.map((f) => f.field_key),
     "release_label", "cell_count", "cross_section_width_mm", "cross_section_height_mm", "elements_per_m3", "marking_elements", "marking_rows",
     "laborkat_length_mm", "required_length_mm", "labor_kat_count", "micro_nox", "micro_sox",
-    "length_tolerance", "diameter_tolerance", "inner_wall_tolerance", "lab_tests", "lab_tests_auto",
+    "lab_tests", "lab_tests_auto",
     "bench_extra_pieces", "regular_element_total", "total_element_count",
   ]);
   const out: Record<string, unknown> = {};
