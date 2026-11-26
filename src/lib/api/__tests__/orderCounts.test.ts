@@ -36,7 +36,7 @@ describe("Auftrags-API: Dashboard-Zählung nach Status", () => {
 
   it("wirft den Fehler weiter, statt 0 zu liefern", async () => {
     const error = { message: "Zeitüberschreitung", code: "57014" };
-    dbMock.respond("measurement_orders", { data: null, count: null, error });
+    dbMock.respond("measurement_orders", { data: null, count: null, error } as any);
     await expect(orders.countByStatus()).rejects.toEqual(error);
   });
 });
