@@ -79,6 +79,35 @@ export const orders = {
         .order("created_at", { ascending: true })
     ),
 
+  /**
+   * Leichte Zählung für das Dashboard (statt der schweren Auftragsliste): Anzahl nicht-interner Aufträge je Status.
+   * Nur Kopfabfragen mit exakter Anzahl, keine Datenzeilen. Rechte (RLS) gelten wie bei `list`.
+   */
+  countByStatus: async (): Promise<{ open: number; in_progress: number; completed: number }> => {
+    const count = async (status: "open" | "in_progress" | "completed") => {
+      const { count: n, error } = await dbClient
+        .from("measurement_orders")
+        .select("id", { count: "exact", head: true })
+        .neq("order_type", "internal")
+        .eq("status", status);
+      if (error) throw error;
+      return n ?? 0;
+    };
+    const [open, in_progress, completed] = await Promise.all([count("open"), count("in_progress"), count("completed")]);
+    return { open, in_progress, completed };
+  },
+
+  /** Die zuletzt angelegten nicht-internen Aufträge in schlanker Form (Dashboard-Liste). */
+  listRecent: (limit = 5) =>
+    unwrap(
+      dbClient
+        .from("measurement_orders")
+        .select("id, order_type, status, created_at, projects(project_number, project_name)")
+        .neq("order_type", "internal")
+        .order("created_at", { ascending: false })
+        .limit(limit)
+    ),
+
   get: (id: string) =>
     unwrap(
       dbClient
