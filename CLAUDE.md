@@ -41,6 +41,12 @@
 
 - Bei der späteren Übertragung nach Prod (Ceram-Repo) gehen `package-lock.json` und `.github/workflows/dev-web.yml` **nicht** mit. Beide gelten nur für dieses Dev-Repo: `package-lock.json` wird hier mit `npm install --package-lock-only` gepflegt (alle Paketadressen zeigen auf `registry.npmjs.org`) und lokal sowie im Dev-Web-Bau (`dev-web.yml`) per `npm ci` installiert.
 
+# Prod-Übertragung: Versionierung und Workflows
+
+- Die Prod-Version kommt aus dem Release-Tag `vX.Y.Z` (Aufgabe 041): Der Prod-Workflow nimmt die höhere von neuestem Tag und `src-tauri/tauri.conf.json`, zählt +1 und setzt die Nummer nur im Build-Arbeitsverzeichnis. Es gibt **keinen** "bump version"-Commit auf Prod-`main` mehr und deshalb **keinen Rückweg Prod → Dev** für die Version.
+- Die Prod-Fassung von `.github/workflows/release.yml` wird **nie überschrieben**, auch nicht beim Übertragen des Dev-Stands (Dev-Fassung mit der Zusatzbedingung bleibt nur hier).
+- Aus dem `lovable`-Branch werden Änderungen an `.github/workflows/` und an der Version in `src-tauri/tauri.conf.json` **nicht übernommen**, sondern nur gemeldet.
+
 # Reine Dev-Dateien (für Prod-Abgleiche)
 
 Diese Dateien gibt es nur im Dev-Repo. Sie gehen nie nach Prod, und beim Zurückholen des Prod-Stands (Merge von `prod/main` oder `prod/lovable`) gilt immer der Dev-Stand:
