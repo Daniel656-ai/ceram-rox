@@ -125,12 +125,11 @@ export const productionDocuments = {
     await unwrap(db.from("production_document_requests").update(fields).eq("id", id));
   },
 
-  /** Atomic optimistic update: row identity, timestamp AND previous JSON must still match. */
-  async saveM3(id: string, expected: Pick<ProductionDocumentRequest, "updated_at" | "form_values">,
+  /** Atomic optimistic update via row identity and server-managed updated_at (no form_values in URL). */
+  async saveM3(id: string, expected: Pick<ProductionDocumentRequest, "updated_at">,
     fields: { form_definition_id: string | null; form_values: Record<string, unknown> }): Promise<ProductionDocumentRequest> {
     const row = await unwrap(db.from("production_document_requests").update(fields)
       .eq("id", id).eq("doc_kind", "m3_list").eq("updated_at", expected.updated_at)
-      .eq("form_values", JSON.stringify(expected.form_values))
       .select(SELECT).maybeSingle()) as ProductionDocumentRequest | null;
     if (!row) throw new Error("Speicherkonflikt: Die m³-Liste wurde zwischenzeitlich geändert oder ist nicht mehr bearbeitbar. Ihre Eingaben bleiben erhalten. Bitte den aktuellen Stand in einem zweiten Fenster prüfen.");
     if (row.id !== id || canonicalM3(row.form_values) !== canonicalM3(fields.form_values) || row.form_definition_id !== fields.form_definition_id)
