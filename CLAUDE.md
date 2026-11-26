@@ -35,6 +35,7 @@
 
 - Zu Beginn jeder Aufgabe den Prompt des Nutzers **wörtlich** als `tasks/NNN-kurztitel.txt` speichern (NNN = Aufgabennummer). Spätere Nachrichten des Nutzers zur selben Aufgabe (Antworten, Ergänzungen, Freigaben) unten anhängen, mit einer Trennzeile `---- Folgenachricht …`.
 - Nach dem Merge der Aufgabe die Datei nach `tasks/archiv/` verschieben. Offene Aufgaben bleiben in `tasks/`.
+- PR-Texte (`NNN-pr-text.md`) werden nach dem Merge der Aufgabe ebenfalls nach `tasks/archiv/` verschoben (mit `git mv`, im selben kleinen Aufräum-Branch).
 - Die TXT-Dateien bleiben **lokal** und werden nie committet: `.gitignore` schließt `tasks/**/*.txt` aus (gilt auch in `tasks/archiv/`). Wo der Wortlaut nicht mehr vorhanden ist, steht oben `REKONSTRUIERT`.
 
 # Nicht nach Prod übertragen
@@ -56,6 +57,7 @@ Diese Dateien gibt es nur im Dev-Repo. Sie gehen nie nach Prod, und beim Zurück
 - `.github/workflows/dev-web.yml`, `.github/workflows/release.yml` (Dev-Fassung mit der Zusatzbedingung `github.repository != 'danielgass95-sketch/ceram-rox-dev'`)
 - `package-lock.json`
 - `docs/konfig-abhaengigkeiten.md`
+- `docs/konfig-tabellen.md`, `docs/dev-db-tests.md` (Dev-Dokumentation; die zugehörigen SQL-Dateien liegen unter `scripts/dev-db/`)
 
 Nach jedem solchen Merge prüfen, ob reine Dev-Dateien verloren gingen: `git diff --name-status <Dev-main vor dem Merge> HEAD` ansehen und gelöschte Dateien aus dieser Liste zurückholen. (Beim Merge aus Aufgabe 025 gingen `scripts/test-runner/compare-main.ps1` und `scripts/analyse/aktivitaet-varianten.sql` verloren und `.github/workflows/tests.yml` wurde auf den Prod-Stand gesetzt.)
 
