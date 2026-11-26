@@ -102,7 +102,7 @@ export const orders = {
     unwrap(
       dbClient
         .from("measurement_orders")
-        .select("id, order_type, status, created_at, projects(project_number, project_name)")
+        .select("id, order_number, order_type, status, created_at, projects(project_number, project_name)")
         .neq("order_type", "internal")
         .order("created_at", { ascending: false })
         .limit(limit)
