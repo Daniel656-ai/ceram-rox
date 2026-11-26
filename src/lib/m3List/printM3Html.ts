@@ -27,7 +27,7 @@ export function buildM3PrintHtml(model: M3PdfModel): string {
               r.pieces
             )}</td><td>${escapeHtml(r.laborKat)}</td><td>${escapeHtml(r.responsible)}</td><td>${
               r.test ? "TEST" : ""
-            }</td></tr>`
+            }</td></tr>${r.servicesNote || r.remarks ? `<tr class="row-details"><td colspan="6">${r.servicesNote ? `<div>${escapeHtml(r.servicesNote)}</div>` : ""}${r.remarks ? `<div>Bemerkung: ${escapeHtml(r.remarks)}</div>` : ""}</td></tr>` : ""}`
         )
         .join("")
     : `<tr><td colspan="6">Keine m³-Zeilen.</td></tr>`;
@@ -54,6 +54,9 @@ table { border-collapse: collapse; width: 100%; }
 .rows th, .rows td { border: 0.2mm solid #999; padding: 1mm 1.5mm; line-height: 1.25; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .rows th, .rows td { font-weight: bold; }
 .rows tr { break-inside: avoid; }
+.rows .row-details { break-inside: auto; }
+.rows .row-details td { font-size: 9pt; font-weight: normal; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rows tr:has(+ .row-details) { break-after: avoid; }
 :root { --charge-background: #ffeb3b; --charge-foreground: #d32f2f; }
 .charge { border: 0.4mm solid #999; padding: 2mm; font-size: 10pt; font-weight: bold; margin: 2mm 0; break-inside: avoid; }
 .charge-active, .rows tr.test td { background: var(--charge-background); color: var(--charge-foreground); font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

@@ -68,10 +68,14 @@ b8abe423 (2026-11-24). Es stehen **keine Messwerte und keine Kundendaten** in di
   - Kontrollfelder: `delivery_volume_m3`, `av_nox`, `av_sox`, `sox_required`, `doku_date` u. a.
   - Berechnet: `cell_count`, `elements_per_m3`, `required_length_mm`, `total_element_count` u. a.
   - Konstanten (globale Felder mit Datenquelle „constant"): `m3_querschnitt_m`, `m3_druckpruefung_mm`, `m3_rsm_max_mm`, `m3_laborkat_zuschlag_mm`, `m3_elementanzahl_rundung`.
+  - Zeilenfelder und Zeilenkennung (Aufgabe 045b): `row_lab_tests_selected` (individuelle Messungen je Zeile, `ROW_SERVICES_KEY` in `rowServices.ts`), `row_remarks` (Zeilenbemerkung, `M3RowDetails.tsx`, PDF/Druck) und `__m3_row_id` (Zeilenkennung, setzt `M3ListForm.tsx` per Metadaten `row_identity_key` am Feld `m3_rows`; Altzeilen ohne Kennung fallen auf die Position zurück).
+  - Toleranzen: `length_tolerance`, `diameter_tolerance`, `inner_wall_tolerance` sind eigene Arbeitswerte im gespeicherten `form_values` (nicht mehr berechnet, nicht in `stripDerivedValues`). Einmalige Startwerte aus den Freigabefeldern `length_tolerance`, `cross_section_tolerance` (→ `diameter_tolerance`) und `inner_wall_tolerance`; Altlisten mit `tolerance_variant`/`tolerance_free`/`tol_*` behalten ihre bisherigen Werte. `M3ListForm.tsx` blendet `tolerance_variant` und die drei Toleranzfelder im Layout aus (`M3_TOLERANCES`), sie müssen in der Vorlage vorhanden bleiben.
+  - Zahlenfelder der Liste bekommen die Metadaten `numeric_text_input` (Texteingabe mit Dezimalkomma, `FormLayoutRenderer.tsx`).
 - **Wenn umbenannt/gelöscht:**
   - Formular „m³-Liste" umbenannt: Der Code findet die Vorlage nicht und bricht mit Fehlermeldung ab („Die bestehende Formularvorlage … wurde nicht gefunden"). Es wird bewusst keine neue Vorlage erzeugt.
   - Feld fehlt: Die Vorlagen-Funktion legt fehlende Felder neu an. Ist `m3_rows` kein Wiederholbereich, bricht sie zum Schutz der Konfiguration ab.
   - Konstante fehlt oder nicht lesbar: Kein Ersatzwert, die Berechnung meldet die Konstante als fehlend. Die Erkennung läuft zuerst über den Schlüssel, danach über die Bezeichnung.
+- **Änderung 045b:** Die Vorlage wird nur noch gesucht (`findM3Template`), `ensureM3Template`/`ensureM3Constants` legen nichts mehr an. Fehlen Vorlage oder Konstanten, zeigt die Liste einen Ladefehler. Der Retrofit (`analyzeM3Retrofit`) stoppt auf „review“, sobald eine Zeile individuelle Messungen hat.
 - **Datenbank:** Die Funktion `m3_retrofit_order_samples` und die Löschfunktionen (`delete_m3_list`, `m3_list_delete_plan`) erkennen aus der m³-Liste erzeugte Proben an der Beschreibung („Aus m³-Liste…" bzw. „m³-Liste Zeile N"). Eine Änderung dieser Texte ändert, was gelöscht wird.
 
 ### 4. Mundstück 293/1 (automatische Regel)

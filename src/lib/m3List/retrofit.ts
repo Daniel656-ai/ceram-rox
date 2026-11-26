@@ -3,6 +3,7 @@
  * Nutzt dieselbe Probenlogik wie die Neuanlage (planM3Samples / buildM3SampleNumber).
  * Jede Unklarheit führt zu „review“ – es wird dann nichts automatisch geändert.
  */
+import { hasRowServiceOverride } from "./rowServices";
 import { planM3Samples, M3SampleNumberError, type M3SamplePlanEntry } from "./sampleNumber";
 import type { TestMarkingRowsResolution } from "./testMarking";
 
@@ -40,6 +41,9 @@ export function analyzeM3Retrofit(input: {
 }): RetrofitAnalysis {
   const reasons: string[] = [];
   const empty = { samples: [], links: [], assignments: [], new_tasks: [] };
+  if (input.rows.some(hasRowServiceOverride)) {
+    return { status: "review", reasons: ["Individuelle Messungen je m³-Zeile vorhanden. Die automatische Nachrüstung würde abweichende Beauftragungen vereinheitlichen und wurde gestoppt."], rows: [], plan: empty };
+  }
   let planEntries: M3SamplePlanEntry[];
   try {
     planEntries = planM3Samples(input.articleNumber, input.rows, input.marking);
