@@ -5,7 +5,7 @@ versioniert. Dieses Skript liest die Konfiguration **täglich nur lesend** aus d
 JSON-Dateien in einem Git-Ordner ab und committet nur, wenn sich etwas geändert hat. Wer sich die Commits ansieht,
 sieht genau, **was sich wann geändert hat**.
 
-Grundlage: `tasks/029b-konfig-tabellen.md`, Abschnitte 1–5. Passende Prüfregeln: `CLAUDE.md` (Abschnitt „Konfig-Diff aus Gitea prüfen“) und `docs/konfig-abhaengigkeiten.md`.
+Grundlage: `docs/konfig-tabellen.md`, Abschnitte 1–5. Passende Prüfregeln: `CLAUDE.md` (Abschnitt „Konfig-Diff aus Gitea prüfen“) und `docs/konfig-abhaengigkeiten.md`.
 
 ## Was passiert bei einem Lauf
 
@@ -112,5 +112,5 @@ Register-ScheduledTask -TaskName "Konfig-Schnappschuss" -Action $aktion -Trigger
 - Es wird gespeichert, **was** sich geändert hat und **an welchem Tag** (Zeitpunkt des Laufs), nicht **wer**. Die Tabellen haben meist kein „geändert von“.
 - Zwischen zwei Läufen ist nur der Endstand sichtbar. Wird etwas am selben Tag geändert und zurückgenommen, erscheint nichts.
 - Gelöschte Zeilen erscheinen als Löschung im Diff, aber erst beim nächsten Lauf.
-- Nicht erfasst: Auftragsdaten, Messwerte, Benutzer, Rollen, Dateianhänge. Nur die Tabellen aus `tasks/029b-konfig-tabellen.md`.
+- Nicht erfasst: Auftragsdaten, Messwerte, Benutzer, Rollen, Dateianhänge. Nur die Tabellen aus `docs/konfig-tabellen.md`.
 - Tabellen aus 029b, die in Prod anders heißen oder fehlen, werden übersprungen und stehen in `_uebersprungen.txt`. Neue Konfigurationstabellen müssen in der Liste `$Bereiche` im Skript ergänzt werden.

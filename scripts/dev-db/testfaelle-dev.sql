@@ -1,12 +1,12 @@
 -- Aufgabe 023: Prüfung der Policies aus 0049 in der DEV-Datenbank (nur Dev; alles läuft in einer Transaktion und wird zurückgerollt).
 --
 -- Voraussetzung: 0048/0049 sind in Dev eingespielt; Testbenutzer aus scripts/dev-db/testuser-dev.sql sind angelegt;
--- ein BEGONNENER Auftrag, der dem Testbenutzer "Ersteller" gehört (siehe tasks/023-testanleitung.md, Schritt 2).
+-- ein BEGONNENER Auftrag, der dem Testbenutzer "Ersteller" gehört (siehe docs/dev-db-tests.md, Schritt 2).
 --
 -- Aufruf (am Server, im DEV-Container):
 --   docker exec -i supabase_db_ceram-rox-dev psql -U postgres -d postgres -v nur_dev=ja \
 --     -v order_id=<Auftrags-UUID> -v started_meas=<UUID einer begonnenen Aufgabe> \
---     -f - < tasks/023-testfaelle-dev.sql
+--     -f - < scripts/dev-db/testfaelle-dev.sql
 -- Jede Zeile "ERGEBNIS" muss "OK" melden. "FEHLER" = Policy greift nicht wie erwartet.
 
 \if :{?nur_dev}

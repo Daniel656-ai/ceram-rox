@@ -1,7 +1,7 @@
 # Taeglicher Konfigurations-Schnappschuss (nur lesend)
 #
 # Exportiert die Konfigurationstabellen (Formulare, Dienstleistungen, Workflows, Vorlagen, Rohstoffe, Einstellungen;
-# siehe tasks/029b-konfig-tabellen.md, Abschnitte 1-5) als sortierte JSON-Dateien und das Schema "public" als schema.sql
+# siehe docs/konfig-tabellen.md, Abschnitte 1-5) als sortierte JSON-Dateien und das Schema "public" als schema.sql
 # in einen lokalen Git-Ordner. Pro Lauf gibt es nur dann einen Commit, wenn sich etwas geaendert hat.
 #
 #   powershell -ExecutionPolicy Bypass -File konfig-snapshot.ps1                                   # Prod (Standard)
@@ -42,7 +42,7 @@ $MaskPattern  = "pass|secret|token|api_?key|credential|private_key"
 $Utf8NoBom    = New-Object System.Text.UTF8Encoding $false
 if (-not $LogDatei) { $LogDatei = Join-Path (Split-Path -Parent $Ziel) "konfig-snapshot.log" }
 
-# Bereiche und Tabellen laut tasks/029b-konfig-tabellen.md (Abschnitte 1-5).
+# Bereiche und Tabellen laut docs/konfig-tabellen.md (Abschnitte 1-5).
 # Elternobjekt: je Eintrag eine eigene Datei (Name + id); Kindtabellen mit passender Fremdschluessel-Spalte
 # stehen in dieser Datei, alle uebrigen Tabellen des Bereichs als <Tabelle>.json.
 $Bereiche = @(

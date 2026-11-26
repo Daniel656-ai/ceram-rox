@@ -44,7 +44,7 @@ Gesperrte Lovable-Funktionen (Schritt 0048): Der Aufruf von `force_delete_order(
 Auftrag, begonnen, dem Test-Ersteller gehörend (aus Teil A, Schritt 4/5), und eine begonnene Aufgabe davon:
 
 ```powershell
-Get-Content tasks\023-testfaelle-dev.sql -Raw | docker exec -i supabase_db_ceram-rox-dev psql -U postgres -d postgres -v nur_dev=ja -v order_id=<UUID> -v started_meas=<UUID> -f -
+Get-Content scripts\dev-db\testfaelle-dev.sql -Raw | docker exec -i supabase_db_ceram-rox-dev psql -U postgres -d postgres -v nur_dev=ja -v order_id=<UUID> -v started_meas=<UUID> -f -
 ```
 Alles läuft in einer Transaktion und wird zurückgerollt. Jede Zeile muss `OK` melden (Ersteller: direkte Änderungen an begonnenem
 Auftrag/Aufgabe/Parametern werden abgewiesen; Master: dürfen; Dienstleister: kein Zugriff auf den Auftragskopf).

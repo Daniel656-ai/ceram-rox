@@ -121,7 +121,7 @@ Branch `improve/lovable-abgleich`. Dateien:
 | `drizzle/migrations/0049_order_edit_policies.sql` | Hilfsfunktionen, fünf einschränkende Policies, Schalter `app.order_edit` (`apply_order_changes` komplett neu angelegt, `set_config` als erste Anweisung), `order_sync_primary_sample` |
 | `src/lib/api/orderSamples.ts` | `syncPrimary` ruft `order_sync_primary_sample` statt direktem UPDATE |
 | `tasks/lovable-prod/` | Lovable-Kopien 0034–0040 (nur zum Lesen) |
-| `tasks/023-testanleitung.md`, `023-testuser-dev.sql`, `023-testfaelle-dev.sql` | Testanleitung, Testbenutzer (nur Dev), SQL-Prüfung |
+| `docs/dev-db-tests.md`, `scripts/dev-db/testuser-dev.sql`, `scripts/dev-db/testfaelle-dev.sql` | Testanleitung, Testbenutzer (nur Dev), SQL-Prüfung |
 
 > **IN PROD NUR 0048 UND 0049 GEMEINSAM EINSPIELEN** – zusammen mit unserer neuen Oberfläche und mit der Freigabe durch Stefan.
 > 0048 allein öffnet die Schutzlücke wieder, 0049 allein lässt Lovables Trigger stehen. Lovables Oberfläche ruft die in 0048
@@ -191,7 +191,7 @@ Master sind nie blockiert, zugewiesene Messdienstleister bei `order_measurements
 
 Nach dem Merge nach `main` holt der Dev-Sync (`scripts/dev-db/sync-db-dev.ps1`, alle 10 Minuten über `update-dev-web.ps1`) die Dateien selbst.
 0038 war bisher fehlgeschlagen und nicht eingetragen: der nächste Lauf nimmt dort wieder auf und spielt 0038 bis 0049 nacheinander ein.
-Kontrolle über `sync-db-dev.log` und die Testanleitung `tasks/023-testanleitung.md`.
+Kontrolle über `sync-db-dev.log` und die Testanleitung `docs/dev-db-tests.md`.
 
 ## Vorschlag (nicht umgesetzt): feste LF-Zeilenenden für `.sql` per `.gitattributes`
 

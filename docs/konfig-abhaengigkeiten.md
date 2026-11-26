@@ -4,7 +4,7 @@ Zweck: Ändert sich in Prod eine Konfiguration (Formular, Feld, Dienstleistung, 
 klar sein, ob **unser Code** davon betroffen ist. Die Liste nennt Stellen im Code, die an bestimmten Schlüsseln,
 Namen oder Strukturen hängen.
 
-Grundlage: `tasks/029b-konfig-tabellen.md` (welche Tabellen die Oberfläche ändert). Stand: Dev-`main`
+Grundlage: `docs/konfig-tabellen.md` (welche Tabellen die Oberfläche ändert). Stand: Dev-`main`
 b8abe423 (2026-11-24). Es stehen **keine Messwerte und keine Kundendaten** in dieser Datei, nur Schlüssel und Namen aus dem Code.
 
 ## So liest man die Liste
