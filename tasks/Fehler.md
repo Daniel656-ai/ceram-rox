@@ -225,6 +225,22 @@ Fehler, die beim Schreiben der Tests auffallen, werden hier gesammelt und **nich
   - **Messung (Datei `orderEditPage.test.tsx`, 20 Runden × 6 parallele Läufe = 120 Läufe als künstliche Last):** vorher 26 von 120 rot; nur mit längerer Wartezeit 14 von 120 rot (reicht nicht, weil der Klick verloren war, nicht zu langsam); nach der Korrektur **0 von 120 rot**.
   - **Korrektur (nur in der Testdatei):** Hilfsfunktion `tickReady` – die Tests warten auf den fertigen Zustand (Formularwerte geladen, Sperren/Dienstleistungen da), bevor sie klicken; zusätzlich Wartezeit der Datei auf 10 s (`configure({ asyncUtilTimeout })`).
 
+## F-14: Realtime-Verbindung in der Dev-Web-Vorschau abgelehnt (WebSocket `realtime/v1` → 403)
+
+- **Bereich:** Dev-Umgebung / Aktivitätsfeed im Dashboard
+- **Datei:** `src/lib/api/activityLog.ts:82` (`realtime.onActivityAndNotifications`), aufgerufen in `src/hooks/useActivityLog.ts:31`
+- **Beschreibung:** In der Konsole der Dev-Web-Vorschau (`http://172.30.100.162:8090`, Master) wird der WebSocket zu `…:55321/realtime/v1` mit 403 abgelehnt. Die Seite läuft weiter; nur das automatische Nachladen des Aktivitätsfeeds und des Zählers „ungelesen“ bei neuen Einträgen fällt aus (der Feed lädt dann nur beim Öffnen/Neuladen).
+- **Kurzanalyse (Vermutung, nicht geprüft):** Die Anwendung baut die Verbindung korrekt auf (`dbClient.channel(...)`); der 403 kommt vom Server, nicht aus dem App-Code. Wahrscheinlich ist der Realtime-Dienst der Dev-Supabase nicht freigegeben oder nicht erreichbar (Dienst nicht gestartet, Kong-Route `/realtime/v1` fehlt, WebSocket-Upgrade/Herkunft vom Proxy abgelehnt oder Schlüssel im Web-Bau passt nicht zur Dev-DB). Zu prüfen: Logs des Realtime-Containers der Dev-Supabase, Route `/realtime/v1`, Schlüssel in `dev-web.yml`.
+- **Schritte zum Nachstellen:**
+  1. `http://172.30.100.162:8090` öffnen, anmelden
+  2. Browser-Konsole (F12): Fehler zu `realtime/v1` mit Status 403
+- **Erwartet:** Verbindung kommt zustande (oder Realtime ist in Dev bewusst aus, ohne Fehlermeldung)
+- **Tatsächlich:** 403, Feed aktualisiert sich nicht live
+- **Schweregrad:** niedrig
+- **Test:** –
+- **Issue:** –
+- **Status:** offen (nur notiert, Aufgabe 047)
+
 ## Flackernde Tests (beobachtet, kein Anwendungsfehler nachgewiesen)
 
 Tests, die im Volllauf gelegentlich rot und einzeln grün sind. Sie werden nicht markiert, solange kein Fehler in der Anwendung nachgewiesen ist. Jedes Auftreten wird hier vermerkt.
