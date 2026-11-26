@@ -1,5 +1,14 @@
 # ROX Roadmap – Nachträgliche Korrektur abgeschlossener Dienstleistungen
 
+## Freigabe: m³-Liste überarbeiten (2026-11-26)
+- [x] Dokumentgebundene Hydration, Dezimaleingaben, geprüfte Speicherung mit atomarem Versionsvergleich.
+- [x] Zeilenbemerkungen und vollständige individuelle Dienstleistungsauswahl; Neuanlage und Retrofit absichern.
+- [x] Toleranzen aus belegten Freigabefeldern einmalig als unabhängige Arbeitswerte übernehmen.
+- [x] Gemeinsames Druckmodell und beide Renderer; 2.199 Tests bestanden, Web-Speichern/Wiederöffnen mit isolierten Antworten, A4-Sichtprüfung ohne Produktivänderungen.
+- [x] Abschlussbericht mit getrennten Web-/Desktop-Ergebnissen.
+- [ ] Reale Web-Datenbank-Schreibabnahme: benötigt isolierte ROX-Testumgebung; Browser-Schreibantworten wurden abgefangen.
+- [ ] Firmen-Schema und tatsächliche Tauri/WebView2-Abnahme: benötigt zugängliche Unternehmensinstallation.
+
 ## Freigabe: Sichere vollständige Auftragslöschung (2026-11-13)
 - [x] Web-RPC mit serverseitigen Berechtigungen, Datensperren, Historienerhalt und kaskadensicheren Triggern; Migrationen 0034/0035 angewendet und nachgeprüft. Separate verknüpfte Prozessaufträge konservativ geschützt.
 - [x] Domain-API und relevante Listen-/Aufgaben-Caches angebunden; laufende Löschung verhindert Doppelklick, Fehlerweitergabe geprüft.

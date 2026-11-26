@@ -7,7 +7,7 @@
  * laufen über die vorhandene API-Schicht (`src/lib/api`), die Backend-Adresse
  * bleibt unverändert.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertCircle, AlertTriangle, FileDown, Printer, Save } from "lucide-react";
@@ -22,8 +22,8 @@ import { autoLayout } from "@/components/OrderKindDynamicForm";
 import { normalizeLayout, type FormLayoutTree } from "@/lib/api/formDefinitionLayout";
 import type { FormField } from "@/lib/api/formFields";
 import { useProductionReleaseRevision } from "@/hooks/useProductionDocuments";
-import { ensureM3Template, m3DisplayFields } from "@/lib/m3List/template";
-import { ensureM3Constants, readM3Constants } from "@/lib/m3List/constants";
+import { findM3Template, m3DisplayFields } from "@/lib/m3List/template";
+import { readM3Constants } from "@/lib/m3List/constants";
 import { deriveM3Values, stripDerivedValues } from "@/lib/m3List/derive";
 import { splitLayoutAtField } from "@/lib/m3List/layoutSplit";
 import { BENCH_TEMPLATES } from "@/lib/m3List/calculations";
@@ -35,45 +35,62 @@ import { Input } from "@/components/ui/input";
 import { buildNoxHandover, mapNoxHandoverToParameters } from "@/lib/m3List/noxHandover";
 import { planM3Samples } from "@/lib/m3List/sampleNumber";
 import { Checkbox } from "@/components/ui/checkbox";
+import M3RowDetails from "./M3RowDetails";
+import { canonicalM3, M3_TOLERANCES, validateM3Inputs } from "@/lib/m3List/workingValues";
+import { planM3RowServices } from "@/lib/m3List/rowServices";
+import type { ProductionDocumentRequest } from "@/lib/api/productionDocuments";
+import type { LayoutNode } from "@/lib/api/formDefinitionLayout";
 
 export default function M3ListForm({ requestId }: { requestId: string }) {
+  return <M3DocumentEditor key={requestId} requestId={requestId} />;
+}
+
+function M3DocumentEditor({ requestId }: { requestId: string }) {
   const qc = useQueryClient();
   const { role, user, customRoleNames } = useAuth();
-  const [stored, setStored] = useState<Record<string, unknown> | null>(null);
+  const [stored, setStoredState] = useState<Record<string, unknown> | null>(null);
+  const storedRef = useRef<Record<string, unknown> | null>(null);
+  const baseline = useRef<ProductionDocumentRequest | null>(null);
+  const savingRef = useRef(false);
+  const setStored = (update: SetStateAction<Record<string, unknown> | null>) => {
+    const next = typeof update === "function" ? update(storedRef.current) : update;
+    storedRef.current = next;
+    setStoredState(next);
+  };
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
 
-  const { data: request, isLoading } = useQuery({
+  const { data: request, isLoading, isFetchedAfterMount, error: requestError } = useQuery({
     queryKey: ["production-document-request", requestId],
     queryFn: () => api.productionDocuments.get(requestId),
-  });
-
-  const { data: release } = useProductionReleaseRevision(request?.based_on_release_id ?? null);
-
-  /** Die Vorlagenstruktur muss auch ohne verfügbare Konstanten sichtbar sein. */
-  const { data: formId, error: templateError, isLoading: templateLoading } = useQuery({
-    queryKey: ["m3-form-template"],
-    queryFn: ensureM3Template,
     refetchOnMount: "always",
   });
 
-  /** Fehlende Konstanten betreffen ausschließlich die Berechnungen. */
-  const { error: constantsSetupError } = useQuery({
-    queryKey: ["m3-constants-setup"],
-    queryFn: ensureM3Constants,
-    retry: false,
-  });
+  const { data: release, isLoading: releaseLoading, error: releaseError } = useProductionReleaseRevision(request?.based_on_release_id ?? null);
 
-  const { data: form } = useQuery({
+  /** Die Vorlagenstruktur muss auch ohne verfügbare Konstanten sichtbar sein. */
+  const { data: templateId, error: templateError, isLoading: templateLoading } = useQuery({
+    queryKey: ["m3-form-template"],
+    queryFn: async () => {
+      const id = await findM3Template();
+      if (!id) throw new Error("Die bestehende m³-Vorlage wurde nicht gefunden. Es wurden keine Vorlagendaten angelegt.");
+      return id;
+    },
+    enabled: !!request && !request.form_definition_id,
+    refetchOnMount: "always",
+  });
+  const formId = request?.form_definition_id ?? templateId;
+
+  const { data: form, error: formError } = useQuery({
     queryKey: ["form-definition", formId],
-    queryFn: () => api.formDefinitions.get(formId!),
+    queryFn: () => formId ? api.formDefinitions.get(formId) : Promise.reject(new Error("Formular fehlt")),
     enabled: !!formId,
   });
 
-  const { data: fields = [] } = useQuery({
+  const { data: fields = [], isLoading: fieldsLoading, error: fieldsError } = useQuery({
     queryKey: ["form-fields", formId],
-    queryFn: () => api.formFields.listForForm(formId!),
+    queryFn: () => formId ? api.formFields.listForForm(formId) : Promise.reject(new Error("Formular fehlt")),
     enabled: !!formId,
   });
 
@@ -86,17 +103,23 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   // bestehenden m³-Vorlagen (nur Darstellung, keine Änderung der Vorlage).
   const typedFields = useMemo(
     () =>
-      m3DisplayFields(fields as FormField[]),
+      m3DisplayFields(fields as FormField[]).map(field => ({ ...field, metadata: {
+        ...(field.metadata ?? {}),
+        ...(["number", "decimal", "percent"].includes(field.field_type) && !field.readonly ? { numeric_text_input: true } : {}),
+        ...(field.field_key === M3_ROWS_KEY ? { row_identity_key: "__m3_row_id" } : {}),
+      } })),
     [fields]
   );
 
-  useEffect(() => {
-    if (request && stored === null) {
-      setStored((request.form_values ?? {}) as Record<string, unknown>);
-    }
-  }, [request, stored]);
-
   const constantsState = useMemo(() => readM3Constants(globalFields as never[]), [globalFields]);
+
+  useEffect(() => {
+    if (!request || !isFetchedAfterMount || !release || releaseLoading || storedRef.current !== null) return;
+    baseline.current = request;
+    const initial = stripDerivedValues(deriveM3Values({ release: release as Record<string, unknown>,
+      orderNumber: request.measurement_orders?.order_number ?? null, stored: request.form_values ?? {}, constants: constantsState.constants }).values);
+    setStored(initial);
+  }, [request, isFetchedAfterMount, release, releaseLoading, constantsState.constants]);
 
   const derived = useMemo(
     () =>
@@ -142,7 +165,11 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
 
   const layout = useMemo<FormLayoutTree>(() => {
     const normalized = normalizeLayout(form?.layout);
-    return normalized.nodes.length ? normalized : autoLayout(typedFields);
+    const hidden = new Set(typedFields.filter(f => ["tolerance_variant", ...M3_TOLERANCES.map(t => t.key)].includes(f.field_key)).map(f => f.id));
+    const filter = (nodes: LayoutNode[]): LayoutNode[] => nodes.filter(n => n.type !== "field" || !hidden.has(n.field_id)).map(n =>
+      "children" in n ? { ...n, children: filter(n.children) } as LayoutNode : n);
+    const base = normalized.nodes.length ? normalized : autoLayout(typedFields);
+    return { ...base, nodes: filter(base.nodes) };
   }, [form?.layout, typedFields]);
 
   /**
@@ -160,37 +187,53 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
     [layout, repeaterFieldId]
   );
 
-  const { data: permissions } = useQuery({
+  const { data: permissions, isLoading: permissionsLoading, error: permissionsError } = useQuery({
     queryKey: ["form-field-permissions", formId, role, typedFields.length],
     queryFn: () =>
-      api.formFieldPermissions.getEffectiveMap(formId!, role ?? "", typedFields.map((f) => f.id)),
+      formId ? api.formFieldPermissions.getEffectiveMap(formId, role ?? "", typedFields.map((f) => f.id)) : Promise.reject(new Error("Formular fehlt")),
     enabled: !!formId && !!role && typedFields.length > 0,
   });
 
-  if (isLoading || !request) return <p className="text-sm text-muted-foreground">m³-Liste wird geladen …</p>;
-  if (!request.based_on_release_id) {
-    return (
-      <p className="text-sm text-destructive flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4" /> Dieser m³-Liste ist keine Produktionsfreigabe-Revision zugeordnet.
-      </p>
-    );
-  }
+  const loadError = requestError || releaseError || fieldsError || templateError || formError || permissionsError;
+  if (loadError) return <p className="text-sm text-destructive">m³-Liste konnte nicht geladen werden: {loadError instanceof Error ? loadError.message : "Ladefehler"}</p>;
+  if (!request?.based_on_release_id && !isLoading) return <p className="text-sm text-destructive">Dieser m³-Liste ist keine Produktionsfreigabe-Revision zugeordnet.</p>;
+  if (isLoading || !isFetchedAfterMount || !request || stored === null || releaseLoading || templateLoading || fieldsLoading || permissionsLoading || !form) return <p className="text-sm text-muted-foreground">m³-Liste wird geladen …</p>;
 
-  const save = async () => {
+  const currentDerived = () => deriveM3Values({ release: release as Record<string, unknown>, orderNumber: request.measurement_orders?.order_number ?? null,
+    stored: storedRef.current ?? {}, constants: constantsState.constants });
+
+  const persist = async (): Promise<ProductionDocumentRequest> => {
+    if (savingRef.current || !baseline.current) throw new Error("Ein Speichervorgang läuft bereits. Bitte kurz warten.");
+    savingRef.current = true;
     setSaving(true);
+    const localAtStart = storedRef.current;
     try {
-      await api.productionDocuments.update(requestId, {
-        form_definition_id: formId ?? null,
-        form_values: stripDerivedValues(derived.values),
-      });
-      await qc.invalidateQueries({ queryKey: ["production-document-request", requestId] });
+      const values = stripDerivedValues(currentDerived().values);
+      const original = stripDerivedValues(deriveM3Values({ release: release as Record<string, unknown>, orderNumber: request.measurement_orders?.order_number ?? null,
+        stored: baseline.current.form_values, constants: constantsState.constants }).values);
+      validateM3Inputs(values, original);
+      const saved = await api.productionDocuments.saveM3(requestId, baseline.current, { form_definition_id: formId ?? null, form_values: values });
+      baseline.current = saved;
+      if (storedRef.current === localAtStart) setStored(saved.form_values);
+      qc.setQueryData(["production-document-request", requestId], saved);
       await qc.invalidateQueries({ queryKey: ["production-document-requests"] });
-      toast.success("m³-Liste gespeichert.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Speichern fehlgeschlagen.");
+      return saved;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
+  };
+  const save = async () => {
+    try { await persist(); toast.success("m³-Liste gespeichert."); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Speichern fehlgeschlagen. Ihre Eingaben bleiben erhalten."); }
+  };
+  const savedSnapshot = async () => {
+    const saved = await persist();
+    if (canonicalM3(saved.form_values) !== canonicalM3(stripDerivedValues(currentDerived().values)))
+      throw new Error("Während des Speicherns wurden weitere Eingaben geändert. Bitte erneut speichern und den Vorgang wiederholen.");
+    const result = deriveM3Values({ release: release as Record<string, unknown>, orderNumber: request.measurement_orders?.order_number ?? null,
+      stored: saved.form_values, constants: constantsState.constants });
+    return result;
   };
 
   /**
@@ -201,8 +244,11 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
    * Nachrüstung für Administratoren (Proben-Nachprüfung).
    */
   const ensureSamples = async (orderId: string): Promise<{ created: number; existing: number }> => {
+    if (!user?.id) throw new Error("Anmeldung erforderlich.");
+    const snapshot = await savedSnapshot();
     const rel = (release ?? {}) as Record<string, unknown>;
-    const plan = planM3Samples(rel.article_number ?? derived.values.article_number, derivedRows, testMarking);
+    const rows = snapshot.values[M3_ROWS_KEY] as Record<string, unknown>[];
+    const plan = planM3Samples(rel.article_number ?? snapshot.values.article_number, rows, resolveTestMarkingRows(snapshot.values, rows));
     if (!plan.length) throw new Error("Keine Proben erzeugt: In der m³-Liste gibt es keine Zeile mit Elementnummer.");
     const linked = (await api.orderSamples.list(orderId)) as { samples?: { sample_number?: string | null } | null }[];
     const have = new Set(linked.map((l) => l.samples?.sample_number).filter(Boolean) as string[]);
@@ -218,7 +264,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         {
           sample_name: `${articleNo} · Element ${p.elementNumber}`,
           description: `m³-Liste Zeile ${p.rowIndex + 1}`,
-          created_by: user!.id,
+          created_by: user.id,
           project_id: (rel.project_id as string | null) ?? null,
           order_id: orderId,
           status: "neu",
@@ -235,7 +281,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       }
       ids.push(s.id);
     }
-    if (ids.length) await api.orderSamples.add(orderId, ids, user!.id);
+    if (ids.length) await api.orderSamples.add(orderId, ids, user.id);
     await qc.invalidateQueries({ queryKey: ["samples"] });
     await qc.invalidateQueries({ queryKey: ["orders"] });
     return { created: ids.length, existing: plan.length - ids.length };
@@ -272,7 +318,12 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       const rel = release as Record<string, unknown>;
       // Probenplan und Duplikatprüfung VOR jeder Schreiboperation, damit bei
       // Konflikten weder Auftrag noch Proben teilweise entstehen.
-      const samplePlan = planM3Samples(rel.article_number ?? derived.values.article_number, derivedRows, testMarking);
+      const snapshot = await savedSnapshot();
+      const rows = snapshot.values[M3_ROWS_KEY] as Record<string, unknown>[];
+      const samplePlan = planM3Samples(rel.article_number ?? snapshot.values.article_number, rows, resolveTestMarkingRows(snapshot.values, rows));
+      if (!samplePlan.length) throw new Error("Keine m³-Zeile mit gültiger Elementnummer vorhanden.");
+      const standard = String(snapshot.values.lab_tests ?? "").split(",").map(c => c.trim()).filter(Boolean);
+      const servicePlan = await planM3RowServices(samplePlan, rows, standard, codes => api.measurementServices.resolveSamplingCodes(codes));
       const existing = await api.samples.findExistingNumbers(samplePlan.map((p) => p.sampleNumber));
       if (existing.length) {
         throw new Error(
@@ -289,13 +340,16 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         } (aus m³-Liste)`,
       })) as { id: string; order_number?: string | null };
       await api.productionDocuments.update(requestId, { order_id: created.id });
+      const linkedDocument = await api.productionDocuments.get(requestId);
+      if (!linkedDocument || linkedDocument.order_id !== created.id) throw new Error("Die Auftragszuordnung konnte nicht bestätigt werden. Bitte den angelegten Auftrag prüfen.");
+      baseline.current = linkedDocument;
+      qc.setQueryData(["production-document-request", requestId], linkedDocument);
       await api.productionDocuments.linkReleaseToOrder(request.based_on_release_id, created.id);
 
       // Maßgeblich ist ausschließlich die in der m³-Liste gesetzte
       // Beprobungsauswahl (Benutzerauswahl, sonst der automatische Vorschlag) –
       // nicht erneut die Automatik. „Bench“ ergibt dabei BENCH NOx + BENCH SOx.
-      const { matched, missing } = await api.measurementServices.resolveSamplingCodes(selectedCodes);
-      const noxHandover = buildNoxHandover(derived.values);
+      const noxHandover = buildNoxHandover(snapshot.values);
       const articleNo = String(rel.article_number ?? derived.values.article_number ?? "").trim();
       const sampleIds: string[] = [];
       for (const p of samplePlan) {
@@ -322,7 +376,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       }
       await api.orderSamples.add(created.id, sampleIds, user.id);
       // Wie in der regulären Auftragserstellung: je Probe und Dienstleistung eine Aufgabe.
-      for (const sampleId of sampleIds) for (const m of matched) {
+      for (const [index, sampleId] of sampleIds.entries()) for (const m of servicePlan[index].services) {
         const createdMeasurement = (await api.measurements.add({
           order_id: created.id,
           service_id: m.id,
@@ -349,17 +403,8 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
       await qc.invalidateQueries({ queryKey: ["production-document-requests"] });
       await qc.invalidateQueries({ queryKey: ["orders"] });
       toast.success(`Beprobungsauftrag ${created.order_number ?? ""} erstellt und zugeordnet.`, {
-        description:
-          `Proben: ${samplePlan.map((p) => p.sampleNumber).join(", ")} · Dienstleistungen je Probe: ${matched.length}` +
-          (missing.length ? ` · Nicht zugeordnet: ${missing.join(", ")}` : ""),
+        description: `Proben: ${samplePlan.map(p => p.sampleNumber).join(", ")} · Messungen: ${servicePlan.reduce((n, p) => n + p.services.length, 0)}`,
       });
-      if (missing.length) {
-        toast.warning(
-          missing.length === 1
-            ? `Für das Beprobungskürzel ${missing[0]} ist noch keine Dienstleistung hinterlegt.`
-            : `Für die Beprobungskürzel ${missing.join(", ")} ist noch keine Dienstleistung hinterlegt.`
-        );
-      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Beprobungsauftrag konnte nicht erstellt werden.");
     } finally {
@@ -368,7 +413,7 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
   };
 
   return (
-    <div className="space-y-4">
+    <fieldset disabled={creatingOrder} className="space-y-4 min-w-0">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Badge variant="outline">{String(derived.values.release_label ?? "–")}</Badge>
         <span className="text-muted-foreground">
@@ -388,11 +433,11 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           </div>
         </div>
         {!request.order_id ? (
-          <Button variant="outline" onClick={createSamplingOrder} disabled={creatingOrder}>
+          <Button variant="outline" onClick={createSamplingOrder} disabled={creatingOrder || saving}>
             Beprobungsauftrag erstellen
           </Button>
         ) : (
-          <Button variant="outline" onClick={addSamplesToExistingOrder} disabled={creatingOrder}>
+          <Button variant="outline" onClick={addSamplesToExistingOrder} disabled={creatingOrder || saving}>
             Proben aus m³-Liste ergänzen
           </Button>
         )}
@@ -406,16 +451,6 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           <AlertTitle>m³-Formularstruktur konnte nicht ergänzt werden</AlertTitle>
           <AlertDescription>
             {templateError instanceof Error ? templateError.message : "Unbekannter Fehler beim Ergänzen der m³-Vorlage."}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {constantsSetupError && constantsState.missing.length > 0 && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>m³-Konstanten konnten nicht geprüft werden</AlertTitle>
-          <AlertDescription>
-            Die Formularstruktur bleibt verfügbar; nur die Berechnungen sind momentan nicht ausführbar.
           </AlertDescription>
         </Alert>
       )}
@@ -460,37 +495,18 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         )}
       </div>
 
-      <div className="rounded-md border p-3 space-y-2">
-        <div className="text-sm font-medium">Freie Toleranzen</div>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={stored?.tolerance_free === true}
-            onCheckedChange={(v) => setStoredKey("tolerance_free", v === true)}
-          />
-          <span>Freie Toleranzen statt Variante 1/2 verwenden</span>
-        </label>
-        {stored?.tolerance_free === true && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-            {([
-              ["tol_length_plus", "Länge + [mm]"],
-              ["tol_length_minus", "Länge − [mm]"],
-              ["tol_diameter_plus", "Durchmesser + [mm]"],
-              ["tol_diameter_minus", "Durchmesser − [mm]"],
-            ] as const).map(([key, label]) => (
-              <label key={key} className="space-y-1">
-                <span className="text-muted-foreground">{label}</span>
-                <Input
-                  inputMode="decimal"
-                  placeholder="z. B. 1,5"
-                  value={String(stored?.[key] ?? "")}
-                  onChange={(e) => setStoredKey(key, e.target.value)}
-                />
-              </label>
-            ))}
-          </div>
-        )}
-        <div className="text-xs text-muted-foreground">
-          Aktuell: L {String(derived.values.length_tolerance ?? "–")} · D {String(derived.values.diameter_tolerance ?? "–")}
+      <div className="space-y-2 text-sm">
+        <div className="font-medium">Toleranzen [mm]</div>
+        <div className="grid gap-2">
+          {M3_TOLERANCES.map(({ key, label }) => {
+            const field = typedFields.find(f => f.field_key === key);
+            const permission = field ? permissions?.get(field.id) : undefined;
+            if (permission?.visibility === "hidden") return null;
+            return <label key={key} className="space-y-1 text-xs">
+              <span className="text-muted-foreground">{label}</span>
+              <Input type="text" inputMode="decimal" disabled={permission?.visibility === "read"} value={String(stored[key] ?? "")} onChange={e => setStoredKey(key, e.target.value)} />
+            </label>;
+          })}
         </div>
       </div>
       </div>
@@ -503,7 +519,9 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
             fields={typedFields}
             permissions={permissions}
             values={displayValues}
-            onChange={(key, v) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }))}
+            onChange={(key, v) => setStoredKey(key, v)}
+          repeaterDetails={({ field, index, entry, readonly, onPatch }) => field.field_key === M3_ROWS_KEY
+            ? <M3RowDetails row={entry} index={index} standard={selectedCodes} dynamicCodes={dynamicCodes} readonly={readonly} onPatch={onPatch} /> : null}
           />
         </div>
       )}
@@ -576,7 +594,9 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           fields={typedFields}
           permissions={permissions}
           values={displayValues}
-          onChange={(key, v) => setStored((prev) => ({ ...(prev ?? {}), [key]: v }))}
+          onChange={(key, v) => setStoredKey(key, v)}
+          repeaterDetails={({ field, index, entry, readonly, onPatch }) => field.field_key === M3_ROWS_KEY
+            ? <M3RowDetails row={entry} index={index} standard={selectedCodes} dynamicCodes={dynamicCodes} readonly={readonly} onPatch={onPatch} /> : null}
         />
         </div>
       )}
@@ -587,14 +607,16 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         <div>{BENCH_TEMPLATES.withSox}</div>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button
           variant="outline"
-          disabled={printing}
+          disabled={printing || saving}
           onClick={async () => {
             setPrinting(true);
             try {
-              await printM3List(derived.values, { notices: derived.notices, testRowIndices: testIndices });
+              const snapshot = await savedSnapshot();
+              const rows = snapshot.values[M3_ROWS_KEY] as Record<string, unknown>[];
+              await printM3List(snapshot.values, { notices: snapshot.notices, testRowIndices: resolveTestMarkingRows(snapshot.values, rows).rowIndices });
             } catch (e) {
               toast.error(e instanceof Error ? `Drucken fehlgeschlagen: ${e.message}` : "Drucken fehlgeschlagen.");
             } finally {
@@ -606,9 +628,12 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
         </Button>
         <Button
           variant="outline"
-          onClick={() => {
+          disabled={saving || printing}
+          onClick={async () => {
             try {
-              downloadM3Pdf(derived.values, { notices: derived.notices, testRowIndices: testIndices });
+              const snapshot = await savedSnapshot();
+              const rows = snapshot.values[M3_ROWS_KEY] as Record<string, unknown>[];
+              downloadM3Pdf(snapshot.values, { notices: snapshot.notices, testRowIndices: resolveTestMarkingRows(snapshot.values, rows).rowIndices });
             } catch (e) {
               toast.error(e instanceof Error ? e.message : "PDF-Download fehlgeschlagen.");
             }
@@ -620,6 +645,6 @@ export default function M3ListForm({ requestId }: { requestId: string }) {
           <Save className="h-4 w-4 mr-2" /> m³-Liste speichern
         </Button>
       </div>
-    </div>
+    </fieldset>
   );
 }
