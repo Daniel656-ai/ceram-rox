@@ -33,7 +33,8 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { FillRowsCtx } from "./fillRowsContext";
+import { FillRowsCtx, TemperatureOrderLockCtx } from "./fillRowsContext";
+import { hasStepMeasurementValues, isTemperatureBlock, temperatureOf } from "@/lib/results/temperatureBlock";
 import { Lock, Plus, Trash2, ArrowUp, ArrowDown, Copy, AlertTriangle, ClipboardPaste, Link2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -247,7 +248,7 @@ const spanStyle = (n: { rowSpan?: number }): React.CSSProperties | undefined => 
  * Außenabstand kommt ausschließlich vom Grid (gap), nie vom Element selbst.
  * ---------------------------------------------------------------- */
 
-export { FillRowsCtx };
+export { FillRowsCtx, TemperatureOrderLockCtx };
 
 /** Hinweistext eines Feldes: in schmalen Spalten nur als Symbol mit Tooltip (kein Text in Ein-Wort-Zeilen). */
 function FieldHint({ text }: { text: string }) {
@@ -1193,6 +1194,14 @@ function RepeaterField({
     (meta.max_entries == null || entries.length < meta.max_entries);
   const canRemove = interactive && !readonly && (perm.can_remove ?? true);
 
+  // Temperaturblock: Eintrag i = Temperaturstufe i. Liegen Messwerte je Stufe vor, dürfen Einträge weder
+  // verschoben noch gelöscht werden (sonst verschieben sich die Messwerte still gegen die Temperaturen).
+  // Werte ändern und Einträge hinten anhängen bleibt möglich.
+  const orderLock = useContext(TemperatureOrderLockCtx);
+  const stepLocked = !nested && isTemperatureBlock(field, children) && (orderLock || hasStepMeasurementValues(root?.values));
+  const STEP_LOCK_MSG = "Für diese Temperaturen liegen bereits Messwerte vor – Verschieben und Löschen ist gesperrt. Werte ändern und neue Einträge hinten anhängen ist möglich.";
+  const removableWhenLocked = (i: number) => i === entries.length - 1 && temperatureOf(entries[i]) === null;
+
   const label = node.label_override || field.display_name;
   const desc = node.description_override ?? field.description;
 
@@ -1230,6 +1239,7 @@ function RepeaterField({
   const isMsAuswahl = !nested && storageKey === MS_AUSWAHL_KEY;
   const removeAt = (i: number) => {
     if (meta.min_entries && entries.length <= meta.min_entries) return;
+    if (stepLocked && !removableWhenLocked(i)) { toast.error(STEP_LOCK_MSG); return; }
     if (isMsAuswahl) {
       const r = removePairedRow(entries, root?.get(MUNDSTUECK_MS_KEY), i);
       if (!r.ok) {
@@ -1244,6 +1254,7 @@ function RepeaterField({
     updateEntries(next);
   };
   const moveAt = (i: number, dir: -1 | 1) => {
+    if (stepLocked) { toast.error(STEP_LOCK_MSG); return; }
     const j = i + dir;
     if (j < 0 || j >= entries.length) return;
     const next = entries.slice();
@@ -1263,7 +1274,8 @@ function RepeaterField({
     // sich niemals zwei Zeilen teilen.
     if (!managed && typeof copy[INSTANCE_ID_KEY] === "string") copy[INSTANCE_ID_KEY] = newInstanceId();
     const next = entries.slice();
-    next.splice(i + 1, 0, copy);
+    // Gesperrter Temperaturblock: Kopie immer hinten anhängen, damit keine Stufe verrutscht.
+    next.splice(stepLocked ? next.length : i + 1, 0, copy);
     updateEntries(next);
   };
 
@@ -1300,6 +1312,12 @@ function RepeaterField({
         )}
       </div>
       {desc && <p className="text-xs text-muted-foreground px-3 pt-2">{desc}</p>}
+      {stepLocked && (
+        <p role="note" data-testid="temperature-lock-note" className="flex items-start gap-2 mx-3 mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <Lock className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>{STEP_LOCK_MSG}</span>
+        </p>
+      )}
       {planned != null && (
         <div className="flex items-center gap-2 px-3 pt-2 text-xs text-muted-foreground">
           <span>Vorgesehen laut Auftrag: {planned} {meta.item_label ?? "Eintrag"}(e)</span>
@@ -1337,8 +1355,8 @@ function RepeaterField({
             allFields={allFields}
             readonly={readonly}
             layout={meta.layout}
-            canRemove={canRemove && (!meta.min_entries || entries.length > meta.min_entries)}
-            canReorder={interactive && !readonly}
+            canRemove={canRemove && (!meta.min_entries || entries.length > meta.min_entries) && (!stepLocked || removableWhenLocked(i))}
+            canReorder={interactive && !readonly && !stepLocked}
             itemLabel={meta.item_label ?? "Eintrag"}
             labelFieldKey={meta.label_field_key}
             header={isMsAuswahl && isAutoEntry(entry) ? (

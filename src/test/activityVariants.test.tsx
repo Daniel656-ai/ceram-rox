@@ -24,7 +24,7 @@ const fl = (key: string, label: string, value: number | string | null, unit: str
   });
 const block = () => res({ result_name: "form:f:aktivitatsmessblock", display_label: "Aktivitätsmessblock", remarks: ACTIVITY_BLOCK_JSON });
 
-/* Varianten nach den echten Feldnamen aus tasks/014-varianten.csv */
+/* Varianten nach den echten Feldnamen aus dem Export tasks014-varianten.csv (inzwischen gelöscht; Feldnamen siehe tasks/archiv/014-aktivitaetsmessung-darstellung.md) */
 
 describe("Variante B: flach je Temperaturstufe (FG-260011)", () => {
   const results = [
@@ -51,7 +51,7 @@ describe("Variante B: flach je Temperaturstufe (FG-260011)", () => {
   });
 
   it("Dosiermengen stehen unter Weitere Angaben, nicht in den Messbedingungen", () => {
-    expect(view!.catalysts[0].conditions).toEqual({ av: null, fr: null, no: null, nh3: null, h2o: null, o2: null });
+    expect(view!.catalysts[0].conditions).toEqual({ av: null, sv: null, fr: null, no: null, nh3: null, h2o: null, o2: null, extra: [] });
     expect(view!.other.map((f) => f.label)).toEqual(["NO_Anlage", "H2O_Anlage", "O2_Anlage"]);
     expect(rest).toEqual([]);
   });
@@ -75,8 +75,13 @@ describe("Variante C: alt flach (DAB260006)", () => {
     expect(view!.catalysts).toHaveLength(1);
     expect(view!.catalysts[0].conditions).toMatchObject({ av: 41.38, no: 200, nh3: 240, h2o: 10, o2: 100 });
     const labels = view!.other.map((f) => f.label);
-    expect(labels).toEqual(expect.arrayContaining(["NO (2)", "NH₃ 2", "CO", "SV 1", "Testbedingungen"]));
-    expect(view!.other.find((f) => f.label === "SV 1")?.unit).toBe("h⁻¹");
+    // CO ist ein weiteres Eingangsgas und steht jetzt als Spalte in den Messbedingungen (Aufgabe 040), nicht mehr hier.
+    expect(view!.catalysts[0].conditions.extra).toEqual([{ compound: "CO", value: 300, unit: "ppm" }]);
+    // SV 1 (Raumgeschwindigkeit, h⁻¹) ist eine eigene Spalte der Messbedingungen (Aufgabe 040), nicht mehr unter „Weitere Angaben“.
+    expect(view!.catalysts[0].conditions.sv).toBe(76051);
+    expect(labels).toEqual(expect.arrayContaining(["NO (2)", "NH₃ 2", "Testbedingungen"]));
+    expect(labels).not.toContain("CO");
+    expect(labels).not.toContain("SV 1");
   });
 
   it("nur Bedingungen ohne Temperaturstufen/Ergebnisse: keine Aktivitätsansicht", () => {

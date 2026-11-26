@@ -38,7 +38,7 @@ describe("Aktivitätsmessblock (echte Daten P260305)", () => {
   });
 
   it("Messbedingungen: AV, FR (feucht), Sollwerte der Anlage", () => {
-    expect(cats[0].conditions).toEqual({ av: 41.38, fr: 1.44, no: 200, nh3: 240, h2o: 10, o2: 10 });
+    expect(cats[0].conditions).toEqual({ av: 41.38, sv: null, fr: 1.44, no: 200, nh3: 240, h2o: 10, o2: 10, extra: [] });
     expect(cats[1].conditions.no).toBe(233);
   });
 
